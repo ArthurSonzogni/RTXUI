@@ -1,0 +1,12 @@
+module(name = "cpp_react_tui", version = "1.0")
+bazel_dep(name = "googletest", version = "1.14.0", dev_dependency = True)
+bazel_dep(name = "catch2", version = "3.6.0", dev_dependency = True)
+
+# Hedron's Compile Commands Extractor for Bazel
+# https://github.com/hedronvision/bazel-compile-commands-extractor
+bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+git_override(
+    module_name = "hedron_compile_commands",
+    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+    commit = "a14ad3a64e7bf398ab48105aaa0348e032ac87f8",
+)
