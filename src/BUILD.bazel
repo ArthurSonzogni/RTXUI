@@ -1,0 +1,30 @@
+cc_library(
+  name = "xml",
+  hdrs = [
+    "xml.hpp"
+  ],
+  srcs = [
+    "xml.cpp"
+  ] ,
+  deps = [
+    ":expected"
+  ],
+  visibility = ["//visibility:public"],
+)
+
+cc_test(
+  name = "test",
+  srcs = ["xml_test.cpp"],
+  deps = [
+    ":xml",
+    "@catch2//:catch2_main",
+  ],
+)
+
+cc_library(
+  name = "expected",
+  hdrs = [
+    "expected.hpp"
+  ],
+  visibility = ["//visibility:public"],
+)
