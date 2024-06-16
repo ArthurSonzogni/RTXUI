@@ -12,11 +12,43 @@ cc_library(
   visibility = ["//visibility:public"],
 )
 
+cc_library(
+  name = "task",
+  hdrs = [
+    "task.hpp",
+    "task_queue.hpp",
+    "task_runner.hpp",
+  ],
+  srcs = [
+    "task.cpp",
+    "task_queue.cpp",
+    "task_runner.cpp",
+  ],
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = "reactive",
+  hdrs = [
+    "reactive.hpp",
+  ],
+  srcs = [
+    "reactive.cpp",
+  ],
+  visibility = ["//visibility:public"],
+)
+
 cc_test(
   name = "test",
-  srcs = ["xml_test.cpp"],
+  srcs = [
+    "xml_test.cpp",
+    "task_test.cpp",
+    "reactive_test.cpp",
+  ],
   deps = [
     ":xml",
+    ":task",
+    ":reactive",
     "@catch2//:catch2_main",
   ],
 )
@@ -24,7 +56,7 @@ cc_test(
 cc_library(
   name = "expected",
   hdrs = [
-    "expected.hpp"
+    "expected.hpp",
   ],
   visibility = ["//visibility:public"],
 )

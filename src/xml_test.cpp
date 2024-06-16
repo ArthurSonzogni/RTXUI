@@ -167,3 +167,89 @@ TEST_CASE("XML comment", "[xml]") {
   CHECK(nodes.value().size() == 1);
   CHECK(xml::Print(nodes.value()[0]) == StripIndent(input));
 }
+
+TEST_CASE("XML empty tag", "[xml]") {
+  const std::string input = R"(
+    <>
+      <sub/>
+    </>
+  )";
+
+  auto nodes = xml::Parse(input);
+  CHECK(!nodes);
+  REQUIRE(nodes.error().message == "Expected tag name, but got >");
+  REQUIRE(nodes.error().line == 1);
+  REQUIRE(nodes.error().column == 5);
+}
+
+TEST_CASE("XML reactive", "[xml]") {
+  const std::string input = R"(
+    <root>
+      <!-- This demonstrates the usage of interpolation -->
+      <paragraph>
+        Hello, World!
+        input = {{input}}
+        state = {{state}}
+      </paragraph>
+
+      <!-- This demonstrates event handling -->
+      <button @click.left="onClick">
+        Click me!
+      </button>
+
+      <output if="state">
+        This is a conditional text!
+      </output>
+
+      <SubComponent></SubComponent>
+
+      <SubComponent prop="value"></SubComponent>
+
+      <SubComponent>
+        <template name="namedslot_1">Hello from slot 1</template>
+        <template name="namedslot_2">Hello from slot 2</template>
+      </SubComponent>
+
+      <slot></slot>
+    </root>
+  )";
+
+  const std::string output = R"(
+    <root>
+      <!-- This demonstrates the usage of interpolation -->
+      <paragraph>
+        Hello, World!
+            input = {{input}}
+            state = {{state}}
+      </paragraph>
+      <!-- This demonstrates event handling -->
+      <button @click.left="onClick">
+        Click me!
+      </button>
+      <output if="state">
+        This is a conditional text!
+      </output>
+      <SubComponent/>
+      <SubComponent prop="value"/>
+      <SubComponent>
+        <template name="namedslot_1">
+          Hello from slot 1
+        </template>
+        <template name="namedslot_2">
+          Hello from slot 2
+        </template>
+      </SubComponent>
+      <slot/>
+    </root>
+  )";
+
+  auto nodes = xml::Parse(input);
+  if (!nodes) {
+    FAIL(nodes.error().message + " at line " +
+         std::to_string(nodes.error().line) + " column " +
+         std::to_string(nodes.error().column));
+  }
+
+  CHECK(nodes.value().size() == 1);
+  CHECK(xml::Print(nodes.value()[0]) == StripIndent(output));
+}

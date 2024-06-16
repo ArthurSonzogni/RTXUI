@@ -20,6 +20,7 @@ class Parser {
   auto ParseComment() -> Expected<Node, Error>;
 
   auto MakeError(std::string message) -> Error;
+  auto MakeErrorExpected(std::string expected) -> Error;
 
  private:
   std::string_view xml_;
@@ -65,7 +66,7 @@ auto Parser::ParseTag() -> Expected<std::string_view, Error> {
     Advance();
   }
   if (start == pos_) {
-    return MakeError("Expected name, but got " + std::string(1, Get()));
+    return MakeErrorExpected("tag name");
   }
   std::string_view name = xml_.substr(start, pos_ - start);
   indent.pop_back();
@@ -88,12 +89,12 @@ auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
     }
     ParseWhiteSpaces();
     if (Get() != '=') {
-      return MakeError("Expected '=', got " + std::string(1, Get()));
+      return MakeErrorExpected("'='");
     }
     Advance();  // Skip '='.
     ParseWhiteSpaces();
     if (Get() != '"') {
-      return MakeError("Expected '\"', got " + std::string(1, Get()));
+      return MakeErrorExpected("'\"'");
     }
     Advance();  // Skip '"'.
     auto value_start = pos_;
@@ -101,7 +102,7 @@ auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
       Advance();
     }
     if (Get() == 0) {
-      return MakeError("Expected '\"', but got EOF");
+      return MakeErrorExpected("'\"'");
     }
     Advance();  // Skip '"'.
     attributes[key.value()] = xml_.substr(value_start, pos_ - value_start - 1);
@@ -122,7 +123,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
     }
 
     if (Get() != '<') {
-      return MakeError("Expected '<', got " + std::string(1, Get()));
+      return MakeErrorExpected("<");
     }
 
     int end = pos_ - 1;
@@ -160,7 +161,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
   if (Get() == '/') {
     Advance();  // Skip '/'.
     if (Get() != '>') {
-      return MakeError("Expected '>', got " + std::string(1, Get()));
+      return MakeErrorExpected(">");
     }
     Advance();  // Skip '>'.
     indent.pop_back();
@@ -174,7 +175,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
 
   // Normally closing tag.
   if (Get() != '>') {
-    return MakeError("Expected '>', got " + std::string(1, Get()));
+    return MakeErrorExpected(">");
   }
   Advance();  // Skip '>'.
   Nodes children;
@@ -200,7 +201,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
   }
   ParseWhiteSpaces();
   if (Get() != '>') {
-    return MakeError("Expected '>', got " + std::string(1, Get()));
+    return MakeErrorExpected(">");
   }
   Advance();  // Skip '>'.
   if (tag_opening.value() != tag_closing.value()) {
@@ -221,7 +222,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
 auto Parser::ParseComment() -> Expected<Node, Error> {
   indent += " ";
   if (Get() != '<' || Get(1) != '!' || Get(2) != '-' || Get(3) != '-') {
-    return MakeError("Expected '<!--'");
+    return MakeErrorExpected("<!--");
   }
   Advance();  // Skip '<'.
   Advance();  // Skip '!'
@@ -261,6 +262,14 @@ auto Parser::MakeError(std::string message) -> Error {
     }
   }
   return Error{message, line, column};
+}
+
+auto Parser::MakeErrorExpected(std::string expected) -> Error {
+  if (Get() == 0) {
+    return MakeError("Expected " + expected + ", but got end of file");
+  }
+  return MakeError("Expected " + expected + ", but got " +
+                   std::string(1, Get()));
 }
 
 }  // namespace

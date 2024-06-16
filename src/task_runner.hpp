@@ -1,0 +1,34 @@
+#ifndef TASK_RUNNER_HPP
+#define TASK_RUNNER_HPP
+
+#include "task.hpp"
+#include "task_queue.hpp"
+
+namespace task {
+
+class TaskRunner {
+ public:
+  TaskRunner() = default;
+
+  // Returns the task runner for the current thread.
+  static auto Current() -> TaskRunner*;
+
+  /// Schedules a task to be executed immediately.
+  auto PostTask(Task task) -> void;
+
+  /// Schedules a task to be executed after a certain duration.
+  auto PostDelayedTask(Task task,
+                       std::chrono::steady_clock::duration duration) -> void;
+
+  /// Runs the tasks in the queue, return the delay until the next delayed task
+  /// can be executed.
+  auto Run() -> void;
+
+ private:
+  TaskRunner* previous_task_runner_ = nullptr;
+  TaskQueue queue_;
+};
+
+}  // namespace task
+
+#endif  // TASK_RUNNER_HPP
