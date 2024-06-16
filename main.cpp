@@ -5,16 +5,17 @@ auto app = fl::App();
 app.Register("SubComponent", ...);
 
 // Define the <Component> component into the App.
-app.Register("Component", [](fl::Component& component) {
+app.Register("Component", [](fl::ComponentTemplate& component) {
   // Component attributes. They act as input parameters to the component.
   component.Attribute("input_1", true);
   component.Attribute("input_2", 42);
 
-  // Component model. They act as
-  component.State("state", true);
+  // Component internal state. It can be modified by the component itself,
+  // passed as attribute, and displayed inside the DOM.
+  component["state"] = true;
 
   // Function to handle the button click event.
-  component.Function("toggle", [&](fl::State& state, fl::Event& event) {
+  component.Function("toggle", [&](fl::Component& state, fl::Event& event) {
     state["enabled"] = !state["enabled"];
   });
 
@@ -30,7 +31,7 @@ app.Register("Component", [](fl::Component& component) {
     </paragraph>
 
     <!-- This demonstrates event handling -->
-    <button click.left="onClick">
+    <button @click.left="onClick">
       Click me!
     </button>
 

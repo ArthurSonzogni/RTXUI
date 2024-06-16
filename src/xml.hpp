@@ -1,3 +1,6 @@
+#ifndef XML_HPP_
+#define XML_HPP_
+
 #include <map>
 #include <string>
 #include <string_view>
@@ -53,3 +56,5 @@ auto Parse(std::string_view xml) -> Expected<Nodes, Error>;
 auto Print(const Node& node, int level = 0) -> std::string;
 
 }  // namespace xml
+
+#endif  // XML_HPP_
