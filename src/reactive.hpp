@@ -2,7 +2,9 @@
 #define REACTIVE_HPP_
 
 #include <cstdint>
+#include <initializer_list>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <variant>
@@ -11,7 +13,7 @@
 namespace reactive {
 
 /// A Reactive object represents a value that can be invalidated.
-/// The values are garbage collected.
+/// The values are ref counted and garbage collected.
 
 // The possible types of a Reactive object.
 enum Type {
@@ -26,6 +28,7 @@ enum Type {
 };
 
 class Reactive;
+class Iterator;
 struct Value;
 
 struct Value {
@@ -40,9 +43,18 @@ struct Value {
   std::uint16_t ref_count = 1;
 };
 
+Reactive Null();
+Reactive Bool(bool value);
+Reactive Int(int value);
+Reactive Double(double value);
+Reactive String(const char* value);
+Reactive String(const std::string& value);
 Reactive Array();
+Reactive Array(std::initializer_list<Reactive> values);
 Reactive Map();
+Reactive Map(std::initializer_list<std::pair<std::string, Reactive>> values);
 Reactive Set();
+Reactive Set(std::initializer_list<Reactive> values);
 
 class Reactive {
  public:
@@ -101,6 +113,10 @@ class Reactive {
 
   std::strong_ordering operator<=>(const Reactive&) const = default;
 
+  // Iterators:
+  Iterator begin() const;
+  Iterator end() const;
+
   // Methods:
   void push_back(const Reactive& value);
   void insert(const std::string& key, const Reactive& value);
@@ -112,12 +128,37 @@ class Reactive {
   bool empty() const;
 
  private:
+  friend class Iterator;
   Reactive(std::vector<Reactive> value);
   Reactive(std::map<std::string, Reactive> value);
   Reactive(std::set<Reactive> value);
   void AssignNull();
 
   Value* ptr_;
+};
+
+// Iterator over a Reactive object. It can be used in range-based for loops.
+class Iterator {
+ public:
+  // Operators:
+  Reactive& operator*();
+  Iterator& operator++();
+  bool operator==(const Iterator& other) const;
+  bool operator!=(const Iterator& other) const;
+
+ private:
+  friend class Reactive;
+  // Constructors:
+  Iterator();
+  Iterator(std::vector<Reactive>::iterator it);
+  Iterator(std::set<Reactive>::iterator it);
+  Iterator(std::map<std::string, Reactive>::iterator it);
+
+  Reactive r_;
+  std::optional<std::variant<std::vector<Reactive>::iterator,
+                             std::set<Reactive>::iterator,
+                             std::map<std::string, Reactive>::iterator>>
+      it_;
 };
 
 }  // namespace reactive
