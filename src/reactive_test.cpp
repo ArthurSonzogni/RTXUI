@@ -4,8 +4,17 @@
 
 namespace {
 
+TEST_CASE("Demo", "[reactive]") {
+  auto a = reactive::Int(42);
+  auto b = reactive::Int(43);
+  auto c = reactive::Int(2);
+
+  auto d = a + b * c;
+  REQUIRE(d.AsInt() == 128);
+}
+
 TEST_CASE("Reactive null", "[reactive]") {
-  reactive::Reactive r;
+  auto r = reactive::Null();
   REQUIRE(r.IsNull());
   REQUIRE(!r.IsBool());
   REQUIRE(!r.IsInt());
@@ -18,7 +27,7 @@ TEST_CASE("Reactive null", "[reactive]") {
 }
 
 TEST_CASE("Reactive bool", "[reactive]") {
-  reactive::Reactive r(true);
+  auto r = reactive::Bool(true);
   REQUIRE(!r.IsNull());
   REQUIRE(r.IsBool());
   REQUIRE(!r.IsInt());
@@ -32,7 +41,7 @@ TEST_CASE("Reactive bool", "[reactive]") {
 }
 
 TEST_CASE("Reactive int", "[reactive]") {
-  reactive::Reactive r(42);
+  auto r = reactive::Int(42);
   REQUIRE(!r.IsNull());
   REQUIRE(!r.IsBool());
   REQUIRE(r.IsInt());
@@ -46,7 +55,7 @@ TEST_CASE("Reactive int", "[reactive]") {
 }
 
 TEST_CASE("Reactive double", "[reactive]") {
-  reactive::Reactive r(3.14);
+  auto r = reactive::Double(3.14);
   REQUIRE(!r.IsNull());
   REQUIRE(!r.IsBool());
   REQUIRE(!r.IsInt());
@@ -60,7 +69,7 @@ TEST_CASE("Reactive double", "[reactive]") {
 }
 
 TEST_CASE("Reactive string", "[reactive]") {
-  reactive::Reactive r("hello");
+  auto r = reactive::String("hello");
   REQUIRE(!r.IsNull());
   REQUIRE(!r.IsBool());
   REQUIRE(!r.IsInt());
@@ -114,7 +123,7 @@ TEST_CASE("Reactive set", "[reactive]") {
 }
 
 TEST_CASE("Reactive copy", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
+  auto r1 = reactive::Int(42);
   auto r2 = r1;
   REQUIRE(r1 == r2);
   REQUIRE(r1.AsInt() == 42);
@@ -122,7 +131,7 @@ TEST_CASE("Reactive copy", "[reactive]") {
 }
 
 TEST_CASE("Reactive move", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
+  auto r1 = reactive::Int(42);
   auto r2 = std::move(r1);
   REQUIRE(r1.IsNull());
   REQUIRE(!r2.IsNull());
@@ -130,8 +139,8 @@ TEST_CASE("Reactive move", "[reactive]") {
 }
 
 TEST_CASE("Reactive assign", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(43);
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(43);
   r1 = r2;
   REQUIRE(r1 == r2);
   REQUIRE(r1.AsInt() == 43);
@@ -139,18 +148,18 @@ TEST_CASE("Reactive assign", "[reactive]") {
 }
 
 TEST_CASE("Reactive assign move", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(43);
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(43);
   r1 = std::move(r2);
   REQUIRE(r2.IsNull());
   REQUIRE(!r1.IsNull());
   REQUIRE(r1.AsInt() == 43);
 }
 
-TEST_CASE("Reactive equal", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(42);
-  auto r3 = reactive::Reactive(43);
+TEST_CASE("Int equal", "[reactive]") {
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(42);
+  auto r3 = reactive::Int(43);
   REQUIRE(r1 != r2);
   REQUIRE(r1 != r3);
 }
@@ -163,95 +172,95 @@ TEST_CASE("Reactive bool assignment", "[reactive]") {
 }
 
 TEST_CASE("Reactive addition int", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(43);
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(43);
   auto r3 = r1 + r2;
   REQUIRE(r3.IsInt());
   REQUIRE(r3.AsInt() == 85);
 }
 
 TEST_CASE("Reactive addition double", "[reactive]") {
-  auto r1 = reactive::Reactive(3.14);
-  auto r2 = reactive::Reactive(2.71);
+  auto r1 = reactive::Double(3.14);
+  auto r2 = reactive::Double(2.71);
   auto r3 = r1 + r2;
   REQUIRE(r3.IsDouble());
   REQUIRE(r3.AsDouble() == 5.85);
 }
 
 TEST_CASE("Reactive subtraction int", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(43);
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(43);
   auto r3 = r1 - r2;
   REQUIRE(r3.IsInt());
   REQUIRE(r3.AsInt() == -1);
 }
 
 TEST_CASE("Reactive subtraction double", "[reactive]") {
-  auto r1 = reactive::Reactive(3.14);
-  auto r2 = reactive::Reactive(2.71);
+  auto r1 = reactive::Double(3.14);
+  auto r2 = reactive::Double(2.71);
   auto r3 = r1 - r2;
   REQUIRE(r3.IsDouble());
   REQUIRE(r3.AsDouble() == Catch::Approx(0.43));
 }
 
 TEST_CASE("Reactive multiplication int", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(43);
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(43);
   auto r3 = r1 * r2;
   REQUIRE(r3.IsInt());
   REQUIRE(r3.AsInt() == 1806);
 }
 
 TEST_CASE("Reactive multiplication double", "[reactive]") {
-  auto r1 = reactive::Reactive(3.14);
-  auto r2 = reactive::Reactive(2.71);
+  auto r1 = reactive::Double(3.14);
+  auto r2 = reactive::Double(2.71);
   auto r3 = r1 * r2;
   REQUIRE(r3.IsDouble());
   REQUIRE(r3.AsDouble() == Catch::Approx(8.5094));
 }
 
 TEST_CASE("Reactive division int", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(43);
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(43);
   auto r3 = r1 / r2;
   REQUIRE(r3.IsInt());
   REQUIRE(r3.AsInt() == 0);
 }
 
 TEST_CASE("Reactive division double", "[reactive]") {
-  auto r1 = reactive::Reactive(3.14);
-  auto r2 = reactive::Reactive(2.71);
+  auto r1 = reactive::Double(3.14);
+  auto r2 = reactive::Double(2.71);
   auto r3 = r1 / r2;
   REQUIRE(r3.IsDouble());
   REQUIRE(r3.AsDouble() == Catch::Approx(1.15867158672));
 }
 
 TEST_CASE("Reactive modulo", "[reactive]") {
-  auto r1 = reactive::Reactive(42);
-  auto r2 = reactive::Reactive(43);
+  auto r1 = reactive::Int(42);
+  auto r2 = reactive::Int(43);
   auto r3 = r1 % r2;
   REQUIRE(r3.IsInt());
   REQUIRE(r3.AsInt() == 42);
 }
 
 TEST_CASE("Reactive logical and", "[reactive]") {
-  auto r1 = reactive::Reactive(true);
-  auto r2 = reactive::Reactive(false);
+  auto r1 = reactive::Bool(true);
+  auto r2 = reactive::Bool(false);
   auto r3 = r1 && r2;
   REQUIRE(r3.IsBool());
   REQUIRE(!r3.AsBool());
 }
 
 TEST_CASE("Reactive logical or", "[reactive]") {
-  auto r1 = reactive::Reactive(true);
-  auto r2 = reactive::Reactive(false);
+  auto r1 = reactive::Bool(true);
+  auto r2 = reactive::Bool(false);
   auto r3 = r1 || r2;
   REQUIRE(r3.IsBool());
   REQUIRE(r3.AsBool());
 }
 
 TEST_CASE("Reactive logical not", "[reactive]") {
-  auto r1 = reactive::Reactive(true);
+  auto r1 = reactive::Bool(true);
   auto r2 = !r1;
   REQUIRE(r2.IsBool());
   REQUIRE(!r2.AsBool());
@@ -366,6 +375,162 @@ TEST_CASE("Reactive empty map", "[reactive]") {
 TEST_CASE("Reactive empty set", "[reactive]") {
   auto r = reactive::Set();
   REQUIRE(r.empty());
+}
+
+TEST_CASE("Reactive addition", "[reactive]") {
+  auto r_null = reactive::Null();
+  auto r_bool = reactive::Bool(true);
+  auto r_int = reactive::Int(42);
+  auto r_double = reactive::Double(3.14);
+  auto r_string = reactive::String("hello");
+  auto r_array = reactive::Array({1, 2, 3});
+  auto r_map = reactive::Map({{"a", 1}, {"b", 2}});
+  auto r_set = reactive::Set({1, 2, 3});
+
+  auto all = reactive::Array({
+      r_null,
+      r_bool,
+      r_int,
+      r_double,
+      r_string,
+      r_array,
+      r_map,
+      r_set,
+  });
+
+  // Addition
+  for (auto a : all) {
+    for (auto b : all) {
+      auto c = a + b;
+      if (a.Type() == b.Type()) {
+        REQUIRE(c.Type() == a.Type());
+      } else {
+        REQUIRE(c.Type() == reactive::Type::kNull);
+      }
+    }
+  }
+
+  // Subtraction
+  for (auto a : all) {
+    for (auto b : all) {
+      auto c = a - b;
+      if (a.Type() != b.Type()) {
+        REQUIRE(c.Type() == reactive::Type::kNull);
+      } else {
+        switch (a.Type()) {
+          case reactive::Type::kBool:
+          case reactive::Type::kInt:
+          case reactive::Type::kDouble:
+            REQUIRE(c.Type() == a.Type());
+            break;
+          default:
+            REQUIRE(c.Type() == reactive::Type::kNull);
+            break;
+        }
+      }
+    }
+  }
+
+  // Multiplication
+  for (auto a : all) {
+    for (auto b : all) {
+      auto c = a * b;
+      if (a.Type() != b.Type()) {
+        REQUIRE(c.Type() == reactive::Type::kNull);
+      } else {
+        switch (a.Type()) {
+          case reactive::Type::kBool:
+          case reactive::Type::kInt:
+          case reactive::Type::kDouble:
+            REQUIRE(c.Type() == a.Type());
+            break;
+          default:
+            REQUIRE(c.Type() == reactive::Type::kNull);
+            break;
+        }
+      }
+    }
+  }
+
+  // Division
+  for (auto a : all) {
+    for (auto b : all) {
+      auto c = a / b;
+      if (a.Type() != b.Type()) {
+        REQUIRE(c.Type() == reactive::Type::kNull);
+      } else {
+        switch (a.Type()) {
+          case reactive::Type::kInt:
+          case reactive::Type::kDouble:
+            REQUIRE(c.Type() == a.Type());
+            break;
+          default:
+            REQUIRE(c.Type() == reactive::Type::kNull);
+            break;
+        }
+      }
+    }
+  }
+
+  // Modulo
+  for (auto a : all) {
+    for (auto b : all) {
+      auto c = a % b;
+      if (a.Type() != b.Type()) {
+        REQUIRE(c.Type() == reactive::Type::kNull);
+      } else {
+        switch (a.Type()) {
+          case reactive::Type::kInt:
+            REQUIRE(c.Type() == a.Type());
+            break;
+          default:
+            REQUIRE(c.Type() == reactive::Type::kNull);
+            break;
+        }
+      }
+    }
+  }
+
+  // Logical and
+  for (auto a : all) {
+    for (auto b : all) {
+      auto c = a && b;
+      if (a.Type() == reactive::Type::kBool &&
+          b.Type() == reactive::Type::kBool) {
+        REQUIRE(c.Type() == reactive::Type::kBool);
+      } else {
+        REQUIRE(c.Type() == reactive::Type::kNull);
+      }
+    }
+  }
+
+  // Logical or
+  for (auto a : all) {
+    for (auto b : all) {
+      auto c = a || b;
+      if (a.Type() == reactive::Type::kBool &&
+          b.Type() == reactive::Type::kBool) {
+        REQUIRE(c.Type() == reactive::Type::kBool);
+      } else {
+        REQUIRE(c.Type() == reactive::Type::kNull);
+      }
+    }
+  }
+
+  // Logical not
+  for (auto a : all) {
+    auto b = !a;
+    switch (a.Type()) {
+      case reactive::Type::kBool:
+      case reactive::Type::kInt:
+      case reactive::Type::kDouble:
+        REQUIRE(b.Type() == reactive::Type::kBool);
+        break;
+      default:
+        REQUIRE(b.Type() == reactive::Type::kNull);
+        break;
+    }
+  }
 }
 
 }  // namespace

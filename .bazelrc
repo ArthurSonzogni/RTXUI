@@ -1,2 +1,4 @@
+build --action_env=BAZEL_CXXOPTS="-std=c++20"
+build --compilation_mode=dbg
+build --repo_env=CC=clang
 common --enable_bzlmod
-build --action_env=BAZEL_CXXOPTS="-std=c++20" --repo_env=CC=clang
