@@ -4,7 +4,7 @@
 
 namespace task {
 
-static thread_local TaskRunner* current_task_runner = nullptr;
+static thread_local TaskRunner* current_task_runner = nullptr;  // NOLINT
 
 // static
 auto TaskRunner::Current() -> TaskRunner* {

@@ -1,5 +1,5 @@
-#include "xml.hpp"
-#include <iostream>
+#include "xml/xml.hpp"
+#include "core/expected.hpp"
 
 namespace xml {
 
@@ -7,7 +7,7 @@ namespace {
 
 class Parser {
  public:
-  Parser(std::string_view xml) : xml_(xml) {}
+  Parser(std::string_view xml) : xml_(xml) {}  // NOLINT
 
   auto Get() -> char;
   auto Get(int) -> char;
@@ -27,13 +27,10 @@ class Parser {
   size_t pos_ = 0;
 };
 
-static std::string indent = "";
-
 // Helper function to check if a character is Contained in a string.
-template <size_t N>
-bool Contains(char c, const char (&chars)[N]) {
-  for (char g : chars) {
-    if (c == g) {
+bool Contains(char c, std::vector<char> chars) {
+  for (char x : chars) {
+    if (c == x) {
       return true;
     }
   }
@@ -52,34 +49,25 @@ auto Parser::Get(int offset) -> char {
 }
 
 auto Parser::ParseWhiteSpaces() -> void {
-  indent += " ";
-  while (Contains(Get(), " \n\r\t")) {
+  while (Contains(Get(), {' ', '\n', '\r', '\t'})) {
     Advance();  // Skip white spaces
   }
-  indent.pop_back();
 }
 
 auto Parser::ParseTag() -> Expected<std::string_view, Error> {
-  indent += " ";
   int start = pos_;
-  while (!Contains(Get(), "> \n\t=\"/\0")) {
+  while (!Contains(Get(), {'>', ' ', '\n', '\t', '=', '\"', '/', '\0'})) {
     Advance();
   }
-  if (start == pos_) {
-    return MakeErrorExpected("tag name");
-  }
   std::string_view name = xml_.substr(start, pos_ - start);
-  indent.pop_back();
   return name;
 }
 
 auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
-  indent += " ";
   Attributes attributes;
   while (true) {
     auto g = Get();
-    if (Contains(g, ">/")) {
-      indent.pop_back();
+    if (Contains(g, {'>', '/'})) {
       return attributes;
     }
 
@@ -98,7 +86,7 @@ auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
     }
     Advance();  // Skip '"'.
     auto value_start = pos_;
-    while (!Contains(Get(), "\"\0")) {
+    while (!Contains(Get(), {'\"', '\0'})) {
       Advance();
     }
     if (Get() == 0) {
@@ -112,14 +100,22 @@ auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
 }
 
 auto Parser::ParseNode() -> Expected<Node, Error> {
-  indent += " ";
   ParseWhiteSpaces();
 
   // Parse text node.
   if (Get() != '<') {
     int start = pos_;
-    while (!Contains(Get(), "<\0")) {
+    while (!Contains(Get(), {'<', '\0'})) {
       Advance();
+    }
+
+    if (Get() == 0) {
+      return Node{
+          .type = Node::kText,
+          .text = xml_.substr(start, pos_ - start),
+          .attributes = {},
+          .children = {},
+      };
     }
 
     if (Get() != '<') {
@@ -127,7 +123,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
     }
 
     int end = pos_ - 1;
-    while (Contains(xml_[end], " \n\t")) {
+    while (Contains(xml_[end], {' ', '\n', '\t'})) {
       --end;
     }
 
@@ -164,7 +160,6 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
       return MakeErrorExpected(">");
     }
     Advance();  // Skip '>'.
-    indent.pop_back();
 
     return Node{
         .type = Node::kElement,
@@ -210,7 +205,6 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
                      std::string(tag_opening.value()));
   }
 
-  indent.pop_back();
   return Node{
       .type = Node::kElement,
       .tag = tag_opening.value(),
@@ -220,7 +214,6 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
 }
 
 auto Parser::ParseComment() -> Expected<Node, Error> {
-  indent += " ";
   if (Get() != '<' || Get(1) != '!' || Get(2) != '-' || Get(3) != '-') {
     return MakeErrorExpected("<!--");
   }
@@ -241,7 +234,6 @@ auto Parser::ParseComment() -> Expected<Node, Error> {
   Advance();  // Skip '-'
   Advance();  // Skip '-'
   Advance();  // Skip '>'
-  indent.pop_back();
   return Node{
       .type = Node::kComment,
       .text = comment,
@@ -278,12 +270,16 @@ auto Parse(std::string_view xml) -> Expected<Nodes, Error> {
   std::vector<Node> nodes;
   Parser parser(xml);
   while (true) {
+    parser.ParseWhiteSpaces();
     auto node = parser.ParseNode();
     if (!node) {
       return node.error();
     }
     nodes.push_back(node.value());
-    break;
+    parser.ParseWhiteSpaces();
+    if (parser.Get() == 0) {
+      break;
+    }
   }
   return nodes;
 }

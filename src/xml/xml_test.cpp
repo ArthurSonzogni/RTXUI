@@ -1,72 +1,7 @@
-#include "./xml.hpp"
+#include "xml/xml.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <string>
-
-namespace {
-
-// Split a string by a delimiter, return a vector of string views.
-auto Split(std::string_view text,
-           char delimiter) -> std::vector<std::string_view> {
-  std::vector<std::string_view> result;
-  size_t start = 0;
-  for (size_t i = 0; i < text.size(); ++i) {
-    if (text[i] == delimiter) {
-      result.push_back(text.substr(start, i - start));
-      start = i + 1;
-    }
-  }
-  result.push_back(text.substr(start));
-  return result;
-}
-
-// Strip the maximum indentation on a string. Every line should have the same
-// amount of leading spaces removed.
-std::string StripIndent(const std::string_view& text) {
-  int min_indent = std::numeric_limits<int>::max();
-  for (const auto& line : Split(text, '\n')) {
-    // Skip empty lines:
-    bool is_empty = true;
-    for (char c : line) {
-      if (c != ' ') {
-        is_empty = false;
-        break;
-      }
-    }
-    if (is_empty) {
-      continue;
-    }
-
-    int indent = 0;
-    for (char c : line) {
-      if (c == ' ') {
-        ++indent;
-      } else {
-        break;
-      }
-    }
-    min_indent = std::min(min_indent, indent);
-  }
-
-  std::string result;
-  for (const auto& line : Split(text, '\n')) {
-    // Skip empty lines:
-    bool is_empty = true;
-    for (char c : line) {
-      if (c != ' ') {
-        is_empty = false;
-        break;
-      }
-    }
-    if (is_empty) {
-      continue;
-    }
-    result += std::string(line.substr(min_indent)) + "\n";
-  }
-
-  return result;
-}
-
-}  // namespace
+#include "core/string.hpp"
 
 TEST_CASE("XML parser works correctly", "[xml]") {
   const std::string input = R"(
@@ -176,10 +111,8 @@ TEST_CASE("XML empty tag", "[xml]") {
   )";
 
   auto nodes = xml::Parse(input);
-  CHECK(!nodes);
-  REQUIRE(nodes.error().message == "Expected tag name, but got >");
-  REQUIRE(nodes.error().line == 1);
-  REQUIRE(nodes.error().column == 5);
+  CHECK(nodes.value().size() == 1);
+  CHECK(xml::Print(nodes.value()[0]) == StripIndent(input));
 }
 
 TEST_CASE("XML reactive", "[xml]") {
