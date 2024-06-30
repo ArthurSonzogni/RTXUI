@@ -1,28 +1,51 @@
-#include <fl/fl.h>
+#include "src/app.hpp"
 
-auto app = fl::App();
+App app;
 
-app.Register("SubComponent", ...);
+// app.Register("SubComponent", ...);
 
-// Define the <Component> component into the App.
-app.Register("Component", [](fl::ComponentTemplate& component) {
-  // Component attributes. They act as input parameters to the component.
-  component.Attribute("input_1", true);
-  component.Attribute("input_2", 42);
+// Define the <e> e into the App.
+app.RegisterComponent("MyComponent", [](Element& e) {
+  // Input parameters to the component.
+  // The parent binds a reactive value, the child receives a deep copy.
+  // Example: <MyComponent input_1="42" input_2="test"/>
+  e.Attribute("input_1");
+  e.Attribute("input_2");
 
-  // Component internal state. It can be modified by the component itself,
+  // Output parameters to the component. They are bound to functions.
+  // Example: <MyComponent click="handleClick"/>
+  e.Event("click");
+
+  // Input/Output parameters to the component.
+  // They acts as input/output parameters. This is a short hand for declaring
+  // both a
+  // e model. They acts as input/output parameters. They are short hand
+  // for defining an attribute and an event assigning the value to the
+  // attribute.
+  //
+  e.Model("model");
+
+  // e internal state. It can be modified by the e itself,
   // passed as attribute, and displayed inside the DOM.
-  component["state"] = true;
+  e["state"] = true;
 
   // Function to handle the button click event.
-  component.Function("toggle", [&](fl::Component& state, fl::Event& event) {
+  e.Function("toggle", [&](reactive::Reactive& that) {
+    // Assigning a new value to a reactive state will re-render the template.
     state["enabled"] = !state["enabled"];
   });
 
-  component::Computed("computed",
-                      [](fl::State&) { return 42 + state["input_1"]; });
+  e.Computed("computed", [](reactive::Reactive& that) {
+    // This function will be called whenever the `input_1` attribute or `state`
+    // internal state changes. The returned value will be assigned to
+    // `computed`.
+    if (that["state"]) {
+      return 42 - that["input_1"]
+    }
+    return 42 + that["input_1"]
+  });
 
-  component.Template(R"(
+  e.Dom(R"(
     <!-- This demonstrates the usage of interpolation -->
     <paragraph>
       Hello, World!
@@ -31,7 +54,7 @@ app.Register("Component", [](fl::ComponentTemplate& component) {
     </paragraph>
 
     <!-- This demonstrates event handling -->
-    <button @click.left="onClick">
+    <button click.left="onClick">
       Click me!
     </button>
 
@@ -48,11 +71,12 @@ app.Register("Component", [](fl::ComponentTemplate& component) {
       <template name="namedslot_2">Hello from slot 2</template>
     </SubComponent>
 
-    <!-- This demonstrates embedding a sub-component from the parent component -->
+    <!-- This demonstrates embedding a sub-e from the parent e -->
     <slot></slot>
   )");
 
-  component.Style(R"(
+  // Style is scoped to the current component. It is not global or inherited.
+  e.Style(R"(
     paragraph {
       display-outside: block;
       display-inside: flow;
@@ -73,5 +97,9 @@ app.Register("Component", [](fl::ComponentTemplate& component) {
       foreground-color: black;
       background-color: white;
     }
-  )")
-})
+  )");
+
+  e.OnMounted([](reactive::Reactive state) {
+    //
+  });
+});

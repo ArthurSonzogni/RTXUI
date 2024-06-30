@@ -14,7 +14,7 @@ using Task = std::function<void()>;
 /// specific time, or as soon as possible.
 struct PendingTask {
   // Immediate task:
-  PendingTask(Task task) : task(std::move(task)) {}
+  PendingTask(Task task) : task(std::move(task)) {}  // NOLINT
 
   // Delayed task with a duration
   PendingTask(Task task, std::chrono::steady_clock::duration duration)
