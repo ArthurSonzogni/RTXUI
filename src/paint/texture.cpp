@@ -1,5 +1,7 @@
 #include "paint/texture.hpp"
+
 #include <sstream>
+
 #include "core/likely.hpp"
 
 namespace {

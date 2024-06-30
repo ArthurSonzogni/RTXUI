@@ -1,4 +1,5 @@
 #include "reactive.hpp"
+
 #include <cassert>
 
 namespace reactive {
