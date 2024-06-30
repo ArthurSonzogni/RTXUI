@@ -2,6 +2,7 @@
 #define STYLE_HPP
 
 #include <optional>
+
 #include "paint/color.hpp"
 
 struct Rect {

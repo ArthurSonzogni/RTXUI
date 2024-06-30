@@ -1,5 +1,7 @@
 #include "task.hpp"
+
 #include <catch2/catch_test_macros.hpp>
+
 #include "task_runner.hpp"
 
 namespace {

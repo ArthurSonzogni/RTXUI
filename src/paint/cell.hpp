@@ -4,8 +4,9 @@
 #ifndef PAINT_CELL_HPP_
 #define PAINT_CELL_HPP_
 
-#include <cstdint>    // for uint8_t
-#include <string>     // for string, basic_string, allocator
+#include <cstdint>  // for uint8_t
+#include <string>   // for string, basic_string, allocator
+
 #include "color.hpp"  // for Color, Color::Default
 
 /// @brief A Unicode character and its associated style.
