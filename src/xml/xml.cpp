@@ -1,3 +1,6 @@
+// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
 #include "xml/xml.hpp"
 
 #include "core/expected.hpp"
@@ -111,16 +114,16 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
     }
 
     if (Get() == 0) {
+      return MakeErrorExpected("<");
+    }
+
+    if (Get() != '<') {
       return Node{
           .type = Node::kText,
           .text = xml_.substr(start, pos_ - start),
           .attributes = {},
           .children = {},
       };
-    }
-
-    if (Get() != '<') {
-      return MakeErrorExpected("<");
     }
 
     int end = pos_ - 1;
@@ -177,6 +180,9 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
   Nodes children;
   while (true) {
     ParseWhiteSpaces();
+    if (Get() == 0) {
+      return MakeErrorExpected("</");
+    }
     if (Get() == '<' && Get(1) == '/') {
       break;
     }
@@ -225,6 +231,9 @@ auto Parser::ParseComment() -> Expected<Node, Error> {
 
   int start = pos_;
   while (true) {
+    if (Get() == 0) {
+      return MakeErrorExpected("-->");
+    }
     if (Get() == '-' && Get(1) == '-' && Get(2) == '>') {
       break;
     }
@@ -272,15 +281,15 @@ auto Parse(std::string_view xml) -> Expected<Nodes, Error> {
   Parser parser(xml);
   while (true) {
     parser.ParseWhiteSpaces();
+    if (parser.Get() == 0) {
+      break;
+    }
+
     auto node = parser.ParseNode();
     if (!node) {
       return node.error();
     }
     nodes.push_back(node.value());
-    parser.ParseWhiteSpaces();
-    if (parser.Get() == 0) {
-      break;
-    }
   }
   return nodes;
 }
