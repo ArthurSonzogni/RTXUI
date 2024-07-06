@@ -1,3 +1,6 @@
+// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
 #include "paint/texture.hpp"
 
 #include <sstream>
@@ -43,8 +46,14 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
 
   if (UNLIKELY(next->foreground_color != prev->foreground_color ||
                next->background_color != prev->background_color)) {
-    // ss << "\x1B[" + next->foreground_color.Print(false) + "m";
-    // ss << "\x1B[" + next->background_color.Print(true) + "m";
+    ss << "\x1B[48;2";
+    ss << next->background_color.r << ";";
+    ss << next->background_color.g << ";";
+    ss << next->background_color.b << "m";
+    ss << "\x1B[38;2";
+    ss << next->foreground_color.r << ";";
+    ss << next->foreground_color.g << ";";
+    ss << next->foreground_color.b << "m";
   }
 }
 }  // namespace

@@ -19,7 +19,7 @@ add_library(cpp_react_tui
   "src/core/task_queue.hpp"
   "src/core/task_runner.cpp"
   "src/core/task_runner.hpp"
-  "src/dom/style.hpp"
+  "src/dom/computed_style.hpp"
   "src/paint/cell.cpp"
   "src/paint/cell.hpp"
   "src/paint/color.hpp"
@@ -42,14 +42,21 @@ target_include_directories(cpp_react_tui PUBLIC "src")
 option(CPP_REACT_TUI_BUILD_TESTS "Build tests" OFF)
 if(CPP_REACT_TUI_BUILD_TESTS)
   enable_testing()
-
-  # Use FetchContent to download Catch2
   include(FetchContent)
+
+  # Catch2
   FetchContent_Declare(catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2
     GIT_TAG v3.6.0
   )
   FetchContent_MakeAvailable(catch2)
+
+  # FuzzTest
+  FetchContent_Declare(fuzztest
+    GIT_REPOSITORY https://github.com/google/fuzztest.git
+    GIT_TAG e576caaece16bd1f8dcd196736743c36474f3c16
+  )
+  FetchContent_MakeAvailable(fuzztest)
 
   add_executable(cpp_react_tui_test
     "src/core/task_test.cpp"
@@ -59,4 +66,13 @@ if(CPP_REACT_TUI_BUILD_TESTS)
   )
   target_link_libraries(cpp_react_tui_test PRIVATE cpp_react_tui)
   target_link_libraries(cpp_react_tui_test PRIVATE Catch2::Catch2WithMain)
+
+  fuzztest_setup_fuzzing_flags()
+  add_executable(cpp_react_tui_fuzzer
+    "src/xml/xml_fuzzer.cpp"
+  )
+  include(GoogleTest)
+  target_link_libraries(cpp_react_tui_fuzzer PRIVATE cpp_react_tui)
+  link_fuzztest(cpp_react_tui_fuzzer)
+  gtest_discover_tests(cpp_react_tui_fuzzer)
 endif()
