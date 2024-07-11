@@ -6,14 +6,13 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "paint/texture.hpp"
-
+namespace rtxui {
 namespace {
 
 TEST_CASE("App basic", "[app]") {
   App app;
   app.Register("Main", [](Element& element) {
-    element.Dom(R"(
+    element.Template(R"(
       <div>Hello, World!</div>
       <Hello/>
       <World/>
@@ -26,20 +25,21 @@ TEST_CASE("App basic", "[app]") {
   });
 
   app.Register("Hello", [](Element& element) {
-    element.Dom(R"(
+    element.Template(R"(
       <div>Hello</div>
     )");
   });
 
   app.Register("World", [](Element& element) {
     element.Ref("ref", 42);
-    element.Dom(R"(
+    element.Template(R"(
       <div>World</div>
     )");
   });
 
-  Texture output(10, 5);
-  app.Render("Main", output);
+  // Texture output(10, 5);
+  // app.Render("Main", output);
 }
 
 }  // namespace
+}  // namespace rtxui

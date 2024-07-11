@@ -1,16 +1,37 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(cpp_react_tui
+project(rtxui
   LANGUAGES CXX
   VERSION 5.0.0
   DESCRIPTION "C++ reactive terminal renderering"
 )
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+option(RTXUI_BUILD_TESTS "Build tests" OFF)
+option(RTXUI_BUILD_EXAMPLES "Build examples" OFF)
+option(RTXUI_BUILD_FUZZERS "Build fuzzers" OFF)
 
-add_library(cpp_react_tui
+include(FetchContent)
+
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Set the default build type to 'Release'
+if (CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+add_library(rtxui
+  "src/cell/cell.hpp"
+  "src/component.cpp"
+  "src/component.hpp"
+  "src/app.cpp"
+  "src/app.hpp"
   "src/core/expected.hpp"
   "src/core/likely.hpp"
+  "src/core/refcounted.hpp"
   "src/core/string.cpp"
   "src/core/string.hpp"
   "src/core/task.cpp"
@@ -20,6 +41,9 @@ add_library(cpp_react_tui
   "src/core/task_runner.cpp"
   "src/core/task_runner.hpp"
   "src/dom/computed_style.hpp"
+  "src/dom/node.cpp"
+  "src/element.cpp"
+  "src/element.hpp"
   "src/paint/cell.cpp"
   "src/paint/cell.hpp"
   "src/paint/color.hpp"
@@ -29,50 +53,59 @@ add_library(cpp_react_tui
   "src/reactive/reactive.hpp"
   "src/xml/xml.cpp"
   "src/xml/xml.hpp"
-  "src/app.cpp"
-  "src/app.hpp"
-  "src/element.cpp"
-  "src/element.hpp"
 )
 
-target_compile_features(cpp_react_tui PUBLIC cxx_std_23)
-target_include_directories(cpp_react_tui PUBLIC "src")
+target_compile_features(rtxui PUBLIC cxx_std_23)
+target_include_directories(rtxui PUBLIC "src")
 
 # An option to enable testing
-option(CPP_REACT_TUI_BUILD_TESTS "Build tests" OFF)
-if(CPP_REACT_TUI_BUILD_TESTS)
+if(RTXUI_BUILD_TESTS)
   enable_testing()
-  include(FetchContent)
 
   # Catch2
   FetchContent_Declare(catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2
     GIT_TAG v3.6.0
+    EXCLUDE_FROM_ALL
+    GIT_PROGRESS TRUE
   )
   FetchContent_MakeAvailable(catch2)
+
+  add_executable(rtxui_test
+    "src/core/task_test.cpp"
+    "src/cell/cell_test.cpp"
+    "src/core/refcounted_test.cpp"
+    "src/reactive/reactive_test.cpp"
+    "src/xml/xml_test.cpp"
+    "src/app_test.cpp"
+  )
+  target_link_libraries(rtxui_test PRIVATE rtxui)
+  target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
+  list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+  include(CTest)
+  include(Catch)
+  catch_discover_tests(rtxui_test)
+
+endif()
+
+if (RTXUI_BUILD_FUZZERS)
+  enable_testing()
 
   # FuzzTest
   FetchContent_Declare(fuzztest
     GIT_REPOSITORY https://github.com/google/fuzztest.git
     GIT_TAG e576caaece16bd1f8dcd196736743c36474f3c16
+    EXCLUDE_FROM_ALL
+    GIT_PROGRESS TRUE
   )
   FetchContent_MakeAvailable(fuzztest)
 
-  add_executable(cpp_react_tui_test
-    "src/core/task_test.cpp"
-    "src/reactive/reactive_test.cpp"
-    "src/xml/xml_test.cpp"
-    "src/app_test.cpp"
-  )
-  target_link_libraries(cpp_react_tui_test PRIVATE cpp_react_tui)
-  target_link_libraries(cpp_react_tui_test PRIVATE Catch2::Catch2WithMain)
-
   fuzztest_setup_fuzzing_flags()
-  add_executable(cpp_react_tui_fuzzer
+  add_executable(rtxui_fuzzer
     "src/xml/xml_fuzzer.cpp"
   )
   include(GoogleTest)
-  target_link_libraries(cpp_react_tui_fuzzer PRIVATE cpp_react_tui)
-  link_fuzztest(cpp_react_tui_fuzzer)
-  gtest_discover_tests(cpp_react_tui_fuzzer)
+  target_link_libraries(rtxui_fuzzer PRIVATE rtxui)
+  link_fuzztest(rtxui_fuzzer)
+  gtest_discover_tests(rtxui_fuzzer)
 endif()

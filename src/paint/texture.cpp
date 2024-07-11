@@ -61,7 +61,7 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
 Texture::Texture(std::uint8_t width, std::uint8_t height)
     : width_(width), height_(height), cells_(width * height) {}
 
-Cell& Texture::At(int x, int y) {
+Cell& Texture::operator[](int x, int y) {
   if (x < 0 || x >= width_ || y < 0 || y >= height_) {
     return NullCell;
   }
