@@ -8,8 +8,10 @@
 #include <map>
 #include <string_view>
 
+#include "dom/node.hpp"
 #include "element.hpp"
-#include "paint/texture.hpp"
+
+namespace rtxui {
 
 // An App is a collection of components.
 class App {
@@ -19,10 +21,15 @@ class App {
   // Registers a component with the given label.
   void Register(const std::string_view label, std::function<void(Element&)> f);
 
-  void Render(const std::string_view label, Texture& texture);
+  void Render(const std::string_view label);
 
  private:
-  std::map<std::string, Element> elements_;
+  std::map<std::string, std::function<void(Element&)>> components_;
+
+  Ref<Element> root_element_ = nullptr;
+  Ref<Node> root_node_ = nullptr;
 };
+
+}  // namespace rtxui
 
 #endif  // APP_HPP_

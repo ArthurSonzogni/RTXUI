@@ -80,7 +80,7 @@ class Reactive {
   ~Reactive();
 
   // Type checkers
-  Type Type() const;
+  Type GetType() const;
   bool IsNull() const;
   bool IsBool() const;
   bool IsInt() const;

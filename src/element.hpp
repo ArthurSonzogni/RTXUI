@@ -7,9 +7,12 @@
 #include <functional>
 #include <string_view>
 
+#include "core/refcounted.hpp"
 #include "reactive/reactive.hpp"
 
-class Element {
+namespace rtxui {
+
+class Element : public RefCounted {
  public:
   void Attribute(const std::string_view label, reactive::Reactive value);
   void Event(const std::string_view label);
@@ -17,10 +20,12 @@ class Element {
   void Ref(const std::string_view label, reactive::Reactive value);
   void Computed(const std::string_view label,
                 std::function<reactive::Reactive(reactive::Reactive&)>);
-  void Dom(const std::string_view);
+  void Template(const std::string_view);
   void Style(const std::string_view);
 
  private:
 };
+
+}  // namespace rtxui
 
 #endif  // ELEMENT_HPP_

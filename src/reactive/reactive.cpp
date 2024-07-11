@@ -104,7 +104,7 @@ Reactive::~Reactive() {
 }
 
 // Type checkers
-Type Reactive::Type() const {
+Type Reactive::GetType() const {
   if (IsNull()) {
     return Type::kNull;
   }
@@ -125,6 +125,7 @@ Type Reactive::Type() const {
       return Type::kSet;
     default:
       assert(false);
+      return Type::kNull;
   }
 }
 
@@ -208,11 +209,11 @@ void Reactive::operator=(bool value) {
 }
 
 Reactive Reactive::operator+(const Reactive& other) const {
-  if (Type() != other.Type()) {
+  if (GetType() != other.GetType()) {
     return reactive::Null();
   }
 
-  switch (Type()) {
+  switch (GetType()) {
     case Type::kNull: {
       return reactive::Null();
     }
@@ -269,6 +270,7 @@ Reactive Reactive::operator+(const Reactive& other) const {
       return out;
     }
   }
+  assert(false);
 }
 
 Reactive Reactive::operator-(const Reactive& other) const {
@@ -527,6 +529,7 @@ bool Iterator::operator==(const Iterator& other) const {
       return std::get<2>(*it_) == std::get<2>(*other.it_);
     default:
       assert(false);
+      return false;
   }
 }
 

@@ -10,6 +10,8 @@
 #include "core/string.hpp"
 #include "xml/xml.hpp"
 
+namespace rtxui {
+
 void Element::Attribute(const std::string_view label,
                         reactive::Reactive value) {
   //
@@ -32,7 +34,7 @@ void Element::Computed(const std::string_view label,
   //
 }
 
-void Element::Dom(const std::string_view dom) {
+void Element::Template(const std::string_view dom) {
   std::string unindented_dom = StripIndent(dom);
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(unindented_dom);
   if (!nodes) {
@@ -69,3 +71,5 @@ void Element::Dom(const std::string_view dom) {
 void Element::Style(const std::string_view) {
   //
 }
+
+}  // namespace rtxui

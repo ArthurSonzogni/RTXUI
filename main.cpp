@@ -9,7 +9,7 @@ app.RegisterComponent("MyComponent", [](Element& e) {
   // Input parameters to the component.
   // The parent binds a reactive value, the child receives a deep copy.
   // Example: <MyComponent input_1="42" input_2="test"/>
-  e.Attribute("input_1");
+  auto x1 = e.Attribute("input_1");
   e.Attribute("input_2");
 
   // Output parameters to the component. They are bound to functions.
@@ -45,7 +45,7 @@ app.RegisterComponent("MyComponent", [](Element& e) {
     return 42 + that["input_1"]
   });
 
-  e.Dom(R"(
+  e.Template(R"(
     <!-- This demonstrates the usage of interpolation -->
     <paragraph>
       Hello, World!
@@ -103,3 +103,72 @@ app.RegisterComponent("MyComponent", [](Element& e) {
     //
   });
 });
+
+class Component {
+ public:
+  virtual std::string Setup() {}
+};
+
+#define RTXUI(name)                         \
+  struct RTXUI_##name : public Component {  \
+    std::string Setup() final;              \
+  };                                        \
+  namespace {                               \
+  rtxui::Register<RTXUI_##name> reg(#name); \
+  }                                         \
+  std::string RTXUI_##name::Setup()
+
+#define Expose(x) Expose(#x, x)
+
+RTXUI(MyComponent) {
+  // This state is reflecting the `<MyComponent input="world"/>` attribute by
+  // the parent.
+  auto input = State("world");
+
+  // This demonstrates the usage of computed values. `hello_input` will be
+  // updated whenever `input` is updated.
+  auto hello_input =
+      Computed<std::string>([] { return "Hello, " + input.Value(); });
+
+  auto counter_1 = State(0);
+  auto counter_2 = State(0);
+
+  // Computed values can depend on multiple reactive values.
+  auto counter_3 =
+      Computed<int>([&] { return counter_1.Value() + counter_2.Value(); });
+
+  // This demonstrates the usage of event handling.
+  auto onClick = [=] {
+    // Test
+    counter_1.value(counter_1.Value() + 1);
+  };
+
+  // Make values available to the template.
+  BIND(input);
+  BIND(hello_input);
+  BIND(counter_1);
+  BIND(onClick);
+
+  return R"(
+    <MyComponent input onclick>
+      <style scoped>
+        p {
+          color: red;
+        }
+      </style>
+
+      <p>
+        {hello_input}
+      </p>
+
+      <button click={onClick}>
+        Click me!
+      </button>
+
+      <p if={counter_1 > 0}>
+        You clicked {counter_1} times.
+      </p>
+
+    </MyComponent> 
+  )";
+};

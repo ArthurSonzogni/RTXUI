@@ -12,7 +12,7 @@
 class Texture {
  public:
   Texture(std::uint8_t width, std::uint8_t height);
-  Cell& At(int x, int y);
+  Cell& operator[](int x, int y);
 
   std::uint8_t width() const { return width_; }
   std::uint8_t height() const { return height_; }

@@ -27,7 +27,7 @@ TEST_CASE("Reactive null", "[reactive]") {
   REQUIRE(!r.IsArray());
   REQUIRE(!r.IsMap());
   REQUIRE(!r.IsSet());
-  REQUIRE(r.Type() == reactive::Type::kNull);
+  REQUIRE(r.GetType() == reactive::Type::kNull);
 }
 
 TEST_CASE("Reactive bool", "[reactive]") {
@@ -41,7 +41,7 @@ TEST_CASE("Reactive bool", "[reactive]") {
   REQUIRE(!r.IsMap());
   REQUIRE(!r.IsSet());
   REQUIRE(r.AsBool());
-  REQUIRE(r.Type() == reactive::Type::kBool);
+  REQUIRE(r.GetType() == reactive::Type::kBool);
 }
 
 TEST_CASE("Reactive int", "[reactive]") {
@@ -55,7 +55,7 @@ TEST_CASE("Reactive int", "[reactive]") {
   REQUIRE(!r.IsMap());
   REQUIRE(!r.IsSet());
   REQUIRE(r.AsInt() == 42);
-  REQUIRE(r.Type() == reactive::Type::kInt);
+  REQUIRE(r.GetType() == reactive::Type::kInt);
 }
 
 TEST_CASE("Reactive double", "[reactive]") {
@@ -69,7 +69,7 @@ TEST_CASE("Reactive double", "[reactive]") {
   REQUIRE(!r.IsMap());
   REQUIRE(!r.IsSet());
   REQUIRE(r.AsDouble() == 3.14);
-  REQUIRE(r.Type() == reactive::Type::kDouble);
+  REQUIRE(r.GetType() == reactive::Type::kDouble);
 }
 
 TEST_CASE("Reactive string", "[reactive]") {
@@ -83,7 +83,7 @@ TEST_CASE("Reactive string", "[reactive]") {
   REQUIRE(!r.IsMap());
   REQUIRE(!r.IsSet());
   REQUIRE(r.AsString() == "hello");
-  REQUIRE(r.Type() == reactive::Type::kString);
+  REQUIRE(r.GetType() == reactive::Type::kString);
 }
 
 TEST_CASE("Reactive array", "[reactive]") {
@@ -96,7 +96,7 @@ TEST_CASE("Reactive array", "[reactive]") {
   REQUIRE(r.IsArray());
   REQUIRE(!r.IsMap());
   REQUIRE(!r.IsSet());
-  REQUIRE(r.Type() == reactive::Type::kArray);
+  REQUIRE(r.GetType() == reactive::Type::kArray);
 }
 
 TEST_CASE("Reactive map", "[reactive]") {
@@ -109,7 +109,7 @@ TEST_CASE("Reactive map", "[reactive]") {
   REQUIRE(!r.IsArray());
   REQUIRE(r.IsMap());
   REQUIRE(!r.IsSet());
-  REQUIRE(r.Type() == reactive::Type::kMap);
+  REQUIRE(r.GetType() == reactive::Type::kMap);
 }
 
 TEST_CASE("Reactive set", "[reactive]") {
@@ -123,7 +123,7 @@ TEST_CASE("Reactive set", "[reactive]") {
   REQUIRE(!r.IsMap());
   REQUIRE(r.IsSet());
   REQUIRE(r.empty());
-  REQUIRE(r.Type() == reactive::Type::kSet);
+  REQUIRE(r.GetType() == reactive::Type::kSet);
 }
 
 TEST_CASE("Reactive copy", "[reactive]") {
@@ -275,7 +275,7 @@ TEST_CASE("Reactive array index", "[reactive]") {
   r.push_back(42);
   r.push_back(43);
 
-  REQUIRE(r[0].Type() == reactive::Type::kInt);
+  REQUIRE(r[0].GetType() == reactive::Type::kInt);
   REQUIRE(r[0].IsInt());
   REQUIRE(r[0].AsInt() == 42);
   REQUIRE(r[1].IsInt());
@@ -406,10 +406,10 @@ TEST_CASE("Reactive addition", "[reactive]") {
   for (auto a : all) {
     for (auto b : all) {
       auto c = a + b;
-      if (a.Type() == b.Type()) {
-        REQUIRE(c.Type() == a.Type());
+      if (a.GetType() == b.GetType()) {
+        REQUIRE(c.GetType() == a.GetType());
       } else {
-        REQUIRE(c.Type() == reactive::Type::kNull);
+        REQUIRE(c.GetType() == reactive::Type::kNull);
       }
     }
   }
@@ -418,17 +418,17 @@ TEST_CASE("Reactive addition", "[reactive]") {
   for (auto a : all) {
     for (auto b : all) {
       auto c = a - b;
-      if (a.Type() != b.Type()) {
-        REQUIRE(c.Type() == reactive::Type::kNull);
+      if (a.GetType() != b.GetType()) {
+        REQUIRE(c.GetType() == reactive::Type::kNull);
       } else {
-        switch (a.Type()) {
+        switch (a.GetType()) {
           case reactive::Type::kBool:
           case reactive::Type::kInt:
           case reactive::Type::kDouble:
-            REQUIRE(c.Type() == a.Type());
+            REQUIRE(c.GetType() == a.GetType());
             break;
           default:
-            REQUIRE(c.Type() == reactive::Type::kNull);
+            REQUIRE(c.GetType() == reactive::Type::kNull);
             break;
         }
       }
@@ -439,17 +439,17 @@ TEST_CASE("Reactive addition", "[reactive]") {
   for (auto a : all) {
     for (auto b : all) {
       auto c = a * b;
-      if (a.Type() != b.Type()) {
-        REQUIRE(c.Type() == reactive::Type::kNull);
+      if (a.GetType() != b.GetType()) {
+        REQUIRE(c.GetType() == reactive::Type::kNull);
       } else {
-        switch (a.Type()) {
+        switch (a.GetType()) {
           case reactive::Type::kBool:
           case reactive::Type::kInt:
           case reactive::Type::kDouble:
-            REQUIRE(c.Type() == a.Type());
+            REQUIRE(c.GetType() == a.GetType());
             break;
           default:
-            REQUIRE(c.Type() == reactive::Type::kNull);
+            REQUIRE(c.GetType() == reactive::Type::kNull);
             break;
         }
       }
@@ -460,16 +460,16 @@ TEST_CASE("Reactive addition", "[reactive]") {
   for (auto a : all) {
     for (auto b : all) {
       auto c = a / b;
-      if (a.Type() != b.Type()) {
-        REQUIRE(c.Type() == reactive::Type::kNull);
+      if (a.GetType() != b.GetType()) {
+        REQUIRE(c.GetType() == reactive::Type::kNull);
       } else {
-        switch (a.Type()) {
+        switch (a.GetType()) {
           case reactive::Type::kInt:
           case reactive::Type::kDouble:
-            REQUIRE(c.Type() == a.Type());
+            REQUIRE(c.GetType() == a.GetType());
             break;
           default:
-            REQUIRE(c.Type() == reactive::Type::kNull);
+            REQUIRE(c.GetType() == reactive::Type::kNull);
             break;
         }
       }
@@ -480,15 +480,15 @@ TEST_CASE("Reactive addition", "[reactive]") {
   for (auto a : all) {
     for (auto b : all) {
       auto c = a % b;
-      if (a.Type() != b.Type()) {
-        REQUIRE(c.Type() == reactive::Type::kNull);
+      if (a.GetType() != b.GetType()) {
+        REQUIRE(c.GetType() == reactive::Type::kNull);
       } else {
-        switch (a.Type()) {
+        switch (a.GetType()) {
           case reactive::Type::kInt:
-            REQUIRE(c.Type() == a.Type());
+            REQUIRE(c.GetType() == a.GetType());
             break;
           default:
-            REQUIRE(c.Type() == reactive::Type::kNull);
+            REQUIRE(c.GetType() == reactive::Type::kNull);
             break;
         }
       }
@@ -499,11 +499,11 @@ TEST_CASE("Reactive addition", "[reactive]") {
   for (auto a : all) {
     for (auto b : all) {
       auto c = a && b;
-      if (a.Type() == reactive::Type::kBool &&
-          b.Type() == reactive::Type::kBool) {
-        REQUIRE(c.Type() == reactive::Type::kBool);
+      if (a.GetType() == reactive::Type::kBool &&
+          b.GetType() == reactive::Type::kBool) {
+        REQUIRE(c.GetType() == reactive::Type::kBool);
       } else {
-        REQUIRE(c.Type() == reactive::Type::kNull);
+        REQUIRE(c.GetType() == reactive::Type::kNull);
       }
     }
   }
@@ -512,11 +512,11 @@ TEST_CASE("Reactive addition", "[reactive]") {
   for (auto a : all) {
     for (auto b : all) {
       auto c = a || b;
-      if (a.Type() == reactive::Type::kBool &&
-          b.Type() == reactive::Type::kBool) {
-        REQUIRE(c.Type() == reactive::Type::kBool);
+      if (a.GetType() == reactive::Type::kBool &&
+          b.GetType() == reactive::Type::kBool) {
+        REQUIRE(c.GetType() == reactive::Type::kBool);
       } else {
-        REQUIRE(c.Type() == reactive::Type::kNull);
+        REQUIRE(c.GetType() == reactive::Type::kNull);
       }
     }
   }
@@ -524,14 +524,14 @@ TEST_CASE("Reactive addition", "[reactive]") {
   // Logical not
   for (auto a : all) {
     auto b = !a;
-    switch (a.Type()) {
+    switch (a.GetType()) {
       case reactive::Type::kBool:
       case reactive::Type::kInt:
       case reactive::Type::kDouble:
-        REQUIRE(b.Type() == reactive::Type::kBool);
+        REQUIRE(b.GetType() == reactive::Type::kBool);
         break;
       default:
-        REQUIRE(b.Type() == reactive::Type::kNull);
+        REQUIRE(b.GetType() == reactive::Type::kNull);
         break;
     }
   }
