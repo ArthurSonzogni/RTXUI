@@ -5,6 +5,8 @@
 #pragma once
 
 #include <cassert>
+#include <concepts>
+#include <cstdint>
 #include <utility>
 
 namespace rtxui {
@@ -17,8 +19,8 @@ class RefCounted {
   RefCounted() = default;
   virtual ~RefCounted() { assert(count_ == 0); }
 
-  void AddRef() { ++count_; }
-  void Release() {
+  void AddRef() const { ++count_; }
+  void Release() const {
     --count_;
     if (count_ == 0) {
       delete this;
@@ -26,62 +28,38 @@ class RefCounted {
   }
 
  private:
-  mutable int count_ = 1;
+  mutable uint16_t count_ = 0;
 };
 
 template <typename T>
 class Ref {
  public:
+  Ref() = default;
+
   template <typename... Args>
-  Ref(Args&&... args) : ptr_(new T(std::forward<Args>(args)...)) {}
-
-  // Allow creating a null Ref.
-  Ref(std::nullptr_t) {}
-
-  // Allow implicit conversion from T*.
-  Ref(T* ptr) : ptr_(ptr) { ptr_->AddRef(); }
-
-  // Copy and move constructors.
-  Ref(const Ref& other) : ptr_(other.ptr_) { ptr_->AddRef(); }
-  Ref(Ref&& other) : ptr_(other.ptr_) { other.ptr_ = nullptr; }
-
-  // Copy and move constructor from derived class.
-  template <typename U>
-  Ref(Ref<U>& other) : ptr_(other.get()) {
-    ptr_->AddRef();
-  }
-  template <typename U>
-  Ref(Ref<U>&& other) : ptr_(other.get()) {
-    other.get() = nullptr;
+  static Ref<T> New(Args&&... args) {
+    return new T(std::forward<Args>(args)...);
   }
 
+  Ref(T* ptr) : ptr_(ptr) {
+    if (ptr_) {
+      ptr_->AddRef();
+    }
+  }
   ~Ref() {
     if (ptr_) {
       ptr_->Release();
+      ptr_ = nullptr;
     }
   }
 
-  Ref& operator=(const Ref& other) {
-    if (ptr_) {
-      ptr_->Release();
-    }
-    ptr_ = other.ptr_;
-    ptr_->AddRef();
-    return *this;
-  }
+  Ref(std::nullptr_t) {}
 
-  Ref& operator=(Ref&& other) {
-    if (ptr_) {
-      ptr_->Release();
-    }
-    ptr_ = other.ptr_;
-    other.ptr_ = nullptr;
-    return *this;
-  }
+  // Comparisons.
+  auto operator<=>(const Ref& other) const { return ptr_ <=> other.ptr_; }
 
-  // Allow implicit conversion to T*.
+  // Access to the underlying pointer. -----------------------------------------
   operator T*() { return ptr_; }
-
   T* get() { return ptr_; }
   T* operator->() { return ptr_; }
   const T* get() const { return ptr_; }
@@ -89,7 +67,76 @@ class Ref {
   T& operator*() { return *ptr_; }
   const T& operator*() const { return *ptr_; }
 
+  // Downcast from derived class. ----------------------------------------------
+  template <typename U>
+    requires std::derived_from<U, T>
+  Ref(const Ref<U>& other) : ptr_(other.ptr_) {
+    if (ptr_) {
+      ptr_->AddRef();
+    }
+  }
+  Ref(const Ref& other) : ptr_(other.ptr_) {
+    if (ptr_) {
+      ptr_->AddRef();
+    }
+  }
+  template <typename U>
+    requires std::derived_from<U, T>
+  Ref(Ref<U>&& other) {
+    ptr_ = other.ptr_;
+    other.ptr_ = nullptr;
+  }
+  Ref(Ref&& other) { std::swap(ptr_, other.ptr_); }
+
+  Ref& operator=(std::nullptr_t) {
+    if (ptr_) {
+      ptr_->Release();
+      ptr_ = nullptr;
+    }
+    return *this;
+  }
+
+  template <typename U>
+    requires std::derived_from<U, T>
+  Ref& operator=(Ref<U>& other) {
+    if (other.ptr_) {
+      other.ptr_->AddRef();
+    }
+    if (ptr_) {
+      ptr_->Release();
+    }
+    ptr_ = other.ptr_;
+    return *this;
+  }
+  Ref& operator=(const Ref& other) {
+    if (other.ptr_) {
+      other.ptr_->AddRef();
+    }
+    if (ptr_) {
+      ptr_->Release();
+    }
+    ptr_ = other.ptr_;
+    return *this;
+  }
+  template <typename U>
+    requires std::derived_from<U, T>
+  Ref& operator=(Ref<U>&& other) {
+    if (ptr_) {
+      ptr_->Release();
+    }
+    ptr_ = other.ptr_;
+    other.ptr_ = nullptr;
+    return *this;
+  }
+  Ref& operator=(Ref&& other) {
+    std::swap(ptr_, other.ptr_);
+    return *this;
+  }
+
  private:
+  template <typename U>
+  friend class Ref;
+
   T* ptr_ = nullptr;
 };
 

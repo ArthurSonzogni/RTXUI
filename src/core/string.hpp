@@ -11,6 +11,12 @@
 // Split a string by a delimiter, return a vector of string views.
 auto Split(std::string_view text,
            char delimiter) -> std::vector<std::string_view>;
+auto Split(std::string_view text,
+           std::string_view delimiter) -> std::vector<std::string_view>;
+auto Join(const std::vector<std::string_view>& parts,
+          std::string_view delimiter) -> std::string;
+auto Join(const std::vector<std::string>& parts,
+          std::string_view delimiter) -> std::string;
 auto StripIndent(const std::string_view& text) -> std::string;
 auto Repeat(std::string_view text, int count) -> std::string;
 

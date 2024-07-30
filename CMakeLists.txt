@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.24)
 
 project(rtxui
   LANGUAGES CXX
@@ -23,12 +23,16 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-add_library(rtxui
+add_library(rtxui_lib STATIC
+  "src/cell/cell.cpp"
   "src/cell/cell.hpp"
-  "src/component.cpp"
-  "src/component.hpp"
-  "src/app.cpp"
-  "src/app.hpp"
+  "src/components/component.cpp"
+  "src/components/component.hpp"
+  "src/components/div.cpp"
+  "src/components/p.cpp"
+  "src/components/span.cpp"
+  "src/components/strong.cpp"
+  "src/components/ul.cpp"
   "src/core/expected.hpp"
   "src/core/likely.hpp"
   "src/core/refcounted.hpp"
@@ -41,9 +45,12 @@ add_library(rtxui
   "src/core/task_runner.cpp"
   "src/core/task_runner.hpp"
   "src/dom/computed_style.hpp"
-  "src/dom/node.cpp"
-  "src/element.cpp"
-  "src/element.hpp"
+  "src/dom/element.cpp"
+  "src/dom/element.hpp"
+  "src/dom/text_element.cpp"
+  "src/dom/text_element.hpp"
+  "src/dom/slot_element.cpp"
+  "src/dom/slot_element.hpp"
   "src/paint/cell.cpp"
   "src/paint/cell.hpp"
   "src/paint/color.hpp"
@@ -51,12 +58,18 @@ add_library(rtxui
   "src/paint/texture.hpp"
   "src/reactive/reactive.cpp"
   "src/reactive/reactive.hpp"
+  "src/register.cpp"
+  "src/register.hpp"
   "src/xml/xml.cpp"
   "src/xml/xml.hpp"
 )
 
-target_compile_features(rtxui PUBLIC cxx_std_23)
-target_include_directories(rtxui PUBLIC "src")
+target_compile_features(rtxui_lib PUBLIC cxx_std_23)
+target_include_directories(rtxui_lib PUBLIC "src")
+
+# See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
+add_library(rtxui "src/dummy.cpp")
+target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui_lib>")
 
 # An option to enable testing
 if(RTXUI_BUILD_TESTS)
@@ -72,12 +85,12 @@ if(RTXUI_BUILD_TESTS)
   FetchContent_MakeAvailable(catch2)
 
   add_executable(rtxui_test
-    "src/core/task_test.cpp"
     "src/cell/cell_test.cpp"
+    "src/components/component_test.cpp"
     "src/core/refcounted_test.cpp"
+    "src/core/task_test.cpp"
     "src/reactive/reactive_test.cpp"
     "src/xml/xml_test.cpp"
-    "src/app_test.cpp"
   )
   target_link_libraries(rtxui_test PRIVATE rtxui)
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
