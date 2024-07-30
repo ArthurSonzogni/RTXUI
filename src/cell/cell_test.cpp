@@ -5,27 +5,26 @@
 #include "cell/cell.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <iostream>
 
 namespace rtxui {
 namespace {
 
 template <typename T>
 auto State(T&& value) {
-  return Ref<TypedCell<T>>(std::forward<T>(value));
+  return Ref<TypedCell<T>>::New(std::forward<T>(value));
 }
 
 template <typename T>
 auto Computed(std::function<T()> f) {
-  return Ref<ComputedTypedCell<T>>(std::move(f));
+  return Ref<ComputedTypedCell<T>>::New(std::move(f));
 }
 
 auto Watch(std::function<void()> f) {
-  return Ref<WatcherCaptureCell>(std::move(f));
+  return Ref<WatcherCaptureCell>::New(std::move(f));
 }
 
 auto Watch(Ref<Cell> cell, std::function<void()> f) {
-  auto out = Ref<WatcherCell>(std::move(f));
+  auto out = Ref<WatcherCell>::New(std::move(f));
   out->DependsOn(cell.get());
   return out;
 }
@@ -33,7 +32,6 @@ auto Watch(Ref<Cell> cell, std::function<void()> f) {
 TEST_CASE("Computed", "[cell]") {
   auto a = State(42);
   auto b = State(23);
-
   REQUIRE(a->Value() == 42);
   REQUIRE(b->Value() == 23);
 

@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <functional>
-#include <iostream>
 #include <utility>
 #include <vector>
 
@@ -16,29 +15,29 @@ namespace rtxui {
 class Cell : public RefCounted {
  public:
   void InvalidateDependents() {
-    std::cerr << __func__ << std::endl;
     for (auto* dependent : dependents_) {
       dependent->Invalidate();
     }
   }
   virtual void Invalidate() {}
-  ~Cell() override {
-    std::cerr << __func__ << std::endl;
-    for (auto* dependent : dependents_) {
-      std::erase_if(dependent->dependencies_,
-                    [this](const auto& ref) { return ref.get() == this; });
-    }
-    for (auto& ref : dependencies_) {
-      std::erase_if(ref->dependents_, [this](const auto* dependent) {
-        return dependent == this;
-      });
-    }
-  }
+  ~Cell() override { ClearDependencies(); }
 
   void DependsOn(Cell* dependency) {
-    std::cerr << __func__ << std::endl;
     dependencies_.push_back(dependency);
     dependency->dependents_.push_back(this);
+  }
+
+ private:
+  void ClearDependencies() {
+    // Move the dependencies to a temporary vector to avoid invalidating the re
+    // entrance problems.
+    std::vector<Ref<Cell>> dependencies = std::move(dependencies_);
+    std::vector<Cell*> dependents = std::move(dependents_);
+
+    for (auto& dependency : dependencies) {
+      std::erase(dependency->dependents_, this);
+    }
+    // Dependencies are cleared here.
   }
 
  protected:
@@ -46,7 +45,7 @@ class Cell : public RefCounted {
   std::vector<Ref<Cell>> dependencies_;
 };
 
-std::vector<Cell*>* g_captured_cells = nullptr;
+extern std::vector<Cell*>* g_captured_cells;
 
 template <typename T>
 class TypedCell : public Cell {
@@ -54,20 +53,17 @@ class TypedCell : public Cell {
   TypedCell(T value) : previous_value_(value), value_(std::move(value)) {}
 
   T Value() {
-    std::cerr << __func__ << std::endl;
     if (g_captured_cells) {
       g_captured_cells->push_back(this);
     }
     return value_;
   }
   void Value(T value) {
-    std::cerr << __func__ << std::endl;
     value_ = std::move(value);
     Invalidate();
   }
 
   void Invalidate() override {
-    std::cerr << __func__ << std::endl;
     if (value_ == previous_value_) {
       return;
     }
@@ -85,7 +81,6 @@ class ComputedTypedCell : public TypedCell<T> {
  public:
   ComputedTypedCell(std::function<T()> callback)
       : TypedCell<T>(callback()), callback_(std::move(callback)) {
-    std::cerr << __func__ << std::endl;
     std::vector<Cell*> captured_cells;
     g_captured_cells = &captured_cells;
     callback_();
@@ -96,7 +91,6 @@ class ComputedTypedCell : public TypedCell<T> {
   }
 
   void Invalidate() override {
-    std::cerr << __func__ << std::endl;
     this->value_ = callback_();
     if (this->value_ == this->previous_value_) {
       return;

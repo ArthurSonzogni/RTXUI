@@ -27,8 +27,8 @@ class Printer final : public RefCounted {
 TEST_CASE("basic", "[refcount]") {
   std::vector<std::string> out;
   {
-    auto a = Ref<Printer>("a", out);
-    auto b = Ref<Printer>("b", out);
+    auto a = Ref<Printer>::New("a", out);
+    auto b = Ref<Printer>::New("b", out);
   }
   REQUIRE(out == std::vector<std::string>{
                      "a constructed",
@@ -41,8 +41,8 @@ TEST_CASE("basic", "[refcount]") {
 TEST_CASE("copy", "[refcount]") {
   std::vector<std::string> out;
   {
-    auto a = Ref<Printer>("a", out);
-    auto b = Ref<Printer>("b", out);
+    auto a = Ref<Printer>::New("a", out);
+    auto b = Ref<Printer>::New("b", out);
     a = b;
   }
   REQUIRE(out == std::vector<std::string>{
@@ -56,7 +56,7 @@ TEST_CASE("copy", "[refcount]") {
 TEST_CASE("move", "[refcount]") {
   std::vector<std::string> out;
   {
-    auto a = Ref<Printer>("a", out);
+    auto a = Ref<Printer>::New("a", out);
     auto b = std::move(a);
   }
   REQUIRE(out == std::vector<std::string>{
@@ -68,8 +68,8 @@ TEST_CASE("move", "[refcount]") {
 TEST_CASE("capture", "[refcount]") {
   std::vector<std::string> out;
   {
-    auto a = Ref<Printer>("a", out);
-    auto b = Ref<Printer>("b", out);
+    auto a = Ref<Printer>::New("a", out);
+    auto b = Ref<Printer>::New("b", out);
     std::swap(a, b);
   }
   REQUIRE(out == std::vector<std::string>{
