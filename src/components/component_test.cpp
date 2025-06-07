@@ -1,179 +1,153 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "component.hpp"
+#include "components/component.hpp"
+#include "components/default_components.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
 
 #include "core/string.hpp"
-#include "register.hpp"
 
-namespace rtxui::test {
 namespace {
 
-RTXUI_COMPONENT(Component) {
-  return R"(
-    <template>
-      Hello, World!
-      <Hello/>
-      <World/>
-    </template>
-
-    <style>
-      this {
-        display-inside: flow;
-        display-outside: block;
-        background-color: red;
-        foreground-color: white;
-        decoration: bold
-      }
-    </style>
-  )";
-}
-
 RTXUI_COMPONENT(Hello) {
-  return R"(
-    <template>
-      <div>
-        Hello
-      </div>
-    </template>
-  )";
+  return R"html(
+    Hello
+  )html";
 }
 
 RTXUI_COMPONENT(World) {
-  return R"(
-    <template>
-      <div>
-        World
-      </div>
-    </template>
-  )";
+  return R"html(
+    World
+  )html";
 }
 
-TEST_CASE("RegisterAll", "[component]") {
-  std::string expected = R"(
-    div
-    p
-    rtxui {
-      test {
-        Component
-        Hello
-        World
-      }
-    }
-  )";
-  std::cerr << "```" << std::endl;
-  std::cerr << Register::Print() << std::endl;
-  std::cerr << "```" << std::endl;
-}
+RTXUI_COMPONENT(HelloWorld) {
+  // Import components
+  Import<Hello>();
+  Import<World>();
 
-TEST_CASE("Registered", "[component]") {
-  REQUIRE(Register::Get("Component") != nullptr);
-  REQUIRE(Register::Get("Hello") != nullptr);
-  REQUIRE(Register::Get("World") != nullptr);
-  REQUIRE(Register::Get("Unknown") == nullptr);
-}
+  //// Define internal reactive state.
+  //auto count = State(0);
 
-TEST_CASE("Setup", "[component]") {
-  REQUIRE(Register::Get("Component")->New()->Setup() == R"(
-    <template>
-      Hello, World!
-      <Hello/>
-      <World/>
-    </template>
+  //// Define computed state.
+  //auto computed = Computed([count]() {
+    //return "Count is: " + std::to_string(count->Value());
+  //});
+
+  //// Define callbacks.
+  //auto increment = [count] {
+    //count->SetValue(count->Value() + 1);
+  //}
+
+  //auto reset = [count] {
+    //count->SetValue(0);
+  //}
+
+  //// Bind the state and computed values to the template.
+  //Import("count", count);
+  //Import("computed", computed);
+  //Import("increment", increment);
+
+  return R"html(
+    Hello, World!
+    <Hello/>
+    <World/>
 
     <style>
-      this {
+      self {
         display-inside: flow;
         display-outside: block;
         background-color: red;
         foreground-color: white;
-        decoration: bold
+        decoration: bold;
       }
     </style>
-  )");
+  )html";
+}
 
-  REQUIRE(Register::Get("Hello")->New()->Setup() == R"(
-    <template>
-      <div>
-        Hello
-      </div>
-    </template>
-  )");
+TEST_CASE("Tag", "[component]") {
+  REQUIRE(HelloWorld().Tag() == "HelloWorld");
+  REQUIRE(Hello().Tag() == "Hello");
+  REQUIRE(World().Tag() == "World");
+}
 
-  REQUIRE(Register::Get("World")->New()->Setup() == R"(
-    <template>
-      <div>
-        World
-      </div>
-    </template>
-  )");
+TEST_CASE("Setup", "[component]") {
+  HelloWorld component;
+  REQUIRE(component.Template() == StripIndent(R"(
+    Hello, World!
+    <Hello/>
+    <World/>
+
+    <style>
+      self {
+        display-inside: flow;
+        display-outside: block;
+        background-color: red;
+        foreground-color: white;
+        decoration: bold;
+      }
+    </style>
+  )"));
 }
 
 TEST_CASE("Mount", "[component]") {
-  auto component = Register::Get("Component")->New();
-  component->Mount();
+  auto component = HelloWorld();
+  component.Mount();
 
   const std::string expected = R"(
-    <Component>
+    <HelloWorld>
       Hello, World!
       <Hello>
-        <div>
-          Hello
-        </div>
+        Hello
       </Hello>
       <World>
-        <div>
-          World
-        </div>
+        World
       </World>
-    </Component>
+    </HelloWorld>
   )";
 
-  REQUIRE(component->Root()->Print() == StripIndent(expected));
+  REQUIRE(component.Root()->Print() == StripIndent(expected));
 }
 
-RTXUI_COMPONENT(Page) {
-  return R"(
-    <template>
-      <slot.header/>
-      <slot/>
-      <slot.footer/>
-    </template>
+ RTXUI_COMPONENT(Page) {
+   return R"(
+    <slot.header/>
+    <slot/>
+    <slot.footer/>
   )";
 }
 
 RTXUI_COMPONENT(MyPage) {
+  Import<rtxui::p>();
+  Import<Page>();
   return R"(
-    <template>
-      <p> This is a page: </p>
-      <Page>
-        <template.header>
-          <p>
-            A website by Arthur Sonzogni
-          </p>
-        </template.header>
-
-        <template.footer>
-          <p>
-            © 2024 Arthur Sonzogni
-          </p>
-        </template.footer>
-
+    <p> This is a page: </p>
+    <Page>
+      <template.header>
         <p>
-          Hello, World!
+          A website by Arthur Sonzogni
         </p>
-      </Page>
-    </template>
+      </template.header>
+
+      <template.footer>
+        <p>
+          © 2024 Arthur Sonzogni
+        </p>
+      </template.footer>
+
+      <p>
+       Hello, World!
+      </p>
+    </Page>
   )";
 }
 
 TEST_CASE("Component with named slots", "[component]") {
-  auto component = Register::Get("MyPage")->New();
-  component->Mount();
+  MyPage mypage;
+  mypage.Mount();
 
   const std::string expected = R"(
     <MyPage>
@@ -194,81 +168,127 @@ TEST_CASE("Component with named slots", "[component]") {
     </MyPage>
   )";
 
-  REQUIRE(component->Root()->Print() == StripIndent(expected));
+  REQUIRE(mypage.Root()->Print() == StripIndent(expected));
 }
 
-namespace a {
-RTXUI_COMPONENT(div) {
-  return R"(
-      <template>
-        <p>
-          This is a "ftxui.test.a.div", hiding the builtin "div".
-        </p>
+RTXUI_COMPONENT(Inverted) {
+  // Test the Import alias feature, by inverting the semantics of `p` and `div`.
+  Import<rtxui::p>("div");
+  Import<rtxui::div>("p");
 
-        <slot/>
-      </template>
-    )";
+  return R"html(
+    <div>
+      <p>
+        This is a div inside a p.
+      </p>
+      <div>
+        This is a p inside a p.
+      </div>
+    </div>
+
+    <p>
+      <div>
+        This is a p inside a div.
+      </div>
+      <p>
+        This is a div inside a div.
+      </p>
+    </p>
+  )html";
 }
 
-RTXUI_COMPONENT(div_user) {
-  return R"(
-      <template>
+TEST_CASE("Import alias", "[component]") {
+  // Here we try to test the Import alias feature by importing `p` as `div` and
+  // `div` as `p`. This should invert the semantics of the two elements in the
+  // template.
+  const std::string expected = R"html(
+    <Inverted>
+      <p>
         <div>
-          <p>What div is this?</p>
+          This is a div inside a p.
         </div>
-      </template>
-    )";
-}
-}  // namespace a
-
-RTXUI_COMPONENT(TwoDiv) {
-  return R"(
-    <template>
-
-      <div>
-        First div.
-      </div>
-
-      <a.div>
-        Second div.
-      </a.div>
-
-      <a.div_user/>
-
-    </template>
-  )";
-}
-
-TEST_CASE("Component namespace", "[component]") {
-  auto component = Register::Get("TwoDiv")->New();
-  component->Mount();
-
-  const std::string expected = R"(
-    <TwoDiv>
-      <div>
-        First div.
-      </div>
+        <p>
+          This is a p inside a p.
+        </p>
+      </p>
       <div>
         <p>
-          This is a "ftxui.test.a.div", hiding the builtin "div".
+          This is a p inside a div.
         </p>
-        Second div.
-      </div>
-      <div_user>
         <div>
-          <p>
-            This is a "ftxui.test.a.div", hiding the builtin "div".
-          </p>
-          <p>
-            What div is this?
-          </p>
+          This is a div inside a div.
         </div>
-      </div_user>
-    </TwoDiv>
-  )";
+      </div>
+    </Inverted>
+  )html";
+  
+  Inverted inverted;
+  inverted.Mount();
+  REQUIRE(inverted.Root()->Print() == StripIndent(expected));
+}
 
-  REQUIRE(component->Root()->Print() == StripIndent(expected));
+RTXUI_COMPONENT(Counter) {
+  // Define internal reactive state.
+  auto count = State(0);
+
+  // Define computed state.
+  auto double_count = Computed([count]() {
+    return count->Value() * 2;
+  });
+
+  // Define callbacks that will be called when the user interacts with the
+  // component.
+  auto increment = [count] { count->SetValue(count->Value() + 1); };
+  auto reset = [count] { count->SetValue(0); };
+
+  // Import the components used in the template.
+  //
+  // Note that there are no "special" components in rtxui. All components are
+  // regular components that can be imported and used in the template.
+  //
+  // RTXUI provides a set of default components that can be imported, such as
+  // `p`, `span`, and `button`. These components are defined in the
+  // `default_components.hpp` header file, which is included in the
+  // `components` directory.
+  //
+  // Import are scoped to the component we are defining. This means that every
+  // component can import the same component without conflicts.
+  Import<rtxui::div>();
+  Import<rtxui::button>();
+  Import<rtxui::ul>();
+  Import<rtxui::li>();
+
+  // Bind the state and callbacks to make them available to the template.
+  Import("count", count);
+  Import("double_count", double_count);
+  Import("increment", increment);
+  Import("reset", reset);
+
+  // Return the template of the component.
+  return R"html(
+    <ul>
+      <li>Count: {count}<p>
+      <li>Count: {count}</p>
+    </ul>
+
+    <button onclick="{increment}">Increment</button>
+    <button onclick="{reset}">Reset</button>
+
+    <style>
+      p {
+        background-color:red;
+        color: white;
+        decoration: bold;
+      }
+
+      button {
+        background-color: blue;
+        color: white;
+        padding: 5px;
+        border-radius: 3px;
+      }
+    </style>
+  )html";
 }
 
 }  // namespace
-}  // namespace rtxui::test

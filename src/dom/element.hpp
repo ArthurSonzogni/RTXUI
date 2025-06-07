@@ -2,20 +2,22 @@
 #define DOM_ElEMENT_HPP_
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "core/refcounted.hpp"
+#include "layout/LayoutObject.hpp"
 
 namespace rtxui {
 
-class Component;
+class ComponentBase;
 
 // A generic HTML element
 class Element : public RefCounted {
  public:
   Element() = default;
-  explicit Element(const Component* component) : component_(component) {}
+  explicit Element(const ComponentBase* component) : component_(component) {}
 
   // Disallow copy and assign.
   Element(const Element&) = delete;
@@ -34,12 +36,16 @@ class Element : public RefCounted {
 
   std::string_view tag() const;
 
-  virtual std::string Print(int depth = 0) const;
+  // Debugging.
+  std::string Print() const { return Print(0); }
+  virtual std::string Print(int depth) const;
 
  protected:
   std::vector<Ref<Element>> children_;
   Element* parent_ = nullptr;
-  const Component* component_ = nullptr;
+  const ComponentBase* component_ = nullptr;
+
+  std::unique_ptr<LayoutObject> layout_object_;
 };
 
 }  // namespace rtxui

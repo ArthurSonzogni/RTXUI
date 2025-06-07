@@ -31,6 +31,44 @@ TEST_CASE("XML parser works correctly", "[xml]") {
   CHECK(xml::Print(nodes.value()[0]) == StripIndent(input));
 }
 
+TEST_CASE("XML with multiple roots", "[xml]") {
+  const std::string input = R"(
+    <root1>
+      <sub/>
+    </root1>
+    <root2>
+      <sub/>
+    </root2>
+  )";
+
+  auto nodes = xml::Parse(input);
+  if (!nodes) {
+    FAIL(nodes.error().message + " at line " +
+         std::to_string(nodes.error().line) + " column " +
+         std::to_string(nodes.error().column));
+  }
+
+  CHECK(nodes.value().size() == 2);
+  CHECK(nodes.value()[0].tag == "root1");
+  CHECK(nodes.value()[1].tag == "root2");
+}
+
+TEST_CASE("XML with unique text", "[xml]") {
+  const std::string input = "Hello World!";
+
+  auto nodes = xml::Parse(input);
+  if (!nodes) {
+    FAIL(nodes.error().message + " at line " +
+         std::to_string(nodes.error().line) + " column " +
+         std::to_string(nodes.error().column));
+  }
+
+  CHECK(nodes.value().size() == 1);
+  CHECK(nodes.value()[0].type == xml::Node::kText);
+  CHECK(nodes.value()[0].text == "Hello World!");
+  CHECK(xml::Print(nodes.value()[0]) == "Hello World!\n");
+}
+
 TEST_CASE("XML attribute containing spaces", "[xml]") {
   const std::string input = R"(
     <root>

@@ -5,8 +5,6 @@
 
 namespace rtxui {
 
-class Component;
-
 // A text HTML element
 class TextElement : public Element {
  public:

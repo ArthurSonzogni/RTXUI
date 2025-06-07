@@ -8,19 +8,20 @@
 #include <vector>
 
 namespace rtxui {
-class Component;
 
-struct Register {
-  explicit Register(Component* component);
+class ComponentBase;
 
-  static std::vector<std::string> ComputeNamespaces(std::source_location);
-  static const Component* Get(
-      std::string_view name,
-      const std::vector<std::string>& namespaces =
-          ComputeNamespaces(std::source_location::current()));
+//struct Register {
+  //explicit Register(ComponentBase* component);
 
-  // Debug
-  static std::string Print();
-};
+  //static std::vector<std::string> ComputeNamespaces(std::source_location);
+  //static const ComponentBase* Get(
+      //std::string_view name,
+      //const std::vector<std::string>& namespaces =
+          //ComputeNamespaces(std::source_location::current()));
+
+  //// Debug
+  //static std::string Print();
+//};
 
 }  // namespace rtxui
