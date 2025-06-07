@@ -1,3 +1,4 @@
+#include <iostream>
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
@@ -113,18 +114,14 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
       Advance();
     }
 
-    if (Get() == 0) {
-      return MakeErrorExpected("<");
-    }
-
-    if (Get() != '<') {
-      return Node{
-          .type = Node::kText,
-          .text = xml_.substr(start, pos_ - start),
-          .attributes = {},
-          .children = {},
-      };
-    }
+    //if (Get() != '<') {
+      //return Node{
+          //.type = Node::kText,
+          //.text = xml_.substr(start, pos_ - start),
+          //.attributes = {},
+          //.children = {},
+      //};
+    //}
 
     int end = pos_ - 1;
     while (Contains(xml_[end], {' ', '\n', '\t'})) {

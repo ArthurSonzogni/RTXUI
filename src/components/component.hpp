@@ -6,28 +6,38 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 #include <set>
-#include <source_location>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 #include "cell/cell.hpp"
 #include "core/refcounted.hpp"
 #include "dom/element.hpp"
-#include "register.hpp"
+#include "components/import.hpp"
 #include "xml/xml.hpp"
+#include "reflection/class_name.hpp"
 
 namespace rtxui {
 
-class Component : public RefCounted {
+class ComponentBase : public RefCounted, public Bindings {
  public:
-  virtual std::string Setup() = 0;
-  virtual Ref<Component> New() const = 0;
-  virtual std::string_view Tag() const = 0;
-  virtual const std::vector<std::string>& Namespaces() = 0;
+  virtual ~ComponentBase() = default;
 
-  // Bind a name in the template to a cell.
-  void Bind(std::string_view name, Ref<Cell> value);
+  /// Define a component.
+  ///
+  /// @return the template of the component, which is a string containing
+  /// HTML-like syntax.
+  virtual std::string_view RunSetup() = 0;
+
+  /// This is used by `Import` to avoid users to have to specify the name of a
+  /// class.
+  virtual std::string_view Tag() const = 0;
+
+  std::string_view Template();
 
   template <typename T>
   auto State(T&& value) {
@@ -65,48 +75,76 @@ class Component : public RefCounted {
   void Render();
   Element* Root() { return root_.get(); }
 
-  Element* DefaultSlot();
-  Element* Slot(std::string_view name);
+  Ref<Element> Slot(std::string_view name);
 
  private:
-  void Render(const xml::Node& node, Element* element);
+  void Render(const xml::Node& node, Element* element, ComponentBase* source);
+
+  std::string template_;
 
   std::string xml_string_;
   xml::Nodes xml_nodes_;
 
-  std::map<std::string, Ref<Cell>> bindings_;
   std::set<Ref<Cell>> watchers_;
   Ref<Element> root_;
 
-  Ref<Element> default_slot_;
   std::map<std::string, Ref<Element>> slots_;
 
-  std::set<Ref<Component>> children_;
+  std::set<Ref<ComponentBase>> children_;
+};
+
+template <typename Derived>
+class Component : public ComponentBase {
+ public:
+  static std::string_view StaticTag() { return ClassName<Derived>(); }
+  std::string_view Tag() const final { return StaticTag(); }
+  std::string_view RunSetup() final {
+    if constexpr (requires { Derived::kTemplate; }) {
+      // The derived class has a static member named kTemplate ?
+      return Derived::kTemplate;
+    } else if constexpr (requires { static_cast<Derived*>(this)->Setup(); }) {
+      // Either the derived class implements Setup(), or it is a static
+      // string_view named kTemplate.
+      return static_cast<Derived*>(this)->Setup();
+    } else {
+      static_assert(false,
+                    "Component must implement Setup() or have a static "
+                    "kTemplate member.");
+    }
+  }
 };
 
 }  // namespace rtxui
 
-#define RTXUI_COMPONENT(name)                                     \
-  struct RTXUI_##name : public rtxui::Component {                 \
-    inline std::string Setup() final;                             \
-    ::rtxui::Ref<Component> New() const final {                   \
-      return ::rtxui::Ref<RTXUI_##name>::New();                   \
-    }                                                             \
-    static std::source_location SourceLocation() {                \
-      return std::source_location::current();                     \
-    }                                                             \
-    std::string_view Tag() const final {                          \
-      return #name;                                               \
-    }                                                             \
-    const std::vector<std::string>& Namespaces() final {          \
-      static std::vector<std::string> namespaces_ =               \
-          ::rtxui::Register::ComputeNamespaces(SourceLocation()); \
-      return namespaces_;                                         \
-    }                                                             \
-  };                                                              \
-  ::rtxui::Register rtxui_reg_##name(new RTXUI_##name());         \
-  inline std::string RTXUI_##name::Setup()
-
-#define RTXUI_BIND(x) Bind(#x, x)
+/// A macro turning:
+/// ```cpp
+/// RTXUI_COMPONENT(Hello) {4
+///   return R"html(
+///   <div>
+///   Hello
+///   </div>
+///   )html";
+/// }
+/// ```
+///
+/// Into:
+/// ```cpp
+/// class Hello : public rtxui::Component<Hello> {
+///  public:
+///   std::string_view Setup() {
+///     return R"html(
+///       <div>
+///         Hello
+///       </div>
+///     )html";
+///   }
+/// };
+/// ```
+#define RTXUI_COMPONENT(T)               \
+  class T : public rtxui::Component<T> { \
+   public:                               \
+    std::string_view Setup();            \
+  };                                     \
+  std::string_view T::Setup()
 
 #endif  // RTXUI_COMPONENT_HPP_

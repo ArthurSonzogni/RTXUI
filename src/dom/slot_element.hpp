@@ -5,8 +5,6 @@
 
 namespace rtxui {
 
-class Component;
-
 // A slot HTML element
 class SlotElement : public Element {
  public:

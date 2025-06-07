@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <print>
 #include <string_view>
 #include <vector>
 
@@ -13,6 +14,11 @@
 
 namespace rtxui {
 namespace {
+
+int indent = 0;
+std::string Indent() {
+  return std::string(indent * 2, ' ');
+}
 
 void XmlParseError(const xml::Error& error, std::string_view xml_string) {
   std::cerr << "======== Error parsing DOM ========" << std::endl;
@@ -41,46 +47,47 @@ void XmlParseError(const xml::Error& error, std::string_view xml_string) {
   std::exit(1);
 }
 
-void UnknownComponentError(std::string_view tag) {
-  std::cerr << "Unknown component: " << tag << std::endl;
-  std::cerr << "" << std::endl;
-  std::cerr << "Did you defined the component and correctly linked it?"
-            << std::endl;
-  std::cerr << "Known components: " << std::endl;
-  std::cerr << Register::Print() << std::endl;
-  std::exit(1);
-}
-
 }  // namespace
 
-void Component::Bind(std::string_view name, Ref<Cell> value) {
-  bindings_.insert({std::string(name), std::move(value)});
+std::string_view ComponentBase::Template() {
+  if (template_.empty()) {
+    template_ = StripIndent(RunSetup());
+  }
+  return template_;
 }
 
-void Component::Mount() {
-  xml_string_ = StripIndent(Setup());
+void ComponentBase::Mount() {
+  indent++;
+  template_ = Template();
+  xml_string_ = StripIndent(template_);
+
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
   if (!nodes) {
     XmlParseError(nodes.error(), xml_string_);
   }
   xml_nodes_ = std::move(nodes.value());
   Render();
+  indent--;
 }
 
-void Component::Render() {
-  // Find the <template> tag.
+void ComponentBase::Render() {
+  // Create a fake "<template>" xml element that contains every children of the
+  // component.
   xml::Node template_node;
+  template_node.type = xml::Node::Type::kElement;
+  template_node.tag = "template";
+  template_node.children.reserve(xml_nodes_.size());
   for (const auto& node : xml_nodes_) {
-    if (node.type == xml::Node::Type::kElement && node.tag == "template") {
-      template_node = node;
-      break;
+    if (node.type == xml::Node::Type::kElement ||
+        node.type == xml::Node::Type::kText) {
+      template_node.children.push_back(node);
+    } else if (node.type == xml::Node::Type::kComment) {
+      // Ignore comments.
+    } else {
+      std::cerr << "Unknown XML node type: " << static_cast<int>(node.type)
+                << std::endl;
+      std::exit(1);
     }
-  }
-
-  if (template_node.tag.empty()) {
-    std::cerr << "No <template> tag found in the " << Tag() << " component."
-              << std::endl;
-    std::exit(1);
   }
 
   // Create the root element, if it doesn't exist.
@@ -88,11 +95,13 @@ void Component::Render() {
     root_ = Ref<Element>::New(this);
   }
 
-  Render(template_node, root_.get());
+  Render(template_node, root_.get(), this);
 }
 
 // Render the `<template>` node inside the `element`.
-void Component::Render(const xml::Node& node, Element* slot) {
+void ComponentBase::Render(const xml::Node& node,
+                           Element* slot,
+                           ComponentBase* import_source) {
   int element_index = 0;
   for (const auto& node : node.children) {
     if (element_index < slot->ChildCount()) {
@@ -100,59 +109,70 @@ void Component::Render(const xml::Node& node, Element* slot) {
     }
 
     switch (node.type) {
+      case xml::Node::Type::kComment: {
+        break;
+      }
+
       case xml::Node::Type::kText: {
         slot->AddChild(Ref<TextElement>::New(std::string(node.text)));
         break;
       }
 
       case xml::Node::Type::kElement: {
-        if (node.tag == "slot") {
-          assert(default_slot_ == nullptr);
-          default_slot_ = Ref<SlotElement>::New();
-          slot->AddChild(default_slot_);
+        if (node.tag == "style") {
           break;
         }
 
-        if (node.tag.starts_with("slot.")) {
-          std::string slot_name = std::string(node.tag.substr(5));
-          slots_[slot_name] = Ref<SlotElement>::New();
-          slot->AddChild(slots_[slot_name]);
+        if (node.tag == "slot" || node.tag.starts_with("slot.")) {
+          std::string slot_name =
+              node.tag == "slot" ? "" : std::string(node.tag.substr(5));
+          auto slot_element = Ref<SlotElement>::New();
+          slots_[slot_name] = slot_element;
+          slot->AddChild(slot_element.get());
           break;
         }
 
         if (node.tag.starts_with("template.")) {
           std::string template_name = std::string(node.tag.substr(9));
-          std::cerr << "Rendering template " << template_name << std::endl;
-          Element* slot = Slot(template_name);
-          if (!slot) {
-            std::cerr << "Slot not found: " << template_name << std::endl;
-            std::exit(1);
+          Ref<Element> target_slot = Slot(template_name);
+          if (!target_slot) {
+            break;
           }
-          Render(node, slot);
+          Render(node, target_slot.get(), import_source);
           break;
         }
 
-        std::cerr << Join(Namespaces(), ".") << "." << Tag() << " -> "
-                  << node.tag << std::endl;
+        // Find the ComponentFactory from the `imports_` map.
+        auto it = import_source->imports_.find(std::string(node.tag));
+        if (it == import_source->imports_.end()) {
+          std::print(
+              stderr,
+              "\n"
+              "Error:\n"
+              "  The component <{}> is using the component <{}>, but it has not "
+              "been imported.\n"
+              "\n"
+              "  Known components are:\n",
+              import_source->Tag(), node.tag);
 
-        auto child_template = Register::Get(node.tag, Namespaces());
-        if (!child_template) {
-          UnknownComponentError(node.tag);
+          for (const auto& [key, _] : import_source->imports_) {
+            std::print(stderr, "    - {}\n", key);
+          }
+          std::exit(1);
+          return;
         }
 
-        auto child = child_template->New();
+        auto child = it->second();
         children_.insert(child);
         child->Mount();
         slot->AddChild(child->Root());
 
-        Element* default_slot = child->DefaultSlot();
+        // At this point, `child` has been mounted and rendered. Its default
+        // slot is now available and empty. We can inject our own content.
+        Ref<Element> default_slot = child->Slot("");
         if (default_slot) {
-          child->Render(node, default_slot);
+          child->Render(node, default_slot.get(), this);
         }
-      }
-
-      case xml::Node::Type::kComment: {
-        break;
       }
     }
 
@@ -160,15 +180,13 @@ void Component::Render(const xml::Node& node, Element* slot) {
   }
 }
 
-Element* Component::DefaultSlot() {
-  return default_slot_.get();
-}
-
-Element* Component::Slot(std::string_view name) {
-  if (slots_.count(std::string(name))) {
-    return slots_[std::string(name)].get();
+Ref<Element> ComponentBase::Slot(std::string_view name) {
+  auto it = slots_.find(std::string(name));
+  if (it != slots_.end()) {
+    return it->second;
+  } else {
+    return {};
   }
-  return nullptr;
 }
 
 }  // namespace rtxui
