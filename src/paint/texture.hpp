@@ -19,8 +19,8 @@ class Texture {
   std::string Render() const;
 
  private:
-  std::uint8_t width_ = 0;
-  std::uint8_t height_ = 0;
+  const std::uint8_t width_;
+  const std::uint8_t height_;
   std::vector<Cell> cells_;
 };
 

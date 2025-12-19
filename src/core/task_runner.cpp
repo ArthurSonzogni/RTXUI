@@ -27,7 +27,8 @@ auto TaskRunner::PostDelayedTask(Task task,
 }
 
 /// Runs the tasks in the queue.
-auto TaskRunner::Run() -> void {
+auto TaskRunner::RunUntilNextDelayedTask()
+    -> std::chrono::steady_clock::duration {
   // Install the current task runner, as the "current" running one.
   assert(!previous_task_runner_);
   previous_task_runner_ = current_task_runner;
@@ -35,22 +36,38 @@ auto TaskRunner::Run() -> void {
 
   while (true) {
     auto maybe_task = queue_.Get();
+    if (std::holds_alternative<std::monostate>(maybe_task)) {
+      // No more tasks to execute, exit the loop.
+      current_task_runner = previous_task_runner_;
+      previous_task_runner_ = nullptr;
+      return std::chrono::steady_clock::duration::zero();
+    }
+
     if (std::holds_alternative<Task>(maybe_task)) {
       std::get<Task>(maybe_task)();
       continue;
     }
 
-    auto duration = std::get<std::chrono::steady_clock::duration>(maybe_task);
-    if (duration == std::chrono::steady_clock::duration::max()) {
-      break;
+    if (std::holds_alternative<std::chrono::steady_clock::duration>(
+            maybe_task)) {
+      current_task_runner = previous_task_runner_;
+      previous_task_runner_ = nullptr;
+      return std::get<std::chrono::steady_clock::duration>(maybe_task);
+    }
+  }
+}
+
+auto TaskRunner::Run() -> void {
+  while(true) {
+    auto duration = RunUntilNextDelayedTask();
+    if (duration == std::chrono::steady_clock::duration::zero()) {
+      // No more tasks to execute, exit the loop.
+      return;
     }
 
-    // Sleep for the duration of the next task.
+    // Sleep for the duration until the next task can be executed.
     std::this_thread::sleep_for(duration);
   }
-
-  current_task_runner = previous_task_runner_;
-  previous_task_runner_ = nullptr;
 }
 
 }  // namespace task

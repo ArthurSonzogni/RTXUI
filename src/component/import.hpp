@@ -11,23 +11,27 @@
 #include <unordered_map>
 
 #include "cell/cell.hpp"
-#include "components/component.hpp"
+#include "component/component.hpp"
 #include "core/refcounted.hpp"
 #include "reflection/class_name.hpp"
 
 namespace rtxui {
 
+using VariableImportMap = std::unordered_map<std::string, Ref<Cell>>;
+
 using ComponentFactory = std::function<Ref<ComponentBase>()>;
 using ComponentImportMap = std::unordered_map<std::string, ComponentFactory>;
 
-using VariableImportMap = std::unordered_map<std::string, Ref<Cell>>;
+using Callback = std::function<void()>;
+using CallbackImportMap = std::unordered_map<std::string, Callback>;
 
 /// Bindings is a structure that allows you to import components and bindings_
 /// into a component.
 class Bindings {
  protected:
-  ComponentImportMap imports_;
   VariableImportMap bindings_;
+  CallbackImportMap callbacks_;
+  ComponentImportMap imports_;
 
  public:
   /// Bind a variable into the template.
@@ -44,6 +48,22 @@ class Bindings {
     }
 
     bindings_[std::string(name)] = value;
+  }
+
+  /// Bind a callback into the template.
+  ///
+  /// **Example:**
+  /// ```cpp
+  /// auto callback = [=] { count->Value(count->Value() + 1); };
+  /// Import("callback", callback);
+  /// ```
+  void Import(std::string_view name, std::function<void()> callback) {
+    if (callbacks_.count(std::string(name))) {
+      std::println("Error: Callback '{}' is already imported.", name);
+      std::exit(1);
+    }
+
+    callbacks_[std::string(name)] = std::move(callback);
   }
 
   /// Import a component into the template.

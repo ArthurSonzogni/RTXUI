@@ -59,13 +59,10 @@ class Ref {
   auto operator<=>(const Ref& other) const { return ptr_ <=> other.ptr_; }
 
   // Access to the underlying pointer. -----------------------------------------
-  operator T*() { return ptr_; }
-  T* get() { return ptr_; }
-  T* operator->() { return ptr_; }
-  const T* get() const { return ptr_; }
-  const T* operator->() const { return ptr_; }
-  T& operator*() { return *ptr_; }
-  const T& operator*() const { return *ptr_; }
+  operator T*() const { return ptr_; }
+  T* get() const { return ptr_; }
+  T* operator->() const { return ptr_; }
+  T& operator*() const { return *ptr_; }
 
   // Downcast from derived class. ----------------------------------------------
   template <typename U>

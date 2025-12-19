@@ -26,11 +26,6 @@ struct Cell {
   bool strikethrough : 1 = false;
   bool automerge : 1 = false;
 
-  // The hyperlink associated with the pixel.
-  // 0 is the default value, meaning no hyperlink.
-  // It's an index for accessing Screen meta data
-  std::uint8_t hyperlink = 0;
-
   // The graphemes stored into the pixel. To support combining characters,
   // like: a?, this can potentially contain multiple codepoints.
   std::string character = "";

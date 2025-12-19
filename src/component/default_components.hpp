@@ -1,7 +1,7 @@
 #ifndef RTXUI_COMPONENTS_HPP
 #define RTXUI_COMPONENTS_HPP
 
-#include "components/component.hpp"
+#include "component/component.hpp"
 
 namespace rtxui {
 
@@ -86,7 +86,26 @@ RTXUI_COMPONENT(li) {
   )html";
 }
 
+RTXUI_COMPONENT(button) {
+  // `on_click` is a Computed
+  //auto on_click = Import<std::function<void()>>("onclick");
+
+  //auto listen_click = AddEventListener("click", on_click);
+
+  return R"html(
+    <style>
+      self {
+        display: inline flow;
+        background-color: blue;
+        color: white;
+        padding: 5px;
+        border-radius: 3px;
+      }
+    </style>
+    <slot></slot>
+  )html";
+}
+
 }  // namespace rtxui
 
 #endif  // RTXUI_COMPONENTS_HPP
-

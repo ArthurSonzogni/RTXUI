@@ -1,8 +1,8 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "components/component.hpp"
-#include "components/default_components.hpp"
+#include "component/component.hpp"
+#include "component/default_components.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -232,14 +232,12 @@ RTXUI_COMPONENT(Counter) {
   auto count = State(0);
 
   // Define computed state.
-  auto double_count = Computed([count]() {
-    return count->Value() * 2;
-  });
+  auto double_count = Computed<int>([=] { return count->Value() * 2; });
 
   // Define callbacks that will be called when the user interacts with the
   // component.
-  auto increment = [count] { count->SetValue(count->Value() + 1); };
-  auto reset = [count] { count->SetValue(0); };
+  auto increment = [=] { count->Value(count->Value() + 1); };
+  auto reset = [=] { count->Value(0); };
 
   // Import the components used in the template.
   //
@@ -254,7 +252,6 @@ RTXUI_COMPONENT(Counter) {
   // Import are scoped to the component we are defining. This means that every
   // component can import the same component without conflicts.
   Import<rtxui::div>();
-  Import<rtxui::button>();
   Import<rtxui::ul>();
   Import<rtxui::li>();
 

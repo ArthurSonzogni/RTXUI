@@ -1,6 +1,6 @@
 #include "register.hpp"
 
-#include "components/component.hpp"
+#include "component/component.hpp"
 #include "core/refcounted.hpp"
 #include "core/string.hpp"
 
