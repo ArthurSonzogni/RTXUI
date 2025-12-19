@@ -47,7 +47,7 @@ auto TaskQueue::Get() -> MaybeTask {
   }
 
   // If there are no tasks to execute, return the maximum duration.
-  return std::chrono::steady_clock::duration::max();
+  return std::monostate{};
 }
 
 }  // namespace task

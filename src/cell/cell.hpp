@@ -58,6 +58,7 @@ class TypedCell : public Cell {
     }
     return value_;
   }
+
   void Value(T value) {
     value_ = std::move(value);
     Invalidate();

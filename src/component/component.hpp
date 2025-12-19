@@ -17,7 +17,7 @@
 #include "cell/cell.hpp"
 #include "core/refcounted.hpp"
 #include "dom/element.hpp"
-#include "components/import.hpp"
+#include "component/import.hpp"
 #include "xml/xml.hpp"
 #include "reflection/class_name.hpp"
 
@@ -41,12 +41,12 @@ class ComponentBase : public RefCounted, public Bindings {
 
   template <typename T>
   auto State(T&& value) {
-    return Ref<TypedCell<T>>(std::forward<T>(value));
+    return Ref<TypedCell<T>>::New(std::forward<T>(value));
   }
 
   template <typename T>
   auto Computed(std::function<T()> f) {
-    return Ref<ComputedTypedCell<T>>(std::move(f));
+    return Ref<ComputedTypedCell<T>>::New(std::move(f));
   }
 
   // Create a watcher that will execute the given function whenever the content

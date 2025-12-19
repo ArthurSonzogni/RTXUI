@@ -25,6 +25,9 @@ class TaskRunner {
 
   /// Runs the tasks in the queue, return the delay until the next delayed task
   /// can be executed.
+  auto RunUntilNextDelayedTask() -> std::chrono::steady_clock::duration;
+
+  // Runs the tasks in the queue, blocking until all tasks are executed.
   auto Run() -> void;
 
  private:

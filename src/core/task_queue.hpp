@@ -21,7 +21,8 @@ namespace task {
 struct TaskQueue {
   auto PostTask(PendingTask task) -> void;
 
-  using MaybeTask = std::variant<Task, std::chrono::steady_clock::duration>;
+  using MaybeTask =
+      std::variant<Task, std::chrono::steady_clock::duration, std::monostate>;
   auto Get() -> MaybeTask;
 
  private:

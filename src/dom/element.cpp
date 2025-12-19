@@ -1,6 +1,6 @@
 #include "dom/element.hpp"
 
-#include "components/component.hpp"
+#include "component/component.hpp"
 
 namespace rtxui {
 
