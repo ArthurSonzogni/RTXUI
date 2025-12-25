@@ -14,6 +14,13 @@ struct Color {
   std::uint8_t a = 0;
 
   Color() = default;
+  Color(Color const&) = default;
+
+  static Color RGB(std::uint8_t red, std::uint8_t green, std::uint8_t blue);
+  static Color RGBA(std::uint8_t red,
+                    std::uint8_t green,
+                    std::uint8_t blue,
+                    std::uint8_t alpha);
   std::strong_ordering operator<=>(const Color&) const = default;
 };
 

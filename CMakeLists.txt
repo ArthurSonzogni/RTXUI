@@ -34,11 +34,14 @@ add_library(rtxui_lib STATIC
   "src/geometry/PhysicalOffset.hpp"
   "src/geometry/PhysicalSize.cpp"
   "src/geometry/PhysicalSize.hpp"
-  "src/layout/LogicalFragment.cpp"
-  "src/layout/LogicalFragment.hpp"
-  "src/layout/PhysicalFragment.cpp"
-  "src/layout/PhysicalFragment.hpp"
-  "src/layout/PhysicalFragmentLink.hpp"
+  "src/layout/layout.cpp"
+  "src/layout/layout.hpp"
+  "src/layout/layout_box.hpp"
+  "src/layout/layout_tree_builder.hpp"
+  "src/layout/physical_fragment.hpp"
+  "src/layout/style.hpp"
+  "src/paint/paint.cpp"
+  "src/paint/paint.hpp"
   "src/component/component.cpp"
   "src/component/component.hpp"
   "src/component/import.hpp"
@@ -63,19 +66,12 @@ add_library(rtxui_lib STATIC
   "src/dom/slot_element.hpp"
   "src/paint/cell.cpp"
   "src/paint/cell.hpp"
+  "src/paint/color.cpp"
   "src/paint/color.hpp"
   "src/paint/texture.cpp"
   "src/paint/texture.hpp"
-  "src/reactive/reactive.cpp"
-  "src/reactive/reactive.hpp"
   "src/register.cpp"
   "src/register.hpp"
-  "src/layout/LayoutObject.hpp"
-  "src/layout/LayoutObject.cpp"
-  "src/layout/LayoutText.hpp"
-  "src/layout/LayoutText.cpp"
-  "src/layout/LayoutBox.hpp"
-  "src/layout/LayoutBox.cpp"
   "src/xml/xml.cpp"
   "src/xml/xml.hpp"
 )
@@ -86,6 +82,9 @@ target_include_directories(rtxui_lib PUBLIC "src")
 # See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
 add_library(rtxui "src/dummy.cpp")
 target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui_lib>")
+
+add_executable(rtxui_main main.cpp)
+target_link_libraries(rtxui_main PRIVATE rtxui_lib)
 
 # An option to enable testing
 if(RTXUI_BUILD_TESTS)
@@ -105,11 +104,10 @@ if(RTXUI_BUILD_TESTS)
     "src/component/component_test.cpp"
     "src/core/refcounted_test.cpp"
     "src/core/task_test.cpp"
-    "src/reactive/reactive_test.cpp"
     "src/reflection/reflection_test.cpp"
     "src/xml/xml_test.cpp"
   )
-  target_link_libraries(rtxui_test PRIVATE rtxui)
+  target_link_libraries(rtxui_test PRIVATE rtxui_lib)
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
   list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
   include(CTest)
@@ -135,7 +133,7 @@ if (RTXUI_BUILD_FUZZERS)
     "src/xml/xml_fuzzer.cpp"
   )
   include(GoogleTest)
-  target_link_libraries(rtxui_fuzzer PRIVATE rtxui)
+  target_link_libraries(rtxui_fuzzer PRIVATE rtxui_lib)
   link_fuzztest(rtxui_fuzzer)
   gtest_discover_tests(rtxui_fuzzer)
 endif()

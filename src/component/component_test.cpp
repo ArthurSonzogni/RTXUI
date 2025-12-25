@@ -13,15 +13,15 @@
 namespace {
 
 RTXUI_COMPONENT(Hello) {
-  return R"html(
+  return R"(
     Hello
-  )html";
+  )";
 }
 
 RTXUI_COMPONENT(World) {
-  return R"html(
+  return R"(
     World
-  )html";
+  )";
 }
 
 RTXUI_COMPONENT(HelloWorld) {
@@ -51,7 +51,7 @@ RTXUI_COMPONENT(HelloWorld) {
   //Import("computed", computed);
   //Import("increment", increment);
 
-  return R"html(
+  return R"(
     Hello, World!
     <Hello/>
     <World/>
@@ -65,7 +65,7 @@ RTXUI_COMPONENT(HelloWorld) {
         decoration: bold;
       }
     </style>
-  )html";
+  )";
 }
 
 TEST_CASE("Tag", "[component]") {
@@ -176,7 +176,7 @@ RTXUI_COMPONENT(Inverted) {
   Import<rtxui::p>("div");
   Import<rtxui::div>("p");
 
-  return R"html(
+  return R"(
     <div>
       <p>
         This is a div inside a p.
@@ -194,14 +194,14 @@ RTXUI_COMPONENT(Inverted) {
         This is a div inside a div.
       </p>
     </p>
-  )html";
+  )";
 }
 
 TEST_CASE("Import alias", "[component]") {
   // Here we try to test the Import alias feature by importing `p` as `div` and
   // `div` as `p`. This should invert the semantics of the two elements in the
   // template.
-  const std::string expected = R"html(
+  const std::string expected = R"(
     <Inverted>
       <p>
         <div>
@@ -220,7 +220,7 @@ TEST_CASE("Import alias", "[component]") {
         </div>
       </div>
     </Inverted>
-  )html";
+  )";
   
   Inverted inverted;
   inverted.Mount();
@@ -262,7 +262,7 @@ RTXUI_COMPONENT(Counter) {
   Import("reset", reset);
 
   // Return the template of the component.
-  return R"html(
+  return R"(
     <ul>
       <li>Count: {count}<p>
       <li>Count: {count}</p>
@@ -285,7 +285,7 @@ RTXUI_COMPONENT(Counter) {
         border-radius: 3px;
       }
     </style>
-  )html";
+  )";
 }
 
 }  // namespace

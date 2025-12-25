@@ -47,13 +47,15 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
   if (UNLIKELY(next->foreground_color != prev->foreground_color ||
                next->background_color != prev->background_color)) {
     ss << "\x1B[48;2";
-    ss << next->background_color.r << ";";
-    ss << next->background_color.g << ";";
-    ss << next->background_color.b << "m";
-    ss << "\x1B[38;2";
-    ss << next->foreground_color.r << ";";
-    ss << next->foreground_color.g << ";";
-    ss << next->foreground_color.b << "m";
+    ss << ";" << static_cast<int>(next->background_color.r);
+    ss << ";" << static_cast<int>(next->background_color.g);
+    ss << ";" << static_cast<int>(next->background_color.b);
+    ss << "m";
+    ss << "\x1B[38;2";;
+    ss << ";" << static_cast<int>(next->foreground_color.r);
+    ss << ";" << static_cast<int>(next->foreground_color.g);
+    ss << ";" << static_cast<int>(next->foreground_color.b);
+    ss << "m";
   }
 }
 }  // namespace

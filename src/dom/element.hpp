@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "core/refcounted.hpp"
-#include "layout/LayoutObject.hpp"
+#include "layout/style.hpp"
 
 namespace rtxui {
 
@@ -40,12 +40,12 @@ class Element : public RefCounted {
   std::string Print() const { return Print(0); }
   virtual std::string Print(int depth) const;
 
+  ComputedStyle style;
+
  protected:
   std::vector<Ref<Element>> children_;
   Element* parent_ = nullptr;
   const ComponentBase* component_ = nullptr;
-
-  std::unique_ptr<LayoutObject> layout_object_;
 };
 
 }  // namespace rtxui
