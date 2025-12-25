@@ -24,4 +24,6 @@ struct Color {
   std::strong_ordering operator<=>(const Color&) const = default;
 };
 
+Color Blend(Color over, Color under);
+
 #endif  // PAINT_COLOR_HPP_

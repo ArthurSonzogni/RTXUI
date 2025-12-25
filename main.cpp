@@ -28,6 +28,7 @@ int main() {
   root->style.display = Display::Block;
   root->style.border = {1, 1, 1, 1};
   root->style.foreground_color = Color::RGB(255, 255, 255);
+  root->style.background_color = Color::RGB(0, 0, 0);
 
   auto flex_container = Ref<Element>::New();
   flex_container->style.display = Display::Flex;
@@ -41,7 +42,6 @@ int main() {
   item1->style.width = Length::Cells(10);
   item1->style.background_color = Color::RGB(255, 255, 0);
   auto text1 = Ref<TextElement>::New("Fixed");
-  text1->style.foreground_color = Color::RGB(0, 0, 0);
   item1->AddChild(text1);
 
   // Item 2: Grow

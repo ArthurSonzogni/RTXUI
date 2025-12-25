@@ -15,22 +15,20 @@ void Paint(const PhysicalFragment* frag,
   int w = frag->width;
   int h = frag->height;
 
-  // Randomize the fragment background for debugging:
-  //const int rand = static_cast<int>(
-      //reinterpret_cast<std::uintptr_t>(frag) >> 3);  // NOLINT
-  //const_cast<PhysicalFragment*>(frag)->background_color =
-      //Color::RGB((rand * 37) % 256, (rand * 57) % 256, (rand * 97) % 256);
-
   // 0. Draw Background
-  if (frag->background_color.a > 0) {
-    for (int y = 0; y < h; ++y) {
-      for (int x = 0; x < w; ++x) {
-        int tex_x = abs_x + x;
-        int tex_y = abs_y + y;
-        if (tex_x >= 0 && tex_x < texture.width() && tex_y >= 0 &&
-            tex_y < texture.height()) {
-          texture.operator[](tex_x, tex_y).background_color =
-              frag->background_color;
+  if (frag->background_color) {
+    Color new_bg = frag->background_color.value();
+    if (new_bg.a > 0) {
+      for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+          int tex_x = abs_x + x;
+          int tex_y = abs_y + y;
+          if (tex_x >= 0 && tex_x < texture.width() && tex_y >= 0 &&
+              tex_y < texture.height()) {
+            auto& cell = texture.operator[](tex_x, tex_y);
+            Color under_bg = cell.background_color;
+            cell.background_color = Blend(new_bg, under_bg);
+          }
         }
       }
     }
@@ -42,8 +40,10 @@ void Paint(const PhysicalFragment* frag,
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
         auto& cell = texture.operator[](x, y);
         cell.character = c;
-        if (frag->foreground_color.a > 0) {
-          cell.foreground_color = frag->foreground_color;
+        if (frag->foreground_color) {
+          Color fg = frag->foreground_color.value();
+          Color bg = cell.background_color;
+          cell.foreground_color = Blend(fg, bg);
         }
       }
     };
@@ -74,10 +74,11 @@ void Paint(const PhysicalFragment* frag,
       int y = abs_y;
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
         auto& cell = texture.operator[](x, y);
-        cell.character =
-            std::string(1, frag->text_content[i]);
-        if (frag->foreground_color.a > 0) {
-            cell.foreground_color = frag->foreground_color;
+        cell.character = std::string(1, frag->text_content[i]);
+        if (frag->foreground_color) {
+          Color fg = frag->foreground_color.value();
+          Color bg = cell.background_color;
+          cell.foreground_color = Blend(fg, bg);
         }
       }
     }
