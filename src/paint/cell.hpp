@@ -4,8 +4,9 @@
 #ifndef PAINT_CELL_HPP_
 #define PAINT_CELL_HPP_
 
-#include <cstdint>  // for uint8_t
-#include <string>   // for string, basic_string, allocator
+#include <cstdint>   // for uint8_t
+#include <optional>  // for optional
+#include <string>    // for string, basic_string, allocator
 
 #include "color.hpp"  // for Color, Color::Default
 
@@ -27,7 +28,7 @@ struct Cell {
   bool automerge : 1 = false;
 
   // The graphemes stored into the pixel. To support combining characters,
-  // like: a?, this can potentially contain multiple codepoints.
+  // like: á, this can potentially contain multiple codepoints.
   std::string character = "";
 };
 

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "paint/color.hpp"
 
@@ -62,8 +63,8 @@ struct ComputedStyle {
   Spacing padding;
   Spacing border;
 
-  Color background_color;
-  Color foreground_color;
+  std::optional<Color> background_color;
+  std::optional<Color> foreground_color;
 
   bool IsBlockLevel() const {
     return display == Display::Block || display == Display::Flex;

@@ -44,17 +44,19 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
                                : "\x1B[29m");  // CROSSED_OUT_RESET
   }
 
-  if (UNLIKELY(next->foreground_color != prev->foreground_color ||
-               next->background_color != prev->background_color)) {
+  if (UNLIKELY(next->foreground_color != prev->foreground_color)) {
+    ss << "\x1B[38;2";
+    ss << ";" << static_cast<int>(next->foreground_color.r);
+    ss << ";" << static_cast<int>(next->foreground_color.g);
+    ss << ";" << static_cast<int>(next->foreground_color.b);
+    ss << "m";
+  }
+
+  if (UNLIKELY(next->background_color != prev->background_color)) {
     ss << "\x1B[48;2";
     ss << ";" << static_cast<int>(next->background_color.r);
     ss << ";" << static_cast<int>(next->background_color.g);
     ss << ";" << static_cast<int>(next->background_color.b);
-    ss << "m";
-    ss << "\x1B[38;2";;
-    ss << ";" << static_cast<int>(next->foreground_color.r);
-    ss << ";" << static_cast<int>(next->foreground_color.g);
-    ss << ";" << static_cast<int>(next->foreground_color.b);
     ss << "m";
   }
 }

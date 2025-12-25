@@ -2,6 +2,7 @@
 #define RTXUI_LAYOUT_PHYSICAL_FRAGMENT_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -15,8 +16,8 @@ struct PhysicalFragment {
   std::string text_content;
   bool has_border = false;
 
-  Color background_color;
-  Color foreground_color;
+  std::optional<Color> background_color;
+  std::optional<Color> foreground_color;
 
   struct ChildLink {
     std::shared_ptr<PhysicalFragment> fragment;
