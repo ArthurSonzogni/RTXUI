@@ -1,174 +1,104 @@
-#include "src/app.hpp"
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
-App app;
+#include "src/core/refcounted.hpp"
+#include "src/dom/element.hpp"
+#include "src/dom/text_element.hpp"
+#include "src/layout/layout.hpp"
+#include "src/layout/layout_tree_builder.hpp"
+#include "src/layout/style.hpp"
+#include "src/paint/color.hpp"
+#include "src/paint/paint.hpp"
+#include "src/paint/texture.hpp"
 
-// app.Register("SubComponent", ...);
+using namespace rtxui;
 
-// Define the <e> e into the App.
-app.RegisterComponent("MyComponent", [](Element& e) {
-  // Input parameters to the component.
-  // The parent binds a reactive value, the child receives a deep copy.
-  // Example: <MyComponent input_1="42" input_2="test"/>
-  auto x1 = e.Attribute("input_1");
-  e.Attribute("input_2");
+int main() {
+  // ----------------------------
+  // Flexbox Demo:
+  // Row container with 3 items:
+  // 1. Fixed width
+  // 2. Grow (Takes remaining space)
+  // 3. Percent Width
+  // ----------------------------
 
-  // Output parameters to the component. They are bound to functions.
-  // Example: <MyComponent click="handleClick"/>
-  e.Event("click");
+  auto root = Ref<Element>::New();
+  root->style.display = Display::Block;
+  root->style.border = {1, 1, 1, 1};
+  root->style.foreground_color = Color::RGB(255, 255, 255);
 
-  // Input/Output parameters to the component.
-  // They acts as input/output parameters. This is a short hand for declaring
-  // both a
-  // e model. They acts as input/output parameters. They are short hand
-  // for defining an attribute and an event assigning the value to the
-  // attribute.
-  //
-  e.Model("model");
+  auto flex_container = Ref<Element>::New();
+  flex_container->style.display = Display::Flex;
+  flex_container->style.flex_direction = Direction::Row;
+  flex_container->style.width = Length::Pct(100);
+  flex_container->style.height = Length::Cells(10);
 
-  // e internal state. It can be modified by the e itself,
-  // passed as attribute, and displayed inside the DOM.
-  e["state"] = true;
+  // Item 1: Fixed
+  auto item1 = Ref<Element>::New();
+  item1->style.display = Display::Block;
+  item1->style.width = Length::Cells(10);
+  item1->style.background_color = Color::RGB(255, 255, 0);
+  auto text1 = Ref<TextElement>::New("Fixed");
+  text1->style.foreground_color = Color::RGB(0, 0, 0);
+  item1->AddChild(text1);
 
-  // Function to handle the button click event.
-  e.Function("toggle", [&](reactive::Reactive& that) {
-    // Assigning a new value to a reactive state will re-render the template.
-    state["enabled"] = !state["enabled"];
-  });
+  // Item 2: Grow
+  auto item2 = Ref<Element>::New();
+  item2->style.display = Display::Block;
+  item2->style.flex_grow = 1;
+  item2->style.background_color = Color::RGB(0, 255, 0);
+  item2->AddChild(Ref<TextElement>::New("Grow"));
 
-  e.Computed("computed", [](reactive::Reactive& that) {
-    // This function will be called whenever the `input_1` attribute or `state`
-    // internal state changes. The returned value will be assigned to
-    // `computed`.
-    if (that["state"]) {
-      return 42 - that["input_1"]
-    }
-    return 42 + that["input_1"]
-  });
+  // Item 3: Percent
+  auto item3 = Ref<Element>::New();
+  item3->style.display = Display::Block;
+  item3->style.width = Length::Pct(20);
+  item3->style.background_color = Color::RGB(0, 0, 255);
+  item3->AddChild(Ref<TextElement>::New("20%"));
 
-  e.Template(R"(
-    <!-- This demonstrates the usage of interpolation -->
-    <paragraph>
-      Hello, World!
-      input = {{input}}
-      state = {{state}}
-    </paragraph>
+  flex_container->AddChild(item1);
+  flex_container->AddChild(item2);
+  flex_container->AddChild(item3);
 
-    <!-- This demonstrates event handling -->
-    <button click.left="onClick">
-      Click me!
-    </button>
+  root->AddChild(flex_container);
 
-    <output if="state">
-      This is a conditional text!
-    </output>
+  auto text_1 = Ref<TextElement>::New("This is an inline box demo.");
+  auto text_2 = Ref<TextElement>::New(" ");
+  auto text_3 = Ref<TextElement>::New("It should wrap properly within");
+  auto text_4 = Ref<TextElement>::New(" ");
+  auto text_5 = Ref<TextElement>::New("the given width constraints.");
+  text_1->style.background_color = Color::RGB(255, 0, 0);
+  text_3->style.background_color = Color::RGB(0, 255, 0);
+  text_5->style.background_color = Color::RGB(0, 0, 255);
 
-    <SubComponent></SubComponent>
+  root->AddChild(text_1);
+  root->AddChild(text_2);
+  root->AddChild(text_3);
+  root->AddChild(text_4);
+  root->AddChild(text_5);
 
-    <SubComponent prop="value"></SubComponent>
+  // 2. Build Box Tree
+  std::cout << "[Step 1] Constructing Layout Tree..." << std::endl;
+  auto root_box = LayoutTreeBuilder::Build(root.get());
 
-    <SubComponent>
-      <template name="namedslot_1">Hello from slot 1</template>
-      <template name="namedslot_2">Hello from slot 2</template>
-    </SubComponent>
+  for(int width = 10; width <= 60; width += 10) {
+    // 3. Layout
+    std::cout << "[Step 2] Running Layout Algorithms..." << std::endl;
+    LayoutConstraints viewport = {
+        {width, MeasureMode::Exactly},
+        {30, MeasureMode::Exactly},
+    };
+    auto root_fragment = RunLayout({root_box.get()}, viewport);
 
-    <!-- This demonstrates embedding a sub-e from the parent e -->
-    <slot></slot>
-  )");
+    // 4. Paint
+    // Initialize with space characters
+    Texture texture(width, 30);
+    Paint(root_fragment.get(), texture);
 
-  // Style is scoped to the current component. It is not global or inherited.
-  e.Style(R"(
-    paragraph {
-      display-outside: block;
-      display-inside: flow;
-    }
+    std::cout << texture.Render() << std::endl;
+  }
 
-    .title {
-      foreground-color: white;
-      background-color: blue;
-    }
-
-    button {
-      foreground-color: white;
-      background-color: blue;
-      transition: foreground-color 0.5s ease-in-out;
-    }
-
-    button:hover {
-      foreground-color: black;
-      background-color: white;
-    }
-  )");
-
-  e.OnMounted([](reactive::Reactive state) {
-    //
-  });
-});
-
-class Component {
- public:
-  virtual std::string Setup() {}
-};
-
-#define RTXUI(name)                         \
-  struct RTXUI_##name : public Component {  \
-    std::string Setup() final;              \
-  };                                        \
-  namespace {                               \
-  rtxui::Register<RTXUI_##name> reg(#name); \
-  }                                         \
-  std::string RTXUI_##name::Setup()
-
-#define Expose(x) Expose(#x, x)
-
-RTXUI(MyComponent) {
-  // This state is reflecting the `<MyComponent input="world"/>` attribute by
-  // the parent.
-  auto input = State("world");
-
-  // This demonstrates the usage of computed values. `hello_input` will be
-  // updated whenever `input` is updated.
-  auto hello_input =
-      Computed<std::string>([] { return "Hello, " + input.Value(); });
-
-  auto counter_1 = State(0);
-  auto counter_2 = State(0);
-
-  // Computed values can depend on multiple reactive values.
-  auto counter_3 =
-      Computed<int>([&] { return counter_1.Value() + counter_2.Value(); });
-
-  // This demonstrates the usage of event handling.
-  auto onClick = [=] {
-    // Test
-    counter_1.value(counter_1.Value() + 1);
-  };
-
-  // Make values available to the template.
-  BIND(input);
-  BIND(hello_input);
-  BIND(counter_1);
-  BIND(onClick);
-
-  return R"(
-    <MyComponent input onclick>
-      <style scoped>
-        p {
-          color: red;
-        }
-      </style>
-
-      <p>
-        {hello_input}
-      </p>
-
-      <button click={onClick}>
-        Click me!
-      </button>
-
-      <p if={counter_1 > 0}>
-        You clicked {counter_1} times.
-      </p>
-
-    </MyComponent> 
-  )";
-};
+  return 0;
+}

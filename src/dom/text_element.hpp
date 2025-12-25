@@ -10,6 +10,7 @@ class TextElement : public Element {
  public:
   explicit TextElement(std::string text) : text_(std::move(text)) {}
   std::string Print(int depth) const final;
+  const std::string& text() const { return text_; }
 
  private:
   std::string text_;
