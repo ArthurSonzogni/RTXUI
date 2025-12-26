@@ -6,14 +6,21 @@
 #include "paint/texture.hpp"
 
 namespace rtxui {
+
+namespace {
+
 void Paint(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
-           int off_y) {
+           int off_y,
+           Color inherited_foreground_color) {
   int abs_x = off_x;
   int abs_y = off_y;
   int w = frag->width;
   int h = frag->height;
+
+  Color current_foreground_color =
+      frag->foreground_color.value_or(inherited_foreground_color);
 
   // 0. Draw Background
   if (frag->background_color) {
@@ -40,11 +47,9 @@ void Paint(const PhysicalFragment* frag,
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
         auto& cell = texture.operator[](x, y);
         cell.character = c;
-        if (frag->foreground_color) {
-          Color fg = frag->foreground_color.value();
-          Color bg = cell.background_color;
-          cell.foreground_color = Blend(fg, bg);
-        }
+        Color fg = current_foreground_color;
+        Color bg = cell.background_color;
+        cell.foreground_color = Blend(fg, bg);
       }
     };
 
@@ -75,18 +80,26 @@ void Paint(const PhysicalFragment* frag,
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
         auto& cell = texture.operator[](x, y);
         cell.character = std::string(1, frag->text_content[i]);
-        if (frag->foreground_color) {
-          Color fg = frag->foreground_color.value();
-          Color bg = cell.background_color;
-          cell.foreground_color = Blend(fg, bg);
-        }
+        Color fg = current_foreground_color;
+        Color bg = cell.background_color;
+        cell.foreground_color = Blend(fg, bg);
       }
     }
   }
 
   // 3. Recurse
   for (auto& child : frag->children) {
-    Paint(child.fragment.get(), texture, abs_x + child.x, abs_y + child.y);
+    Paint(child.fragment.get(), texture, abs_x + child.x, abs_y + child.y,
+          current_foreground_color);
   }
 }
+}  // namespace
+
+void Paint(const PhysicalFragment* frag,
+           Texture& texture,
+           int off_x,
+           int off_y) {
+  Paint(frag, texture, off_x, off_y, Color::RGB(255, 255, 255));
+}
+
 }  // namespace rtxui

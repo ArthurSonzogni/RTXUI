@@ -1,6 +1,9 @@
 #ifndef RTXUI_PAINT_PAINT_HPP
 #define RTXUI_PAINT_PAINT_HPP
 
+#include <optional>
+
+#include "paint/color.hpp"
 #include "layout/physical_fragment.hpp"
 #include "paint/texture.hpp"
 

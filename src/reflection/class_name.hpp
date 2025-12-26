@@ -12,18 +12,16 @@ template <typename T>
 constexpr std::string_view ClassName() {
 #if defined(__clang__)
   constexpr std::string_view full = __PRETTY_FUNCTION__;
-  constexpr std::string_view prefix = "std::string_view ClassName() [T = ";
+  constexpr std::string_view prefix = "ClassName() [T = ";
   constexpr std::string_view suffix = "]";
 #elif defined(__GNUC__)
   constexpr std::string_view full = __PRETTY_FUNCTION__;
   constexpr std::string_view prefix =
-      "constexpr std::string_view ClassName() [with T = ";
+      "ClassName() [with T = ";
   constexpr std::string_view suffix = ";";
 #elif defined(_MSC_VER)
   const std::string_view full = __FUNCSIG__;
-  constexpr std::string_view prefix =
-      "class std::basic_string_view<char,struct std::char_traits<char> > "
-      "__cdecl ClassName<";
+  constexpr std::string_view prefix = "ClassName<";
   constexpr std::string_view suffix = ">(void)";
 #endif
 

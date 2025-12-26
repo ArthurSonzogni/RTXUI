@@ -9,7 +9,7 @@ namespace rtxui {
 class SlotElement : public Element {
  public:
   explicit SlotElement() = default;
-  std::string Print(int depth) const final;
+  //std::string Print(int depth) const final;
 };
 
 }  // namespace rtxui

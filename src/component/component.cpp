@@ -2,14 +2,19 @@
 
 #include <iomanip>
 #include <iostream>
-#include <string>
+#include <optional>
 #include <print>
+#include <string>
 #include <string_view>
 #include <vector>
 
 #include "core/string.hpp"
+#include "dom/element.hpp"
 #include "dom/slot_element.hpp"
 #include "dom/text_element.hpp"
+#include "paint/color.hpp"
+#include "style/apply_style.hpp"
+#include "style/style.hpp"
 #include "xml/xml.hpp"
 
 namespace rtxui {
@@ -47,6 +52,34 @@ void XmlParseError(const xml::Error& error, std::string_view xml_string) {
   std::exit(1);
 }
 
+void CssParseError(const css::Error& error, std::string_view css_string) {
+  std::cerr << "======== Error parsing CSS ========" << std::endl;
+  int error_line = error.line;
+  int error_column = error.column;
+
+  std::vector<std::string_view> css_lines = Split(css_string, '\n');
+  std::cerr << "    ┌" << Repeat("─", 76) << std::endl;
+  for (int line = 0; line < css_lines.size(); line++) {
+    std::cerr << std::setw(4) << line << "│ " << css_lines[line] << std::endl;
+    if (line != error_line) {
+      continue;
+    }
+    std::string arrow_line = Repeat("-", std::max(76, error_column));
+    if (error_column < arrow_line.length()) {
+      arrow_line[error_column + 1] = '^';
+    }
+    std::cerr << "    └" << arrow_line << std::endl;
+    std::cerr << "      " << Repeat(" ", error_column) << "|" << std::endl;
+    std::cerr << error_line << ":" << error_column << ": " << error.message
+              << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "    ┌" << Repeat("─", 76) << std::endl;
+  }
+  std::cerr << "    └" << Repeat("─", 76) << std::endl;
+  std::cerr << std::flush;
+  std::exit(1);
+}
+
 }  // namespace
 
 std::string_view ComponentBase::Template() {
@@ -71,6 +104,11 @@ void ComponentBase::Mount() {
 }
 
 void ComponentBase::Render() {
+  // Create the root element, if it doesn't exist.
+  if (!root_) {
+    root_ = Ref<Element>::New(this);
+  }
+
   // Create a fake "<template>" xml element that contains every children of the
   // component.
   xml::Node template_node;
@@ -78,8 +116,28 @@ void ComponentBase::Render() {
   template_node.tag = "template";
   template_node.children.reserve(xml_nodes_.size());
   for (const auto& node : xml_nodes_) {
-    if (node.type == xml::Node::Type::kElement ||
-        node.type == xml::Node::Type::kText) {
+    if (node.type == xml::Node::Type::kElement) {
+      if (node.tag == "style") {
+        if (node.children.empty() ||
+            node.children[0].type != xml::Node::Type::kText) {
+          continue;
+        }
+        auto stylesheet = css::Parse(node.children[0].text);
+        if (!stylesheet) {
+          CssParseError(stylesheet.error(), node.children[0].text);
+        }
+
+        for (const auto& ruleset : stylesheet.value()) {
+          if (ruleset.selector == "self") {
+            for (const auto& declaration : ruleset.declarations) {
+              ApplyStyle(root_->style, declaration);
+            }
+          }
+        }
+        continue;
+      }
+      template_node.children.push_back(node);
+    } else if (node.type == xml::Node::Type::kText) {
       template_node.children.push_back(node);
     } else if (node.type == xml::Node::Type::kComment) {
       // Ignore comments.
@@ -90,11 +148,6 @@ void ComponentBase::Render() {
     }
   }
 
-  // Create the root element, if it doesn't exist.
-  if (!root_) {
-    root_ = Ref<Element>::New(this);
-  }
-
   Render(template_node, root_.get(), this);
 }
 
@@ -103,47 +156,47 @@ void ComponentBase::Render(const xml::Node& node,
                            Element* slot,
                            ComponentBase* import_source) {
   int element_index = 0;
-  for (const auto& node : node.children) {
+  for (const auto& child_node : node.children) {
     if (element_index < slot->ChildCount()) {
       continue;
     }
 
-    switch (node.type) {
+    switch (child_node.type) {
       case xml::Node::Type::kComment: {
         break;
       }
 
       case xml::Node::Type::kText: {
-        slot->AddChild(Ref<TextElement>::New(std::string(node.text)));
+        slot->AddChild(Ref<TextElement>::New(std::string(child_node.text)));
         break;
       }
 
       case xml::Node::Type::kElement: {
-        if (node.tag == "style") {
+        if (child_node.tag == "style") {
           break;
         }
 
-        if (node.tag == "slot" || node.tag.starts_with("slot.")) {
+        if (child_node.tag == "slot" || child_node.tag.starts_with("slot.")) {
           std::string slot_name =
-              node.tag == "slot" ? "" : std::string(node.tag.substr(5));
+              child_node.tag == "slot" ? "" : std::string(child_node.tag.substr(5));
           auto slot_element = Ref<SlotElement>::New();
           slots_[slot_name] = slot_element;
           slot->AddChild(slot_element.get());
           break;
         }
 
-        if (node.tag.starts_with("template.")) {
-          std::string template_name = std::string(node.tag.substr(9));
+        if (child_node.tag.starts_with("template.")) {
+          std::string template_name = std::string(child_node.tag.substr(9));
           Ref<Element> target_slot = Slot(template_name);
           if (!target_slot) {
             break;
           }
-          Render(node, target_slot.get(), import_source);
+          Render(child_node, target_slot.get(), import_source);
           break;
         }
 
         // Find the ComponentFactory from the `imports_` map.
-        auto it = import_source->imports_.find(std::string(node.tag));
+        auto it = import_source->imports_.find(std::string(child_node.tag));
         if (it == import_source->imports_.end()) {
           std::print(
               stderr,
@@ -153,7 +206,7 @@ void ComponentBase::Render(const xml::Node& node,
               "been imported.\n"
               "\n"
               "  Known components are:\n",
-              import_source->Tag(), node.tag);
+              import_source->Tag(), child_node.tag);
 
           for (const auto& [key, _] : import_source->imports_) {
             std::print(stderr, "    - {}\n", key);
@@ -171,7 +224,7 @@ void ComponentBase::Render(const xml::Node& node,
         // slot is now available and empty. We can inject our own content.
         Ref<Element> default_slot = child->Slot("");
         if (default_slot) {
-          child->Render(node, default_slot.get(), this);
+          child->Render(child_node, default_slot.get(), this);
         }
       }
     }
