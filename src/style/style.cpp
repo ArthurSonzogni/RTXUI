@@ -1,7 +1,7 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "css/css.hpp"
+#include "style/style.hpp"
 
 #include <string_view>
 #include <vector>
@@ -44,6 +44,10 @@ bool Contains(char c, const std::vector<char>& chars) {
   return false;
 }
 
+bool IsWhiteSpace(char c) {
+  return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+}
+
 auto Parser::Advance() -> void {
   ++pos_;
 }
@@ -57,30 +61,74 @@ auto Parser::Get(int offset) -> char {
 }
 
 auto Parser::ParseWhiteSpaces() -> void {
-  while (Contains(Get(), {' ', '\n', '\r', '\t'})) {
-    Advance();
+  while (true) {
+    // 1. Skip standard whitespace.
+    if (IsWhiteSpace(Get())) {
+      Advance();
+      continue;
+    }
+
+    // 2. Skip comments /* ... */
+    if (Get() == '/' && Get(1) == '*') {
+      Advance();  // Skip '/'
+      Advance();  // Skip '*'
+      while (Get() != '\0') {
+        if (Get() == '*' && Get(1) == '/') {
+          Advance();  // Skip '*'
+          Advance();  // Skip '/'
+          break;
+        }
+        Advance();
+      }
+      continue;
+    }
+
+    break;
   }
 }
 
 auto Parser::ParseSelector() -> Expected<std::string_view, Error> {
   int start = pos_;
-  while (Get() != '\0' && !Contains(Get(), {'{', ' ', '\n', '\t'})) {
+
+  // Read until we hit the opening brace '{' or EOF.
+  while (Get() != '\0' && Get() != '{') {
     Advance();
   }
-  if (start == pos_) {
+
+  // Trim trailing whitespace.
+  int end = pos_;
+  while (end > start && IsWhiteSpace(css_[end - 1])) {
+    end--;
+  }
+
+  if (start == end) {
     return MakeErrorExpected("selector");
   }
-  return css_.substr(start, pos_ - start);
+
+  return css_.substr(start, end - start);
 }
 
 auto Parser::ParseValue() -> Expected<std::string_view, Error> {
   int start = pos_;
-  while (Get() != '\0' && !Contains(Get(), {';', '}'})) {
+  int brace_depth = 0;
+  while (Get() != '\0') {
+    char c = Get();
+    if (brace_depth == 0 && Contains(c, {';', '}'})) {
+      break;
+    }
+
+    if (c == '{') {
+      brace_depth++;
+    } else if (c == '}') {
+      if (brace_depth > 0) {
+        brace_depth--;
+      }
+    }
     Advance();
   }
 
   std::string_view val = css_.substr(start, pos_ - start);
-  while (!val.empty() && Contains(val.back(), {' ', '\n', '\t', '\r'})) {
+  while (!val.empty() && IsWhiteSpace(val.back())) {
     val.remove_suffix(1);
   }
   return val;
@@ -195,6 +243,19 @@ auto Parser::MakeErrorExpected(std::string expected) -> Error {
 auto Parse(std::string_view css) -> Expected<StyleSheet, Error> {
   Parser parser(css);
   return parser.ParseStyleSheet();
+}
+
+auto Print(const StyleSheet& stylesheet) -> std::string {
+  std::string result;
+  for (const auto& ruleset : stylesheet) {
+    result += std::string(ruleset.selector) + " {\n";
+    for (const auto& decl : ruleset.declarations) {
+      result += "  " + std::string(decl.property) + ": " +
+                std::string(decl.value) + ";\n";
+    }
+    result += "}\n\n";
+  }
+  return result;
 }
 
 }  // namespace css
