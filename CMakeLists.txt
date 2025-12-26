@@ -72,6 +72,8 @@ add_library(rtxui_lib STATIC
   "src/paint/texture.hpp"
   "src/register.cpp"
   "src/register.hpp"
+  "src/style/apply_style.cpp"
+  "src/style/apply_style.hpp"
   "src/style/style.cpp"
   "src/style/style.hpp"
   "src/xml/xml.cpp"
