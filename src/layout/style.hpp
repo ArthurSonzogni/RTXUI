@@ -1,14 +1,23 @@
 #ifndef RTXUI_LAYOUT_STYLE_HPP
 #define RTXUI_LAYOUT_STYLE_HPP
 
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
 
 #include "paint/color.hpp"
 
 namespace rtxui {
-enum class Display { Block, Inline, Flex, None };
+enum class DisplayOutside {
+  Block,
+  Inline,
+};
+enum class DisplayInside {
+  FlowRoot,
+  Flow,
+  Flex,
+};
+
 enum class MeasureMode { Exactly, AtMost, Undefined };
 enum class Direction { Row, Column };
 enum class Unit { Auto, Cells, Percent };
@@ -50,7 +59,9 @@ struct LayoutConstraints {
 
 // Represents the "Computed CSS values"
 struct ComputedStyle {
-  Display display = Display::Inline;
+  DisplayOutside display_outside = DisplayOutside::Inline;
+  DisplayInside display_inside = DisplayInside::Flow; // Default to flow
+
   Direction flex_direction = Direction::Row;
 
   Length width = Length::Auto();
@@ -67,9 +78,11 @@ struct ComputedStyle {
   std::optional<Color> foreground_color;
 
   bool IsBlockLevel() const {
-    return display == Display::Block || display == Display::Flex;
+    return display_outside == DisplayOutside::Block;
   }
-  bool IsInlineLevel() const { return display == Display::Inline; }
+  bool IsInlineLevel() const {
+    return display_outside == DisplayOutside::Inline;
+  }
 };
 }  // namespace rtxui
 #endif  // RTXUI_LAYOUT_STYLE_HPP

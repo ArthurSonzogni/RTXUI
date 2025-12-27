@@ -49,39 +49,111 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "background-color") {
     style.background_color = ParseColor(v);
-  } else if (p == "foreground-color") {
-    style.foreground_color = ParseColor(v);
-  } else if (p == "display") {
-    if (v == "block")
-      style.display = Display::Block;
-    else if (v == "inline")
-      style.display = Display::Inline;
-    else if (v == "flex")
-      style.display = Display::Flex;
-    else if (v == "none")
-      style.display = Display::None;
-  } else if (p == "flex-direction") {
-    if (v == "row")
-      style.flex_direction = Direction::Row;
-    else if (v == "column")
-      style.flex_direction = Direction::Column;
-  } else if (p == "flex-grow") {
-    style.flex_grow = StoF(v);
-  } else if (p == "width") {
-    style.width = ParseLength(v);
-  } else if (p == "height") {
-    style.height = ParseLength(v);
-  } else if (p == "border-width") {
-    int width = StoI(v);
-    style.border = {width, width, width, width};
+    return;
   }
-  else if (p == "margin") {
+
+  if (p == "foreground-color") {
+    style.foreground_color = ParseColor(v);
+    return;
+  }
+
+  if (p == "margin") {
     int m = StoI(v);
     style.margin = {m, m, m, m};
-  } else if (p == "padding") {
+    return;
+  }
+
+  if (p == "padding") {
     int p = StoI(v);
     style.padding = {p, p, p, p};
+    return;
   }
+  
+  if (p == "border-width") {
+    int bw = StoI(v);
+    style.border = {bw, bw, bw, bw};
+    return;
+  }
+
+  if (p == "flex-grow") {
+    style.flex_grow = StoF(v);
+    return;
+  }
+
+  if (p == "flex-direction") {
+    if (v == "row") {
+      style.flex_direction = Direction::Row;
+      return;
+    }
+
+    if (v == "column") {
+      style.flex_direction = Direction::Column;
+      return;
+    }
+  }
+
+  if (p == "width") {
+    style.width = ParseLength(v);
+    return;
+  }
+
+  if (p == "height") {
+    style.height = ParseLength(v);
+    return;
+  }
+
+  if (p == "display") {
+    // Parse combined display property (display-outside and display-inside)
+    // For simplicity, handle common single-keyword values and assume default display-inside: flow
+    // For two-keyword values, parse them as specified.
+
+    // Split the value string by space
+    std::string s_value(v.data(), v.size());
+    
+    size_t space_pos = s_value.find(' ');
+    if (space_pos == std::string::npos) {
+      // Single keyword value
+      if (s_value == "block") {
+        style.display_outside = DisplayOutside::Block;
+        style.display_inside = DisplayInside::Flow;
+        return;
+      }
+      if (s_value == "inline") {
+        style.display_outside = DisplayOutside::Inline;
+        style.display_inside = DisplayInside::Flow;
+        return;
+      }
+      if (s_value == "flex") {
+        style.display_outside = DisplayOutside::Block;
+        style.display_inside = DisplayInside::Flex;
+        return;
+      }
+
+    } else {
+      std::string outside = s_value.substr(0, space_pos);
+      std::string inside = s_value.substr(space_pos + 1);
+
+      if (outside == "block") {
+        style.display_outside = DisplayOutside::Block;
+        return;
+      }
+
+      if (outside == "inline") {
+        style.display_outside = DisplayOutside::Inline;
+      }
+
+      if (inside == "flow") {
+        style.display_inside = DisplayInside::Flow;
+        return;
+      }
+
+      if (inside == "flex") {
+        style.display_inside = DisplayInside::Flex;
+        return;
+      }
+    }
+  }
+
 }
 
 }  // namespace rtxui
