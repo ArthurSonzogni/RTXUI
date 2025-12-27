@@ -44,7 +44,7 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
     return nullptr;
   }
 
-  if (box->style.display == Display::Flex) {
+  if (box->style.display_inside == DisplayInside::Flex) {
     return LayoutFlex(node, constraints);
   }
 
