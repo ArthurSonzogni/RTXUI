@@ -157,6 +157,10 @@ int main() {
   std::cout << "[Step 1] Constructing Layout Tree..." << std::endl;
   auto root_box = LayoutTreeBuilder::Build(root);
 
+  // Print the root Layout Box Tree
+  std::cout << "[Info] Root Layout Box Tree:" << std::endl;
+  std::cout << root_box->Print() << std::endl;
+
   for (int width = 10; width <= 60; width += 10) {
     // 3. Layout
     std::cout << "[Step 2] Running Layout Algorithms..." << std::endl;

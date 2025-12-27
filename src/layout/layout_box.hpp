@@ -23,13 +23,14 @@ class LayoutBox {
   Element* dom_node = nullptr;  // Link back to DOM.
   std::vector<std::shared_ptr<LayoutBox>> children;
 
-
   // Flags for the algorithm selection.
   bool is_anonymous = false;
   bool is_text = false;
   std::string text_data;
 
-  LayoutBox(const std::string& name) : debug_name(name) {}
+  LayoutBox(const std::string& name);
+
+  std::string Print(int indent = 0) const;
 
   // Helper to determine which algorithm to run
   bool IsInlineFormattingContext() const {
