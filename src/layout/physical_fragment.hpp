@@ -11,7 +11,6 @@
 namespace rtxui {
 struct PhysicalFragment {
   int x, y, width, height;
-  std::string tag;
   bool is_text = false;
   std::string text_content;
   bool has_border = false;
@@ -25,7 +24,7 @@ struct PhysicalFragment {
   };
   std::vector<ChildLink> children;
 
-  PhysicalFragment(int w, int h, std::string t) : width(w), height(h), tag(t) {}
+  PhysicalFragment(int w, int h) : width(w), height(h) {}
 };
 }  // namespace rtxui
 #endif  // RTXUI_LAYOUT_PHYSICAL_FRAGMENT_HPP

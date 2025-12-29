@@ -18,7 +18,14 @@ struct LayoutInputNode {
 
 class LayoutBox {
  public:
-  std::string debug_name;
+  enum Algorithm {
+    InlineFlow,
+    BlockFlow,
+    Flex,
+    Text,
+  };
+  Algorithm algorithm;
+
   ComputedStyle style;
   Element* dom_node = nullptr;  // Link back to DOM.
   std::vector<std::shared_ptr<LayoutBox>> children;
@@ -26,19 +33,12 @@ class LayoutBox {
   // Flags for the algorithm selection.
   bool is_anonymous = false;
   bool is_text = false;
+  bool is_anonymous_ = false;
   std::string text_data;
 
-  LayoutBox(const std::string& name);
+  LayoutBox();
 
   std::string Print(int indent = 0) const;
-
-  // Helper to determine which algorithm to run
-  bool IsInlineFormattingContext() const {
-    if (children.empty()) {
-      return false;
-    }
-    return children[0]->style.IsInlineLevel();
-  }
 };
 
 }  // namespace rtxui

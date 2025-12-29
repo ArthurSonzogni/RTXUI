@@ -62,21 +62,16 @@ RTXUI_COMPONENT(Percent) {
 
 RTXUI_COMPONENT(FlexContainer) {
   Import<rtxui::div>();
-  Import<Fixed>();
-  Import<Grow>();
-  Import<Percent>();
   return R"html(
-    <Fixed />
-    <Grow />
-    <Percent />
+    <slot />
 
     <style>
       self {
-        display: flex;
+        display: block flex;
         flex-direction: row;
         foreground-color: black;
+        background-color: white;
         width: 100%;
-        height: 10;
       }
     </style>
   )html";
@@ -126,12 +121,28 @@ RTXUI_COMPONENT(App) {
   Import<RedText>();
   Import<GreenText>();
   Import<BlueText>();
+  Import<Fixed>();
+  Import<Grow>();
+  Import<Percent>();
   Import<rtxui::span>();
   return R"html(
-    <FlexContainer />
+    <FlexContainer>
+      <Fixed />
+      <Grow />
+      <Percent />
+    </FlexContainer>
     <RedText />
-    <GreenText />
+    Bonjour a tous le monde qui est ici!
+    Comment ca va?
+    Moi, ca va tres bien, merci! <GreenText />
+    Bonjour a tous le monde qui est ici!
+    Comment ca va?
+    Moi, ca va tres bien, merci!
     <BlueText />
+    Bonjour a tous le monde qui est ici!
+    Comment ca va?
+    Moi, ca va tres bien, merci!
+    <GreenText />
 
     <style>
       self {
@@ -161,7 +172,7 @@ int main() {
   std::cout << "[Info] Root Layout Box Tree:" << std::endl;
   std::cout << root_box->Print() << std::endl;
 
-  for (int width = 10; width <= 60; width += 10) {
+  for (int width = 10; width <= 60; width += 5) {
     // 3. Layout
     std::cout << "[Step 2] Running Layout Algorithms..." << std::endl;
     LayoutConstraints viewport = {
