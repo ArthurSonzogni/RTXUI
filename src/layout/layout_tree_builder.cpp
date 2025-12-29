@@ -51,40 +51,29 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node) {
     return box;
   }
 
-  // CSS: Decide if the Algorithm should be InlineFlow or BlockFlow. This is
-  // BlockFlow if it exist at least one element with display_inside = block.
-  bool has_block_child = false;
-  for (const auto& child_box : raw_children) {
-    if (child_box->style.display_outside == DisplayOutside::Block) {
-      has_block_child = true;
+  if (box->style.display_outside == DisplayOutside::Block) {
+    box->algorithm = LayoutBox::Algorithm::BlockFlow;
+    std::vector<std::shared_ptr<LayoutBox>> refined_children;
+    std::shared_ptr<LayoutBox> anonymous_box = nullptr;
+    for (const auto& child_box : raw_children) {
+      if (child_box->style.display_outside == DisplayOutside::Inline) {
+        if (!anonymous_box) {
+          anonymous_box = std::make_shared<LayoutBox>();
+          anonymous_box->is_anonymous = true;
+          anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+          refined_children.push_back(anonymous_box);
+        }
+        anonymous_box->children.push_back(child_box);
+      } else {
+        anonymous_box = nullptr;
+        refined_children.push_back(child_box);
+      }
     }
-  }
-
-  if (!has_block_child) {
+    box->children = refined_children;
+  } else {  // Inline
     box->algorithm = LayoutBox::Algorithm::InlineFlow;
     box->children = raw_children;
-    return box;
   }
-
-  // If BlockFlow, we need to wrap Inline children into anonymous Block boxes.
-  std::vector<std::shared_ptr<LayoutBox>> refined_children;
-  std::shared_ptr<LayoutBox> anonymous_box = nullptr;
-  for (const auto& child_box : raw_children) {
-    if (child_box->style.display_outside == DisplayOutside::Inline) {
-      if (!anonymous_box) {
-        anonymous_box = std::make_shared<LayoutBox>();
-        anonymous_box->is_anonymous = true;
-        anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-        refined_children.push_back(anonymous_box);
-      }
-      anonymous_box->children.push_back(child_box);
-    } else {
-      anonymous_box = nullptr;
-      refined_children.push_back(child_box);
-    }
-  }
-  box->children = refined_children;
-  box->algorithm = LayoutBox::Algorithm::BlockFlow;
 
   return box;
 }

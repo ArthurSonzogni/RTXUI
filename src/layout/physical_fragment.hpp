@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "layout/style.hpp"
 #include "paint/color.hpp"
 
 namespace rtxui {
@@ -14,6 +15,8 @@ struct PhysicalFragment {
   bool is_text = false;
   std::string text_content;
   bool has_border = false;
+  BorderStyle border_style = BorderStyle::None;
+  std::optional<Color> border_color;
 
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;

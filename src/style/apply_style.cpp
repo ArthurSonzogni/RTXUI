@@ -9,7 +9,71 @@
 namespace rtxui {
 namespace {
 
+float StoF(std::string_view s) {
+  std::string temp(s);
+  return std::stof(temp);
+}
+int StoI(std::string_view s) {
+  std::string temp(s);
+  return std::stoi(temp);
+}
+
 std::optional<Color> ParseColor(std::string_view value) {
+  // Parse rgb(r, g, b)
+  if (value.substr(0, 4) == "rgb(" && value.back() == ')') {
+    value.remove_prefix(4);
+    value.remove_suffix(1);
+    size_t first_comma = value.find(',');
+    if (first_comma == std::string_view::npos)
+      return std::nullopt;
+    size_t second_comma = value.find(',', first_comma + 1);
+    if (second_comma == std::string_view::npos)
+      return std::nullopt;
+    std::string_view r_str = value.substr(0, first_comma);
+    std::string_view g_str = value.substr(first_comma + 1, second_comma - first_comma - 1);
+    std::string_view b_str = value.substr(second_comma + 1);
+    try {
+      int r = StoI(r_str);
+      int g = StoI(g_str);
+      int b = StoI(b_str);
+      return Color::RGB(r, g, b);
+    } catch (const std::invalid_argument&) {
+      return std::nullopt;
+    } catch (const std::out_of_range&) {
+      return std::nullopt;
+    }
+  }
+
+  // Parse rgba(r, g, b, a)
+  if (value.substr(0, 5) == "rgba(" && value.back() == ')') {
+    value.remove_prefix(5);
+    value.remove_suffix(1);
+    size_t first_comma = value.find(',');
+    if (first_comma == std::string_view::npos)
+      return std::nullopt;
+    size_t second_comma = value.find(',', first_comma + 1);
+    if (second_comma == std::string_view::npos)
+      return std::nullopt;
+    size_t third_comma = value.find(',', second_comma + 1);
+    if (third_comma == std::string_view::npos)
+      return std::nullopt;
+    std::string_view r_str = value.substr(0, first_comma);
+    std::string_view g_str = value.substr(first_comma + 1, second_comma - first_comma - 1);
+    std::string_view b_str = value.substr(second_comma + 1, third_comma - second_comma - 1);
+    std::string_view a_str = value.substr(third_comma + 1);
+    try {
+      int r = StoI(r_str);
+      int g = StoI(g_str);
+      int b = StoI(b_str);
+      float a = StoF(a_str);
+      return Color::RGBA(r, g, b, a);
+    } catch (const std::invalid_argument&) {
+      return std::nullopt;
+    } catch (const std::out_of_range&) {
+      return std::nullopt;
+    }
+  }
+
   if (value == "red")
     return Color::RGB(255, 0, 0);
   if (value == "white")
@@ -25,21 +89,48 @@ std::optional<Color> ParseColor(std::string_view value) {
   return std::nullopt;
 }
 
-float StoF(std::string_view s) {
-  std::string temp(s);
-  return std::stof(temp);
-}
-int StoI(std::string_view s) {
-  std::string temp(s);
-  return std::stoi(temp);
-}
-
 Length ParseLength(std::string_view value) {
   if (value.back() == '%') {
     value.remove_suffix(1);
     return Length::Pct(StoF(value));
   }
   return Length::Cells(StoF(value));
+}
+
+std::optional<BorderStyle> ParseBorderStyle(std::string_view v) {
+  if (v == "none")
+    return BorderStyle::None;
+  if (v == "ascii")
+    return BorderStyle::Ascii;
+  if (v == "blank")
+    return BorderStyle::Blank;
+  if (v == "dashed")
+    return BorderStyle::Dashed;
+  if (v == "double")
+    return BorderStyle::Double;
+  if (v == "heavy")
+    return BorderStyle::Heavy;
+  if (v == "hkey")
+    return BorderStyle::HKey;
+  if (v == "inner")
+    return BorderStyle::Inner;
+  if (v == "outer")
+    return BorderStyle::Outer;
+  if (v == "panel")
+    return BorderStyle::Panel;
+  if (v == "round" || v == "rounded")
+    return BorderStyle::Round;
+  if (v == "solid")
+    return BorderStyle::Solid;
+  if (v == "tall")
+    return BorderStyle::Tall;
+  if (v == "thick")
+    return BorderStyle::Thick;
+  if (v == "vkey")
+    return BorderStyle::VKey;
+  if (v == "wide")
+    return BorderStyle::Wide;
+  return std::nullopt;
 }
 
 }  // namespace
@@ -53,7 +144,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
-  if (p == "foreground-color") {
+  if (p == "color" || p == "foreground-color") {
     style.foreground_color = ParseColor(v);
     return;
   }
@@ -73,6 +164,65 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   if (p == "border-width") {
     int bw = StoI(v);
     style.border = {bw, bw, bw, bw};
+    return;
+  }
+
+  if (p == "border") {
+    if (auto style_opt = ParseBorderStyle(v)) {
+      style.border_style = *style_opt;
+      if (style.border.top == 0 && style.border.bottom == 0 &&
+          style.border.left == 0 && style.border.right == 0) {
+        style.border = {1, 1, 1, 1};
+      }
+      return;
+    }
+    // Try to parse as a number for width
+    try {
+      int bw = StoI(v);
+      style.border = {bw, bw, bw, bw};
+      style.border_style = BorderStyle::Solid;
+      return;  // Return only on success
+    } catch (const std::invalid_argument&) {
+      // Not a number, fall through to other properties or do nothing
+    } catch (const std::out_of_range&) {
+      // Out of range for int.
+    }
+    return;
+  }
+  
+  if (p == "border-top") {
+    int bw = StoI(v);
+    style.border.top = bw;
+    return;
+  }
+
+  if (p == "border-bottom") {
+    int bw = StoI(v);
+    style.border.bottom = bw;
+    return;
+  }
+
+  if (p == "border-left") {
+    int bw = StoI(v);
+    style.border.left = bw;
+    return;
+  }
+
+  if (p == "border-right") {
+    int bw = StoI(v);
+    style.border.right = bw;
+    return;
+  }
+
+  if (p == "border-style") {
+    if (auto style_opt = ParseBorderStyle(v)) {
+      style.border_style = *style_opt;
+    }
+    return;
+  }
+
+  if (p == "border-color") {
+    style.border_color = ParseColor(v);
     return;
   }
 

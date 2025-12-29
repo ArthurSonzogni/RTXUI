@@ -57,10 +57,29 @@ struct LayoutConstraints {
   Constraint height;
 };
 
+enum class BorderStyle {
+  None,
+  Ascii,
+  Blank,
+  Dashed,
+  Double,
+  Heavy,
+  HKey,
+  Inner,
+  Outer,
+  Panel,
+  Round,
+  Solid,
+  Tall,
+  Thick,
+  VKey,
+  Wide,
+};
+
 // Represents the "Computed CSS values"
 struct ComputedStyle {
   DisplayOutside display_outside = DisplayOutside::Inline;
-  DisplayInside display_inside = DisplayInside::Flow; // Default to flow
+  DisplayInside display_inside = DisplayInside::Flow;  // Default to flow
 
   Direction flex_direction = Direction::Row;
 
@@ -73,6 +92,9 @@ struct ComputedStyle {
   Spacing margin;
   Spacing padding;
   Spacing border;
+
+  BorderStyle border_style = BorderStyle::None;
+  std::optional<Color> border_color;
 
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
