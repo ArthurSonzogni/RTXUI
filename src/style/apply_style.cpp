@@ -1,6 +1,7 @@
 #include "style/apply_style.hpp"
 
 #include <optional>
+#include <stdexcept>
 #include <string>
 
 #include "paint/color.hpp"
@@ -135,7 +136,6 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
       if (outside == "block") {
         style.display_outside = DisplayOutside::Block;
-        return;
       }
 
       if (outside == "inline") {
@@ -144,13 +144,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
       if (inside == "flow") {
         style.display_inside = DisplayInside::Flow;
-        return;
       }
 
       if (inside == "flex") {
         style.display_inside = DisplayInside::Flex;
-        return;
       }
+      return;
     }
   }
 

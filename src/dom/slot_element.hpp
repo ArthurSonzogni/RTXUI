@@ -8,8 +8,7 @@ namespace rtxui {
 // A slot HTML element
 class SlotElement : public Element {
  public:
-  explicit SlotElement() = default;
-  //std::string Print(int depth) const final;
+  SlotElement();
 };
 
 }  // namespace rtxui

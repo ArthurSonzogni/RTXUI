@@ -8,7 +8,7 @@ namespace rtxui {
 // A text HTML element
 class TextElement : public Element {
  public:
-  explicit TextElement(std::string text) : text_(std::move(text)) {}
+  explicit TextElement(std::string text);
   std::string Print(int depth) const final;
   const std::string& text() const { return text_; }
 

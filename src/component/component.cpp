@@ -115,6 +115,9 @@ void ComponentBase::Render() {
   template_node.type = xml::Node::Type::kElement;
   template_node.tag = "template";
   template_node.children.reserve(xml_nodes_.size());
+
+  std::optional<css::StyleSheet> stylesheet;
+
   for (const auto& node : xml_nodes_) {
     if (node.type == xml::Node::Type::kElement) {
       if (node.tag == "style") {
@@ -122,17 +125,11 @@ void ComponentBase::Render() {
             node.children[0].type != xml::Node::Type::kText) {
           continue;
         }
-        auto stylesheet = css::Parse(node.children[0].text);
-        if (!stylesheet) {
-          CssParseError(stylesheet.error(), node.children[0].text);
-        }
-
-        for (const auto& ruleset : stylesheet.value()) {
-          if (ruleset.selector == "self") {
-            for (const auto& declaration : ruleset.declarations) {
-              ApplyStyle(root_->style, declaration);
-            }
-          }
+        auto maybe_stylesheet = css::Parse(node.children[0].text);
+        if (maybe_stylesheet) {
+          stylesheet = maybe_stylesheet.value();
+        } else {
+          CssParseError(maybe_stylesheet.error(), node.children[0].text);
         }
         continue;
       }
@@ -149,6 +146,22 @@ void ComponentBase::Render() {
   }
 
   Render(template_node, root_.get(), this);
+
+  if (stylesheet) {
+    for (const auto& ruleset : *stylesheet) {
+      // Handle "self" selector.
+      if (ruleset.selector == "self") {
+        for (const auto& declaration : ruleset.declarations) {
+          ApplyStyle(root_->style, declaration);
+        }
+        continue;
+      }
+
+      // Tag selector. Note that a style is scoped to this component only. So 
+      // we can only apply styles children of the roots and slots.
+
+    }
+  }
 }
 
 // Render the `<template>` node inside the `element`.
@@ -167,7 +180,14 @@ void ComponentBase::Render(const xml::Node& node,
       }
 
       case xml::Node::Type::kText: {
-        slot->AddChild(Ref<TextElement>::New(std::string(child_node.text)));
+        std::string text = std::string(child_node.text);
+        // Replace all '\n' with ' '.
+        for (char& c : text) {
+          if (c == '\n' || c == '\r') {
+            c = ' ';
+          }
+        }
+        slot->AddChild(Ref<TextElement>::New(text).get());
         break;
       }
 

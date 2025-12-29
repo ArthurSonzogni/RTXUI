@@ -34,6 +34,9 @@ class Element : public RefCounted {
   Element* ChildAt(int index) { return children_.at(index).get(); }
   const std::vector<Ref<Element>>& children() const { return children_; }
 
+  // Element info.
+  bool is_slot() const { return is_slot_; }
+  bool is_text() const { return is_text_; }
   std::string_view tag() const;
 
   // Debugging.
@@ -43,6 +46,9 @@ class Element : public RefCounted {
   ComputedStyle style;
 
  protected:
+  bool is_slot_ : 1 = false;
+  bool is_text_ : 1 = false;
+
   std::vector<Ref<Element>> children_;
   Element* parent_ = nullptr;
   const ComponentBase* component_ = nullptr;
