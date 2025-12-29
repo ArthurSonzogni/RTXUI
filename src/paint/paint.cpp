@@ -41,34 +41,74 @@ void Paint(const PhysicalFragment* frag,
     }
   }
 
-  // 1. Draw Border (Box Drawing Characters)
+  // 1. Draw Border
   if (frag->has_border) {
+    Color border_color = frag->border_color.value_or(current_foreground_color);
+
     auto set_char = [&](int x, int y, const std::string& c) {
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
         auto& cell = texture.operator[](x, y);
         cell.character = c;
-        Color fg = current_foreground_color;
         Color bg = cell.background_color;
-        cell.foreground_color = Blend(fg, bg);
+        cell.foreground_color = Blend(border_color, bg);
       }
     };
 
-    // Corners
-    set_char(abs_x, abs_y, "┌");
-    set_char(abs_x + w - 1, abs_y, "┐");
-    set_char(abs_x, abs_y + h - 1, "└");
-    set_char(abs_x + w - 1, abs_y + h - 1, "┘");
+    switch (frag->border_style) {
+      case BorderStyle::Ascii:
+        // Corners
+        set_char(abs_x, abs_y, "+");
+        set_char(abs_x + w - 1, abs_y, "+");
+        set_char(abs_x, abs_y + h - 1, "+");
+        set_char(abs_x + w - 1, abs_y + h - 1, "+");
+        // Top/Bottom
+        for (int i = 1; i < w - 1; ++i) {
+          set_char(abs_x + i, abs_y, "-");
+          set_char(abs_x + i, abs_y + h - 1, "-");
+        }
+        // Left/Right
+        for (int i = 1; i < h - 1; ++i) {
+          set_char(abs_x, abs_y + i, "|");
+          set_char(abs_x + w - 1, abs_y + i, "|");
+        }
+        break;
 
-    // Top/Bottom
-    for (int i = 1; i < w - 1; ++i) {
-      set_char(abs_x + i, abs_y, "─");
-      set_char(abs_x + i, abs_y + h - 1, "─");
-    }
+      case BorderStyle::Round:
+        // Corners
+        set_char(abs_x, abs_y, "╭");
+        set_char(abs_x + w - 1, abs_y, "╮");
+        set_char(abs_x, abs_y + h - 1, "╰");
+        set_char(abs_x + w - 1, abs_y + h - 1, "╯");
+        // Top/Bottom
+        for (int i = 1; i < w - 1; ++i) {
+          set_char(abs_x + i, abs_y, "─");
+          set_char(abs_x + i, abs_y + h - 1, "─");
+        }
+        // Left/Right
+        for (int i = 1; i < h - 1; ++i) {
+          set_char(abs_x, abs_y + i, "│");
+          set_char(abs_x + w - 1, abs_y + i, "│");
+        }
+        break;
 
-    // Left/Right
-    for (int i = 1; i < h - 1; ++i) {
-      set_char(abs_x, abs_y + i, "│");
-      set_char(abs_x + w - 1, abs_y + i, "│");
+      case BorderStyle::None:
+      default:
+        // Corners
+        set_char(abs_x, abs_y, "┌");
+        set_char(abs_x + w - 1, abs_y, "┐");
+        set_char(abs_x, abs_y + h - 1, "└");
+        set_char(abs_x + w - 1, abs_y + h - 1, "┘");
+        // Top/Bottom
+        for (int i = 1; i < w - 1; ++i) {
+          set_char(abs_x + i, abs_y, "─");
+          set_char(abs_x + i, abs_y + h - 1, "─");
+        }
+        // Left/Right
+        for (int i = 1; i < h - 1; ++i) {
+          set_char(abs_x, abs_y + i, "│");
+          set_char(abs_x + w - 1, abs_y + i, "│");
+        }
+        break;
     }
   }
 

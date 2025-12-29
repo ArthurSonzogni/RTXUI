@@ -92,7 +92,10 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   auto fragment = std::make_shared<PhysicalFragment>(width, 0);
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
-  if (box->style.border.Horiz() > 0) {
+  fragment->border_style = box->style.border_style;
+  fragment->border_color = box->style.border_color;
+  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
+      box->style.border_style != BorderStyle::None) {
     fragment->has_border = true;
   }
 
@@ -102,15 +105,22 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
 
   for (auto& child_box : box->children) {
     LayoutConstraints child_c;
-    child_c.width = {content_width_limit - child_box->style.margin.Horiz(),
-                     MeasureMode::AtMost};
-    child_c.height = {0, MeasureMode::Undefined};
+    child_c.width = {
+        content_width_limit - child_box->style.margin.Horiz(),
+        MeasureMode::AtMost,
+    };
+    child_c.height = {
+        0,
+        MeasureMode::Undefined,
+    };
 
     auto child_frag = RunLayout({child_box.get()}, child_c);
 
-    fragment->children.push_back({child_frag,
-                                  cur_x + child_box->style.margin.left,
-                                  cur_y + child_box->style.margin.top});
+    fragment->children.push_back({
+        child_frag,
+        cur_x + child_box->style.margin.left,
+        cur_y + child_box->style.margin.top,
+    });
 
     cur_y += child_frag->height + child_box->style.margin.Vert();
     max_child_width = std::max(
@@ -154,6 +164,12 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   auto container_frag = std::make_shared<PhysicalFragment>(width, 0);
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
+  container_frag->border_style = box->style.border_style;
+  container_frag->border_color = box->style.border_color;
+  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
+      box->style.border_style != BorderStyle::None) {
+    container_frag->has_border = true;
+  }
 
   int cursor_x = 0;
   int cursor_y = box->style.padding.top + box->style.border.top;
@@ -349,6 +365,14 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   // Pass 3: Final Measurement & Positioning
   auto fragment = std::make_shared<PhysicalFragment>(my_width, my_height);
+  fragment->background_color = box->style.background_color;
+  fragment->foreground_color = box->style.foreground_color;
+  fragment->border_style = box->style.border_style;
+  fragment->border_color = box->style.border_color;
+  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
+      box->style.border_style != BorderStyle::None) {
+    fragment->has_border = true;
+  }
   int main_pos = is_row ? (box->style.padding.left + box->style.border.left)
                         : (box->style.padding.top + box->style.border.top);
   int cross_start = is_row ? (box->style.padding.top + box->style.border.top)

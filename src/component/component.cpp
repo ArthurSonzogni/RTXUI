@@ -1,5 +1,6 @@
 #include "component.hpp"
 
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -107,6 +108,8 @@ void ComponentBase::Render() {
   // Create the root element, if it doesn't exist.
   if (!root_) {
     root_ = Ref<Element>::New(this);
+    root_->id = id_;
+    root_->classes = classes_;
   }
 
   // Create a fake "<template>" xml element that contains every children of the
@@ -148,6 +151,34 @@ void ComponentBase::Render() {
   Render(template_node, root_.get(), this);
 
   if (stylesheet) {
+    auto ApplyRuleset = [](Element* element, const css::Ruleset& ruleset) {
+      std::string_view selector = ruleset.selector;
+      bool match = false;
+      if (selector.starts_with("#")) {
+        if (!element->id.empty() && element->id == selector.substr(1)) {
+          match = true;
+        }
+      } else if (selector.starts_with(".")) {
+        std::string_view class_name = selector.substr(1);
+        for (const auto& cls : element->classes) {
+          if (cls == class_name) {
+            match = true;
+            break;
+          }
+        }
+      } else {
+        if (element->tag() == selector) {
+          match = true;
+        }
+      }
+
+      if (match) {
+        for (const auto& declaration : ruleset.declarations) {
+          ApplyStyle(element->style, declaration);
+        }
+      }
+    };
+
     for (const auto& ruleset : *stylesheet) {
       // Handle "self" selector.
       if (ruleset.selector == "self") {
@@ -157,9 +188,15 @@ void ComponentBase::Render() {
         continue;
       }
 
-      // Tag selector. Note that a style is scoped to this component only. So 
-      // we can only apply styles children of the roots and slots.
+      std::function<void(Element*, const css::Ruleset&)> StyleDescendants =
+          [&](Element* element, const css::Ruleset& ruleset) {
+            ApplyRuleset(element, ruleset);
+            for (int i = 0; i < element->ChildCount(); ++i) {
+              StyleDescendants(element->ChildAt(i), ruleset);
+            }
+          };
 
+      StyleDescendants(root_.get(), ruleset);
     }
   }
 }
@@ -187,7 +224,7 @@ void ComponentBase::Render(const xml::Node& node,
             c = ' ';
           }
         }
-        slot->AddChild(Ref<TextElement>::New(text).get());
+        slot->AddChild(Ref<TextElement>::New(text));
         break;
       }
 
@@ -197,11 +234,21 @@ void ComponentBase::Render(const xml::Node& node,
         }
 
         if (child_node.tag == "slot" || child_node.tag.starts_with("slot.")) {
-          std::string slot_name =
-              child_node.tag == "slot" ? "" : std::string(child_node.tag.substr(5));
+          std::string slot_name = child_node.tag == "slot"
+                                      ? ""
+                                      : std::string(child_node.tag.substr(5));
           auto slot_element = Ref<SlotElement>::New();
+
+          if (child_node.attributes.contains("id")) {
+            slot_element->id = child_node.attributes.at("id");
+          }
+          if (child_node.attributes.contains("class")) {
+            auto class_views = Split(child_node.attributes.at("class"), ' ');
+            slot_element->classes.assign(class_views.begin(), class_views.end());
+          }
+
           slots_[slot_name] = slot_element;
-          slot->AddChild(slot_element.get());
+          slot->AddChild(slot_element);
           break;
         }
 
@@ -218,15 +265,15 @@ void ComponentBase::Render(const xml::Node& node,
         // Find the ComponentFactory from the `imports_` map.
         auto it = import_source->imports_.find(std::string(child_node.tag));
         if (it == import_source->imports_.end()) {
-          std::print(
-              stderr,
-              "\n"
-              "Error:\n"
-              "  The component <{}> is using the component <{}>, but it has not "
-              "been imported.\n"
-              "\n"
-              "  Known components are:\n",
-              import_source->Tag(), child_node.tag);
+          std::print(stderr,
+                     "\n"
+                     "Error:\n"
+                     "  The component <{}> is using the component <{}>, but it "
+                     "has not "
+                     "been imported.\n"
+                     "\n"
+                     "  Known components are:\n",
+                     import_source->Tag(), child_node.tag);
 
           for (const auto& [key, _] : import_source->imports_) {
             std::print(stderr, "    - {}\n", key);
@@ -237,6 +284,15 @@ void ComponentBase::Render(const xml::Node& node,
 
         auto child = it->second();
         children_.insert(child);
+
+        if (child_node.attributes.contains("id")) {
+          child->id_ = child_node.attributes.at("id");
+        }
+        if (child_node.attributes.contains("class")) {
+          auto class_views = Split(child_node.attributes.at("class"), ' ');
+          child->classes_.assign(class_views.begin(), class_views.end());
+        }
+
         child->Mount();
         slot->AddChild(child->Root());
 

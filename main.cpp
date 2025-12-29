@@ -17,99 +17,27 @@
 
 using namespace rtxui;
 
-RTXUI_COMPONENT(Fixed) {
-  Import<rtxui::p>();
-  return R"html(
-    Fixed
-
-    <style>
-      self {
-        background-color: yellow;
-        border-width: 1;
-        width: 10;
-      }
-    </style>
-  )html";
-}
-
-RTXUI_COMPONENT(Grow) {
-  Import<rtxui::p>();
-  return R"html(
-    Grow
-    <style>
-      self {
-        background-color: green;
-        padding: 1;
-        flex-grow: 1;
-      }
-    </style>
-  )html";
-}
-
-RTXUI_COMPONENT(Percent) {
-  Import<rtxui::p>();
-  return R"html(
-    20%
-    <style>
-      self {
-        background-color: blue;
-        width: 20%;
-        margin: 1;
-      }
-    </style>
-  )html";
-}
-
-RTXUI_COMPONENT(FlexContainer) {
+RTXUI_COMPONENT(Styled) {
   Import<rtxui::div>();
   return R"html(
-    <slot />
+    <div>Begin</div>
+    <slot></slot>
+    <div>End</div>
 
     <style>
       self {
-        display: block flex;
-        flex-direction: row;
-        foreground-color: black;
-        background-color: white;
-        width: 100%;
+        display: inline block;
+        color: white;
+        background-color: black;
+        border: 1;
+        width: 30%;
       }
-    </style>
-  )html";
-}
-
-RTXUI_COMPONENT(RedText) {
-  Import<rtxui::span>();
-  return R"html(
-    This is an inline box demo.
-
-    <style>
-      self {
-        background-color: red;
-      }
-    </style>
-  )html";
-}
-
-RTXUI_COMPONENT(GreenText) {
-  Import<rtxui::span>();
-  return R"html(
-    It should wrap properly within
-
-    <style>
-      self {
-        background-color: green;
-      }
-    </style>
-  )html";
-}
-
-RTXUI_COMPONENT(BlueText) {
-  Import<rtxui::span>();
-  return R"html(
-    the given width constraints.
-    <style>
-      self {
+      div {
+        color: yellow;
         background-color: blue;
+        padding: 1;
+        border: 1;
+        margin: 1;
       }
     </style>
   )html";
@@ -117,39 +45,81 @@ RTXUI_COMPONENT(BlueText) {
 
 RTXUI_COMPONENT(App) {
   Import<rtxui::div>();
-  Import<FlexContainer>();
-  Import<RedText>();
-  Import<GreenText>();
-  Import<BlueText>();
-  Import<Fixed>();
-  Import<Grow>();
-  Import<Percent>();
-  Import<rtxui::span>();
+  Import<Styled>();
   return R"html(
-    <FlexContainer>
-      <Fixed />
-      <Grow />
-      <Percent />
-    </FlexContainer>
-    <RedText />
-    Bonjour a tous le monde qui est ici!
-    Comment ca va?
-    Moi, ca va tres bien, merci! <GreenText />
-    Bonjour a tous le monde qui est ici!
-    Comment ca va?
-    Moi, ca va tres bien, merci!
-    <BlueText />
-    Bonjour a tous le monde qui est ici!
-    Comment ca va?
-    Moi, ca va tres bien, merci!
-    <GreenText />
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit - Bonjour!
+    Bonjour ipsum dolor sit amet, consectetur adipiscing elit.
+    Au revoir ipsum dolor sit amet, consectetur adipiscing elit.
+
+
+    <Styled>
+      This is a slot content inside the Styled component.
+    </Styled>
+
+    <Styled id="large-styled">
+      This is a slot content inside the Styled component.
+      This is a slot content inside the Styled component.
+      This is a slot content inside the Styled component.
+      This is a slot content inside the Styled component.
+      This is a slot content inside the Styled component.
+    </Styled>
+
+    <div id="flex">
+      <div id="red">
+        This is a red box.
+      </div>
+      <div id="green">
+        This is a green box.
+      </div>
+      <div id="blue">
+        This is a blue box.
+      </div>
+    </div>
+    Au revoir!
 
     <style>
       self {
-        display: block;
-        border-width: 1;
-        foreground-color: white;
+        color: white;
         background-color: black;
+        width: 100%;
+        border: 1;
+      }
+
+      #large-styled {
+        background-color: red;
+      }
+     
+      #flex {
+        display: flex;
+        width: 100%;
+        gap: 1;
+        padding: 1;
+        border: 1;
+        margin: 1;
+        background-color: yellow;
+        color: black;
+      }
+      #red {
+        width: 10;
+        background-color: red;
+        color: white;
+        flex-grow: 1;
+        padding: 1;
+        border: 1;
+      }
+      #green {
+        background-color: green;
+        color: white;
+        flex-grow: 2;
+        padding: 1;
+        border: 1;
+      }
+      #blue {
+        background-color: blue;
+        color: white;
+        flex-grow: 1;
+        padding: 1;
+        border: 1;
       }
     </style>
   )html";

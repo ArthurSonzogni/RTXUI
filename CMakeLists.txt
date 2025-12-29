@@ -29,6 +29,7 @@ add_library(rtxui_lib STATIC
   "src/component/component.cpp"
   "src/component/component.hpp"
   "src/component/default_components.hpp"
+  "src/component/default_components.cpp"
   "src/component/import.hpp"
   "src/core/expected.hpp"
   "src/core/likely.hpp"
@@ -112,6 +113,7 @@ if(RTXUI_BUILD_TESTS)
     "src/core/task_test.cpp"
     "src/reflection/reflection_test.cpp"
     "src/style/style_test.cpp"
+    "src/layout/layout_test.cpp"
     "src/xml/xml_test.cpp"
   )
   target_link_libraries(rtxui_test PRIVATE rtxui_lib)

@@ -15,11 +15,11 @@
 #include <vector>
 
 #include "cell/cell.hpp"
+#include "component/import.hpp"
 #include "core/refcounted.hpp"
 #include "dom/element.hpp"
-#include "component/import.hpp"
-#include "xml/xml.hpp"
 #include "reflection/class_name.hpp"
+#include "xml/xml.hpp"
 
 namespace rtxui {
 
@@ -91,6 +91,10 @@ class ComponentBase : public RefCounted, public Bindings {
   std::map<std::string, Ref<Element>> slots_;
 
   std::set<Ref<ComponentBase>> children_;
+
+  // Properties given by the parent component.
+  std::string id_;
+  std::vector<std::string> classes_;
 };
 
 template <typename Derived>
@@ -116,6 +120,14 @@ class Component : public ComponentBase {
 
 }  // namespace rtxui
 
+#define RTXUI_COMPONENT_DECLARE(T)       \
+  class T : public rtxui::Component<T> { \
+   public:                               \
+    std::string_view Setup();            \
+  };
+
+#define RTXUI_COMPONENT_IMPLEMENT(T) std::string_view T::Setup()
+
 /// A macro turning:
 /// ```cpp
 /// RTXUI_COMPONENT(Hello) {4
@@ -140,11 +152,8 @@ class Component : public ComponentBase {
 ///   }
 /// };
 /// ```
-#define RTXUI_COMPONENT(T)               \
-  class T : public rtxui::Component<T> { \
-   public:                               \
-    std::string_view Setup();            \
-  };                                     \
-  std::string_view T::Setup()
+#define RTXUI_COMPONENT(T)   \
+  RTXUI_COMPONENT_DECLARE(T) \
+  RTXUI_COMPONENT_IMPLEMENT(T)
 
 #endif  // RTXUI_COMPONENT_HPP_

@@ -45,6 +45,9 @@ class Element : public RefCounted {
 
   ComputedStyle style;
 
+  std::string id;
+  std::vector<std::string> classes;
+
  protected:
   bool is_slot_ : 1 = false;
   bool is_text_ : 1 = false;

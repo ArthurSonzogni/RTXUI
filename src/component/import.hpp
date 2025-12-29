@@ -11,11 +11,12 @@
 #include <unordered_map>
 
 #include "cell/cell.hpp"
-#include "component/component.hpp"
 #include "core/refcounted.hpp"
 #include "reflection/class_name.hpp"
 
 namespace rtxui {
+
+class ComponentBase;
 
 using VariableImportMap = std::unordered_map<std::string, Ref<Cell>>;
 
