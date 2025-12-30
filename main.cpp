@@ -28,16 +28,20 @@ RTXUI_COMPONENT(Styled) {
       self {
         display: inline block;
         color: white;
-        background-color: black;
+        background-color: rgb(70, 70, 70);
         border: tall;
+        border-color: black;
         width: 50%;
+        padding-left: 1;
       }
       div {
         color: yellow;
-        background-color: blue;
-        padding: 1;
+        background-color: rgb(120, 120, 120);
         border: tall;
-        margin: 1;
+        padding-left: 1;
+        border-color: rgb(100, 100, 100);
+        border-color-top: rgb(200, 200, 200);
+        border-color-bottom: rgb(50, 50, 50);
       }
     </style>
   )html";
@@ -76,45 +80,48 @@ RTXUI_COMPONENT(App) {
     <style>
       self {
         color: white;
-        background-color: black;
+        background-color: rgb(30, 30, 30);
         width: 100%;
         border: tall;
       }
 
       #large-styled {
-        background-color: red;
+        background-color: rgb(90, 90, 90);
       }
      
       #flex {
         display: flex;
         width: 100%;
         gap: 1;
-        padding: 1;
         border: tall;
         margin: 1;
-        background-color: yellow;
+        background-color: rgb(50, 50, 50);
         color: black;
+        border-color: black;
       }
       #red {
         width: 10;
         background-color: red;
         color: white;
+        border-color: black;
         flex-grow: 1;
-        padding: 1;
+        padding-left: 1;
         border: tall;
       }
       #green {
         background-color: green;
         color: white;
+        border-color: black;
         flex-grow: 2;
-        padding: 1;
+        padding-left: 1;
         border: tall;
       }
       #blue {
         background-color: blue;
+        border-color: black;
+        padding-left: 1;
         color: white;
         flex-grow: 1;
-        padding: 1;
         border: tall;
       }
     </style>
@@ -138,7 +145,7 @@ int main() {
   std::cout << "[Info] Root Layout Box Tree:" << std::endl;
   std::cout << root_box->Print() << std::endl;
 
-  for (int width = 10; width <= 60; width += 5) {
+  for (int width = 10; width <= 160; width += 15) {
     // 3. Layout
     std::cout << "[Step 2] Running Layout Algorithms..." << std::endl;
     LayoutConstraints viewport = {

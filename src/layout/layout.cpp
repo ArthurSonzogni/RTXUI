@@ -93,7 +93,10 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
   fragment->border_style = box->style.border_style;
-  fragment->border_color = box->style.border_color;
+  fragment->border_color_top = box->style.border_color_top;
+  fragment->border_color_right = box->style.border_color_right;
+  fragment->border_color_bottom = box->style.border_color_bottom;
+  fragment->border_color_left = box->style.border_color_left;
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     fragment->has_border = true;
@@ -180,7 +183,10 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
   container_frag->border_style = box->style.border_style;
-  container_frag->border_color = box->style.border_color;
+  container_frag->border_color_top = box->style.border_color_top;
+  container_frag->border_color_right = box->style.border_color_right;
+  container_frag->border_color_bottom = box->style.border_color_bottom;
+  container_frag->border_color_left = box->style.border_color_left;
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     container_frag->has_border = true;
@@ -393,7 +399,10 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
   fragment->border_style = box->style.border_style;
-  fragment->border_color = box->style.border_color;
+  fragment->border_color_top = box->style.border_color_top;
+  fragment->border_color_right = box->style.border_color_right;
+  fragment->border_color_bottom = box->style.border_color_bottom;
+  fragment->border_color_left = box->style.border_color_left;
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     fragment->has_border = true;

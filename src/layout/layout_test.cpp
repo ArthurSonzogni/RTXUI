@@ -300,6 +300,7 @@ TEST_CASE("Layout: Borders", "[layout]") {
                                        "╰─╯",
                                    }));
   }
+
 }
 
 }  // namespace rtxui

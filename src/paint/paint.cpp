@@ -236,7 +236,7 @@ const BorderData& GetBorderData(BorderStyle style) {
   return border_styles[static_cast<size_t>(style)];
 }
 
-void Paint(const PhysicalFragment* frag,
+void PaintImpl(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
            int off_y,
@@ -272,30 +272,39 @@ void Paint(const PhysicalFragment* frag,
 
   // 1. Draw Border
   if (frag->has_border && frag->border_style != BorderStyle::None) {
-    Color border_color = frag->border_color.value_or(current_foreground_color);
+    Color top_border_color =
+        frag->border_color_top.value_or(current_foreground_color);
+    Color right_border_color =
+        frag->border_color_right.value_or(current_foreground_color);
+    Color bottom_border_color =
+        frag->border_color_bottom.value_or(current_foreground_color);
+    Color left_border_color =
+        frag->border_color_left.value_or(current_foreground_color);
 
-    auto set_char = [&](int x, int y, const char* c, uint8_t mode) {
-      if (c == nullptr || *c == '\0' || *c == ' ') return;
+    auto set_char = [&](int x, int y, const char* c, uint8_t mode,
+                        const Color& border_color) {
+      if (c == nullptr || *c == '\0' || *c == ' ')
+        return;
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
         auto& cell = texture[x, y];
         cell.character = c;
 
         Color inner_bg = current_background_color;
         Color outer_bg = parent_background_color;
-        
+
         switch (mode) {
-          case 0: // Widget
+          case 0:  // Widget
             cell.foreground_color = Blend(border_color, cell.background_color);
             break;
-          case 1: // Parent
+          case 1:  // Parent
             cell.foreground_color = border_color;
             cell.background_color = outer_bg;
             break;
-          case 2: // ReverseOuter
+          case 2:  // ReverseOuter
             cell.foreground_color = outer_bg;
             cell.background_color = Blend(border_color, inner_bg);
             break;
-          case 3: // ReverseInner
+          case 3:  // ReverseInner
             cell.foreground_color = inner_bg;
             cell.background_color = Blend(border_color, outer_bg);
             break;
@@ -306,21 +315,29 @@ void Paint(const PhysicalFragment* frag,
     const auto& data = GetBorderData(frag->border_style);
 
     // Corners
-    set_char(abs_x, abs_y, data.charset[0][0], data.locations[0][0]);           // tl
-    set_char(abs_x + w - 1, abs_y, data.charset[0][2], data.locations[0][2]);   // tr
-    set_char(abs_x, abs_y + h - 1, data.charset[2][0], data.locations[2][0]);   // bl
-    set_char(abs_x + w - 1, abs_y + h - 1, data.charset[2][2], data.locations[2][2]); // br
+    set_char(abs_x, abs_y, data.charset[0][0], data.locations[0][0],
+             left_border_color);  // tl
+    set_char(abs_x + w - 1, abs_y, data.charset[0][2], data.locations[0][2],
+             right_border_color);  // tr
+    set_char(abs_x, abs_y + h - 1, data.charset[2][0], data.locations[2][0],
+             left_border_color);  // bl
+    set_char(abs_x + w - 1, abs_y + h - 1, data.charset[2][2],
+             data.locations[2][2], right_border_color);  // br
 
     // Top/Bottom
     for (int i = 1; i < w - 1; ++i) {
-      set_char(abs_x + i, abs_y, data.charset[0][1], data.locations[0][1]);     // t
-      set_char(abs_x + i, abs_y + h - 1, data.charset[2][1], data.locations[2][1]); // b
+      set_char(abs_x + i, abs_y, data.charset[0][1], data.locations[0][1],
+               top_border_color);  // t
+      set_char(abs_x + i, abs_y + h - 1, data.charset[2][1],
+               data.locations[2][1], bottom_border_color);  // b
     }
 
     // Left/Right
     for (int i = 1; i < h - 1; ++i) {
-      set_char(abs_x, abs_y + i, data.charset[1][0], data.locations[1][0]);     // l
-      set_char(abs_x + w - 1, abs_y + i, data.charset[1][2], data.locations[1][2]); // r
+      set_char(abs_x, abs_y + i, data.charset[1][0], data.locations[1][0],
+               left_border_color);  // l
+      set_char(abs_x + w - 1, abs_y + i, data.charset[1][2],
+               data.locations[1][2], right_border_color);  // r
     }
   }
 
@@ -341,7 +358,7 @@ void Paint(const PhysicalFragment* frag,
 
   // 3. Recurse
   for (auto& child : frag->children) {
-    Paint(child.fragment.get(), texture, abs_x + child.x, abs_y + child.y,
+    PaintImpl(child.fragment.get(), texture, abs_x + child.x, abs_y + child.y,
           current_foreground_color, current_background_color);
   }
 }
@@ -351,7 +368,8 @@ void Paint(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
            int off_y) {
-  Paint(frag, texture, off_x, off_y, Color::RGB(255, 255, 255), Color::RGB(0, 0, 0));
+  PaintImpl(frag, texture, off_x, off_y, Color::RGB(255, 255, 255),
+            Color::RGB(0, 0, 0));
 }
 
 }  // namespace rtxui

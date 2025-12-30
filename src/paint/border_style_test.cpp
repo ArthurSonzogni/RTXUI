@@ -30,6 +30,28 @@ std::string GetTextLayer(const Texture& texture) {
   return out;
 }
 
+// Helper to extract a color layer (background or foreground) as a grid of
+// characters.
+std::string GetColorLayer(const Texture& texture,
+                          bool background,
+                          const std::map<Color, char>& color_map) {
+  std::string out;
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      const auto& cell = const_cast<Texture&>(texture)[x, y];
+      Color c = background ? cell.background_color : cell.foreground_color;
+      if (c.a == 0) {
+        out += ".";  // Use '.' for transparent/unset colors
+      } else {
+        auto it = color_map.find(c);
+        out += (it != color_map.end()) ? it->second : '?';
+      }
+    }
+    out += "\n";
+  }
+  return out;
+}
+
 // Process the raw string for comparison.
 std::string CheckGrid(const std::vector<std::string>& expected) {
   std::string result;
@@ -178,6 +200,46 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
 
     CHECK(output == CheckGrid(expected));
   }
+}
+
+TEST_CASE("Individual Border Colors") {
+  struct IndividualBorderColorTest : Component<IndividualBorderColorTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            .box {
+              border: ascii;
+              border-color-top: red;
+              border-color-right: blue;
+              border-color-bottom: green;
+              border-color-left: yellow;
+              color: white;
+              display: block;
+            }
+          </style>
+          <div class="box">Hi</div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<IndividualBorderColorTest>::New(), 6, 3);
+
+  std::map<Color, char> foreground_colors = {
+      {Color::RGB(255, 0, 0), 'R'},      // red
+      {Color::RGB(0, 0, 255), 'B'},      // blue
+      {Color::RGB(0, 255, 0), 'G'},      // green
+      {Color::RGB(255, 255, 0), 'Y'},    // yellow
+      {Color::RGB(255, 255, 255), 'W'},  // white
+  };
+
+  // Border colors: top=Red, right=Blue, bottom=Green, left=Yellow
+  // Corners take the color of the vertical border.
+  CHECK(GetColorLayer(texture, false, foreground_colors) == CheckGrid({
+                                                                "YRRRRB",
+                                                                "YWW..B",
+                                                                "YGGGGB",
+                                                            }));
 }
 
 }  // namespace rtxui
