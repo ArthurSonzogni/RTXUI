@@ -58,14 +58,14 @@ struct LayoutConstraints {
 };
 
 enum class BorderStyle {
-  None,
   Ascii,
   Blank,
   Dashed,
   Double,
-  Heavy,
   HKey,
+  Heavy,
   Inner,
+  None,
   Outer,
   Panel,
   Round,

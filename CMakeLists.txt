@@ -111,9 +111,10 @@ if(RTXUI_BUILD_TESTS)
     "src/component/component_test.cpp"
     "src/core/refcounted_test.cpp"
     "src/core/task_test.cpp"
+    "src/layout/layout_test.cpp"
+    "src/paint/border_style_test.cpp"
     "src/reflection/reflection_test.cpp"
     "src/style/style_test.cpp"
-    "src/layout/layout_test.cpp"
     "src/xml/xml_test.cpp"
   )
   target_link_libraries(rtxui_test PRIVATE rtxui_lib)

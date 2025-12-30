@@ -28,7 +28,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
  * Supports Fixed and Percentage units. Returns -1 for 'Auto'.
  */
 int ResolveSize(const Length& length, int parent_size) {
-  if (length.unit == Unit::Percent&& parent_size >= 0) {
+  if (length.unit == Unit::Percent && parent_size >= 0) {
     return (length.value * parent_size) / 100;
   }
   if (length.unit == Unit::Cells) {
@@ -102,6 +102,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   int cur_y = box->style.border.top + box->style.padding.top;
   int cur_x = box->style.border.left + box->style.padding.left;
   int max_child_width = 0;
+  int prev_margin_bottom = 0;
+  bool is_first_child = true;
 
   for (auto& child_box : box->children) {
     LayoutConstraints child_c;
@@ -116,17 +118,30 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
 
     auto child_frag = RunLayout({child_box.get()}, child_c);
 
+    int margin_top = child_box->style.margin.top;
+    int margin_bottom = child_box->style.margin.bottom;
+
+    // Sibling margin collapse: use the maximum of the previous child's bottom
+    // margin and the current child's top margin.
+    int collapsed_margin = is_first_child ? margin_top : std::max(prev_margin_bottom, margin_top);
+
     fragment->children.push_back({
         child_frag,
         cur_x + child_box->style.margin.left,
-        cur_y + child_box->style.margin.top,
+        cur_y + collapsed_margin,
     });
 
-    cur_y += child_frag->height + child_box->style.margin.Vert();
+    // Advance cur_y to the bottom of the current fragment content.
+    cur_y += collapsed_margin + child_frag->height;
+    prev_margin_bottom = margin_bottom;
+    is_first_child = false;
+
     max_child_width = std::max(
         max_child_width, child_frag->width + child_box->style.margin.Horiz());
   }
 
+  // Final height includes the bottom margin of the last child and container padding/border.
+  cur_y += prev_margin_bottom;
   cur_y += box->style.border.bottom + box->style.padding.bottom;
 
   if (is_auto_width && constraints.width.mode == MeasureMode::Undefined) {
@@ -234,21 +249,31 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         create_fragment(end);
       }
     } else {
-      LayoutConstraints child_c = {{content_width_limit, MeasureMode::AtMost},
+      // For elements in inline flow, we must respect their margins.
+      int m_left = child->style.margin.left;
+      int m_right = child->style.margin.right;
+      int m_top = child->style.margin.top;
+      int m_bottom = child->style.margin.bottom;
+      int child_m_horiz = m_left + m_right;
+      int child_m_vert = m_top + m_bottom;
+
+      LayoutConstraints child_c = {{content_width_limit - child_m_horiz, MeasureMode::AtMost},
                                    {0, MeasureMode::Undefined}};
       auto child_frag = RunLayout({child.get()}, child_c);
 
-      if (cursor_x + child_frag->width > content_width_limit && cursor_x > 0) {
+      // If the child (plus its horizontal margins) overflows the current line, wrap.
+      if (cursor_x + child_frag->width + child_m_horiz > content_width_limit && cursor_x > 0) {
         commit_line();
       }
 
       container_frag->children.push_back(
           {child_frag,
-           box->style.padding.left + box->style.border.left + cursor_x,
-           cursor_y});
+           box->style.padding.left + box->style.border.left + cursor_x + m_left,
+           cursor_y + m_top});
 
-      line_height = std::max(line_height, child_frag->height);
-      cursor_x += child_frag->width;
+      // Inline boxes affect the line height based on their content + vertical margins.
+      line_height = std::max(line_height, child_frag->height + child_m_vert);
+      cursor_x += child_frag->width + child_m_horiz;
     }
   }
 
@@ -276,11 +301,11 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   int parent_h = constraints.height.value;
 
   int my_width = (constraints.width.mode == MeasureMode::Exactly)
-                     ? parent_w
-                     : ResolveSize(box->style.width, parent_w);
+                       ? parent_w
+                       : ResolveSize(box->style.width, parent_w);
   int my_height = (constraints.height.mode == MeasureMode::Exactly)
-                      ? parent_h
-                      : ResolveSize(box->style.height, parent_h);
+                        ? parent_h
+                        : ResolveSize(box->style.height, parent_h);
 
   bool auto_width = (my_width == -1);
   bool auto_height = (my_height == -1);
@@ -325,8 +350,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     } else {
       child_c.width = {content_w, MeasureMode::AtMost};
       child_c.height = {basis != -1 ? basis : 0, basis != -1
-                                                     ? MeasureMode::Exactly
-                                                     : MeasureMode::Undefined};
+                                                       ? MeasureMode::Exactly
+                                                       : MeasureMode::Undefined};
     }
 
     auto frag = RunLayout({child.get()}, child_c);

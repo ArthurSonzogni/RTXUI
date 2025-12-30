@@ -155,9 +155,57 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "margin-top") {
+    int m = StoI(v);
+    style.margin.top = m;
+    return;
+  }
+
+  if (p == "margin-bottom") {
+    int m = StoI(v);
+    style.margin.bottom = m;
+    return;
+  }
+
+  if (p == "margin-left") {
+    int m = StoI(v);
+    style.margin.left = m;
+    return;
+  }
+
+  if (p == "margin-right") {
+    int m = StoI(v);
+    style.margin.right = m;
+    return;
+  }
+
   if (p == "padding") {
     int p = StoI(v);
     style.padding = {p, p, p, p};
+    return;
+  }
+
+  if (p == "padding-top") {
+    int p = StoI(v);
+    style.padding.top = p;
+    return;
+  }
+
+  if (p == "padding-bottom") {
+    int p = StoI(v);
+    style.padding.bottom = p;
+    return;
+  }
+
+  if (p == "padding-left") {
+    int p = StoI(v);
+    style.padding.left = p;
+    return;
+  }
+
+  if (p == "padding-right") {
+    int p = StoI(v);
+    style.padding.right = p;
     return;
   }
   

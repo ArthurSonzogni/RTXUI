@@ -29,14 +29,14 @@ RTXUI_COMPONENT(Styled) {
         display: inline block;
         color: white;
         background-color: black;
-        border: 1;
-        width: 30%;
+        border: tall;
+        width: 50%;
       }
       div {
         color: yellow;
         background-color: blue;
         padding: 1;
-        border: 1;
+        border: tall;
         margin: 1;
       }
     </style>
@@ -47,10 +47,6 @@ RTXUI_COMPONENT(App) {
   Import<rtxui::div>();
   Import<Styled>();
   return R"html(
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit - Bonjour!
-    Bonjour ipsum dolor sit amet, consectetur adipiscing elit.
-    Au revoir ipsum dolor sit amet, consectetur adipiscing elit.
-
 
     <Styled>
       This is a slot content inside the Styled component.
@@ -82,7 +78,7 @@ RTXUI_COMPONENT(App) {
         color: white;
         background-color: black;
         width: 100%;
-        border: 1;
+        border: tall;
       }
 
       #large-styled {
@@ -94,7 +90,7 @@ RTXUI_COMPONENT(App) {
         width: 100%;
         gap: 1;
         padding: 1;
-        border: 1;
+        border: tall;
         margin: 1;
         background-color: yellow;
         color: black;
@@ -105,21 +101,21 @@ RTXUI_COMPONENT(App) {
         color: white;
         flex-grow: 1;
         padding: 1;
-        border: 1;
+        border: tall;
       }
       #green {
         background-color: green;
         color: white;
         flex-grow: 2;
         padding: 1;
-        border: 1;
+        border: tall;
       }
       #blue {
         background-color: blue;
         color: white;
         flex-grow: 1;
         padding: 1;
-        border: 1;
+        border: tall;
       }
     </style>
   )html";
