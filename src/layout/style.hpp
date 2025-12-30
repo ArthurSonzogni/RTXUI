@@ -94,7 +94,10 @@ struct ComputedStyle {
   Spacing border;
 
   BorderStyle border_style = BorderStyle::None;
-  std::optional<Color> border_color;
+  std::optional<Color> border_color_top;
+  std::optional<Color> border_color_right;
+  std::optional<Color> border_color_bottom;
+  std::optional<Color> border_color_left;
 
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;

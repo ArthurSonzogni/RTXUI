@@ -270,7 +270,31 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "border-color") {
-    style.border_color = ParseColor(v);
+    auto color = ParseColor(v);
+    style.border_color_top = color;
+    style.border_color_right = color;
+    style.border_color_bottom = color;
+    style.border_color_left = color;
+    return;
+  }
+
+  if (p == "border-color-top") {
+    style.border_color_top = ParseColor(v);
+    return;
+  }
+
+  if (p == "border-color-right") {
+    style.border_color_right = ParseColor(v);
+    return;
+  }
+
+  if (p == "border-color-bottom") {
+    style.border_color_bottom = ParseColor(v);
+    return;
+  }
+
+  if (p == "border-color-left") {
+    style.border_color_left = ParseColor(v);
     return;
   }
 
