@@ -19,6 +19,7 @@ cmake .. \
 ninja
 
 tests=(
+  "TerminalInputParser.Fuzz"
   "XML.TestXML"
 )
 
