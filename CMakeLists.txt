@@ -24,6 +24,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 add_library(rtxui_lib STATIC
+  "src/terminal/terminal_input_parser.cpp"
+  "src/terminal/terminal_input_parser.hpp"
+  "src/terminal/event.cpp"
+  "src/terminal/event.hpp"
   "src/cell/cell.cpp"
   "src/cell/cell.hpp"
   "src/component/component.cpp"
@@ -108,6 +112,7 @@ if(RTXUI_BUILD_TESTS)
 
   add_executable(rtxui_test
     "src/cell/cell_test.cpp"
+    "src/terminal/terminal_input_parser_test.cpp"
     "src/component/component_test.cpp"
     "src/core/refcounted_test.cpp"
     "src/core/task_test.cpp"
@@ -123,6 +128,11 @@ if(RTXUI_BUILD_TESTS)
   include(CTest)
   include(Catch)
   catch_discover_tests(rtxui_test)
+
+  add_executable(rtxui_terminal_input_parser
+    "src/terminal/terminal_input_parser_main.cpp"
+  )
+  target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui_lib)
 
 endif()
 
@@ -140,10 +150,16 @@ if (RTXUI_BUILD_FUZZERS)
 
   fuzztest_setup_fuzzing_flags()
   add_executable(rtxui_fuzzer
+    "src/style/style_fuzzer.cpp"
+    "src/terminal/terminal_input_parser_test_fuzzer.cpp"
     "src/xml/xml_fuzzer.cpp"
   )
   include(GoogleTest)
   target_link_libraries(rtxui_fuzzer PRIVATE rtxui_lib)
   link_fuzztest(rtxui_fuzzer)
   gtest_discover_tests(rtxui_fuzzer)
+
+  # FUZZ test requires a definition of to run in fuzzing mode
+  target_compile_definitions(rtxui_fuzzer PRIVATE FUZZTEST_FUZZING_ENABLED)
+
 endif()

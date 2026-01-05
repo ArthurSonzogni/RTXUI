@@ -22,7 +22,7 @@ RTXUI_COMPONENT(Styled) {
   return R"html(
     <div>Begin</div>
     <slot></slot>
-    <div>End</div>
+    <div class="end">End</div>
 
     <style>
       self {
@@ -42,6 +42,11 @@ RTXUI_COMPONENT(Styled) {
         border-color: rgb(100, 100, 100);
         border-color-top: rgb(200, 200, 200);
         border-color-bottom: rgb(50, 50, 50);
+      }
+      .end {
+        border-color: rgb(70,70,70);
+        border-color-bottom: rgb(200, 200, 200);
+        border-color-top: rgb(50, 50, 50);
       }
     </style>
   )html";
