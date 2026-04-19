@@ -14,8 +14,12 @@ float StoF(std::string_view s) {
   return std::stof(temp);
 }
 int StoI(std::string_view s) {
-  std::string temp(s);
-  return std::stoi(temp);
+  try {
+    std::string temp(s);
+    return std::stoi(temp);
+  } catch (...) {
+    return 0;
+  }
 }
 
 std::optional<Color> ParseColor(std::string_view value) {

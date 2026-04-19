@@ -3,28 +3,23 @@
 // the LICENSE file.
 #include "terminal/event.hpp"
 
-#include <map>  // for map
+#include <map>
 #include <string>
-#include <utility>  // for move
+#include <utility>
+#include <variant>
 
 #include "core/string.hpp"
 
-// Disable warning for shadowing variable, for every compilers. Indeed, there is
-// a static Event for every letter of the alphabet:
+// Disable warning for shadowing variable
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wshadow"
 #elif __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
-#elif defined(_MSC_VER)
-#pragma warning(disable : 6244)
-#pragma warning(disable : 6246)
 #endif
 
 // static
 Event::Keyboard Event::Keyboard::From(std::uint32_t cp) {
-  Keyboard k;
-  k.codepoint = cp;
-  return k;
+  Keyboard k; k.codepoint = cp; return k;
 }
 
 // static
@@ -34,334 +29,126 @@ Event::Keyboard Event::Keyboard::From(char c) {
 
 // static
 Event::Keyboard Event::Keyboard::From(std::string_view str) {
-  uint32_t cp = 0;
-  size_t end = 0;
-  EatCodePoint(str, 0, &end, &cp);
-  return From(cp);
+  uint32_t cp = 0; size_t end = 0; EatCodePoint(str, 0, &end, &cp); return From(cp);
 }
 
-/// @brief Return a string representation of the event.
-std::string Event::DebugString() const {
-  static std::map<Event, std::string_view> event_to_string = {
-      // --- Arrow ---
-      {Event::ArrowLeft, "Event::ArrowLeft"},
-      {Event::ArrowRight, "Event::ArrowRight"},
-      {Event::ArrowUp, "Event::ArrowUp"},
-      {Event::ArrowDown, "Event::ArrowDown"},
-
-      // --- ArrowCtrl ---
-      {Event::ArrowLeftCtrl, "Event::ArrowLeftCtrl"},
-      {Event::ArrowRightCtrl, "Event::ArrowRightCtrl"},
-      {Event::ArrowUpCtrl, "Event::ArrowUpCtrl"},
-      {Event::ArrowDownCtrl, "Event::ArrowDownCtrl"},
-
-      // --- Other ---
-      {Event::Backspace, "Event::Backspace"},
-      {Event::Delete, "Event::Delete"},
-      {Event::Escape, "Event::Escape"},
-      {Event::Return, "Event::Return"},
-      {Event::Tab, "Event::Tab"},
-      {Event::TabReverse, "Event::TabReverse"},
-
-      // --- Function keys ---
-      {Event::F1, "Event::F1"},
-      {Event::F2, "Event::F2"},
-      {Event::F3, "Event::F3"},
-      {Event::F4, "Event::F4"},
-      {Event::F5, "Event::F5"},
-      {Event::F6, "Event::F6"},
-      {Event::F7, "Event::F7"},
-      {Event::F8, "Event::F8"},
-      {Event::F9, "Event::F9"},
-      {Event::F10, "Event::F10"},
-      {Event::F11, "Event::F11"},
-      {Event::F12, "Event::F12"},
-
-      // --- Navigation keys ---
-      {Event::Insert, "Event::Insert"},
-      {Event::Home, "Event::Home"},
-      {Event::End, "Event::End"},
-      {Event::PageUp, "Event::PageUp"},
-      {Event::PageDown, "Event::PageDown"},
-
-      // --- Control keys ---
-      {Event::CtrlA, "Event::CtrlA"},
-      {Event::CtrlB, "Event::CtrlB"},
-      {Event::CtrlC, "Event::CtrlC"},
-      {Event::CtrlD, "Event::CtrlD"},
-      {Event::CtrlE, "Event::CtrlE"},
-      {Event::CtrlF, "Event::CtrlF"},
-      {Event::CtrlG, "Event::CtrlG"},
-      {Event::CtrlH, "Event::CtrlH"},
-      {Event::CtrlI, "Event::CtrlI"},
-      {Event::CtrlJ, "Event::CtrlJ"},
-      {Event::CtrlK, "Event::CtrlK"},
-      {Event::CtrlL, "Event::CtrlL"},
-      {Event::CtrlM, "Event::CtrlM"},
-      {Event::CtrlN, "Event::CtrlN"},
-      {Event::CtrlO, "Event::CtrlO"},
-      {Event::CtrlP, "Event::CtrlP"},
-      {Event::CtrlQ, "Event::CtrlQ"},
-      {Event::CtrlR, "Event::CtrlR"},
-      {Event::CtrlS, "Event::CtrlS"},
-      {Event::CtrlT, "Event::CtrlT"},
-      {Event::CtrlU, "Event::CtrlU"},
-      {Event::CtrlV, "Event::CtrlV"},
-      {Event::CtrlW, "Event::CtrlW"},
-      {Event::CtrlX, "Event::CtrlX"},
-      {Event::CtrlY, "Event::CtrlY"},
-      {Event::CtrlZ, "Event::CtrlZ"},
-
-      // --- Alt keys ---
-      {Event::AltA, "Event::AltA"},
-      {Event::AltB, "Event::AltB"},
-      {Event::AltC, "Event::AltC"},
-      {Event::AltD, "Event::AltD"},
-      {Event::AltE, "Event::AltE"},
-      {Event::AltF, "Event::AltF"},
-      {Event::AltG, "Event::AltG"},
-      {Event::AltH, "Event::AltH"},
-      {Event::AltI, "Event::AltI"},
-      {Event::AltJ, "Event::AltJ"},
-      {Event::AltK, "Event::AltK"},
-      {Event::AltL, "Event::AltL"},
-      {Event::AltM, "Event::AltM"},
-      {Event::AltN, "Event::AltN"},
-      {Event::AltO, "Event::AltO"},
-      {Event::AltP, "Event::AltP"},
-      {Event::AltQ, "Event::AltQ"},
-      {Event::AltR, "Event::AltR"},
-      {Event::AltS, "Event::AltS"},
-      {Event::AltT, "Event::AltT"},
-      {Event::AltU, "Event::AltU"},
-      {Event::AltV, "Event::AltV"},
-      {Event::AltW, "Event::AltW"},
-      {Event::AltX, "Event::AltX"},
-      {Event::AltY, "Event::AltY"},
-      {Event::AltZ, "Event::AltZ"},
-
-      // --- CtrlAlt keys ---
-      {Event::CtrlAltA, "Event::CtrlAltA"},
-      {Event::CtrlAltB, "Event::CtrlAltB"},
-      {Event::CtrlAltC, "Event::CtrlAltC"},
-      {Event::CtrlAltD, "Event::CtrlAltD"},
-      {Event::CtrlAltE, "Event::CtrlAltE"},
-      {Event::CtrlAltF, "Event::CtrlAltF"},
-      {Event::CtrlAltG, "Event::CtrlAltG"},
-      {Event::CtrlAltH, "Event::CtrlAltH"},
-      {Event::CtrlAltI, "Event::CtrlAltI"},
-      {Event::CtrlAltJ, "Event::CtrlAltJ"},
-      {Event::CtrlAltK, "Event::CtrlAltK"},
-      {Event::CtrlAltL, "Event::CtrlAltL"},
-      {Event::CtrlAltM, "Event::CtrlAltM"},
-      {Event::CtrlAltN, "Event::CtrlAltN"},
-      {Event::CtrlAltO, "Event::CtrlAltO"},
-      {Event::CtrlAltP, "Event::CtrlAltP"},
-      {Event::CtrlAltQ, "Event::CtrlAltQ"},
-      {Event::CtrlAltR, "Event::CtrlAltR"},
-      {Event::CtrlAltS, "Event::CtrlAltS"},
-      {Event::CtrlAltT, "Event::CtrlAltT"},
-      {Event::CtrlAltU, "Event::CtrlAltU"},
-      {Event::CtrlAltV, "Event::CtrlAltV"},
-      {Event::CtrlAltW, "Event::CtrlAltW"},
-      {Event::CtrlAltX, "Event::CtrlAltX"},
-      {Event::CtrlAltY, "Event::CtrlAltY"},
-      {Event::CtrlAltZ, "Event::CtrlAltZ"},
-  };
-
-  static std::map<Mouse::Button, const char*> mouse_button_string = {
-      {Mouse::Button::Left, ".button = Mouse::Left"},
-      {Mouse::Button::Middle, ".button = Mouse::Middle"},
-      {Mouse::Button::Right, ".button = Mouse::Right"},
-      {Mouse::Button::WheelUp, ".button = Mouse::WheelUp"},
-      {Mouse::Button::WheelDown, ".button = Mouse::WheelDown"},
-      {Mouse::Button::None, ".button = Mouse::None"},
-      {Mouse::Button::WheelLeft, ".button = Mouse::WheelLeft"},
-      {Mouse::Button::WheelRight, ".button = Mouse::WheelRight"},
-  };
-
-  static std::map<Mouse::Motion, const char*> mouse_motion_string = {
-      {Mouse::Motion::Pressed, ".motion = Mouse::Pressed"},
-      {Mouse::Motion::Released, ".motion = Mouse::Released"},
-      {Mouse::Motion::Moved, ".motion = Mouse::Moved"},
-  };
-
-  if (auto* key = std::get_if<Keyboard>(&data_)) {
-    return "Event::Keyboard(" + CodePointToString(key->codepoint) +
-           (key->shift ? ", shift=true " : "") +
-           (key->ctrl ? ", ctrl=true " : "") +
-           (key->alt ? ", alt=true " : "") +
-           (key->meta ? ", meta=true" : "") + ")";
-  }
-
-  if (auto* resized = std::get_if<Resized>(&data_)) {
-    return "Event::Resized(" + std::to_string(resized->width) + ", " +
-           std::to_string(resized->height) + ")";
-  }
-
-  if (auto* special = std::get_if<Special>(&data_)) {
-    std::vector<std::string> bytes;
-    for (char c : special->sequence) {
-      bytes.push_back(std::to_string(static_cast<int>(c)));
-    }
-    return "Event::Special(\"" + Join(bytes, ", ") + "\")";
-  }
-
-  if (auto* mouse = std::get_if<Mouse>(&data_)) {
-    std::string out = "Event::Mouse(\"...\", Mouse{";
-    out += std::string(mouse_button_string[mouse->button]);
-    out += ", ";
-    out += std::string(mouse_motion_string[mouse->motion]);
-    out += ", ";
-    if (mouse->shift) {
-      out += ".shift = true, ";
-    }
-    if (mouse->meta) {
-      out += ".meta = true, ";
-    }
-    if (mouse->control) {
-      out += ".control = true, ";
-    }
-    out += ".x = " + std::to_string(mouse->x);
-
-    out += ", ";
-    out += ".y = " + std::to_string(mouse->y);
-    out += "})";
-
-    return out;
-  }
-
-  if (auto* cursor_shape = std::get_if<CursorShape>(&data_)) {
-    return "Event::CursorShape(" + std::to_string(cursor_shape->shape) + ")";
-  }
-
-  if (auto* cursor = std::get_if<CursorPosition>(&data_)) {
-    return "Event::CursorPosition(" + std::to_string(cursor->x) + ", " +
-           std::to_string(cursor->y) + ")";
-  }
-  return "Not implemented yet.";
+std::string Event::Modifier::Print() const {
+  std::string out;
+  if (alt) out += "alt";
+  if (ctrl) { if (!out.empty()) out += "|"; out += "ctrl"; }
+  if (meta) { if (!out.empty()) out += "|"; out += "meta"; }
+  if (shift) { if (!out.empty()) out += "|"; out += "shift"; }
+  return out;
 }
 
-// clang-format off
-// NOLINTBEGIN
+std::string Event::Keyboard::Print() const {
+  if (special != Special::None) {
+    static const auto& special_string = *new std::map<Special, std::string>{
+        {Special::ArrowLeft, "ArrowLeft"}, {Special::ArrowRight, "ArrowRight"},
+        {Special::ArrowUp, "ArrowUp"}, {Special::ArrowDown, "ArrowDown"},
+        {Special::Backspace, "Backspace"}, {Special::Delete, "Delete"},
+        {Special::Escape, "Escape"}, {Special::Return, "Return"},
+        {Special::Tab, "Tab"}, {Special::TabReverse, "TabReverse"},
+        {Special::Insert, "Insert"}, {Special::Home, "Home"},
+        {Special::End, "End"}, {Special::PageUp, "PageUp"},
+        {Special::PageDown, "PageDown"}, {Special::F1, "F1"},
+        {Special::F2, "F2"}, {Special::F3, "F3"}, {Special::F4, "F4"},
+        {Special::F5, "F5"}, {Special::F6, "F6"}, {Special::F7, "F7"},
+        {Special::F8, "F8"}, {Special::F9, "F9"}, {Special::F10, "F10"},
+        {Special::F11, "F11"}, {Special::F12, "F12"},
+    };
+    return "Keyboard(" + ((std::map<Special, std::string>&)special_string)[special] + ")";
+  }
+  std::string out = "Keyboard(" + CodePointToString(codepoint);
+  std::string mod = modifier.Print();
+  if (!mod.empty()) out += " " + mod;
+  out += ")";
+  return out;
+}
 
-// --- Arrow ---
-const Event Event::ArrowLeft      = Event::Special("\x1B[D");
-const Event Event::ArrowRight     = Event::Special("\x1B[C");
-const Event Event::ArrowUp        = Event::Special("\x1B[A");
-const Event Event::ArrowDown      = Event::Special("\x1B[B");
-const Event Event::ArrowLeftCtrl  = Event::Special("\x1B[1;5D");
-const Event Event::ArrowRightCtrl = Event::Special("\x1B[1;5C");
-const Event Event::ArrowUpCtrl    = Event::Special("\x1B[1;5A");
-const Event Event::ArrowDownCtrl  = Event::Special("\x1B[1;5B");
-const Event Event::Backspace      = Event::Special({127});
-const Event Event::Delete         = Event::Special("\x1B[3~");
-const Event Event::Escape         = Event::Special("\x1B");
-const Event Event::Return         = Event::Special({10});
-const Event Event::Tab            = Event::Special({9});
-const Event Event::TabReverse     = Event::Special({27, 91, 90});
+std::string Event::Mouse::Print() const {
+  static const auto& button_string = *new std::map<Mouse::Button, const char*>{
+      {Mouse::Button::Left, "Left"}, {Mouse::Button::Middle, "Middle"},
+      {Mouse::Button::Right, "Right"}, {Mouse::Button::WheelUp, "WheelUp"},
+      {Mouse::Button::WheelDown, "WheelDown"}, {Mouse::Button::None, "None"},
+      {Mouse::Button::WheelLeft, "WheelLeft"}, {Mouse::Button::WheelRight, "WheelRight"},
+  };
+  static const auto& motion_string = *new std::map<Mouse::Motion, const char*>{
+      {Mouse::Motion::Pressed, "Pressed"}, {Mouse::Motion::Released, "Released"},
+      {Mouse::Motion::Moved, "Moved"},
+  };
+  std::string out = "Mouse(" + std::string(((std::map<Mouse::Button, const char*>&)button_string)[button]);
+  out += ", " + std::string(((std::map<Mouse::Motion, const char*>&)motion_string)[motion]);
+  out += ", x=" + std::to_string(x) + ", y=" + std::to_string(y);
+  std::string mod = modifier.Print();
+  if (!mod.empty()) out += ", " + mod;
+  out += ")";
+  return out;
+}
 
-// See https://invisible-island.net/xterm/xterm-function-keys.html
-// We follow xterm-new / vterm-xf86-v4 / mgt / screen
-const Event Event::F1  = Event::Special("\x1BOP");
-const Event Event::F2  = Event::Special("\x1BOQ");
-const Event Event::F3  = Event::Special("\x1BOR");
-const Event Event::F4  = Event::Special("\x1BOS");
-const Event Event::F5  = Event::Special("\x1B[15~");
-const Event Event::F6  = Event::Special("\x1B[17~");
-const Event Event::F7  = Event::Special("\x1B[18~");
-const Event Event::F8  = Event::Special("\x1B[19~");
-const Event Event::F9  = Event::Special("\x1B[20~");
-const Event Event::F10 = Event::Special("\x1B[21~");
-const Event Event::F11 = Event::Special("\x1B[23~");
-const Event Event::F12 = Event::Special("\x1B[24~");
+std::string Event::Resized::Print() const {
+  return "Event::Resized(" + std::to_string(width) + ", " + std::to_string(height) + ")";
+}
+std::string Event::CursorShape::Print() const {
+  return "Event::CursorShape(" + std::to_string(shape) + ")";
+}
+std::string Event::CursorPosition::Print() const {
+  return "Event::CursorPosition(" + std::to_string(x) + ", " + std::to_string(y) + ")";
+}
 
-const Event Event::Insert   = Event::Special("\x1B[2~");
-const Event Event::Home     = Event::Special({27, 91, 72});
-const Event Event::End      = Event::Special({27, 91, 70});
-const Event Event::PageUp   = Event::Special({27, 91, 53, 126});
-const Event Event::PageDown = Event::Special({27, 91, 54, 126});
+std::string Event::Print() const {
+  return std::visit([](const auto& data) { return data.Print(); }, data_);
+}
 
-const Event Event::CtrlA = Event::Special("\x01");
-const Event Event::CtrlB = Event::Special("\x02");
-const Event Event::CtrlC = Event::Special("\x03");
-const Event Event::CtrlD = Event::Special("\x04");
-const Event Event::CtrlE = Event::Special("\x05");
-const Event Event::CtrlF = Event::Special("\x06");
-const Event Event::CtrlG = Event::Special("\x07");
-const Event Event::CtrlH = Event::Special("\x08");
-const Event Event::CtrlI = Event::Special("\x09");
-const Event Event::CtrlJ = Event::Special("\x0a");
-const Event Event::CtrlK = Event::Special("\x0b");
-const Event Event::CtrlL = Event::Special("\x0c");
-const Event Event::CtrlM = Event::Special("\x0d");
-const Event Event::CtrlN = Event::Special("\x0e");
-const Event Event::CtrlO = Event::Special("\x0f");
-const Event Event::CtrlP = Event::Special("\x10");
-const Event Event::CtrlQ = Event::Special("\x11");
-const Event Event::CtrlR = Event::Special("\x12");
-const Event Event::CtrlS = Event::Special("\x13");
-const Event Event::CtrlT = Event::Special("\x14");
-const Event Event::CtrlU = Event::Special("\x15");
-const Event Event::CtrlV = Event::Special("\x16");
-const Event Event::CtrlW = Event::Special("\x17");
-const Event Event::CtrlX = Event::Special("\x18");
-const Event Event::CtrlY = Event::Special("\x19");
-const Event Event::CtrlZ = Event::Special("\x1a");
+#define RTXUI_IMPL_EVENT(NAME, ...) \
+  const Event& Event::NAME() { \
+    static const Event& event = *new Event(Event::Keyboard{ __VA_ARGS__ }); \
+    return event; \
+  }
 
-const Event Event::AltA = Event::Special("\x1b""a");
-const Event Event::AltB = Event::Special("\x1b""b");
-const Event Event::AltC = Event::Special("\x1b""c");
-const Event Event::AltD = Event::Special("\x1b""d");
-const Event Event::AltE = Event::Special("\x1b""e");
-const Event Event::AltF = Event::Special("\x1b""f");
-const Event Event::AltG = Event::Special("\x1b""g");
-const Event Event::AltH = Event::Special("\x1b""h");
-const Event Event::AltI = Event::Special("\x1b""i");
-const Event Event::AltJ = Event::Special("\x1b""j");
-const Event Event::AltK = Event::Special("\x1b""k");
-const Event Event::AltL = Event::Special("\x1b""l");
-const Event Event::AltM = Event::Special("\x1b""m");
-const Event Event::AltN = Event::Special("\x1b""n");
-const Event Event::AltO = Event::Special("\x1b""o");
-const Event Event::AltP = Event::Special("\x1b""p");
-const Event Event::AltQ = Event::Special("\x1b""q");
-const Event Event::AltR = Event::Special("\x1b""r");
-const Event Event::AltS = Event::Special("\x1b""s");
-const Event Event::AltT = Event::Special("\x1b""t");
-const Event Event::AltU = Event::Special("\x1b""u");
-const Event Event::AltV = Event::Special("\x1b""v");
-const Event Event::AltW = Event::Special("\x1b""w");
-const Event Event::AltX = Event::Special("\x1b""x");
-const Event Event::AltY = Event::Special("\x1b""y");
-const Event Event::AltZ = Event::Special("\x1b""z");
+RTXUI_IMPL_EVENT(ArrowLeft, .special = Event::Keyboard::ArrowLeft)
+RTXUI_IMPL_EVENT(ArrowRight, .special = Event::Keyboard::ArrowRight)
+RTXUI_IMPL_EVENT(ArrowUp, .special = Event::Keyboard::ArrowUp)
+RTXUI_IMPL_EVENT(ArrowDown, .special = Event::Keyboard::ArrowDown)
+RTXUI_IMPL_EVENT(ArrowLeftCtrl, .special = Event::Keyboard::ArrowLeft, .modifier = {.ctrl = true})
+RTXUI_IMPL_EVENT(ArrowRightCtrl, .special = Event::Keyboard::ArrowRight, .modifier = {.ctrl = true})
+RTXUI_IMPL_EVENT(ArrowUpCtrl, .special = Event::Keyboard::ArrowUp, .modifier = {.ctrl = true})
+RTXUI_IMPL_EVENT(ArrowDownCtrl, .special = Event::Keyboard::ArrowDown, .modifier = {.ctrl = true})
+RTXUI_IMPL_EVENT(Backspace, .special = Event::Keyboard::Backspace)
+RTXUI_IMPL_EVENT(Delete, .special = Event::Keyboard::Delete)
+RTXUI_IMPL_EVENT(Escape, .special = Event::Keyboard::Escape)
+RTXUI_IMPL_EVENT(Return, .special = Event::Keyboard::Return)
+RTXUI_IMPL_EVENT(Tab, .special = Event::Keyboard::Tab)
+RTXUI_IMPL_EVENT(TabReverse, .special = Event::Keyboard::TabReverse)
+RTXUI_IMPL_EVENT(F1, .special = Event::Keyboard::F1)
+RTXUI_IMPL_EVENT(F2, .special = Event::Keyboard::F2)
+RTXUI_IMPL_EVENT(F3, .special = Event::Keyboard::F3)
+RTXUI_IMPL_EVENT(F4, .special = Event::Keyboard::F4)
+RTXUI_IMPL_EVENT(F5, .special = Event::Keyboard::F5)
+RTXUI_IMPL_EVENT(F6, .special = Event::Keyboard::F6)
+RTXUI_IMPL_EVENT(F7, .special = Event::Keyboard::F7)
+RTXUI_IMPL_EVENT(F8, .special = Event::Keyboard::F8)
+RTXUI_IMPL_EVENT(F9, .special = Event::Keyboard::F9)
+RTXUI_IMPL_EVENT(F10, .special = Event::Keyboard::F10)
+RTXUI_IMPL_EVENT(F11, .special = Event::Keyboard::F11)
+RTXUI_IMPL_EVENT(F12, .special = Event::Keyboard::F12)
+RTXUI_IMPL_EVENT(Insert, .special = Event::Keyboard::Insert)
+RTXUI_IMPL_EVENT(Home, .special = Event::Keyboard::Home)
+RTXUI_IMPL_EVENT(End, .special = Event::Keyboard::End)
+RTXUI_IMPL_EVENT(PageUp, .special = Event::Keyboard::PageUp)
+RTXUI_IMPL_EVENT(PageDown, .special = Event::Keyboard::PageDown)
 
-const Event Event::CtrlAltA = Event::Special("\x1b\x01");
-const Event Event::CtrlAltB = Event::Special("\x1b\x02");
-const Event Event::CtrlAltC = Event::Special("\x1b\x03");
-const Event Event::CtrlAltD = Event::Special("\x1b\x04");
-const Event Event::CtrlAltE = Event::Special("\x1b\x05");
-const Event Event::CtrlAltF = Event::Special("\x1b\x06");
-const Event Event::CtrlAltG = Event::Special("\x1b\x07");
-const Event Event::CtrlAltH = Event::Special("\x1b\x08");
-const Event Event::CtrlAltI = Event::Special("\x1b\x09");
-const Event Event::CtrlAltJ = Event::Special("\x1b\x0a");
-const Event Event::CtrlAltK = Event::Special("\x1b\x0b");
-const Event Event::CtrlAltL = Event::Special("\x1b\x0c");
-const Event Event::CtrlAltM = Event::Special("\x1b\x0d");
-const Event Event::CtrlAltN = Event::Special("\x1b\x0e");
-const Event Event::CtrlAltO = Event::Special("\x1b\x0f");
-const Event Event::CtrlAltP = Event::Special("\x1b\x10");
-const Event Event::CtrlAltQ = Event::Special("\x1b\x11");
-const Event Event::CtrlAltR = Event::Special("\x1b\x12");
-const Event Event::CtrlAltS = Event::Special("\x1b\x13");
-const Event Event::CtrlAltT = Event::Special("\x1b\x14");
-const Event Event::CtrlAltU = Event::Special("\x1b\x15");
-const Event Event::CtrlAltV = Event::Special("\x1b\x16");
-const Event Event::CtrlAltW = Event::Special("\x1b\x17");
-const Event Event::CtrlAltX = Event::Special("\x1b\x18");
-const Event Event::CtrlAltY = Event::Special("\x1b\x19");
-const Event Event::CtrlAltZ = Event::Special("\x1b\x1a");
+#define RTXUI_IMPL_LETTER(L, UC, CP) \
+  RTXUI_IMPL_EVENT(L, .codepoint = CP) \
+  RTXUI_IMPL_EVENT(UC, .codepoint = CP, .modifier = {.shift = true}) \
+  RTXUI_IMPL_EVENT(Ctrl##UC, .codepoint = CP, .modifier = {.ctrl = true}) \
+  RTXUI_IMPL_EVENT(Alt##UC, .codepoint = CP, .modifier = {.alt = true}) \
+  RTXUI_IMPL_EVENT(CtrlAlt##UC, .codepoint = CP, .modifier = {.alt = true, .ctrl = true})
 
-// NOLINTEND
-// clang-format on
+RTXUI_IMPL_LETTER(a, A, 'a') RTXUI_IMPL_LETTER(b, B, 'b') RTXUI_IMPL_LETTER(c, C, 'c') RTXUI_IMPL_LETTER(d, D, 'd')
+RTXUI_IMPL_LETTER(e, E, 'e') RTXUI_IMPL_LETTER(f, F, 'f') RTXUI_IMPL_LETTER(g, G, 'g') RTXUI_IMPL_LETTER(h, H, 'h')
+RTXUI_IMPL_LETTER(i, I, 'i') RTXUI_IMPL_LETTER(j, J, 'j') RTXUI_IMPL_LETTER(k, K, 'k') RTXUI_IMPL_LETTER(l, L, 'l')
+RTXUI_IMPL_LETTER(m, M, 'm') RTXUI_IMPL_LETTER(n, N, 'n') RTXUI_IMPL_LETTER(o, O, 'o') RTXUI_IMPL_LETTER(p, P, 'p')
+RTXUI_IMPL_LETTER(q, Q, 'q') RTXUI_IMPL_LETTER(r, R, 'r') RTXUI_IMPL_LETTER(s, S, 's') RTXUI_IMPL_LETTER(t, T, 't')
+RTXUI_IMPL_LETTER(u, U, 'u') RTXUI_IMPL_LETTER(v, V, 'v') RTXUI_IMPL_LETTER(w, W, 'w') RTXUI_IMPL_LETTER(x, X, 'x')
+RTXUI_IMPL_LETTER(y, Y, 'y') RTXUI_IMPL_LETTER(z, Z, 'z')

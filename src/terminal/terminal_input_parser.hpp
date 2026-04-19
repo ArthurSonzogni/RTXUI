@@ -42,7 +42,7 @@ class TerminalInputParser {
   Output ParseCursorPosition(std::vector<int> arguments);
 
   void AddEvent(Event event);
-  Event MakeSpecialEvent(std::string sequence);
+  std::optional<Event> ToEvent(std::string_view);
 
   std::vector<Event> events_;
   int position_ = -1;

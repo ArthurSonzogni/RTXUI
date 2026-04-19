@@ -5,11 +5,14 @@
 #define RTXUI_COMPONENT_HPP_
 
 #include <functional>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -27,49 +30,10 @@ class ComponentBase : public RefCounted, public Bindings {
  public:
   virtual ~ComponentBase() = default;
 
-  /// Define a component.
-  ///
-  /// @return the template of the component, which is a string containing
-  /// HTML-like syntax.
-  virtual std::string_view RunSetup() = 0;
-
-  /// This is used by `Import` to avoid users to have to specify the name of a
-  /// class.
+  virtual std::string_view Setup() = 0;
   virtual std::string_view Tag() const = 0;
 
   std::string_view Template();
-
-  template <typename T>
-  auto State(T&& value) {
-    return Ref<TypedCell<T>>::New(std::forward<T>(value));
-  }
-
-  template <typename T>
-  auto Computed(std::function<T()> f) {
-    return Ref<ComputedTypedCell<T>>::New(std::move(f));
-  }
-
-  // Create a watcher that will execute the given function whenever the content
-  // of the function f() changes. It returns a function that can be called to
-  // stop the watcher.
-  auto Watch(std::function<void()> f) -> std::function<void()> {
-    auto watcher = Ref<WatcherCaptureCell>::New(std::move(f));
-    auto watcher_cell = Ref<Cell>(watcher);
-    auto out = [=, this] { watchers_.erase(watcher_cell); };
-    watchers_.insert(watcher.get());
-    return out;
-  }
-
-  // Create a watcher that will execute the given function whenever the content
-  // of `cell` changes. It returns a function that can be called to stop the
-  // watcher.
-  auto Watch(Ref<Cell> cell, std::function<void()> f) {
-    auto watcher = Ref<WatcherCell>::New(std::move(f));
-    auto watcher_cell = Ref<Cell>(watcher);
-    watcher->DependsOn(cell.get());
-    watchers_.insert(watcher.get());
-    return [=, this] { watchers_.erase(watcher_cell); };
-  }
 
   void Mount();
   void Render();
@@ -77,83 +41,61 @@ class ComponentBase : public RefCounted, public Bindings {
 
   Ref<Element> Slot(std::string_view name);
 
- private:
+  // The Digest cycle: Detects changes in plain members and triggers updates.
+  virtual void Digest() = 0;
+  virtual void InitReflection() {}
+
+ protected:
   void Render(const xml::Node& node, Element* element, ComponentBase* source);
 
   std::string template_;
-
   std::string xml_string_;
   xml::Nodes xml_nodes_;
 
   std::set<Ref<Cell>> watchers_;
   Ref<Element> root_;
-
   std::map<std::string, Ref<Element>> slots_;
-
   std::set<Ref<ComponentBase>> children_;
 
-  // Properties given by the parent component.
   std::string id_;
   std::vector<std::string> classes_;
 };
 
+/// Component<Derived> provides Transparent Reactivity.
+/// 
+/// Since the Bloomberg fork's reflection traits are experimental and unstable,
+/// we provide a hybrid approach:
+/// - Data members are registered using RTXUI_REFLECT.
+/// - Methods can be discovered automatically or registered.
 template <typename Derived>
 class Component : public ComponentBase {
  public:
+  Component() {}
+
+  void InitReflection() override {
+    // Discovery logic would go here. 
+    // In this PoC, we assume the user has used the RTXUI_REFLECT macro
+    // which populates the bindings.
+  }
+
   static std::string_view StaticTag() { return ClassName<Derived>(); }
   std::string_view Tag() const final { return StaticTag(); }
-  std::string_view RunSetup() final {
-    if constexpr (requires { Derived::kTemplate; }) {
-      // The derived class has a static member named kTemplate ?
-      return Derived::kTemplate;
-    } else if constexpr (requires { static_cast<Derived*>(this)->Setup(); }) {
-      // Either the derived class implements Setup(), or it is a static
-      // string_view named kTemplate.
-      return static_cast<Derived*>(this)->Setup();
-    } else {
-      static_assert(false,
-                    "Component must implement Setup() or have a static "
-                    "kTemplate member.");
-    }
+
+  void Digest() final {
+    // In a fully reflected version, this compares state against a snapshot.
+    // For this PoC, we trigger a re-render.
+    this->Render();
   }
 };
 
+// --- SIMULATED REFLECTION MACRO ---
+#define RTXUI_REFLECT(TYPE, NAME) \
+  TYPE NAME = [this]() { \
+    this->Import(#NAME, rtxui::Ref<rtxui::ComputedTypedCell<TYPE>>::New([this]() { return this->NAME; })); \
+    return TYPE(); \
+  }(); \
+  static_assert(true)
+
 }  // namespace rtxui
-
-#define RTXUI_COMPONENT_DECLARE(T)       \
-  class T : public rtxui::Component<T> { \
-   public:                               \
-    std::string_view Setup();            \
-  };
-
-#define RTXUI_COMPONENT_IMPLEMENT(T) std::string_view T::Setup()
-
-/// A macro turning:
-/// ```cpp
-/// RTXUI_COMPONENT(Hello) {4
-///   return R"html(
-///   <div>
-///   Hello
-///   </div>
-///   )html";
-/// }
-/// ```
-///
-/// Into:
-/// ```cpp
-/// class Hello : public rtxui::Component<Hello> {
-///  public:
-///   std::string_view Setup() {
-///     return R"html(
-///       <div>
-///         Hello
-///       </div>
-///     )html";
-///   }
-/// };
-/// ```
-#define RTXUI_COMPONENT(T)   \
-  RTXUI_COMPONENT_DECLARE(T) \
-  RTXUI_COMPONENT_IMPLEMENT(T)
 
 #endif  // RTXUI_COMPONENT_HPP_
