@@ -12,9 +12,6 @@ option(RTXUI_BUILD_FUZZERS "Build fuzzers" OFF)
 
 include(FetchContent)
 
-add_compile_options(-fsanitize=address)
-add_link_options(-fsanitize=address)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -87,8 +84,17 @@ add_library(rtxui_lib STATIC
   "src/xml/xml.hpp"
 )
 
-target_compile_features(rtxui_lib PUBLIC cxx_std_23)
+target_compile_features(rtxui_lib PUBLIC cxx_std_26)
 target_include_directories(rtxui_lib PUBLIC "src")
+
+# Enable experimental reflection if supported by the compiler
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-freflection-latest" HAS_REFLECTION)
+if(HAS_REFLECTION)
+  target_compile_options(rtxui_lib PUBLIC "-freflection-latest")
+  add_definitions(-DRTXUI_HAS_REFLECTION)
+  message(STATUS "RTXUI: C++26 Reflection enabled (-freflection-latest)")
+endif()
 
 # See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
 add_library(rtxui "src/dummy.cpp")
@@ -163,3 +169,4 @@ if (RTXUI_BUILD_FUZZERS)
   target_compile_definitions(rtxui_fuzzer PRIVATE FUZZTEST_FUZZING_ENABLED)
 
 endif()
+

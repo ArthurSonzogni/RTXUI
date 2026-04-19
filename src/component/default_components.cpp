@@ -2,104 +2,109 @@
 
 namespace rtxui {
 
-RTXUI_COMPONENT_IMPLEMENT(div) {
+std::string_view h1::Setup() {
   return R"html(
+    <slot></slot>
     <style>
-      self {
-        display: block flow;
+      self { 
+        display: block; 
+        font-weight: bold;
+        text-decoration: underlined;
+        margin-bottom: 1;
       }
     </style>
-    <slot></slot>
   )html";
 }
 
-RTXUI_COMPONENT_IMPLEMENT(span) {
+std::string_view div::Setup() {
   return R"html(
-    <style>
-      self {
-        display: inline flow;
-      }
-    </style>
     <slot></slot>
+    <style>
+      self { display: block; }
+    </style>
   )html";
 }
 
-RTXUI_COMPONENT_IMPLEMENT(p) {
+std::string_view span::Setup() {
   return R"html(
-    <style>
-      self {
-        display: block flow;
-      }
-    </style>
     <slot></slot>
+    <style>
+      self { display: inline; }
+    </style>
   )html";
 }
 
-RTXUI_COMPONENT_IMPLEMENT(strong) {
+std::string_view p::Setup() {
   return R"html(
+    <slot></slot>
     <style>
-      self {
-        decoration: bold;
+      self { 
+        display: block; 
+        margin-top: 1;
+        margin-bottom: 1;
       }
     </style>
-    <slot></slot>
   )html";
 }
 
-RTXUI_COMPONENT_IMPLEMENT(ul) {
+std::string_view strong::Setup() {
   return R"html(
+    <slot></slot>
     <style>
-      self {
-        display: block flow;
-        list-style-position: outside;
-        list-style-type: disc;
+      self { 
+        display: inline; 
+        font-weight: bold;
       }
     </style>
-    <slot></slot>
   )html";
 }
 
-RTXUI_COMPONENT_IMPLEMENT(ol) {
+std::string_view ul::Setup() {
   return R"html(
+    <slot></slot>
     <style>
-      self {
-        display: block flow;
-        list-style-position: outside;
-        list-style-type: decimal;
+      self { 
+        display: block; 
+        padding-left: 2;
       }
     </style>
-    <slot></slot>
   )html";
 }
 
-RTXUI_COMPONENT_IMPLEMENT(li) {
+std::string_view li::Setup() {
   return R"html(
+    <slot></slot>
     <style>
-      self {
-        display: list-item flow;
+      self { 
+        display: block; 
       }
     </style>
-    <slot></slot>
   )html";
 }
 
-RTXUI_COMPONENT_IMPLEMENT(button) {
-  // `on_click` is a Computed
-  //auto on_click = Import<std::function<void()>>("onclick");
-
-  //auto listen_click = AddEventListener("click", on_click);
-
+std::string_view ol::Setup() {
   return R"html(
+    <slot></slot>
     <style>
-      self {
-        display: inline flow;
-        background-color: blue;
-        color: white;
-        padding: 5px;
-        border-radius: 3px;
+      self { 
+        display: block; 
+        padding-left: 2;
       }
     </style>
+  )html";
+}
+
+std::string_view button::Setup() {
+  return R"html(
     <slot></slot>
+    <style>
+      self { 
+        display: inline-block; 
+        border: tall;
+        padding-left: 1;
+        padding-right: 1;
+      }
+    </style>
   )html";
 }
 

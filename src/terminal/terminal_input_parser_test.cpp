@@ -7,11 +7,11 @@
 #include <vector>    // for vector
 
 #include "catch2/catch_test_macros.hpp"  // for TEST_CASE, REQUIRE, CHECK, CHECK_FALSE
-#include "terminal/event.hpp"  // for Event, Event::Return, Event::ArrowDown, Event::ArrowLeft, Event::ArrowRight, Event::ArrowUp, Event::Backspace, Event::End, Event::Home, Event::Custom, Event::Delete, Event::F1, Event::F10, Event::F11, Event::F12, Event::F2, Event::F3, Event::F4, Event::F5, Event::F6, Event::F7, Event::F8, Event::F9, Event::PageDown, Event::PageUp, Event::Tab, Event::TabReverse, Event::Escape
+#include "terminal/event.hpp"  // for Event, Event::Return(), Event::ArrowDown(), Event::ArrowLeft(), Event::ArrowRight(), Event::ArrowUp(), Event::Backspace(), Event::End(), Event::Home(), Event::Delete(), Event::F1(), Event::F10(), Event::F11(), Event::F12(), Event::F2(), Event::F3(), Event::F4(), Event::F5(), Event::F6(), Event::F7(), Event::F8(), Event::F9(), Event::PageDown(), Event::PageUp(), Event::Tab(), Event::TabReverse(), Event::Escape()
 
 // NOLINTBEGIN
 
-// Test char |c| to are trivially converted into |Event::Character(c)|.
+// Test char |c| to are trivially converted into |Event::Character()(c)|.
 TEST_CASE("Event.Character", "[terminal]") {
   std::vector<char> basic_char;
   for (char c = 'a'; c <= 'z'; ++c) {
@@ -37,10 +37,10 @@ TEST_CASE("Event.Character", "[terminal]") {
     CHECK(keyboard);
     CHECK(keyboard->codepoint == basic_char[i]);
     CHECK(keyboard->motion == Event::Keyboard::Pressed);
-    CHECK_FALSE(keyboard->alt);
-    CHECK_FALSE(keyboard->ctrl);
-    CHECK_FALSE(keyboard->meta);
-    CHECK_FALSE(keyboard->shift);
+    CHECK_FALSE(keyboard->modifier.alt);
+    CHECK_FALSE(keyboard->modifier.ctrl);
+    CHECK_FALSE(keyboard->modifier.meta);
+    CHECK_FALSE(keyboard->modifier.shift);
   }
 }
 
@@ -66,7 +66,7 @@ TEST_CASE("Event.EscapeKeyEnoughWait", "[terminal]") {
 
   auto event = parser.GetEvent();
   REQUIRE(event.has_value());
-  CHECK(*event == Event::Escape);
+  CHECK(*event == Event::Escape());
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -84,8 +84,8 @@ TEST_CASE("Event.EscapeFast", "[terminal]") {
   }
 
   REQUIRE(received_events.size() == 2);
-  CHECK(received_events[0] == Event::AltA);
-  CHECK(received_events[1] == Event::AltB);
+  CHECK(received_events[0] == Event::AltA());
+  CHECK(received_events[1] == Event::AltB());
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -321,43 +321,12 @@ TEST_CASE("Event.NewLine", "[terminal]") {
 
     auto event = parser.GetEvent();
     REQUIRE(event.has_value());
-    CHECK(*event == Event::Return);
+    CHECK(*event == Event::Return());
     CHECK_FALSE(parser.GetEvent().has_value());
   }
 }
 
-TEST_CASE("Event.Control", "[terminal]") {
-  struct TestCase {
-    char input;
-    bool cancel;
-  };
-  std::vector<TestCase> cases;
-  for (int i = 0; i < 32; ++i) {
-    if (i == 8 || i == 13 || i == 24 || i == 26 || i == 27) {
-      continue;
-    }
-    cases.push_back({char(i), false});
-  }
-  cases.push_back({char(24), false});
-  cases.push_back({char(26), false});
-  cases.push_back({char(127), false});
-
-  for (auto test : cases) {
-    TerminalInputParser parser;
-    parser.Add(test.input);
-
-    auto event = parser.GetEvent();
-    if (test.cancel) {
-      CHECK_FALSE(event.has_value());
-    } else {
-      REQUIRE(event.has_value());
-      CHECK(*event == Event::Special({test.input}));
-      CHECK_FALSE(parser.GetEvent().has_value());
-    }
-  }
-}
-
-TEST_CASE("Event.Special", "[terminal]") {
+TEST_CASE("Event.Keyboard", "[terminal]") {
   auto str = [](std::string input) {
     std::vector<unsigned char> output;
     for (auto it : input) {
@@ -371,89 +340,89 @@ TEST_CASE("Event.Special", "[terminal]") {
     Event expected;
   } kTestCase[] = {
       // Arrow (default cursor mode)
-      {str("[A"), Event::ArrowUp},
-      {str("[B"), Event::ArrowDown},
-      {str("[C"), Event::ArrowRight},
-      {str("[D"), Event::ArrowLeft},
-      {str("[H"), Event::Home},
-      {str("[F"), Event::End},
+      {str("[A"), Event::ArrowUp()},
+      {str("[B"), Event::ArrowDown()},
+      {str("[C"), Event::ArrowRight()},
+      {str("[D"), Event::ArrowLeft()},
+      {str("[H"), Event::Home()},
+      {str("[F"), Event::End()},
 
       // Arrow (application cursor mode)
-      {str("\x1BOA"), Event::ArrowUp},
-      {str("\x1BOB"), Event::ArrowDown},
-      {str("\x1BOC"), Event::ArrowRight},
-      {str("\x1BOD"), Event::ArrowLeft},
-      {str("\x1BOH"), Event::Home},
-      {str("\x1BOF"), Event::End},
+      {str("\x1BOA"), Event::ArrowUp()},
+      {str("\x1BOB"), Event::ArrowDown()},
+      {str("\x1BOC"), Event::ArrowRight()},
+      {str("\x1BOD"), Event::ArrowLeft()},
+      {str("\x1BOH"), Event::Home()},
+      {str("\x1BOF"), Event::End()},
 
       // Backspace & Quirk for:
       // https://github.com/ArthurSonzogni/FTXUI/issues/508
-      {{127}, Event::Backspace},
-      {{8}, Event::Backspace},
+      {{127}, Event::Backspace()},
+      {{8}, Event::Backspace()},
 
       // Delete
-      {str("\x1B[3~"), Event::Delete},
+      {str("\x1B[3~"), Event::Delete()},
 
       // Return
-      {{13}, Event::Return},
-      {{10}, Event::Return},
+      {{13}, Event::Return()},
+      {{10}, Event::Return()},
 
       // Tabs:
-      {{9}, Event::Tab},
-      {{27, 91, 90}, Event::TabReverse},
+      {{9}, Event::Tab()},
+      {{27, 91, 90}, Event::TabReverse()},
 
       // Function keys
-      {str("\x1BOP"), Event::F1},
-      {str("\x1BOQ"), Event::F2},
-      {str("\x1BOR"), Event::F3},
-      {str("\x1BOS"), Event::F4},
-      {str("\x1B[15~"), Event::F5},
-      {str("\x1B[17~"), Event::F6},
-      {str("\x1B[18~"), Event::F7},
-      {str("\x1B[19~"), Event::F8},
-      {str("\x1B[20~"), Event::F9},
-      {str("\x1B[21~"), Event::F10},
-      {str("\x1B[23~"), Event::F11},
-      {str("\x1B[24~"), Event::F12},
+      {str("\x1BOP"), Event::F1()},
+      {str("\x1BOQ"), Event::F2()},
+      {str("\x1BOR"), Event::F3()},
+      {str("\x1BOS"), Event::F4()},
+      {str("\x1B[15~"), Event::F5()},
+      {str("\x1B[17~"), Event::F6()},
+      {str("\x1B[18~"), Event::F7()},
+      {str("\x1B[19~"), Event::F8()},
+      {str("\x1B[20~"), Event::F9()},
+      {str("\x1B[21~"), Event::F10()},
+      {str("\x1B[23~"), Event::F11()},
+      {str("\x1B[24~"), Event::F12()},
 
       // Function keys for virtual terminal:
-      {str("\x1B[[A"), Event::F1},
-      {str("\x1B[[B"), Event::F2},
-      {str("\x1B[[C"), Event::F3},
-      {str("\x1B[[D"), Event::F4},
-      {str("\x1B[[E"), Event::F5},
+      {str("\x1B[[A"), Event::F1()},
+      {str("\x1B[[B"), Event::F2()},
+      {str("\x1B[[C"), Event::F3()},
+      {str("\x1B[[D"), Event::F4()},
+      {str("\x1B[[E"), Event::F5()},
 
       // Function keys for xterm-r5, xterm-r6, rxvt
-      {str("\x1B[11~"), Event::F1},
-      {str("\x1B[12~"), Event::F2},
-      {str("\x1B[13~"), Event::F3},
-      {str("\x1B[14~"), Event::F4},
+      {str("\x1B[11~"), Event::F1()},
+      {str("\x1B[12~"), Event::F2()},
+      {str("\x1B[13~"), Event::F3()},
+      {str("\x1B[14~"), Event::F4()},
 
       // Function keys for vt100
-      {str("\x1BOt"), Event::F5},
-      {str("\x1BOu"), Event::F6},
-      {str("\x1BOv"), Event::F7},
-      {str("\x1BOl"), Event::F8},
-      {str("\x1BOw"), Event::F9},
-      {str("\x1BOx"), Event::F10},
+      {str("\x1BOt"), Event::F5()},
+      {str("\x1BOu"), Event::F6()},
+      {str("\x1BOv"), Event::F7()},
+      {str("\x1BOl"), Event::F8()},
+      {str("\x1BOw"), Event::F9()},
+      {str("\x1BOx"), Event::F10()},
 
       // Function keys for scoansi
-      {str("\x1B[M"), Event::F1},
-      {str("\x1B[N"), Event::F2},
-      {str("\x1B[O"), Event::F3},
-      {str("\x1B[P"), Event::F4},
-      {str("\x1B[Q"), Event::F5},
-      {str("\x1B[R"), Event::F6},
-      {str("\x1B[S"), Event::F7},
-      {str("\x1B[T"), Event::F8},
-      {str("\x1B[U"), Event::F9},
-      {str("\x1B[V"), Event::F10},
-      {str("\x1B[W"), Event::F11},
-      {str("\x1B[X"), Event::F12},
+      {str("\x1B[M"), Event::F1()},
+      {str("\x1B[N"), Event::F2()},
+      {str("\x1B[O"), Event::F3()},
+      {str("\x1B[P"), Event::F4()},
+      {str("\x1B[Q"), Event::F5()},
+      {str("\x1B[R"), Event::F6()},
+      {str("\x1B[S"), Event::F7()},
+      {str("\x1B[T"), Event::F8()},
+      {str("\x1B[U"), Event::F9()},
+      {str("\x1B[V"), Event::F10()},
+      {str("\x1B[W"), Event::F11()},
+      {str("\x1B[X"), Event::F12()},
 
       // Page up and down:
-      {str("\x1B[5~"), Event::PageUp},
-      {str("\x1B[6~"), Event::PageDown},
+      {str("\x1B[5~"), Event::PageUp()},
+      {str("\x1B[6~"), Event::PageDown()},
 
       // Custom:
 

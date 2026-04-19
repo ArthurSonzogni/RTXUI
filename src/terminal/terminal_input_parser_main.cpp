@@ -44,45 +44,26 @@ struct RawTerminal {
     terminal.c_cc[VTIME] = 0;  // Timeout in deciseconds for non-canonical read.
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal);
 
-    std::cout << "\x1b[?1000h";  // Enable mouse
-    std::cout << "\x1b[?1001h";  // Enable Hilite Mouse mode
-    std::cout << "\x1b[?1002h";  // Enable Mouse Vt1000 mode
-    std::cout << "\x1b[?1003h";  // Enable Mouse Motion events
-    std::cout << "\x1b[?1004h";  // Enable Focus events
-    std::cout << "\x1b[?1005h";  // Enable UTF-8 Mouse mode
-    std::cout << "\x1b[?1006h";  // Enable SGR mouse mode
-    std::cout << "\x1b[?1007h";  // Enable Extended Mouse mode
-    std::cout << "\x1b[?1013h";  // Enable Any Event Mouse mode
-    std::cout << "\x1b[?1011h";  // Enable Drag Event Mouse mode
-    std::cout << "\x1b[?1010h";  // Enable X10 Mouse mode
-    std::cout << "\x1b[?1012h";  // Enable Button Event Mouse mode
-    std::cout << "\x1b[?1015h";  // Enable urxvt Mouse mode
-    std::cout << "\x1b[?1049h";  // Enable alternative screen buffer
-    std::cout << "\x1b[?7l";
+    std::cout << "\x1b[?1000h"; // Enable mouse tracking.
+    std::cout << "\x1b[?1003h"; // Enable mouse motion tracking.
+    std::cout << "\x1b[?1015h"; // Enable urxvt mouse mode.
+    std::cout << "\x1b[?1006h"; // Enable SGR mouse mode.
 
-    // Enable kitty keyboard protocol
-    std::cout << "\x1b[>4;2m";
+  
+
+    std::cout << "\x1b[?7l"; // Disable line wrapping.
+
 
     std::cout << "\x1b[?25l"  << std::flush;
 
     // Enable cursor
   }
   ~RawTerminal() {
-    std::cout << "\x1b[?1000l";  // Disable mouse
-    std::cout << "\x1b[?1001l";  // Disable Hilite Mouse mode
-    std::cout << "\x1b[?1002l";  // Disable Mouse Vt1000 mode
-    std::cout << "\x1b[?1003l";  // Disable Mouse Motion events
-    std::cout << "\x1b[?1004l";  // Disable Focus events
-    std::cout << "\x1b[?1005l";  // Disable UTF-8 Mouse mode
-    std::cout << "\x1b[?1006l";  // Disable SGR mouse mode
-    std::cout << "\x1b[?1007l";  // Disable Extended Mouse mode
-    std::cout << "\x1b[?1013l";  // Disable Any Event Mouse mode
-    std::cout << "\x1b[?1011l";  // Disable Drag Event Mouse mode
-    std::cout << "\x1b[?1010l";  // Disable X10 Mouse mode
-    std::cout << "\x1b[?1012l";  // Disable Button Event Mouse mode
-    std::cout << "\x1b[?1015l";  // Disable urxvt Mouse mode
-    std::cout << "\x1b[?1049l";  // Disable alternative screen buffer
 
+    std::cout << "\x1b[?1000l"; // Disable mouse tracking.
+    std::cout << "\x1b[?1003l"; // Disable mouse motion tracking.
+    std::cout << "\x1b[?1015l"; // Disable urxvt mouse mode.
+    std::cout << "\x1b[?1006l"; // Disable SGR mouse mode.
     std::cout << "\x1b[?25h"; // Enable cursor.
 
     std::cout << std::flush;
@@ -109,7 +90,7 @@ int main() {
     while (auto event = parser.GetEvent()) {
       std::cout << std::endl;
       std::cout << *event << "\r" << std::endl;
-      if (*event == Event::Escape || *event == Event::CtrlC) {
+      if (*event == Event::Escape() || *event == Event::CtrlC()) {
         return 0;
       }
     }

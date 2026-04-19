@@ -85,13 +85,13 @@ void CssParseError(const css::Error& error, std::string_view css_string) {
 
 std::string_view ComponentBase::Template() {
   if (template_.empty()) {
-    template_ = StripIndent(RunSetup());
+    template_ = StripIndent(Setup());
   }
   return template_;
 }
 
 void ComponentBase::Mount() {
-  indent++;
+  InitReflection();
   template_ = Template();
   xml_string_ = StripIndent(template_);
 
@@ -101,7 +101,6 @@ void ComponentBase::Mount() {
   }
   xml_nodes_ = std::move(nodes.value());
   Render();
-  indent--;
 }
 
 void ComponentBase::Render() {
