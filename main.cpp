@@ -57,8 +57,8 @@ class Styled : public Component<Styled> {
 
 class App : public Component<App> {
  public:
-  // --- Transparent State using Simulated Reflection ---
-  RTXUI_REFLECT(int, count);
+  // --- Transparent State ---
+  RTXUI_STATE(int, count);
 
   // --- Actions ---
   void Increment() {
