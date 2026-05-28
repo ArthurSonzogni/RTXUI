@@ -97,7 +97,14 @@ class App : public Component<App> {
     return R"html(
       <div class="header">
         <h1>RTXUI Reflection Demo</h1>
-        <button onclick="Increment" oncontextmenu="Decrement">Clicks: {count} ({double_clicks} doubled)</button>
+        <button
+          onclick="Increment"
+          oncontextmenu="Decrement"
+        >
+          Clicks: {count}
+        </button>
+
+        ({double_clicks} doubled)
       </div>
 
       <div id="flex">

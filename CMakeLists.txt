@@ -29,8 +29,6 @@ add_library(rtxui_lib STATIC
   "src/terminal/event.hpp"
   "src/terminal/screen.cpp"
   "src/terminal/screen.hpp"
-  "src/cell/cell.cpp"
-  "src/cell/cell.hpp"
   "src/component/component.cpp"
   "src/component/component.hpp"
   "src/component/default_components.hpp"
@@ -129,7 +127,6 @@ if(RTXUI_BUILD_TESTS)
   FetchContent_MakeAvailable(catch2)
 
   add_executable(rtxui_test
-    "src/cell/cell_test.cpp"
     "src/terminal/terminal_input_parser_test.cpp"
     "src/terminal/screen_test.cpp"
     "src/component/component_test.cpp"
