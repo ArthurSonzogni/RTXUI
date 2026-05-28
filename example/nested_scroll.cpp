@@ -28,7 +28,7 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           <div>[Outer Item 4] Scrollbar dynamically renders on the right.</div>
           <div>[Outer Item 5] Preparing to load Inner Box A...</div>
 
-          <div class="inner-title">Nested Scrollbox A (Cyan Border)</div>
+          <div class="inner-title">Nested Scrollbox A (Light Blue Border)</div>
           <div class="inner-scroll box-a">
             <div>[Box A - Item 1] Focus me & press ArrowDown</div>
             <div>[Box A - Item 2] Or scroll with mouse wheel</div>
@@ -52,7 +52,7 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           <div>[Outer Item 7] Layout handles arbitrary nesting level.</div>
           <div>[Outer Item 8] Ready for Inner Box B...</div>
 
-          <div class="inner-title">Nested Scrollbox B (Yellow Border)</div>
+          <div class="inner-title">Nested Scrollbox B (Steel Blue Border)</div>
           <div class="inner-scroll box-b">
             <div>[Box B - Item 1] Welcome to Box B!</div>
             <div>[Box B - Item 2] Focus me & scroll to end</div>
@@ -81,22 +81,22 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
         self {
           display: block;
           padding: 1;
-          background-color: rgb(20, 20, 20);
-          color: white;
+          background-color: rgb(15, 23, 42);
+          color: rgb(241, 245, 249);
         }
         .main-container {
           display: block;
           border: tall;
-          border-color: gray;
+          border-color: rgb(30, 41, 59);
           padding: 1;
         }
         h1 {
-          color: lightblue;
+          color: rgb(147, 197, 253);
           font-weight: bold;
           margin-bottom: 1;
         }
         .desc {
-          color: rgb(180, 180, 180);
+          color: rgb(148, 163, 184);
           margin-bottom: 1;
         }
         .outer-scroll {
@@ -104,8 +104,8 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           height: 12;
           overflow-y: scroll;
           scroll-speed: 1;
-          border: ascii;
-          border-color: green;
+          border: tall;
+          border-color: rgb(29, 78, 216);
           padding: 1;
         }
         .inner-scroll {
@@ -117,21 +117,21 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           margin-bottom: 1;
         }
         .box-a {
-          border: dashed;
-          border-color: cyan;
+          border: tall;
+          border-color: rgb(147, 197, 253);
         }
         .box-b {
-          border: dashed;
-          border-color: yellow;
+          border: tall;
+          border-color: rgb(59, 130, 246);
         }
         .section-title {
-          color: lightgreen;
+          color: rgb(96, 165, 250);
           font-weight: bold;
           margin-top: 1;
           margin-bottom: 1;
         }
         .inner-title {
-          color: magenta;
+          color: rgb(191, 219, 254);
           font-weight: bold;
           margin-top: 1;
         }
