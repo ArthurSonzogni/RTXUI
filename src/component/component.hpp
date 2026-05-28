@@ -129,8 +129,12 @@ class Component : public ComponentBase {
   }
 
   std::string GetInterpolatedValue(std::string_view expression) override {
+    std::string_view target = expression;
+    if (target.starts_with("props.")) {
+      target = target.substr(6);
+    }
     for (const auto& entry : entries_) {
-      if (entry.name == expression) return entry.get_value();
+      if (entry.name == target) return entry.get_value();
     }
     return std::string(expression);
   }
@@ -156,6 +160,10 @@ class Component : public ComponentBase {
  protected:
   template <typename T>
   void RegisterState(std::string name, T* ptr) {
+    std::string clean_name = name;
+    if (clean_name.starts_with("props.")) {
+      clean_name = clean_name.substr(6);
+    }
     auto snapshot = std::make_shared<T>(*ptr);
     auto get_value = [ptr]() { return reflection::to_string(*ptr); };
     auto check_and_update = [ptr, snapshot]() mutable {
@@ -168,7 +176,7 @@ class Component : public ComponentBase {
     auto set_value = [ptr](std::string_view val) {
       reflection::from_string(val, *ptr);
     };
-    entries_.push_back({name, std::move(get_value), std::move(check_and_update), std::move(set_value)});
+    entries_.push_back({std::move(clean_name), std::move(get_value), std::move(check_and_update), std::move(set_value)});
   }
 
   template <typename Ret>
