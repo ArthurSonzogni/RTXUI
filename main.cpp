@@ -18,38 +18,44 @@
 
 using namespace rtxui;
 
-class Styled : public Component<Styled> {
+class LabeledBox : public Component<LabeledBox> {
  public:
+  struct Props {
+    std::string title = "Box";
+  } props;
+
+  LabeledBox() {
+    Bind(props.title);
+  }
+
   std::string_view Setup() override {
     Import<rtxui::div>();
     return R"html(
-      <div>Begin</div>
-      <slot></slot>
-      <div class="end">End</div>
+      <div class="box">
+        <div class="title">{props.title}</div>
+        <div class="content">
+          <slot></slot>
+        </div>
+      </div>
 
       <style>
         self {
-          display: inline block;
-          color: white;
-          background-color: rgb(70, 70, 70);
-          border: tall;
-          border-color: black;
-          width: 50%;
-          padding-left: 1;
+          display: block;
+          flex-grow: 1;
         }
-        div {
+        .box {
+          border: tall;
+          border-color: rgb(150, 150, 150);
+          padding-left: 1;
+          display: block;
+        }
+        .title {
+          font-weight: bold;
           color: yellow;
-          background-color: rgb(120, 120, 120);
-          border: tall;
-          padding-left: 1;
-          border-color: rgb(100, 100, 100);
-          border-color-top: rgb(200, 200, 200);
-          border-color-bottom: rgb(50, 50, 50);
+          margin-bottom: 1;
         }
-        .end {
-          border-color: rgb(70,70,70);
-          border-color-bottom: rgb(200, 200, 200);
-          border-color-top: rgb(50, 50, 50);
+        .content {
+          display: block;
         }
       </style>
     )html";
@@ -94,6 +100,7 @@ class App : public Component<App> {
     Import<rtxui::div>();
     Import<rtxui::h1>();
     Import<rtxui::button>();
+    Import<LabeledBox>();
     return R"html(
       <div class="header">
         <h1>RTXUI Reflection Demo</h1>
@@ -108,15 +115,12 @@ class App : public Component<App> {
       </div>
 
       <div id="flex">
-        <div id="red">
-          This is a red box.
-        </div>
-        <div id="green">
-          This is a green box.
-        </div>
-        <div id="blue">
-          This is a blue box.
-        </div>
+        <LabeledBox title="Box A (Clicks: {count})">
+          This is a custom box.
+        </LabeledBox>
+        <LabeledBox title="Box B (Clicks: {double_clicks})">
+          This is a box with doubled clicks.
+        </LabeledBox>
       </div>
       Au revoir!
 
@@ -139,33 +143,8 @@ class App : public Component<App> {
           border: tall;
           margin: 1;
           background-color: rgb(50, 50, 50);
-          color: black;
-          border-color: black;
-        }
-        #red {
-          width: 10;
-          background-color: red;
           color: white;
           border-color: black;
-          flex-grow: 1;
-          padding-left: 1;
-          border: tall;
-        }
-        #green {
-          background-color: green;
-          color: white;
-          border-color: black;
-          flex-grow: 2;
-          padding-left: 1;
-          border: tall;
-        }
-        #blue {
-          background-color: blue;
-          border-color: black;
-          padding-left: 1;
-          color: white;
-          flex-grow: 1;
-          border: tall;
         }
       </style>
     )html";
