@@ -32,13 +32,14 @@ class BorderBox : public Component<BorderBox> {
         }
         .box-wrapper {
           border: {border_class};
-          border-color: gray;
+          border-color: rgb(100, 200, 255);
           padding-left: 1;
           padding-right: 1;
           display: block;
         }
         .label {
           font-weight: bold;
+          color: rgb(100, 200, 255);
           text-align: center;
         }
       </style>
@@ -88,22 +89,26 @@ class BordersDemo : public Component<BordersDemo> {
           display: block;
           padding: 1;
           border: double;
-          border-color: gray;
+          border-color: rgb(50, 100, 200);
+          background-color: rgb(5, 10, 30);
+          color: white;
           width: 100%;
           height: 100%;
         }
         h1 {
           font-weight: bold;
           margin-bottom: 1;
+          color: rgb(100, 200, 255);
         }
         p {
           margin-bottom: 2;
+          color: rgb(170, 200, 255);
         }
         .row {
           display: flex;
           width: 100%;
           gap: 2;
-          margin-bottom: 1;
+          margin-bottom: 2;
         }
       </style>
     )html";
