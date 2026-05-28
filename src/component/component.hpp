@@ -20,6 +20,7 @@
 #include "core/refcounted.hpp"
 #include "dom/element.hpp"
 #include "reflection/class_name.hpp"
+#include "terminal/event.hpp"
 #include "xml/xml.hpp"
 
 namespace rtxui {
@@ -35,8 +36,9 @@ class ComponentBase : public RefCounted, public Bindings {
 
   void Mount();
   void Render();
-  virtual void Digest() = 0;
+  virtual bool Digest() = 0;
   virtual void InitReflection() {}
+  virtual bool OnEvent(Event event) { return false; }
 
   Element* Root() { return root_.get(); }
   Ref<Element> Slot(std::string_view name);
@@ -93,7 +95,7 @@ class Component : public ComponentBase {
     return "";
   }
 
-  void Digest() override {
+  bool Digest() override {
     bool changed = false;
     for (auto& entry : entries_) {
       if (entry.check_and_update && entry.check_and_update()) {
@@ -103,6 +105,12 @@ class Component : public ComponentBase {
     if (changed) {
       this->Render();
     }
+    for (auto& child : children_) {
+      if (child->Digest()) {
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   std::string GetInterpolatedValue(std::string_view expression) override {
@@ -110,6 +118,15 @@ class Component : public ComponentBase {
       if (entry.name == expression) return entry.get_value();
     }
     return std::string(expression);
+  }
+
+  bool OnEvent(Event event) override {
+    for (auto& child : children_) {
+      if (child->OnEvent(event)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   template <typename T>
