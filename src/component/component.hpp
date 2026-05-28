@@ -96,6 +96,7 @@ void from_string(std::string_view str, T& value) {
 template <typename Derived>
 class Component : public ComponentBase {
  public:
+  using ComponentBase::Import;
   static std::string_view StaticTag() { return ClassName<Derived>(); }
   std::string_view Tag() const final { return StaticTag(); }
 
@@ -149,12 +150,12 @@ class Component : public ComponentBase {
   }
 
   template <typename T>
-  void BindState(std::string name, T& ref) {
+  void Import(std::string name, T& ref) {
     RegisterState(name, &ref);
   }
 
   template <typename Ret>
-  void BindMethod(std::string name, Ret (Derived::*method)() const) {
+  void Import(std::string name, Ret (Derived::*method)() const) {
     RegisterComputed(name, method);
   }
  protected:
@@ -192,10 +193,10 @@ class Component : public ComponentBase {
 };
 
 // Bind(x) registers a member variable for interpolation and snapshot checking.
-#define Bind(x) this->BindState(#x, this->x)
+#define Bind(x) this->Import(#x, this->x)
 
 // BindComputed(x) registers a const member function for interpolation.
-#define BindComputed(x) this->BindMethod(#x, &std::decay_t<decltype(*this)>::x)
+#define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
 
 // Legacy compatibility macros
 #define RTXUI_STATE(TYPE, NAME) \
