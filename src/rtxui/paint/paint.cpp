@@ -485,26 +485,33 @@ void PaintImpl(const PhysicalFragment* frag,
     }
   }
 
-  // 3. Draw Scrollbar
-  bool draw_scrollbar = false;
+  // 3. Draw Scrollbars
+  bool draw_v_scrollbar = false;
   if (frag->dom_node && frag->dom_node->style.overflow_y == Overflow::Scroll &&
       frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
-    draw_scrollbar = true;
+    draw_v_scrollbar = true;
   }
 
-  if (draw_scrollbar) {
+  bool draw_h_scrollbar = false;
+  if (frag->dom_node && frag->dom_node->style.overflow_x == Overflow::Scroll &&
+      frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
+    draw_h_scrollbar = true;
+  }
+
+  if (draw_v_scrollbar) {
     int border_right = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
     int scrollbar_x = abs_x + w - border_right - 1;
-    // When there is no horizontal scrollbar, the vertical scrollbar spans the
-    // full box height (including border rows) for a cleaner look.
-    bool has_horizontal_scrollbar = false; // Not yet supported.
     int track_y_start = abs_y;
     int track_h = h;
-    if (has_horizontal_scrollbar) {
-      int border_top = border_right; // uniform border
-      int border_bottom = border_right;
-      track_y_start = abs_y + border_top;
-      track_h = h - border_top - border_bottom;
+    if (frag->has_border && frag->border_style != BorderStyle::None) {
+      if (draw_h_scrollbar) {
+        track_y_start = abs_y + 1;
+        track_h = h - 2;
+      }
+    } else {
+      if (draw_h_scrollbar) {
+        track_h = h - 1;
+      }
     }
 
     if (track_h > 0 && scrollbar_x >= 0 && scrollbar_x < texture.width()) {
@@ -533,10 +540,54 @@ void PaintImpl(const PhysicalFragment* frag,
     }
   }
 
+  if (draw_h_scrollbar) {
+    int border_bottom = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+    int scrollbar_y = abs_y + h - border_bottom - 1;
+    int track_x_start = abs_x;
+    int track_w = w;
+    if (frag->has_border && frag->border_style != BorderStyle::None) {
+      if (draw_v_scrollbar) {
+        track_x_start = abs_x + 1;
+        track_w = w - 2;
+      }
+    } else {
+      if (draw_v_scrollbar) {
+        track_w = w - 1;
+      }
+    }
+
+    if (track_w > 0 && scrollbar_y >= 0 && scrollbar_y < texture.height()) {
+      int scroll_width = frag->dom_node->scroll_width();
+      int padding_horiz = frag->dom_node->style.padding.Horiz();
+      int border_horiz = (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
+      int viewport_w = std::max(1, w - border_horiz - padding_horiz);
+
+      int thumb_w = std::max(1, (viewport_w * track_w) / std::max(1, scroll_width));
+      thumb_w = std::min(track_w, thumb_w);
+      int max_scroll = scroll_width - w;
+      int thumb_x = (max_scroll > 0) ? ((track_w - thumb_w) * frag->scroll_x) / max_scroll : 0;
+
+      for (int i = 0; i < track_w; ++i) {
+        int x = track_x_start + i;
+        if (x >= 0 && x < texture.width() && clip.Contains(x, scrollbar_y)) {
+          auto& cell = texture[x, scrollbar_y];
+          cell.character = " ";
+          if (i >= thumb_x && i < thumb_x + thumb_w) {
+            cell.background_color = Color::RGBA(200, 200, 200, 200);
+          } else {
+            cell.background_color = Color::RGBA(80, 80, 80, 120);
+          }
+        }
+      }
+    }
+  }
+
   // 4. Recurse
   ClipRect child_clip = clip;
+  int scroll_x_offset = 0;
   int scroll_y_offset = 0;
   if (frag->clips_descendants) {
+    scroll_x_offset = frag->scroll_x;
     scroll_y_offset = frag->scroll_y;
     int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
     int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
@@ -561,17 +612,23 @@ void PaintImpl(const PhysicalFragment* frag,
       scrollbar_w = 1;
     }
 
+    int scrollbar_h = 0;
+    if (frag->dom_node && frag->dom_node->style.overflow_x == Overflow::Scroll &&
+        frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
+      scrollbar_h = 1;
+    }
+
     ClipRect local_content_box = {
         abs_x + border_l + padding_l,
         abs_y + border_t + padding_t,
         abs_x + w - border_r - padding_r - scrollbar_w,
-        abs_y + h - border_b - padding_b,
+        abs_y + h - border_b - padding_b - scrollbar_h,
     };
     child_clip = clip.Intersect(local_content_box);
   }
 
   for (auto& child : frag->children) {
-    PaintImpl(child.fragment.get(), texture, abs_x + child.x,
+    PaintImpl(child.fragment.get(), texture, abs_x + child.x - scroll_x_offset,
               abs_y + child.y - scroll_y_offset, current_foreground_color,
               current_background_color, child_clip);
   }

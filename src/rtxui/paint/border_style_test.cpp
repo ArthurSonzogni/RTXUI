@@ -382,6 +382,55 @@ TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
   CHECK(texture[9, 3].background_color != texture[9, 0].background_color);
 }
 
+TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
+  struct ScrollDemoApp : Component<ScrollDemoApp> {
+    std::string_view Setup() override {
+      Import<div>();
+      return R"html(
+        <div id="scrollable">
+          <div class="wide-item">Wide content line!</div>
+        </div>
+        <style>
+          self {
+            display: block;
+          }
+          #scrollable {
+            display: block;
+            width: 10;
+            height: 4;
+            overflow-x: scroll;
+          }
+          .wide-item {
+            display: block;
+            width: 20;
+          }
+        </style>
+      )html";
+    }
+  };
+
+  auto app = Ref<ScrollDemoApp>::New();
+  app->Mount();
+
+  auto* scroll_element = app->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_element != nullptr);
+
+  // Content width is 20. Container width is 10. Max scroll = 20 - 10 = 10.
+  scroll_element->set_scroll_x(10);
+
+  // Render to a texture of size 10x4.
+  // The scrollbar should be on the bottom row (y=3) of the scrollable container.
+  auto texture = RenderComponent(app, 10, 4);
+
+  // Scrollbar row is index 3.
+  // Track width is 10, scrollbar is drawn along y=3.
+  // The thumb must be at the very right (x=9) when scrolled to the end.
+  CHECK(texture[0, 3].character == " ");
+  CHECK(texture[9, 3].character == " ");
+  // The thumb (x=9) should have a brighter background than the track (x=0).
+  CHECK(texture[9, 3].background_color != texture[0, 3].background_color);
+}
+
 TEST_CASE("Individual Border Colors") {
   struct IndividualBorderColorTest : Component<IndividualBorderColorTest> {
     std::string_view Setup() {

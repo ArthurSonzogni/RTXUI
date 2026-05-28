@@ -121,9 +121,11 @@ struct ComputedStyle {
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
 
+  Overflow overflow_x = Overflow::Visible;
   Overflow overflow_y = Overflow::Visible;
   ScrollbarWidth scrollbar_width = ScrollbarWidth::Auto;
-  int scroll_speed = 1;
+  int scroll_speed_x = 1;
+  int scroll_speed_y = 1;
 
   bool IsBlockLevel() const {
     return display_outside == DisplayOutside::Block;

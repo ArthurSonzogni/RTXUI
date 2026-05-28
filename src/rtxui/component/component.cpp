@@ -24,14 +24,15 @@ namespace rtxui {
 namespace {
 
 struct ElementState {
+  int scroll_x = 0;
   int scroll_y = 0;
   bool focused = false;
 };
 
 void CollectElementStates(Element* el, std::vector<int> path, std::map<std::vector<int>, ElementState>& states) {
   if (!el) return;
-  if (el->scroll_y() != 0 || el->focused()) {
-    states[path] = {el->scroll_y(), el->focused()};
+  if (el->scroll_x() != 0 || el->scroll_y() != 0 || el->focused()) {
+    states[path] = {el->scroll_x(), el->scroll_y(), el->focused()};
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     std::vector<int> child_path = path;
@@ -44,6 +45,7 @@ void RestoreElementStates(Element* el, std::vector<int> path, const std::map<std
   if (!el) return;
   auto it = states.find(path);
   if (it != states.end()) {
+    el->set_scroll_x(it->second.scroll_x);
     el->set_scroll_y(it->second.scroll_y);
     el->set_focused(it->second.focused);
   }

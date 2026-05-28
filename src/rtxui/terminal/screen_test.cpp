@@ -222,6 +222,80 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_y() == 0);
 }
 
+TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ScrollTestComponent : public Component<ScrollTestComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ScrollTestComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div class="wide-child">Very long text that overflows horizontally</div>
+      </div>
+      <style>
+        #scrollable {
+          display: block;
+          width: 10;
+          overflow-x: scroll;
+          scroll-speed-x: 3;
+        }
+        .wide-child {
+          display: block;
+          width: 30;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ScrollTestComponent>::New();
+  Screen screen(component, device);
+
+  auto* scroll_element = component->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_element != nullptr);
+
+  // 1. Initial State
+  // Content width = 30, viewport width = 10. Max scroll = 20.
+  REQUIRE(scroll_element->scroll_width() == 30);
+  REQUIRE(scroll_element->scroll_x() == 0);
+
+  // 2. Mouse Wheel Scroll Right (Scroll by speed = 3)
+  Event::Mouse wheel_right;
+  wheel_right.button = Event::Mouse::Button::WheelRight;
+  wheel_right.motion = Event::Mouse::Motion::Pressed;
+  wheel_right.x = 2;
+  wheel_right.y = 2;
+  screen.Dispatch(wheel_right);
+  REQUIRE(scroll_element->scroll_x() == 3);
+
+  // 3. Mouse Wheel Scroll Left (Scroll by speed = 3)
+  Event::Mouse wheel_left;
+  wheel_left.button = Event::Mouse::Button::WheelLeft;
+  wheel_left.motion = Event::Mouse::Motion::Pressed;
+  wheel_left.x = 2;
+  wheel_left.y = 2;
+  screen.Dispatch(wheel_left);
+  REQUIRE(scroll_element->scroll_x() == 0);
+
+  // 4. Click to Focus the Element
+  Event::Mouse click;
+  click.button = Event::Mouse::Button::Left;
+  click.motion = Event::Mouse::Motion::Pressed;
+  click.x = 2;
+  click.y = 2;
+  screen.Dispatch(click);
+
+  // 5. Keyboard Navigation ArrowRight (Scroll by speed = 3)
+  screen.Dispatch(Event::ArrowRight());
+  REQUIRE(scroll_element->scroll_x() == 3);
+
+  // 6. Keyboard ArrowLeft (Scroll by speed = 3)
+  screen.Dispatch(Event::ArrowLeft());
+  REQUIRE(scroll_element->scroll_x() == 0);
+}
+
 TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
