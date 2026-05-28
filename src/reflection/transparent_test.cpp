@@ -7,6 +7,9 @@
 namespace {
 class Counter : public rtxui::TransparentComponent<Counter> {
  public:
+  Counter() {
+    InitTransparent();
+  }
   // --- Transparent State ---
   int count = 0;
   int multiplier = 2;
@@ -16,6 +19,8 @@ class Counter : public rtxui::TransparentComponent<Counter> {
 
   // --- Action ---
   void Increment() { count++; }
+
+  std::string_view Tag() const override { return "Counter"; }
 
   std::string_view Setup() {
     return R"html(

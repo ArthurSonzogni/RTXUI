@@ -14,6 +14,8 @@ include(FetchContent)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set the default build type to 'Release'
 if (CMAKE_BUILD_TYPE STREQUAL "")
@@ -30,7 +32,6 @@ add_library(rtxui_lib STATIC
   "src/component/component.cpp"
   "src/component/component.hpp"
   "src/component/default_components.hpp"
-  "src/component/default_components.cpp"
   "src/component/import.hpp"
   "src/core/expected.hpp"
   "src/core/likely.hpp"
@@ -89,11 +90,20 @@ target_include_directories(rtxui_lib PUBLIC "src")
 
 # Enable experimental reflection if supported by the compiler
 include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-freflection-latest" HAS_REFLECTION)
-if(HAS_REFLECTION)
-  target_compile_options(rtxui_lib PUBLIC "-freflection-latest")
-  add_definitions(-DRTXUI_HAS_REFLECTION)
-  message(STATUS "RTXUI: C++26 Reflection enabled (-freflection-latest)")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  check_cxx_compiler_flag("-freflection-latest" HAS_REFLECTION_CLANG)
+  if(HAS_REFLECTION_CLANG)
+    target_compile_options(rtxui_lib PUBLIC "-freflection-latest")
+    add_definitions(-DRTXUI_HAS_REFLECTION)
+    message(STATUS "RTXUI: C++26 Reflection enabled (-freflection-latest)")
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  check_cxx_compiler_flag("-freflection" HAS_REFLECTION_GCC)
+  if(HAS_REFLECTION_GCC)
+    target_compile_options(rtxui_lib PUBLIC "-freflection")
+    add_definitions(-DRTXUI_HAS_REFLECTION)
+    message(STATUS "RTXUI: C++26 Reflection enabled (-freflection)")
+  endif()
 endif()
 
 # See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
@@ -120,8 +130,8 @@ if(RTXUI_BUILD_TESTS)
     "src/cell/cell_test.cpp"
     "src/terminal/terminal_input_parser_test.cpp"
     "src/component/component_test.cpp"
-    "src/core/refcounted_test.cpp"
-    "src/core/task_test.cpp"
+    "src/component/interpolation_test.cpp"
+    "src/core/refcounted_test.cpp"    "src/core/task_test.cpp"
     "src/layout/layout_test.cpp"
     "src/paint/border_style_test.cpp"
     "src/reflection/reflection_test.cpp"

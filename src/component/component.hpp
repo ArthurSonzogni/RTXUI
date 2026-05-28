@@ -9,12 +9,10 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <type_traits>
-#include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "cell/cell.hpp"
@@ -29,53 +27,146 @@ namespace rtxui {
 class ComponentBase : public RefCounted, public Bindings {
  public:
   virtual ~ComponentBase() = default;
-  virtual std::string_view Setup() = 0;
+
+  virtual std::string_view Setup() { return ""; }
+  virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
   std::string_view Template();
+
   void Mount();
   void Render();
-  Element* Root() { return root_.get(); }
-  Ref<Element> Slot(std::string_view name);
   virtual void Digest() = 0;
   virtual void InitReflection() {}
+
+  Element* Root() { return root_.get(); }
+  Ref<Element> Slot(std::string_view name);
+
+  virtual std::string GetInterpolatedValue(std::string_view expression) = 0;
 
  protected:
   void Render(const xml::Node& node, Element* element, ComponentBase* source);
   std::string template_;
   std::string xml_string_;
   xml::Nodes xml_nodes_;
-  std::set<Ref<Cell>> watchers_;
   Ref<Element> root_;
   std::map<std::string, Ref<Element>> slots_;
   std::set<Ref<ComponentBase>> children_;
   std::string id_;
   std::vector<std::string> classes_;
+
+  // Simulated reflection registry.
+  struct Entry {
+    std::string name;
+    std::function<std::string()> get_value;
+    std::function<bool()> check_and_update;
+  };
+  std::vector<Entry> entries_;
 };
 
-/// Component<Derived> provides Transparent Reactivity.
+namespace reflection {
+template <typename T>
+std::string to_string(const T& value) {
+  if constexpr (std::is_convertible_v<T, std::string>) return static_cast<std::string>(value);
+  else if constexpr (requires { std::to_string(value); }) return std::to_string(value);
+  else {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+  }
+}
+}  // namespace reflection
+
 template <typename Derived>
 class Component : public ComponentBase {
  public:
-  Component() {}
-
   static std::string_view StaticTag() { return ClassName<Derived>(); }
   std::string_view Tag() const final { return StaticTag(); }
 
+  std::string_view GetView() const override {
+    if constexpr (requires { static_cast<const Derived*>(this)->view; }) {
+      return static_cast<const Derived*>(this)->view;
+    }
+    return const_cast<Component<Derived>*>(this)->Setup();
+  }
+
+  std::string_view Setup() override {
+    return "";
+  }
+
   void Digest() override {
-    this->Render();
+    bool changed = false;
+    for (auto& entry : entries_) {
+      if (entry.check_and_update && entry.check_and_update()) {
+        changed = true;
+      }
+    }
+    if (changed) {
+      this->Render();
+    }
+  }
+
+  std::string GetInterpolatedValue(std::string_view expression) override {
+    for (const auto& entry : entries_) {
+      if (entry.name == expression) return entry.get_value();
+    }
+    return std::string(expression);
+  }
+
+  template <typename T>
+  void BindState(std::string name, T& ref) {
+    RegisterState(name, &ref);
+  }
+
+  template <typename Ret>
+  void BindMethod(std::string name, Ret (Derived::*method)() const) {
+    RegisterComputed(name, method);
+  }
+
+ protected:
+  template <typename T>
+  void RegisterState(std::string name, T* ptr) {
+    auto snapshot = std::make_shared<T>(*ptr);
+    auto get_value = [ptr]() { return reflection::to_string(*ptr); };
+    auto check_and_update = [ptr, snapshot]() mutable {
+      if (*ptr != *snapshot) {
+        *snapshot = *ptr;
+        return true;
+      }
+      return false;
+    };
+    entries_.push_back({name, std::move(get_value), std::move(check_and_update)});
+  }
+
+  template <typename Ret>
+  void RegisterComputed(std::string name, Ret (Derived::*method)() const) {
+    entries_.push_back({name,
+                        [this, method]() {
+                          return reflection::to_string(
+                              (static_cast<const Derived*>(this)->*method)());
+                        },
+                        nullptr});
   }
 };
 
-// --- SIMULATED TRANSPARENT REACTIVITY ---
-// Because true P2996 is still unstable in the Bloomberg fork, we use 
-// this helper to register members. It keeps your code looking like 
-// plain C++ while automating the binding.
+// Bind(x) registers a member variable for interpolation and snapshot checking.
+#define Bind(x) this->BindState(#x, this->x)
+
+// BindComputed(x) registers a const member function for interpolation.
+#define BindComputed(x) this->BindMethod(#x, &std::decay_t<decltype(*this)>::x)
+
+// Legacy compatibility macros
 #define RTXUI_STATE(TYPE, NAME) \
-  TYPE NAME = [this]() { \
-    this->Import(#NAME, rtxui::Ref<rtxui::ComputedTypedCell<TYPE>>::New([this]() { return this->NAME; })); \
-    return TYPE(); \
-  }(); \
-  static_assert(true)
+  TYPE NAME; \
+  int init_##NAME = [this]() { \
+    this->RegisterState(#NAME, &this->NAME); \
+    return 0; \
+  }()
+
+#define RTXUI_COMPUTED(NAME) \
+  int init_##NAME = [this]() { \
+    this->RegisterComputed(#NAME, &std::decay_t<decltype(*this)>::NAME); \
+    return 0; \
+  }()
 
 }  // namespace rtxui
 

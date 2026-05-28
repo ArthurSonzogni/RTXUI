@@ -58,7 +58,11 @@ class Styled : public Component<Styled> {
 class App : public Component<App> {
  public:
   // --- Transparent State ---
-  RTXUI_STATE(int, count);
+  int count = 0;
+
+  App() {
+    Bind(count);
+  }
 
   // --- Actions ---
   void Increment() {
@@ -149,7 +153,7 @@ int main() {
   // 2. Build Box Tree
   auto root_box = LayoutTreeBuilder::Build(root);
 
-  for (int width = 80; width <= 80; width += 15) {
+  for (int width = 0; width <= 80; width += 15) {
     // 3. Layout
     LayoutConstraints viewport = {
         {width, MeasureMode::Exactly},
@@ -161,6 +165,7 @@ int main() {
     Texture texture(width, 30);
     Paint(root_fragment.get(), texture);
 
+    std::cout << "width: " << width << std::endl;
     std::cout << texture.Render() << std::endl;
   }
 
