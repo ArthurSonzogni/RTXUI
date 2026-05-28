@@ -64,11 +64,16 @@ class App : public Component<App> {
   App() {
     Bind(count);
     Import("Increment", [this]() { Increment(); });
+    Import("Decrement", [this]() { Decrement(); });
   }
 
   // --- Actions ---
   void Increment() {
     count++;
+  }
+
+  void Decrement() {
+    count--;
   }
 
   bool OnEvent(Event event) override {
@@ -86,7 +91,7 @@ class App : public Component<App> {
     return R"html(
       <div class="header">
         <h1>RTXUI Reflection Demo</h1>
-        <button onclick="Increment">Clicks: {count}</button>
+        <button onclick="Increment" oncontextmenu="Decrement">Clicks: {count}</button>
       </div>
 
       <div id="flex">

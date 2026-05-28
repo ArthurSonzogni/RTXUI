@@ -98,23 +98,30 @@ void Screen::Loop() {
     while (auto event = parser.GetEvent()) {
       if (event->is<Event::Mouse>()) {
         auto mouse = event->get<Event::Mouse>();
-        if (mouse.button == Event::Mouse::Button::Left &&
-            mouse.motion == Event::Mouse::Motion::Pressed) {
+        if (mouse.motion == Event::Mouse::Motion::Pressed &&
+            (mouse.button == Event::Mouse::Button::Left ||
+             mouse.button == Event::Mouse::Button::Right)) {
           if (root_fragment_) {
             int tx = mouse.x - 1;
             int ty = mouse.y - 1;
             if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
+              std::vector<std::string> attr_keys;
+              if (mouse.button == Event::Mouse::Button::Left) {
+                attr_keys = {"onclick", "@click.left", "@click"};
+              } else {
+                attr_keys = {"oncontextmenu", "@click.right"};
+              }
+
               Element* curr = clicked_element;
               bool handled = false;
               while (curr) {
                 std::string action;
                 const auto& attrs = curr->Attributes();
-                if (attrs.count("onclick")) {
-                  action = attrs.at("onclick");
-                } else if (attrs.count("@click.left")) {
-                  action = attrs.at("@click.left");
-                } else if (attrs.count("@click")) {
-                  action = attrs.at("@click");
+                for (const auto& key : attr_keys) {
+                  if (attrs.count(key)) {
+                    action = attrs.at(key);
+                    break;
+                  }
                 }
 
                 if (!action.empty()) {
