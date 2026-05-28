@@ -131,6 +131,7 @@ if(RTXUI_BUILD_TESTS)
   add_executable(rtxui_test
     "src/cell/cell_test.cpp"
     "src/terminal/terminal_input_parser_test.cpp"
+    "src/terminal/screen_test.cpp"
     "src/component/component_test.cpp"
     "src/component/interpolation_test.cpp"
     "src/core/refcounted_test.cpp"    "src/core/task_test.cpp"

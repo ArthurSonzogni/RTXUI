@@ -10,6 +10,7 @@
 #include <string>
 
 #include "component/component.hpp"
+#include "terminal/terminal_device.hpp"
 #include "terminal/event.hpp"
 
 namespace rtxui {
@@ -18,7 +19,7 @@ struct PhysicalFragment;
 
 class Screen {
  public:
-  explicit Screen(Ref<ComponentBase> component);
+  explicit Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device = nullptr);
   ~Screen();
 
   // Run the event loop (blocks until Escape or Ctrl+C is pressed)
@@ -37,11 +38,12 @@ class Screen {
   int last_height_ = 0;
   bool has_drawn_ = false;
   std::shared_ptr<PhysicalFragment> root_fragment_;
+  std::shared_ptr<TerminalDevice> device_;
 
+  // RAII raw terminal controller
   struct RawTerminal {
-    termios previous_termios_;
-    struct sigaction previous_sigaction_;
-    RawTerminal();
+    TerminalDevice* device_ = nullptr;
+    explicit RawTerminal(TerminalDevice* device);
     ~RawTerminal();
   };
 };

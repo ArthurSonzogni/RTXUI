@@ -68,8 +68,11 @@ ComponentBase* GetParentComponent(ComponentBase* comp) {
 
 } // namespace
 
-Screen::Screen(Ref<ComponentBase> component)
-    : component_(std::move(component)) {
+Screen::Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device)
+    : component_(std::move(component)), device_(std::move(device)) {
+  if (!device_) {
+    device_ = std::make_shared<SystemTerminalDevice>();
+  }
   UpdateSize();
   component_->Mount();
   Draw();
@@ -78,13 +81,13 @@ Screen::Screen(Ref<ComponentBase> component)
 Screen::~Screen() {}
 
 void Screen::Loop() {
-  RawTerminal raw_terminal;
+  RawTerminal raw_terminal(device_.get());
   Draw();
 
   TerminalInputParser parser;
   while (true) {
     char c;
-    int bytes_read = read(STDIN_FILENO, &c, 1);
+    int bytes_read = device_->Read(&c, 1);
     if (bytes_read != 1) {
       if (bytes_read == -1 && errno == EINTR) {
         UpdateSize();
@@ -179,10 +182,10 @@ void Screen::Draw() {
 
   if (has_drawn_ && last_height_ > 0) {
     // Reset cursor up by the number of printed lines
-    std::cout << "\x1b[" << last_height_ << "A";
+    device_->Write("\x1b[" + std::to_string(last_height_) + "A");
   }
 
-  std::cout << new_output << std::flush;
+  device_->Write(new_output);
 
   last_height_ = 0;
   for (char ch : new_output) {
@@ -194,13 +197,14 @@ void Screen::Draw() {
 }
 
 void Screen::UpdateSize() {
-  struct winsize w;
-  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0 && w.ws_row > 0) {
-    if (w.ws_col != width_ || w.ws_row != height_) {
-      width_ = w.ws_col;
-      height_ = w.ws_row;
+  int new_width = width_;
+  int new_height = height_;
+  if (device_->GetSize(new_width, new_height)) {
+    if (new_width != width_ || new_height != height_) {
+      width_ = new_width;
+      height_ = new_height;
       if (has_drawn_) {
-        std::cout << "\x1b[2J\x1b[H" << std::flush;
+        device_->Write("\x1b[2J\x1b[H");
         last_height_ = 0;
         component_->Render();
         Draw();
@@ -217,55 +221,15 @@ void Screen::DigestAndDraw() {
 
 // --- RawTerminal RAII Implementation ---
 
-Screen::RawTerminal::RawTerminal() {
-  if (isatty(STDIN_FILENO)) {
-    tcgetattr(STDIN_FILENO, &previous_termios_);
-    termios terminal = previous_termios_;
-
-    terminal.c_iflag &= ~IGNBRK;
-    terminal.c_iflag &= ~BRKINT;
-    terminal.c_iflag &= ~PARMRK;
-    terminal.c_iflag &= ~ISTRIP;
-    terminal.c_iflag &= ~INLCR;
-    terminal.c_iflag &= ~IGNCR;
-    terminal.c_iflag &= ~ICRNL;
-    terminal.c_iflag &= ~IXON;
-
-    terminal.c_lflag &= ~ECHO;
-    terminal.c_lflag &= ~ECHONL;
-    terminal.c_lflag &= ~ICANON;
-    terminal.c_lflag &= ~ISIG;
-    terminal.c_lflag &= ~IEXTEN;
-    terminal.c_cflag |= CS8;
-
-    terminal.c_cc[VMIN] = 1;  // Block until at least 1 character is available
-    terminal.c_cc[VTIME] = 0; // No timeout
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal);
-
-    // Register SIGWINCH signal handler to interrupt blocking read() on window resize
-    struct sigaction sa;
-    sa.sa_handler = handle_sigwinch;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0; // Do not use SA_RESTART
-    sigaction(SIGWINCH, &sa, &previous_sigaction_);
-
-    std::cout << "\x1b[?1049h"; // Enter alternate screen buffer
-    std::cout << "\x1b[?7l";  // Disable line wrapping
-    std::cout << "\x1b[?25l"; // Hide cursor
-    std::cout << "\x1b[?1000h\x1b[?1006h" << std::flush; // Enable mouse tracking in SGR mode
+Screen::RawTerminal::RawTerminal(TerminalDevice* device) : device_(device) {
+  if (device_ && device_->IsAtty()) {
+    device_->EnterRawMode(handle_sigwinch);
   }
 }
 
 Screen::RawTerminal::~RawTerminal() {
-  if (isatty(STDIN_FILENO)) {
-    // Restore previous SIGWINCH handler
-    sigaction(SIGWINCH, &previous_sigaction_, nullptr);
-
-    std::cout << "\x1b[?1000l\x1b[?1006l"; // Disable mouse tracking
-    std::cout << "\x1b[?25h";  // Show cursor
-    std::cout << "\x1b[?7h";   // Enable line wrapping
-    std::cout << "\x1b[?1049l" << std::flush; // Exit alternate screen buffer
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &previous_termios_);
+  if (device_ && device_->IsAtty()) {
+    device_->ExitRawMode();
   }
 }
 
