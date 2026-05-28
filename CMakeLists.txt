@@ -120,6 +120,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_borders example/borders.cpp)
   target_link_libraries(rtxui_example_borders PRIVATE rtxui)
+
+  add_executable(rtxui_example_nested_scroll example/nested_scroll.cpp)
+  target_link_libraries(rtxui_example_nested_scroll PRIVATE rtxui)
 endif()
 
 # An option to enable testing
