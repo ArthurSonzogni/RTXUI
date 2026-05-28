@@ -307,8 +307,12 @@ Ref<Element> ComponentBase::Slot(std::string_view name) {
 }
 
 void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
+  std::string_view target = name;
+  if (target.starts_with("props.")) {
+    target = target.substr(6);
+  }
   for (auto& entry : entries_) {
-    if ((entry.name == name || entry.name == "props." + std::string(name)) && entry.set_value) {
+    if (entry.name == target && entry.set_value) {
       entry.set_value(value);
       return;
     }

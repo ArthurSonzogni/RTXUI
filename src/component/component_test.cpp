@@ -331,8 +331,9 @@ class ChildWithProps : public rtxui::Component<ChildWithProps> {
     rtxui::Component<ChildWithProps>::InitReflection();
   }
 
+  // Directly name the props without the "props." prefix:
   std::string_view view = R"(
-    <div>Message: {props.message}, Value: {props.value}</div>
+    <div>Message: {message}, Value: {value}</div>
   )";
 };
 
@@ -348,8 +349,9 @@ class ParentOfProps : public rtxui::Component<ParentOfProps> {
     rtxui::Component<ParentOfProps>::InitReflection();
   }
 
+  // Can pass using props. prefix or direct name
   std::string_view view = R"(
-    <ChildWithProps props.message="{parent_msg}" props.value="{parent_val}" />
+    <ChildWithProps message="{parent_msg}" value="{parent_val}" />
   )";
 };
 
@@ -382,7 +384,7 @@ class ParentOfPropsShortName : public rtxui::Component<ParentOfPropsShortName> {
   }
 
   std::string_view view = R"(
-    <ChildWithProps message="{parent_msg}" value="999" />
+    <ChildWithProps props.message="{parent_msg}" props.value="999" />
   )";
 };
 

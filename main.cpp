@@ -32,7 +32,7 @@ class LabeledBox : public Component<LabeledBox> {
     Import<rtxui::div>();
     return R"html(
       <div class="box">
-        <div class="title">{props.title}</div>
+        <div class="title">{title}</div>
         <div class="content">
           <slot></slot>
         </div>
