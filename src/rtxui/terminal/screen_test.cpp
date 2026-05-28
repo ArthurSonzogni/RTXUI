@@ -222,5 +222,148 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_y() == 0);
 }
 
+TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class NestedScrollComponent : public Component<NestedScrollComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<NestedScrollComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="outer" class="outer-scroll">
+        <div>Outer 1</div>
+        <div>Outer 2</div>
+        <div>Outer 3</div>
+        <div id="inner" class="inner-scroll">
+          <div>Inner 1</div>
+          <div>Inner 2</div>
+          <div>Inner 3</div>
+          <div>Inner 4</div>
+          <div>Inner 5</div>
+        </div>
+        <div>Outer 4</div>
+        <div>Outer 5</div>
+      </div>
+      <style>
+        .outer-scroll {
+          display: block;
+          height: 4;
+          overflow-y: scroll;
+          scroll-speed: 1;
+        }
+        .inner-scroll {
+          display: block;
+          height: 3;
+          overflow-y: scroll;
+          scroll-speed: 1;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<NestedScrollComponent>::New();
+  Screen screen(component, device);
+
+  auto* outer = component->Root()->QuerySelector("#outer");
+  auto* inner = component->Root()->QuerySelector("#inner");
+  REQUIRE(outer != nullptr);
+  REQUIRE(inner != nullptr);
+
+  // Initial State: both scroll_y are 0
+  REQUIRE(outer->scroll_y() == 0);
+  REQUIRE(inner->scroll_y() == 0);
+
+  // Scroll Down 1: Inner scrolls from 0 to 1
+  Event::Mouse wheel_down;
+  wheel_down.button = Event::Mouse::Button::WheelDown;
+  wheel_down.motion = Event::Mouse::Motion::Pressed;
+  wheel_down.x = 2;
+  wheel_down.y = 4; // targeting inner at y=3 (0-indexed)
+  screen.Dispatch(wheel_down);
+  REQUIRE(inner->scroll_y() == 1);
+  REQUIRE(outer->scroll_y() == 0);
+
+  // Scroll Down 2: Inner scrolls from 1 to 2 (max_scroll is 5-3 = 2)
+  screen.Dispatch(wheel_down);
+  REQUIRE(inner->scroll_y() == 2);
+  REQUIRE(outer->scroll_y() == 0);
+
+  // Scroll Down 3: Inner is already at max (2), so scroll bubbles up to outer!
+  // Outer scrolls from 0 to 1.
+  screen.Dispatch(wheel_down);
+  REQUIRE(inner->scroll_y() == 2);
+  REQUIRE(outer->scroll_y() == 1);
+
+  // Scroll Down 4: Outer scrolls from 1 to 2.
+  screen.Dispatch(wheel_down);
+  REQUIRE(inner->scroll_y() == 2);
+  REQUIRE(outer->scroll_y() == 2);
+
+  // Now test Scroll Up:
+  Event::Mouse wheel_up;
+  wheel_up.button = Event::Mouse::Button::WheelUp;
+  wheel_up.motion = Event::Mouse::Motion::Pressed;
+  wheel_up.x = 2;
+  wheel_up.y = 4;
+
+  // Scroll Up 1: Inner scrolls back from 2 to 1.
+  screen.Dispatch(wheel_up);
+  REQUIRE(inner->scroll_y() == 1);
+  REQUIRE(outer->scroll_y() == 2);
+
+  // Scroll Up 2: Inner scrolls back from 1 to 0.
+  screen.Dispatch(wheel_up);
+  REQUIRE(inner->scroll_y() == 0);
+  REQUIRE(outer->scroll_y() == 2);
+
+  // Scroll Up 3: Inner is at 0 (min scroll), so scroll bubbles up to outer.
+  // Outer scrolls back from 2 to 1.
+  screen.Dispatch(wheel_up);
+  REQUIRE(inner->scroll_y() == 0);
+  REQUIRE(outer->scroll_y() == 1);
+
+  // Scroll Up 4: Outer scrolls back from 1 to 0.
+  screen.Dispatch(wheel_up);
+  REQUIRE(inner->scroll_y() == 0);
+  REQUIRE(outer->scroll_y() == 0);
+
+  // Test keyboard navigation focus/bubbling:
+  // Focus the inner scroll container
+  inner->set_focused(true);
+  screen.Draw(); // update focused element state in Screen
+
+  // Press ArrowDown 1: Inner scrolls from 0 to 1
+  screen.Dispatch(Event::ArrowDown());
+  REQUIRE(inner->scroll_y() == 1);
+  REQUIRE(outer->scroll_y() == 0);
+
+  // Press ArrowDown 2: Inner scrolls from 1 to 2
+  screen.Dispatch(Event::ArrowDown());
+  REQUIRE(inner->scroll_y() == 2);
+  REQUIRE(outer->scroll_y() == 0);
+
+  // Press ArrowDown 3: Inner at max scroll, bubbles up to outer (outer scrolls to 1)
+  screen.Dispatch(Event::ArrowDown());
+  REQUIRE(inner->scroll_y() == 2);
+  REQUIRE(outer->scroll_y() == 1);
+
+  // Press ArrowUp 1: Inner scrolls from 2 to 1
+  screen.Dispatch(Event::ArrowUp());
+  REQUIRE(inner->scroll_y() == 1);
+  REQUIRE(outer->scroll_y() == 1);
+
+  // Press ArrowUp 2: Inner scrolls from 1 to 0
+  screen.Dispatch(Event::ArrowUp());
+  REQUIRE(inner->scroll_y() == 0);
+  REQUIRE(outer->scroll_y() == 1);
+
+  // Press ArrowUp 3: Inner at min scroll, bubbles up to outer (outer scrolls to 0)
+  screen.Dispatch(Event::ArrowUp());
+  REQUIRE(inner->scroll_y() == 0);
+  REQUIRE(outer->scroll_y() == 0);
+}
+
 } // namespace
 } // namespace rtxui

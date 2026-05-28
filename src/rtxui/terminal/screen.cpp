@@ -234,22 +234,31 @@ void Screen::HandleEvent(const Event& event) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
         if (auto scroll_frag = FindScrollableFragmentAt(root_fragment_, tx, ty)) {
-          int scroll_height = scroll_frag->dom_node->scroll_height();
-          int max_scroll = std::max(0, scroll_height - scroll_frag->height);
-          int curr_y = scroll_frag->dom_node->scroll_y();
-          int speed = scroll_frag->dom_node->style.scroll_speed;
+          Element* curr = scroll_frag->dom_node;
+          while (curr) {
+            if (curr->style.overflow_y == Overflow::Scroll) {
+              auto frag = FindFragmentForElement(root_fragment_, curr);
+              if (frag) {
+                int scroll_height = curr->scroll_height();
+                int max_scroll = std::max(0, scroll_height - frag->height);
+                int curr_y = curr->scroll_y();
+                int speed = curr->style.scroll_speed;
 
-          int new_y = curr_y;
-          if (mouse.button == Event::Mouse::Button::WheelUp) {
-            new_y = std::max(0, curr_y - speed);
-          } else {
-            new_y = std::min(max_scroll, curr_y + speed);
-          }
+                int new_y = curr_y;
+                if (mouse.button == Event::Mouse::Button::WheelUp) {
+                  new_y = std::max(0, curr_y - speed);
+                } else {
+                  new_y = std::min(max_scroll, curr_y + speed);
+                }
 
-          if (new_y != curr_y) {
-            scroll_frag->dom_node->set_scroll_y(new_y);
-            Draw();
-            return;
+                if (new_y != curr_y) {
+                  curr->set_scroll_y(new_y);
+                  Draw();
+                  return;
+                }
+              }
+            }
+            curr = curr->Parent();
           }
         }
       }
@@ -258,22 +267,41 @@ void Screen::HandleEvent(const Event& event) {
 
   if (event == Event::ArrowUp() || event == Event::ArrowDown() ||
       event == Event::PageUp() || event == Event::PageDown()) {
-    std::shared_ptr<PhysicalFragment> scroll_frag = nullptr;
     if (focused_element_) {
       Element* curr = focused_element_;
       while (curr) {
         if (curr->style.overflow_y == Overflow::Scroll) {
-          scroll_frag = FindFragmentForElement(root_fragment_, curr);
-          if (scroll_frag) break;
+          auto scroll_frag = FindFragmentForElement(root_fragment_, curr);
+          if (scroll_frag) {
+            int scroll_height = curr->scroll_height();
+            int max_scroll = std::max(0, scroll_height - scroll_frag->height);
+            int curr_y = curr->scroll_y();
+            int speed = curr->style.scroll_speed;
+
+            int delta = 0;
+            if (event == Event::ArrowUp()) {
+              delta = -speed;
+            } else if (event == Event::ArrowDown()) {
+              delta = speed;
+            } else if (event == Event::PageUp()) {
+              delta = -scroll_frag->height;
+            } else if (event == Event::PageDown()) {
+              delta = scroll_frag->height;
+            }
+
+            int new_y = std::clamp(curr_y + delta, 0, max_scroll);
+            if (new_y != curr_y) {
+              curr->set_scroll_y(new_y);
+              Draw();
+              return;
+            }
+          }
         }
         curr = curr->Parent();
       }
     }
-    if (!scroll_frag) {
-      scroll_frag = FindFirstScrollableFragment(root_fragment_);
-    }
 
-    if (scroll_frag) {
+    if (auto scroll_frag = FindFirstScrollableFragment(root_fragment_)) {
       int scroll_height = scroll_frag->dom_node->scroll_height();
       int max_scroll = std::max(0, scroll_height - scroll_frag->height);
       int curr_y = scroll_frag->dom_node->scroll_y();
