@@ -15,6 +15,7 @@ class Element;
 struct PhysicalFragment {
   Element* dom_node = nullptr;
   int x, y, width, height;
+  int scroll_x = 0;
   int scroll_y = 0;
   bool clips_descendants = false;
   bool is_text = false;

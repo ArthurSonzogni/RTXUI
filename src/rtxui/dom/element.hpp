@@ -67,15 +67,22 @@ class Element : public RefCounted {
   int scroll_height() const { return scroll_height_; }
   void set_scroll_height(int h) { scroll_height_ = h; }
 
+  int scroll_x() const { return scroll_x_; }
+  void set_scroll_x(int x) { scroll_x_ = x; }
+  int scroll_width() const { return scroll_width_; }
+  void set_scroll_width(int w) { scroll_width_ = w; }
+
   bool focused() const { return focused_; }
   void set_focused(bool f) { focused_ = f; }
 
  protected:
-  bool is_slot_ : 1 = false;
-  bool is_text_ : 1 = false;
-  int scroll_y_ = 0;
-  int scroll_height_ = 0;
-  bool focused_ = false;
+   bool is_slot_ : 1 = false;
+   bool is_text_ : 1 = false;
+   int scroll_y_ = 0;
+   int scroll_height_ = 0;
+   int scroll_x_ = 0;
+   int scroll_width_ = 0;
+   bool focused_ = false;
 
   std::string tag_ = "div";
   std::map<std::string, std::string> attributes_;

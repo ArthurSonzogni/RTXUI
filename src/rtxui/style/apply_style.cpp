@@ -419,7 +419,22 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
-  if (p == "overflow" || p == "overflow-y") {
+  if (p == "overflow") {
+    if (auto o = ParseOverflow(v)) {
+      style.overflow_x = *o;
+      style.overflow_y = *o;
+    }
+    return;
+  }
+
+  if (p == "overflow-x") {
+    if (auto o = ParseOverflow(v)) {
+      style.overflow_x = *o;
+    }
+    return;
+  }
+
+  if (p == "overflow-y") {
     if (auto o = ParseOverflow(v)) {
       style.overflow_y = *o;
     }
@@ -434,7 +449,19 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "scroll-speed") {
-    style.scroll_speed = StoI(v);
+    int val = StoI(v);
+    style.scroll_speed_x = val;
+    style.scroll_speed_y = val;
+    return;
+  }
+
+  if (p == "scroll-speed-x") {
+    style.scroll_speed_x = StoI(v);
+    return;
+  }
+
+  if (p == "scroll-speed-y") {
+    style.scroll_speed_y = StoI(v);
     return;
   }
 
