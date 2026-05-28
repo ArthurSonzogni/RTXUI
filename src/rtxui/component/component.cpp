@@ -21,6 +21,54 @@
 namespace rtxui {
 namespace {
 
+std::string Interpolate(std::string_view text, ComponentBase* source) {
+  std::string result;
+  size_t last_pos = 0;
+  while (true) {
+    size_t open_brace = text.find('{', last_pos);
+    if (open_brace == std::string_view::npos) {
+      result += text.substr(last_pos);
+      break;
+    }
+    result += text.substr(last_pos, open_brace - last_pos);
+    size_t close_brace = text.find('}', open_brace);
+    if (close_brace == std::string_view::npos) {
+      result += text.substr(open_brace);
+      break;
+    }
+    std::string_view expression =
+        text.substr(open_brace + 1, close_brace - open_brace - 1);
+    
+    // Trim spaces to find a clean identifier
+    std::string_view trimmed = expression;
+    while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.front()))) {
+      trimmed.remove_prefix(1);
+    }
+    while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
+      trimmed.remove_suffix(1);
+    }
+
+    bool is_ident = !trimmed.empty();
+    for (char c : trimmed) {
+      if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '.' && c != '-') {
+        is_ident = false;
+        break;
+      }
+    }
+
+    if (is_ident) {
+      result += source->GetInterpolatedValue(trimmed);
+    } else {
+      // Keep the curly braces as they are (it's likely a CSS ruleset block)
+      result += "{";
+      result += expression;
+      result += "}";
+    }
+    last_pos = close_brace + 1;
+  }
+  return result;
+}
+
 void XmlParseError(const xml::Error& error, std::string_view xml_string) {
   std::cerr << "======== Error parsing DOM ========" << std::endl;
   int error_line = error.line;
@@ -101,6 +149,8 @@ void ComponentBase::Render() {
   children_.clear();
   slots_.clear();
 
+  std::vector<std::string> interpolated_css_strings;
+
   if (!root_) {
     root_ = Ref<Element>::New(this);
     root_->id = id_;
@@ -122,11 +172,13 @@ void ComponentBase::Render() {
             node.children[0].type != xml::Node::Type::kText) {
           continue;
         }
-        auto maybe_stylesheet = css::Parse(node.children[0].text);
+        interpolated_css_strings.push_back(Interpolate(node.children[0].text, this));
+        const auto& css_str = interpolated_css_strings.back();
+        auto maybe_stylesheet = css::Parse(css_str);
         if (maybe_stylesheet) {
           stylesheet = maybe_stylesheet.value();
         } else {
-          CssParseError(maybe_stylesheet.error(), node.children[0].text);
+          CssParseError(maybe_stylesheet.error(), css_str);
         }
         continue;
       }
@@ -194,26 +246,7 @@ void ComponentBase::Render(const xml::Node& node,
                            Element* slot,
                            ComponentBase* import_source) {
   auto Interpolate = [&](std::string_view text) -> std::string {
-    std::string result;
-    size_t last_pos = 0;
-    while (true) {
-      size_t open_brace = text.find('{', last_pos);
-      if (open_brace == std::string_view::npos) {
-        result += text.substr(last_pos);
-        break;
-      }
-      result += text.substr(last_pos, open_brace - last_pos);
-      size_t close_brace = text.find('}', open_brace);
-      if (close_brace == std::string_view::npos) {
-        result += text.substr(open_brace);
-        break;
-      }
-      std::string_view expression =
-          text.substr(open_brace + 1, close_brace - open_brace - 1);
-      result += import_source->GetInterpolatedValue(expression);
-      last_pos = close_brace + 1;
-    }
-    return result;
+    return rtxui::Interpolate(text, import_source);
   };
 
   for (const auto& child_node : node.children) {
