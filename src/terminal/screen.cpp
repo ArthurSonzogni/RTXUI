@@ -84,82 +84,87 @@ void Screen::Loop() {
   RawTerminal raw_terminal(device_.get());
   Draw();
 
-  TerminalInputParser parser;
-  while (true) {
-    char c;
-    int bytes_read = device_->Read(&c, 1);
-    if (bytes_read != 1) {
-      if (bytes_read == -1 && errno == EINTR) {
-        UpdateSize();
-      }
-      continue;
+  running_ = true;
+  while (running_) {
+    Step();
+  }
+}
+
+void Screen::Step() {
+  char c;
+  int bytes_read = device_->Read(&c, 1);
+  if (bytes_read != 1) {
+    if (bytes_read == -1 && errno == EINTR) {
+      UpdateSize();
     }
+    return;
+  }
 
-    UpdateSize();
-    parser.Add(c);
+  UpdateSize();
+  parser_.Add(c);
 
-    while (auto event = parser.GetEvent()) {
-      if (event->is<Event::Mouse>()) {
-        auto mouse = event->get<Event::Mouse>();
-        if (mouse.motion == Event::Mouse::Motion::Pressed &&
-            (mouse.button == Event::Mouse::Button::Left ||
-             mouse.button == Event::Mouse::Button::Right)) {
-          if (root_fragment_) {
-            int tx = mouse.x - 1;
-            int ty = mouse.y - 1;
-            if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
-              std::vector<std::string> attr_keys;
-              if (mouse.button == Event::Mouse::Button::Left) {
-                attr_keys = {"onclick", "@click.left", "@click"};
-              } else {
-                attr_keys = {"oncontextmenu", "@click.right"};
+  while (auto event = parser_.GetEvent()) {
+    if (event->is<Event::Mouse>()) {
+      auto mouse = event->get<Event::Mouse>();
+      if (mouse.motion == Event::Mouse::Motion::Pressed &&
+          (mouse.button == Event::Mouse::Button::Left ||
+           mouse.button == Event::Mouse::Button::Right)) {
+        if (root_fragment_) {
+          int tx = mouse.x - 1;
+          int ty = mouse.y - 1;
+          if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
+            std::vector<std::string> attr_keys;
+            if (mouse.button == Event::Mouse::Button::Left) {
+              attr_keys = {"onclick", "@click.left", "@click"};
+            } else {
+              attr_keys = {"oncontextmenu", "@click.right"};
+            }
+
+            Element* curr = clicked_element;
+            bool handled = false;
+            while (curr) {
+              std::string action;
+              const auto& attrs = curr->Attributes();
+              for (const auto& key : attr_keys) {
+                if (attrs.count(key)) {
+                  action = attrs.at(key);
+                  break;
+                }
               }
 
-              Element* curr = clicked_element;
-              bool handled = false;
-              while (curr) {
-                std::string action;
-                const auto& attrs = curr->Attributes();
-                for (const auto& key : attr_keys) {
-                  if (attrs.count(key)) {
-                    action = attrs.at(key);
+              if (!action.empty()) {
+                ComponentBase* comp = GetAttributeOwnerComponent(curr);
+                bool executed = false;
+                while (comp) {
+                  if (comp->RunCallback(action)) {
+                    DigestAndDraw();
+                    handled = true;
+                    executed = true;
                     break;
                   }
+                  comp = GetParentComponent(comp);
                 }
-
-                if (!action.empty()) {
-                  ComponentBase* comp = GetAttributeOwnerComponent(curr);
-                  bool executed = false;
-                  while (comp) {
-                    if (comp->RunCallback(action)) {
-                      DigestAndDraw();
-                      handled = true;
-                      executed = true;
-                      break;
-                    }
-                    comp = GetParentComponent(comp);
-                  }
-                  if (executed) {
-                    break;
-                  }
+                if (executed) {
+                  break;
                 }
-                curr = curr->Parent();
               }
-              if (handled) {
-                continue;
-              }
+              curr = curr->Parent();
+            }
+            if (handled) {
+              continue;
             }
           }
         }
       }
+    }
 
-      if (component_->OnEvent(*event)) {
-        DigestAndDraw();
-        continue;
-      }
-      if (*event == Event::Escape() || *event == Event::CtrlC()) {
-        return;
-      }
+    if (component_->OnEvent(*event)) {
+      DigestAndDraw();
+      continue;
+    }
+    if (*event == Event::Escape() || *event == Event::CtrlC()) {
+      running_ = false;
+      return;
     }
   }
 }
