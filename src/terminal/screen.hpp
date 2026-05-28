@@ -5,6 +5,7 @@
 #define RTXUI_TERMINAL_SCREEN_HPP_
 
 #include <termios.h>
+#include <signal.h>
 #include <memory>
 #include <string>
 
@@ -37,9 +38,9 @@ class Screen {
   bool has_drawn_ = false;
   std::shared_ptr<PhysicalFragment> root_fragment_;
 
-  // RAII raw terminal controller
   struct RawTerminal {
     termios previous_termios_;
+    struct sigaction previous_sigaction_;
     RawTerminal();
     ~RawTerminal();
   };
