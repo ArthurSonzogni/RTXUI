@@ -3,9 +3,9 @@
 // the LICENSE file.
 #include "terminal/screen.hpp"
 
+#include <cerrno>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <fstream>
 #include <iostream>
 
 #include "dom/element.hpp"
@@ -19,6 +19,8 @@
 namespace rtxui {
 
 namespace {
+
+void handle_sigwinch(int sig) {}
 
 Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment, int target_x, int target_y) {
   if (!fragment) {
@@ -59,6 +61,11 @@ ComponentBase* GetAttributeOwnerComponent(Element* element) {
   return GetOwningComponent(element);
 }
 
+ComponentBase* GetParentComponent(ComponentBase* comp) {
+  if (!comp || !comp->Root()) return nullptr;
+  return GetOwningComponent(comp->Root()->Parent());
+}
+
 } // namespace
 
 Screen::Screen(Ref<ComponentBase> component)
@@ -77,7 +84,11 @@ void Screen::Loop() {
   TerminalInputParser parser;
   while (true) {
     char c;
-    if (read(STDIN_FILENO, &c, 1) != 1) {
+    int bytes_read = read(STDIN_FILENO, &c, 1);
+    if (bytes_read != 1) {
+      if (bytes_read == -1 && errno == EINTR) {
+        UpdateSize();
+      }
       continue;
     }
 
@@ -87,30 +98,15 @@ void Screen::Loop() {
     while (auto event = parser.GetEvent()) {
       if (event->is<Event::Mouse>()) {
         auto mouse = event->get<Event::Mouse>();
-        {
-          std::ofstream log("/home/arthursonzogni/programmation/real/RTXUI/rtxui_debug.log", std::ios::app);
-          log << "Mouse Event: button=" << (int)mouse.button
-              << ", motion=" << (int)mouse.motion
-              << ", x=" << mouse.x << ", y=" << mouse.y << "\n";
-        }
         if (mouse.button == Event::Mouse::Button::Left &&
             mouse.motion == Event::Mouse::Motion::Pressed) {
-          std::ofstream log("/home/arthursonzogni/programmation/real/RTXUI/rtxui_debug.log", std::ios::app);
-          log << "Left Pressed Click at: " << mouse.x << ", " << mouse.y << "\n";
           if (root_fragment_) {
-            log << "Root fragment size: " << root_fragment_->width << "x" << root_fragment_->height << "\n";
             int tx = mouse.x - 1;
             int ty = mouse.y - 1;
             if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
-              log << "Found element: tag=" << clicked_element->tag() << "\n";
               Element* curr = clicked_element;
               bool handled = false;
               while (curr) {
-                log << "Checking element: tag=" << curr->tag() << "\n";
-                for (const auto& [k, v] : curr->Attributes()) {
-                  log << "  attr: " << k << "=" << v << "\n";
-                }
-
                 std::string action;
                 const auto& attrs = curr->Attributes();
                 if (attrs.count("onclick")) {
@@ -122,19 +118,19 @@ void Screen::Loop() {
                 }
 
                 if (!action.empty()) {
-                  log << "Found action: " << action << "\n";
-                  if (auto* comp = GetAttributeOwnerComponent(curr)) {
-                    log << "Found owner component: tag=" << comp->Tag() << "\n";
+                  ComponentBase* comp = GetAttributeOwnerComponent(curr);
+                  bool executed = false;
+                  while (comp) {
                     if (comp->RunCallback(action)) {
-                      log << "Callback executed successfully!\n";
                       DigestAndDraw();
                       handled = true;
+                      executed = true;
                       break;
-                    } else {
-                      log << "Callback failed on owner component!\n";
                     }
-                  } else {
-                    log << "No owner component found for attributes!\n";
+                    comp = GetParentComponent(comp);
+                  }
+                  if (executed) {
+                    break;
                   }
                 }
                 curr = curr->Parent();
@@ -142,11 +138,7 @@ void Screen::Loop() {
               if (handled) {
                 continue;
               }
-            } else {
-              log << "No element found at: " << tx << ", " << ty << "\n";
             }
-          } else {
-            log << "No root_fragment_\n";
           }
         }
       }
@@ -201,6 +193,8 @@ void Screen::UpdateSize() {
       width_ = w.ws_col;
       height_ = w.ws_row;
       if (has_drawn_) {
+        std::cout << "\x1b[2J\x1b[H" << std::flush;
+        last_height_ = 0;
         component_->Render();
         Draw();
       }
@@ -241,6 +235,13 @@ Screen::RawTerminal::RawTerminal() {
     terminal.c_cc[VTIME] = 0; // No timeout
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal);
 
+    // Register SIGWINCH signal handler to interrupt blocking read() on window resize
+    struct sigaction sa;
+    sa.sa_handler = handle_sigwinch;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0; // Do not use SA_RESTART
+    sigaction(SIGWINCH, &sa, &previous_sigaction_);
+
     std::cout << "\x1b[?1049h"; // Enter alternate screen buffer
     std::cout << "\x1b[?7l";  // Disable line wrapping
     std::cout << "\x1b[?25l"; // Hide cursor
@@ -250,6 +251,9 @@ Screen::RawTerminal::RawTerminal() {
 
 Screen::RawTerminal::~RawTerminal() {
   if (isatty(STDIN_FILENO)) {
+    // Restore previous SIGWINCH handler
+    sigaction(SIGWINCH, &previous_sigaction_, nullptr);
+
     std::cout << "\x1b[?1000l\x1b[?1006l"; // Disable mouse tracking
     std::cout << "\x1b[?25h";  // Show cursor
     std::cout << "\x1b[?7h";   // Enable line wrapping
