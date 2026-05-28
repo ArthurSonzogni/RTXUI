@@ -3,9 +3,11 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <algorithm>
 
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/dom/element.hpp"
 
 namespace rtxui {
 
@@ -232,16 +234,141 @@ const BorderData& GetBorderData(BorderStyle style) {
               {1, 1, 1},
           },
       },
+      /* Dotted */
+      {
+          {
+              {"·", "·", "·"},
+              {"·", " ", "·"},
+              {"·", "·", "·"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
+      /* DoubleHorizontal */
+      {
+          {
+              {"╒", "═", "╕"},
+              {"│", " ", "│"},
+              {"╘", "═", "╛"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
+      /* DoubleVertical */
+      {
+          {
+              {"╓", "─", "╖"},
+              {"║", " ", "║"},
+              {"╙", "─", "╜"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
+      /* Shadow */
+      {
+          {
+              {"░", "░", "▓"},
+              {"░", " ", "▓"},
+              {"░", "▓", "▓"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
+      /* ShadeLight */
+      {
+          {
+              {"░", "░", "░"},
+              {"░", " ", "░"},
+              {"░", "░", "░"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
+      /* ShadeMedium */
+      {
+          {
+              {"▒", "▒", "▒"},
+              {"▒", " ", "▒"},
+              {"▒", "▒", "▒"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
+      /* ShadeDark */
+      {
+          {
+              {"▓", "▓", "▓"},
+              {"▓", " ", "▓"},
+              {"▓", "▓", "▓"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
+      /* Squiggle */
+      {
+          {
+              {"~", "~", "~"},
+              {"~", " ", "~"},
+              {"~", "~", "~"},
+          },
+          {
+              {0, 0, 0},
+              {0, 0, 0},
+              {0, 0, 0},
+          },
+      },
   };
   return border_styles[static_cast<size_t>(style)];
 }
+
+struct ClipRect {
+  int x1 = 0;
+  int y1 = 0;
+  int x2 = 1000000;
+  int y2 = 1000000;
+
+  bool Contains(int x, int y) const {
+    return x >= x1 && x < x2 && y >= y1 && y < y2;
+  }
+
+  ClipRect Intersect(const ClipRect& other) const {
+    return {
+        std::max(x1, other.x1),
+        std::max(y1, other.y1),
+        std::min(x2, other.x2),
+        std::min(y2, other.y2),
+    };
+  }
+};
 
 void PaintImpl(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
            int off_y,
            Color inherited_foreground_color,
-           Color parent_background_color) {
+           Color parent_background_color,
+           ClipRect clip) {
   int abs_x = off_x;
   int abs_y = off_y;
   int w = frag->width;
@@ -260,7 +387,7 @@ void PaintImpl(const PhysicalFragment* frag,
           int tex_x = abs_x + x;
           int tex_y = abs_y + y;
           if (tex_x >= 0 && tex_x < texture.width() && tex_y >= 0 &&
-              tex_y < texture.height()) {
+              tex_y < texture.height() && clip.Contains(tex_x, tex_y)) {
             auto& cell = texture[tex_x, tex_y];
             Color under_bg = cell.background_color;
             cell.background_color = Blend(new_bg, under_bg);
@@ -285,7 +412,8 @@ void PaintImpl(const PhysicalFragment* frag,
                         const Color& border_color) {
       if (c == nullptr || *c == '\0' || *c == ' ')
         return;
-      if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
+      if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
+          clip.Contains(x, y)) {
         auto& cell = texture[x, y];
         cell.character = c;
 
@@ -346,7 +474,8 @@ void PaintImpl(const PhysicalFragment* frag,
     for (size_t i = 0; i < frag->text_content.size(); ++i) {
       int x = abs_x + static_cast<int>(i) + (frag->has_border ? 1 : 0);
       int y = abs_y + (frag->has_border ? 1 : 0);
-      if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height()) {
+      if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
+          clip.Contains(x, y)) {
         auto& cell = texture[x, y];
         cell.character = std::string(1, frag->text_content[i]);
         Color fg = current_foreground_color;
@@ -356,10 +485,87 @@ void PaintImpl(const PhysicalFragment* frag,
     }
   }
 
-  // 3. Recurse
+  // 3. Draw Scrollbar
+  bool draw_scrollbar = false;
+  if (frag->dom_node && frag->dom_node->style.overflow_y == Overflow::Scroll &&
+      frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
+    draw_scrollbar = true;
+  }
+
+  if (draw_scrollbar) {
+    int border_top = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+    int border_bottom = border_top;
+    int border_right = border_top;
+    int scrollbar_x = abs_x + w - border_right - 1;
+    int track_y_start = abs_y + border_top;
+    int track_h = h - border_top - border_bottom;
+
+    if (track_h > 0 && scrollbar_x >= 0 && scrollbar_x < texture.width()) {
+      int scroll_height = frag->dom_node->scroll_height();
+      int padding_vert = frag->dom_node->style.padding.Vert();
+      int viewport_h = std::max(1, h - border_top - border_bottom - padding_vert);
+
+      int thumb_h = std::max(1, (viewport_h * track_h) / std::max(1, scroll_height));
+      thumb_h = std::min(track_h, thumb_h);
+      int max_scroll = scroll_height - h;
+      int thumb_y = (max_scroll > 0) ? ((track_h - thumb_h) * frag->scroll_y) / max_scroll : 0;
+
+      for (int i = 0; i < track_h; ++i) {
+        int y = track_y_start + i;
+        if (y >= 0 && y < texture.height() && clip.Contains(scrollbar_x, y)) {
+          auto& cell = texture[scrollbar_x, y];
+          if (i >= thumb_y && i < thumb_y + thumb_h) {
+            cell.character = "█";
+          } else {
+            cell.character = "░";
+          }
+          cell.foreground_color = current_foreground_color;
+        }
+      }
+    }
+  }
+
+  // 4. Recurse
+  ClipRect child_clip = clip;
+  int scroll_y_offset = 0;
+  if (frag->clips_descendants) {
+    scroll_y_offset = frag->scroll_y;
+    int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+    int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+
+    if (frag->dom_node) {
+      padding_l = frag->dom_node->style.padding.left;
+      padding_r = frag->dom_node->style.padding.right;
+      padding_t = frag->dom_node->style.padding.top;
+      padding_b = frag->dom_node->style.padding.bottom;
+    }
+
+    if (frag->has_border && frag->border_style != BorderStyle::None) {
+      border_l = 1;
+      border_r = 1;
+      border_t = 1;
+      border_b = 1;
+    }
+
+    int scrollbar_w = 0;
+    if (frag->dom_node && frag->dom_node->style.overflow_y == Overflow::Scroll &&
+        frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
+      scrollbar_w = 1;
+    }
+
+    ClipRect local_content_box = {
+        abs_x + border_l + padding_l,
+        abs_y + border_t + padding_t,
+        abs_x + w - border_r - padding_r - scrollbar_w,
+        abs_y + h - border_b - padding_b,
+    };
+    child_clip = clip.Intersect(local_content_box);
+  }
+
   for (auto& child : frag->children) {
-    PaintImpl(child.fragment.get(), texture, abs_x + child.x, abs_y + child.y,
-          current_foreground_color, current_background_color);
+    PaintImpl(child.fragment.get(), texture, abs_x + child.x,
+              abs_y + child.y - scroll_y_offset, current_foreground_color,
+              current_background_color, child_clip);
   }
 }
 }  // namespace
@@ -369,7 +575,7 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, Color::RGB(255, 255, 255),
-            Color::RGB(0, 0, 0));
+            Color::RGB(0, 0, 0), ClipRect{0, 0, texture.width(), texture.height()});
 }
 
 }  // namespace rtxui

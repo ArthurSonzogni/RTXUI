@@ -9,6 +9,7 @@
 #include <string_view>
 #include <vector>
 #include <algorithm>
+#include <map>
 
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
@@ -21,6 +22,37 @@
 
 namespace rtxui {
 namespace {
+
+struct ElementState {
+  int scroll_y = 0;
+  bool focused = false;
+};
+
+void CollectElementStates(Element* el, std::vector<int> path, std::map<std::vector<int>, ElementState>& states) {
+  if (!el) return;
+  if (el->scroll_y() != 0 || el->focused()) {
+    states[path] = {el->scroll_y(), el->focused()};
+  }
+  for (size_t i = 0; i < el->ChildCount(); ++i) {
+    std::vector<int> child_path = path;
+    child_path.push_back(static_cast<int>(i));
+    CollectElementStates(el->ChildAt(i), child_path, states);
+  }
+}
+
+void RestoreElementStates(Element* el, std::vector<int> path, const std::map<std::vector<int>, ElementState>& states) {
+  if (!el) return;
+  auto it = states.find(path);
+  if (it != states.end()) {
+    el->set_scroll_y(it->second.scroll_y);
+    el->set_focused(it->second.focused);
+  }
+  for (size_t i = 0; i < el->ChildCount(); ++i) {
+    std::vector<int> child_path = path;
+    child_path.push_back(static_cast<int>(i));
+    RestoreElementStates(el->ChildAt(i), child_path, states);
+  }
+}
 
 std::string Interpolate(std::string_view text, ComponentBase* source) {
   struct Placeholder {
@@ -155,6 +187,11 @@ void ComponentBase::Mount() {
 }
 
 void ComponentBase::Render() {
+  std::map<std::vector<int>, ElementState> saved_states;
+  if (root_) {
+    CollectElementStates(root_.get(), {}, saved_states);
+  }
+
   children_.clear();
   slots_.clear();
 
@@ -248,6 +285,10 @@ void ComponentBase::Render() {
 
       StyleDescendants(root_.get(), ruleset);
     }
+  }
+
+  if (root_) {
+    RestoreElementStates(root_.get(), {}, saved_states);
   }
 }
 

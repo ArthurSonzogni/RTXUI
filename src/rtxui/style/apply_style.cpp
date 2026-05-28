@@ -140,6 +140,40 @@ std::optional<BorderStyle> ParseBorderStyle(std::string_view v) {
     return BorderStyle::VKey;
   if (v == "wide")
     return BorderStyle::Wide;
+  if (v == "dotted")
+    return BorderStyle::Dotted;
+  if (v == "double-horizontal")
+    return BorderStyle::DoubleHorizontal;
+  if (v == "double-vertical")
+    return BorderStyle::DoubleVertical;
+  if (v == "shadow" || v == "3d")
+    return BorderStyle::Shadow;
+  if (v == "shade-light")
+    return BorderStyle::ShadeLight;
+  if (v == "shade-medium")
+    return BorderStyle::ShadeMedium;
+  if (v == "shade-dark")
+    return BorderStyle::ShadeDark;
+  if (v == "squiggle" || v == "wave")
+    return BorderStyle::Squiggle;
+  return std::nullopt;
+}
+
+std::optional<Overflow> ParseOverflow(std::string_view v) {
+  if (v == "visible")
+    return Overflow::Visible;
+  if (v == "hidden")
+    return Overflow::Hidden;
+  if (v == "scroll" || v == "auto")
+    return Overflow::Scroll;
+  return std::nullopt;
+}
+
+std::optional<ScrollbarWidth> ParseScrollbarWidth(std::string_view v) {
+  if (v == "auto")
+    return ScrollbarWidth::Auto;
+  if (v == "none")
+    return ScrollbarWidth::None;
   return std::nullopt;
 }
 
@@ -383,6 +417,25 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       }
       return;
     }
+  }
+
+  if (p == "overflow" || p == "overflow-y") {
+    if (auto o = ParseOverflow(v)) {
+      style.overflow_y = *o;
+    }
+    return;
+  }
+
+  if (p == "scrollbar-width") {
+    if (auto sw = ParseScrollbarWidth(v)) {
+      style.scrollbar_width = *sw;
+    }
+    return;
+  }
+
+  if (p == "scroll-speed") {
+    style.scroll_speed = StoI(v);
+    return;
   }
 
 }

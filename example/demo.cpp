@@ -105,8 +105,23 @@ class App : public Component<App> {
       </div>
 
       <div id="flex">
-        <LabeledBox title="Box A (Clicks: {count})">
-          This is a custom box.
+        <LabeledBox title="Box A (Scrollable List)">
+          <div class="scroll-container">
+            <div>[Item 1] Click here to focus & scroll</div>
+            <div>[Item 2] Use Arrow keys / Page keys</div>
+            <div>[Item 3] Mouse wheel scrolls up/down</div>
+            <div>[Item 4] Scrollbar reduces width</div>
+            <div>[Item 5] Configurable scroll speed</div>
+            <div>[Item 6] Live viewport clipping</div>
+            <div>[Item 7] Responsive layout block</div>
+            <div>[Item 8] Overflow-y: scroll in CSS</div>
+            <div>[Item 9] Scrollbar-width: auto</div>
+            <div>[Item 10] Track styled with shade</div>
+            <div>[Item 11] Thumb styled with solid</div>
+            <div>[Item 12] ArrowUp / ArrowDown works</div>
+            <div>[Item 13] PageUp / PageDown works</div>
+            <div>[Item 14] End of scrolling demo</div>
+          </div>
         </LabeledBox>
         <LabeledBox title="Box B (Clicks: {double_clicks})">
           This is a box with doubled clicks.
@@ -135,6 +150,14 @@ class App : public Component<App> {
           background-color: rgb(50, 50, 50);
           color: white;
           border-color: black;
+        }
+        .scroll-container {
+          display: block;
+          height: 6;
+          overflow-y: scroll;
+          scroll-speed: 1;
+          border: ascii;
+          border-color: yellow;
         }
       </style>
     )html";
