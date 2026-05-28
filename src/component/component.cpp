@@ -270,8 +270,12 @@ void ComponentBase::Render(const xml::Node& node,
 
           for (auto& [key, value] : child_node.attributes) {
             if (key == "id" || key == "class") continue;
-            child->Root()->SetAttribute(std::string(key), Interpolate(value));
+            std::string interpolated_value = Interpolate(value);
+            child->SetProperty(std::string(key), interpolated_value);
+            child->Root()->SetAttribute(std::string(key), interpolated_value);
           }
+
+          child->Render();
 
           slot->AddChild(child->Root());
 
@@ -300,6 +304,15 @@ void ComponentBase::Render(const xml::Node& node,
 Ref<Element> ComponentBase::Slot(std::string_view name) {
   auto it = slots_.find(std::string(name));
   return (it != slots_.end()) ? it->second : Ref<Element>();
+}
+
+void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
+  for (auto& entry : entries_) {
+    if ((entry.name == name || entry.name == "props." + std::string(name)) && entry.set_value) {
+      entry.set_value(value);
+      return;
+    }
+  }
 }
 
 }  // namespace rtxui

@@ -40,6 +40,7 @@ class ComponentBase : public RefCounted, public Bindings {
 
   Element* Root() { return root_.get(); }
   Ref<Element> Slot(std::string_view name);
+  void SetProperty(std::string_view name, std::string_view value);
 
   virtual std::string GetInterpolatedValue(std::string_view expression) = 0;
 
@@ -59,6 +60,7 @@ class ComponentBase : public RefCounted, public Bindings {
     std::string name;
     std::function<std::string()> get_value;
     std::function<bool()> check_and_update;
+    std::function<void(std::string_view)> set_value;
   };
   std::vector<Entry> entries_;
 };
@@ -72,6 +74,21 @@ std::string to_string(const T& value) {
     std::stringstream ss;
     ss << value;
     return ss.str();
+  }
+}
+
+template <typename T>
+void from_string(std::string_view str, T& value) {
+  if constexpr (std::is_same_v<T, std::string>) {
+    value = std::string(str);
+  } else if constexpr (std::is_same_v<T, int>) {
+    value = std::stoi(std::string(str));
+  } else if constexpr (std::is_same_v<T, bool>) {
+    value = (str == "true" || str == "1");
+  } else {
+    std::stringstream ss;
+    ss << str;
+    ss >> value;
   }
 }
 }  // namespace reflection
@@ -136,7 +153,6 @@ class Component : public ComponentBase {
   void BindMethod(std::string name, Ret (Derived::*method)() const) {
     RegisterComputed(name, method);
   }
-
  protected:
   template <typename T>
   void RegisterState(std::string name, T* ptr) {
@@ -149,7 +165,10 @@ class Component : public ComponentBase {
       }
       return false;
     };
-    entries_.push_back({name, std::move(get_value), std::move(check_and_update)});
+    auto set_value = [ptr](std::string_view val) {
+      reflection::from_string(val, *ptr);
+    };
+    entries_.push_back({name, std::move(get_value), std::move(check_and_update), std::move(set_value)});
   }
 
   template <typename Ret>
@@ -159,6 +178,7 @@ class Component : public ComponentBase {
                           return reflection::to_string(
                               (static_cast<const Derived*>(this)->*method)());
                         },
+                        nullptr,
                         nullptr});
   }
 };

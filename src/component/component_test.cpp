@@ -317,4 +317,84 @@ TEST_CASE("Element.QuerySelector", "[dom]") {
   CHECK(root->QuerySelector("nonexistent") == nullptr);
 }
 
+class ChildWithProps : public rtxui::Component<ChildWithProps> {
+ public:
+  struct Props {
+    std::string message = "default";
+    int value = 0;
+  } props;
+
+  void InitReflection() override {
+    Bind(props.message);
+    Bind(props.value);
+    Import<rtxui::div>();
+    rtxui::Component<ChildWithProps>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <div>Message: {props.message}, Value: {props.value}</div>
+  )";
+};
+
+class ParentOfProps : public rtxui::Component<ParentOfProps> {
+ public:
+  std::string parent_msg = "hello";
+  int parent_val = 42;
+
+  void InitReflection() override {
+    Bind(parent_msg);
+    Bind(parent_val);
+    Import<ChildWithProps>();
+    rtxui::Component<ParentOfProps>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <ChildWithProps props.message="{parent_msg}" props.value="{parent_val}" />
+  )";
+};
+
+TEST_CASE("ComponentPropsAndReactivity", "[component]") {
+  auto parent = rtxui::Ref<ParentOfProps>::New();
+  parent->Mount();
+
+  auto* root = parent->Root();
+  REQUIRE(root != nullptr);
+
+  std::string output = root->Print();
+  CHECK(output.find("Message: hello, Value: 42") != std::string::npos);
+
+  parent->parent_msg = "world";
+  parent->parent_val = 100;
+  parent->Digest();
+
+  output = parent->Root()->Print();
+  CHECK(output.find("Message: world, Value: 100") != std::string::npos);
+}
+
+class ParentOfPropsShortName : public rtxui::Component<ParentOfPropsShortName> {
+ public:
+  std::string parent_msg = "short";
+
+  void InitReflection() override {
+    Bind(parent_msg);
+    Import<ChildWithProps>();
+    rtxui::Component<ParentOfPropsShortName>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <ChildWithProps message="{parent_msg}" value="999" />
+  )";
+};
+
+TEST_CASE("ComponentPropsShortNames", "[component]") {
+  auto parent = rtxui::Ref<ParentOfPropsShortName>::New();
+  parent->Mount();
+
+  auto* root = parent->Root();
+  REQUIRE(root != nullptr);
+
+  std::string output = root->Print();
+  CHECK(output.find("Message: short, Value: 999") != std::string::npos);
+}
+
 }  // namespace
