@@ -2,6 +2,7 @@
 #define DOM_ElEMENT_HPP_
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -13,45 +14,57 @@ namespace rtxui {
 
 class ComponentBase;
 
-// A generic HTML element
 class Element : public RefCounted {
  public:
-  Element() = default;
-  explicit Element(const ComponentBase* component) : component_(component) {}
+  Element();
+  Element(const ComponentBase* component);
+  virtual ~Element() = default;
 
-  // Disallow copy and assign.
+  // Non-copyable, non-movable.
   Element(const Element&) = delete;
   Element& operator=(const Element&) = delete;
   Element(Element&&) = default;
   Element& operator=(Element&&) = default;
 
   void AddChild(Ref<Element> child);
+  void RemoveChildren();
   void Visit(std::function<void(Element&)> f);
 
   // Hierarchical accessors.
   Element* Parent() { return parent_; }
   size_t ChildCount() const { return children_.size(); }
-  Element* ChildAt(int index) { return children_.at(index).get(); }
+  Element* ChildAt(size_t index) { return children_[index].get(); }
   const std::vector<Ref<Element>>& children() const { return children_; }
 
-  // Element info.
-  bool is_slot() const { return is_slot_; }
-  bool is_text() const { return is_text_; }
-  std::string_view tag() const;
+  // Virtual tag.
+  virtual std::string_view tag() const;
+  void SetTag(std::string tag) { tag_ = std::move(tag); }
 
-  // Debugging.
-  std::string Print() const { return Print(0); }
-  virtual std::string Print(int depth) const;
+  // Attributes.
+  void SetAttribute(std::string name, std::string value);
+  const std::map<std::string, std::string>& Attributes() const {
+    return attributes_;
+  }
 
-  ComputedStyle style;
-
+  // Common properties.
   std::string id;
   std::vector<std::string> classes;
+  ComputedStyle style;
+
+  // Rendering.
+  virtual std::string Print(int depth = 0) const;
+
+  const ComponentBase* component() const { return component_; }
+
+  bool is_slot() const { return is_slot_; }
+  bool is_text() const { return is_text_; }
 
  protected:
   bool is_slot_ : 1 = false;
   bool is_text_ : 1 = false;
 
+  std::string tag_ = "div";
+  std::map<std::string, std::string> attributes_;
   std::vector<Ref<Element>> children_;
   Element* parent_ = nullptr;
   const ComponentBase* component_ = nullptr;

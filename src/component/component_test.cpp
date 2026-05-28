@@ -14,28 +14,27 @@ namespace {
 
 class Hello : public rtxui::Component<Hello> {
  public:
-  std::string_view Setup() override {
-    return R"(
+  std::string_view view = R"(
       Hello
     )";
-  }
 };
 
 class World : public rtxui::Component<World> {
  public:
-  std::string_view Setup() override {
-    return R"(
+  std::string_view view = R"(
       World
     )";
-  }
 };
 
 class HelloWorld : public rtxui::Component<HelloWorld> {
  public:
-  std::string_view Setup() override {
+  void InitReflection() override {
     Import<Hello>();
     Import<World>();
-    return R"(
+    rtxui::Component<HelloWorld>::InitReflection();
+  }
+
+  std::string_view view = R"(
       Hello, World!
       <Hello/>
       <World/>
@@ -48,7 +47,6 @@ class HelloWorld : public rtxui::Component<HelloWorld> {
         }
       </style>
     )";
-  }
 };
 
 TEST_CASE("Tag", "[component]") {
@@ -78,21 +76,22 @@ TEST_CASE("Mount", "[component]") {
 
 class Page : public rtxui::Component<Page> {
  public:
-  std::string_view Setup() override {
-   return R"(
+  std::string_view view = R"(
     <slot.header/>
     <slot/>
     <slot.footer/>
   )";
- }
 };
 
 class MyPage : public rtxui::Component<MyPage> {
  public:
-  std::string_view Setup() override {
+  void InitReflection() override {
     Import<rtxui::p>();
     Import<Page>();
-    return R"(
+    rtxui::Component<MyPage>::InitReflection();
+  }
+
+  std::string_view view = R"(
       <p> This is a page: </p>
       <Page>
         <template.header>
@@ -112,7 +111,6 @@ class MyPage : public rtxui::Component<MyPage> {
         </p>
       </Page>
     )";
-  }
 };
 
 TEST_CASE("Component with named slots", "[component]") {
@@ -143,11 +141,13 @@ TEST_CASE("Component with named slots", "[component]") {
 
 class Inverted : public rtxui::Component<Inverted> {
  public:
-  std::string_view Setup() override {
+  void InitReflection() override {
     Import<rtxui::p>("div");
     Import<rtxui::div>("p");
+    rtxui::Component<Inverted>::InitReflection();
+  }
 
-    return R"(
+  std::string_view view = R"(
       <div>
         <p>
           This is a div inside a p.
@@ -166,7 +166,6 @@ class Inverted : public rtxui::Component<Inverted> {
         </p>
       </p>
     )";
-  }
 };
 
 TEST_CASE("Import alias", "[component]") {
@@ -201,26 +200,26 @@ class Counter : public rtxui::Component<Counter> {
   int count = 0;
   int double_count() const { return count * 2; }
 
-  void increment() { count++; }
-  void reset() { count = 0; }
+  Counter() {
+    Bind(count);
+    BindComputed(double_count);
+  }
 
-  std::string_view Setup() override {
+  void increment() { count++; }
+
+  void InitReflection() override {
     Import<rtxui::div>();
     Import<rtxui::ul>();
     Import<rtxui::li>();
-    Import<rtxui::p>();
-    Import<rtxui::button>();
+    rtxui::Component<Counter>::InitReflection();
+  }
 
-    return R"(
+  std::string_view view = R"(
       <ul>
         <li>Count: {count}</li>
         <li>Double: {double_count}</li>
       </ul>
-
-      <button onclick="increment">Increment</button>
-      <button onclick="reset">Reset</button>
     )";
-  }
 };
 
 TEST_CASE("Transparent Reactivity", "[component]") {
@@ -228,15 +227,16 @@ TEST_CASE("Transparent Reactivity", "[component]") {
   counter->Mount();
   
   REQUIRE(counter->count == 0);
+  REQUIRE(counter->Root()->Print().find("Count: 0") != std::string::npos);
+  REQUIRE(counter->Root()->Print().find("Double: 0") != std::string::npos);
   
   // Simulate an action
   counter->increment();
-  // The increment() method is an Action, so it should have auto-digested.
-  // But since we are calling it from C++, we need to manually Digest() 
-  // unless we use the internal binding logic.
   counter->Digest();
   
   REQUIRE(counter->count == 1);
+  REQUIRE(counter->Root()->Print().find("Count: 1") != std::string::npos);
+  REQUIRE(counter->Root()->Print().find("Double: 2") != std::string::npos);
 }
 
 }  // namespace
