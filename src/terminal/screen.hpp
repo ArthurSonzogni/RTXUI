@@ -29,12 +29,16 @@ class Screen {
    // Run one step of the event loop
    void Step();
 
+   // Dispatch a single event directly to the component tree
+   void Dispatch(Event event);
+
    // Render and draw the component to the terminal
    void Draw();
 
   private:
    void UpdateSize();
    void DigestAndDraw();
+   void HandleEvent(const Event& event);
 
    Ref<ComponentBase> component_;
    int width_ = 80;
