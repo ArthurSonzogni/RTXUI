@@ -33,8 +33,8 @@ class BorderBox : public Component<BorderBox> {
         .box-wrapper {
           border: {border_class};
           border-color: rgb(100, 200, 255);
-          padding-left: 1;
-          padding-right: 1;
+          padding: 1;
+          margin: 1;
           display: block;
         }
         .label {
