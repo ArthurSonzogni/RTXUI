@@ -63,6 +63,7 @@ class App : public Component<App> {
 
   App() {
     Bind(count);
+    BindComputed(double_clicks);
     Import("Increment", [this]() { Increment(); });
     Import("Decrement", [this]() { Decrement(); });
   }
@@ -74,6 +75,11 @@ class App : public Component<App> {
 
   void Decrement() {
     count--;
+  }
+
+  // --- Computed ---
+  int double_clicks() const {
+    return count * 2;
   }
 
   bool OnEvent(Event event) override {
@@ -91,7 +97,7 @@ class App : public Component<App> {
     return R"html(
       <div class="header">
         <h1>RTXUI Reflection Demo</h1>
-        <button onclick="Increment" oncontextmenu="Decrement">Clicks: {count}</button>
+        <button onclick="Increment" oncontextmenu="Decrement">Clicks: {count} ({double_clicks} doubled)</button>
       </div>
 
       <div id="flex">
