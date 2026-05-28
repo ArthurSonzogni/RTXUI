@@ -23,10 +23,6 @@ auto EatCodePoint(std::string_view input,
                   size_t start,
                   size_t* end,
                   uint32_t* ucs) -> bool;
-auto EatCodePoint(std::wstring_view input,
-                  size_t start,
-                  size_t* end,
-                  uint32_t* ucs) -> bool;
 
 auto IsCombining(uint32_t ucs) -> bool;
 auto IsFullWidth(uint32_t ucs) -> bool;
@@ -38,8 +34,6 @@ auto GlyphNext(std::string_view input, size_t start) -> size_t;
 auto GlyphIterate(std::string_view input, int glyph_offset, size_t start = 0) -> size_t;
 auto CellToGlyphIndex(std::string_view input) -> std::vector<int>;
 auto GlyphCount(std::string_view input) -> int;
-auto to_wstring(std::string_view s) -> std::wstring;
-auto to_string(std::wstring_view s) -> std::string;
 
 struct Grapheme {
   std::string_view text;
