@@ -13,6 +13,8 @@
 
 namespace rtxui {
 
+struct PhysicalFragment;
+
 class Screen {
  public:
   explicit Screen(Ref<ComponentBase> component);
@@ -33,6 +35,7 @@ class Screen {
   int height_ = 24;
   int last_height_ = 0;
   bool has_drawn_ = false;
+  std::shared_ptr<PhysicalFragment> root_fragment_;
 
   // RAII raw terminal controller
   struct RawTerminal {

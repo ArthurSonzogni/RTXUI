@@ -90,6 +90,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
                             box->style.border.Horiz());
 
   auto fragment = std::make_shared<PhysicalFragment>(width, 0);
+  fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
   fragment->border_style = box->style.border_style;
@@ -180,6 +181,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   int content_width_limit = std::max(
       0, width - box->style.padding.Horiz() - box->style.border.Horiz());
   auto container_frag = std::make_shared<PhysicalFragment>(width, 0);
+  container_frag->dom_node = box->dom_node;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
   container_frag->border_style = box->style.border_style;
@@ -218,6 +220,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
         auto text_frag =
             std::make_shared<PhysicalFragment>(static_cast<int>(len), 1);
+        text_frag->dom_node = child->dom_node;
         text_frag->is_text = true;
         text_frag->text_content = child->text_data.substr(start, len);
         text_frag->foreground_color = child->style.foreground_color;
@@ -396,6 +399,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   // Pass 3: Final Measurement & Positioning
   auto fragment = std::make_shared<PhysicalFragment>(my_width, my_height);
+  fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
   fragment->border_style = box->style.border_style;
