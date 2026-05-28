@@ -493,17 +493,25 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   if (draw_scrollbar) {
-    int border_top = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
-    int border_bottom = border_top;
-    int border_right = border_top;
+    int border_right = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
     int scrollbar_x = abs_x + w - border_right - 1;
-    int track_y_start = abs_y + border_top;
-    int track_h = h - border_top - border_bottom;
+    // When there is no horizontal scrollbar, the vertical scrollbar spans the
+    // full box height (including border rows) for a cleaner look.
+    bool has_horizontal_scrollbar = false; // Not yet supported.
+    int track_y_start = abs_y;
+    int track_h = h;
+    if (has_horizontal_scrollbar) {
+      int border_top = border_right; // uniform border
+      int border_bottom = border_right;
+      track_y_start = abs_y + border_top;
+      track_h = h - border_top - border_bottom;
+    }
 
     if (track_h > 0 && scrollbar_x >= 0 && scrollbar_x < texture.width()) {
       int scroll_height = frag->dom_node->scroll_height();
       int padding_vert = frag->dom_node->style.padding.Vert();
-      int viewport_h = std::max(1, h - border_top - border_bottom - padding_vert);
+      int border_vert = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+      int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
 
       int thumb_h = std::max(1, (viewport_h * track_h) / std::max(1, scroll_height));
       thumb_h = std::min(track_h, thumb_h);
