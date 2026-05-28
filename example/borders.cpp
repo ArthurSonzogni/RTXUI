@@ -11,13 +11,11 @@ class BorderBox : public Component<BorderBox> {
   struct Props {
     std::string title = "Border";
     std::string border_class = "solid";
-    std::string color = "white";
   } props;
 
   BorderBox() {
     Bind(props.title);
     Bind(props.border_class);
-    Bind(props.color);
   }
 
   std::string_view Setup() override {
@@ -34,15 +32,13 @@ class BorderBox : public Component<BorderBox> {
         }
         .box-wrapper {
           border: {border_class};
-          border-color: {color};
-          background-color: rgb(45, 45, 45);
+          border-color: gray;
           padding-left: 1;
           padding-right: 1;
           display: block;
         }
         .label {
           font-weight: bold;
-          color: yellow;
           text-align: center;
         }
       </style>
@@ -63,24 +59,27 @@ class BordersDemo : public Component<BordersDemo> {
         <p>This demo showcases the 12 different border styles supported by RTXUI.</p>
 
         <div class="row">
-          <BorderBox title="ascii" border_class="ascii" color="rgb(200, 200, 200)"></BorderBox>
-          <BorderBox title="blank" border_class="blank" color="gray"></BorderBox>
-          <BorderBox title="dashed" border_class="dashed" color="cyan"></BorderBox>
-          <BorderBox title="double" border_class="double" color="magenta"></BorderBox>
+          <BorderBox title="ascii" border_class="ascii"></BorderBox>
+          <BorderBox title="blank" border_class="blank"></BorderBox>
+          <BorderBox title="dashed" border_class="dashed"></BorderBox>
         </div>
 
         <div class="row">
-          <BorderBox title="hkey" border_class="hkey" color="red"></BorderBox>
-          <BorderBox title="heavy" border_class="heavy" color="green"></BorderBox>
-          <BorderBox title="inner" border_class="inner" color="blue"></BorderBox>
-          <BorderBox title="outer" border_class="outer" color="rgb(255, 128, 0)"></BorderBox>
+          <BorderBox title="double" border_class="double"></BorderBox>
+          <BorderBox title="hkey" border_class="hkey"></BorderBox>
+          <BorderBox title="heavy" border_class="heavy"></BorderBox>
         </div>
 
         <div class="row">
-          <BorderBox title="panel" border_class="panel" color="rgb(0, 255, 128)"></BorderBox>
-          <BorderBox title="round" border_class="round" color="rgb(128, 0, 255)"></BorderBox>
-          <BorderBox title="solid" border_class="solid" color="white"></BorderBox>
-          <BorderBox title="tall" border_class="tall" color="rgb(255, 255, 128)"></BorderBox>
+          <BorderBox title="inner" border_class="inner"></BorderBox>
+          <BorderBox title="outer" border_class="outer"></BorderBox>
+          <BorderBox title="panel" border_class="panel"></BorderBox>
+        </div>
+
+        <div class="row">
+          <BorderBox title="round" border_class="round"></BorderBox>
+          <BorderBox title="solid" border_class="solid"></BorderBox>
+          <BorderBox title="tall" border_class="tall"></BorderBox>
         </div>
       </div>
 
@@ -90,13 +89,10 @@ class BordersDemo : public Component<BordersDemo> {
           padding: 1;
           border: double;
           border-color: gray;
-          background-color: rgb(20, 20, 20);
-          color: white;
           width: 100%;
           height: 100%;
         }
         h1 {
-          color: rgb(255, 180, 0);
           font-weight: bold;
           margin-bottom: 1;
         }
