@@ -23,70 +23,68 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 add_library(rtxui_lib STATIC
-  "src/terminal/terminal_input_parser.cpp"
-  "src/terminal/terminal_input_parser.hpp"
-  "src/terminal/event.cpp"
-  "src/terminal/event.hpp"
-  "src/terminal/screen.cpp"
-  "src/terminal/screen.hpp"
-  "src/component/component.cpp"
-  "src/component/component.hpp"
-  "src/component/default_components.hpp"
-  "src/component/import.hpp"
-  "src/core/expected.hpp"
-  "src/core/likely.hpp"
-  "src/core/refcounted.hpp"
-  "src/core/string.cpp"
-  "src/core/string.hpp"
-  "src/core/task.cpp"
-  "src/core/task.hpp"
-  "src/core/task_queue.cpp"
-  "src/core/task_queue.hpp"
-  "src/core/task_runner.cpp"
-  "src/core/task_runner.hpp"
-  "src/dom/computed_style.hpp"
-  "src/dom/element.cpp"
-  "src/dom/element.hpp"
-  "src/dom/slot_element.cpp"
-  "src/dom/slot_element.hpp"
-  "src/dom/text_element.cpp"
-  "src/dom/text_element.hpp"
-  "src/geometry/LogicalSize.cpp"
-  "src/geometry/LogicalSize.hpp"
-  "src/geometry/PhysicalDirection.cpp"
-  "src/geometry/PhysicalDirection.hpp"
-  "src/geometry/PhysicalOffset.cpp"
-  "src/geometry/PhysicalOffset.hpp"
-  "src/geometry/PhysicalSize.cpp"
-  "src/geometry/PhysicalSize.hpp"
-  "src/layout/layout.cpp"
-  "src/layout/layout.hpp"
-  "src/layout/layout_box.cpp"
-  "src/layout/layout_box.hpp"
-  "src/layout/layout_tree_builder.cpp"
-  "src/layout/layout_tree_builder.hpp"
-  "src/layout/physical_fragment.hpp"
-  "src/layout/style.hpp"
-  "src/paint/cell.cpp"
-  "src/paint/cell.hpp"
-  "src/paint/color.cpp"
-  "src/paint/color.hpp"
-  "src/paint/paint.cpp"
-  "src/paint/paint.hpp"
-  "src/paint/texture.cpp"
-  "src/paint/texture.hpp"
-  "src/register.cpp"
-  "src/register.hpp"
-  "src/style/apply_style.cpp"
-  "src/style/apply_style.hpp"
-  "src/style/style.cpp"
-  "src/style/style.hpp"
-  "src/xml/xml.cpp"
-  "src/xml/xml.hpp"
+  "src/rtxui/terminal/terminal_input_parser.cpp"
+  "src/rtxui/terminal/terminal_input_parser.hpp"
+  "src/rtxui/terminal/event.cpp"
+  "src/rtxui/terminal/event.hpp"
+  "src/rtxui/terminal/screen.cpp"
+  "src/rtxui/terminal/screen.hpp"
+  "src/rtxui/component/component.cpp"
+  "src/rtxui/component/component.hpp"
+  "src/rtxui/component/default_components.hpp"
+  "src/rtxui/component/import.hpp"
+  "src/rtxui/core/expected.hpp"
+  "src/rtxui/core/likely.hpp"
+  "src/rtxui/core/refcounted.hpp"
+  "src/rtxui/core/string.cpp"
+  "src/rtxui/core/string.hpp"
+  "src/rtxui/core/task.cpp"
+  "src/rtxui/core/task.hpp"
+  "src/rtxui/core/task_queue.cpp"
+  "src/rtxui/core/task_queue.hpp"
+  "src/rtxui/core/task_runner.cpp"
+  "src/rtxui/core/task_runner.hpp"
+  "src/rtxui/dom/computed_style.hpp"
+  "src/rtxui/dom/element.cpp"
+  "src/rtxui/dom/element.hpp"
+  "src/rtxui/dom/slot_element.cpp"
+  "src/rtxui/dom/slot_element.hpp"
+  "src/rtxui/dom/text_element.cpp"
+  "src/rtxui/dom/text_element.hpp"
+  "src/rtxui/geometry/LogicalSize.cpp"
+  "src/rtxui/geometry/LogicalSize.hpp"
+  "src/rtxui/geometry/PhysicalDirection.cpp"
+  "src/rtxui/geometry/PhysicalDirection.hpp"
+  "src/rtxui/geometry/PhysicalOffset.cpp"
+  "src/rtxui/geometry/PhysicalOffset.hpp"
+  "src/rtxui/geometry/PhysicalSize.cpp"
+  "src/rtxui/geometry/PhysicalSize.hpp"
+  "src/rtxui/layout/layout.cpp"
+  "src/rtxui/layout/layout.hpp"
+  "src/rtxui/layout/layout_box.cpp"
+  "src/rtxui/layout/layout_box.hpp"
+  "src/rtxui/layout/layout_tree_builder.cpp"
+  "src/rtxui/layout/layout_tree_builder.hpp"
+  "src/rtxui/layout/physical_fragment.hpp"
+  "src/rtxui/layout/style.hpp"
+  "src/rtxui/paint/cell.cpp"
+  "src/rtxui/paint/cell.hpp"
+  "src/rtxui/paint/color.cpp"
+  "src/rtxui/paint/color.hpp"
+  "src/rtxui/paint/paint.cpp"
+  "src/rtxui/paint/paint.hpp"
+  "src/rtxui/paint/texture.cpp"
+  "src/rtxui/paint/texture.hpp"
+  "src/rtxui/style/apply_style.cpp"
+  "src/rtxui/style/apply_style.hpp"
+  "src/rtxui/style/style.cpp"
+  "src/rtxui/style/style.hpp"
+  "src/rtxui/xml/xml.cpp"
+  "src/rtxui/xml/xml.hpp"
 )
 
 target_compile_features(rtxui_lib PUBLIC cxx_std_26)
-target_include_directories(rtxui_lib PUBLIC "src")
+target_include_directories(rtxui_lib PUBLIC "src" "include")
 
 # Enable experimental reflection if supported by the compiler
 include(CheckCXXCompilerFlag)
@@ -107,11 +105,19 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 # See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
-add_library(rtxui "src/dummy.cpp")
+add_library(rtxui "src/rtxui/dummy.cpp")
 target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui_lib>")
 
-add_executable(rtxui_main main.cpp)
-target_link_libraries(rtxui_main PRIVATE rtxui_lib)
+if(RTXUI_BUILD_EXAMPLES)
+  add_executable(rtxui_example_demo example/demo.cpp)
+  target_link_libraries(rtxui_example_demo PRIVATE rtxui)
+
+  add_executable(rtxui_example_counter example/counter.cpp)
+  target_link_libraries(rtxui_example_counter PRIVATE rtxui)
+
+  add_executable(rtxui_example_layout example/layout.cpp)
+  target_link_libraries(rtxui_example_layout PRIVATE rtxui)
+endif()
 
 # An option to enable testing
 if(RTXUI_BUILD_TESTS)
@@ -127,17 +133,18 @@ if(RTXUI_BUILD_TESTS)
   FetchContent_MakeAvailable(catch2)
 
   add_executable(rtxui_test
-    "src/terminal/terminal_input_parser_test.cpp"
-    "src/terminal/screen_test.cpp"
-    "src/component/component_test.cpp"
-    "src/component/interpolation_test.cpp"
-    "src/core/refcounted_test.cpp"    "src/core/task_test.cpp"
-    "src/core/unicode_test.cpp"
-    "src/layout/layout_test.cpp"
-    "src/paint/border_style_test.cpp"
-    "src/reflection/reflection_test.cpp"
-    "src/style/style_test.cpp"
-    "src/xml/xml_test.cpp"
+    "src/rtxui/terminal/terminal_input_parser_test.cpp"
+    "src/rtxui/terminal/screen_test.cpp"
+    "src/rtxui/component/component_test.cpp"
+    "src/rtxui/component/interpolation_test.cpp"
+    "src/rtxui/core/refcounted_test.cpp"
+    "src/rtxui/core/task_test.cpp"
+    "src/rtxui/core/unicode_test.cpp"
+    "src/rtxui/layout/layout_test.cpp"
+    "src/rtxui/paint/border_style_test.cpp"
+    "src/rtxui/reflection/reflection_test.cpp"
+    "src/rtxui/style/style_test.cpp"
+    "src/rtxui/xml/xml_test.cpp"
   )
   target_link_libraries(rtxui_test PRIVATE rtxui_lib)
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
@@ -147,7 +154,7 @@ if(RTXUI_BUILD_TESTS)
   catch_discover_tests(rtxui_test)
 
   add_executable(rtxui_terminal_input_parser
-    "src/terminal/terminal_input_parser_main.cpp"
+    "src/rtxui/terminal/terminal_input_parser_main.cpp"
   )
   target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui_lib)
 
@@ -167,9 +174,9 @@ if (RTXUI_BUILD_FUZZERS)
 
   fuzztest_setup_fuzzing_flags()
   add_executable(rtxui_fuzzer
-    "src/style/style_fuzzer.cpp"
-    "src/terminal/terminal_input_parser_test_fuzzer.cpp"
-    "src/xml/xml_fuzzer.cpp"
+    "src/rtxui/style/style_fuzzer.cpp"
+    "src/rtxui/terminal/terminal_input_parser_test_fuzzer.cpp"
+    "src/rtxui/xml/xml_fuzzer.cpp"
   )
   include(GoogleTest)
   target_link_libraries(rtxui_fuzzer PRIVATE rtxui_lib)
