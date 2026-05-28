@@ -69,7 +69,6 @@ class App : public Component<App> {
   // --- Actions ---
   void Increment() {
     count++;
-    this->Digest();
   }
 
   bool OnEvent(Event event) override {
