@@ -5,6 +5,7 @@
 
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <fstream>
 #include <iostream>
 
 #include "dom/element.hpp"
@@ -50,6 +51,14 @@ ComponentBase* GetOwningComponent(Element* element) {
   return nullptr;
 }
 
+ComponentBase* GetAttributeOwnerComponent(Element* element) {
+  if (!element) return nullptr;
+  if (element->component()) {
+    return GetOwningComponent(element->Parent());
+  }
+  return GetOwningComponent(element);
+}
+
 } // namespace
 
 Screen::Screen(Ref<ComponentBase> component)
@@ -78,31 +87,66 @@ void Screen::Loop() {
     while (auto event = parser.GetEvent()) {
       if (event->is<Event::Mouse>()) {
         auto mouse = event->get<Event::Mouse>();
+        {
+          std::ofstream log("rtxui_debug.log", std::ios::app);
+          log << "Mouse Event: button=" << (int)mouse.button
+              << ", motion=" << (int)mouse.motion
+              << ", x=" << mouse.x << ", y=" << mouse.y << "\n";
+        }
         if (mouse.button == Event::Mouse::Button::Left &&
             mouse.motion == Event::Mouse::Motion::Pressed) {
+          std::ofstream log("rtxui_debug.log", std::ios::app);
+          log << "Left Pressed Click at: " << mouse.x << ", " << mouse.y << "\n";
           if (root_fragment_) {
+            log << "Root fragment size: " << root_fragment_->width << "x" << root_fragment_->height << "\n";
             int tx = mouse.x - 1;
             int ty = mouse.y - 1;
             if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
-              std::string action;
-              const auto& attrs = clicked_element->Attributes();
-              if (attrs.count("onclick")) {
-                action = attrs.at("onclick");
-              } else if (attrs.count("@click.left")) {
-                action = attrs.at("@click.left");
-              } else if (attrs.count("@click")) {
-                action = attrs.at("@click");
-              }
+              log << "Found element: tag=" << clicked_element->tag() << "\n";
+              Element* curr = clicked_element;
+              bool handled = false;
+              while (curr) {
+                log << "Checking element: tag=" << curr->tag() << "\n";
+                for (const auto& [k, v] : curr->Attributes()) {
+                  log << "  attr: " << k << "=" << v << "\n";
+                }
 
-              if (!action.empty()) {
-                if (auto* comp = GetOwningComponent(clicked_element)) {
-                  if (comp->RunCallback(action)) {
-                    DigestAndDraw();
-                    continue;
+                std::string action;
+                const auto& attrs = curr->Attributes();
+                if (attrs.count("onclick")) {
+                  action = attrs.at("onclick");
+                } else if (attrs.count("@click.left")) {
+                  action = attrs.at("@click.left");
+                } else if (attrs.count("@click")) {
+                  action = attrs.at("@click");
+                }
+
+                if (!action.empty()) {
+                  log << "Found action: " << action << "\n";
+                  if (auto* comp = GetAttributeOwnerComponent(curr)) {
+                    log << "Found owner component: tag=" << comp->Tag() << "\n";
+                    if (comp->RunCallback(action)) {
+                      log << "Callback executed successfully!\n";
+                      DigestAndDraw();
+                      handled = true;
+                      break;
+                    } else {
+                      log << "Callback failed on owner component!\n";
+                    }
+                  } else {
+                    log << "No owner component found for attributes!\n";
                   }
                 }
+                curr = curr->Parent();
               }
+              if (handled) {
+                continue;
+              }
+            } else {
+              log << "No element found at: " << tx << ", " << ty << "\n";
             }
+          } else {
+            log << "No root_fragment_\n";
           }
         }
       }
