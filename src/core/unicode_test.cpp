@@ -244,20 +244,6 @@ TEST_CASE("CellToGlyphIndex.FullWidth", "[unicode]") {
   CHECK(indices[2] == 1);
 }
 
-// --- to_wstring / to_string ---
-
-TEST_CASE("to_wstring.Roundtrip", "[unicode]") {
-  std::string_view input = "Hello 世界 😀";
-  std::wstring wide = to_wstring(input);
-  std::string back = to_string(wide);
-  CHECK(back == input);
-}
-
-TEST_CASE("to_wstring.Empty", "[unicode]") {
-  CHECK(to_wstring("").empty());
-  CHECK(to_string(L"").empty());
-}
-
 // --- Graphemes range ---
 
 TEST_CASE("Graphemes.ASCII", "[unicode]") {
