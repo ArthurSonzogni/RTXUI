@@ -35,6 +35,7 @@ class BorderBox : public Component<BorderBox> {
         .box-wrapper {
           border: {border_class};
           border-color: {color};
+          background-color: rgb(45, 45, 45);
           padding-left: 1;
           padding-right: 1;
           display: block;
@@ -92,6 +93,7 @@ class BordersDemo : public Component<BordersDemo> {
           background-color: rgb(20, 20, 20);
           color: white;
           width: 100%;
+          height: 100%;
         }
         h1 {
           color: rgb(255, 180, 0);
