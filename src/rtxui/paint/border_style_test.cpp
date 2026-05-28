@@ -373,10 +373,13 @@ TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
 
   // Track height is 4, scrollbar column is index 9.
   // Under corrected math, the thumb must be at the very bottom (y=3).
-  CHECK(texture[9, 0].character == "░");
-  CHECK(texture[9, 1].character == "░");
-  CHECK(texture[9, 2].character == "░");
-  CHECK(texture[9, 3].character == "█");
+  // Scrollbar now uses background colors: track=RGBA(80,80,80,120), thumb=RGBA(200,200,200,200).
+  CHECK(texture[9, 0].character == " ");
+  CHECK(texture[9, 1].character == " ");
+  CHECK(texture[9, 2].character == " ");
+  CHECK(texture[9, 3].character == " ");
+  // The thumb (y=3) should have a brighter background than the track (y=0..2).
+  CHECK(texture[9, 3].background_color != texture[9, 0].background_color);
 }
 
 TEST_CASE("Individual Border Colors") {
