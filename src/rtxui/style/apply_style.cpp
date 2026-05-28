@@ -90,6 +90,12 @@ std::optional<Color> ParseColor(std::string_view value) {
     return Color::RGB(0, 255, 0);
   if (value == "black")
     return Color::RGB(0, 0, 0);
+  if (value == "gray" || value == "grey")
+    return Color::RGB(128, 128, 128);
+  if (value == "cyan")
+    return Color::RGB(0, 255, 255);
+  if (value == "magenta")
+    return Color::RGB(255, 0, 255);
   return std::nullopt;
 }
 
