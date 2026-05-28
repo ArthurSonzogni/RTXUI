@@ -54,6 +54,9 @@ class Element : public RefCounted {
   // Rendering.
   virtual std::string Print(int depth = 0) const;
 
+  // Query selector for testing.
+  Element* QuerySelector(std::string_view selector);
+
   const ComponentBase* component() const { return component_; }
 
   bool is_slot() const { return is_slot_; }

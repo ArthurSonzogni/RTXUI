@@ -4,6 +4,7 @@
 #include "component/component.hpp"
 #include "component/default_components.hpp"
 #include "terminal/screen.hpp"
+#include "dom/element.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -258,6 +259,62 @@ TEST_CASE("Screen Drawing", "[terminal]") {
   rtxui::Screen screen(counter);
   screen.Draw();
   REQUIRE(true);
+}
+
+class SelectorTest : public rtxui::Component<SelectorTest> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<SelectorTest>::InitReflection();
+  }
+
+  std::string_view view = R"(
+      <div id="container" class="main-box panel">
+        <span id="label" class="text-bold text-red">Hello Selector</span>
+        <span>Other Label</span>
+      </div>
+    )";
+};
+
+TEST_CASE("Element.QuerySelector", "[dom]") {
+  auto comp = rtxui::Ref<SelectorTest>::New();
+  comp->Mount();
+
+  auto* root = comp->Root();
+  REQUIRE(root != nullptr);
+
+  // 1. Tag selector
+  auto* container_by_tag = root->QuerySelector("div");
+  REQUIRE(container_by_tag != nullptr);
+  REQUIRE(container_by_tag->id == "container");
+
+  // 2. ID selector
+  auto* label_by_id = root->QuerySelector("#label");
+  REQUIRE(label_by_id != nullptr);
+  REQUIRE(label_by_id->tag() == "span");
+
+  // 3. Class selector
+  auto* main_box = root->QuerySelector(".main-box");
+  REQUIRE(main_box != nullptr);
+  REQUIRE(main_box->id == "container");
+
+  auto* panel = root->QuerySelector(".panel");
+  REQUIRE(panel != nullptr);
+  REQUIRE(panel->id == "container");
+
+  auto* text_bold = root->QuerySelector(".text-bold");
+  REQUIRE(text_bold != nullptr);
+  REQUIRE(text_bold->id == "label");
+
+  auto* text_red = root->QuerySelector(".text-red");
+  REQUIRE(text_red != nullptr);
+  REQUIRE(text_red->id == "label");
+
+  // 4. Non-matching selectors
+  CHECK(root->QuerySelector("#nonexistent") == nullptr);
+  CHECK(root->QuerySelector(".nonexistent") == nullptr);
+  CHECK(root->QuerySelector("nonexistent") == nullptr);
 }
 
 }  // namespace
