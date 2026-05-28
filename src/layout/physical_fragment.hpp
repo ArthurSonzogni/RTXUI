@@ -10,7 +10,10 @@
 #include "paint/color.hpp"
 
 namespace rtxui {
+class Element;
+
 struct PhysicalFragment {
+  Element* dom_node = nullptr;
   int x, y, width, height;
   bool is_text = false;
   std::string text_content;

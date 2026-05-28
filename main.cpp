@@ -63,6 +63,7 @@ class App : public Component<App> {
 
   App() {
     Bind(count);
+    Import("Increment", [this]() { Increment(); });
   }
 
   // --- Actions ---

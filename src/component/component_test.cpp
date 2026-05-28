@@ -240,6 +240,19 @@ TEST_CASE("Transparent Reactivity", "[component]") {
   REQUIRE(counter->Root()->Print().find("Double: 2") != std::string::npos);
 }
 
+TEST_CASE("Bindings callback execution", "[component]") {
+  auto counter = rtxui::Ref<Counter>::New();
+  counter->Import("increment", [counter]() { counter->increment(); });
+
+  REQUIRE(counter->count == 0);
+  bool ran = counter->RunCallback("increment");
+  REQUIRE(ran == true);
+  REQUIRE(counter->count == 1);
+
+  bool ran_nonexistent = counter->RunCallback("nonexistent");
+  REQUIRE(ran_nonexistent == false);
+}
+
 TEST_CASE("Screen Drawing", "[terminal]") {
   auto counter = rtxui::Ref<Counter>::New();
   rtxui::Screen screen(counter);

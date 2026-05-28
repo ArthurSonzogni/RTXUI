@@ -35,6 +35,16 @@ class Bindings {
   ComponentImportMap imports_;
 
  public:
+  /// Invoke an imported callback by name.
+  bool RunCallback(std::string_view name) {
+    auto it = callbacks_.find(std::string(name));
+    if (it != callbacks_.end()) {
+      it->second();
+      return true;
+    }
+    return false;
+  }
+
   /// Bind a variable into the template.
   ///
   /// **Example:**
