@@ -54,17 +54,17 @@ ComponentBase* GetOwningComponent(Element* element) {
 
 Screen::Screen(Ref<ComponentBase> component)
     : component_(std::move(component)) {
-  raw_terminal_ = std::make_unique<RawTerminal>();
   UpdateSize();
   component_->Mount();
   Draw();
 }
 
-Screen::~Screen() {
-  raw_terminal_.reset();
-}
+Screen::~Screen() {}
 
 void Screen::Loop() {
+  RawTerminal raw_terminal;
+  Draw();
+
   TerminalInputParser parser;
   while (true) {
     char c;

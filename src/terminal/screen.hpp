@@ -43,8 +43,6 @@ class Screen {
     RawTerminal();
     ~RawTerminal();
   };
-
-  std::unique_ptr<RawTerminal> raw_terminal_;
 };
 
 } // namespace rtxui
