@@ -117,6 +117,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_layout example/layout.cpp)
   target_link_libraries(rtxui_example_layout PRIVATE rtxui)
+
+  add_executable(rtxui_example_borders example/borders.cpp)
+  target_link_libraries(rtxui_example_borders PRIVATE rtxui)
 endif()
 
 # An option to enable testing
