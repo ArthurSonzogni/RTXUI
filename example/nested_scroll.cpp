@@ -88,6 +88,7 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           display: block;
           border: tall;
           border-color: rgb(30, 41, 59);
+          background-color: rgb(30, 41, 59);
           padding: 1;
         }
         h1 {
@@ -106,6 +107,7 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           scroll-speed: 1;
           border: tall;
           border-color: rgb(29, 78, 216);
+          background-color: rgb(10, 25, 52);
           padding: 1;
         }
         .inner-scroll {
@@ -119,10 +121,12 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
         .box-a {
           border: tall;
           border-color: rgb(147, 197, 253);
+          background-color: rgb(30, 41, 59);
         }
         .box-b {
           border: tall;
           border-color: rgb(59, 130, 246);
+          background-color: rgb(30, 41, 59);
         }
         .section-title {
           color: rgb(96, 165, 250);

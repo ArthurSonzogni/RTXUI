@@ -514,12 +514,12 @@ void PaintImpl(const PhysicalFragment* frag,
         int y = track_y_start + i;
         if (y >= 0 && y < texture.height() && clip.Contains(scrollbar_x, y)) {
           auto& cell = texture[scrollbar_x, y];
+          cell.character = " ";
           if (i >= thumb_y && i < thumb_y + thumb_h) {
-            cell.character = "█";
+            cell.background_color = Color::RGBA(200, 200, 200, 200);
           } else {
-            cell.character = "░";
+            cell.background_color = Color::RGBA(80, 80, 80, 120);
           }
-          cell.foreground_color = current_foreground_color;
         }
       }
     }
