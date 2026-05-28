@@ -60,6 +60,13 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Deployment and Pushing
+
+**Never push without being asked.**
+
+- Never run `git push` or push changes to the remote repository unless explicitly asked by the user.
+- Always commit changes locally first and verify them.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
