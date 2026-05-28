@@ -1673,3 +1673,189 @@ auto CodePointToString(uint32_t codepoint) -> std::string {
 
   return std::string{};
 }
+
+auto EatCodePoint(std::wstring_view input,
+                  size_t start,
+                  size_t* end,
+                  uint32_t* ucs) -> bool {
+  if (start >= input.size()) {
+    *end = start + 1;
+    return false;
+  }
+
+  if constexpr (sizeof(wchar_t) == 4) {
+    *ucs = input[start];
+    *end = start + 1;
+    return true;
+  }
+
+  int32_t C0 = input[start];
+  if (C0 < 0xd800 || C0 >= 0xdc00) {
+    *ucs = C0;
+    *end = start + 1;
+    return true;
+  }
+
+  if (start + 1 >= input.size()) {
+    *end = start + 2;
+    return false;
+  }
+
+  int32_t C1 = input[start + 1];
+  *ucs = ((C0 & 0x3ff) << 10) + (C1 & 0x3ff) + 0x10000;
+  *end = start + 2;
+  return true;
+}
+
+auto to_wstring(std::string_view s) -> std::wstring {
+  std::wstring out;
+  size_t i = 0;
+  uint32_t codepoint = 0;
+  while (EatCodePoint(s, i, &i, &codepoint)) {
+    if constexpr (sizeof(wchar_t) == 4) {
+      out.push_back(codepoint);
+      continue;
+    }
+    if (codepoint < 0xD800 || (codepoint > 0xDFFF && codepoint < 0x10000)) {
+      uint16_t p0 = codepoint;
+      out.push_back(p0);
+      continue;
+    }
+    codepoint -= 0x010000;
+    uint16_t p0 = (((codepoint << 12) >> 22) + 0xD800);
+    uint16_t p1 = (((codepoint << 22) >> 22) + 0xDC00);
+    out.push_back(p0);
+    out.push_back(p1);
+  }
+  return out;
+}
+
+auto to_string(std::wstring_view s) -> std::string {
+  std::string out;
+  size_t i = 0;
+  uint32_t codepoint = 0;
+  while (EatCodePoint(s, i, &i, &codepoint)) {
+    if (codepoint <= 0x7F) {
+      const uint8_t p1 = codepoint;
+      out.push_back(p1);
+      continue;
+    }
+    if (codepoint <= 0x7FF) {
+      uint8_t p2 = codepoint & 0b111111;
+      codepoint >>= 6;
+      uint8_t p1 = codepoint;
+      out.push_back(0b11000000 + p1);
+      out.push_back(0b10000000 + p2);
+      continue;
+    }
+    if (codepoint <= 0xFFFF) {
+      uint8_t p3 = codepoint & 0b111111;
+      codepoint >>= 6;
+      uint8_t p2 = codepoint & 0b111111;
+      codepoint >>= 6;
+      uint8_t p1 = codepoint;
+      out.push_back(0b11100000 + p1);
+      out.push_back(0b10000000 + p2);
+      out.push_back(0b10000000 + p3);
+      continue;
+    }
+    if (codepoint <= 0x10FFFF) {
+      uint8_t p4 = codepoint & 0b111111;
+      codepoint >>= 6;
+      uint8_t p3 = codepoint & 0b111111;
+      codepoint >>= 6;
+      uint8_t p2 = codepoint & 0b111111;
+      codepoint >>= 6;
+      uint8_t p1 = codepoint;
+      out.push_back(0b11110000 + p1);
+      out.push_back(0b10000000 + p2);
+      out.push_back(0b10000000 + p3);
+      out.push_back(0b10000000 + p4);
+      continue;
+    }
+  }
+  return out;
+}
+
+GraphemeIterator::GraphemeIterator(std::string_view text, size_t pos)
+    : text_(text), pos_(pos) {
+  if (pos_ < text_.size()) {
+    Next();
+  }
+}
+
+GraphemeIterator& GraphemeIterator::operator++() {
+  pos_ += current_.text.size();
+  if (pos_ < text_.size()) {
+    Next();
+  } else {
+    pos_ = text_.size();
+    current_ = Grapheme{"", 0};
+  }
+  return *this;
+}
+
+void GraphemeIterator::Next() {
+  size_t start = pos_;
+  size_t end = start;
+  uint32_t codepoint = 0;
+  
+  if (!EatCodePoint(text_, start, &end, &codepoint)) {
+    current_ = Grapheme{text_.substr(start, 1), 1};
+    return;
+  }
+
+  int width = 0;
+  if (IsControl(codepoint)) {
+    width = 0;
+  } else if (IsCombining(codepoint)) {
+    width = 0;
+  } else if (IsFullWidth(codepoint)) {
+    width = 2;
+  } else {
+    width = 1;
+  }
+
+  if (codepoint == 0x000D && end < text_.size()) {
+    size_t next_end = end;
+    uint32_t next_cp = 0;
+    if (EatCodePoint(text_, end, &next_end, &next_cp) && next_cp == 0x000A) {
+      current_ = Grapheme{text_.substr(start, next_end - start), 0};
+      return;
+    }
+  }
+
+  while (end < text_.size()) {
+    size_t next_end = end;
+    uint32_t next_cp = 0;
+    if (!EatCodePoint(text_, end, &next_end, &next_cp)) {
+      break;
+    }
+
+    if (IsCombining(next_cp)) {
+      end = next_end;
+    } else if (next_cp == 0x200D) {
+      end = next_end;
+      if (end < text_.size()) {
+        size_t emoji_end = end;
+        uint32_t emoji_cp = 0;
+        if (EatCodePoint(text_, end, &emoji_end, &emoji_cp)) {
+          end = emoji_end;
+          while (end < text_.size()) {
+            size_t comb_end = end;
+            uint32_t comb_cp = 0;
+            if (EatCodePoint(text_, end, &comb_end, &comb_cp) && IsCombining(comb_cp)) {
+              end = comb_end;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      break;
+    }
+  }
+
+  current_ = Grapheme{text_.substr(start, end - start), width};
+}
