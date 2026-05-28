@@ -57,30 +57,48 @@ class BordersDemo : public Component<BordersDemo> {
     return R"html(
       <div>
         <h1>RTXUI Border Styles Gallery</h1>
-        <p>This demo showcases the 12 different border styles supported by RTXUI.</p>
+        <p>This demo showcases the 24 different border styles supported by RTXUI.</p>
 
         <div class="row">
           <BorderBox title="ascii" border_class="ascii"></BorderBox>
           <BorderBox title="blank" border_class="blank"></BorderBox>
           <BorderBox title="dashed" border_class="dashed"></BorderBox>
+          <BorderBox title="double" border_class="double"></BorderBox>
         </div>
 
         <div class="row">
-          <BorderBox title="double" border_class="double"></BorderBox>
           <BorderBox title="hkey" border_class="hkey"></BorderBox>
           <BorderBox title="heavy" border_class="heavy"></BorderBox>
+          <BorderBox title="inner" border_class="inner"></BorderBox>
+          <BorderBox title="none" border_class="none"></BorderBox>
         </div>
 
         <div class="row">
-          <BorderBox title="inner" border_class="inner"></BorderBox>
           <BorderBox title="outer" border_class="outer"></BorderBox>
           <BorderBox title="panel" border_class="panel"></BorderBox>
+          <BorderBox title="round" border_class="round"></BorderBox>
+          <BorderBox title="solid" border_class="solid"></BorderBox>
         </div>
 
         <div class="row">
-          <BorderBox title="round" border_class="round"></BorderBox>
-          <BorderBox title="solid" border_class="solid"></BorderBox>
           <BorderBox title="tall" border_class="tall"></BorderBox>
+          <BorderBox title="thick" border_class="thick"></BorderBox>
+          <BorderBox title="vkey" border_class="vkey"></BorderBox>
+          <BorderBox title="wide" border_class="wide"></BorderBox>
+        </div>
+
+        <div class="row">
+          <BorderBox title="dotted" border_class="dotted"></BorderBox>
+          <BorderBox title="double-horiz" border_class="double-horizontal"></BorderBox>
+          <BorderBox title="double-vert" border_class="double-vertical"></BorderBox>
+          <BorderBox title="shadow (3d)" border_class="shadow"></BorderBox>
+        </div>
+
+        <div class="row">
+          <BorderBox title="shade-light" border_class="shade-light"></BorderBox>
+          <BorderBox title="shade-med" border_class="shade-medium"></BorderBox>
+          <BorderBox title="shade-dark" border_class="shade-dark"></BorderBox>
+          <BorderBox title="squiggle" border_class="squiggle"></BorderBox>
         </div>
       </div>
 
@@ -94,6 +112,7 @@ class BordersDemo : public Component<BordersDemo> {
           color: white;
           width: 100%;
           height: 100%;
+          overflow-y: scroll;
         }
         h1 {
           font-weight: bold;

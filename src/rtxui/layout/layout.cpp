@@ -83,11 +83,15 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
     }
   }
 
+  bool has_scrollbar = (box->style.overflow_y == Overflow::Scroll &&
+                        box->style.scrollbar_width == ScrollbarWidth::Auto);
+  int scrollbar_spacing = has_scrollbar ? 1 : 0;
+
   int content_width_limit =
       is_auto_width && constraints.width.mode == MeasureMode::Undefined
           ? 10000
           : std::max(0, width - box->style.padding.Horiz() -
-                            box->style.border.Horiz());
+                            box->style.border.Horiz() - scrollbar_spacing);
 
   auto fragment = std::make_shared<PhysicalFragment>(width, 0);
   fragment->dom_node = box->dom_node;
@@ -158,6 +162,19 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   } else {
     int resolved_h = ResolveSize(box->style.height, constraints.height.value);
     fragment->height = (resolved_h != -1) ? resolved_h : cur_y;
+  }
+
+  if (box->style.overflow_y != Overflow::Visible) {
+    fragment->clips_descendants = true;
+  }
+
+  if (box->dom_node) {
+    box->dom_node->set_scroll_height(cur_y);
+    int max_scroll = std::max(0, cur_y - fragment->height);
+    if (box->dom_node->scroll_y() > max_scroll) {
+      box->dom_node->set_scroll_y(max_scroll);
+    }
+    fragment->scroll_y = box->dom_node->scroll_y();
   }
 
   return fragment;
@@ -326,8 +343,12 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     my_height = parent_h;
   }
 
+  bool has_scrollbar = (box->style.overflow_y == Overflow::Scroll &&
+                        box->style.scrollbar_width == ScrollbarWidth::Auto);
+  int scrollbar_spacing = has_scrollbar ? 1 : 0;
+
   int content_w = std::max(
-      0, my_width - box->style.border.Horiz() - box->style.padding.Horiz());
+      0, my_width - box->style.border.Horiz() - box->style.padding.Horiz() - scrollbar_spacing);
   int content_h = std::max(
       0, my_height - box->style.border.Vert() - box->style.padding.Vert());
 
@@ -456,6 +477,22 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
             ? (max_cross_used + box->style.padding.Vert() +
                box->style.border.Vert())
             : (main_pos + box->style.padding.bottom + box->style.border.bottom);
+
+  int total_content_height = is_row ? (max_cross_used + box->style.padding.Vert() + box->style.border.Vert())
+                                    : (main_pos + box->style.padding.bottom + box->style.border.bottom);
+
+  if (box->style.overflow_y != Overflow::Visible) {
+    fragment->clips_descendants = true;
+  }
+
+  if (box->dom_node) {
+    box->dom_node->set_scroll_height(total_content_height);
+    int max_scroll = std::max(0, total_content_height - fragment->height);
+    if (box->dom_node->scroll_y() > max_scroll) {
+      box->dom_node->set_scroll_y(max_scroll);
+    }
+    fragment->scroll_y = box->dom_node->scroll_y();
+  }
 
   return fragment;
 }

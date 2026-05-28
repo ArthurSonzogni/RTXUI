@@ -74,6 +74,25 @@ enum class BorderStyle {
   Thick,
   VKey,
   Wide,
+  Dotted,
+  DoubleHorizontal,
+  DoubleVertical,
+  Shadow,
+  ShadeLight,
+  ShadeMedium,
+  ShadeDark,
+  Squiggle,
+};
+
+enum class Overflow {
+  Visible,
+  Hidden,
+  Scroll,
+};
+
+enum class ScrollbarWidth {
+  Auto,
+  None,
 };
 
 // Represents the "Computed CSS values"
@@ -101,6 +120,10 @@ struct ComputedStyle {
 
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
+
+  Overflow overflow_y = Overflow::Visible;
+  ScrollbarWidth scrollbar_width = ScrollbarWidth::Auto;
+  int scroll_speed = 1;
 
   bool IsBlockLevel() const {
     return display_outside == DisplayOutside::Block;

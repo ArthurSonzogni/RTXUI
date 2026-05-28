@@ -202,6 +202,183 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
   }
 }
 
+TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
+  struct RemainingGridApp : Component<RemainingGridApp> {
+    std::string_view Setup() override {
+      Import<div>();
+      return R"html(
+        <style>
+          self {
+            display: flow;
+            background-color: black;
+          }
+          .cell {
+            display: inline;
+            margin: 1;
+            background-color: rgb(100, 100, 100);
+          }
+          .thick             { border: thick; }
+          .vkey              { border: vkey; }
+          .wide              { border: wide; }
+          .none              { border: none; }
+          .dotted            { border: dotted; }
+          .double-horizontal { border: double-horizontal; }
+          .double-vertical   { border: double-vertical; }
+          .shadow            { border: shadow; }
+          .shade-light       { border: shade-light; }
+          .shade-medium      { border: shade-medium; }
+          .shade-dark        { border: shade-dark; }
+          .squiggle          { border: squiggle; }
+        </style>
+        <div class="cell thick">thick</div>
+        <div class="cell vkey">vkey</div>
+        <div class="cell wide">wide</div>
+        <div class="cell none">none</div>
+        <div class="cell dotted">dotted</div>
+        <div class="cell double-horizontal">doubleh</div>
+        <div class="cell double-vertical">doublev</div>
+        <div class="cell shadow">shadow</div>
+        <div class="cell shade-light">light</div>
+        <div class="cell shade-medium">medium</div>
+        <div class="cell shade-dark">dark</div>
+        <div class="cell squiggle">squigg</div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<RemainingGridApp>::New(), 50, 22);
+
+  // Check the text layer for correct border characters.
+  {
+    std::string output = GetTextLayer(texture);
+    std::vector<std::string> expected = {
+        "                                                  ",
+        " █▀▀▀▀▀█  ▏    ▕  ▁▁▁▁▁▁          ········        ",
+        " █thick█  ▏vkey▕  ▎wide▊   none   ·dotted·        ",
+        " █▄▄▄▄▄█  ▏    ▕  ▔▔▔▔▔▔          ········        ",
+        "                                                  ",
+        "                                                  ",
+        " ╒═══════╕  ╓───────╖  ░░░░░░░▓  ░░░░░░░          ",
+        " │doubleh│  ║doublev║  ░shadow▓  ░light░          ",
+        " ╘═══════╛  ╙───────╜  ░▓▓▓▓▓▓▓  ░░░░░░░          ",
+        "                                                  ",
+        "                                                  ",
+        " ▒▒▒▒▒▒▒▒  ▓▓▓▓▓▓  ~~~~~~~~                       ",
+        " ▒medium▒  ▓dark▓  ~squigg~                       ",
+        " ▒▒▒▒▒▒▒▒  ▓▓▓▓▓▓  ~~~~~~~~                       ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+    };
+    // Fix the U+2556 character manually if needed (it matches exactly U+2556)
+    CHECK(output == CheckGrid(expected));
+  }
+
+  // Check the background color layer for correct coloring.
+  {
+    std::map<Color, char> color_map = {
+        {Color::RGB(0, 0, 0), '0'},
+        {Color::RGB(100, 100, 100), '1'},
+        {Color::RGB(255, 255, 255), '2'},
+    };
+
+    std::string output;
+    for (int y = 0; y < texture.height(); ++y) {
+      for (int x = 0; x < texture.width(); ++x) {
+        const auto& cell = texture.operator[](x, y);
+        Color bg = cell.background_color;
+        if (color_map.find(bg) != color_map.end()) {
+          output += color_map[bg];
+        } else {
+          output += ' ';
+        }
+      }
+      output += "\n";
+    }
+
+    std::vector<std::string> expected = {
+        "00000000000000000000000000000000000000000000000000",
+        "01111111001111110000000000111111001111111100000000",
+        "01111111001111110011111200111111001111111100000000",
+        "01111111001111110000000000111111001111111100000000",
+        "00000000000000000000000000000000000000000000000000",
+        "00000000000000000000000000000000000000000000000000",
+        "01111111110011111111100111111110011111110000000000",
+        "01111111110011111111100111111110011111110000000000",
+        "01111111110011111111100111111110011111110000000000",
+        "00000000000000000000000000000000000000000000000000",
+        "00000000000000000000000000000000000000000000000000",
+        "01111111100111111001111111100000000000000000000000",
+        "01111111100111111001111111100000000000000000000000",
+        "01111111100111111001111111100000000000000000000000",
+        "00000000000000000000000000000000000000000000000000",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+        "                                                  ",
+    };
+
+    CHECK(output == CheckGrid(expected));
+  }
+}
+
+TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
+  struct ScrollDemoApp : Component<ScrollDemoApp> {
+    std::string_view Setup() override {
+      Import<div>();
+      return R"html(
+        <div id="scrollable">
+          <div>Line 1</div>
+          <div>Line 2</div>
+          <div>Line 3</div>
+          <div>Line 4</div>
+          <div>Line 5</div>
+          <div>Line 6</div>
+        </div>
+        <style>
+          self {
+            display: block;
+          }
+          #scrollable {
+            display: block;
+            height: 4;
+            padding-top: 1;
+            padding-bottom: 1;
+            overflow-y: scroll;
+          }
+        </style>
+      )html";
+    }
+  };
+
+  auto app = Ref<ScrollDemoApp>::New();
+  app->Mount();
+
+  auto* scroll_element = app->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_element != nullptr);
+
+  // Content = 6 items + 2 padding = 8. Height = 4. Max scroll = 8 - 4 = 4.
+  scroll_element->set_scroll_y(4);
+
+  // Render to a texture of size 10x4
+  auto texture = RenderComponent(app, 10, 4);
+
+  // Track height is 4, scrollbar column is index 9.
+  // Under corrected math, the thumb must be at the very bottom (y=3).
+  CHECK(texture[9, 0].character == "░");
+  CHECK(texture[9, 1].character == "░");
+  CHECK(texture[9, 2].character == "░");
+  CHECK(texture[9, 3].character == "█");
+}
+
 TEST_CASE("Individual Border Colors") {
   struct IndividualBorderColorTest : Component<IndividualBorderColorTest> {
     std::string_view Setup() {

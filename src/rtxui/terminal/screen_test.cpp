@@ -135,5 +135,92 @@ TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
   REQUIRE(btn_element->Print().find("Click Me (1)") != std::string::npos);
 }
 
+TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ScrollTestComponent : public Component<ScrollTestComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ScrollTestComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div>Line 1</div>
+        <div>Line 2</div>
+        <div>Line 3</div>
+        <div>Line 4</div>
+        <div>Line 5</div>
+        <div>Line 6</div>
+        <div>Line 7</div>
+        <div>Line 8</div>
+        <div>Line 9</div>
+        <div>Line 10</div>
+      </div>
+      <style>
+        #scrollable {
+          display: block;
+          height: 4;
+          overflow-y: scroll;
+          scroll-speed: 2;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ScrollTestComponent>::New();
+  Screen screen(component, device);
+
+  auto* scroll_element = component->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_element != nullptr);
+
+  // 1. Initial State
+  REQUIRE(scroll_element->scroll_height() == 10);
+  REQUIRE(scroll_element->scroll_y() == 0);
+
+  // 2. Mouse Wheel Scroll Down (Scroll by speed = 2)
+  Event::Mouse wheel_down;
+  wheel_down.button = Event::Mouse::Button::WheelDown;
+  wheel_down.motion = Event::Mouse::Motion::Pressed;
+  wheel_down.x = 2;
+  wheel_down.y = 2;
+  screen.Dispatch(wheel_down);
+  REQUIRE(scroll_element->scroll_y() == 2);
+
+  // 3. Mouse Wheel Scroll Up (Scroll by speed = 2)
+  Event::Mouse wheel_up;
+  wheel_up.button = Event::Mouse::Button::WheelUp;
+  wheel_up.motion = Event::Mouse::Motion::Pressed;
+  wheel_up.x = 2;
+  wheel_up.y = 2;
+  screen.Dispatch(wheel_up);
+  REQUIRE(scroll_element->scroll_y() == 0);
+
+  // 4. Click to Focus the Element
+  Event::Mouse click;
+  click.button = Event::Mouse::Button::Left;
+  click.motion = Event::Mouse::Motion::Pressed;
+  click.x = 2;
+  click.y = 2;
+  screen.Dispatch(click);
+
+  // 5. Keyboard Navigation ArrowDown (Scroll by speed = 2)
+  screen.Dispatch(Event::ArrowDown());
+  REQUIRE(scroll_element->scroll_y() == 2);
+
+  // 6. Keyboard PageDown (Scroll by viewport height = 4)
+  screen.Dispatch(Event::PageDown());
+  // 2 + 4 = 6. Max scroll is 10 (content) - 4 (viewport) = 6.
+  REQUIRE(scroll_element->scroll_y() == 6);
+
+  // 7. Keyboard ArrowUp (Scroll by speed = 2)
+  screen.Dispatch(Event::ArrowUp());
+  REQUIRE(scroll_element->scroll_y() == 4);
+
+  // 8. Keyboard PageUp (Scroll by viewport height = 4)
+  screen.Dispatch(Event::PageUp());
+  REQUIRE(scroll_element->scroll_y() == 0);
+}
+
 } // namespace
 } // namespace rtxui

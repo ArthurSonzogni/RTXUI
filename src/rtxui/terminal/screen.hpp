@@ -49,6 +49,7 @@ class Screen {
    std::shared_ptr<PhysicalFragment> root_fragment_;
    std::shared_ptr<TerminalDevice> device_;
    TerminalInputParser parser_;
+   Element* focused_element_ = nullptr;
 
    // RAII raw terminal controller
    struct RawTerminal {
