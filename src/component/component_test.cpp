@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "component/component.hpp"
 #include "component/default_components.hpp"
+#include "terminal/screen.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -237,6 +238,13 @@ TEST_CASE("Transparent Reactivity", "[component]") {
   REQUIRE(counter->count == 1);
   REQUIRE(counter->Root()->Print().find("Count: 1") != std::string::npos);
   REQUIRE(counter->Root()->Print().find("Double: 2") != std::string::npos);
+}
+
+TEST_CASE("Screen Drawing", "[terminal]") {
+  auto counter = rtxui::Ref<Counter>::New();
+  rtxui::Screen screen(counter);
+  screen.Draw();
+  REQUIRE(true);
 }
 
 }  // namespace

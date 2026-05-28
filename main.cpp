@@ -14,6 +14,7 @@
 #include "src/paint/color.hpp"
 #include "src/paint/paint.hpp"
 #include "src/paint/texture.hpp"
+#include "src/terminal/screen.hpp"
 
 using namespace rtxui;
 
@@ -68,6 +69,14 @@ class App : public Component<App> {
   void Increment() {
     count++;
     this->Digest();
+  }
+
+  bool OnEvent(Event event) override {
+    if (event == Event::a() || event == Event::Keyboard::From(' ')) {
+      Increment();
+      return true;
+    }
+    return Component<App>::OnEvent(event);
   }
 
   std::string_view Setup() override {
@@ -147,27 +156,7 @@ class App : public Component<App> {
 
 int main() {
   auto app = Ref<App>::New();
-  app->Mount();
-  auto root = app->Root();
-
-  // 2. Build Box Tree
-  auto root_box = LayoutTreeBuilder::Build(root);
-
-  for (int width = 0; width <= 80; width += 15) {
-    // 3. Layout
-    LayoutConstraints viewport = {
-        {width, MeasureMode::Exactly},
-        {30, MeasureMode::Exactly},
-    };
-    auto root_fragment = RunLayout({root_box.get()}, viewport);
-
-    // 4. Paint
-    Texture texture(width, 30);
-    Paint(root_fragment.get(), texture);
-
-    std::cout << "width: " << width << std::endl;
-    std::cout << texture.Render() << std::endl;
-  }
-
+  Screen screen(app);
+  screen.Loop();
   return 0;
 }

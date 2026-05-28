@@ -27,6 +27,8 @@ add_library(rtxui_lib STATIC
   "src/terminal/terminal_input_parser.hpp"
   "src/terminal/event.cpp"
   "src/terminal/event.hpp"
+  "src/terminal/screen.cpp"
+  "src/terminal/screen.hpp"
   "src/cell/cell.cpp"
   "src/cell/cell.hpp"
   "src/component/component.cpp"
