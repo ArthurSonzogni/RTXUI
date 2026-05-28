@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <algorithm>
 
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
@@ -22,49 +23,57 @@ namespace rtxui {
 namespace {
 
 std::string Interpolate(std::string_view text, ComponentBase* source) {
-  std::string result;
-  size_t last_pos = 0;
-  while (true) {
-    size_t open_brace = text.find('{', last_pos);
-    if (open_brace == std::string_view::npos) {
-      result += text.substr(last_pos);
-      break;
-    }
-    result += text.substr(last_pos, open_brace - last_pos);
-    size_t close_brace = text.find('}', open_brace);
-    if (close_brace == std::string_view::npos) {
-      result += text.substr(open_brace);
-      break;
-    }
-    std::string_view expression =
-        text.substr(open_brace + 1, close_brace - open_brace - 1);
-    
-    // Trim spaces to find a clean identifier
-    std::string_view trimmed = expression;
-    while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.front()))) {
-      trimmed.remove_prefix(1);
-    }
-    while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
-      trimmed.remove_suffix(1);
-    }
+  struct Placeholder {
+    size_t open_idx;
+    size_t close_idx;
+    std::string trimmed_expr;
+  };
+  std::vector<Placeholder> placeholders;
+  std::vector<size_t> stack;
 
-    bool is_ident = !trimmed.empty();
-    for (char c : trimmed) {
-      if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '.' && c != '-') {
-        is_ident = false;
-        break;
+  for (size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == '{') {
+      stack.push_back(i);
+    } else if (text[i] == '}') {
+      if (!stack.empty()) {
+        size_t open_idx = stack.back();
+        stack.pop_back();
+        size_t close_idx = i;
+        std::string_view expression = text.substr(open_idx + 1, close_idx - open_idx - 1);
+        
+        // Trim spaces to find a clean identifier
+        std::string_view trimmed = expression;
+        while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.front()))) {
+          trimmed.remove_prefix(1);
+        }
+        while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
+          trimmed.remove_suffix(1);
+        }
+
+        bool is_ident = !trimmed.empty();
+        for (char c : trimmed) {
+          if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '.' && c != '-') {
+            is_ident = false;
+            break;
+          }
+        }
+
+        if (is_ident) {
+          placeholders.push_back({open_idx, close_idx, std::string(trimmed)});
+        }
       }
     }
+  }
 
-    if (is_ident) {
-      result += source->GetInterpolatedValue(trimmed);
-    } else {
-      // Keep the curly braces as they are (it's likely a CSS ruleset block)
-      result += "{";
-      result += expression;
-      result += "}";
-    }
-    last_pos = close_brace + 1;
+  // Sort placeholders in descending order of open_idx (right-to-left)
+  std::sort(placeholders.begin(), placeholders.end(), [](const Placeholder& a, const Placeholder& b) {
+    return a.open_idx > b.open_idx;
+  });
+
+  std::string result(text);
+  for (const auto& ph : placeholders) {
+    std::string val = source->GetInterpolatedValue(ph.trimmed_expr);
+    result.replace(ph.open_idx, ph.close_idx - ph.open_idx + 1, val);
   }
   return result;
 }
