@@ -15,8 +15,8 @@ class InterpolationComponent : public rtxui::Component<InterpolationComponent> {
   int version = 5;
 
   void RegisterProperties() {
-    RegisterState("name", &name);
-    RegisterState("version", &version);
+    Import("name", name);
+    Import("version", version);
   }
   
   std::string get_greeting() const { return "Hello " + name; }
@@ -24,8 +24,8 @@ class InterpolationComponent : public rtxui::Component<InterpolationComponent> {
 
   void InitReflection() override {
     RegisterProperties();
-    RegisterComputed("get_greeting", &InterpolationComponent::get_greeting);
-    RegisterComputed("get_next_version", &InterpolationComponent::get_next_version);
+    Import("get_greeting", &InterpolationComponent::get_greeting);
+    Import("get_next_version", &InterpolationComponent::get_next_version);
 
     Import<rtxui::div>();
     Import<rtxui::span>();
