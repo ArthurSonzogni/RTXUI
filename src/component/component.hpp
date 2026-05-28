@@ -14,8 +14,6 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
-
-#include "cell/cell.hpp"
 #include "component/import.hpp"
 #include "core/refcounted.hpp"
 #include "dom/element.hpp"

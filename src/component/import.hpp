@@ -10,7 +10,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "cell/cell.hpp"
 #include "core/refcounted.hpp"
 #include "reflection/class_name.hpp"
 
@@ -18,19 +17,16 @@ namespace rtxui {
 
 class ComponentBase;
 
-using VariableImportMap = std::unordered_map<std::string, Ref<Cell>>;
-
 using ComponentFactory = std::function<Ref<ComponentBase>()>;
 using ComponentImportMap = std::unordered_map<std::string, ComponentFactory>;
 
 using Callback = std::function<void()>;
 using CallbackImportMap = std::unordered_map<std::string, Callback>;
 
-/// Bindings is a structure that allows you to import components and bindings_
+/// Bindings is a structure that allows you to import components and callbacks
 /// into a component.
 class Bindings {
  protected:
-  VariableImportMap bindings_;
   CallbackImportMap callbacks_;
   ComponentImportMap imports_;
 
@@ -43,22 +39,6 @@ class Bindings {
       return true;
     }
     return false;
-  }
-
-  /// Bind a variable into the template.
-  ///
-  /// **Example:**
-  /// ```cpp
-  /// Import("variable", variable);
-  /// ```
-  void Import(std::string_view name, Ref<Cell> value) {
-    // Detect duplicate imports.
-    if (bindings_.count(std::string(name))) {
-      std::println("Error: Variable '{}' is already imported.", name);
-      std::exit(1);
-    }
-
-    bindings_[std::string(name)] = value;
   }
 
   /// Bind a callback into the template.
