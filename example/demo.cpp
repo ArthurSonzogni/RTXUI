@@ -123,24 +123,8 @@ class App : public Component<App> {
             <div>[Item 14] End of scrolling demo</div>
           </div>
         </LabeledBox>
-        <LabeledBox title="Box B (Nested Scroll Demo)">
-          <div class="outer-scroll">
-            <div class="scroll-title">[Outer Start] Scroll down to find inner boxes</div>
-            <div class="inner-scroll">
-              <div>[Inner A-1] Scroll me</div>
-              <div>[Inner A-2] Use mouse wheel</div>
-              <div>[Inner A-3] Or keyboard focus</div>
-              <div>[Inner A-4] Inner A bottom</div>
-            </div>
-            <div class="scroll-title">Some text in between</div>
-            <div class="inner-scroll">
-              <div>[Inner B-1] Scroll me</div>
-              <div>[Inner B-2] Scroll down</div>
-              <div>[Inner B-3] Close to end</div>
-              <div>[Inner B-4] Inner B bottom</div>
-            </div>
-            <div class="scroll-title">[Outer End] End of outer list</div>
-          </div>
+        <LabeledBox title="Box B (Clicks: {double_clicks})">
+          This is a box with doubled clicks.
         </LabeledBox>
       </div>
       Au revoir!
@@ -174,28 +158,6 @@ class App : public Component<App> {
           scroll-speed: 1;
           border: ascii;
           border-color: yellow;
-        }
-        .outer-scroll {
-          display: block;
-          height: 6;
-          overflow-y: scroll;
-          scroll-speed: 1;
-          border: ascii;
-          border-color: green;
-        }
-        .inner-scroll {
-          display: block;
-          height: 3;
-          overflow-y: scroll;
-          scroll-speed: 1;
-          border: dashed;
-          border-color: cyan;
-          margin-top: 1;
-          margin-bottom: 1;
-        }
-        .scroll-title {
-          color: white;
-          font-weight: bold;
         }
       </style>
     )html";
