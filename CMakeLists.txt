@@ -135,6 +135,7 @@ if(RTXUI_BUILD_TESTS)
     "src/component/component_test.cpp"
     "src/component/interpolation_test.cpp"
     "src/core/refcounted_test.cpp"    "src/core/task_test.cpp"
+    "src/core/unicode_test.cpp"
     "src/layout/layout_test.cpp"
     "src/paint/border_style_test.cpp"
     "src/reflection/reflection_test.cpp"
