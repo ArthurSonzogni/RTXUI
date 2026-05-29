@@ -293,7 +293,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           have_last_space = true;
         }
 
-        if (cursor_x + (cur_col - col_start) + g.width > content_width_limit) {
+        if (box->style.white_space == WhiteSpace::Nowrap) {
+          cur_col += g.width;
+        } else if (cursor_x + (cur_col - col_start) + g.width > content_width_limit) {
           if (have_last_space) {
             // Wrap at last space
             int frag_cols = last_space_col;
@@ -345,7 +347,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       auto child_frag = RunLayout({child.get()}, child_c);
 
       // If the child (plus its horizontal margins) overflows the current line, wrap.
-      if (cursor_x + child_frag->width + child_m_horiz > content_width_limit && cursor_x > 0) {
+      if (box->style.white_space != WhiteSpace::Nowrap &&
+          cursor_x + child_frag->width + child_m_horiz > content_width_limit && cursor_x > 0) {
         commit_line();
       }
 

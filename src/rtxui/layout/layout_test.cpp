@@ -524,4 +524,49 @@ TEST_CASE("Layout: text-align", "[layout][text-align]") {
   }
 }
 
+TEST_CASE("Layout: white-space", "[layout][white-space]") {
+  SECTION("white-space: nowrap prevents text wrapping") {
+    struct TestComponent : Component<TestComponent> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .container {
+              display: block;
+              width: 4;
+              white-space: nowrap;
+            }
+          </style>
+          <div class="container">A B C</div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<TestComponent>::New(), 4, 1);
+    CHECK(GetTextLayer(texture) == "A B \n");
+  }
+
+  SECTION("white-space: nowrap inheritance") {
+    struct TestComponent : Component<TestComponent> {
+      std::string_view Setup() {
+        Import<div>();
+        Import<span>();
+        return R"html(
+          <style>
+            .container {
+              display: block;
+              width: 4;
+              white-space: nowrap;
+            }
+          </style>
+          <div class="container">
+            <span>A B C</span>
+          </div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<TestComponent>::New(), 4, 1);
+    CHECK(GetTextLayer(texture) == "A B \n");
+  }
+}
+
 }  // namespace rtxui

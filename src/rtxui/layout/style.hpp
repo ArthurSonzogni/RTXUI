@@ -101,6 +101,11 @@ enum class TextAlign {
   Center,
 };
 
+enum class WhiteSpace {
+  Normal,
+  Nowrap,
+};
+
 // Represents the "Computed CSS values"
 struct ComputedStyle {
   DisplayOutside display_outside = DisplayOutside::Inline;
@@ -132,6 +137,7 @@ struct ComputedStyle {
   Overflow overflow_y = Overflow::Visible;
   ScrollbarWidth scrollbar_width = ScrollbarWidth::Auto;
   std::optional<TextAlign> text_align;
+  std::optional<WhiteSpace> white_space;
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
 

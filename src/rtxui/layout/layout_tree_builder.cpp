@@ -3,7 +3,7 @@
 namespace rtxui {
 
 // Static Build method implementation
-std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign parent_align) {
+std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign parent_align, WhiteSpace parent_ws) {
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
@@ -15,6 +15,9 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign
 
   TextAlign resolved_align = dom_node->style.text_align.value_or(parent_align);
   box->style.text_align = resolved_align;
+
+  WhiteSpace resolved_ws = dom_node->style.white_space.value_or(parent_ws);
+  box->style.white_space = resolved_ws;
 
   // Text nodes don't usually run an algorithm themselves;
   // they are consumed by the parent's InlineFlow.
@@ -30,7 +33,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign
     if (child_dom.get()->is_slot()) {
       // Skip elements with no tag (e.g., SlotElement)
       for (auto& grandchild_dom : child_dom.get()->children()) {
-        auto grandchild_box = Build(grandchild_dom.get(), resolved_align);
+        auto grandchild_box = Build(grandchild_dom.get(), resolved_align, resolved_ws);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -38,7 +41,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved_align);
+    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws);
     if (child_box) {
       raw_children.push_back(child_box);
     }
@@ -68,6 +71,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign
           anonymous_box->is_anonymous = true;
           anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
           anonymous_box->style.text_align = resolved_align;
+          anonymous_box->style.white_space = resolved_ws;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);

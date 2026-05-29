@@ -11,7 +11,7 @@
 namespace rtxui {
 class LayoutTreeBuilder {
  public:
-  static std::shared_ptr<LayoutBox> Build(Element* dom_node, TextAlign parent_align = TextAlign::Left);
+  static std::shared_ptr<LayoutBox> Build(Element* dom_node, TextAlign parent_align = TextAlign::Left, WhiteSpace parent_ws = WhiteSpace::Normal);
 };
 }  // namespace rtxui
 #endif  // RTXUI_LAYOUT_LAYOUT_TREE_BUILDER_HPP
