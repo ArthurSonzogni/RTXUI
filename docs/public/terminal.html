@@ -25,6 +25,22 @@
 <body>
   <div id="terminal"></div>
   <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      const errStr = `\r\n\x1b[31;1m[ERROR]\x1b[0m ${message} at ${source}:${lineno}:${colno}\r\n`;
+      if (window.xtermInstance) {
+        window.xtermInstance.write(errStr);
+      }
+      console.error(errStr, error);
+    };
+
+    window.onunhandledrejection = function(event) {
+      const errStr = `\r\n\x1b[31;1m[UNHANDLED REJECTION]\x1b[0m ${event.reason}\r\n`;
+      if (window.xtermInstance) {
+        window.xtermInstance.write(errStr);
+      }
+      console.error(errStr, event.reason);
+    };
+
     const params = new URLSearchParams(window.location.search);
     const src = params.get('src');
     const cols = parseInt(params.get('cols') || '80', 10);
@@ -42,7 +58,10 @@
       }
     });
 
+    window.xtermInstance = xtermInstance;
     xtermInstance.open(document.getElementById('terminal'));
+
+    xtermInstance.write("\x1b[33m[INFO] Initializing terminal...\x1b[0m\r\n");
 
     window.rtxui_columns = xtermInstance.cols;
     window.rtxui_lines = xtermInstance.rows;
@@ -67,10 +86,18 @@
     window.Module = {
       preRun: [],
       postRun: [],
-      print: (text) => {},
-      printErr: (text) => {},
-      setStatus: (text) => {},
+      print: (text) => {
+        console.log("[WASM stdout]", text);
+      },
+      printErr: (text) => {
+        console.error("[WASM stderr]", text);
+        xtermInstance.write(`\r\n\x1b[31m[WASM ERROR]\x1b[0m ${text}\r\n`);
+      },
+      setStatus: (text) => {
+        console.log("[WASM status]", text);
+      },
       locateFile: (path, prefix) => {
+        console.log("[WASM locateFile]", path, prefix);
         if (path.endsWith('.wasm')) {
           return '/wasm/' + path;
         }
@@ -79,9 +106,17 @@
     };
 
     if (src) {
+      xtermInstance.write(`\x1b[33m[INFO] Loading WASM script: ${src}...\x1b[0m\r\n`);
       const script = document.createElement('script');
       script.src = src;
+      script.onerror = (err) => {
+        const errStr = `\r\n\x1b[31;1m[ERROR]\x1b[0m Failed to load script: ${src}\r\n`;
+        xtermInstance.write(errStr);
+        console.error(errStr, err);
+      };
       document.body.appendChild(script);
+    } else {
+      xtermInstance.write("\x1b[31m[ERROR] No WASM source script provided (missing 'src' query param)\x1b[0m\r\n");
     }
   </script>
 </body>
