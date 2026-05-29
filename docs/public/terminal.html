@@ -80,6 +80,7 @@
     });
 
     window.rtxui_on_output = (str) => {
+      console.log("[rtxui_on_output]", JSON.stringify(str));
       xtermInstance.write(str);
     };
 
