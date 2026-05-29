@@ -63,14 +63,15 @@ class SystemTerminalDevice : public TerminalDevice {
 
   void Write(std::string_view data) override {
 #ifdef __EMSCRIPTEN__
+    std::string str(data);
     EM_ASM({
-      let str = UTF8ToString($0, $1);
+      let s = UTF8ToString($0);
       if (window.rtxui_on_output) {
-        window.rtxui_on_output(str);
+        window.rtxui_on_output(s);
       } else {
-        console.log(str);
+        console.log(s);
       }
-    }, data.data(), data.size());
+    }, str.c_str());
 #else
     std::cout << data << std::flush;
 #endif
