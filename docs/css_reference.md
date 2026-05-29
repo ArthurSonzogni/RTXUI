@@ -62,6 +62,8 @@ Borders are drawn using ASCII/Unicode styling characters based on the specified 
 - `border-color-left`: Specifies color of the left border line.
 - `border-color-right`: Specifies color of the right border line.
 
+<WasmTerminal src="/wasm/rtxui_example_borders.js" :cols="80" :rows="50" />
+
 ---
 
 ## 4. Typography & Coloring
@@ -81,6 +83,8 @@ RTXUI includes a subset of CSS Flexbox for robust horizontal and vertical layout
 - `flex-direction`: Layout axis for flex items (`row` or `column`).
 - `flex-grow`: Portion of free space assigned to the item along the main axis.
 
+<WasmTerminal src="/wasm/rtxui_example_layout.js" :cols="80" :rows="16" />
+
 ---
 
 ## 6. Scrolling & Overflow
@@ -97,8 +101,5 @@ Enables viewport scrolling when children overflow parent boundaries.
 - `scroll-speed-x`: Step scroll distance horizontally on event triggers (e.g. `scroll-speed-x: 3`).
 - `scroll-speed-y`: Step scroll distance vertically on event triggers.
 
-### Live Horizontal Scroll Demo
-Below is a live WebAssembly demo showing horizontal layout scrolling with nested containers in RTXUI. Use Shift + Mouse Wheel or the Arrow keys to scroll horizontally.
-
-<WasmTerminal src="/wasm/rtxui_example_horizontal_scroll.js" />
+<WasmTerminal src="/wasm/rtxui_example_horizontal_scroll.js" :cols="80" :rows="30" />
 

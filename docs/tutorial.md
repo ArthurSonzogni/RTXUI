@@ -16,7 +16,7 @@ using namespace rtxui;
 class HelloWorldApp : public Component<HelloWorldApp> {
  public:
   std::string_view Setup() override {
-    Import<div>();
+    Import<rtxui::div>();
     return R"html(
       <div class="card">
         Hello World from RTXUI!
@@ -46,6 +46,8 @@ int main() {
 }
 ```
 
+<WasmTerminal src="/wasm/rtxui_example_helloworld.js" :cols="60" :rows="14" />
+
 ---
 
 ## 2. Adding Reactive State
@@ -58,25 +60,34 @@ class CounterApp : public Component<CounterApp> {
   // State variables
   int count = 0;
 
+  CounterApp() {
+    Bind(count);
+    BindComputed(double_count);
+    Import("Increment", [this]() { count++; });
+    Import("Decrement", [this]() { count--; });
+  }
+
   // Computed state method
   int double_count() const { return count * 2; }
 
   std::string_view Setup() override {
-    Import<div>();
-    Import<span>();
-    Import<button>();
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    Import<rtxui::button>();
     return R"html(
       <div>
         <span>Count: {count}</span>
         <span>Double: {double_count}</span>
-        <button onclick="count++">Increment</button>
-        <button onclick="count--">Decrement</button>
+        <button onclick="Increment">Increment</button>
+        <button onclick="Decrement">Decrement</button>
       </div>
     )html";
   }
 };
 ```
 - **Reactivity Model**: Whenever a button is clicked, an event handler modifies `count`. The screen runs a Digest cycle, detects that `count` has changed, and updates the DOM elements.
+
+<WasmTerminal src="/wasm/rtxui_example_counter.js" :cols="60" :rows="16" />
 
 ---
 
@@ -88,7 +99,7 @@ When layouts contain lists or large blocks of content, they can overflow. RTXUI 
 class ScrollBox : public Component<ScrollBox> {
  public:
   std::string_view Setup() override {
-    Import<div>();
+    Import<rtxui::div>();
     return R"html(
       <div class="scroll-container">
         <div>Item 1</div>
@@ -119,8 +130,5 @@ class ScrollBox : public Component<ScrollBox> {
 
 By adding `overflow-y: scroll` and restricting `height`, RTXUI automatically crops overflowing elements and displays a modern, responsive scrollbar on the right. Scroll events bubble up nested containers when boundaries are reached.
 
-### Live Interactive Demo
-Below is the live WebAssembly demo of the nested scrolling implementation in RTXUI. Click inside the terminal and use your mouse wheel or the arrow keys to navigate the lists.
-
-<WasmTerminal src="/wasm/rtxui_example_nested_scroll.js" />
+<WasmTerminal src="/wasm/rtxui_example_nested_scroll.js" :cols="80" :rows="30" />
 
