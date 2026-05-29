@@ -455,14 +455,15 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
   CHECK(input_ptr->cursor_pos == 5);
   
   // Ctrl + Backspace to delete the word "hello"
-  Event::Keyboard kb_backspace;
-  kb_backspace.special = Event::Keyboard::Special::Backspace;
-  kb_backspace.modifier.ctrl = true;
-  Event ctrl_backspace(kb_backspace);
-  
-  input_ptr->OnEvent(ctrl_backspace);
+  input_ptr->OnEvent(Event::BackspaceCtrl());
   input_ptr->Digest();
   CHECK(input_ptr->value == " world");
+  CHECK(input_ptr->cursor_pos == 0);
+
+  // Ctrl + Delete to delete the word " world"
+  input_ptr->OnEvent(Event::DeleteCtrl());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
   CHECK(input_ptr->cursor_pos == 0);
   
   // Test CJK navigation

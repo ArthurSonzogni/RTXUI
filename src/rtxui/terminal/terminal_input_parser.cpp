@@ -16,7 +16,8 @@ std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
   static const auto& mapping = *new std::map<std::string, Event>{
       {"\x1B[D", Event::ArrowLeft()}, {"\x1B[C", Event::ArrowRight()}, {"\x1B[A", Event::ArrowUp()}, {"\x1B[B", Event::ArrowDown()},
       {"\x1B[1;5D", Event::ArrowLeftCtrl()}, {"\x1B[1;5C", Event::ArrowRightCtrl()}, {"\x1B[1;5A", Event::ArrowUpCtrl()}, {"\x1B[1;5B", Event::ArrowDownCtrl()},
-      {"\x7F", Event::Backspace()}, {"\x1B[3~", Event::Delete()}, {"\x1B", Event::Escape()}, {"\n", Event::Return()}, {"\r", Event::Return()}, {"\t", Event::Tab()}, {"\x1B[Z", Event::TabReverse()},
+      {"\x7F", Event::Backspace()}, {"\x1B\x7F", Event::BackspaceCtrl()}, {"\x1B\x08", Event::BackspaceCtrl()}, {"\x1B[127;5u", Event::BackspaceCtrl()}, {"\x1B[8;5u", Event::BackspaceCtrl()},
+      {"\x1B[3~", Event::Delete()}, {"\x1B[3;5~", Event::DeleteCtrl()}, {"\x1B", Event::Escape()}, {"\n", Event::Return()}, {"\r", Event::Return()}, {"\t", Event::Tab()}, {"\x1B[Z", Event::TabReverse()},
       {"\x1BOP", Event::F1()}, {"\x1BOQ", Event::F2()}, {"\x1BOR", Event::F3()}, {"\x1BOS", Event::F4()}, {"\x1B[15~", Event::F5()}, {"\x1B[17~", Event::F6()}, {"\x1B[18~", Event::F7()}, {"\x1B[19~", Event::F8()}, {"\x1B[20~", Event::F9()}, {"\x1B[21~", Event::F10()}, {"\x1B[23~", Event::F11()}, {"\x1B[24~", Event::F12()},
       {"\x1B[2~", Event::Insert()}, {"\x1B[H", Event::Home()}, {"\x1B[F", Event::End()}, {"\x1B[5~", Event::PageUp()}, {"\x1B[6~", Event::PageDown()},
       {"\x1BOA", Event::ArrowUp()}, {"\x1BOB", Event::ArrowDown()}, {"\x1BOC", Event::ArrowRight()}, {"\x1BOD", Event::ArrowLeft()}, {"\x1BOH", Event::Home()}, {"\x1BOF", Event::End()},
