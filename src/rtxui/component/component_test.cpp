@@ -500,4 +500,30 @@ TEST_CASE("Input Component Layout Height", "[component]") {
   CHECK(input_el->layout_height() == 3);
 }
 
+TEST_CASE("Input Component State Preservation", "[component]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
+  REQUIRE(input_comp != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  REQUIRE(input_ptr != nullptr);
+
+  // Focus and type 'a'
+  input_el->set_focused(true);
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "ahello world");
+  CHECK(input_ptr->cursor_pos == 1);
+
+  // Type 'b'
+  input_ptr->OnEvent(Event::Keyboard::From('b'));
+  input_ptr->Digest();
+  // cursor_pos should be preserved as 1, so 'b' is typed after 'a'.
+  CHECK(input_ptr->value == "abhello world");
+  CHECK(input_ptr->cursor_pos == 2);
+}
+
 }  // namespace

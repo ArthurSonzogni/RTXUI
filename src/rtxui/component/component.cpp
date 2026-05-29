@@ -194,6 +194,7 @@ void ComponentBase::Render() {
     CollectElementStates(root_.get(), {}, saved_states);
   }
 
+  old_children_ = std::vector<Ref<ComponentBase>>(children_.begin(), children_.end());
   children_.clear();
   slots_.clear();
 
@@ -339,7 +340,20 @@ void ComponentBase::Render(const xml::Node& node,
 
         auto it = import_source->imports_.find(std::string(child_node.tag));
         if (it != import_source->imports_.end()) {
-          auto child = it->second();
+          Ref<ComponentBase> child;
+          for (auto it_old = old_children_.begin(); it_old != old_children_.end(); ++it_old) {
+            if ((*it_old)->Tag() == child_node.tag) {
+              child = *it_old;
+              old_children_.erase(it_old);
+              break;
+            }
+          }
+
+          bool is_new = false;
+          if (!child) {
+            child = it->second();
+            is_new = true;
+          }
           children_.insert(child);
 
           if (child_node.attributes.contains("id")) {
@@ -351,7 +365,11 @@ void ComponentBase::Render(const xml::Node& node,
             child->classes_.assign(class_views.begin(), class_views.end());
           }
 
-          child->Mount();
+          if (is_new) {
+            child->Mount();
+          } else {
+            child->two_way_bindings_.clear();
+          }
 
           for (auto& [key, value] : child_node.attributes) {
             if (key == "id" || key == "class") continue;
