@@ -147,6 +147,18 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_input example/input.cpp)
   target_link_libraries(rtxui_example_input PRIVATE rtxui)
+
+  add_executable(rtxui_example_textarea example/textarea.cpp)
+  target_link_libraries(rtxui_example_textarea PRIVATE rtxui)
+
+  add_executable(rtxui_example_checkbox example/checkbox.cpp)
+  target_link_libraries(rtxui_example_checkbox PRIVATE rtxui)
+
+  add_executable(rtxui_example_slider example/slider.cpp)
+  target_link_libraries(rtxui_example_slider PRIVATE rtxui)
+
+  add_executable(rtxui_example_progress example/progress.cpp)
+  target_link_libraries(rtxui_example_progress PRIVATE rtxui)
 endif()
 
 # An option to enable testing

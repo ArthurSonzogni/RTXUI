@@ -569,4 +569,80 @@ TEST_CASE("Layout: white-space", "[layout][white-space]") {
   }
 }
 
+// ─── Textarea rendering tests ───────────────────────────────────────────────
+
+TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
+  struct TestComponent : Component<TestComponent> {
+    std::string text = "hello";
+    std::string_view Setup() {
+      Bind(text);
+      Import<rtxui::textarea>();
+      return R"html(
+        <textarea class="ta" value="{text}" />
+      )html";
+    }
+  };
+  auto c = Ref<TestComponent>::New();
+  c->Mount();
+  c->Digest();
+
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  // Width 10: border(1)+padding(1)+content(5)+padding(1)+scrollbar(1)+border(1) = 10
+  // Height 3: top-border + content-row + bottom-border
+  Texture texture(10, 3);
+  if (layout_box) {
+    LayoutConstraints constraints;
+    constraints.width = {10, MeasureMode::Exactly};
+    constraints.height = {3, MeasureMode::Exactly};
+    auto fragment = RunLayout({layout_box.get()}, constraints);
+    Paint(fragment.get(), texture);
+  }
+  std::string layer = GetTextLayer(texture);
+  INFO("Actual render: [" << layer << "]");
+  // Row 0: top border    "┌─────── ┐"
+  // Row 1: content line  "│ hello  │"  (padding + cursor('h') + "ello" + padding + scrollbar)
+  // Row 2: bottom border "└─────── ┘"
+  CHECK(layer == "┌─────── ┐\n"
+                 "│ hello  │\n"
+                 "└─────── ┘\n");
+}
+
+TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
+  struct TestComponent : Component<TestComponent> {
+    std::string text = "foo\nbar";
+    std::string_view Setup() {
+      Bind(text);
+      Import<rtxui::textarea>();
+      return R"html(
+        <textarea class="ta" value="{text}" />
+      )html";
+    }
+  };
+  auto c = Ref<TestComponent>::New();
+  c->Mount();
+  c->Digest();
+
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  // Width 8: border(1)+padding(1)+content(3)+padding(1)+scrollbar(1)+border(1) = 8
+  // Height 4: top-border + 2 content rows + bottom-border
+  Texture texture(8, 4);
+  if (layout_box) {
+    LayoutConstraints constraints;
+    constraints.width = {8, MeasureMode::Exactly};
+    constraints.height = {4, MeasureMode::Exactly};
+    auto fragment = RunLayout({layout_box.get()}, constraints);
+    Paint(fragment.get(), texture);
+  }
+  std::string layer = GetTextLayer(texture);
+  INFO("Actual multiline render: [" << layer << "]");
+  // Row 0: "┌───── ┐"
+  // Row 1: "│ foo  │"   ← cursor 'f' + "oo" + padding + scrollbar, width 3 text
+  // Row 2: "│ bar  │"   ← "bar" + padding + scrollbar, width 3 text
+  // Row 3: "└───── ┘"
+  CHECK(layer == "┌───── ┐\n"
+                 "│ foo  │\n"
+                 "│ bar  │\n"
+                 "└───── ┘\n");
+}
+
 }  // namespace rtxui

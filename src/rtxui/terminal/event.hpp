@@ -84,7 +84,8 @@ struct Event {
   // --- Singleton Events ---
   static const Event& ArrowLeft(); static const Event& ArrowRight(); static const Event& ArrowUp(); static const Event& ArrowDown();
   static const Event& ArrowLeftCtrl(); static const Event& ArrowRightCtrl(); static const Event& ArrowUpCtrl(); static const Event& ArrowDownCtrl();
-  static const Event& Backspace(); static const Event& BackspaceCtrl(); static const Event& Delete(); static const Event& DeleteCtrl(); static const Event& Return(); static const Event& Escape();
+  static const Event& ArrowLeftAlt(); static const Event& ArrowRightAlt(); static const Event& ArrowUpAlt(); static const Event& ArrowDownAlt();
+  static const Event& Backspace(); static const Event& BackspaceCtrl(); static const Event& BackspaceAlt(); static const Event& Delete(); static const Event& DeleteCtrl(); static const Event& DeleteAlt(); static const Event& Return(); static const Event& Escape();
   static const Event& Tab(); static const Event& TabReverse();
   static const Event& Insert(); static const Event& Home(); static const Event& End(); static const Event& PageUp(); static const Event& PageDown();
   static const Event& F1(); static const Event& F2(); static const Event& F3(); static const Event& F4(); static const Event& F5();

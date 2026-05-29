@@ -299,6 +299,62 @@ void Screen::HandleEvent(const Event& event) {
     return;
   }
 
+  if (event == Event::Tab() || event == Event::TabReverse()) {
+    std::vector<Element*> focusable;
+    auto IsFocusable = [](Element* el) {
+      if (!el) return false;
+      if (el->Attributes().count("focusable")) {
+        std::string val = el->Attributes().at("focusable");
+        return (val == "true" || val == "1");
+      }
+      std::string_view tag = el->tag();
+      if (tag == "input" || tag == "textarea" || tag == "checkbox" || tag == "slider" || tag == "button") {
+        return true;
+      }
+      return false;
+    };
+    std::function<void(Element*)> CollectFocusable = [&](Element* el) {
+      if (!el) return;
+      if (IsFocusable(el)) {
+        focusable.push_back(el);
+      }
+      for (const auto& child : el->children()) {
+        CollectFocusable(child.get());
+      }
+    };
+    if (component_->Root()) {
+      CollectFocusable(component_->Root());
+    }
+
+    if (!focusable.empty()) {
+      int curr_idx = -1;
+      for (int i = 0; i < static_cast<int>(focusable.size()); ++i) {
+        if (focusable[i]->focused()) {
+          curr_idx = i;
+          break;
+        }
+      }
+
+      int next_idx = 0;
+      if (event == Event::Tab()) {
+        next_idx = (curr_idx == -1) ? 0 : (curr_idx + 1) % focusable.size();
+      } else {
+        next_idx = (curr_idx == -1) ? (focusable.size() - 1)
+                                    : (curr_idx - 1 + focusable.size()) % focusable.size();
+      }
+
+      if (component_->Root()) {
+        component_->Root()->Visit([](Element& el) {
+          el.set_focused(false);
+        });
+      }
+      focusable[next_idx]->set_focused(true);
+      focused_element_ = focusable[next_idx];
+      DigestAndDraw();
+      return;
+    }
+  }
+
   if (event == Event::ArrowUp() || event == Event::ArrowDown() ||
       event == Event::PageUp() || event == Event::PageDown() ||
       event == Event::ArrowLeft() || event == Event::ArrowRight()) {

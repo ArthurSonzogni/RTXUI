@@ -253,117 +253,154 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     line_start_index = container_frag->children.size();
   };
 
-  for (auto& child : box->children) {
-    if (child->is_text) {
-      // Iterate grapheme-by-grapheme to correctly handle double-width
-      // characters (CJK, emoji). We track byte offsets for slicing and
-      // column widths for layout/wrap decisions separately.
+  // Helper: process a span of text in this inline-flow context.
+  // Newlines in |text| call commit_line() at THIS level so they break the
+  // enclosing anonymous block's lines, not just the span's internal layout.
+  // |dom_node|, |fg|, and |bg| come from the owning element (e.g. <span>)
+  // so cursor highlights (background-color: white) are preserved.
+  auto process_text_in_flow = [&](const std::string& text,
+                                   Element* dom_node,
+                                   std::optional<Color> fg,
+                                   std::optional<Color> bg) {
+    size_t byte_start = 0;
+    int col_start = 0;
+    size_t last_space_byte = 0;
+    int last_space_col = 0;
+    bool have_last_space = false;
 
-      const std::string& text = child->text_data;
-      size_t byte_start = 0;       // byte offset of current fragment start
-      int col_start = 0;           // column offset of current fragment start
-      size_t last_space_byte = 0;  // byte offset of last seen space
-      int last_space_col = 0;      // column offset of last seen space
-      bool have_last_space = false;
+    auto emit_frag = [&](size_t byte_end, int col_width) {
+      if (byte_end == byte_start && col_width == 0 && byte_end != text.size())
+        return;
+      auto text_frag = std::make_shared<PhysicalFragment>(col_width, 1);
+      text_frag->dom_node = dom_node;
+      text_frag->is_text = true;
+      text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
+      text_frag->foreground_color = fg;
+      text_frag->background_color = bg;
+      container_frag->children.push_back(
+          {text_frag,
+           box->style.padding.left + box->style.border.left + cursor_x,
+           cursor_y});
+      cursor_x += col_width;
+    };
 
-      // create_fragment: emit a fragment from byte_start..byte_end of width
-      // col_start..col_end_exclusive.
-      auto create_fragment = [&](size_t byte_end, int col_width) {
-        if (byte_end == byte_start && col_width == 0 &&
-            byte_end != text.size()) {
-          return;
-        }
-        auto text_frag =
-            std::make_shared<PhysicalFragment>(col_width, 1);
-        text_frag->dom_node = child->dom_node;
-        text_frag->is_text = true;
-        text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
-        text_frag->foreground_color = child->style.foreground_color;
+    int cur_col = col_start;
+    for (const Grapheme& g : Graphemes(text)) {
+      size_t byte_end =
+          static_cast<size_t>(g.text.data() + g.text.size() - text.data());
 
-        container_frag->children.push_back(
-            {text_frag,
-             box->style.padding.left + box->style.border.left + cursor_x,
-             cursor_y});
-        cursor_x += col_width;
-      };
+      bool is_newline = (g.text == "\n" || g.text == "\r\n" || g.text == "\r");
+      if (is_newline) {
+        size_t frag_byte_end =
+            static_cast<size_t>(g.text.data() - text.data());
+        emit_frag(frag_byte_end, cur_col - col_start);
+        byte_start = byte_end;
+        col_start = cur_col + g.width;
+        cur_col = col_start;
+        have_last_space = false;
+        commit_line();
+        continue;
+      }
 
-      int cur_col = col_start;   // current column position within this text
-      for (const Grapheme& g : Graphemes(text)) {
-        size_t byte_end = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
+      if (g.text.size() == 1 && g.text[0] == ' ') {
+        last_space_byte = static_cast<size_t>(g.text.data() - text.data());
+        last_space_col = cur_col - col_start;
+        have_last_space = true;
+      }
 
-        if (g.text.size() == 1 && g.text[0] == ' ') {
-          last_space_byte = static_cast<size_t>(g.text.data() - text.data());
-          last_space_col = cur_col - col_start;
-          have_last_space = true;
-        }
-
-        if (box->style.white_space == WhiteSpace::Nowrap) {
+      if (box->style.white_space == WhiteSpace::Nowrap) {
+        cur_col += g.width;
+      } else if (cursor_x + (cur_col - col_start) + g.width >
+                 content_width_limit) {
+        if (have_last_space) {
+          emit_frag(last_space_byte, last_space_col);
+          byte_start = last_space_byte + 1;
+          col_start = last_space_col + 1;
+          cur_col = col_start;
+          have_last_space = false;
+          commit_line();
+          byte_end = static_cast<size_t>(g.text.data() + g.text.size() -
+                                         text.data());
           cur_col += g.width;
-        } else if (cursor_x + (cur_col - col_start) + g.width > content_width_limit) {
-          if (have_last_space) {
-            // Wrap at last space
-            int frag_cols = last_space_col;
-            size_t frag_byte_end = last_space_byte;
-            create_fragment(frag_byte_end, frag_cols);
-
-            // skip the space byte
-            byte_start = last_space_byte + 1;
-            col_start = last_space_col + 1;  // space is 1 col wide
-            cur_col = col_start;
-            have_last_space = false;
-            commit_line();
-            // Retry the current grapheme
-            byte_end = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
-            cur_col += g.width;
-          } else if (cursor_x > 0) {
-            commit_line();
-            // cur position unchanged, retry grapheme
-            cur_col += g.width;
-          } else {
-            // Single grapheme fills the line
-            cur_col += g.width;
-            size_t next_byte = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
-            create_fragment(next_byte, cur_col - col_start);
-            byte_start = next_byte;
-            col_start = cur_col;
-            commit_line();
-          }
+        } else if (cursor_x > 0) {
+          commit_line();
+          cur_col += g.width;
         } else {
           cur_col += g.width;
+          size_t next_byte =
+              static_cast<size_t>(g.text.data() + g.text.size() - text.data());
+          emit_frag(next_byte, cur_col - col_start);
+          byte_start = next_byte;
+          col_start = cur_col;
+          commit_line();
+        }
+      } else {
+        cur_col += g.width;
+      }
+    }
+
+    if (byte_start < text.size()) {
+      emit_frag(text.size(), cur_col - col_start);
+    }
+  };
+
+  // Helper: place an element as an opaque inline box (existing behaviour for
+  // block-level, flex, or elements with non-text children).
+  auto place_opaque_box = [&](LayoutBox* elem) {
+    int m_left = elem->style.margin.left;
+    int m_right = elem->style.margin.right;
+    int m_top = elem->style.margin.top;
+    int m_bottom = elem->style.margin.bottom;
+    int child_m_horiz = m_left + m_right;
+    int child_m_vert = m_top + m_bottom;
+
+    LayoutConstraints child_c = {
+        {content_width_limit - child_m_horiz, MeasureMode::AtMost},
+        {0, MeasureMode::Undefined}};
+    auto child_frag = RunLayout({elem}, child_c);
+
+    if (box->style.white_space != WhiteSpace::Nowrap &&
+        cursor_x + child_frag->width + child_m_horiz > content_width_limit &&
+        cursor_x > 0) {
+      commit_line();
+    }
+
+    container_frag->children.push_back(
+        {child_frag,
+         box->style.padding.left + box->style.border.left + cursor_x + m_left,
+         cursor_y + m_top});
+    line_height = std::max(line_height, child_frag->height + child_m_vert);
+    cursor_x += child_frag->width + child_m_horiz;
+  };
+
+  for (auto& child : box->children) {
+    if (child->is_text) {
+      // Direct text node: process in this flow so \n breaks lines here.
+      process_text_in_flow(child->text_data, child->dom_node,
+                           child->style.foreground_color,
+                           child->style.background_color);
+    } else if (child->style.display_outside == DisplayOutside::Inline &&
+               child->style.display_inside == DisplayInside::Flow &&
+               child->style.border.Horiz() == 0 && child->style.border.Vert() == 0 &&
+               child->style.margin.Horiz() == 0 && child->style.margin.Vert() == 0 &&
+               child->style.padding.Horiz() == 0 && child->style.padding.Vert() == 0) {
+      // Inline element (e.g. <span>): flatten its children into this flow so
+      // that a \n in the text breaks lines at the OUTER anonymous-block level.
+      // This is correct CSS Inline Formatting Context (IFC) behaviour.
+      for (auto& grandchild : child->children) {
+        if (grandchild->is_text) {
+          process_text_in_flow(grandchild->text_data,
+                               child->dom_node,
+                               child->style.foreground_color,
+                               child->style.background_color);
+        } else {
+          // Non-text element nested inside inline span: opaque box.
+          place_opaque_box(grandchild.get());
         }
       }
-
-      // Emit any remaining text
-      if (byte_start < text.size()) {
-        create_fragment(text.size(), cur_col - col_start);
-      }
     } else {
-      // For elements in inline flow, we must respect their margins.
-      int m_left = child->style.margin.left;
-      int m_right = child->style.margin.right;
-      int m_top = child->style.margin.top;
-      int m_bottom = child->style.margin.bottom;
-      int child_m_horiz = m_left + m_right;
-      int child_m_vert = m_top + m_bottom;
-
-      LayoutConstraints child_c = {{content_width_limit - child_m_horiz, MeasureMode::AtMost},
-                                   {0, MeasureMode::Undefined}};
-      auto child_frag = RunLayout({child.get()}, child_c);
-
-      // If the child (plus its horizontal margins) overflows the current line, wrap.
-      if (box->style.white_space != WhiteSpace::Nowrap &&
-          cursor_x + child_frag->width + child_m_horiz > content_width_limit && cursor_x > 0) {
-        commit_line();
-      }
-
-      container_frag->children.push_back(
-          {child_frag,
-           box->style.padding.left + box->style.border.left + cursor_x + m_left,
-           cursor_y + m_top});
-
-      // Inline boxes affect the line height based on their content + vertical margins.
-      line_height = std::max(line_height, child_frag->height + child_m_vert);
-      cursor_x += child_frag->width + child_m_horiz;
+      // Block-level or flex element: treat as opaque inline box.
+      place_opaque_box(child.get());
     }
   }
 

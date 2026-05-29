@@ -309,8 +309,17 @@ void ComponentBase::Render(const xml::Node& node,
 
       case xml::Node::Type::kText: {
         std::string text = Interpolate(child_node.text);
-        for (char& c : text) {
-          if (c == '\n' || c == '\r') c = ' ';
+        bool preserve_newlines = false;
+        for (Element* curr = slot; curr; curr = curr->Parent()) {
+          if (curr->tag() == "textarea" || curr->tag() == "pre") {
+            preserve_newlines = true;
+            break;
+          }
+        }
+        if (!preserve_newlines) {
+          for (char& c : text) {
+            if (c == '\n' || c == '\r') c = ' ';
+          }
         }
         slot->AddChild(Ref<TextElement>::New(text));
         break;

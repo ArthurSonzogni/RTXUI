@@ -124,13 +124,8 @@ class button : public Component<button> {
   )html";
 };
 
-class input : public Component<input> {
+class TextInputBase {
  public:
-  void InitReflection() override;
-  std::string_view Setup() override;
-  bool OnEvent(Event event) override;
-  bool Digest() override;
-
   std::string value;
   int cursor_pos = 0;
 
@@ -140,9 +135,76 @@ class input : public Component<input> {
   std::string right_text;
   std::string cursor_class = "cursor";
 
- private:
+ protected:
   bool is_focused_ = false;
-  void KeepCursorVisible();
+  int ideal_column_ = 0;
+
+  void KeepCursorVisible(Element* root, bool is_multiline);
+  bool OnEventShared(ComponentBase* self, Event event, bool is_multiline);
+  bool DigestShared(ComponentBase* self);
+};
+
+class input : public Component<input>, public TextInputBase {
+ public:
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool OnEvent(Event event) override;
+  bool Digest() override;
+};
+
+class textarea : public Component<textarea>, public TextInputBase {
+ public:
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool OnEvent(Event event) override;
+  bool Digest() override;
+};
+
+class checkbox : public Component<checkbox> {
+ public:
+  bool checked = false;
+  std::string checked_char = " ";
+  std::string focus_class = "";
+
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool OnEvent(Event event) override;
+  bool Digest() override;
+};
+
+class slider : public Component<slider> {
+ public:
+  int value = 0;
+  int min = 0;
+  int max = 100;
+  int step = 1;
+  int width = 20;
+
+  // Render bindings
+  std::string track_left;
+  std::string thumb_char = "●";
+  std::string track_right;
+  std::string focus_class = "";
+
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool OnEvent(Event event) override;
+  bool Digest() override;
+};
+
+class progress : public Component<progress> {
+ public:
+  double value = 0;
+  double max = 100;
+  int width = 20;
+
+  // Render bindings
+  std::string filled_track;
+  std::string empty_track;
+
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool Digest() override;
 };
 
 }  // namespace rtxui
