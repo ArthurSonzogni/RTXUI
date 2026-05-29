@@ -10,8 +10,11 @@ class Counter : public Component<Counter> {
  public:
   int count = 0;
 
+  int double_count() const { return count * 2; }
+
   Counter() {
     Bind(count);
+    BindComputed(double_count);
     Import("Increment", [this]() { count++; });
     Import("Decrement", [this]() { count--; });
   }
@@ -19,39 +22,47 @@ class Counter : public Component<Counter> {
   std::string_view Setup() override {
     Import<rtxui::div>();
     Import<rtxui::span>();
-    Import<rtxui::p>();
     Import<rtxui::button>();
     return R"html(
-      <div>
-        <p>Simple Clicker Demo</p>
-        <button onclick="Decrement">-</button>
-        <span> Value: {count} </span>
-        <button onclick="Increment">+</button>
+      <div class="counter-container">
+        <div class="row">
+          <span>Count: {count}</span>
+          <span>Double: {double_count}</span>
+        </div>
+        <div class="row button-row">
+          <button onclick="Increment">Increment</button>
+          <button onclick="Decrement">Decrement</button>
+        </div>
       </div>
 
       <style>
         self {
           display: block;
           padding: 1;
-          border: tall;
-          border-color: green;
-          background-color: rgb(20, 20, 20);
+          background-color: rgb(15, 23, 42);
           color: white;
+          border: tall;
+          border-color: rgb(59, 130, 246);
         }
-        p {
-          font-weight: bold;
-          color: cyan;
+        .counter-container {
+          display: block;
+        }
+        .row {
+          display: block;
           margin-bottom: 1;
+        }
+        .button-row {
+          display: flex;
+          gap: 2;
+        }
+        span {
+          margin-right: 2;
         }
         button {
           border: solid;
-          border-color: yellow;
+          border-color: rgb(59, 130, 246);
           padding-left: 1;
           padding-right: 1;
-        }
-        span {
-          margin-left: 1;
-          margin-right: 1;
         }
       </style>
     )html";

@@ -4,7 +4,7 @@
       <iframe
         :src="`/terminal.html?src=${encodeURIComponent(src)}&cols=${cols}&rows=${rows}`"
         class="terminal-iframe"
-        :style="{ height: `${rows * 17 + 24}px` }"
+        :style="{ height: `${rows * 19 + 24}px` }"
         frameborder="0"
         scrolling="no"
       ></iframe>

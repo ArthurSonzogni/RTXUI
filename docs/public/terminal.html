@@ -2,6 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
   <style>
@@ -19,6 +22,12 @@
       height: 100%;
       padding: 12px;
       box-sizing: border-box;
+    }
+    .xterm-viewport {
+      scrollbar-width: none !important;
+    }
+    .xterm-viewport::-webkit-scrollbar {
+      display: none !important;
     }
   </style>
 </head>
@@ -41,8 +50,21 @@
       console.error(errStr, event.reason);
     };
 
+    // Prevent browser focus-scrolling bugs
+    window.addEventListener('scroll', () => {
+      window.scrollTo(0, 0);
+    });
+
     window.addEventListener('load', () => {
-      setTimeout(() => {
+      const termEl = document.getElementById('terminal');
+      if (termEl) {
+        termEl.addEventListener('scroll', () => {
+          termEl.scrollTop = 0;
+          termEl.scrollLeft = 0;
+        });
+      }
+
+      document.fonts.ready.then(() => {
         const params = new URLSearchParams(window.location.search);
         const src = params.get('src');
         const cols = parseInt(params.get('cols') || '80', 10);
@@ -53,6 +75,10 @@
           cols: cols,
           rows: rows,
           cursorBlink: true,
+          convertEol: true,
+          scrollback: 0,
+          fontFamily: '"JetBrains Mono", Fira Code, Cascadia Code, Consolas, "DejaVu Sans Mono", monospace',
+          fontSize: 14,
           theme: {
             background: '#0f172a',
             foreground: '#f8fafc',
@@ -62,9 +88,6 @@
 
         window.xtermInstance = xtermInstance;
         xtermInstance.open(document.getElementById('terminal'));
-
-        xtermInstance.write("Hello from xterm.js!\r\n");
-        xtermInstance.write("\x1b[33m[INFO] Initializing terminal...\x1b[0m\r\n");
 
         window.rtxui_columns = xtermInstance.cols;
         window.rtxui_lines = xtermInstance.rows;
@@ -83,21 +106,7 @@
         });
 
         window.rtxui_on_output = (str) => {
-          console.log("[rtxui_on_output]", JSON.stringify(str));
           xtermInstance.write(str);
-          
-          // Dump buffer contents to verify it holds character data
-          setTimeout(() => {
-            console.log("--- XTERM BUFFER DUMP ---");
-            const buffer = xtermInstance.buffer.active;
-            for (let i = 0; i < buffer.length; i++) {
-              const line = buffer.getLine(i);
-              if (line) {
-                console.log(`Line ${i}:`, line.translateToString());
-              }
-            }
-            console.log("-------------------------");
-          }, 100);
         };
 
         window.Module = {
@@ -114,7 +123,6 @@
             console.log("[WASM status]", text);
           },
           locateFile: (path, prefix) => {
-            console.log("[WASM locateFile]", path, prefix);
             if (path.endsWith('.wasm')) {
               return '/wasm/' + path;
             }
@@ -123,22 +131,18 @@
         };
 
         if (src) {
-          xtermInstance.write(`\x1b[33m[INFO] Loading WASM script in 3 seconds: ${src}...\x1b[0m\r\n`);
-          setTimeout(() => {
-            xtermInstance.write(`\x1b[33m[INFO] Injecting WASM script: ${src}...\x1b[0m\r\n`);
-            const script = document.createElement('script');
-            script.src = src;
-            script.onerror = (err) => {
-              const errStr = `\r\n\x1b[31;1m[ERROR]\x1b[0m Failed to load script: ${src}\r\n`;
-              xtermInstance.write(errStr);
-              console.error(errStr, err);
-            };
-            document.body.appendChild(script);
-          }, 3000);
+          const script = document.createElement('script');
+          script.src = src;
+          script.onerror = (err) => {
+            const errStr = `\r\n\x1b[31;1m[ERROR]\x1b[0m Failed to load script: ${src}\r\n`;
+            xtermInstance.write(errStr);
+            console.error(errStr, err);
+          };
+          document.body.appendChild(script);
         } else {
           xtermInstance.write("\x1b[31m[ERROR] No WASM source script provided (missing 'src' query param)\x1b[0m\r\n");
         }
-      }, 50);
+      });
     });
   </script>
 </body>
