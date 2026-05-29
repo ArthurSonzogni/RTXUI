@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 
+#include "rtxui/core/string.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/dom/element.hpp"
@@ -471,17 +472,30 @@ void PaintImpl(const PhysicalFragment* frag,
 
   // 2. Draw Text
   if (frag->is_text) {
-    for (size_t i = 0; i < frag->text_content.size(); ++i) {
-      int x = abs_x + static_cast<int>(i) + (frag->has_border ? 1 : 0);
-      int y = abs_y + (frag->has_border ? 1 : 0);
+    int border_offset = frag->has_border ? 1 : 0;
+    int cell_x = 0;  // cell column offset within the text fragment
+    int y = abs_y + border_offset;
+    for (const Grapheme& g : Graphemes(frag->text_content)) {
+      int x = abs_x + border_offset + cell_x;
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
           clip.Contains(x, y)) {
         auto& cell = texture[x, y];
-        cell.character = std::string(1, frag->text_content[i]);
+        cell.character = std::string(g.text);
         Color fg = current_foreground_color;
         Color bg = cell.background_color;
         cell.foreground_color = Blend(fg, bg);
       }
+      // For double-width graphemes, mark the continuation cell as empty so
+      // the terminal does not shift subsequent characters.
+      if (g.width == 2) {
+        int x2 = x + 1;
+        if (x2 >= 0 && x2 < texture.width() && y >= 0 && y < texture.height() &&
+            clip.Contains(x2, y)) {
+          auto& cont = texture[x2, y];
+          cont.character = "";  // continuation placeholder — rendered as space
+        }
+      }
+      cell_x += g.width;
     }
   }
 
