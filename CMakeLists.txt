@@ -86,6 +86,11 @@ add_library(rtxui_lib STATIC
 target_compile_features(rtxui_lib PUBLIC cxx_std_26)
 target_include_directories(rtxui_lib PUBLIC "src" "include")
 
+if(EMSCRIPTEN)
+  add_compile_options("-sASYNCIFY")
+  add_link_options("-sASYNCIFY" "-sEXPORTED_RUNTIME_METHODS=[ccall,cwrap]")
+endif()
+
 # Enable experimental reflection if supported by the compiler
 include(CheckCXXCompilerFlag)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

@@ -118,3 +118,9 @@ class ScrollBox : public Component<ScrollBox> {
 ```
 
 By adding `overflow-y: scroll` and restricting `height`, RTXUI automatically crops overflowing elements and displays a modern, responsive scrollbar on the right. Scroll events bubble up nested containers when boundaries are reached.
+
+### Live Interactive Demo
+Below is the live WebAssembly demo of the nested scrolling implementation in RTXUI. Click inside the terminal and use your mouse wheel or the arrow keys to navigate the lists.
+
+<WasmTerminal src="/wasm/rtxui_example_nested_scroll.js" />
+
