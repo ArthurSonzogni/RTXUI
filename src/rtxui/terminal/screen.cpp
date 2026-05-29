@@ -135,6 +135,7 @@ Screen::Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> dev
   }
   UpdateSize();
   component_->Mount();
+  component_->Digest();
   Draw();
 }
 

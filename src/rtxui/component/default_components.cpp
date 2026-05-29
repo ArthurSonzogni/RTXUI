@@ -233,37 +233,24 @@ bool input::OnEvent(Event event) {
 }
 
 bool input::Digest() {
-  bool changed = Component<input>::Digest();
-
   bool cur_focused = Root() ? Root()->focused() : false;
-  if (cur_focused != is_focused_) {
-    is_focused_ = cur_focused;
-    changed = true;
-  }
+  is_focused_ = cur_focused;
 
   auto graphemes = GetGraphemesList(value);
   int n = static_cast<int>(graphemes.size());
   if (cursor_pos < 0) {
     cursor_pos = 0;
-    changed = true;
   }
   if (cursor_pos > n) {
     cursor_pos = n;
-    changed = true;
   }
 
-  std::string new_left = GraphemesToString(graphemes, 0, cursor_pos);
-  std::string new_cursor = (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
-  std::string new_right = GraphemesToString(graphemes, cursor_pos + 1);
-  std::string new_class = is_focused_ ? "cursor cursor-focused" : "cursor";
+  left_text = GraphemesToString(graphemes, 0, cursor_pos);
+  cursor_char = (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
+  right_text = GraphemesToString(graphemes, cursor_pos + 1);
+  cursor_class = is_focused_ ? "cursor cursor-focused" : "cursor";
 
-  if (new_left != left_text || new_cursor != cursor_char || new_right != right_text || new_class != cursor_class) {
-    left_text = std::move(new_left);
-    cursor_char = std::move(new_cursor);
-    right_text = std::move(new_right);
-    cursor_class = std::move(new_class);
-    changed = true;
-  }
+  bool changed = Component<input>::Digest();
 
   if (changed) {
     KeepCursorVisible();
