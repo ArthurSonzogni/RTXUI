@@ -54,7 +54,7 @@ class ColorDemo : public Component<ColorDemo> {
     return R"html(
       <div class="container">
         <h1>RTXUI Color System Demo</h1>
-        <p>Scroll down to see more colors. Built without borders using padding, margins, and scroll overflow.</p>
+        <p>Scroll to see standard keywords, hex codes, rgb(), and rgba() syntaxes.</p>
         
         <div class="h2">1. Standard Keywords (16-color base)</div>
         <div class="row">
@@ -82,23 +82,13 @@ class ColorDemo : public Component<ColorDemo> {
           <ColorBox text="aqua" bg_color="aqua" fg_color="black"></ColorBox>
         </div>
 
-        <div class="h2">2. Hex Colors (#RGB, #RRGGBB)</div>
+        <div class="h2">2. Hex Colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA)</div>
         <div class="row">
           <ColorBox text="#f0f" bg_color="#f0f" fg_color="white"></ColorBox>
           <ColorBox text="#0ff" bg_color="#0ff" fg_color="black"></ColorBox>
           <ColorBox text="#ff3366" bg_color="#ff3366" fg_color="white"></ColorBox>
           <ColorBox text="#33cc66" bg_color="#33cc66" fg_color="black"></ColorBox>
         </div>
-
-        <div class="h2">3. RGBA Colors with Alpha Blending</div>
-        <div class="row">
-          <ColorBox text="rgba(255,0,0,0.5)" bg_color="rgba(255,0,0,0.5)" fg_color="white"></ColorBox>
-          <ColorBox text="rgba(0,0,255,0.3)" bg_color="rgba(0,0,255,0.3)" fg_color="white"></ColorBox>
-          <ColorBox text="#00ff0088" bg_color="#00ff0088" fg_color="black"></ColorBox>
-          <ColorBox text="#ffffff33" bg_color="#ffffff33" fg_color="white"></ColorBox>
-        </div>
-
-        <div class="h2">4. Pastel Palette</div>
         <div class="row">
           <ColorBox text="#ffb3ba" bg_color="#ffb3ba" fg_color="black"></ColorBox>
           <ColorBox text="#ffdfba" bg_color="#ffdfba" fg_color="black"></ColorBox>
@@ -111,19 +101,27 @@ class ColorDemo : public Component<ColorDemo> {
           <ColorBox text="#ffd3e8" bg_color="#ffd3e8" fg_color="black"></ColorBox>
           <ColorBox text="#cbf3f0" bg_color="#cbf3f0" fg_color="black"></ColorBox>
         </div>
-
-        <div class="h2">5. Grayscale & Muted tones</div>
         <div class="row">
-          <ColorBox text="#222" bg_color="#222" fg_color="white"></ColorBox>
-          <ColorBox text="#444" bg_color="#444" fg_color="white"></ColorBox>
-          <ColorBox text="#666" bg_color="#666" fg_color="white"></ColorBox>
-          <ColorBox text="#888" bg_color="#888" fg_color="black"></ColorBox>
-        </div>
-        <div class="row">
-          <ColorBox text="#aaa" bg_color="#aaa" fg_color="black"></ColorBox>
-          <ColorBox text="#ccc" bg_color="#ccc" fg_color="black"></ColorBox>
-          <ColorBox text="#eee" bg_color="#eee" fg_color="black"></ColorBox>
+          <ColorBox text="#ff007f" bg_color="#ff007f" fg_color="white"></ColorBox>
+          <ColorBox text="#39ff14" bg_color="#39ff14" fg_color="black"></ColorBox>
+          <ColorBox text="#00ffcc88" bg_color="#00ffcc88" fg_color="black"></ColorBox>
           <ColorBox text="#151520" bg_color="#151520" fg_color="white"></ColorBox>
+        </div>
+
+        <div class="h2">3. RGB Colors</div>
+        <div class="row">
+          <ColorBox text="rgb(255,0,128)" bg_color="rgb(255,0,128)" fg_color="white"></ColorBox>
+          <ColorBox text="rgb(0,255,128)" bg_color="rgb(0,255,128)" fg_color="black"></ColorBox>
+          <ColorBox text="rgb(128,0,255)" bg_color="rgb(128,0,255)" fg_color="white"></ColorBox>
+          <ColorBox text="rgb(255,128,0)" bg_color="rgb(255,128,0)" fg_color="black"></ColorBox>
+        </div>
+
+        <div class="h2">4. RGBA Colors with Alpha Blending</div>
+        <div class="row">
+          <ColorBox text="rgba(255,0,0,0.5)" bg_color="rgba(255,0,0,0.5)" fg_color="white"></ColorBox>
+          <ColorBox text="rgba(0,0,255,0.3)" bg_color="rgba(0,0,255,0.3)" fg_color="white"></ColorBox>
+          <ColorBox text="rgba(0,255,0,0.7)" bg_color="rgba(0,255,0,0.7)" fg_color="black"></ColorBox>
+          <ColorBox text="rgba(255,255,255,0.2)" bg_color="rgba(255,255,255,0.2)" fg_color="white"></ColorBox>
         </div>
       </div>
 
