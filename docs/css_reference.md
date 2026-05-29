@@ -57,6 +57,7 @@ Color formatting for component text and backgrounds.
 - `background-color` [`<color>`](#colors): Configures the background color of cells within the element's box boundary.
 
 - `text-align` `left | right | center`: Configures the horizontal alignment of text/inline content within the element.
+- `white-space` `normal | nowrap`: Configures word wrapping. `nowrap` prevents automated text wrapping.
 
 <WasmTerminal src="/wasm/rtxui_example_text_align.js" :cols="80" :rows="24" />
 

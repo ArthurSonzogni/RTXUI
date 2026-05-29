@@ -443,6 +443,17 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "white-space") {
+    if (v == "normal") {
+      style.white_space = WhiteSpace::Normal;
+      return;
+    }
+    if (v == "nowrap") {
+      style.white_space = WhiteSpace::Nowrap;
+      return;
+    }
+  }
+
   if (p == "display") {
     // Parse combined display property (display-outside and display-inside)
     // For simplicity, handle common single-keyword values and assume default display-inside: flow
