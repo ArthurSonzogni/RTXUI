@@ -74,15 +74,17 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
   // Convert DOM to Layout Tree.
   auto layout_box = LayoutTreeBuilder::Build(component->Root());
 
-  // Execute Layout algorithm.
-  LayoutConstraints constraints;
-  constraints.width = {width, MeasureMode::Exactly};
-  constraints.height = {height, MeasureMode::Exactly};
-  auto fragment = RunLayout({layout_box.get()}, constraints);
-
-  // Paint the resulting fragments into a texture.
   Texture texture(static_cast<uint8_t>(width), static_cast<uint8_t>(height));
-  Paint(fragment.get(), texture);
+  if (layout_box) {
+    // Execute Layout algorithm.
+    LayoutConstraints constraints;
+    constraints.width = {width, MeasureMode::Exactly};
+    constraints.height = {height, MeasureMode::Exactly};
+    auto fragment = RunLayout({layout_box.get()}, constraints);
+
+    // Paint the resulting fragments into a texture.
+    Paint(fragment.get(), texture);
+  }
   return texture;
 }
 
@@ -386,6 +388,49 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
     CHECK(GetTextLayer(texture) == "A一^B \n");
   }
 
+}
+
+TEST_CASE("Layout: display: none", "[layout][display]") {
+  SECTION("Element with display: none takes no space") {
+    struct DisplayNoneTest : Component<DisplayNoneTest> {
+      std::string_view Setup() {
+        Import<div>();
+        Import<span>();
+        return R"html(
+          <style>
+            .none { display: none; }
+            .inline { display: inline; }
+          </style>
+          <div class="inline">
+            <span>A</span>
+            <span class="none">B</span>
+            <span>C</span>
+          </div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<DisplayNoneTest>::New(), 5, 1);
+    CHECK(GetTextLayer(texture) == "AC   \n");
+  }
+
+  SECTION("Root element with display: none renders empty") {
+    struct RootDisplayNoneTest : Component<RootDisplayNoneTest> {
+      std::string_view Setup() {
+        Import<div>();
+        Import<span>();
+        return R"html(
+          <style>
+            .root { display: none; }
+          </style>
+          <div class="root">
+            <span>A</span>
+          </div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<RootDisplayNoneTest>::New(), 5, 1);
+    CHECK(GetTextLayer(texture) == "     \n");
+  }
 }
 
 }  // namespace rtxui

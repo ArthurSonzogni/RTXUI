@@ -192,6 +192,7 @@ Controls the visibility and size layout of scrollbars.
 Controls the layout display formatting context of an element.
 
 - **Format**:
+  - `none`: The element and its descendants are not displayed and take up no layout space.
   - `block`: Behaves as a block container.
   - `inline`: Behaves as an inline container.
   - `flex`: Behaves as a flexible box container.
