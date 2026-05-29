@@ -293,6 +293,11 @@ void Screen::HandleEvent(const Event& event) {
     }
   }
 
+  if (component_->OnEvent(event)) {
+    DigestAndDraw();
+    return;
+  }
+
   if (event == Event::ArrowUp() || event == Event::ArrowDown() ||
       event == Event::PageUp() || event == Event::PageDown() ||
       event == Event::ArrowLeft() || event == Event::ArrowRight()) {
@@ -396,10 +401,6 @@ void Screen::HandleEvent(const Event& event) {
     }
   }
 
-  if (component_->OnEvent(event)) {
-    DigestAndDraw();
-    return;
-  }
   if (event == Event::Escape() || event == Event::CtrlC()) {
     running_ = false;
     return;

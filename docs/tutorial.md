@@ -164,3 +164,44 @@ class CJKApp : public Component<CJKApp> {
 
 <WasmTerminal src="/wasm/rtxui_example_cjk.js" :cols="80" :rows="18" />
 
+---
+
+## 5. Interactive Text Input
+
+The `<input>` element provides a fully interactive text box out-of-the-box. It features two-way data binding, full grapheme-aware navigation (including Ctrl to skip word boundaries), backspace/delete manipulation (including Ctrl to delete words), mouse click positioning, and horizontal scrolling on overflow.
+
+```cpp
+class InputApp : public Component<InputApp> {
+ public:
+  std::string my_text = "Hello World";
+
+  InputApp() {
+    Bind(my_text);
+  }
+
+  std::string_view Setup() override {
+    Import<rtxui::div>();
+    Import<rtxui::input>();
+    return R"html(
+      <div class="card">
+        <input class="styled-input" value="{my_text}" />
+        <div>Value: {my_text}</div>
+      </div>
+      <style>
+        .styled-input {
+          display: inline flex;
+          width: 30;
+          border: solid;
+          border-color: rgb(59, 130, 246);
+          padding-left: 1;
+          padding-right: 1;
+          margin-bottom: 1;
+        }
+      </style>
+    )html";
+  }
+};
+```
+
+<WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="22" />
+

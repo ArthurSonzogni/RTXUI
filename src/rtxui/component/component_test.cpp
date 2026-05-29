@@ -399,4 +399,94 @@ TEST_CASE("ComponentPropsShortNames", "[component]") {
   CHECK(output.find("Message: short, Value: 999") != std::string::npos);
 }
 
+class InputTestComponent : public rtxui::Component<InputTestComponent> {
+ public:
+  std::string my_text = "hello world";
+  void InitReflection() override {
+    Bind(my_text);
+    Import<rtxui::input>();
+    rtxui::Component<InputTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <input value="{my_text}" />
+  )";
+};
+
+TEST_CASE("Input Component Basic Interactions", "[component]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+  
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  
+  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
+  REQUIRE(input_comp != nullptr);
+  
+  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  REQUIRE(input_ptr != nullptr);
+  
+  // Verify initial state
+  CHECK(input_ptr->value == "hello world");
+  CHECK(input_ptr->cursor_pos == 0);
+  
+  // Focus to accept events
+  input_el->set_focused(true);
+  
+  // ArrowRight
+  input_ptr->OnEvent(Event::ArrowRight());
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_pos == 1);
+  
+  // Type a char '!'
+  input_ptr->OnEvent(Event::Keyboard::From('!'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "h!ello world");
+  CHECK(input_ptr->cursor_pos == 2);
+  
+  // Backspace
+  input_ptr->OnEvent(Event::Backspace());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello world");
+  CHECK(input_ptr->cursor_pos == 1);
+  
+  // Ctrl + ArrowRight to skip word boundary
+  input_ptr->OnEvent(Event::ArrowRightCtrl());
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_pos == 5);
+  
+  // Ctrl + Backspace to delete the word "hello"
+  Event::Keyboard kb_backspace;
+  kb_backspace.special = Event::Keyboard::Special::Backspace;
+  kb_backspace.modifier.ctrl = true;
+  Event ctrl_backspace(kb_backspace);
+  
+  input_ptr->OnEvent(ctrl_backspace);
+  input_ptr->Digest();
+  CHECK(input_ptr->value == " world");
+  CHECK(input_ptr->cursor_pos == 0);
+  
+  // Test CJK navigation
+  input_ptr->value = "你好world";
+  input_ptr->cursor_pos = 0;
+  input_ptr->Digest();
+  
+  input_ptr->OnEvent(Event::ArrowRight());
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_pos == 1);
+  
+  input_ptr->OnEvent(Event::Keyboard::From('x'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "你x好world");
+  CHECK(input_ptr->cursor_pos == 2);
+  
+  // Test Scrolling keeping cursor visible
+  input_el->set_layout_width(10); // total layout width of 10 cells
+  // With 1 cell border and 1 cell padding on left and right, inner visible width is 6.
+  input_ptr->value = "123456789";
+  input_ptr->cursor_pos = 7;
+  input_ptr->Digest();
+  // cursor_col = 7. scroll_x should adjust to 7 - 6 + 1 = 2.
+  CHECK(input_el->scroll_x() == 2);
+}
+
 }  // namespace
