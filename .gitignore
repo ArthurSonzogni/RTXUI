@@ -36,6 +36,7 @@ bazel-*
 
 # cmake & local build
 /build/
+/build_wasm/
 /build_fuzz/
 /gcc-local/
 /Testing/
@@ -47,3 +48,4 @@ bazel-*
 /docs/node_modules/
 /docs/.vitepress/dist/
 /docs/.vitepress/cache/
+/docs/public/wasm/

@@ -96,3 +96,9 @@ Enables viewport scrolling when children overflow parent boundaries.
 - `scroll-speed`: Shorthand to configure scrolling step speed on mouse/keyboard inputs.
 - `scroll-speed-x`: Step scroll distance horizontally on event triggers (e.g. `scroll-speed-x: 3`).
 - `scroll-speed-y`: Step scroll distance vertically on event triggers.
+
+### Live Horizontal Scroll Demo
+Below is a live WebAssembly demo showing horizontal layout scrolling with nested containers in RTXUI. Use Shift + Mouse Wheel or the Arrow keys to scroll horizontally.
+
+<WasmTerminal src="/wasm/rtxui_example_horizontal_scroll.js" />
+

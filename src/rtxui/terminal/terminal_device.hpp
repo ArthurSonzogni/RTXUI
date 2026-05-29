@@ -10,7 +10,28 @@
 #include <iostream>
 #include <algorithm>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 namespace rtxui {
+
+#ifdef __EMSCRIPTEN__
+inline char emscripten_get_char() {
+  return EM_ASM_INT({
+    return Asyncify.handleSleep(function(wakeUp) {
+      if (window.rtxui_input_queue && window.rtxui_input_queue.length > 0) {
+        wakeUp(window.rtxui_input_queue.shift());
+        return;
+      }
+      window.rtxui_on_input = function(char_code) {
+        window.rtxui_on_input = null;
+        wakeUp(char_code);
+      };
+    });
+  });
+}
+#endif
 
 class TerminalDevice {
  public:
@@ -31,14 +52,40 @@ class SystemTerminalDevice : public TerminalDevice {
   }
 
   int Read(char* buf, int len) override {
+#ifdef __EMSCRIPTEN__
+    if (len <= 0) return 0;
+    buf[0] = emscripten_get_char();
+    return 1;
+#else
     return read(STDIN_FILENO, buf, len);
+#endif
   }
 
   void Write(std::string_view data) override {
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+      let str = UTF8ToString($0, $1);
+      if (window.rtxui_on_output) {
+        window.rtxui_on_output(str);
+      } else {
+        console.log(str);
+      }
+    }, data.data(), data.size());
+#else
     std::cout << data << std::flush;
+#endif
   }
 
   bool GetSize(int& width, int& height) override {
+#ifdef __EMSCRIPTEN__
+    width = EM_ASM_INT({
+      return window.rtxui_columns || 80;
+    });
+    height = EM_ASM_INT({
+      return window.rtxui_lines || 24;
+    });
+    return true;
+#else
     struct winsize w;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0 && w.ws_row > 0) {
       width = w.ws_col;
@@ -46,9 +93,13 @@ class SystemTerminalDevice : public TerminalDevice {
       return true;
     }
     return false;
+#endif
   }
 
   void EnterRawMode(void (*sigwinch_handler)(int)) override {
+#ifdef __EMSCRIPTEN__
+    Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1000h\x1b[?1006h");
+#else
     tcgetattr(STDIN_FILENO, &previous_termios_);
     termios terminal = previous_termios_;
 
@@ -79,17 +130,24 @@ class SystemTerminalDevice : public TerminalDevice {
     sigaction(SIGWINCH, &sa, &previous_sigaction_);
 
     Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1000h\x1b[?1006h");
+#endif
   }
 
   void ExitRawMode() override {
+#ifdef __EMSCRIPTEN__
+    Write("\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
+#else
     Write("\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
     sigaction(SIGWINCH, &previous_sigaction_, nullptr);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &previous_termios_);
+#endif
   }
 
  private:
+#ifndef __EMSCRIPTEN__
   termios previous_termios_;
   struct sigaction previous_sigaction_;
+#endif
 };
 
 class MockTerminalDevice : public TerminalDevice {
