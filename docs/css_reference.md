@@ -56,8 +56,6 @@ Color formatting for component text and backgrounds.
 - `color` / `foreground-color` [`<color>`](#colors): Configures the foreground text color of the element.
 - `background-color` [`<color>`](#colors): Configures the background color of cells within the element's box boundary.
 
-<WasmTerminal src="/wasm/rtxui_example_colors.js" :cols="80" :rows="22" />
-
 - `text-align` `left | right | center`: Configures the horizontal alignment of text/inline content within the element.
 
 <WasmTerminal src="/wasm/rtxui_example_text_align.js" :cols="80" :rows="24" />
@@ -143,6 +141,8 @@ Colors define foreground text, background cells, or border colors.
     - `blue`
     - `teal`
     - `aqua` (or `cyan`)
+
+<WasmTerminal src="/wasm/rtxui_example_colors.js" :cols="80" :rows="22" />
 
 ### Border Styles
 
