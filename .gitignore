@@ -43,6 +43,7 @@ bazel-*
 /activate_gcc.sh
 /build_gcc.sh
 /build_project.sh
+/build_wasm.sh
 
 # documentation node modules & build outputs
 /docs/node_modules/

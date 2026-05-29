@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+    }
+    #terminal {
+      width: max-content;
+      min-width: 100%;
+      height: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const src = params.get('src');
+    const cols = parseInt(params.get('cols') || '80', 10);
+    const rows = parseInt(params.get('rows') || '15', 10);
+
+    const Terminal = window.Terminal;
+    const xtermInstance = new Terminal({
+      cols: cols,
+      rows: rows,
+      cursorBlink: true,
+      theme: {
+        background: '#0f172a',
+        foreground: '#f8fafc',
+        cursor: '#38bdf8'
+      }
+    });
+
+    xtermInstance.open(document.getElementById('terminal'));
+
+    window.rtxui_columns = xtermInstance.cols;
+    window.rtxui_lines = xtermInstance.rows;
+    window.rtxui_input_queue = [];
+
+    xtermInstance.onData((data) => {
+      for (let i = 0; i < data.length; ++i) {
+        const code = data.charCodeAt(i);
+        if (window.rtxui_on_input) {
+          const cb = window.rtxui_on_input;
+          cb(code);
+        } else {
+          window.rtxui_input_queue.push(code);
+        }
+      }
+    });
+
+    window.rtxui_on_output = (str) => {
+      xtermInstance.write(str);
+    };
+
+    window.Module = {
+      preRun: [],
+      postRun: [],
+      print: (text) => {},
+      printErr: (text) => {},
+      setStatus: (text) => {}
+    };
+
+    if (src) {
+      const script = document.createElement('script');
+      script.src = src;
+      document.body.appendChild(script);
+    }
+  </script>
+</body>
+</html>
