@@ -18,12 +18,17 @@ namespace rtxui {
 namespace {
 
 // Helper to extract the character layer of a texture as a grid string.
+// Continuation cells (second half of a double-width grapheme) are shown as '^'.
 std::string GetTextLayer(const Texture& texture) {
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
       const auto& cell = const_cast<Texture&>(texture)[x, y];
-      out += cell.character.empty() ? " " : cell.character;
+      if (cell.is_continuation) {
+        out += '^';  // marks the reserved column of a double-width character
+      } else {
+        out += cell.character.empty() ? " " : cell.character;
+      }
     }
     out += "\n";
   }
@@ -299,6 +304,86 @@ TEST_CASE("Layout: Borders", "[layout]") {
                                        "│X│",
                                        "╰─╯",
                                    }));
+  }
+
+}  // TEST_CASE "Layout: Borders"
+
+TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
+
+  SECTION("Combining characters render into a single cell") {
+    // é = e (U+0065) + combining acute accent (U+0301, UTF-8: \xCC\x81).
+    // Both bytes must land in a single terminal cell of width 1.
+    struct CombiningTest : Component<CombiningTest> {
+      std::string_view Setup() {
+        Import<div>();
+        // Embed combining codepoint as raw UTF-8 — XML passes it through as-is.
+        static const std::string html =
+            "<style> .box { display: block; } </style>"
+            "<div class=\"box\">cafe\xCC\x81</div>";
+        return html;
+      }
+    };
+
+    auto texture = RenderComponent(Ref<CombiningTest>::New(), 6, 1);
+    // The combining grapheme (e + U+0301) must be stored in a single cell.
+    const auto& cell3 = const_cast<Texture&>(texture)[3, 0];
+    CHECK(cell3.character.size() > 1);       // multi-byte cluster in one cell
+    CHECK(cell3.character == "e\xCC\x81");   // e + combining acute
+    // GetTextLayer joins all cells: c a f e+\xCC\x81 _ _
+    CHECK(GetTextLayer(texture) == "cafe\xCC\x81  \n");
+  }
+
+
+  SECTION("CJK double-width characters occupy two columns") {
+    struct CjkTest : Component<CjkTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style> .box { display: block; } </style>
+          <div class="box">AB</div>
+        )html";
+      }
+    };
+    // ASCII baseline: 'A' at col 0, 'B' at col 1.
+    auto texture_ascii = RenderComponent(Ref<CjkTest>::New(), 4, 1);
+    CHECK(GetTextLayer(texture_ascii) == "AB  \n");
+
+    struct CjkTest2 : Component<CjkTest2> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style> .box { display: block; } </style>
+          <div class="box">一B</div>
+        )html";
+      }
+    };
+    // '一' is double-width: occupies cols 0+1; 'B' lands at col 2.
+    auto texture_cjk = RenderComponent(Ref<CjkTest2>::New(), 4, 1);
+    std::string layer = GetTextLayer(texture_cjk);
+    CHECK(layer == "一^B \n");
+
+    // Verify the continuation cell flag is set
+    const auto& cont = const_cast<Texture&>(texture_cjk)[1, 0];
+    CHECK(cont.is_continuation);
+
+    // Verify 'B' is at column 2
+    const auto& b_cell = const_cast<Texture&>(texture_cjk)[2, 0];
+    CHECK(b_cell.character == "B");
+  }
+
+  SECTION("Mixed ASCII and CJK alignment") {
+    struct MixedTest : Component<MixedTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style> .box { display: block; } </style>
+          <div class="box">A一B</div>
+        )html";
+      }
+    };
+    // 'A' at col 0, '一' at cols 1+2 (continuation at 2), 'B' at col 3.
+    auto texture = RenderComponent(Ref<MixedTest>::New(), 5, 1);
+    CHECK(GetTextLayer(texture) == "A一^B \n");
   }
 
 }

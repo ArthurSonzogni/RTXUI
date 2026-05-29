@@ -476,6 +476,17 @@ void PaintImpl(const PhysicalFragment* frag,
     int cell_x = 0;  // cell column offset within the text fragment
     int y = abs_y + border_offset;
     for (const Grapheme& g : Graphemes(frag->text_content)) {
+      // Orphan combining marks (width==0, no base codepoint in this fragment)
+      // are appended to the previous cell so the terminal can compose them.
+      if (g.width == 0) {
+        int x_prev = abs_x + border_offset + cell_x - 1;
+        if (x_prev >= 0 && x_prev < texture.width() && y >= 0 &&
+            y < texture.height() && clip.Contains(x_prev, y)) {
+          texture[x_prev, y].character += std::string(g.text);
+        }
+        continue;  // no column advance
+      }
+
       int x = abs_x + border_offset + cell_x;
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
           clip.Contains(x, y)) {
