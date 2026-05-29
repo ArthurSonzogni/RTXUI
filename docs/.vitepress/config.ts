@@ -27,6 +27,7 @@ export default defineConfig({
         text: 'Reference',
         items: [
           { text: 'C++ API Reference', link: '/cpp_api' },
+          { text: 'HTML Element Reference', link: '/html_reference' },
           { text: 'CSS Attribute Reference', link: '/css_reference' }
         ]
       }
