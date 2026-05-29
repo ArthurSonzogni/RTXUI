@@ -60,6 +60,7 @@ class ComponentBase : public RefCounted, public Bindings {
   Ref<Element> root_;
   std::map<std::string, Ref<Element>> slots_;
   std::set<Ref<ComponentBase>> children_;
+  std::vector<Ref<ComponentBase>> old_children_;
   std::string id_;
   std::vector<std::string> classes_;
 
