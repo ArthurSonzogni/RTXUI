@@ -27,7 +27,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           <div class="item">[Item B]</div>
 
           <div class="nested-container">
-            <div class="inner-title">Nested Box A (Light Blue Wide Border)</div>
+            <div class="inner-title">Nested Box A (Light Blue tall Border)</div>
             <div class="inner-scroll box-a">
               <div class="inner-item first">[A-1]</div>
               <div class="inner-item">[A-2]</div>
@@ -45,7 +45,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           <div class="item">[Middle Item]</div>
 
           <div class="nested-container">
-            <div class="inner-title">Nested Box B (Steel Blue Wide Border)</div>
+            <div class="inner-title">Nested Box B (Steel Blue tall Border)</div>
             <div class="inner-scroll box-b">
               <div class="inner-item first">[B-1]</div>
               <div class="inner-item">[B-2]</div>
@@ -73,7 +73,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
         }
         .main-container {
           display: block;
-          border: wide;
+          border: tall;
           border-color: rgb(30, 41, 59);
           background-color: rgb(30, 41, 59);
           padding: 1;
@@ -94,7 +94,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           height: 10;
           overflow-x: scroll;
           scroll-speed-x: 2;
-          border: wide;
+          border: tall;
           border-color: rgb(29, 78, 216);
           background-color: rgb(10, 25, 52);
           padding: 1;
@@ -105,7 +105,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           margin-right: 2;
           background-color: rgb(30, 41, 59);
           color: rgb(219, 234, 254);
-          border: wide;
+          border: tall;
           border-color: rgb(71, 85, 105);
           padding: 1;
         }
@@ -128,12 +128,12 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           scroll-speed-x: 1;
         }
         .box-a {
-          border: wide;
+          border: tall;
           border-color: rgb(147, 197, 253);
           background-color: rgb(30, 41, 59);
         }
         .box-b {
-          border: wide;
+          border: tall;
           border-color: rgb(59, 130, 246);
           background-color: rgb(30, 41, 59);
         }
@@ -143,7 +143,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           margin-right: 1;
           background-color: rgb(15, 23, 42);
           color: rgb(147, 197, 253);
-          border: wide;
+          border: tall;
           border-color: rgb(51, 65, 85);
           padding: 0 1;
         }
