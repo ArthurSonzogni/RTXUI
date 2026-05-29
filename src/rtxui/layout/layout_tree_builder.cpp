@@ -3,7 +3,7 @@
 namespace rtxui {
 
 // Static Build method implementation
-std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node) {
+std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign parent_align) {
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
@@ -12,6 +12,9 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node) {
   auto box = std::make_shared<LayoutBox>();
   box->style = dom_node->style;
   box->dom_node = dom_node;
+
+  TextAlign resolved_align = dom_node->style.text_align.value_or(parent_align);
+  box->style.text_align = resolved_align;
 
   // Text nodes don't usually run an algorithm themselves;
   // they are consumed by the parent's InlineFlow.
@@ -27,7 +30,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node) {
     if (child_dom.get()->is_slot()) {
       // Skip elements with no tag (e.g., SlotElement)
       for (auto& grandchild_dom : child_dom.get()->children()) {
-        auto grandchild_box = Build(grandchild_dom.get());
+        auto grandchild_box = Build(grandchild_dom.get(), resolved_align);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -35,7 +38,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node) {
       continue;
     }
 
-    auto child_box = Build(child_dom.get());
+    auto child_box = Build(child_dom.get(), resolved_align);
     if (child_box) {
       raw_children.push_back(child_box);
     }
@@ -64,6 +67,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node) {
           anonymous_box = std::make_shared<LayoutBox>();
           anonymous_box->is_anonymous = true;
           anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+          anonymous_box->style.text_align = resolved_align;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);

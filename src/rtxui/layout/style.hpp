@@ -95,6 +95,12 @@ enum class ScrollbarWidth {
   None,
 };
 
+enum class TextAlign {
+  Left,
+  Right,
+  Center,
+};
+
 // Represents the "Computed CSS values"
 struct ComputedStyle {
   DisplayOutside display_outside = DisplayOutside::Inline;
@@ -125,6 +131,7 @@ struct ComputedStyle {
   Overflow overflow_x = Overflow::Visible;
   Overflow overflow_y = Overflow::Visible;
   ScrollbarWidth scrollbar_width = ScrollbarWidth::Auto;
+  std::optional<TextAlign> text_align;
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
 
