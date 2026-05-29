@@ -138,3 +138,7 @@ An interactive single-line text entry field.
   ```html
   <input value="{search_query}" />
   ```
+
+- **Interactive Demo**:
+  
+  <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="22" />
