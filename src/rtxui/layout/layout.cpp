@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 
+#include "rtxui/core/string.hpp"
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/style.hpp"
@@ -240,54 +241,85 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   for (auto& child : box->children) {
     if (child->is_text) {
-      size_t start = 0;
-      size_t end = child->text_data.size();
-      size_t last_space = start;
+      // Iterate grapheme-by-grapheme to correctly handle double-width
+      // characters (CJK, emoji). We track byte offsets for slicing and
+      // column widths for layout/wrap decisions separately.
 
-      auto create_fragment = [&](size_t fit_end) {
-        size_t len = fit_end - start;
-        if (len == 0 && fit_end != end) {
+      const std::string& text = child->text_data;
+      size_t byte_start = 0;       // byte offset of current fragment start
+      int col_start = 0;           // column offset of current fragment start
+      size_t last_space_byte = 0;  // byte offset of last seen space
+      int last_space_col = 0;      // column offset of last seen space
+      bool have_last_space = false;
+
+      // create_fragment: emit a fragment from byte_start..byte_end of width
+      // col_start..col_end_exclusive.
+      auto create_fragment = [&](size_t byte_end, int col_width) {
+        if (byte_end == byte_start && col_width == 0 &&
+            byte_end != text.size()) {
           return;
         }
-
         auto text_frag =
-            std::make_shared<PhysicalFragment>(static_cast<int>(len), 1);
+            std::make_shared<PhysicalFragment>(col_width, 1);
         text_frag->dom_node = child->dom_node;
         text_frag->is_text = true;
-        text_frag->text_content = child->text_data.substr(start, len);
+        text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
         text_frag->foreground_color = child->style.foreground_color;
 
         container_frag->children.push_back(
             {text_frag,
              box->style.padding.left + box->style.border.left + cursor_x,
              cursor_y});
-        cursor_x += static_cast<int>(len);
+        cursor_x += col_width;
       };
 
-      for (size_t i = start; i < end; ++i) {
-        if (child->text_data[i] == ' ') {
-          last_space = i;
+      int cur_col = col_start;   // current column position within this text
+      for (const Grapheme& g : Graphemes(text)) {
+        size_t byte_end = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
+
+        if (g.text.size() == 1 && g.text[0] == ' ') {
+          last_space_byte = static_cast<size_t>(g.text.data() - text.data());
+          last_space_col = cur_col - col_start;
+          have_last_space = true;
         }
-        if (cursor_x + static_cast<int>(i - start + 1) > content_width_limit) {
-          if (last_space > start) {
-            create_fragment(last_space);
-            start = last_space + 1;
-            i = start - 1;
+
+        if (cursor_x + (cur_col - col_start) + g.width > content_width_limit) {
+          if (have_last_space) {
+            // Wrap at last space
+            int frag_cols = last_space_col;
+            size_t frag_byte_end = last_space_byte;
+            create_fragment(frag_byte_end, frag_cols);
+
+            // skip the space byte
+            byte_start = last_space_byte + 1;
+            col_start = last_space_col + 1;  // space is 1 col wide
+            cur_col = col_start;
+            have_last_space = false;
             commit_line();
+            // Retry the current grapheme
+            byte_end = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
+            cur_col += g.width;
           } else if (cursor_x > 0) {
             commit_line();
-            i--;
+            // cur position unchanged, retry grapheme
+            cur_col += g.width;
           } else {
-            size_t split = (i == start) ? i + 1 : i;
-            create_fragment(split);
-            start = split;
-            i = start - 1;
+            // Single grapheme fills the line
+            cur_col += g.width;
+            size_t next_byte = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
+            create_fragment(next_byte, cur_col - col_start);
+            byte_start = next_byte;
+            col_start = cur_col;
             commit_line();
           }
+        } else {
+          cur_col += g.width;
         }
       }
-      if (start < end) {
-        create_fragment(end);
+
+      // Emit any remaining text
+      if (byte_start < text.size()) {
+        create_fragment(text.size(), cur_col - col_start);
       }
     } else {
       // For elements in inline flow, we must respect their margins.
