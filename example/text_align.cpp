@@ -42,6 +42,8 @@ class TextAlignDemo : public Component<TextAlignDemo> {
           background-color: rgb(10, 10, 15);
           color: white;
           width: 50;
+          height: 18;
+          overflow-y: scroll;
         }
         h1 {
           color: cyan;
