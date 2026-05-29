@@ -7,6 +7,8 @@
 #include <string>
 
 #include "rtxui/core/string.hpp"
+#include "rtxui/style/apply_style.hpp"
+#include "rtxui/layout/style.hpp"
 
 TEST_CASE("CSS parser works correctly", "[css]") {
   const std::string input = R"(
@@ -142,4 +144,120 @@ TEST_CASE("CSS with trailing semicolon optional", "[css]") {
   auto stylesheet = css::Parse(input);
   CHECK(stylesheet);
   CHECK(stylesheet.value()[0].declarations[0].value == "red");
+}
+
+TEST_CASE("Color parsing in ApplyStyle", "[style][color]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("Keywords") {
+    rtxui::ApplyStyle(style, {"color", "red"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 0);
+    CHECK(style.foreground_color->a == 255);
+
+    rtxui::ApplyStyle(style, {"background-color", "white"});
+    REQUIRE(style.background_color.has_value());
+    CHECK(style.background_color->r == 255);
+    CHECK(style.background_color->g == 255);
+    CHECK(style.background_color->b == 255);
+    CHECK(style.background_color->a == 255);
+
+    rtxui::ApplyStyle(style, {"color", "silver"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 192);
+    CHECK(style.foreground_color->g == 192);
+    CHECK(style.foreground_color->b == 192);
+
+    rtxui::ApplyStyle(style, {"color", "maroon"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 128);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 0);
+
+    rtxui::ApplyStyle(style, {"color", "purple"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 128);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 128);
+
+    rtxui::ApplyStyle(style, {"color", "lime"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 255);
+    CHECK(style.foreground_color->b == 0);
+
+    rtxui::ApplyStyle(style, {"color", "olive"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 128);
+    CHECK(style.foreground_color->g == 128);
+    CHECK(style.foreground_color->b == 0);
+
+    rtxui::ApplyStyle(style, {"color", "navy"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 128);
+
+    rtxui::ApplyStyle(style, {"color", "teal"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 128);
+    CHECK(style.foreground_color->b == 128);
+  }
+
+  SECTION("rgb(...) function") {
+    rtxui::ApplyStyle(style, {"color", "rgb(10, 20, 30)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 10);
+    CHECK(style.foreground_color->g == 20);
+    CHECK(style.foreground_color->b == 30);
+    CHECK(style.foreground_color->a == 255);
+  }
+
+  SECTION("rgba(...) function with scaled alpha") {
+    rtxui::ApplyStyle(style, {"color", "rgba(10, 20, 30, 0.5)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 10);
+    CHECK(style.foreground_color->g == 20);
+    CHECK(style.foreground_color->b == 30);
+    CHECK(style.foreground_color->a == 127);
+  }
+
+  SECTION("Hex #RGB format") {
+    rtxui::ApplyStyle(style, {"color", "#f0a"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 170);
+    CHECK(style.foreground_color->a == 255);
+  }
+
+  SECTION("Hex #RGBA format") {
+    rtxui::ApplyStyle(style, {"color", "#f0a8"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 170);
+    CHECK(style.foreground_color->a == 136);
+  }
+
+  SECTION("Hex #RRGGBB format") {
+    rtxui::ApplyStyle(style, {"color", "#ff00aa"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 170);
+    CHECK(style.foreground_color->a == 255);
+  }
+
+  SECTION("Hex #RRGGBBAA format") {
+    rtxui::ApplyStyle(style, {"color", "#ff00aa88"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 170);
+    CHECK(style.foreground_color->a == 136);
+  }
 }
