@@ -132,3 +132,35 @@ By adding `overflow-y: scroll` and restricting `height`, RTXUI automatically cro
 
 <WasmTerminal src="/wasm/rtxui_example_nested_scroll.js" :cols="80" :rows="30" />
 
+---
+
+## 4. Unicode & CJK Full-Width Characters
+
+RTXUI includes native support for Unicode grapheme cluster parsing and string layout width calculation. Wide characters (such as Chinese, Japanese, and Korean) take up exactly two terminal cell columns, aligning correctly in flexbox and grid layouts.
+
+```cpp
+class CJKApp : public Component<CJKApp> {
+ public:
+  std::string_view Setup() override {
+    Import<rtxui::div>();
+    return R"html(
+      <div class="container">
+        <div>Chinese: 中文 (Width = 4 cells)</div>
+        <div>Japanese: 日本語 (Width = 6 cells)</div>
+        <div>Korean: 한국어 (Width = 6 cells)</div>
+      </div>
+      <style>
+        self {
+          display: block;
+          padding: 1;
+          border: solid;
+          border-color: green;
+        }
+      </style>
+    )html";
+  }
+};
+```
+
+<WasmTerminal src="/wasm/rtxui_example_cjk.js" :cols="80" :rows="18" />
+

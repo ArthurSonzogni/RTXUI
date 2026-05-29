@@ -137,6 +137,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_colors example/colors.cpp)
   target_link_libraries(rtxui_example_colors PRIVATE rtxui)
+
+  add_executable(rtxui_example_cjk example/cjk.cpp)
+  target_link_libraries(rtxui_example_cjk PRIVATE rtxui)
 endif()
 
 # An option to enable testing
