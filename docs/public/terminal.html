@@ -69,7 +69,13 @@
       postRun: [],
       print: (text) => {},
       printErr: (text) => {},
-      setStatus: (text) => {}
+      setStatus: (text) => {},
+      locateFile: (path, prefix) => {
+        if (path.endsWith('.wasm')) {
+          return '/wasm/' + path;
+        }
+        return prefix + path;
+      }
     };
 
     if (src) {
