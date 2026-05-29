@@ -465,6 +465,28 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
   input_ptr->Digest();
   CHECK(input_ptr->value == "");
   CHECK(input_ptr->cursor_pos == 0);
+
+  // Test Alt modifiers (for word boundaries and deletion)
+  input_ptr->value = "hello world";
+  input_ptr->cursor_pos = 1;
+  input_ptr->Digest();
+  
+  // Alt + ArrowRight to skip word boundary
+  input_ptr->OnEvent(Event::ArrowRightAlt());
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_pos == 5);
+  
+  // Alt + Backspace to delete the word "hello"
+  input_ptr->OnEvent(Event::BackspaceAlt());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == " world");
+  CHECK(input_ptr->cursor_pos == 0);
+
+  // Alt + Delete to delete the word " world"
+  input_ptr->OnEvent(Event::DeleteAlt());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+  CHECK(input_ptr->cursor_pos == 0);
   
   // Test CJK navigation
   input_ptr->value = "你好world";
@@ -525,6 +547,309 @@ TEST_CASE("Input Component State Preservation", "[component]") {
   // cursor_pos should be preserved as 1, so 'b' is typed after 'a'.
   CHECK(input_ptr->value == "abhello world");
   CHECK(input_ptr->cursor_pos == 2);
+}
+
+class TextareaTestComponent : public rtxui::Component<TextareaTestComponent> {
+ public:
+  std::string my_text = "line one\nline two\nline three";
+  void InitReflection() override {
+    Bind(my_text);
+    Import<rtxui::textarea>();
+    rtxui::Component<TextareaTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <textarea value="{my_text}" />
+  )";
+};
+
+TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_comp = const_cast<rtxui::ComponentBase*>(ta_el->component());
+  REQUIRE(ta_comp != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(ta_comp);
+  REQUIRE(ta_ptr != nullptr);
+
+  CHECK(ta_ptr->value == "line one\nline two\nline three");
+  CHECK(ta_ptr->cursor_pos == 0);
+
+  ta_el->set_focused(true);
+
+  // Type a character at position 0
+  ta_ptr->OnEvent(Event::Keyboard::From('A'));
+  ta_ptr->Digest();
+  CHECK(ta_ptr->value == "Aline one\nline two\nline three");
+  CHECK(ta_ptr->cursor_pos == 1);
+}
+
+TEST_CASE("Textarea Component Enter Key", "[component][textarea]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  ta_el->set_focused(true);
+  ta_ptr->value = "hello world";
+  ta_ptr->cursor_pos = 5;
+  ta_ptr->Digest();
+
+  // Press Enter in the middle — should split into two lines
+  ta_ptr->OnEvent(Event::Return());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->value == "hello\n world");
+  CHECK(ta_ptr->cursor_pos == 6);
+}
+
+TEST_CASE("Textarea Component Arrow Up/Down Navigation", "[component][textarea]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  ta_el->set_focused(true);
+  ta_ptr->value = "abc\ndefgh\nij";
+  ta_ptr->cursor_pos = 0;
+  ta_ptr->Digest();
+
+  // Move right 2 chars on line 0 -> cursor at 'c', col=2
+  ta_ptr->OnEvent(Event::ArrowRight());
+  ta_ptr->OnEvent(Event::ArrowRight());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 2);
+
+  // ArrowDown should land on line 1, col 2 -> grapheme index 6 (4 for "abc\n" + 2)
+  ta_ptr->OnEvent(Event::ArrowDown());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 6);  // "abc\n" = 4, then 2 more = 6
+
+  // ArrowDown again -> line 2, col 2 -> grapheme index 11 (4 + 6 + 1 = 11? "abc\n"=4, "defgh\n"=6, "ij"=2)
+  // "abc\n" = indices 0..3 (4 graphemes), "defgh\n" = 4..9 (6 graphemes), "ij" = 10..11 (2)
+  // On line 2, col 2 -> index 12 (past last character), clamped to 12 which equals size
+  ta_ptr->OnEvent(Event::ArrowDown());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 12);  // End of "ij" = 10 + 2 = 12
+
+  // ArrowUp should go back to line 1, col 2 -> index 6
+  ta_ptr->OnEvent(Event::ArrowUp());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 6);
+}
+
+TEST_CASE("Textarea Component Home/End Keys", "[component][textarea]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  ta_el->set_focused(true);
+  ta_ptr->value = "hello\nworld";
+  ta_ptr->cursor_pos = 3;  // middle of "hello"
+  ta_ptr->Digest();
+
+  // Home -> goes to start of line 0 (index 0)
+  ta_ptr->OnEvent(Event::Home());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 0);
+
+  // End -> goes to end of line 0 (index 5, before '\n')
+  ta_ptr->OnEvent(Event::End());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 5);
+
+  // Move to line 1
+  ta_ptr->cursor_pos = 8;  // middle of "world"
+  ta_ptr->Digest();
+
+  // Home on line 1 -> index 6 (after '\n')
+  ta_ptr->OnEvent(Event::Home());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 6);
+
+  // End on line 1 -> index 11 (end of "world")
+  ta_ptr->OnEvent(Event::End());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->cursor_pos == 11);
+}
+
+TEST_CASE("Textarea Component Backspace/Delete", "[component][textarea]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  ta_el->set_focused(true);
+  ta_ptr->value = "hello\nworld";
+  ta_ptr->cursor_pos = 6;  // start of "world" (after '\n')
+  ta_ptr->Digest();
+
+  // Backspace at the beginning of line 1 joins the two lines
+  ta_ptr->OnEvent(Event::Backspace());
+  ta_ptr->Digest();
+  CHECK(ta_ptr->value == "helloworld");
+  CHECK(ta_ptr->cursor_pos == 5);
+}
+
+class CheckboxTestComponent : public rtxui::Component<CheckboxTestComponent> {
+ public:
+  bool my_checked = false;
+  bool onchange_called = false;
+
+  void InitReflection() override {
+    Bind(my_checked);
+    Import<rtxui::checkbox>();
+    Import("ToggleEnabled", [this]() {
+      onchange_called = true;
+    });
+    rtxui::Component<CheckboxTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <checkbox checked="{my_checked}" onchange="ToggleEnabled">Click Me</checkbox>
+  )";
+};
+
+TEST_CASE("Checkbox Component Basic Interactions", "[component][checkbox]") {
+  auto container = rtxui::Ref<CheckboxTestComponent>::New();
+  container->Mount();
+
+  auto* cb_el = container->Root()->QuerySelector("checkbox");
+  REQUIRE(cb_el != nullptr);
+  auto* cb_comp = const_cast<rtxui::ComponentBase*>(cb_el->component());
+  REQUIRE(cb_comp != nullptr);
+  auto* cb_ptr = dynamic_cast<rtxui::checkbox*>(cb_comp);
+  REQUIRE(cb_ptr != nullptr);
+
+  // Initial state
+  CHECK(cb_ptr->checked == false);
+  CHECK(container->my_checked == false);
+  CHECK(container->onchange_called == false);
+
+  // Focus and trigger space
+  cb_el->set_focused(true);
+  cb_ptr->OnEvent(Event::Keyboard::From(' ')); // Space
+  container->Digest();
+
+  CHECK(cb_ptr->checked == true);
+  CHECK(container->my_checked == true);
+  CHECK(container->onchange_called == true);
+
+  // Press space again
+  container->onchange_called = false;
+  cb_ptr->OnEvent(Event::Keyboard::From(' '));
+  container->Digest();
+
+  CHECK(cb_ptr->checked == false);
+  CHECK(container->my_checked == false);
+  CHECK(container->onchange_called == true);
+}
+
+class SliderTestComponent : public rtxui::Component<SliderTestComponent> {
+ public:
+  int my_val = 50;
+  bool onchange_called = false;
+
+  void InitReflection() override {
+    Bind(my_val);
+    Import<rtxui::slider>();
+    Import("OnSliderChange", [this]() {
+      onchange_called = true;
+    });
+    rtxui::Component<SliderTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <slider value="{my_val}" min="0" max="100" step="10" width="11" onchange="OnSliderChange" />
+  )";
+};
+
+TEST_CASE("Slider Component Basic Interactions", "[component][slider]") {
+  auto container = rtxui::Ref<SliderTestComponent>::New();
+  container->Mount();
+
+  auto* slider_el = container->Root()->QuerySelector("slider");
+  REQUIRE(slider_el != nullptr);
+  auto* slider_comp = const_cast<rtxui::ComponentBase*>(slider_el->component());
+  REQUIRE(slider_comp != nullptr);
+  auto* slider_ptr = dynamic_cast<rtxui::slider*>(slider_comp);
+  REQUIRE(slider_ptr != nullptr);
+
+  // Initial state (value = 50)
+  CHECK(slider_ptr->value == 50);
+  CHECK(container->my_val == 50);
+  CHECK(container->onchange_called == false);
+
+  // Focus and trigger arrow keys
+  slider_el->set_focused(true);
+  slider_ptr->OnEvent(Event::ArrowRight());
+  container->Digest();
+
+  // Value should increase by step (10)
+  CHECK(slider_ptr->value == 60);
+  CHECK(container->my_val == 60);
+  CHECK(container->onchange_called == true);
+
+  // Press ArrowLeft
+  container->onchange_called = false;
+  slider_ptr->OnEvent(Event::ArrowLeft());
+  container->Digest();
+
+  CHECK(slider_ptr->value == 50);
+  CHECK(container->my_val == 50);
+  CHECK(container->onchange_called == true);
+}
+
+class ProgressTestComponent : public rtxui::Component<ProgressTestComponent> {
+ public:
+  double my_progress = 25.0;
+
+  void InitReflection() override {
+    Bind(my_progress);
+    Import<rtxui::progress>();
+    rtxui::Component<ProgressTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <progress value="{my_progress}" max="100" width="10" />
+  )";
+};
+
+TEST_CASE("Progress Component Basic Rendering", "[component][progress]") {
+  auto container = rtxui::Ref<ProgressTestComponent>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* progress_el = container->Root()->QuerySelector("progress");
+  REQUIRE(progress_el != nullptr);
+  auto* progress_comp = const_cast<rtxui::ComponentBase*>(progress_el->component());
+  REQUIRE(progress_comp != nullptr);
+  auto* progress_ptr = dynamic_cast<rtxui::progress*>(progress_comp);
+  REQUIRE(progress_ptr != nullptr);
+
+  // Initial state (value = 25.0) -> width is 10, so 2.5 rounded to 3 characters filled.
+  CHECK(progress_ptr->value == 25.0);
+  CHECK(progress_ptr->filled_track == "███");
+  CHECK(progress_ptr->empty_track == "       "); // 7 spaces
+
+  // Update value
+  container->my_progress = 70.0;
+  container->Digest();
+
+  // Value = 70.0 -> 7 characters filled.
+  CHECK(progress_ptr->value == 70.0);
+  CHECK(progress_ptr->filled_track == "███████");
+  CHECK(progress_ptr->empty_track == "   "); // 3 spaces
 }
 
 }  // namespace

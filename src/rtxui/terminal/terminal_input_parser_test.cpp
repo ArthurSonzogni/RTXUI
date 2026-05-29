@@ -355,18 +355,31 @@ TEST_CASE("Event.Keyboard", "[terminal]") {
       {str("\x1BOH"), Event::Home()},
       {str("\x1BOF"), Event::End()},
 
+      // Ctrl/Alt Arrow
+      {str("\x1B[1;5A"), Event::ArrowUpCtrl()},
+      {str("\x1B[1;5B"), Event::ArrowDownCtrl()},
+      {str("\x1B[1;5C"), Event::ArrowRightCtrl()},
+      {str("\x1B[1;5D"), Event::ArrowLeftCtrl()},
+      {str("\x1B[1;3A"), Event::ArrowUpAlt()},
+      {str("\x1B[1;3B"), Event::ArrowDownAlt()},
+      {str("\x1B[1;3C"), Event::ArrowRightAlt()},
+      {str("\x1B[1;3D"), Event::ArrowLeftAlt()},
+
       // Backspace & Quirk for:
       // https://github.com/ArthurSonzogni/FTXUI/issues/508
       {{127}, Event::Backspace()},
       {{8}, Event::Backspace()},
-      {str("\x1B\x7F"), Event::BackspaceCtrl()},
-      {str("\x1B\x08"), Event::BackspaceCtrl()},
+      {str("\x1B\x7F"), Event::BackspaceAlt()},
+      {str("\x1B\x08"), Event::BackspaceAlt()},
       {str("\x1B[127;5u"), Event::BackspaceCtrl()},
       {str("\x1B[8;5u"), Event::BackspaceCtrl()},
+      {str("\x1B[127;3u"), Event::BackspaceAlt()},
+      {str("\x1B[8;3u"), Event::BackspaceAlt()},
 
       // Delete
       {str("\x1B[3~"), Event::Delete()},
       {str("\x1B[3;5~"), Event::DeleteCtrl()},
+      {str("\x1B[3;3~"), Event::DeleteAlt()},
 
       // Return
       {{13}, Event::Return()},

@@ -439,5 +439,82 @@ TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
   REQUIRE(outer->scroll_y() == 0);
 }
 
+TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class FocusCyclingComponent : public Component<FocusCyclingComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Import<rtxui::input>();
+      Import<rtxui::checkbox>();
+      Component<FocusCyclingComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div>
+        <input id="input1" />
+        <checkbox id="checkbox1">Check me</checkbox>
+        <div id="non-focusable">Not focusable</div>
+        <input id="input2" />
+      </div>
+    )html";
+  };
+
+  auto component = Ref<FocusCyclingComponent>::New();
+  Screen screen(component, device);
+
+  auto* input1 = component->Root()->QuerySelector("#input1");
+  auto* checkbox1 = component->Root()->QuerySelector("#checkbox1");
+  auto* non_focusable = component->Root()->QuerySelector("#non-focusable");
+  auto* input2 = component->Root()->QuerySelector("#input2");
+
+  REQUIRE(input1 != nullptr);
+  REQUIRE(checkbox1 != nullptr);
+  REQUIRE(non_focusable != nullptr);
+  REQUIRE(input2 != nullptr);
+
+  // Initial State: no element focused
+  CHECK_FALSE(input1->focused());
+  CHECK_FALSE(checkbox1->focused());
+  CHECK_FALSE(non_focusable->focused());
+  CHECK_FALSE(input2->focused());
+
+  // 1. Tab key: Focuses first focusable element (input1)
+  screen.Dispatch(Event::Tab());
+  CHECK(input1->focused());
+  CHECK_FALSE(checkbox1->focused());
+  CHECK_FALSE(input2->focused());
+
+  // 2. Tab key: Focuses next (checkbox1)
+  screen.Dispatch(Event::Tab());
+  CHECK_FALSE(input1->focused());
+  CHECK(checkbox1->focused());
+  CHECK_FALSE(input2->focused());
+
+  // 3. Tab key: Skip non-focusable and focus next (input2)
+  screen.Dispatch(Event::Tab());
+  CHECK_FALSE(input1->focused());
+  CHECK_FALSE(checkbox1->focused());
+  CHECK(input2->focused());
+
+  // 4. Tab key: Wrap around to the start (input1)
+  screen.Dispatch(Event::Tab());
+  CHECK(input1->focused());
+  CHECK_FALSE(checkbox1->focused());
+  CHECK_FALSE(input2->focused());
+
+  // 5. Shift+Tab (TabReverse): Wrap around to the end (input2)
+  screen.Dispatch(Event::TabReverse());
+  CHECK_FALSE(input1->focused());
+  CHECK_FALSE(checkbox1->focused());
+  CHECK(input2->focused());
+
+  // 6. Shift+Tab (TabReverse): Go to previous (checkbox1)
+  screen.Dispatch(Event::TabReverse());
+  CHECK_FALSE(input1->focused());
+  CHECK(checkbox1->focused());
+  CHECK_FALSE(input2->focused());
+}
+
 } // namespace
 } // namespace rtxui

@@ -93,6 +93,332 @@ int GetCursorPositionFromColumn(const std::vector<Grapheme>& graphemes, int targ
 
 } // namespace
 
+struct Position2D {
+  int line = 0;
+  int column = 0;
+};
+
+Position2D GetCursor2D(const std::vector<Grapheme>& graphemes, int cursor_pos) {
+  Position2D pos;
+  int limit = std::min(static_cast<int>(graphemes.size()), cursor_pos);
+  for (int i = 0; i < limit; ++i) {
+    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" || graphemes[i].text == "\r") {
+      pos.line++;
+      pos.column = 0;
+    } else {
+      pos.column += graphemes[i].width;
+    }
+  }
+  return pos;
+}
+
+int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes, int target_line, int target_col) {
+  int cur_line = 0;
+  int cur_col = 0;
+  int best_pos = 0;
+  int min_dist = -1;
+  int n = static_cast<int>(graphemes.size());
+
+  int i = 0;
+  while (i < n && cur_line < target_line) {
+    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" || graphemes[i].text == "\r") {
+      cur_line++;
+    }
+    i++;
+  }
+  if (cur_line < target_line) {
+    return n;
+  }
+
+  best_pos = i;
+  min_dist = std::abs(target_col);
+  
+  while (i < n) {
+    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" || graphemes[i].text == "\r") {
+      break;
+    }
+    cur_col += graphemes[i].width;
+    i++;
+    
+    int dist = std::abs(cur_col - target_col);
+    if (dist < min_dist) {
+      min_dist = dist;
+      best_pos = i;
+    }
+  }
+  return best_pos;
+}
+
+int FindLineStart(const std::vector<Grapheme>& graphemes, int start_pos) {
+  int pos = start_pos;
+  while (pos > 0) {
+    if (graphemes[pos - 1].text == "\n" || graphemes[pos - 1].text == "\r\n" || graphemes[pos - 1].text == "\r") {
+      break;
+    }
+    pos--;
+  }
+  return pos;
+}
+
+int FindLineEnd(const std::vector<Grapheme>& graphemes, int start_pos) {
+  int pos = start_pos;
+  int n = static_cast<int>(graphemes.size());
+  while (pos < n) {
+    if (graphemes[pos].text == "\n" || graphemes[pos].text == "\r\n" || graphemes[pos].text == "\r") {
+      break;
+    }
+    pos++;
+  }
+  return pos;
+}
+
+void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
+  if (!root) return;
+
+  auto current_graphemes = GetGraphemesList(value);
+  auto pos2d = GetCursor2D(current_graphemes, cursor_pos);
+  int cursor_line = pos2d.line;
+  int cursor_col = pos2d.column;
+
+  int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
+  
+  // Horizontal Scroll
+  int padding_left = root->style.padding.left;
+  int padding_right = root->style.padding.right;
+  int border_horiz = border_offset * 2;
+  int padding_horiz = padding_left + padding_right;
+
+  int layout_w = root->layout_width();
+  int visible_width = layout_w - border_horiz - padding_horiz;
+  if (visible_width > 0) {
+    int curr_scroll_x = root->scroll_x();
+    if (cursor_col < curr_scroll_x) {
+      root->set_scroll_x(cursor_col);
+    } else if (cursor_col >= curr_scroll_x + visible_width) {
+      root->set_scroll_x(cursor_col - visible_width + 1);
+    }
+  }
+
+  // Vertical Scroll (for multiline)
+  if (is_multiline) {
+    int padding_top = root->style.padding.top;
+    int padding_bottom = root->style.padding.bottom;
+    int border_vert = border_offset * 2;
+    int padding_vert = padding_top + padding_bottom;
+
+    int layout_h = root->layout_height();
+    int visible_height = layout_h - border_vert - padding_vert;
+    if (visible_height > 0) {
+      int curr_scroll_y = root->scroll_y();
+      if (cursor_line < curr_scroll_y) {
+        root->set_scroll_y(cursor_line);
+      } else if (cursor_line >= curr_scroll_y + visible_height) {
+        root->set_scroll_y(cursor_line - visible_height + 1);
+      }
+    }
+  }
+}
+
+bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_multiline) {
+  auto* root = self->Root();
+  if (event.is<Event::Mouse>()) {
+    auto mouse = event.get<Event::Mouse>();
+    if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
+      if (!root) return false;
+      int click_x = mouse.x - 1;
+      int click_y = mouse.y - 1;
+      int abs_x = root->absolute_x();
+      int abs_y = root->absolute_y();
+      int layout_w = root->layout_width();
+      int layout_h = root->layout_height();
+
+      if (click_x >= abs_x && click_x < abs_x + layout_w &&
+          click_y >= abs_y && click_y < abs_y + layout_h) {
+        
+        // Unfocus all other elements
+        if (root->Parent()) {
+          Element* root_el = root;
+          while (root_el->Parent()) {
+            root_el = root_el->Parent();
+          }
+          root_el->Visit([](Element& el) {
+            el.set_focused(false);
+          });
+        }
+        root->set_focused(true);
+
+        int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
+        int padding_left = root->style.padding.left;
+        int padding_top = root->style.padding.top;
+        int inner_click_x = click_x - abs_x - border_offset - padding_left;
+        int inner_click_y = click_y - abs_y - border_offset - padding_top;
+
+        int target_col = inner_click_x + root->scroll_x();
+        int target_row = is_multiline ? (inner_click_y + root->scroll_y()) : 0;
+
+        auto graphemes = GetGraphemesList(value);
+        cursor_pos = is_multiline ? GetCursorPosFrom2D(graphemes, target_row, target_col)
+                                  : GetCursorPositionFromColumn(graphemes, target_col);
+
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (event.is<Event::Keyboard>()) {
+    auto kb = event.get<Event::Keyboard>();
+    if (kb.motion == Event::Keyboard::Motion::Pressed || kb.motion == Event::Keyboard::Motion::Repeat) {
+      if (!root || !root->focused()) {
+        return false;
+      }
+
+      auto graphemes = GetGraphemesList(value);
+      int n = static_cast<int>(graphemes.size());
+
+      if (kb.special == Event::Keyboard::Special::ArrowLeft) {
+        if (kb.modifier.ctrl || kb.modifier.alt) {
+          cursor_pos = FindWordBoundaryLeft(graphemes, cursor_pos);
+        } else {
+          cursor_pos = std::max(0, cursor_pos - 1);
+        }
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (kb.special == Event::Keyboard::Special::ArrowRight) {
+        if (kb.modifier.ctrl || kb.modifier.alt) {
+          cursor_pos = FindWordBoundaryRight(graphemes, cursor_pos);
+        } else {
+          cursor_pos = std::min(n, cursor_pos + 1);
+        }
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (is_multiline && kb.special == Event::Keyboard::Special::ArrowUp) {
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        cursor_pos = GetCursorPosFrom2D(graphemes, pos2d.line - 1, ideal_column_);
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (is_multiline && kb.special == Event::Keyboard::Special::ArrowDown) {
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        cursor_pos = GetCursorPosFrom2D(graphemes, pos2d.line + 1, ideal_column_);
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (kb.special == Event::Keyboard::Special::Home) {
+        if (is_multiline) {
+          cursor_pos = FindLineStart(graphemes, cursor_pos);
+        } else {
+          cursor_pos = 0;
+        }
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (kb.special == Event::Keyboard::Special::End) {
+        if (is_multiline) {
+          cursor_pos = FindLineEnd(graphemes, cursor_pos);
+        } else {
+          cursor_pos = n;
+        }
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (kb.special == Event::Keyboard::Special::Backspace) {
+        HandleBackspace(graphemes, cursor_pos, kb.modifier.ctrl || kb.modifier.alt);
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (kb.special == Event::Keyboard::Special::Delete) {
+        HandleDelete(graphemes, cursor_pos, kb.modifier.ctrl || kb.modifier.alt);
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
+        std::string character = "\n";
+        auto new_graphemes = GetGraphemesList(character);
+        if (cursor_pos < 0) cursor_pos = 0;
+        if (cursor_pos > n) cursor_pos = n;
+
+        graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(), new_graphemes.end());
+        cursor_pos += static_cast<int>(new_graphemes.size());
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
+
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+      if (kb.special == Event::Keyboard::Special::None && kb.codepoint >= 32 && !kb.modifier.ctrl && !kb.modifier.meta) {
+        std::string character = CodePointToString(kb.codepoint);
+        auto new_graphemes = GetGraphemesList(character);
+        if (cursor_pos < 0) cursor_pos = 0;
+        if (cursor_pos > n) cursor_pos = n;
+
+        graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(), new_graphemes.end());
+        cursor_pos += static_cast<int>(new_graphemes.size());
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
+
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool TextInputBase::DigestShared(ComponentBase* self) {
+  auto* root = self->Root();
+  bool cur_focused = root ? root->focused() : false;
+  is_focused_ = cur_focused;
+
+  auto graphemes = GetGraphemesList(value);
+  int n = static_cast<int>(graphemes.size());
+  if (cursor_pos < 0) {
+    cursor_pos = 0;
+  }
+  if (cursor_pos > n) {
+    cursor_pos = n;
+  }
+
+  left_text = GraphemesToString(graphemes, 0, cursor_pos);
+  if (cursor_pos < n && (graphemes[cursor_pos].text == "\n" || graphemes[cursor_pos].text == "\r\n" || graphemes[cursor_pos].text == "\r")) {
+    cursor_char = " ";
+    right_text = GraphemesToString(graphemes, cursor_pos);
+  } else {
+    cursor_char = (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
+    right_text = GraphemesToString(graphemes, cursor_pos + 1);
+  }
+  cursor_class = is_focused_ ? "cursor cursor-focused" : "cursor";
+
+  return false;
+}
+
 void input::InitReflection() {
   Bind(value);
   Bind(left_text);
@@ -103,9 +429,7 @@ void input::InitReflection() {
 }
 
 std::string_view input::Setup() {
-  return R"html(
-    <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
-    <style>
+  return R"html(<span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span><style>
       self {
         display: inline flex;
         flex-direction: row;
@@ -124,28 +448,107 @@ std::string_view input::Setup() {
         background-color: white;
         color: black;
       }
-    </style>
-  )html";
+    </style>)html";
 }
 
 bool input::OnEvent(Event event) {
+  return OnEventShared(this, event, false);
+}
+
+bool input::Digest() {
+  DigestShared(this);
+  bool changed = Component<input>::Digest();
+  if (changed) {
+    KeepCursorVisible(Root(), false);
+  }
+  return changed;
+}
+
+void textarea::InitReflection() {
+  Bind(value);
+  Bind(left_text);
+  Bind(cursor_char);
+  Bind(right_text);
+  Bind(cursor_class);
+  Component<textarea>::InitReflection();
+}
+
+std::string_view textarea::Setup() {
+  return R"html(<span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span><style>
+      self {
+        display: block;
+        border: solid;
+        border-color: #555;
+        padding-left: 1;
+        padding-right: 1;
+        overflow-y: scroll;
+      }
+      .cursor {
+        background-color: transparent;
+      }
+      .cursor-focused {
+        background-color: white;
+        color: black;
+      }
+    </style>)html";
+}
+
+bool textarea::OnEvent(Event event) {
+  return OnEventShared(this, event, true);
+}
+
+bool textarea::Digest() {
+  DigestShared(this);
+  bool changed = Component<textarea>::Digest();
+  if (changed) {
+    KeepCursorVisible(Root(), true);
+  }
+  return changed;
+}
+
+void checkbox::InitReflection() {
+  Bind(checked);
+  Bind(checked_char);
+  Bind(focus_class);
+  Component<checkbox>::InitReflection();
+}
+
+std::string_view checkbox::Setup() {
+  return R"html(<span class="{focus_class}">[<span class="checkmark">{checked_char}</span>] <slot></slot></span><style>
+      self {
+        display: inline-block;
+        cursor: pointer;
+      }
+      .focused {
+        background-color: #333;
+        color: #fff;
+      }
+      .checkmark {
+        font-weight: bold;
+        color: #38bdf8;
+      }
+    </style>)html";
+}
+
+bool checkbox::OnEvent(Event event) {
+  auto* root = Root();
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
     if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
-      if (!Root()) return false;
+      if (!root) return false;
       int click_x = mouse.x - 1;
       int click_y = mouse.y - 1;
-      int abs_x = Root()->absolute_x();
-      int abs_y = Root()->absolute_y();
-      int layout_w = Root()->layout_width();
-      int layout_h = Root()->layout_height();
+      int abs_x = root->absolute_x();
+      int abs_y = root->absolute_y();
+      int layout_w = root->layout_width();
+      int layout_h = root->layout_height();
 
       if (click_x >= abs_x && click_x < abs_x + layout_w &&
           click_y >= abs_y && click_y < abs_y + layout_h) {
         
-        // Unfocus all other elements
-        if (Root()->Parent()) {
-          Element* root_el = Root();
+        // Focus this element
+        if (root->Parent()) {
+          Element* root_el = root;
           while (root_el->Parent()) {
             root_el = root_el->Parent();
           }
@@ -153,77 +556,91 @@ bool input::OnEvent(Event event) {
             el.set_focused(false);
           });
         }
-        Root()->set_focused(true);
+        root->set_focused(true);
 
-        int border_offset = (Root()->style.border_style != BorderStyle::None) ? 1 : 0;
-        int padding_left = Root()->style.padding.left;
-        int inner_click_x = click_x - abs_x - border_offset - padding_left;
-        int target_col = inner_click_x + Root()->scroll_x();
+        checked = !checked;
+        PropagateBinding("checked", checked ? "true" : "false");
 
-        auto graphemes = GetGraphemesList(value);
-        cursor_pos = GetCursorPositionFromColumn(graphemes, target_col);
+        // Run onchange callback if present
+        if (root->Attributes().count("onchange")) {
+          std::string onchange_cb = root->Attributes().at("onchange");
+          Element* parent_el = root->Parent();
+          ComponentBase* parent_comp = nullptr;
+          while (parent_el) {
+            if (parent_el->component()) {
+              parent_comp = const_cast<ComponentBase*>(parent_el->component());
+              break;
+            }
+            parent_el = parent_el->Parent();
+          }
+          while (parent_comp) {
+            if (parent_comp->RunCallback(onchange_cb)) {
+              break;
+            }
+            if (parent_comp->Root()) {
+              parent_el = parent_comp->Root()->Parent();
+              parent_comp = nullptr;
+              while (parent_el) {
+                if (parent_el->component()) {
+                  parent_comp = const_cast<ComponentBase*>(parent_el->component());
+                  break;
+                }
+                parent_el = parent_el->Parent();
+              }
+            } else {
+              break;
+            }
+          }
+        }
 
-        // Keep cursor visible after move
-        KeepCursorVisible();
         return true;
       }
     }
-    return false;
   }
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
     if (kb.motion == Event::Keyboard::Motion::Pressed || kb.motion == Event::Keyboard::Motion::Repeat) {
-      if (!Root() || !Root()->focused()) {
+      if (!root || !root->focused()) {
         return false;
       }
 
-      auto graphemes = GetGraphemesList(value);
-      int n = static_cast<int>(graphemes.size());
+      if (kb.special == Event::Keyboard::Special::None && kb.codepoint == 32) { // Space
+        checked = !checked;
+        PropagateBinding("checked", checked ? "true" : "false");
 
-      if (kb.special == Event::Keyboard::Special::ArrowLeft) {
-        if (kb.modifier.ctrl) {
-          cursor_pos = FindWordBoundaryLeft(graphemes, cursor_pos);
-        } else {
-          cursor_pos = std::max(0, cursor_pos - 1);
+        // Run onchange callback if present
+        if (root->Attributes().count("onchange")) {
+          std::string onchange_cb = root->Attributes().at("onchange");
+          Element* parent_el = root->Parent();
+          ComponentBase* parent_comp = nullptr;
+          while (parent_el) {
+            if (parent_el->component()) {
+              parent_comp = const_cast<ComponentBase*>(parent_el->component());
+              break;
+            }
+            parent_el = parent_el->Parent();
+          }
+          while (parent_comp) {
+            if (parent_comp->RunCallback(onchange_cb)) {
+              break;
+            }
+            if (parent_comp->Root()) {
+              parent_el = parent_comp->Root()->Parent();
+              parent_comp = nullptr;
+              while (parent_el) {
+                if (parent_el->component()) {
+                  parent_comp = const_cast<ComponentBase*>(parent_el->component());
+                  break;
+                }
+                parent_el = parent_el->Parent();
+              }
+            } else {
+              break;
+            }
+          }
         }
-        KeepCursorVisible();
-        return true;
-      }
-      if (kb.special == Event::Keyboard::Special::ArrowRight) {
-        if (kb.modifier.ctrl) {
-          cursor_pos = FindWordBoundaryRight(graphemes, cursor_pos);
-        } else {
-          cursor_pos = std::min(n, cursor_pos + 1);
-        }
-        KeepCursorVisible();
-        return true;
-      }
-      if (kb.special == Event::Keyboard::Special::Backspace) {
-        HandleBackspace(graphemes, cursor_pos, kb.modifier.ctrl);
-        value = GraphemesToString(graphemes);
-        PropagateBinding("value", value);
-        KeepCursorVisible();
-        return true;
-      }
-      if (kb.special == Event::Keyboard::Special::Delete) {
-        HandleDelete(graphemes, cursor_pos, kb.modifier.ctrl);
-        value = GraphemesToString(graphemes);
-        PropagateBinding("value", value);
-        KeepCursorVisible();
-        return true;
-      }
-      if (kb.special == Event::Keyboard::Special::None && kb.codepoint >= 32 && !kb.modifier.ctrl && !kb.modifier.meta) {
-        std::string character = CodePointToString(kb.codepoint);
-        auto new_graphemes = GetGraphemesList(character);
-        if (cursor_pos < 0) cursor_pos = 0;
-        if (cursor_pos > n) cursor_pos = n;
 
-        graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(), new_graphemes.end());
-        cursor_pos += static_cast<int>(new_graphemes.size());
-        value = GraphemesToString(graphemes);
-        PropagateBinding("value", value);
-        KeepCursorVisible();
         return true;
       }
     }
@@ -232,61 +649,238 @@ bool input::OnEvent(Event event) {
   return false;
 }
 
-bool input::Digest() {
-  bool cur_focused = Root() ? Root()->focused() : false;
-  is_focused_ = cur_focused;
-
-  auto graphemes = GetGraphemesList(value);
-  int n = static_cast<int>(graphemes.size());
-  if (cursor_pos < 0) {
-    cursor_pos = 0;
-  }
-  if (cursor_pos > n) {
-    cursor_pos = n;
-  }
-
-  left_text = GraphemesToString(graphemes, 0, cursor_pos);
-  cursor_char = (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
-  right_text = GraphemesToString(graphemes, cursor_pos + 1);
-  cursor_class = is_focused_ ? "cursor cursor-focused" : "cursor";
-
-  bool changed = Component<input>::Digest();
-
-  if (changed) {
-    KeepCursorVisible();
-  }
-
-  return changed;
+bool checkbox::Digest() {
+  auto* root = Root();
+  bool is_focused = root ? root->focused() : false;
+  focus_class = is_focused ? "focused" : "";
+  checked_char = checked ? "x" : " ";
+  return Component<checkbox>::Digest();
 }
 
-void input::KeepCursorVisible() {
-  if (!Root()) return;
+void slider::InitReflection() {
+  Bind(value);
+  Bind(min);
+  Bind(max);
+  Bind(step);
+  Bind(width);
+  Bind(track_left);
+  Bind(thumb_char);
+  Bind(track_right);
+  Bind(focus_class);
+  Component<slider>::InitReflection();
+}
 
-  auto current_graphemes = GetGraphemesList(value);
-  int cursor_col = 0;
-  int limit = std::min(static_cast<int>(current_graphemes.size()), cursor_pos);
-  for (int i = 0; i < limit; ++i) {
-    cursor_col += current_graphemes[i].width;
+std::string_view slider::Setup() {
+  return R"html(<span class="{focus_class}"><span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span></span><style>
+      self {
+        display: inline-block;
+        cursor: pointer;
+      }
+      .focused {
+        background-color: #333;
+        color: #fff;
+      }
+      .track-left {
+        color: #38bdf8;
+      }
+      .track-right {
+        color: #555;
+      }
+      .thumb {
+        font-weight: bold;
+        color: #38bdf8;
+      }
+    </style>)html";
+}
+
+bool slider::OnEvent(Event event) {
+  auto* root = Root();
+  if (!root) return false;
+
+  bool value_changed = false;
+
+  if (event.is<Event::Mouse>()) {
+    auto mouse = event.get<Event::Mouse>();
+    if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
+      int click_x = mouse.x - 1;
+      int click_y = mouse.y - 1;
+      int abs_x = root->absolute_x();
+      int abs_y = root->absolute_y();
+      int layout_w = root->layout_width();
+      int layout_h = root->layout_height();
+
+      if (click_x >= abs_x && click_x < abs_x + layout_w &&
+          click_y >= abs_y && click_y < abs_y + layout_h) {
+        
+        // Focus this element
+        if (root->Parent()) {
+          Element* root_el = root;
+          while (root_el->Parent()) {
+            root_el = root_el->Parent();
+          }
+          root_el->Visit([](Element& el) {
+            el.set_focused(false);
+          });
+        }
+        root->set_focused(true);
+
+        // Click positioning logic: width of slider track
+        int inner_x = click_x - abs_x;
+        int track_w = std::max(2, width);
+        int pos = std::clamp(inner_x, 0, track_w - 1);
+        
+        // Map pos to [min, max]
+        double pct = static_cast<double>(pos) / (track_w - 1);
+        int raw_val = min + static_cast<int>(std::round(pct * (max - min)));
+        
+        // Snap to nearest step
+        int remainder = (raw_val - min) % step;
+        int new_val = raw_val;
+        if (remainder < step / 2.0) {
+          new_val = raw_val - remainder;
+        } else {
+          new_val = raw_val + (step - remainder);
+        }
+        new_val = std::clamp(new_val, min, max);
+
+        if (new_val != value) {
+          value = new_val;
+          value_changed = true;
+        }
+      }
+    }
   }
 
-  int border_offset = (Root()->style.border_style != BorderStyle::None) ? 1 : 0;
-  int padding_left = Root()->style.padding.left;
-  int padding_right = Root()->style.padding.right;
-  int border_horiz = border_offset * 2;
-  int padding_horiz = padding_left + padding_right;
+  if (event.is<Event::Keyboard>()) {
+    auto kb = event.get<Event::Keyboard>();
+    if (kb.motion == Event::Keyboard::Motion::Pressed || kb.motion == Event::Keyboard::Motion::Repeat) {
+      if (root->focused()) {
+        int delta = 0;
+        if (kb.special == Event::Keyboard::Special::ArrowLeft || kb.special == Event::Keyboard::Special::ArrowDown) {
+          delta = -step;
+        } else if (kb.special == Event::Keyboard::Special::ArrowRight || kb.special == Event::Keyboard::Special::ArrowUp) {
+          delta = step;
+        }
 
-  int layout_w = Root()->layout_width();
-  int visible_width = layout_w - border_horiz - padding_horiz;
-  if (visible_width <= 0) {
-    return;
+        if (delta != 0) {
+          int new_val = std::clamp(value + delta, min, max);
+          if (new_val != value) {
+            value = new_val;
+            value_changed = true;
+          }
+        }
+      }
+    }
   }
 
-  int curr_scroll_x = Root()->scroll_x();
-  if (cursor_col < curr_scroll_x) {
-    Root()->set_scroll_x(cursor_col);
-  } else if (cursor_col >= curr_scroll_x + visible_width) {
-    Root()->set_scroll_x(cursor_col - visible_width + 1);
+  if (value_changed) {
+    PropagateBinding("value", std::to_string(value));
+
+    // Run onchange callback if present
+    if (root->Attributes().count("onchange")) {
+      std::string onchange_cb = root->Attributes().at("onchange");
+      Element* parent_el = root->Parent();
+      ComponentBase* parent_comp = nullptr;
+      while (parent_el) {
+        if (parent_el->component()) {
+          parent_comp = const_cast<ComponentBase*>(parent_el->component());
+          break;
+        }
+        parent_el = parent_el->Parent();
+      }
+      while (parent_comp) {
+        if (parent_comp->RunCallback(onchange_cb)) {
+          break;
+        }
+        if (parent_comp->Root()) {
+          parent_el = parent_comp->Root()->Parent();
+          parent_comp = nullptr;
+          while (parent_el) {
+            if (parent_el->component()) {
+              parent_comp = const_cast<ComponentBase*>(parent_el->component());
+              break;
+            }
+            parent_el = parent_el->Parent();
+          }
+        } else {
+          break;
+        }
+      }
+    }
+    return true;
   }
+
+  return false;
+}
+
+bool slider::Digest() {
+  auto* root = Root();
+  bool is_focused = root ? root->focused() : false;
+  focus_class = is_focused ? "focused" : "";
+
+  int track_w = std::max(2, width);
+  int range = max - min;
+  int pos = 0;
+  if (range > 0) {
+    pos = static_cast<int>(std::round(static_cast<double>(value - min) / range * (track_w - 1)));
+  }
+  pos = std::clamp(pos, 0, track_w - 1);
+
+  track_left = "";
+  for (int i = 0; i < pos; ++i) {
+    track_left += "─";
+  }
+  thumb_char = "●";
+  track_right = "";
+  for (int i = pos + 1; i < track_w; ++i) {
+    track_right += "─";
+  }
+
+  return Component<slider>::Digest();
+}
+
+void progress::InitReflection() {
+  Bind(value);
+  Bind(max);
+  Bind(width);
+  Bind(filled_track);
+  Bind(empty_track);
+  Component<progress>::InitReflection();
+}
+
+std::string_view progress::Setup() {
+  return R"html(<span class="filled">{filled_track}</span><span class="empty">{empty_track}</span><style>
+      self {
+        display: inline-block;
+      }
+      .filled {
+        color: #38bdf8;
+      }
+      .empty {
+        color: #444;
+      }
+    </style>)html";
+}
+
+bool progress::Digest() {
+  int track_w = std::max(1, width);
+  double range = max;
+  int pos = 0;
+  if (range > 0) {
+    pos = static_cast<int>(std::round(std::clamp(value / range, 0.0, 1.0) * track_w));
+  }
+  pos = std::clamp(pos, 0, track_w);
+
+  filled_track = "";
+  for (int i = 0; i < pos; ++i) {
+    filled_track += "█";
+  }
+  empty_track = "";
+  for (int i = pos; i < track_w; ++i) {
+    empty_track += " ";
+  }
+
+  return Component<progress>::Digest();
 }
 
 }  // namespace rtxui

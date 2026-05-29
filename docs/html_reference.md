@@ -18,6 +18,10 @@ This reference lists all the built-in HTML/XML elements supported by RTXUI out-o
 | `<li>` | Block | `block` | A single item inside a list. |
 | `<button>` | Block | `inline-block` | Interactive clickable button with borders and padding. |
 | `<input>` | Block | `inline flex` | Interactive single-line text input field. |
+| `<textarea>` | Block | `block` | Interactive multi-line text editing area with vertical scrolling. |
+| `<checkbox>` | Inline | `inline-block` | Interactive binary checkbox/toggle component. |
+| `<slider>` | Inline | `inline-block` | Interactive horizontal slider/range control. |
+| `<progress>` | Inline | `inline-block` | Horizontal block-level progress bar. |
 
 ---
 
@@ -142,3 +146,148 @@ An interactive single-line text entry field.
 - **Interactive Demo**:
   
   <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="22" />
+
+---
+
+### `<textarea>`
+An interactive multi-line text editing area. Shares the same event-handling base as `<input>` but supports newlines, vertical cursor navigation, and vertical scrolling.
+- **Default Styles**:
+  ```css
+  self {
+    display: block;
+    border: solid;
+    border-color: #555;
+    padding-left: 1;
+    padding-right: 1;
+    overflow-y: scroll;
+  }
+  ```
+- **Attributes**:
+  - `value`: Two-way reactive string binding. The string may contain `\n` newline characters. Programmatic changes update the editor, and user edits update the bound variable.
+- **Built-in Keyboard & Mouse Bindings**:
+  - `ArrowLeft` / `ArrowRight`: Moves the cursor character-by-character.
+  - `ArrowUp` / `ArrowDown`: Moves the cursor to the same visual column on the previous/next line, preserving the *ideal column* across empty lines.
+  - `Home` / `End`: Moves the cursor to the start or end of the **current line** (not the whole value).
+  - `Ctrl + ArrowLeft` / `Ctrl + ArrowRight`: Moves the cursor past space-delimited word boundaries.
+  - `Enter` (`Return`): Inserts a `\n` newline at the cursor position.
+  - `Backspace` / `Delete`: Deletes the character/grapheme before/after the cursor. Backspace at the start of a line joins it with the previous line.
+  - `Ctrl + Backspace` / `Ctrl + Delete`: Deletes the word segment to the left/right.
+  - Left Mouse Click: Focuses the textarea and positions the cursor at the closest grapheme boundary to the click coordinates (both row and column).
+  - Auto-Scrolling: Automatically scrolls vertically (`scroll_y`) to keep the cursor line visible within the element's bounds.
+- **Example**:
+  ```html
+  <textarea value="{notes}" />
+  ```
+
+- **Interactive Demo**:
+  
+  <WasmTerminal src="/wasm/rtxui_example_textarea.js" :cols="80" :rows="28" />
+
+---
+
+### `<checkbox>`
+An interactive toggle control for boolean values.
+- **Default Styles**:
+  ```css
+  self {
+    display: inline-block;
+    cursor: pointer;
+  }
+  .focused {
+    background-color: #333;
+    color: #fff;
+  }
+  .checkmark {
+    font-weight: bold;
+    color: #38bdf8;
+  }
+  ```
+- **Attributes**:
+  - `checked`: Reactive boolean binding. Toggling state updates the variable.
+  - `onchange`: Callback triggered when the checked state changes.
+- **Built-in Keyboard & Mouse Bindings**:
+  - `Space`: Toggles the checked state when focused.
+  - Left Mouse Click: Focuses and toggles the checked state.
+- **Example**:
+  ```html
+  <checkbox checked="{is_enabled}" onchange="ToggleEnabled">Enable Notifications</checkbox>
+  ```
+
+- **Interactive Demo**:
+
+  <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="22" />
+
+---
+
+### `<slider>`
+An interactive horizontal range slider component.
+- **Default Styles**:
+  ```css
+  self {
+    display: inline-block;
+    cursor: pointer;
+  }
+  .focused {
+    background-color: #333;
+    color: #fff;
+  }
+  .track-left {
+    color: #38bdf8;
+  }
+  .track-right {
+    color: #555;
+  }
+  .thumb {
+    font-weight: bold;
+    color: #38bdf8;
+  }
+  ```
+- **Attributes**:
+  - `value`: Reactive integer value binding.
+  - `min`: Minimum bound (default `0`).
+  - `max`: Maximum bound (default `100`).
+  - `step`: Step value increment (default `1`).
+  - `width`: Total layout track width in characters (default `20`).
+  - `onchange`: Callback triggered when the value changes.
+- **Built-in Keyboard & Mouse Bindings**:
+  - `ArrowLeft` / `ArrowDown`: Decreases the value by `step`.
+  - `ArrowRight` / `ArrowUp`: Increases the value by `step`.
+  - Left Mouse Click: Focuses the slider and sets the value proportional to the clicked column on the track.
+- **Example**:
+  ```html
+  <slider value="{volume}" min="0" max="100" step="5" width="20" />
+  ```
+
+- **Interactive Demo**:
+
+  <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="22" />
+
+---
+
+### `<progress>`
+A read-only horizontal progress bar indicator.
+- **Default Styles**:
+  ```css
+  self {
+    display: inline-block;
+  }
+  .filled {
+    color: #38bdf8;
+  }
+  .empty {
+    color: #444;
+  }
+  ```
+- **Attributes**:
+  - `value`: Current progress value.
+  - `max`: Maximum range value (default `100`).
+  - `width`: Bar width in characters (default `20`).
+- **Example**:
+  ```html
+  <progress value="{percentage}" max="100" width="30" />
+  ```
+
+- **Interactive Demo**:
+
+  <WasmTerminal src="/wasm/rtxui_example_progress.js" :cols="80" :rows="22" />
+
