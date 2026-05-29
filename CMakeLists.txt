@@ -31,6 +31,7 @@ add_library(rtxui_lib STATIC
   "src/rtxui/terminal/screen.hpp"
   "src/rtxui/component/component.cpp"
   "src/rtxui/component/component.hpp"
+  "src/rtxui/component/default_components.cpp"
   "src/rtxui/component/default_components.hpp"
   "src/rtxui/component/import.hpp"
   "src/rtxui/core/expected.hpp"
@@ -143,6 +144,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_text_align example/text_align.cpp)
   target_link_libraries(rtxui_example_text_align PRIVATE rtxui)
+
+  add_executable(rtxui_example_input example/input.cpp)
+  target_link_libraries(rtxui_example_input PRIVATE rtxui)
 endif()
 
 # An option to enable testing

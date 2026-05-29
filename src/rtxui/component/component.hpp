@@ -41,10 +41,18 @@ class ComponentBase : public RefCounted, public Bindings {
   Element* Root() { return root_.get(); }
   Ref<Element> Slot(std::string_view name);
   void SetProperty(std::string_view name, std::string_view value);
+  void PropagateBinding(std::string_view child_prop, std::string_view value);
 
   virtual std::string GetInterpolatedValue(std::string_view expression) = 0;
 
+  struct BindingLink {
+    std::string child_prop;
+    ComponentBase* parent;
+    std::string parent_prop;
+  };
+
  protected:
+  std::vector<BindingLink> two_way_bindings_;
   void Render(const xml::Node& node, Element* element, ComponentBase* source);
   std::string template_;
   std::string xml_string_;

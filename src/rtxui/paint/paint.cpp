@@ -375,6 +375,10 @@ void PaintImpl(const PhysicalFragment* frag,
   int w = frag->width;
   int h = frag->height;
 
+  if (frag->dom_node) {
+    const_cast<Element*>(frag->dom_node)->set_absolute_position(abs_x, abs_y);
+  }
+
   Color current_foreground_color =
       frag->foreground_color.value_or(inherited_foreground_color);
   Color current_background_color = frag->background_color.value_or(Color::RGBA(0, 0, 0, 0));

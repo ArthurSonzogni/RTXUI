@@ -177,6 +177,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   }
 
   if (box->dom_node) {
+    box->dom_node->set_layout_width(fragment->width);
+    box->dom_node->set_layout_height(fragment->height);
     box->dom_node->set_scroll_height(cur_y);
     int max_scroll = std::max(0, cur_y - fragment->height);
     if (box->dom_node->scroll_y() > max_scroll) {
@@ -369,6 +371,11 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   if (!is_fixed_width) {
     container_frag->width =
         max_line_width + box->style.padding.Horiz() + box->style.border.Horiz();
+  }
+
+  if (box->dom_node) {
+    box->dom_node->set_layout_width(container_frag->width);
+    box->dom_node->set_layout_height(container_frag->height);
   }
 
   int final_content_width = is_fixed_width
@@ -582,6 +589,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   }
 
   if (box->dom_node) {
+    box->dom_node->set_layout_width(fragment->width);
+    box->dom_node->set_layout_height(fragment->height);
     box->dom_node->set_scroll_height(total_content_height);
     int max_scroll = std::max(0, total_content_height - fragment->height);
     if (box->dom_node->scroll_y() > max_scroll) {

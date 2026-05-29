@@ -124,6 +124,27 @@ class button : public Component<button> {
   )html";
 };
 
+class input : public Component<input> {
+ public:
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool OnEvent(Event event) override;
+  bool Digest() override;
+
+  std::string value;
+  int cursor_pos = 0;
+
+  // Render bindings
+  std::string left_text;
+  std::string cursor_char;
+  std::string right_text;
+  std::string cursor_class = "cursor";
+
+ private:
+  bool is_focused_ = false;
+  void KeepCursorVisible();
+};
+
 }  // namespace rtxui
 
 #endif  // RTXUI_DEFAULT_COMPONENTS_HPP_

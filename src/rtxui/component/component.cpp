@@ -358,6 +358,11 @@ void ComponentBase::Render(const xml::Node& node,
             std::string interpolated_value = Interpolate(value);
             child->SetProperty(std::string(key), interpolated_value);
             child->Root()->SetAttribute(std::string(key), interpolated_value);
+
+            if (value.starts_with("{") && value.ends_with("}")) {
+              std::string parent_prop = std::string(value.substr(1, value.size() - 2));
+              child->two_way_bindings_.push_back({std::string(key), import_source, parent_prop});
+            }
           }
 
           child->Render();
@@ -400,6 +405,14 @@ void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
     if (entry.name == target && entry.set_value) {
       entry.set_value(value);
       return;
+    }
+  }
+}
+
+void ComponentBase::PropagateBinding(std::string_view child_prop, std::string_view value) {
+  for (const auto& binding : two_way_bindings_) {
+    if (binding.child_prop == child_prop) {
+      binding.parent->SetProperty(binding.parent_prop, value);
     }
   }
 }
