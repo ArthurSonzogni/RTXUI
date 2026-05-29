@@ -203,7 +203,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutInputNode node,
     LayoutConstraints constraints) {
   auto* box = node.box;
-  int avail_width = constraints.width.value;
+  int avail_width = (constraints.width.mode == MeasureMode::Undefined)
+                        ? 10000
+                        : constraints.width.value;
 
   int width = (constraints.width.mode == MeasureMode::Exactly)
                   ? avail_width
