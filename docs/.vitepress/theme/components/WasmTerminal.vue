@@ -13,6 +13,14 @@ const props = defineProps({
   src: {
     type: String,
     required: true
+  },
+  cols: {
+    type: Number,
+    default: 80
+  },
+  rows: {
+    type: Number,
+    default: 15
   }
 })
 
@@ -43,15 +51,13 @@ onMounted(async () => {
   // 1. Load xterm.js stylesheet and scripts dynamically
   await loadStylesheet('https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css')
   await loadScript('https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js')
-  await loadScript('https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js')
 
   const Terminal = window.Terminal
-  const FitAddon = window.FitAddon.FitAddon
 
   // 2. Initialize Terminal
   xtermInstance = new Terminal({
-    cols: 80,
-    rows: 15,
+    cols: props.cols,
+    rows: props.rows,
     cursorBlink: true,
     theme: {
       background: '#0f172a', // Slate 900
@@ -60,11 +66,7 @@ onMounted(async () => {
     }
   })
 
-  const fitAddon = new FitAddon()
-  xtermInstance.loadAddon(fitAddon)
-
   xtermInstance.open(terminalRef.value)
-  fitAddon.fit()
 
   // 3. Expose dimensions to Emscripten TTY
   window.rtxui_columns = xtermInstance.cols
@@ -88,15 +90,6 @@ onMounted(async () => {
   window.rtxui_on_output = (str) => {
     xtermInstance.write(str)
   }
-
-  // Handle terminal resizing
-  window.addEventListener('resize', () => {
-    if (xtermInstance) {
-      fitAddon.fit()
-      window.rtxui_columns = xtermInstance.cols
-      window.rtxui_lines = xtermInstance.rows
-    }
-  })
 
   // 4. Load the Emscripten JS Module
   window.Module = {
@@ -125,13 +118,15 @@ onBeforeUnmount(() => {
 .wasm-terminal-container {
   margin: 1.5rem 0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--vp-c-border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   background: #0f172a;
   padding: 12px;
 }
 .terminal-div {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
 }
 </style>
