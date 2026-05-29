@@ -109,6 +109,15 @@ class ol : public Component<ol> {
   )html";
 };
 
+class hr : public Component<hr> {
+ public:
+  std::string line_chars;
+
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool Digest() override;
+};
+
 class button : public Component<button> {
  public:
   std::string_view view = R"html(

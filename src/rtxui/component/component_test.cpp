@@ -976,4 +976,34 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   CHECK(select_ptr->selected_label == "Dark Theme");
 }
 
+class HrTestComponent : public rtxui::Component<HrTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::hr>();
+    rtxui::Component<HrTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <hr />
+  )";
+};
+
+TEST_CASE("Horizontal Rule Component", "[component][hr]") {
+  auto container = rtxui::Ref<HrTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* hr_el = container->Root()->QuerySelector("hr");
+  REQUIRE(hr_el != nullptr);
+  auto* hr_comp = const_cast<rtxui::ComponentBase*>(hr_el->component());
+  REQUIRE(hr_comp != nullptr);
+  auto* hr_ptr = dynamic_cast<rtxui::hr*>(hr_comp);
+  REQUIRE(hr_ptr != nullptr);
+
+  container->Digest();
+  screen.Draw();
+
+  CHECK(hr_ptr->line_chars.size() > 0);
+  CHECK(hr_ptr->line_chars.substr(0, 3) == "─");
+}
+
 }  // namespace

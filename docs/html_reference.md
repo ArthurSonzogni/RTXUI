@@ -24,6 +24,7 @@ This reference lists all the built-in HTML/XML elements supported by RTXUI out-o
 | `<progress>` | Inline | `inline-block` | Horizontal block-level progress bar. |
 | `<select>` | Block | `inline flex` | Dropdown selection list. |
 | `<option>` | Block | `block` | A selectable option item inside a `<select>`. |
+| `<hr>` | Block | `block` | A horizontal rule/separator line. |
 
 ---
 
@@ -351,4 +352,30 @@ An interactive dropdown menu for picking from a list of options.
 - **Interactive Demo**:
 
   <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="22" />
+
+---
+
+### `<hr>`
+A block-level horizontal separator rule. Renders a continuous horizontal line `─` across the layout width.
+- **Default Styles**:
+  ```css
+  self {
+    display: block;
+    margin-top: 1;
+    margin-bottom: 1;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .hr-span {
+    color: #555;
+  }
+  ```
+- **Example**:
+  ```html
+  <hr />
+  ```
+
+- **Interactive Demo**:
+
+  <WasmTerminal src="/wasm/rtxui_example_hr.js" :cols="80" :rows="22" />
 

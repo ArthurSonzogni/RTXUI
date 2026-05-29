@@ -162,6 +162,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_select example/select.cpp)
   target_link_libraries(rtxui_example_select PRIVATE rtxui)
+
+  add_executable(rtxui_example_hr example/hr.cpp)
+  target_link_libraries(rtxui_example_hr PRIVATE rtxui)
 endif()
 
 # An option to enable testing
