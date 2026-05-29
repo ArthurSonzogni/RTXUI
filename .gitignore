@@ -33,3 +33,17 @@
 
 # bazel
 bazel-*
+
+# cmake & local build
+/build/
+/build_fuzz/
+/gcc-local/
+/Testing/
+/activate_gcc.sh
+/build_gcc.sh
+/build_project.sh
+
+# documentation node modules & build outputs
+/docs/node_modules/
+/docs/.vitepress/dist/
+/docs/.vitepress/cache/

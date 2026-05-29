@@ -132,6 +132,14 @@ endif()
 if(RTXUI_BUILD_TESTS)
   enable_testing()
 
+  # Verify that all CSS properties are documented
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME verify_css_docs
+      COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_docs.py"
+    )
+  endif()
+
   # Catch2
   FetchContent_Declare(catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2
