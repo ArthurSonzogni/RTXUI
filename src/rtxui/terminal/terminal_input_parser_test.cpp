@@ -359,9 +359,14 @@ TEST_CASE("Event.Keyboard", "[terminal]") {
       // https://github.com/ArthurSonzogni/FTXUI/issues/508
       {{127}, Event::Backspace()},
       {{8}, Event::Backspace()},
+      {str("\x1B\x7F"), Event::BackspaceCtrl()},
+      {str("\x1B\x08"), Event::BackspaceCtrl()},
+      {str("\x1B[127;5u"), Event::BackspaceCtrl()},
+      {str("\x1B[8;5u"), Event::BackspaceCtrl()},
 
       // Delete
       {str("\x1B[3~"), Event::Delete()},
+      {str("\x1B[3;5~"), Event::DeleteCtrl()},
 
       // Return
       {{13}, Event::Return()},
