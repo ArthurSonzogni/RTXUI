@@ -431,11 +431,16 @@ void Screen::Draw() {
       {width_, MeasureMode::Exactly},
       {height_, MeasureMode::Exactly},
   };
-  auto root_fragment = RunLayout({root_box.get()}, viewport);
+  std::shared_ptr<PhysicalFragment> root_fragment = nullptr;
+  if (root_box) {
+    root_fragment = RunLayout({root_box.get()}, viewport);
+  }
   root_fragment_ = root_fragment;
 
   Texture texture(width_, height_);
-  Paint(root_fragment.get(), texture);
+  if (root_fragment) {
+    Paint(root_fragment.get(), texture);
+  }
 
   std::string new_output = texture.Render();
 

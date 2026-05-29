@@ -439,6 +439,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     size_t space_pos = s_value.find(' ');
     if (space_pos == std::string::npos) {
       // Single keyword value
+      if (s_value == "none") {
+        style.display_none = true;
+        return;
+      }
       if (s_value == "block") {
         style.display_outside = DisplayOutside::Block;
         style.display_inside = DisplayInside::Flow;

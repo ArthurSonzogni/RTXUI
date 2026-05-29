@@ -99,6 +99,7 @@ enum class ScrollbarWidth {
 struct ComputedStyle {
   DisplayOutside display_outside = DisplayOutside::Inline;
   DisplayInside display_inside = DisplayInside::Flow;  // Default to flow
+  bool display_none = false;  // true when display: none — element takes no space
 
   Direction flex_direction = Direction::Row;
 

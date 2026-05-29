@@ -4,6 +4,9 @@ namespace rtxui {
 
 // Static Build method implementation
 std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node) {
+  if (!dom_node || dom_node->style.display_none) {
+    return nullptr;
+  }
   auto text_node = dynamic_cast<TextElement*>(dom_node);
 
   auto box = std::make_shared<LayoutBox>();
