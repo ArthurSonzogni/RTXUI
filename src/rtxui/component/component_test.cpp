@@ -489,4 +489,15 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
   CHECK(input_el->scroll_x() == 2);
 }
 
+TEST_CASE("Input Component Layout Height", "[component]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  // The layout height should be 3 cells: 1 cell for text content, plus 2 cells for top/bottom borders.
+  CHECK(input_el->layout_height() == 3);
+}
+
 }  // namespace

@@ -468,14 +468,22 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
     LayoutConstraints child_c;
     if (is_row) {
-      int max_h = (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
       child_c.width = {basis != -1 ? basis : 0, basis != -1
-                                                    ? MeasureMode::Exactly
-                                                    : MeasureMode::Undefined};
-      child_c.height = {max_h, MeasureMode::AtMost};
+                                                     ? MeasureMode::Exactly
+                                                     : MeasureMode::Undefined};
+      if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
+        child_c.height = {0, MeasureMode::Undefined};
+      } else {
+        int max_h = (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
+        child_c.height = {max_h, MeasureMode::AtMost};
+      }
     } else {
-      int max_w = (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
-      child_c.width = {max_w, MeasureMode::AtMost};
+      if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
+        child_c.width = {0, MeasureMode::Undefined};
+      } else {
+        int max_w = (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
+        child_c.width = {max_w, MeasureMode::AtMost};
+      }
       child_c.height = {basis != -1 ? basis : 0, basis != -1
                                                        ? MeasureMode::Exactly
                                                        : MeasureMode::Undefined};
@@ -545,12 +553,20 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     int m_vert = item.box->style.margin.Vert();
 
     if (is_row) {
-      int max_h = (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
       final_c.width = {item.main_resolved_size - m_horiz, MeasureMode::Exactly};
-      final_c.height = {max_h, MeasureMode::AtMost};
+      if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
+        final_c.height = {0, MeasureMode::Undefined};
+      } else {
+        int max_h = (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
+        final_c.height = {max_h, MeasureMode::AtMost};
+      }
     } else {
-      int max_w = (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
-      final_c.width = {max_w, MeasureMode::AtMost};
+      if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
+        final_c.width = {0, MeasureMode::Undefined};
+      } else {
+        int max_w = (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
+        final_c.width = {max_w, MeasureMode::AtMost};
+      }
       final_c.height = {item.main_resolved_size - m_vert, MeasureMode::Exactly};
     }
 

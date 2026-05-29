@@ -47,12 +47,6 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node, TextAlign
     }
   }
 
-  if (raw_children.empty()) {
-    // Set default algorithm even for empty boxes to avoid null pointers
-    box->algorithm = LayoutBox::Algorithm::BlockFlow;
-    return box;
-  }
-
   // --- Algorithm Selection & Tree Refinement ---
   if (box->style.display_inside == DisplayInside::Flex) {
     box->children = raw_children;

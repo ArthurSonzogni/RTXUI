@@ -382,9 +382,7 @@ void ComponentBase::Render(const xml::Node& node,
           child_element->SetAttribute(std::string(key), Interpolate(value));
         }
         slot->AddChild(child_element);
-        for (auto& grandchild : child_node.children) {
-          Render(grandchild, child_element.get(), import_source);
-        }
+        Render(child_node, child_element.get(), import_source);
         break;
       }
     }
