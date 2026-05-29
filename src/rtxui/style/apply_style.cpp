@@ -428,6 +428,21 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "text-align") {
+    if (v == "left") {
+      style.text_align = TextAlign::Left;
+      return;
+    }
+    if (v == "right") {
+      style.text_align = TextAlign::Right;
+      return;
+    }
+    if (v == "center") {
+      style.text_align = TextAlign::Center;
+      return;
+    }
+  }
+
   if (p == "display") {
     // Parse combined display property (display-outside and display-inside)
     // For simplicity, handle common single-keyword values and assume default display-inside: flow

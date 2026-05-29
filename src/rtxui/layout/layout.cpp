@@ -206,8 +206,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   int width = (constraints.width.mode == MeasureMode::Exactly)
                   ? avail_width
                   : ResolveSize(box->style.width, avail_width);
-  bool is_fixed_width = (width != -1);
-  if (!is_fixed_width) {
+  bool is_fixed_width = (width != -1) || box->is_anonymous;
+  if (width == -1) {
     width = avail_width;
   }
 
@@ -232,11 +232,21 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   int line_height = 1;
   int max_line_width = 0;
 
+  struct LineInfo {
+    size_t start_index;
+    size_t end_index;
+    int occupied_width;
+  };
+  std::vector<LineInfo> lines;
+  size_t line_start_index = 0;
+
   auto commit_line = [&]() {
     max_line_width = std::max(max_line_width, cursor_x);
+    lines.push_back({line_start_index, container_frag->children.size(), cursor_x});
     cursor_x = 0;
     cursor_y += line_height;
     line_height = 1;
+    line_start_index = container_frag->children.size();
   };
 
   for (auto& child : box->children) {
@@ -356,6 +366,29 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   if (!is_fixed_width) {
     container_frag->width =
         max_line_width + box->style.padding.Horiz() + box->style.border.Horiz();
+  }
+
+  int final_content_width = is_fixed_width
+      ? content_width_limit
+      : max_line_width;
+
+  if (box->style.text_align.has_value() && box->style.text_align != TextAlign::Left && final_content_width > 0) {
+    for (const auto& line : lines) {
+      int remaining_space = final_content_width - line.occupied_width;
+      if (remaining_space > 0) {
+        int shift = 0;
+        if (box->style.text_align == TextAlign::Right) {
+          shift = remaining_space;
+        } else if (box->style.text_align == TextAlign::Center) {
+          shift = remaining_space / 2;
+        }
+        if (shift > 0) {
+          for (size_t i = line.start_index; i < line.end_index; ++i) {
+            container_frag->children[i].x += shift;
+          }
+        }
+      }
+    }
   }
 
   return container_frag;

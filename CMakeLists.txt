@@ -140,6 +140,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_cjk example/cjk.cpp)
   target_link_libraries(rtxui_example_cjk PRIVATE rtxui)
+
+  add_executable(rtxui_example_text_align example/text_align.cpp)
+  target_link_libraries(rtxui_example_text_align PRIVATE rtxui)
 endif()
 
 # An option to enable testing

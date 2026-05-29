@@ -433,4 +433,95 @@ TEST_CASE("Layout: display: none", "[layout][display]") {
   }
 }
 
+TEST_CASE("Layout: text-align", "[layout][text-align]") {
+  SECTION("text-align: right with fixed width") {
+    struct TestComponent : Component<TestComponent> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .container {
+              display: block;
+              width: 10;
+              text-align: right;
+            }
+          </style>
+          <div class="container">Hello</div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<TestComponent>::New(), 10, 1);
+    CHECK(GetTextLayer(texture) == "     Hello\n");
+  }
+
+  SECTION("text-align: center with fixed width") {
+    struct TestComponent : Component<TestComponent> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .container {
+              display: block;
+              width: 10;
+              text-align: center;
+            }
+          </style>
+          <div class="container">Hello</div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<TestComponent>::New(), 10, 1);
+    // Hello is 5 cells. 10 - 5 = 5. Center shift = 5/2 = 2.
+    // Result has 2 leading spaces, 5 text cells, and 3 trailing spaces.
+    CHECK(GetTextLayer(texture) == "  Hello   \n");
+  }
+
+  SECTION("text-align: right with automatic wrapping") {
+    struct TestComponent : Component<TestComponent> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .container {
+              display: block;
+              width: 4;
+              text-align: right;
+            }
+          </style>
+          <div class="container">A B C</div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<TestComponent>::New(), 4, 2);
+    // "A B" wraps to line 1: width 3. Shift = 4 - 3 = 1 -> " A B"
+    // "C" wraps to line 2: width 1. Shift = 4 - 1 = 3 -> "   C"
+    CHECK(GetTextLayer(texture) ==
+          " A B\n"
+          "   C\n");
+  }
+
+  SECTION("text-align inheritance to nested components") {
+    struct TestComponent : Component<TestComponent> {
+      std::string_view Setup() {
+        Import<div>();
+        Import<span>();
+        return R"html(
+          <style>
+            .container {
+              display: block;
+              width: 10;
+              text-align: right;
+            }
+          </style>
+          <div class="container">
+            <span>A<span>B</span></span>
+          </div>
+        )html";
+      }
+    };
+    auto texture = RenderComponent(Ref<TestComponent>::New(), 10, 1);
+    CHECK(GetTextLayer(texture) == "        AB\n");
+  }
+}
+
 }  // namespace rtxui
