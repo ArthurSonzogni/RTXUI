@@ -485,14 +485,13 @@ void PaintImpl(const PhysicalFragment* frag,
         Color bg = cell.background_color;
         cell.foreground_color = Blend(fg, bg);
       }
-      // For double-width graphemes, mark the continuation cell as empty so
-      // the terminal does not shift subsequent characters.
+      // For double-width graphemes, mark the continuation cell so the renderer
+      // skips it — the terminal cursor already advanced 2 columns.
       if (g.width == 2) {
         int x2 = x + 1;
         if (x2 >= 0 && x2 < texture.width() && y >= 0 && y < texture.height() &&
             clip.Contains(x2, y)) {
-          auto& cont = texture[x2, y];
-          cont.character = "";  // continuation placeholder — rendered as space
+          texture[x2, y].is_continuation = true;
         }
       }
       cell_x += g.width;

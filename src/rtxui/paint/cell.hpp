@@ -26,6 +26,9 @@ struct Cell {
   bool underlined_double : 1 = false;
   bool strikethrough : 1 = false;
   bool automerge : 1 = false;
+  // True for the second cell of a double-width (e.g. CJK) grapheme.
+  // The terminal cursor is already past this cell; nothing should be printed.
+  bool is_continuation : 1 = false;
 
   // The graphemes stored into the pixel. To support combining characters,
   // like: á, this can potentially contain multiple codepoints.

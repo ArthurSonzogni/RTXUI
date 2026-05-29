@@ -89,6 +89,13 @@ std::string Texture::Render() const {
 
     for (int x = 0; x < width_; ++x) {
       const Cell& cell = cells_[y * width_ + x];
+      // Continuation cells are the second half of a double-width grapheme.
+      // The terminal cursor already advanced past this column when the wide
+      // character was printed, so we must emit nothing here.
+      if (cell.is_continuation) {
+        prev = &cell;
+        continue;
+      }
       Transition(ss, prev, &cell);
       prev = &cell;
       if (cell.character.size() == 0) {
