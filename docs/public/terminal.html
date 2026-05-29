@@ -85,6 +85,19 @@
         window.rtxui_on_output = (str) => {
           console.log("[rtxui_on_output]", JSON.stringify(str));
           xtermInstance.write(str);
+          
+          // Dump buffer contents to verify it holds character data
+          setTimeout(() => {
+            console.log("--- XTERM BUFFER DUMP ---");
+            const buffer = xtermInstance.buffer.active;
+            for (let i = 0; i < buffer.length; i++) {
+              const line = buffer.getLine(i);
+              if (line) {
+                console.log(`Line ${i}:`, line.translateToString());
+              }
+            }
+            console.log("-------------------------");
+          }, 100);
         };
 
         window.Module = {
