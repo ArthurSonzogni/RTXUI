@@ -484,6 +484,16 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         style.display_inside = DisplayInside::Flex;
         return;
       }
+      if (s_value == "inline-block") {
+        style.display_outside = DisplayOutside::Inline;
+        style.display_inside = DisplayInside::Flow;
+        return;
+      }
+      if (s_value == "inline-flex") {
+        style.display_outside = DisplayOutside::Inline;
+        style.display_inside = DisplayInside::Flex;
+        return;
+      }
 
     } else {
       std::string outside = s_value.substr(0, space_pos);

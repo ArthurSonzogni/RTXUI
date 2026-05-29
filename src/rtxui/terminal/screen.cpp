@@ -308,7 +308,7 @@ void Screen::HandleEvent(const Event& event) {
         return (val == "true" || val == "1");
       }
       std::string_view tag = el->tag();
-      if (tag == "input" || tag == "textarea" || tag == "checkbox" || tag == "slider" || tag == "button") {
+      if (tag == "input" || tag == "textarea" || tag == "checkbox" || tag == "slider" || tag == "button" || tag == "select") {
         return true;
       }
       return false;
