@@ -23,6 +23,53 @@ int StoI(std::string_view s) {
 }
 
 std::optional<Color> ParseColor(std::string_view value) {
+  if (value.empty())
+    return std::nullopt;
+
+  // Parse hex colors: #RGB, #RGBA, #RRGGBB, #RRGGBBAA
+  if (value.front() == '#') {
+    std::string_view hex = value.substr(1);
+    auto hex_val = [](char c) -> std::optional<uint8_t> {
+      if (c >= '0' && c <= '9') return c - '0';
+      if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+      if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+      return std::nullopt;
+    };
+
+    if (hex.length() == 3 || hex.length() == 4) {
+      auto r_digit = hex_val(hex[0]);
+      auto g_digit = hex_val(hex[1]);
+      auto b_digit = hex_val(hex[2]);
+      auto a_digit = (hex.length() == 4) ? hex_val(hex[3]) : std::optional<uint8_t>(15);
+      if (r_digit && g_digit && b_digit && a_digit) {
+        uint8_t r = (*r_digit << 4) | *r_digit;
+        uint8_t g = (*g_digit << 4) | *g_digit;
+        uint8_t b = (*b_digit << 4) | *b_digit;
+        uint8_t a = (*a_digit << 4) | *a_digit;
+        return Color::RGBA(r, g, b, a);
+      }
+    } else if (hex.length() == 6 || hex.length() == 8) {
+      bool valid = true;
+      uint8_t vals[8] = {0};
+      for (size_t i = 0; i < hex.length(); ++i) {
+        if (auto digit = hex_val(hex[i])) {
+          vals[i] = *digit;
+        } else {
+          valid = false;
+          break;
+        }
+      }
+      if (valid) {
+        uint8_t r = (vals[0] << 4) | vals[1];
+        uint8_t g = (vals[2] << 4) | vals[3];
+        uint8_t b = (vals[4] << 4) | vals[5];
+        uint8_t a = (hex.length() == 8) ? ((vals[6] << 4) | vals[7]) : 255;
+        return Color::RGBA(r, g, b, a);
+      }
+    }
+    return std::nullopt;
+  }
+
   // Parse rgb(r, g, b)
   if (value.substr(0, 4) == "rgb(" && value.back() == ')') {
     value.remove_prefix(4);
@@ -70,7 +117,7 @@ std::optional<Color> ParseColor(std::string_view value) {
       int g = StoI(g_str);
       int b = StoI(b_str);
       float a = StoF(a_str);
-      return Color::RGBA(r, g, b, a);
+      return Color::RGBA(r, g, b, a * 255.f);
     } catch (const std::invalid_argument&) {
       return std::nullopt;
     } catch (const std::out_of_range&) {
@@ -86,16 +133,28 @@ std::optional<Color> ParseColor(std::string_view value) {
     return Color::RGB(0, 0, 255);
   if (value == "yellow")
     return Color::RGB(255, 255, 0);
-  if (value == "green")
+  if (value == "green" || value == "lime")
     return Color::RGB(0, 255, 0);
   if (value == "black")
     return Color::RGB(0, 0, 0);
   if (value == "gray" || value == "grey")
     return Color::RGB(128, 128, 128);
-  if (value == "cyan")
+  if (value == "cyan" || value == "aqua")
     return Color::RGB(0, 255, 255);
-  if (value == "magenta")
+  if (value == "magenta" || value == "fuchsia")
     return Color::RGB(255, 0, 255);
+  if (value == "silver")
+    return Color::RGB(192, 192, 192);
+  if (value == "maroon")
+    return Color::RGB(128, 0, 0);
+  if (value == "purple")
+    return Color::RGB(128, 0, 128);
+  if (value == "olive")
+    return Color::RGB(128, 128, 0);
+  if (value == "navy")
+    return Color::RGB(0, 0, 128);
+  if (value == "teal")
+    return Color::RGB(0, 128, 128);
   return std::nullopt;
 }
 
