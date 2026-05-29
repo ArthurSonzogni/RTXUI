@@ -194,6 +194,29 @@ void ComponentBase::Render() {
     CollectElementStates(root_.get(), {}, saved_states);
   }
 
+  // Save projected slot children and clear parent pointers
+  std::map<std::string, std::vector<Ref<Element>>> saved_slot_children;
+  std::vector<Ref<ComponentBase>> saved_slot_components;
+  for (auto& [name, slot_el] : slots_) {
+    if (slot_el) {
+      saved_slot_children[name] = slot_el->children();
+      for (auto& child_el : slot_el->children()) {
+        child_el->Visit([&](Element& el) {
+          if (el.component()) {
+            for (auto& comp : children_) {
+              if (comp.get() == el.component()) {
+                if (std::find(saved_slot_components.begin(), saved_slot_components.end(), comp) == saved_slot_components.end()) {
+                  saved_slot_components.push_back(comp);
+                }
+              }
+            }
+          }
+        });
+      }
+      slot_el->RemoveChildren();
+    }
+  }
+
   old_children_ = std::vector<Ref<ComponentBase>>(children_.begin(), children_.end());
   children_.clear();
   slots_.clear();
@@ -240,6 +263,20 @@ void ComponentBase::Render() {
   }
 
   Render(template_node, root_.get(), this);
+
+  // Restore projected slot children
+  for (auto& [name, children] : saved_slot_children) {
+    auto it = slots_.find(name);
+    if (it != slots_.end() && it->second) {
+      for (auto& child_el : children) {
+        it->second->AddChild(child_el);
+      }
+    }
+  }
+
+  for (auto& comp : saved_slot_components) {
+    children_.insert(comp);
+  }
 
   if (stylesheet) {
     auto ApplyRuleset = [](Element* element, const css::Ruleset& ruleset) {
@@ -342,6 +379,7 @@ void ComponentBase::Render(const xml::Node& node,
           std::string template_name = std::string(child_node.tag.substr(9));
           Ref<Element> target_slot = Slot(template_name);
           if (target_slot) {
+            target_slot->RemoveChildren();
             Render(child_node, target_slot.get(), import_source);
           }
           break;
@@ -398,6 +436,7 @@ void ComponentBase::Render(const xml::Node& node,
 
           Ref<Element> default_slot = child->Slot("");
           if (default_slot) {
+            default_slot->RemoveChildren();
             child->Render(child_node, default_slot.get(), import_source);
           }
           break;

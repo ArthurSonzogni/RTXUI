@@ -243,7 +243,8 @@ TEST_CASE("Transparent Reactivity", "[component]") {
 
 TEST_CASE("Bindings callback execution", "[component]") {
   auto counter = rtxui::Ref<Counter>::New();
-  counter->Import("increment", [counter]() { counter->increment(); });
+  Counter* raw_counter = counter.get();
+  counter->Import("increment", [raw_counter]() { raw_counter->increment(); });
 
   REQUIRE(counter->count == 0);
   bool ran = counter->RunCallback("increment");
@@ -850,6 +851,129 @@ TEST_CASE("Progress Component Basic Rendering", "[component][progress]") {
   CHECK(progress_ptr->value == 70.0);
   CHECK(progress_ptr->filled_track == "███████");
   CHECK(progress_ptr->empty_track == "   "); // 3 spaces
+}
+
+class SelectTestComponent : public rtxui::Component<SelectTestComponent> {
+ public:
+  std::string my_theme = "light";
+
+  void InitReflection() override {
+    Bind(my_theme);
+    Import<rtxui::select>();
+    Import<rtxui::option>();
+    rtxui::Component<SelectTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <select value="{my_theme}">
+      <option value="dark">Dark Theme</option>
+      <option value="light">Light Theme</option>
+      <option value="solarized">Solarized</option>
+    </select>
+  )";
+};
+
+TEST_CASE("Select and Option Components", "[component][select]") {
+  auto container = rtxui::Ref<SelectTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* select_el = container->Root()->QuerySelector("select");
+  REQUIRE(select_el != nullptr);
+  auto* select_comp = const_cast<rtxui::ComponentBase*>(select_el->component());
+  REQUIRE(select_comp != nullptr);
+  auto* select_ptr = dynamic_cast<rtxui::select*>(select_comp);
+  REQUIRE(select_ptr != nullptr);
+
+  // Check initial state
+  std::cout << "DOM TREE:\n" << container->Root()->Print() << std::endl;
+  std::cout << "select_el absolute_x=" << select_el->absolute_x() 
+            << " absolute_y=" << select_el->absolute_y()
+            << " width=" << select_el->layout_width()
+            << " height=" << select_el->layout_height() << std::endl;
+  std::cout << "select_ptr->Root() absolute_x=" << select_ptr->Root()->absolute_x() 
+            << " absolute_y=" << select_ptr->Root()->absolute_y()
+            << " width=" << select_ptr->Root()->layout_width()
+            << " height=" << select_ptr->Root()->layout_height() << std::endl;
+  CHECK(select_ptr->value == "light");
+  CHECK(select_ptr->selected_label == "Light Theme");
+  CHECK(select_ptr->is_open == false);
+
+  // Click on the select element to open it
+  select_el->set_focused(true);
+  Event::Mouse mouse_click;
+  mouse_click.button = Event::Mouse::Button::Left;
+  mouse_click.motion = Event::Mouse::Motion::Pressed;
+  mouse_click.x = select_el->absolute_x() + 2;
+  mouse_click.y = select_el->absolute_y() + 1;
+  Event click_event(mouse_click);
+  CHECK(select_ptr->OnEvent(click_event) == true);
+  container->Digest();
+  screen.Draw();
+  CHECK(select_ptr->is_open == true);
+  CHECK(select_ptr->hovered_index == 1); // "light" is at index 1
+
+  // Use keyboard: ArrowDown to "solarized" (index 2)
+  Event down_event = Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::ArrowDown,
+  });
+  CHECK(select_ptr->OnEvent(down_event) == true);
+  container->Digest();
+  screen.Draw();
+  CHECK(select_ptr->hovered_index == 2);
+
+  // Use keyboard: Enter to select "solarized"
+  Event enter_event = Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::Return,
+  });
+  CHECK(select_ptr->OnEvent(enter_event) == true);
+  container->Digest();
+  screen.Draw();
+
+  // Verify states after selection
+  CHECK(select_ptr->is_open == false);
+  CHECK(select_ptr->value == "solarized");
+  CHECK(container->my_theme == "solarized");
+  CHECK(select_ptr->selected_label == "Solarized");
+
+  // Re-open the select to make the option elements visible and laid out
+  Event::Mouse reopen_click;
+  reopen_click.button = Event::Mouse::Button::Left;
+  reopen_click.motion = Event::Mouse::Motion::Pressed;
+  reopen_click.x = select_el->absolute_x() + 2;
+  reopen_click.y = select_el->absolute_y() + 1;
+  Event reopen_event(reopen_click);
+  CHECK(select_ptr->OnEvent(reopen_event) == true);
+  container->Digest();
+  screen.Draw();
+  CHECK(select_ptr->is_open == true);
+
+  // Verify option click selection: click on "dark" option (index 0)
+  // Let's find the "dark" option element
+  auto* dark_option_el = container->Root()->QuerySelector("option");
+  REQUIRE(dark_option_el != nullptr);
+  auto* dark_option_comp = const_cast<rtxui::ComponentBase*>(dark_option_el->component());
+  REQUIRE(dark_option_comp != nullptr);
+  auto* dark_option_ptr = dynamic_cast<rtxui::option*>(dark_option_comp);
+  REQUIRE(dark_option_ptr != nullptr);
+  CHECK(dark_option_ptr->value == "dark");
+
+  Event::Mouse option_mouse_click;
+  option_mouse_click.button = Event::Mouse::Button::Left;
+  option_mouse_click.motion = Event::Mouse::Motion::Pressed;
+  option_mouse_click.x = dark_option_el->absolute_x() + 1;
+  option_mouse_click.y = dark_option_el->absolute_y() + 1;
+  Event option_click_event(option_mouse_click);
+  // Send click to option
+  CHECK(dark_option_ptr->OnEvent(option_click_event) == true);
+  container->Digest();
+  screen.Draw();
+
+  // Check state has been updated to "dark"
+  CHECK(select_ptr->value == "dark");
+  CHECK(container->my_theme == "dark");
+  CHECK(select_ptr->selected_label == "Dark Theme");
 }
 
 }  // namespace

@@ -207,6 +207,42 @@ class progress : public Component<progress> {
   bool Digest() override;
 };
 
+struct OptionInfo {
+  std::string value;
+  std::string label;
+  Element* element = nullptr;
+};
+
+class select : public Component<select> {
+ public:
+  std::string value;
+  bool is_open = false;
+  int hovered_index = -1;
+
+  // Render bindings
+  std::string selected_label;
+  std::string arrow_char = "▾";
+  std::string dropdown_class = "closed";
+  std::string focus_class = "";
+
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool OnEvent(Event event) override;
+  bool Digest() override;
+
+  void SelectOption(std::string_view value);
+  std::vector<OptionInfo> GetOptions();
+};
+
+class option : public Component<option> {
+ public:
+  std::string value;
+
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool OnEvent(Event event) override;
+};
+
 }  // namespace rtxui
 
 #endif  // RTXUI_DEFAULT_COMPONENTS_HPP_

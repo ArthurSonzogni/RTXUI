@@ -22,6 +22,8 @@ This reference lists all the built-in HTML/XML elements supported by RTXUI out-o
 | `<checkbox>` | Inline | `inline-block` | Interactive binary checkbox/toggle component. |
 | `<slider>` | Inline | `inline-block` | Interactive horizontal slider/range control. |
 | `<progress>` | Inline | `inline-block` | Horizontal block-level progress bar. |
+| `<select>` | Block | `inline flex` | Dropdown selection list. |
+| `<option>` | Block | `block` | A selectable option item inside a `<select>`. |
 
 ---
 
@@ -290,4 +292,63 @@ A read-only horizontal progress bar indicator.
 - **Interactive Demo**:
 
   <WasmTerminal src="/wasm/rtxui_example_progress.js" :cols="80" :rows="22" />
+
+---
+
+### `<select>` & `<option>`
+An interactive dropdown menu for picking from a list of options.
+- **Default Styles**:
+  ```css
+  self {
+    display: inline flex;
+    flex-direction: column;
+  }
+  .select-btn {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    border: solid;
+    border-color: #555;
+    background-color: #1e293b;
+    color: white;
+    padding-left: 1;
+    padding-right: 1;
+    cursor: pointer;
+  }
+  .focused {
+    border-color: #38bdf8;
+  }
+  .dropdown-list {
+    display: flex;
+    flex-direction: column;
+    border: solid;
+    border-top: none;
+    border-color: #555;
+    background-color: #0f172a;
+  }
+  .closed {
+    display: none;
+  }
+  ```
+- **Attributes**:
+  - `value`: Reactive string value binding matching the selected `<option>`'s `value`.
+  - `onchange`: Callback triggered when the selection changes.
+- **Built-in Keyboard & Mouse Bindings**:
+  - Left Mouse Click (on button): Toggles the dropdown list.
+  - Left Mouse Click (on option): Selects the option and closes the dropdown.
+  - `ArrowDown` / `ArrowUp` (when dropdown is open): Moves the selection highlight.
+  - `ArrowDown` / `ArrowUp` (when dropdown is closed): Cycles selection value directly.
+  - `Enter` / `Space` (when dropdown is open): Selects the highlighted option.
+  - `Escape` (when dropdown is open): Closes the dropdown without selection changes.
+- **Example**:
+  ```html
+  <select value="{selected_theme}">
+    <option value="dark">Dark Theme</option>
+    <option value="light">Light Theme</option>
+  </select>
+  ```
+
+- **Interactive Demo**:
+
+  <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="22" />
 

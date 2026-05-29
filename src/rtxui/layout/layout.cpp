@@ -541,7 +541,9 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   // Pass 2: Resolve Flexible Lengths
   int container_main = is_row ? content_w : content_h;
-  int free_space = container_main - total_main_base;
+  bool main_is_indefinite = is_row ? (constraints.width.mode == MeasureMode::Undefined)
+                                   : (constraints.height.mode == MeasureMode::Undefined);
+  int free_space = main_is_indefinite ? 0 : (container_main - total_main_base);
 
   if (free_space > 0 && total_grow > 0) {
     for (auto& item : items) {

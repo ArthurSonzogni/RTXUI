@@ -91,9 +91,13 @@
         xtermInstance.open(document.getElementById('terminal'));
 
         try {
-          const WebglAddon = window.WebglAddon.WebglAddon;
-          const webglAddon = new WebglAddon();
-          xtermInstance.loadAddon(webglAddon);
+          const canvas = document.createElement('canvas');
+          const gl = canvas.getContext && (canvas.getContext('webgl2') || canvas.getContext('experimental-webgl2'));
+          if (gl) {
+            const WebglAddon = window.WebglAddon.WebglAddon;
+            const webglAddon = new WebglAddon();
+            xtermInstance.loadAddon(webglAddon);
+          }
         } catch (e) {
           console.warn('WebGL addon failed to load, falling back to standard renderer:', e);
         }
