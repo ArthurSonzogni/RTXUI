@@ -1,6 +1,7 @@
 #include "rtxui/component/component.hpp"
 
 #include <charconv>
+#include <cctype>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -484,6 +485,12 @@ void ComponentBase::PropagateBinding(std::string_view child_prop, std::string_vi
 
 namespace reflection {
 int ParseInt(std::string_view str) {
+  while (!str.empty() && std::isspace(static_cast<unsigned char>(str.front()))) {
+    str.remove_prefix(1);
+  }
+  while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back()))) {
+    str.remove_suffix(1);
+  }
   int val = 0;
   auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), val);
   if (ec == std::errc()) {
