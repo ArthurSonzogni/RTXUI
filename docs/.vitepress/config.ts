@@ -7,7 +7,14 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Tutorial', link: '/tutorial' },
-      { text: 'Reference', link: '/cpp_api' }
+      {
+        text: 'Reference',
+        items: [
+          { text: 'C++ API', link: '/cpp_api' },
+          { text: 'HTML Elements', link: '/html_reference' },
+          { text: 'CSS Attributes', link: '/css_reference' }
+        ]
+      }
     ],
     sidebar: [
       {

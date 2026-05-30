@@ -10,8 +10,14 @@ hero:
       text: Get Started
       link: /tutorial
     - theme: alt
-      text: C++ API Reference
+      text: C++ Reference
       link: /cpp_api
+    - theme: alt
+      text: HTML Reference
+      link: /html_reference
+    - theme: alt
+      text: CSS Reference
+      link: /css_reference
 
 features:
   - icon: 🚀
