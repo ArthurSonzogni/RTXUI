@@ -1,32 +1,40 @@
-/* Glue the C++, HTML, and CSS reference buttons together on wider screens */
-@media (min-width: 640px) {
-  /* Set a explicit gap on the action container to align our margin offset math */
-  .VPHero .actions {
-    gap: 12px !important;
-  }
+/* Custom Hero Reference buttons layout */
+.hero-reference {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
 
-  /* Pull HTML and CSS action wrapper divs left to overlap the gap and borders */
-  .VPHero .actions .action:nth-child(3) {
-    margin-left: -13px !important;
+@media (min-width: 960px) {
+  .hero-reference {
+    justify-content: flex-start;
   }
-  .VPHero .actions .action:nth-child(4) {
-    margin-left: -13px !important;
-  }
+}
 
-  /* C++ button (second child): rounded left only */
-  .VPHero .actions .action:nth-child(2) .VPButton {
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-  }
+.hero-reference .ref-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+}
 
-  /* HTML button (third child): completely squared */
-  .VPHero .actions .action:nth-child(3) .VPButton {
-    border-radius: 0 !important;
-  }
+.hero-reference .ref-btn {
+  padding: 0 16px;
+  line-height: 36px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--vp-button-alt-border);
+  color: var(--vp-button-alt-text);
+  background-color: var(--vp-button-alt-bg);
+  text-decoration: none;
+  transition: border-color 0.25s, color 0.25s, background-color 0.25s;
+}
 
-  /* CSS button (fourth child): rounded right only */
-  .VPHero .actions .action:nth-child(4) .VPButton {
-    border-top-left-radius: 0 !important;
-    border-bottom-left-radius: 0 !important;
-  }
+.hero-reference .ref-btn:hover {
+  border-color: var(--vp-button-alt-hover-border);
+  color: var(--vp-button-alt-hover-text);
+  background-color: var(--vp-button-alt-hover-bg);
 }
