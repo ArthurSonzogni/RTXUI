@@ -530,5 +530,584 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
   CHECK_FALSE(input2->focused());
 }
 
+TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
+  // Reset clock to normal when test finishes
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class TransitionTestComponent : public Component<TransitionTestComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<TransitionTestComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="btn">Click me</div>
+      <style>
+        #btn {
+          background-color: #000000;
+          color: #ffffff;
+          transition: background-color 1s linear;
+        }
+        #btn:hover {
+          background-color: #ff0000;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<TransitionTestComponent>::New();
+  Screen screen(component, device);
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+
+  // 1. Initial style: background-color is black (#000000)
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+  CHECK(btn->active_transitions.empty());
+
+  // 2. Hover the button
+  btn->set_hovered(true);
+  component->ResolveTargetStyles();
+
+  // Active transitions should have background-color
+  REQUIRE(btn->active_transitions.count("background-color") == 1);
+
+  // Still black at progress = 0 (t = 1000ms)
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+
+  // Advance to 1500ms (50% progress)
+  mock_now_ms = 1500.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(127, 0, 0));
+
+  // Advance to 2000ms (100% progress)
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(255, 0, 0));
+  CHECK(btn->active_transitions.empty());
+}
+
+TEST_CASE("Transitions.EasingFunctions", "[transitions][easing]") {
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class EasingTestComponent : public Component<EasingTestComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<EasingTestComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="btn">Click me</div>
+      <style>
+        #btn {
+          flex-grow: 0.0;
+          transition: flex-grow 1s ease-in;
+        }
+        #btn:hover {
+          flex-grow: 1.0;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<EasingTestComponent>::New();
+  Screen screen(component, device);
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+
+  // Initial style
+  CHECK(btn->style.flex_grow == 0.0f);
+
+  // Hover
+  btn->set_hovered(true);
+  component->ResolveTargetStyles();
+
+  REQUIRE(btn->active_transitions.count("flex-grow") == 1);
+
+  // At t = 1000ms, progress = 0
+  screen.Step();
+  CHECK(btn->style.flex_grow == 0.0f);
+
+  // At t = 1500ms, progress = 0.5.
+  mock_now_ms = 1500.0;
+  screen.Step();
+  CHECK(btn->style.flex_grow > 0.3f);
+  CHECK(btn->style.flex_grow < 0.35f);
+
+  // At t = 2000ms, progress = 1.0
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(btn->style.flex_grow == 1.0f);
+}
+
+TEST_CASE("Transitions.Interruption", "[transitions]") {
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class InterruptionTestComponent : public Component<InterruptionTestComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<InterruptionTestComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="btn">Click me</div>
+      <style>
+        #btn {
+          background-color: #000000;
+          transition: background-color 1s linear;
+        }
+        #btn:hover {
+          background-color: #ff0000;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<InterruptionTestComponent>::New();
+  Screen screen(component, device);
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+
+  // Initial style
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+
+  // 1. Hover to start transition to Red
+  btn->set_hovered(true);
+  component->ResolveTargetStyles();
+
+  // At start (t = 1000ms), still black
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+
+  // Advance to t = 1500ms (50% progress) -> color is intermediate red (127, 0, 0)
+  mock_now_ms = 1500.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(127, 0, 0));
+
+  // 2. Unhover to interrupt transition and go back to black
+  btn->set_hovered(false);
+  component->ResolveTargetStyles();
+
+  // At the moment of interruption (t = 1500ms), it should start from current value (127, 0, 0)
+  // target is now #000000.
+  // Advance to t = 2000ms (500ms later, which is 50% of the new 1s transition)
+  mock_now_ms = 2000.0;
+  screen.Step();
+  // Halfway between 127 and 0 is 63
+  CHECK(btn->style.background_color == Color::RGB(63, 0, 0));
+
+  // Advance to t = 2500ms (100% of new transition)
+  mock_now_ms = 2500.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+  CHECK(btn->active_transitions.empty());
+}
+
+TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class MouseTransitionComponent : public Component<MouseTransitionComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<MouseTransitionComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="btn">Button</div>
+      <style>
+        #btn {
+          background-color: #000000;
+          width: 10;
+          height: 1;
+          transition: background-color 1s linear;
+        }
+        #btn:hover {
+          background-color: #ff0000;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<MouseTransitionComponent>::New();
+  Screen screen(component, device);
+
+  // We need to render/draw first so that root_fragment_ layout bounds are populated
+  screen.Draw();
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+  CHECK_FALSE(btn->hovered());
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+
+  // Send a mouse hover event inside the button bounds
+  // Coordinates are 1-indexed. The button starts at (0, 0) in layout, which is (1, 1) in screen coords.
+  Event::Mouse hover_in;
+  hover_in.button = Event::Mouse::Button::None;
+  hover_in.motion = Event::Mouse::Motion::Moved;
+  hover_in.x = 2;
+  hover_in.y = 1;
+  screen.Dispatch(hover_in);
+
+  // Verify that dispatching set the hovered state
+  CHECK(btn->hovered());
+  REQUIRE(btn->active_transitions.count("background-color") == 1);
+
+  // Tick the transitions
+  // At t=1000ms
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+
+  // At t=1500ms
+  mock_now_ms = 1500.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(127, 0, 0));
+
+  // Send a mouse event outside button bounds
+  Event::Mouse hover_out;
+  hover_out.button = Event::Mouse::Button::None;
+  hover_out.motion = Event::Mouse::Motion::Moved;
+  hover_out.x = 15;
+  hover_out.y = 1;
+  screen.Dispatch(hover_out);
+
+  // Verify that it is no longer hovered
+  CHECK_FALSE(btn->hovered());
+
+  // Tick transitions back to black
+  // At t=2000ms (50% back)
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(63, 0, 0));
+
+  // At t=2500ms (100% back)
+  mock_now_ms = 2500.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
+}
+
+TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class FlexGrowTransitionComponent : public Component<FlexGrowTransitionComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<FlexGrowTransitionComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div class="row">
+        <div id="item1">Item 1</div>
+        <div id="item2">Item 2</div>
+      </div>
+      <style>
+        .row {
+          display: flex;
+          flex-direction: row;
+          width: 20;
+          height: 1;
+        }
+        #item1 {
+          flex-grow: 1.0;
+        }
+        #item2 {
+          flex-grow: 1.0;
+          transition: flex-grow 1s linear;
+        }
+        #item2:hover {
+          flex-grow: 3.0;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<FlexGrowTransitionComponent>::New();
+  Screen screen(component, device);
+
+  auto* item1 = component->Root()->QuerySelector("#item1");
+  auto* item2 = component->Root()->QuerySelector("#item2");
+  REQUIRE(item1 != nullptr);
+  REQUIRE(item2 != nullptr);
+
+  // Initial draw
+  screen.Draw();
+
+  // Initially both flex-grow are 1.0, so both get half the space (10 each)
+  CHECK(item1->layout_width() == 10);
+  CHECK(item2->layout_width() == 10);
+
+  // Hover item2 to start transition
+  item2->set_hovered(true);
+  component->ResolveTargetStyles();
+
+  // Step at t = 1000ms (0%)
+  screen.Step();
+  CHECK(item1->layout_width() == 10);
+  CHECK(item2->layout_width() == 10);
+
+  // Advance to t = 1500ms (50% progress): item2 flex-grow is 2.0.
+  // total grow = 3.0. item1 gets 1/3 (base 6 + 2 extra = 8), item2 gets 2/3 (base 6 + 5 extra = 11).
+  mock_now_ms = 1500.0;
+  screen.Step();
+  CHECK(item1->layout_width() == 8);
+  CHECK(item2->layout_width() == 11);
+
+  // Advance to t = 2000ms (100% progress): item2 flex-grow is 3.0.
+  // total grow = 4.0. item1 gets 1/4 (base 6 + 2 extra = 8), item2 gets 3/4 (base 6 + 6 extra = 12).
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(item1->layout_width() == 8);
+  CHECK(item2->layout_width() == 12);
+}
+
+TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ActiveTransitionComponent : public Component<ActiveTransitionComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ActiveTransitionComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="btn">Button</div>
+      <style>
+        #btn {
+          background-color: #000000;
+          width: 10;
+          height: 1;
+          transition: background-color 1s linear;
+        }
+        #btn:hover {
+          background-color: #ff0000;
+        }
+        #btn:active {
+          background-color: #00ff00;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ActiveTransitionComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+  CHECK_FALSE(btn->hovered());
+  CHECK_FALSE(btn->active());
+
+  // 1. Hover in
+  Event::Mouse hover_in;
+  hover_in.button = Event::Mouse::Button::None;
+  hover_in.motion = Event::Mouse::Motion::Moved;
+  hover_in.x = 2;
+  hover_in.y = 1;
+  screen.Dispatch(hover_in);
+
+  CHECK(btn->hovered());
+  CHECK_FALSE(btn->active());
+  REQUIRE(btn->active_transitions.count("background-color") == 1);
+
+  // Tick to midpoint (50% hover)
+  mock_now_ms = 1500.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(127, 0, 0));
+
+  // 2. Press mouse (enters active state)
+  Event::Mouse press;
+  press.button = Event::Mouse::Button::Left;
+  press.motion = Event::Mouse::Motion::Pressed;
+  press.x = 2;
+  press.y = 1;
+  screen.Dispatch(press);
+
+  CHECK(btn->hovered());
+  CHECK(btn->active());
+  // The transition should start from current style Color::RGB(127, 0, 0) to Color::RGB(0, 255, 0)
+  REQUIRE(btn->active_transitions.count("background-color") == 1);
+
+  // Tick 500ms after press (t = 2000ms): 50% from (127, 0, 0) to (0, 255, 0)
+  // R: 127 + (0 - 127)*0.5 = 63
+  // G: 0 + (255 - 0)*0.5 = 127
+  // B: 0
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(63, 127, 0));
+
+  // 3. Release mouse (leaves active state, still hovered)
+  Event::Mouse release;
+  release.button = Event::Mouse::Button::Left;
+  release.motion = Event::Mouse::Motion::Released;
+  release.x = 2;
+  release.y = 1;
+  screen.Dispatch(release);
+
+  CHECK(btn->hovered());
+  CHECK_FALSE(btn->active());
+  // Transitions to hover target: Color::RGB(255, 0, 0) from current Color::RGB(63, 127, 0)
+  REQUIRE(btn->active_transitions.count("background-color") == 1);
+
+  // Tick 500ms after release (t = 2500ms): 50% from (63, 127, 0) to (255, 0, 0)
+  // R: 63 + (255 - 63)*0.5 = 159
+  // G: 127 + (0 - 127)*0.5 = 63
+  // B: 0
+  mock_now_ms = 2500.0;
+  screen.Step();
+  CHECK(btn->style.background_color == Color::RGB(159, 63, 0));
+}
+
+TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class FocusTransitionComponent : public Component<FocusTransitionComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<FocusTransitionComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="input" focusable="true"></div>
+      <style>
+        #input {
+          background-color: #000000;
+          width: 10;
+          height: 1;
+          transition: background-color 1s linear;
+        }
+        #input:focus {
+          background-color: #0000ff;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<FocusTransitionComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* input = component->Root()->QuerySelector("#input");
+  REQUIRE(input != nullptr);
+  CHECK_FALSE(input->focused());
+
+  // 1. Click to focus
+  Event::Mouse click;
+  click.button = Event::Mouse::Button::Left;
+  click.motion = Event::Mouse::Motion::Pressed;
+  click.x = 2;
+  click.y = 1;
+  screen.Dispatch(click);
+
+  CHECK(input->focused());
+  REQUIRE(input->active_transitions.count("background-color") == 1);
+
+  // Tick to midpoint (50% focus)
+  mock_now_ms = 1500.0;
+  screen.Step();
+  CHECK(input->style.background_color == Color::RGB(0, 0, 127));
+
+  // 2. Click outside (focus goes to root/nullptr or loses focus)
+  Event::Mouse click_outside;
+  click_outside.button = Event::Mouse::Button::Left;
+  click_outside.motion = Event::Mouse::Motion::Pressed;
+  click_outside.x = 15;
+  click_outside.y = 1;
+  screen.Dispatch(click_outside);
+
+  CHECK_FALSE(input->focused());
+  REQUIRE(input->active_transitions.count("background-color") == 1);
+
+  // Tick 500ms after focus loss (t = 2000ms): 50% from (0, 0, 127) to (0, 0, 0)
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(input->style.background_color == Color::RGB(0, 0, 63));
+}
+
 }  // namespace
 }  // namespace rtxui

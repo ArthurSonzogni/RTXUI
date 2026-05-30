@@ -6,7 +6,7 @@ This reference catalog lists all CSS-like styling properties supported by the RT
 
 ## 1. Box Model (Margin & Padding)
 
-Standard spacing properties to control layout positioning.
+Standard spacing properties to control layout positioning. These properties are **not animatable**.
 
 - `margin` [`<integer>`](#integers): Shorthand to configure margin width on all sides of the element.
   - `margin-top` [`<integer>`](#integers): Vertical space above the element. Sibling block margins collapse according to standard block flow rules.
@@ -23,10 +23,10 @@ Standard spacing properties to control layout positioning.
 
 ## 2. Dimensions & Sizing
 
-Used to control element widths and heights.
+Used to control element widths and heights. These properties are **animatable**.
 
-- `width` [`<length>`](#lengths): Constrains the width of the element.
-- `height` [`<length>`](#lengths): Constrains the height of the element.
+- `width` [`<length>`](#lengths) **(animatable)**: Constrains the width of the element. Supports smooth length/pixel transitions.
+- `height` [`<length>`](#lengths) **(animatable)**: Constrains the height of the element. Supports smooth length/pixel transitions.
 
 ---
 
@@ -34,18 +34,18 @@ Used to control element widths and heights.
 
 Borders are drawn using ASCII/Unicode styling characters around elements.
 
-- `border` [`<border-style>`](#border-styles) | [`<integer>`](#integers): Shorthand to enable borders on all sides of the box. Specifying a `<border-style>` keyword defaults the border width to 1. Specifying an `<integer>` width defaults the style to `solid`.
-  - `border-width` [`<integer>`](#integers): Shorthand to set the border width on all sides of the element.
-  - `border-top` [`<integer>`](#integers): Enables or configures the top border width.
-  - `border-bottom` [`<integer>`](#integers): Enables or configures the bottom border width.
-  - `border-left` [`<integer>`](#integers): Enables or configures the left border width.
-  - `border-right` [`<integer>`](#integers): Enables or configures the right border width.
-  - `border-style` [`<border-style>`](#border-styles): Chooses the character set style of the border.
-  - `border-color` [`<color>`](#colors): Shorthand for the color of all border sides.
-    - `border-color-top` [`<color>`](#colors): Specifies color of the top border line.
-    - `border-color-bottom` [`<color>`](#colors): Specifies color of the bottom border line.
-    - `border-color-left` [`<color>`](#colors): Specifies color of the left border line.
-    - `border-color-right` [`<color>`](#colors): Specifies color of the right border line.
+- `border` [`<border-style>`](#border-styles) | [`<integer>`](#integers): Shorthand to enable borders on all sides of the box. Specifying a `<border-style>` keyword defaults the border width to 1. Specifying an `<integer>` width defaults the style to `solid`. (not animatable)
+  - `border-width` [`<integer>`](#integers): Shorthand to set the border width on all sides of the element. (not animatable)
+  - `border-top` [`<integer>`](#integers): Enables or configures the top border width. (not animatable)
+  - `border-bottom` [`<integer>`](#integers): Enables or configures the bottom border width. (not animatable)
+  - `border-left` [`<integer>`](#integers): Enables or configures the left border width. (not animatable)
+  - `border-right` [`<integer>`](#integers): Enables or configures the right border width. (not animatable)
+  - `border-style` [`<border-style>`](#border-styles): Chooses the character set style of the border. (not animatable)
+  - `border-color` [`<color>`](#colors) **(animatable)**: Shorthand for the color of all border sides. Animates all border colors.
+    - `border-top-color` / `border-color-top` [`<color>`](#colors) **(animatable)**: Specifies color of the top border line.
+    - `border-bottom-color` / `border-color-bottom` [`<color>`](#colors) **(animatable)**: Specifies color of the bottom border line.
+    - `border-left-color` / `border-color-left` [`<color>`](#colors) **(animatable)**: Specifies color of the left border line.
+    - `border-right-color` / `border-color-right` [`<color>`](#colors) **(animatable)**: Specifies color of the right border line.
 
 ---
 
@@ -53,13 +53,13 @@ Borders are drawn using ASCII/Unicode styling characters around elements.
 
 Color formatting for component text and backgrounds.
 
-- `color` / `foreground-color` [`<color>`](#colors): Configures the foreground text color of the element.
-- `background-color` [`<color>`](#colors): Configures the background color of cells within the element's box boundary.
+- `color` / `foreground-color` [`<color>`](#colors) **(animatable)**: Configures the foreground text color of the element. Supports smooth color transitions.
+- `background-color` [`<color>`](#colors) **(animatable)**: Configures the background color of cells within the element's box boundary. Supports smooth color transitions.
 
-- `text-align` `left | right | center`: Configures the horizontal alignment of text/inline content within the element.
-- `white-space` `normal | nowrap`: Configures word wrapping. `nowrap` prevents automated text wrapping.
+- `text-align` `left | right | center`: Configures the horizontal alignment of text/inline content within the element. (not animatable)
+- `white-space` `normal | nowrap`: Configures word wrapping. `nowrap` prevents automated text wrapping. (not animatable)
 
-<WasmTerminal src="/wasm/rtxui_example_text_align.js" :cols="80" :rows="24" />
+<WasmTerminal src="/wasm/rtxui_example_text_align.js" :cols="80" :rows="60" />
 
 ---
 
@@ -67,17 +67,18 @@ Color formatting for component text and backgrounds.
 
 RTXUI includes a subset of CSS Flexbox for horizontal and vertical layouts.
 
-- `display` [`<display>`](#display-modes): Enables the flex layout engine. E.g., `display: flex` or `display: block flow`.
-- `flex-direction` `row | column`: Layout axis for flex items.
-- `flex-grow` [`<number>`](#numbers): Portion of free space assigned to the item along the main axis.
+- `display` [`<display>`](#display-modes): Enables the flex layout engine. (not animatable)
+- `flex-direction` `row | column`: Layout axis for flex items. (not animatable)
+- `flex-grow` [`<number>`](#numbers) **(animatable)**: Portion of free space assigned to the item along the main axis. Supports layout transitions.
+- `flex-shrink` [`<number>`](#numbers) **(animatable)**: Portion of shrinkage space assigned to the item. Supports layout transitions.
 
-<WasmTerminal src="/wasm/rtxui_example_layout.js" :cols="80" :rows="16" />
+<WasmTerminal src="/wasm/rtxui_example_layout.js" :cols="80" :rows="60" />
 
 ---
 
 ## 6. Scrolling & Overflow
 
-Enables viewport scrolling when children overflow parent boundaries.
+Enables viewport scrolling when children overflow parent boundaries. These properties are **not animatable**.
 
 - `overflow` [`<overflow>`](#overflow-modes): Shorthand to configure horizontal and vertical overflow behavior.
   - `overflow-x` [`<overflow>`](#overflow-modes): Horizontal overflow behavior (`visible`, `hidden`, `scroll`).
@@ -87,7 +88,15 @@ Enables viewport scrolling when children overflow parent boundaries.
   - `scroll-speed-x` [`<integer>`](#integers): Step scroll distance horizontally on event triggers.
   - `scroll-speed-y` [`<integer>`](#integers): Step scroll distance vertically on event triggers.
 
-<WasmTerminal src="/wasm/rtxui_example_horizontal_scroll.js" :cols="80" :rows="30" />
+<WasmTerminal src="/wasm/rtxui_example_horizontal_scroll.js" :cols="80" :rows="60" />
+
+---
+
+## 7. Transitions & Animations
+
+Properties to control styling animations and transitions.
+
+- `transition` `<transition>`: Configures transitions for properties (e.g. `transition: background-color 0.25s ease-in-out`). (not animatable)
 
 ---
 
@@ -143,7 +152,7 @@ Colors define foreground text, background cells, or border colors.
     - `teal`
     - `aqua` (or `cyan`)
 
-<WasmTerminal src="/wasm/rtxui_example_colors.js" :cols="80" :rows="22" />
+<WasmTerminal src="/wasm/rtxui_example_colors.js" :cols="80" :rows="60" />
 
 ### Border Styles
 
@@ -173,7 +182,7 @@ RTXUI supports 24 different character sets for border drawing.
 - `outer`: Outer frame border style.
 - `panel`: Panel frame border style.
 
-<WasmTerminal src="/wasm/rtxui_example_borders.js" :cols="80" :rows="50" />
+<WasmTerminal src="/wasm/rtxui_example_borders.js" :cols="80" :rows="60" />
 
 ### Overflow Modes
 

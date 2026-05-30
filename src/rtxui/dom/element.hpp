@@ -12,6 +12,23 @@
 
 namespace rtxui {
 
+struct ActiveTransition {
+  double start_time_ms = 0.0;
+  double duration_ms = 0.0;
+  std::string timing_function = "ease";
+
+  enum class Type { Color, Float, Length } type;
+
+  Color start_color;
+  Color target_color;
+
+  float start_float = 0.0f;
+  float target_float = 0.0f;
+
+  Length start_length;
+  Length target_length;
+};
+
 class ComponentBase;
 
 class Element : public RefCounted {
@@ -32,6 +49,7 @@ class Element : public RefCounted {
 
   // Hierarchical accessors.
   Element* Parent() { return parent_; }
+  const Element* Parent() const { return parent_; }
   size_t ChildCount() const { return children_.size(); }
   Element* ChildAt(size_t index) { return children_[index].get(); }
   const std::vector<Ref<Element>>& children() const { return children_; }
@@ -50,6 +68,9 @@ class Element : public RefCounted {
   std::string id;
   std::vector<std::string> classes;
   ComputedStyle style;
+  ComputedStyle base_style;
+  ComputedStyle target_style;
+  std::map<std::string, ActiveTransition> active_transitions;
 
   // Rendering.
   virtual std::string Print(int depth = 0) const;
@@ -58,6 +79,8 @@ class Element : public RefCounted {
   Element* QuerySelector(std::string_view selector);
 
   const ComponentBase* component() const { return component_; }
+  const ComponentBase* owner_component() const { return owner_component_; }
+  void set_owner_component(const ComponentBase* owner) { owner_component_ = owner; }
 
   bool is_slot() const { return is_slot_; }
   bool is_text() const { return is_text_; }
@@ -80,6 +103,15 @@ class Element : public RefCounted {
   bool focused() const { return focused_; }
   void set_focused(bool f) { focused_ = f; }
 
+  bool hovered() const { return hovered_; }
+  void set_hovered(bool h) { hovered_ = h; }
+
+  bool active() const { return active_; }
+  void set_active(bool a) { active_ = a; }
+
+  void TriggerTransitions(double current_time_ms);
+  bool TickTransitions(double current_time_ms);
+
   int absolute_x() const { return absolute_x_; }
   int absolute_y() const { return absolute_y_; }
   void set_absolute_position(int x, int y) {
@@ -97,6 +129,8 @@ class Element : public RefCounted {
   int layout_width_ = 0;
   int layout_height_ = 0;
   bool focused_ = false;
+  bool hovered_ = false;
+  bool active_ = false;
   int absolute_x_ = 0;
   int absolute_y_ = 0;
 
@@ -105,7 +139,14 @@ class Element : public RefCounted {
   std::vector<Ref<Element>> children_;
   Element* parent_ = nullptr;
   const ComponentBase* component_ = nullptr;
+  const ComponentBase* owner_component_ = nullptr;
 };
+
+namespace time {
+using ClockFn = double (*)();
+void SetCustomClock(ClockFn clock);
+double GetTimeMs();
+}
 
 }  // namespace rtxui
 

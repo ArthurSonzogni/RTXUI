@@ -5,9 +5,15 @@
 
 #include <sys/ioctl.h>
 #include <unistd.h>
+#ifndef __EMSCRIPTEN__
+#include <sys/select.h>
+#else
+#include <emscripten.h>
+#endif
 
 #include <algorithm>
 #include <cerrno>
+#include <fstream>
 #include <iostream>
 
 #include "rtxui/dom/element.hpp"
@@ -163,6 +169,8 @@ class ScreenImpl {
   void UpdateSize();
   void DigestAndDraw();
   void HandleEvent(const Event& event);
+  bool HasActiveTransitions();
+  bool TickTransitions(double current_time_ms);
 
   Ref<ComponentBase> component_;
   int width_ = 80;
@@ -209,21 +217,95 @@ void ScreenImpl::Loop() {
 }
 
 void ScreenImpl::Step() {
-  char c;
-  int bytes_read = device_->Read(&c, 1);
-  if (bytes_read != 1) {
-    if (bytes_read == -1 && errno == EINTR) {
-      UpdateSize();
+#ifdef __EMSCRIPTEN__
+  EM_ASM({
+    window.rtxui_has_active_transitions = $0;
+  }, HasActiveTransitions());
+#endif
+
+  bool input_available = true;
+
+#ifndef __EMSCRIPTEN__
+  if (dynamic_cast<SystemTerminalDevice*>(device_.get())) {
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+
+    struct timeval tv;
+    struct timeval* timeout = nullptr;
+    if (HasActiveTransitions()) {
+      tv.tv_sec = 0;
+      tv.tv_usec = 16667; // ~60 FPS
+      timeout = &tv;
     }
-    return;
+
+    int retval = select(STDIN_FILENO + 1, &fds, nullptr, nullptr, timeout);
+    if (retval == 0) {
+      input_available = false;
+    } else if (retval < 0) {
+      if (errno == EINTR) {
+        UpdateSize();
+      }
+      input_available = false;
+    } else {
+      input_available = FD_ISSET(STDIN_FILENO, &fds);
+    }
+  }
+#endif
+
+  if (input_available) {
+    char c;
+    int bytes_read = device_->Read(&c, 1);
+    if (bytes_read == 1) {
+      UpdateSize();
+      parser_->Add(c);
+      while (auto event = parser_->GetEvent()) {
+        HandleEvent(*event);
+      }
+    } else if (bytes_read == 0) {
+      running_ = false;
+    } else {
+      if (bytes_read == -1 && errno == EINTR) {
+        UpdateSize();
+      }
+    }
   }
 
-  UpdateSize();
-  parser_->Add(c);
-
-  while (auto event = parser_->GetEvent()) {
-    HandleEvent(*event);
+  if (TickTransitions(time::GetTimeMs())) {
+    Draw();
   }
+}
+
+bool ScreenImpl::HasActiveTransitions() {
+  if (!component_ || !component_->Root()) {
+    return false;
+  }
+  std::function<bool(Element*)> CheckActive = [&](Element* element) {
+    if (!element) return false;
+    if (!element->active_transitions.empty()) return true;
+    for (size_t i = 0; i < element->ChildCount(); ++i) {
+      if (CheckActive(element->ChildAt(i))) return true;
+    }
+    return false;
+  };
+  return CheckActive(component_->Root());
+}
+
+bool ScreenImpl::TickTransitions(double current_time_ms) {
+  if (!component_ || !component_->Root()) {
+    return false;
+  }
+  std::function<bool(Element*)> TickAll = [&](Element* element) {
+    if (!element) return false;
+    bool updated = element->TickTransitions(current_time_ms);
+    for (size_t i = 0; i < element->ChildCount(); ++i) {
+      if (TickAll(element->ChildAt(i))) {
+        updated = true;
+      }
+    }
+    return updated;
+  };
+  return TickAll(component_->Root());
 }
 
 void ScreenImpl::Dispatch(Event event) {
@@ -233,6 +315,51 @@ void ScreenImpl::Dispatch(Event event) {
 void ScreenImpl::HandleEvent(const Event& event) {
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
+
+    bool state_changed = false;
+    if (root_fragment_) {
+      int tx = mouse.x - 1;
+      int ty = mouse.y - 1;
+      Element* target_el = FindElementAt(root_fragment_, tx, ty);
+
+      auto IsAncestorOf = [](const Element* element, const Element* target) {
+        for (const Element* curr = target; curr; curr = curr->Parent()) {
+          if (curr == element) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      if (component_->Root()) {
+        component_->Root()->Visit([&](Element& el) {
+          if (mouse.motion == Event::Mouse::Motion::Pressed) {
+            bool should_be_active = IsAncestorOf(&el, target_el);
+            if (el.active() != should_be_active) {
+              el.set_active(should_be_active);
+              state_changed = true;
+            }
+          } else if (mouse.motion == Event::Mouse::Motion::Released) {
+            if (el.active()) {
+              el.set_active(false);
+              state_changed = true;
+            }
+          }
+
+          bool should_be_hovered = IsAncestorOf(&el, target_el);
+          if (el.hovered() != should_be_hovered) {
+            el.set_hovered(should_be_hovered);
+            state_changed = true;
+          }
+        });
+      }
+    }
+
+    if (state_changed) {
+      component_->ResolveTargetStyles();
+      Draw();
+    }
+
     if (mouse.motion == Event::Mouse::Motion::Pressed &&
         (mouse.button == Event::Mouse::Button::Left ||
          mouse.button == Event::Mouse::Button::Right)) {
@@ -240,12 +367,17 @@ void ScreenImpl::HandleEvent(const Event& event) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
         if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
+          bool focus_changed = (focused_element_ != clicked_element);
           if (component_->Root()) {
             component_->Root()->Visit(
                 [](Element& el) { el.set_focused(false); });
           }
           focused_element_ = clicked_element;
           focused_element_->set_focused(true);
+          if (focus_changed) {
+            component_->ResolveTargetStyles();
+            Draw();
+          }
           std::vector<std::string> attr_keys;
           if (mouse.button == Event::Mouse::Button::Left) {
             attr_keys = {"onclick", "@click.left", "@click"};
@@ -414,6 +546,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
       }
       focusable[next_idx]->set_focused(true);
       focused_element_ = focusable[next_idx];
+      component_->ResolveTargetStyles();
       DigestAndDraw();
       return;
     }

@@ -13,25 +13,34 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-#endif
-
-namespace rtxui {
-
-#ifdef __EMSCRIPTEN__
-inline char emscripten_get_char() {
+inline int emscripten_get_char() {
   return EM_ASM_INT({
     return Asyncify.handleSleep(function(wakeUp) {
       if (window.rtxui_input_queue && window.rtxui_input_queue.length > 0) {
         wakeUp(window.rtxui_input_queue.shift());
         return;
       }
+      let timer = null;
+      if (window.rtxui_has_active_transitions) {
+        timer = setTimeout(function() {
+          window.rtxui_on_input = null;
+          wakeUp(-1);
+        }, 16);
+      }
       window.rtxui_on_input = function(char_code) {
+        if (timer) clearTimeout(timer);
         window.rtxui_on_input = null;
         wakeUp(char_code);
       };
     });
   });
 }
+#endif
+
+namespace rtxui {
+
+#ifdef __EMSCRIPTEN__
+// Forward declaration or empty namespace content is fine as long as we define SystemTerminalDevice below.
 #endif
 
 class TerminalDevice {
@@ -55,7 +64,12 @@ class SystemTerminalDevice : public TerminalDevice {
     if (len <= 0) {
       return 0;
     }
-    buf[0] = emscripten_get_char();
+    int c = emscripten_get_char();
+    if (c == -1) {
+      errno = EAGAIN;
+      return -1;
+    }
+    buf[0] = static_cast<char>(c);
     return 1;
 #else
     return read(STDIN_FILENO, buf, len);
@@ -99,7 +113,7 @@ class SystemTerminalDevice : public TerminalDevice {
 
   void EnterRawMode(void (*sigwinch_handler)(int)) override {
 #ifdef __EMSCRIPTEN__
-    Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1000h\x1b[?1006h");
+    Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
 #else
     tcgetattr(STDIN_FILENO, &previous_termios_);
     termios terminal = previous_termios_;
@@ -130,15 +144,15 @@ class SystemTerminalDevice : public TerminalDevice {
     sa.sa_flags = 0;
     sigaction(SIGWINCH, &sa, &previous_sigaction_);
 
-    Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1000h\x1b[?1006h");
+    Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
 #endif
   }
 
   void ExitRawMode() override {
 #ifdef __EMSCRIPTEN__
-    Write("\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
 #else
-    Write("\x1b[?1000l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
     sigaction(SIGWINCH, &previous_sigaction_, nullptr);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &previous_termios_);
 #endif

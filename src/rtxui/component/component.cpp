@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cctype>
 #include <charconv>
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -53,7 +54,7 @@ bool ComponentBase::OnEvent(Event event) {
   return false;
 }
 
-Element* ComponentBase::Root() {
+Element* ComponentBase::Root() const {
   return root_.get();
 }
 
@@ -261,6 +262,142 @@ void CssParseError(const css::Error& error, std::string_view css_string) {
   std::exit(1);
 }
 
+struct ParsedSelector {
+  std::string_view base;
+  std::vector<std::string_view> pseudo_classes;
+};
+
+ParsedSelector SplitSelector(std::string_view selector_str) {
+  while (!selector_str.empty() && std::isspace(static_cast<unsigned char>(selector_str.front()))) {
+    selector_str.remove_prefix(1);
+  }
+  while (!selector_str.empty() && std::isspace(static_cast<unsigned char>(selector_str.back()))) {
+    selector_str.remove_suffix(1);
+  }
+
+  ParsedSelector parsed;
+  size_t colon = selector_str.find(':');
+  if (colon == std::string_view::npos) {
+    parsed.base = selector_str;
+    return parsed;
+  }
+  parsed.base = selector_str.substr(0, colon);
+  while (!parsed.base.empty() && std::isspace(static_cast<unsigned char>(parsed.base.back()))) {
+    parsed.base.remove_suffix(1);
+  }
+
+  std::string_view rest = selector_str.substr(colon);
+  while (!rest.empty() && rest.front() == ':') {
+    rest.remove_prefix(1);
+    size_t next_colon = rest.find(':');
+    std::string_view pseudo = rest.substr(0, next_colon);
+    while (!pseudo.empty() && std::isspace(static_cast<unsigned char>(pseudo.front()))) {
+      pseudo.remove_prefix(1);
+    }
+    while (!pseudo.empty() && std::isspace(static_cast<unsigned char>(pseudo.back()))) {
+      pseudo.remove_suffix(1);
+    }
+    parsed.pseudo_classes.push_back(pseudo);
+    if (next_colon == std::string_view::npos) {
+      break;
+    }
+    rest = rest.substr(next_colon);
+  }
+  return parsed;
+}
+
+bool MatchSelector(const Element* element, const Element* root, const ParsedSelector& selector, bool check_pseudos) {
+  bool base_match = false;
+  if (selector.base == "self") {
+    base_match = (element == root);
+  } else if (selector.base.starts_with("#")) {
+    base_match = (!element->id.empty() && element->id == selector.base.substr(1));
+  } else if (selector.base.starts_with(".")) {
+    std::string_view class_name = selector.base.substr(1);
+    for (const auto& cls : element->classes) {
+      if (cls == class_name) {
+        base_match = true;
+        break;
+      }
+    }
+  } else {
+    base_match = (element->tag() == selector.base);
+  }
+
+  if (!base_match) {
+    return false;
+  }
+
+  if (check_pseudos) {
+    for (auto pseudo : selector.pseudo_classes) {
+      if (pseudo == "hover" && !element->hovered()) {
+        return false;
+      }
+      if (pseudo == "active" && !element->active()) {
+        return false;
+      }
+      if (pseudo == "focus" && !element->focused()) {
+        return false;
+      }
+    }
+  } else {
+    if (!selector.pseudo_classes.empty()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool IsStyledByComponent(const Element* element, const ComponentBase* component) {
+  if (!element) {
+    return false;
+  }
+  if (element->component() == component) {
+    return true;
+  }
+  if (element->owner_component() == component) {
+    return true;
+  }
+  return false;
+}
+
+void ResolveStylesRecursive(Element* element, const ComponentBase* component, const std::unique_ptr<css::StyleSheet>& stylesheet, bool check_pseudos) {
+  if (!element) {
+    return;
+  }
+
+  if (IsStyledByComponent(element, component)) {
+    if (check_pseudos) {
+      if (stylesheet) {
+        for (const auto& ruleset : *stylesheet) {
+          auto parsed = SplitSelector(ruleset.selector);
+          if (!parsed.pseudo_classes.empty() && MatchSelector(element, component->Root(), parsed, true)) {
+            for (const auto& declaration : ruleset.declarations) {
+              ApplyStyle(element->target_style, declaration);
+            }
+          }
+        }
+      }
+    } else {
+      if (stylesheet) {
+        for (const auto& ruleset : *stylesheet) {
+          auto parsed = SplitSelector(ruleset.selector);
+          if (parsed.pseudo_classes.empty() && MatchSelector(element, component->Root(), parsed, false)) {
+            for (const auto& declaration : ruleset.declarations) {
+              ApplyStyle(element->base_style, declaration);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (size_t i = 0; i < element->ChildCount(); ++i) {
+    ResolveStylesRecursive(element->ChildAt(i), component, stylesheet, check_pseudos);
+  }
+}
+
 }  // namespace
 
 std::string_view ComponentBase::Template() {
@@ -319,12 +456,14 @@ void ComponentBase::Render() {
   children_.clear();
   slots_.clear();
 
-  std::vector<std::string> interpolated_css_strings;
+  css_strings_.clear();
 
   if (!root_) {
     root_ = Ref<Element>::New(this);
   }
   root_->style = ComputedStyle();
+  root_->base_style = ComputedStyle();
+  root_->target_style = ComputedStyle();
   root_->id = id_;
   root_->classes = classes_;
   root_->RemoveChildren();
@@ -334,7 +473,7 @@ void ComponentBase::Render() {
   template_node.tag = "template";
   template_node.children.reserve(xml_nodes_.size());
 
-  std::optional<css::StyleSheet> stylesheet;
+  stylesheet_ = nullptr;
 
   for (const auto& node : xml_nodes_) {
     if (node.type == xml::Node::Type::kElement) {
@@ -343,12 +482,12 @@ void ComponentBase::Render() {
             node.children[0].type != xml::Node::Type::kText) {
           continue;
         }
-        interpolated_css_strings.push_back(
+        css_strings_.push_back(
             Interpolate(node.children[0].text, this));
-        const auto& css_str = interpolated_css_strings.back();
+        const auto& css_str = css_strings_.back();
         auto maybe_stylesheet = css::Parse(css_str);
         if (maybe_stylesheet) {
-          stylesheet = maybe_stylesheet.value();
+          stylesheet_ = std::make_unique<css::StyleSheet>(std::move(maybe_stylesheet.value()));
         } else {
           CssParseError(maybe_stylesheet.error(), css_str);
         }
@@ -378,58 +517,74 @@ void ComponentBase::Render() {
     children_.insert(comp);
   }
 
-  if (stylesheet) {
-    auto ApplyRuleset = [](Element* element, const css::Ruleset& ruleset) {
-      std::string_view selector = ruleset.selector;
-      bool match = false;
-      if (selector.starts_with("#")) {
-        if (!element->id.empty() && element->id == selector.substr(1)) {
-          match = true;
-        }
-      } else if (selector.starts_with(".")) {
-        std::string_view class_name = selector.substr(1);
-        for (const auto& cls : element->classes) {
-          if (cls == class_name) {
-            match = true;
-            break;
-          }
-        }
-      } else {
-        if (element->tag() == selector) {
-          match = true;
-        }
-      }
+  ResolveStylesRecursive(root_.get(), this, stylesheet_, false);
 
-      if (match) {
-        for (const auto& declaration : ruleset.declarations) {
-          ApplyStyle(element->style, declaration);
-        }
-      }
-    };
-
-    for (const auto& ruleset : *stylesheet) {
-      if (ruleset.selector == "self") {
-        for (const auto& declaration : ruleset.declarations) {
-          ApplyStyle(root_->style, declaration);
-        }
-        continue;
-      }
-
-      std::function<void(Element*, const css::Ruleset&)> StyleDescendants =
-          [&](Element* element, const css::Ruleset& ruleset) {
-            ApplyRuleset(element, ruleset);
-            for (int i = 0; i < element->ChildCount(); ++i) {
-              StyleDescendants(element->ChildAt(i), ruleset);
-            }
-          };
-
-      StyleDescendants(root_.get(), ruleset);
+  std::function<void(Element*)> CopyBaseStyles = [&](Element* element) {
+    if (IsStyledByComponent(element, this)) {
+      element->target_style = element->base_style;
+      element->style = element->base_style;
     }
-  }
+    for (size_t i = 0; i < element->ChildCount(); ++i) {
+      CopyBaseStyles(element->ChildAt(i));
+    }
+  };
+  CopyBaseStyles(root_.get());
+
+  ResolveTargetStyles();
+
+  std::function<void(Element*)> InstantStyle = [&](Element* element) {
+    if (element) {
+      element->style = element->target_style;
+      element->active_transitions.clear();
+      for (size_t i = 0; i < element->ChildCount(); ++i) {
+        InstantStyle(element->ChildAt(i));
+      }
+    }
+  };
+  InstantStyle(root_.get());
 
   if (root_) {
     RestoreElementStates(root_.get(), {}, saved_states);
   }
+}
+
+void ComponentBase::ResolveTargetStyles() {
+  ResolveTargetStyles(time::GetTimeMs());
+}
+
+void ComponentBase::ResolveTargetStyles(double current_time_ms) {
+  if (!root_) {
+    return;
+  }
+
+  std::function<void(Element*)> ResetTarget = [&](Element* element) {
+    if (element) {
+      element->target_style = element->base_style;
+      for (size_t i = 0; i < element->ChildCount(); ++i) {
+        ResetTarget(element->ChildAt(i));
+      }
+    }
+  };
+  ResetTarget(root_.get());
+
+  std::function<void(ComponentBase*)> ResolveAll = [&](ComponentBase* comp) {
+    if (!comp || !comp->Root()) return;
+    ResolveStylesRecursive(comp->Root(), comp, comp->stylesheet_, true);
+    for (auto& child : comp->children_) {
+      ResolveAll(child.get());
+    }
+  };
+  ResolveAll(this);
+
+  std::function<void(Element*)> TriggerAll = [&](Element* element) {
+    if (element) {
+      element->TriggerTransitions(current_time_ms);
+      for (size_t i = 0; i < element->ChildCount(); ++i) {
+        TriggerAll(element->ChildAt(i));
+      }
+    }
+  };
+  TriggerAll(root_.get());
 }
 
 void ComponentBase::Render(const xml::Node& node,
@@ -460,7 +615,9 @@ void ComponentBase::Render(const xml::Node& node,
             }
           }
         }
-        slot->AddChild(Ref<TextElement>::New(text));
+        auto text_el = Ref<TextElement>::New(text);
+        text_el->set_owner_component(import_source);
+        slot->AddChild(text_el);
         break;
       }
 
@@ -474,6 +631,7 @@ void ComponentBase::Render(const xml::Node& node,
                                       ? ""
                                       : std::string(child_node.tag.substr(5));
           auto slot_element = Ref<SlotElement>::New();
+          slot_element->set_owner_component(import_source);
           import_source->slots_[slot_name] = slot_element;
           slot->AddChild(slot_element);
           break;
@@ -548,6 +706,7 @@ void ComponentBase::Render(const xml::Node& node,
           }
 
           child->Render();
+          child->Root()->set_owner_component(import_source);
 
           slot->AddChild(child->Root());
 
@@ -560,6 +719,7 @@ void ComponentBase::Render(const xml::Node& node,
         }
 
         auto child_element = Ref<Element>::New();
+        child_element->set_owner_component(import_source);
         child_element->SetTag(std::string(child_node.tag));
         for (auto& [key, value] : child_node.attributes) {
           child_element->SetAttribute(std::string(key), Interpolate(value));
@@ -597,6 +757,10 @@ void ComponentBase::PropagateBinding(std::string_view child_prop,
       binding.parent->SetProperty(binding.parent_prop, value);
     }
   }
+}
+
+const css::StyleSheet* ComponentBase::stylesheet() const {
+  return stylesheet_.get();
 }
 
 namespace reflection {

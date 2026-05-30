@@ -214,7 +214,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   int width = (constraints.width.mode == MeasureMode::Exactly)
                   ? avail_width
                   : ResolveSize(box->style.width, avail_width);
-  bool is_fixed_width = (width != -1) || box->is_anonymous;
+  bool is_fixed_width = (width != -1) || (box->is_anonymous && avail_width < 10000);
   if (width == -1) {
     width = avail_width;
   }

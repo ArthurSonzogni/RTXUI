@@ -20,7 +20,8 @@ export default defineConfig({
       {
         text: 'Guides',
         items: [
-          { text: 'Tutorial', link: '/tutorial' }
+          { text: 'Tutorial', link: '/tutorial' },
+          { text: 'Animations', link: '/animations' }
         ]
       },
       {

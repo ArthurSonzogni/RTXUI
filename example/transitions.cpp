@@ -47,6 +47,16 @@ class TransitionsDemo : public Component<TransitionsDemo> {
           border-color: rgb(96, 165, 250); /* Light Blue border */
           color: rgb(255, 255, 255);
         }
+        .box:active {
+          background-color: rgb(30, 58, 138); /* Slate Blue on click */
+          border-color: rgb(59, 130, 246); /* Bright Blue border */
+          color: rgb(255, 255, 255);
+        }
+        .box:focus {
+          background-color: rgb(30, 58, 138); /* Slate Blue on focus */
+          border-color: rgb(59, 130, 246); /* Bright Blue border */
+          color: rgb(255, 255, 255);
+        }
       </style>
     )html";
   }

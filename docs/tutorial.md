@@ -46,7 +46,7 @@ int main() {
 }
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_helloworld.js" :cols="60" :rows="14" />
+<WasmTerminal src="/wasm/rtxui_example_helloworld.js" :cols="60" :rows="60" />
 
 ---
 
@@ -87,7 +87,7 @@ class CounterApp : public Component<CounterApp> {
 ```
 - **Reactivity Model**: Whenever a button is clicked, an event handler modifies `count`. The screen runs a Digest cycle, detects that `count` has changed, and updates the DOM elements.
 
-<WasmTerminal src="/wasm/rtxui_example_counter.js" :cols="60" :rows="16" />
+<WasmTerminal src="/wasm/rtxui_example_counter.js" :cols="60" :rows="60" />
 
 ---
 
@@ -130,7 +130,7 @@ class ScrollBox : public Component<ScrollBox> {
 
 By adding `overflow-y: scroll` and restricting `height`, RTXUI automatically crops overflowing elements and displays a modern, responsive scrollbar on the right. Scroll events bubble up nested containers when boundaries are reached.
 
-<WasmTerminal src="/wasm/rtxui_example_nested_scroll.js" :cols="80" :rows="30" />
+<WasmTerminal src="/wasm/rtxui_example_nested_scroll.js" :cols="80" :rows="60" />
 
 ---
 
@@ -162,7 +162,7 @@ class CJKApp : public Component<CJKApp> {
 };
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_cjk.js" :cols="80" :rows="18" />
+<WasmTerminal src="/wasm/rtxui_example_cjk.js" :cols="80" :rows="60" />
 
 ---
 
@@ -203,5 +203,5 @@ class InputApp : public Component<InputApp> {
 };
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="22" />
+<WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="60" />
 

@@ -148,7 +148,7 @@ An interactive single-line text entry field.
 
 - **Interactive Demo**:
   
-  <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="22" />
+  <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="60" />
 
 ---
 
@@ -184,7 +184,7 @@ An interactive multi-line text editing area. Shares the same event-handling base
 
 - **Interactive Demo**:
   
-  <WasmTerminal src="/wasm/rtxui_example_textarea.js" :cols="80" :rows="28" />
+  <WasmTerminal src="/wasm/rtxui_example_textarea.js" :cols="80" :rows="60" />
 
 ---
 
@@ -218,7 +218,7 @@ An interactive toggle control for boolean values.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="22" />
+  <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="60" />
 
 ---
 
@@ -263,7 +263,7 @@ An interactive horizontal range slider component.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="22" />
+  <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="60" />
 
 ---
 
@@ -292,7 +292,7 @@ A read-only horizontal progress bar indicator.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_progress.js" :cols="80" :rows="22" />
+  <WasmTerminal src="/wasm/rtxui_example_progress.js" :cols="80" :rows="60" />
 
 ---
 
@@ -351,7 +351,7 @@ An interactive dropdown menu for picking from a list of options.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="22" />
+  <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="60" />
 
 ---
 
@@ -377,5 +377,5 @@ A block-level horizontal separator rule. Renders a continuous horizontal line `â
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_hr.js" :cols="80" :rows="22" />
+  <WasmTerminal src="/wasm/rtxui_example_hr.js" :cols="80" :rows="60" />
 
