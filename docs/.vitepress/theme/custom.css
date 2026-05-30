@@ -1,17 +1,32 @@
 /* Glue the C++, HTML, and CSS reference buttons together on wider screens */
 @media (min-width: 640px) {
-  .VPHero .actions a.alt {
-    border-radius: 0;
+  /* Set a explicit gap on the action container to align our margin offset math */
+  .VPHero .actions {
+    gap: 12px !important;
   }
-  .VPHero .actions a.alt ~ a.alt {
-    margin-left: -13px; /* counteract gap + border overlap */
+
+  /* Pull HTML and CSS action wrapper divs left to overlap the gap and borders */
+  .VPHero .actions .action:nth-child(3) {
+    margin-left: -13px !important;
   }
-  .VPHero .actions a.brand + a.alt {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
+  .VPHero .actions .action:nth-child(4) {
+    margin-left: -13px !important;
   }
-  .VPHero .actions a.alt:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
+
+  /* C++ button (second child): rounded left only */
+  .VPHero .actions .action:nth-child(2) .VPButton {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+
+  /* HTML button (third child): completely squared */
+  .VPHero .actions .action:nth-child(3) .VPButton {
+    border-radius: 0 !important;
+  }
+
+  /* CSS button (fourth child): rounded right only */
+  .VPHero .actions .action:nth-child(4) .VPButton {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
   }
 }
