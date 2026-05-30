@@ -75,6 +75,15 @@ void Bindings::Import(std::string_view name, std::function<void()> callback) {
   callbacks_[std::string(name)] = std::move(callback);
 }
 
+void Bindings::Import(std::string_view name, ComponentFactory factory) {
+  if (imports_.count(std::string(name))) {
+    std::println("Error: Component '{}' is already imported.", name);
+    std::exit(1);
+  }
+
+  imports_[std::string(name)] = std::move(factory);
+}
+
 namespace {
 
 struct ElementState {

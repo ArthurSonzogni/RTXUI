@@ -43,6 +43,9 @@ class Bindings {
   /// ```
   void Import(std::string_view name, std::function<void()> callback);
 
+  /// Import a component using a custom factory function.
+  void Import(std::string_view name, ComponentFactory factory);
+
   /// Import a component into the template.
   /// We require the component to be a subclass of `ComponentBase`.
   ///
