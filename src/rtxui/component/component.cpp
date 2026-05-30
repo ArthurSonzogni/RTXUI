@@ -1,5 +1,6 @@
 #include "rtxui/internal/component.hpp"
 
+#include <cassert>
 #include <charconv>
 #include <cctype>
 #include <functional>
@@ -24,8 +25,37 @@
 
 namespace rtxui {
 
+RefCounted::~RefCounted() {
+  assert(count_ == 0);
+}
+
+void RefCounted::AddRef() const {
+  ++count_;
+}
+
+void RefCounted::Release() const {
+  --count_;
+  if (count_ == 0) {
+    delete this;
+  }
+}
+
 ComponentBase::ComponentBase() = default;
 ComponentBase::~ComponentBase() = default;
+
+std::string_view ComponentBase::Setup() {
+  return "";
+}
+
+void ComponentBase::InitReflection() {}
+
+bool ComponentBase::OnEvent(Event event) {
+  return false;
+}
+
+Element* ComponentBase::Root() {
+  return root_.get();
+}
 
 bool Bindings::RunCallback(std::string_view name) {
   auto it = callbacks_.find(std::string(name));

@@ -39,7 +39,7 @@ class ComponentBase : public RefCounted, public Bindings {
   ComponentBase(ComponentBase&&) = delete;
   ComponentBase& operator=(ComponentBase&&) = delete;
 
-  virtual std::string_view Setup() { return ""; }
+  virtual std::string_view Setup();
   virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
   std::string_view Template();
@@ -47,10 +47,10 @@ class ComponentBase : public RefCounted, public Bindings {
   void Mount();
   void Render();
   virtual bool Digest() = 0;
-  virtual void InitReflection() {}
-  virtual bool OnEvent(Event event) { return false; }
+  virtual void InitReflection();
+  virtual bool OnEvent(Event event);
 
-  Element* Root() { return root_.get(); }
+  Element* Root();
   Ref<Element> Slot(std::string_view name);
   void SetProperty(std::string_view name, std::string_view value);
   void PropagateBinding(std::string_view child_prop, std::string_view value);

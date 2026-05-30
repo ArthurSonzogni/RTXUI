@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <cassert>
 #include <concepts>
 #include <cstdint>
 #include <utility>
@@ -17,15 +16,10 @@ class Ref;
 class RefCounted {
  public:
   RefCounted() = default;
-  virtual ~RefCounted() { assert(count_ == 0); }
+  virtual ~RefCounted();
 
-  void AddRef() const { ++count_; }
-  void Release() const {
-    --count_;
-    if (count_ == 0) {
-      delete this;
-    }
-  }
+  void AddRef() const;
+  void Release() const;
 
  private:
   mutable uint16_t count_ = 0;

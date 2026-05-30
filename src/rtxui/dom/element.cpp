@@ -1,6 +1,7 @@
 #include "rtxui/dom/element.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include "rtxui/internal/component.hpp"
 
 namespace rtxui {
