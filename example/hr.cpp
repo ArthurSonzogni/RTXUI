@@ -9,10 +9,10 @@ using namespace rtxui;
 class HrDemo : public Component<HrDemo> {
  public:
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::hr>();
-    Import<rtxui::p>();
+
+
+
+
     return R"html(
       <div class="container">
         <p class="title">Horizontal Rule Element Demo</p>

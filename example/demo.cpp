@@ -19,7 +19,7 @@ class LabeledBox : public Component<LabeledBox> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
+
     return R"html(
       <div class="box">
         <div class="title">{title}</div>
@@ -87,9 +87,9 @@ class App : public Component<App> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::h1>();
-    Import<rtxui::button>();
+
+
+
     Import<LabeledBox>();
     return R"html(
       <div class="header">

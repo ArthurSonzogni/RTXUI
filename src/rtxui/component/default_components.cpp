@@ -1,4 +1,4 @@
-#include "rtxui/internal/default_components.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -956,10 +956,6 @@ std::vector<OptionInfo> select::GetOptions() {
       opts.push_back({val, label, &el});
     }
   });
-  std::cout << "GET OPTIONS SIZE: " << opts.size() << " (value=" << value << ")" << std::endl;
-  for (auto& opt : opts) {
-    std::cout << "  OPT value=" << opt.value << " label=" << opt.label << std::endl;
-  }
   return opts;
 }
 
@@ -1199,7 +1195,6 @@ bool option::OnEvent(Event event) {
 
       if (click_x >= abs_x && click_x < abs_x + layout_w &&
           click_y >= abs_y && click_y < abs_y + layout_h) {
-        
         Element* parent_el = root->Parent();
         while (parent_el) {
           if (parent_el->tag() == "select" && parent_el->component()) {
@@ -1254,5 +1249,28 @@ bool hr::Digest() {
   }
   return Component<hr>::Digest();
 }
+
+namespace {
+int RegisterDefaults = []() {
+  RegisterGlobalComponent("h1", []() { return Ref<h1>::New(); });
+  RegisterGlobalComponent("div", []() { return Ref<div>::New(); });
+  RegisterGlobalComponent("span", []() { return Ref<span>::New(); });
+  RegisterGlobalComponent("p", []() { return Ref<p>::New(); });
+  RegisterGlobalComponent("strong", []() { return Ref<strong>::New(); });
+  RegisterGlobalComponent("ul", []() { return Ref<ul>::New(); });
+  RegisterGlobalComponent("li", []() { return Ref<li>::New(); });
+  RegisterGlobalComponent("ol", []() { return Ref<ol>::New(); });
+  RegisterGlobalComponent("hr", []() { return Ref<hr>::New(); });
+  RegisterGlobalComponent("button", []() { return Ref<button>::New(); });
+  RegisterGlobalComponent("input", []() { return Ref<input>::New(); });
+  RegisterGlobalComponent("textarea", []() { return Ref<textarea>::New(); });
+  RegisterGlobalComponent("checkbox", []() { return Ref<checkbox>::New(); });
+  RegisterGlobalComponent("slider", []() { return Ref<slider>::New(); });
+  RegisterGlobalComponent("progress", []() { return Ref<progress>::New(); });
+  RegisterGlobalComponent("select", []() { return Ref<select>::New(); });
+  RegisterGlobalComponent("option", []() { return Ref<option>::New(); });
+  return 0;
+}();
+} // namespace
 
 }  // namespace rtxui

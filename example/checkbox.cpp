@@ -15,10 +15,10 @@ class CheckboxDemo : public Component<CheckboxDemo> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::checkbox>();
-    Import<rtxui::p>();
+
+
+
+
     return R"html(
       <div class="container">
         <p class="title">Interactive Checkbox Element</p>

@@ -235,6 +235,9 @@ class Component : public ComponentBase {
     return 0; \
   }()
 
+void RegisterGlobalComponent(std::string_view name, ComponentFactory factory);
+ComponentFactory GetGlobalComponentFactory(std::string_view name);
+
 }  // namespace rtxui
 
 #endif  // RTXUI_COMPONENT_HPP_

@@ -19,7 +19,7 @@ class BorderBox : public Component<BorderBox> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
+
     return R"html(
       <div class="box-wrapper">
         <div class="label">{title}</div>
@@ -50,9 +50,9 @@ class BorderBox : public Component<BorderBox> {
 class BordersDemo : public Component<BordersDemo> {
  public:
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::h1>();
-    Import<rtxui::p>();
+
+
+
     Import<BorderBox>();
     return R"html(
       <div>

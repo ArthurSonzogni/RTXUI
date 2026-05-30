@@ -20,7 +20,7 @@ class ColorBox : public Component<ColorBox> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
+
     return R"html(
       <div class="box-content">
         {text}
@@ -47,9 +47,9 @@ class ColorBox : public Component<ColorBox> {
 class ColorDemo : public Component<ColorDemo> {
  public:
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::h1>();
-    Import<rtxui::p>();
+
+
+
     Import<ColorBox>();
     return R"html(
       <div class="container">

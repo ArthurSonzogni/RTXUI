@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "rtxui/internal/component.hpp"
-#include "rtxui/internal/default_components.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/internal/refcounted.hpp"
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"

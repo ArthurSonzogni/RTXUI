@@ -35,10 +35,10 @@ class TextareaDemo : public Component<TextareaDemo> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::p>();
-    Import<rtxui::textarea>();
+
+
+
+
     return R"html(
       <div class="container">
         <p class="title">Multi-line Textarea Editor</p>
