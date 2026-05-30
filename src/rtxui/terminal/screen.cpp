@@ -129,7 +129,40 @@ std::shared_ptr<PhysicalFragment> FindFirstScrollableFragment(
 
 } // namespace
 
-Screen::Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device)
+
+class ScreenImpl {
+ public:
+   ScreenImpl(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device);
+   ~ScreenImpl();
+
+   void Loop();
+   void Step();
+   void Dispatch(Event event);
+   void Draw();
+
+   void UpdateSize();
+   void DigestAndDraw();
+   void HandleEvent(const Event& event);
+
+   Ref<ComponentBase> component_;
+   int width_ = 80;
+   int height_ = 24;
+   int last_height_ = 0;
+   bool has_drawn_ = false;
+   bool running_ = true;
+   std::shared_ptr<PhysicalFragment> root_fragment_;
+   std::shared_ptr<TerminalDevice> device_;
+   std::unique_ptr<TerminalInputParser> parser_;
+   Element* focused_element_ = nullptr;
+
+   struct RawTerminal {
+     TerminalDevice* device_ = nullptr;
+     explicit RawTerminal(TerminalDevice* device);
+     ~RawTerminal();
+   };
+};
+
+ScreenImpl::ScreenImpl(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device)
     : component_(std::move(component)), device_(std::move(device)), parser_(std::make_unique<TerminalInputParser>()) {
   if (!device_) {
     device_ = std::make_shared<SystemTerminalDevice>();
@@ -140,9 +173,9 @@ Screen::Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> dev
   Draw();
 }
 
-Screen::~Screen() {}
+ScreenImpl::~ScreenImpl() {}
 
-void Screen::Loop() {
+void ScreenImpl::Loop() {
   RawTerminal raw_terminal(device_.get());
   Draw();
 
@@ -152,7 +185,7 @@ void Screen::Loop() {
   }
 }
 
-void Screen::Step() {
+void ScreenImpl::Step() {
   char c;
   int bytes_read = device_->Read(&c, 1);
   if (bytes_read != 1) {
@@ -170,11 +203,11 @@ void Screen::Step() {
   }
 }
 
-void Screen::Dispatch(Event event) {
+void ScreenImpl::Dispatch(Event event) {
   HandleEvent(event);
 }
 
-void Screen::HandleEvent(const Event& event) {
+void ScreenImpl::HandleEvent(const Event& event) {
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
     if (mouse.motion == Event::Mouse::Motion::Pressed &&
@@ -465,7 +498,7 @@ void Screen::HandleEvent(const Event& event) {
   }
 }
 
-void Screen::Draw() {
+void ScreenImpl::Draw() {
   auto root = component_->Root();
 
   focused_element_ = nullptr;
@@ -522,7 +555,7 @@ void Screen::Draw() {
   has_drawn_ = true;
 }
 
-void Screen::UpdateSize() {
+void ScreenImpl::UpdateSize() {
   int new_width = width_;
   int new_height = height_;
   if (device_->GetSize(new_width, new_height)) {
@@ -539,7 +572,7 @@ void Screen::UpdateSize() {
   }
 }
 
-void Screen::DigestAndDraw() {
+void ScreenImpl::DigestAndDraw() {
   if (component_->Digest()) {
     Draw();
   }
@@ -547,16 +580,38 @@ void Screen::DigestAndDraw() {
 
 // --- RawTerminal RAII Implementation ---
 
-Screen::RawTerminal::RawTerminal(TerminalDevice* device) : device_(device) {
+ScreenImpl::RawTerminal::RawTerminal(TerminalDevice* device) : device_(device) {
   if (device_ && device_->IsAtty()) {
     device_->EnterRawMode(handle_sigwinch);
   }
 }
 
-Screen::RawTerminal::~RawTerminal() {
+ScreenImpl::RawTerminal::~RawTerminal() {
   if (device_ && device_->IsAtty()) {
     device_->ExitRawMode();
   }
+}
+
+
+Screen::Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device)
+    : impl_(std::make_unique<ScreenImpl>(std::move(component), std::move(device))) {}
+
+Screen::~Screen() = default;
+
+void Screen::Loop() {
+  impl_->Loop();
+}
+
+void Screen::Step() {
+  impl_->Step();
+}
+
+void Screen::Dispatch(Event event) {
+  impl_->Dispatch(event);
+}
+
+void Screen::Draw() {
+  impl_->Draw();
 }
 
 } // namespace rtxui

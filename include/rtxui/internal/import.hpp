@@ -32,14 +32,7 @@ class Bindings {
 
  public:
   /// Invoke an imported callback by name.
-  bool RunCallback(std::string_view name) {
-    auto it = callbacks_.find(std::string(name));
-    if (it != callbacks_.end()) {
-      it->second();
-      return true;
-    }
-    return false;
-  }
+  bool RunCallback(std::string_view name);
 
   /// Bind a callback into the template.
   ///
@@ -48,14 +41,7 @@ class Bindings {
   /// auto callback = [=] { count->Value(count->Value() + 1); };
   /// Import("callback", callback);
   /// ```
-  void Import(std::string_view name, std::function<void()> callback) {
-    if (callbacks_.count(std::string(name))) {
-      std::println("Error: Callback '{}' is already imported.", name);
-      std::exit(1);
-    }
-
-    callbacks_[std::string(name)] = std::move(callback);
-  }
+  void Import(std::string_view name, std::function<void()> callback);
 
   /// Import a component into the template.
   /// We require the component to be a subclass of `ComponentBase`.
