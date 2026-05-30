@@ -9,6 +9,9 @@ hero:
     - theme: brand
       text: Get Started
       link: /tutorial
+    - theme: alt
+      text: C++ API Reference
+      link: /cpp_api
 
 features:
   - icon: 🚀
