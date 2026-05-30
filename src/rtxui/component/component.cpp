@@ -1,5 +1,6 @@
 #include "rtxui/component/component.hpp"
 
+#include <charconv>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -480,5 +481,16 @@ void ComponentBase::PropagateBinding(std::string_view child_prop, std::string_vi
     }
   }
 }
+
+namespace reflection {
+int ParseInt(std::string_view str) {
+  int val = 0;
+  auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), val);
+  if (ec == std::errc()) {
+    return val;
+  }
+  return 0;
+}
+}  // namespace reflection
 
 }  // namespace rtxui

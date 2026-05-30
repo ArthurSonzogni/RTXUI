@@ -5,7 +5,6 @@
 #define RTXUI_COMPONENT_HPP_
 
 #include <functional>
-#include <charconv>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -76,6 +75,8 @@ class ComponentBase : public RefCounted, public Bindings {
 };
 
 namespace reflection {
+int ParseInt(std::string_view str);
+
 template <typename T>
 std::string to_string(const T& value) {
   if constexpr (std::is_convertible_v<T, std::string>) return static_cast<std::string>(value);
@@ -92,13 +93,7 @@ void from_string(std::string_view str, T& value) {
   if constexpr (std::is_same_v<T, std::string>) {
     value = std::string(str);
   } else if constexpr (std::is_same_v<T, int>) {
-    int val = 0;
-    auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), val);
-    if (ec == std::errc()) {
-      value = val;
-    } else {
-      value = 0;
-    }
+    value = ParseInt(str);
   } else if constexpr (std::is_same_v<T, bool>) {
     value = (str == "true" || str == "1");
   } else {
