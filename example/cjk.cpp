@@ -8,9 +8,6 @@ using namespace rtxui;
 class CJKDemo : public Component<CJKDemo> {
  public:
   std::string_view Setup() override {
-
-
-
     return R"html(
       <div class="container">
         <h1>RTXUI CJK Character Demo</h1>

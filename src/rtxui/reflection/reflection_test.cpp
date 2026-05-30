@@ -1,9 +1,9 @@
 // Copyright 2025 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/internal/class_name.hpp"
-
 #include <catch2/catch_test_macros.hpp>
+
+#include "rtxui/internal/class_name.hpp"
 
 namespace {
 class A {};

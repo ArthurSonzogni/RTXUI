@@ -10,16 +10,9 @@ class ProgressDemo : public Component<ProgressDemo> {
  public:
   int progress_val = 45;
 
-  ProgressDemo() {
-    Bind(progress_val);
-  }
+  ProgressDemo() { Bind(progress_val); }
 
   std::string_view Setup() override {
-
-
-
-
-
     return R"html(
       <div class="container">
         <p class="title">Interactive Progress Bar Element</p>

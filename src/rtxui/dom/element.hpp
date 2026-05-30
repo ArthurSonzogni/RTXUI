@@ -88,17 +88,17 @@ class Element : public RefCounted {
   }
 
  protected:
-   bool is_slot_ : 1 = false;
-   bool is_text_ : 1 = false;
-   int scroll_y_ = 0;
-   int scroll_height_ = 0;
-   int scroll_x_ = 0;
-   int scroll_width_ = 0;
-   int layout_width_ = 0;
-   int layout_height_ = 0;
-   bool focused_ = false;
-   int absolute_x_ = 0;
-   int absolute_y_ = 0;
+  bool is_slot_ : 1 = false;
+  bool is_text_ : 1 = false;
+  int scroll_y_ = 0;
+  int scroll_height_ = 0;
+  int scroll_x_ = 0;
+  int scroll_width_ = 0;
+  int layout_width_ = 0;
+  int layout_height_ = 0;
+  bool focused_ = false;
+  int absolute_x_ = 0;
+  int absolute_y_ = 0;
 
   std::string tag_ = "div";
   std::map<std::string, std::string> attributes_;

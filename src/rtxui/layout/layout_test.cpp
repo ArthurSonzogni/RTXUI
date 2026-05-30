@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/internal/component.hpp"
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
@@ -311,7 +311,6 @@ TEST_CASE("Layout: Borders", "[layout]") {
 }  // TEST_CASE "Layout: Borders"
 
 TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
-
   SECTION("Combining characters render into a single cell") {
     // é = e (U+0065) + combining acute accent (U+0301, UTF-8: \xCC\x81).
     // Both bytes must land in a single terminal cell of width 1.
@@ -329,12 +328,11 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
     auto texture = RenderComponent(Ref<CombiningTest>::New(), 6, 1);
     // The combining grapheme (e + U+0301) must be stored in a single cell.
     const auto& cell3 = const_cast<Texture&>(texture)[3, 0];
-    CHECK(cell3.character.size() > 1);       // multi-byte cluster in one cell
-    CHECK(cell3.character == "e\xCC\x81");   // e + combining acute
+    CHECK(cell3.character.size() > 1);      // multi-byte cluster in one cell
+    CHECK(cell3.character == "e\xCC\x81");  // e + combining acute
     // GetTextLayer joins all cells: c a f e+\xCC\x81 _ _
     CHECK(GetTextLayer(texture) == "cafe\xCC\x81  \n");
   }
-
 
   SECTION("CJK double-width characters occupy two columns") {
     struct CjkTest : Component<CjkTest> {
@@ -387,7 +385,6 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
     auto texture = RenderComponent(Ref<MixedTest>::New(), 5, 1);
     CHECK(GetTextLayer(texture) == "A一^B \n");
   }
-
 }
 
 TEST_CASE("Layout: display: none", "[layout][display]") {
@@ -587,8 +584,8 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
   c->Digest();
 
   auto layout_box = LayoutTreeBuilder::Build(c->Root());
-  // Width 10: border(1)+padding(1)+content(5)+padding(1)+scrollbar(1)+border(1) = 10
-  // Height 3: top-border + content-row + bottom-border
+  // Width 10: border(1)+padding(1)+content(5)+padding(1)+scrollbar(1)+border(1)
+  // = 10 Height 3: top-border + content-row + bottom-border
   Texture texture(10, 3);
   if (layout_box) {
     LayoutConstraints constraints;
@@ -600,11 +597,12 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
   std::string layer = GetTextLayer(texture);
   INFO("Actual render: [" << layer << "]");
   // Row 0: top border    "┌─────── ┐"
-  // Row 1: content line  "│ hello  │"  (padding + cursor('h') + "ello" + padding + scrollbar)
-  // Row 2: bottom border "└─────── ┘"
-  CHECK(layer == "┌─────── ┐\n"
-                 "│ hello  │\n"
-                 "└─────── ┘\n");
+  // Row 1: content line  "│ hello  │"  (padding + cursor('h') + "ello" +
+  // padding + scrollbar) Row 2: bottom border "└─────── ┘"
+  CHECK(layer ==
+        "┌─────── ┐\n"
+        "│ hello  │\n"
+        "└─────── ┘\n");
 }
 
 TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
@@ -623,8 +621,8 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
   c->Digest();
 
   auto layout_box = LayoutTreeBuilder::Build(c->Root());
-  // Width 8: border(1)+padding(1)+content(3)+padding(1)+scrollbar(1)+border(1) = 8
-  // Height 4: top-border + 2 content rows + bottom-border
+  // Width 8: border(1)+padding(1)+content(3)+padding(1)+scrollbar(1)+border(1)
+  // = 8 Height 4: top-border + 2 content rows + bottom-border
   Texture texture(8, 4);
   if (layout_box) {
     LayoutConstraints constraints;
@@ -639,10 +637,11 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
   // Row 1: "│ foo  │"   ← cursor 'f' + "oo" + padding + scrollbar, width 3 text
   // Row 2: "│ bar  │"   ← "bar" + padding + scrollbar, width 3 text
   // Row 3: "└───── ┘"
-  CHECK(layer == "┌───── ┐\n"
-                 "│ foo  │\n"
-                 "│ bar  │\n"
-                 "└───── ┘\n");
+  CHECK(layer ==
+        "┌───── ┐\n"
+        "│ foo  │\n"
+        "│ bar  │\n"
+        "└───── ┘\n");
 }
 
 }  // namespace rtxui

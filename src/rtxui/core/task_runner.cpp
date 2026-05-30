@@ -58,7 +58,7 @@ auto TaskRunner::RunUntilNextDelayedTask()
 }
 
 auto TaskRunner::Run() -> void {
-  while(true) {
+  while (true) {
     auto duration = RunUntilNextDelayedTask();
     if (duration == std::chrono::steady_clock::duration::zero()) {
       // No more tasks to execute, exit the loop.

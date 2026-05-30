@@ -5,6 +5,7 @@
 #define RTXUI_TERMINAL_SCREEN_HPP_
 
 #include <memory>
+
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/event.hpp"
 
@@ -15,7 +16,8 @@ class TerminalDevice;
 
 class Screen {
  public:
-  explicit Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device = nullptr);
+  explicit Screen(Ref<ComponentBase> component,
+                  std::shared_ptr<TerminalDevice> device = nullptr);
   ~Screen();
 
   // Run the event loop (blocks until Escape or Ctrl+C is pressed)
@@ -34,6 +36,6 @@ class Screen {
   std::unique_ptr<ScreenImpl> impl_;
 };
 
-} // namespace rtxui
+}  // namespace rtxui
 
-#endif // RTXUI_TERMINAL_SCREEN_HPP_
+#endif  // RTXUI_TERMINAL_SCREEN_HPP_

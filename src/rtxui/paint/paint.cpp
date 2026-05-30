@@ -1,14 +1,14 @@
 #include "rtxui/paint/paint.hpp"
 
-#include <string>
-#include <array>
-#include <vector>
 #include <algorithm>
+#include <array>
+#include <string>
+#include <vector>
 
 #include "rtxui/core/string.hpp"
+#include "rtxui/dom/element.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/texture.hpp"
-#include "rtxui/dom/element.hpp"
 
 namespace rtxui {
 
@@ -364,12 +364,12 @@ struct ClipRect {
 };
 
 void PaintImpl(const PhysicalFragment* frag,
-           Texture& texture,
-           int off_x,
-           int off_y,
-           Color inherited_foreground_color,
-           Color parent_background_color,
-           ClipRect clip) {
+               Texture& texture,
+               int off_x,
+               int off_y,
+               Color inherited_foreground_color,
+               Color parent_background_color,
+               ClipRect clip) {
   int abs_x = off_x;
   int abs_y = off_y;
   int w = frag->width;
@@ -381,7 +381,8 @@ void PaintImpl(const PhysicalFragment* frag,
 
   Color current_foreground_color =
       frag->foreground_color.value_or(inherited_foreground_color);
-  Color current_background_color = frag->background_color.value_or(Color::RGBA(0, 0, 0, 0));
+  Color current_background_color =
+      frag->background_color.value_or(Color::RGBA(0, 0, 0, 0));
 
   // 0. Draw Background
   if (frag->background_color) {
@@ -415,8 +416,9 @@ void PaintImpl(const PhysicalFragment* frag,
 
     auto set_char = [&](int x, int y, const char* c, uint8_t mode,
                         const Color& border_color) {
-      if (c == nullptr || *c == '\0' || *c == ' ')
+      if (c == nullptr || *c == '\0' || *c == ' ') {
         return;
+      }
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
           clip.Contains(x, y)) {
         auto& cell = texture[x, y];
@@ -527,7 +529,8 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   if (draw_v_scrollbar) {
-    int border_right = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+    int border_right =
+        (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
     int scrollbar_x = abs_x + w - border_right - 1;
     int track_y_start = abs_y;
     int track_h = h;
@@ -545,13 +548,17 @@ void PaintImpl(const PhysicalFragment* frag,
     if (track_h > 0 && scrollbar_x >= 0 && scrollbar_x < texture.width()) {
       int scroll_height = frag->dom_node->scroll_height();
       int padding_vert = frag->dom_node->style.padding.Vert();
-      int border_vert = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+      int border_vert =
+          (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
       int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
 
-      int thumb_h = std::max(1, (viewport_h * track_h) / std::max(1, scroll_height));
+      int thumb_h =
+          std::max(1, (viewport_h * track_h) / std::max(1, scroll_height));
       thumb_h = std::min(track_h, thumb_h);
       int max_scroll = scroll_height - h;
-      int thumb_y = (max_scroll > 0) ? ((track_h - thumb_h) * frag->scroll_y) / max_scroll : 0;
+      int thumb_y = (max_scroll > 0)
+                        ? ((track_h - thumb_h) * frag->scroll_y) / max_scroll
+                        : 0;
 
       for (int i = 0; i < track_h; ++i) {
         int y = track_y_start + i;
@@ -569,7 +576,8 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   if (draw_h_scrollbar) {
-    int border_bottom = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+    int border_bottom =
+        (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
     int scrollbar_y = abs_y + h - border_bottom - 1;
     int track_x_start = abs_x;
     int track_w = w;
@@ -587,13 +595,17 @@ void PaintImpl(const PhysicalFragment* frag,
     if (track_w > 0 && scrollbar_y >= 0 && scrollbar_y < texture.height()) {
       int scroll_width = frag->dom_node->scroll_width();
       int padding_horiz = frag->dom_node->style.padding.Horiz();
-      int border_horiz = (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
+      int border_horiz =
+          (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
       int viewport_w = std::max(1, w - border_horiz - padding_horiz);
 
-      int thumb_w = std::max(1, (viewport_w * track_w) / std::max(1, scroll_width));
+      int thumb_w =
+          std::max(1, (viewport_w * track_w) / std::max(1, scroll_width));
       thumb_w = std::min(track_w, thumb_w);
       int max_scroll = scroll_width - w;
-      int thumb_x = (max_scroll > 0) ? ((track_w - thumb_w) * frag->scroll_x) / max_scroll : 0;
+      int thumb_x = (max_scroll > 0)
+                        ? ((track_w - thumb_w) * frag->scroll_x) / max_scroll
+                        : 0;
 
       for (int i = 0; i < track_w; ++i) {
         int x = track_x_start + i;
@@ -635,13 +647,15 @@ void PaintImpl(const PhysicalFragment* frag,
     }
 
     int scrollbar_w = 0;
-    if (frag->dom_node && frag->dom_node->style.overflow_y == Overflow::Scroll &&
+    if (frag->dom_node &&
+        frag->dom_node->style.overflow_y == Overflow::Scroll &&
         frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
       scrollbar_w = 1;
     }
 
     int scrollbar_h = 0;
-    if (frag->dom_node && frag->dom_node->style.overflow_x == Overflow::Scroll &&
+    if (frag->dom_node &&
+        frag->dom_node->style.overflow_x == Overflow::Scroll &&
         frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
       scrollbar_h = 1;
     }
@@ -668,7 +682,8 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, Color::RGB(255, 255, 255),
-            Color::RGB(0, 0, 0), ClipRect{0, 0, texture.width(), texture.height()});
+            Color::RGB(0, 0, 0),
+            ClipRect{0, 0, texture.width(), texture.height()});
 }
 
 }  // namespace rtxui

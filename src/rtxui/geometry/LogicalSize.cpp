@@ -32,4 +32,3 @@ constexpr LogicalSize& LogicalSize::operator-=(const LogicalSize& other) {
 }
 
 }  // namespace rtxui
-

@@ -1,18 +1,18 @@
 #include "rtxui/internal/component.hpp"
 
+#include <algorithm>
 #include <cassert>
-#include <charconv>
 #include <cctype>
+#include <charconv>
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <print>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <algorithm>
-#include <map>
 
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
@@ -86,10 +86,11 @@ void Bindings::Import(std::string_view name, ComponentFactory factory) {
 
 namespace {
 std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
-  static auto* registry = new std::unordered_map<std::string, ComponentFactory>();
+  static auto* registry =
+      new std::unordered_map<std::string, ComponentFactory>();
   return *registry;
 }
-} // namespace
+}  // namespace
 
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory) {
   GetGlobalRegistry()[std::string(name)] = std::move(factory);
@@ -109,8 +110,12 @@ struct ElementState {
   bool focused = false;
 };
 
-void CollectElementStates(Element* el, std::vector<int> path, std::map<std::vector<int>, ElementState>& states) {
-  if (!el) return;
+void CollectElementStates(Element* el,
+                          std::vector<int> path,
+                          std::map<std::vector<int>, ElementState>& states) {
+  if (!el) {
+    return;
+  }
   if (el->scroll_x() != 0 || el->scroll_y() != 0 || el->focused()) {
     states[path] = {el->scroll_x(), el->scroll_y(), el->focused()};
   }
@@ -121,8 +126,13 @@ void CollectElementStates(Element* el, std::vector<int> path, std::map<std::vect
   }
 }
 
-void RestoreElementStates(Element* el, std::vector<int> path, const std::map<std::vector<int>, ElementState>& states) {
-  if (!el) return;
+void RestoreElementStates(
+    Element* el,
+    std::vector<int> path,
+    const std::map<std::vector<int>, ElementState>& states) {
+  if (!el) {
+    return;
+  }
   auto it = states.find(path);
   if (it != states.end()) {
     el->set_scroll_x(it->second.scroll_x);
@@ -153,20 +163,24 @@ std::string Interpolate(std::string_view text, ComponentBase* source) {
         size_t open_idx = stack.back();
         stack.pop_back();
         size_t close_idx = i;
-        std::string_view expression = text.substr(open_idx + 1, close_idx - open_idx - 1);
-        
+        std::string_view expression =
+            text.substr(open_idx + 1, close_idx - open_idx - 1);
+
         // Trim spaces to find a clean identifier
         std::string_view trimmed = expression;
-        while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.front()))) {
+        while (!trimmed.empty() &&
+               std::isspace(static_cast<unsigned char>(trimmed.front()))) {
           trimmed.remove_prefix(1);
         }
-        while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
+        while (!trimmed.empty() &&
+               std::isspace(static_cast<unsigned char>(trimmed.back()))) {
           trimmed.remove_suffix(1);
         }
 
         bool is_ident = !trimmed.empty();
         for (char c : trimmed) {
-          if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '.' && c != '-') {
+          if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' &&
+              c != '.' && c != '-') {
             is_ident = false;
             break;
           }
@@ -180,9 +194,10 @@ std::string Interpolate(std::string_view text, ComponentBase* source) {
   }
 
   // Sort placeholders in descending order of open_idx (right-to-left)
-  std::sort(placeholders.begin(), placeholders.end(), [](const Placeholder& a, const Placeholder& b) {
-    return a.open_idx > b.open_idx;
-  });
+  std::sort(placeholders.begin(), placeholders.end(),
+            [](const Placeholder& a, const Placeholder& b) {
+              return a.open_idx > b.open_idx;
+            });
 
   std::string result(text);
   for (const auto& ph : placeholders) {
@@ -285,7 +300,9 @@ void ComponentBase::Render() {
           if (el.component()) {
             for (auto& comp : children_) {
               if (comp.get() == el.component()) {
-                if (std::find(saved_slot_components.begin(), saved_slot_components.end(), comp) == saved_slot_components.end()) {
+                if (std::find(saved_slot_components.begin(),
+                              saved_slot_components.end(),
+                              comp) == saved_slot_components.end()) {
                   saved_slot_components.push_back(comp);
                 }
               }
@@ -297,7 +314,8 @@ void ComponentBase::Render() {
     }
   }
 
-  old_children_ = std::vector<Ref<ComponentBase>>(children_.begin(), children_.end());
+  old_children_ =
+      std::vector<Ref<ComponentBase>>(children_.begin(), children_.end());
   children_.clear();
   slots_.clear();
 
@@ -325,7 +343,8 @@ void ComponentBase::Render() {
             node.children[0].type != xml::Node::Type::kText) {
           continue;
         }
-        interpolated_css_strings.push_back(Interpolate(node.children[0].text, this));
+        interpolated_css_strings.push_back(
+            Interpolate(node.children[0].text, this));
         const auto& css_str = interpolated_css_strings.back();
         auto maybe_stylesheet = css::Parse(css_str);
         if (maybe_stylesheet) {
@@ -436,7 +455,9 @@ void ComponentBase::Render(const xml::Node& node,
         }
         if (!preserve_newlines) {
           for (char& c : text) {
-            if (c == '\n' || c == '\r') c = ' ';
+            if (c == '\n' || c == '\r') {
+              c = ' ';
+            }
           }
         }
         slot->AddChild(Ref<TextElement>::New(text));
@@ -444,7 +465,9 @@ void ComponentBase::Render(const xml::Node& node,
       }
 
       case xml::Node::Type::kElement: {
-        if (child_node.tag == "style") break;
+        if (child_node.tag == "style") {
+          break;
+        }
 
         if (child_node.tag == "slot" || child_node.tag.starts_with("slot.")) {
           std::string slot_name = child_node.tag == "slot"
@@ -476,7 +499,8 @@ void ComponentBase::Render(const xml::Node& node,
 
         if (factory) {
           Ref<ComponentBase> child;
-          for (auto it_old = old_children_.begin(); it_old != old_children_.end(); ++it_old) {
+          for (auto it_old = old_children_.begin();
+               it_old != old_children_.end(); ++it_old) {
             if ((*it_old)->Tag() == child_node.tag) {
               child = *it_old;
               old_children_.erase(it_old);
@@ -495,7 +519,8 @@ void ComponentBase::Render(const xml::Node& node,
             child->id_ = Interpolate(child_node.attributes.at("id"));
           }
           if (child_node.attributes.contains("class")) {
-            std::string interpolated_class = Interpolate(child_node.attributes.at("class"));
+            std::string interpolated_class =
+                Interpolate(child_node.attributes.at("class"));
             auto class_views = Split(interpolated_class, ' ');
             child->classes_.assign(class_views.begin(), class_views.end());
           }
@@ -507,14 +532,18 @@ void ComponentBase::Render(const xml::Node& node,
           }
 
           for (auto& [key, value] : child_node.attributes) {
-            if (key == "id" || key == "class") continue;
+            if (key == "id" || key == "class") {
+              continue;
+            }
             std::string interpolated_value = Interpolate(value);
             child->SetProperty(std::string(key), interpolated_value);
             child->Root()->SetAttribute(std::string(key), interpolated_value);
 
             if (value.starts_with("{") && value.ends_with("}")) {
-              std::string parent_prop = std::string(value.substr(1, value.size() - 2));
-              child->two_way_bindings_.push_back({std::string(key), import_source, parent_prop});
+              std::string parent_prop =
+                  std::string(value.substr(1, value.size() - 2));
+              child->two_way_bindings_.push_back(
+                  {std::string(key), import_source, parent_prop});
             }
           }
 
@@ -561,7 +590,8 @@ void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
   }
 }
 
-void ComponentBase::PropagateBinding(std::string_view child_prop, std::string_view value) {
+void ComponentBase::PropagateBinding(std::string_view child_prop,
+                                     std::string_view value) {
   for (const auto& binding : two_way_bindings_) {
     if (binding.child_prop == child_prop) {
       binding.parent->SetProperty(binding.parent_prop, value);
@@ -571,7 +601,8 @@ void ComponentBase::PropagateBinding(std::string_view child_prop, std::string_vi
 
 namespace reflection {
 int ParseInt(std::string_view str) {
-  while (!str.empty() && std::isspace(static_cast<unsigned char>(str.front()))) {
+  while (!str.empty() &&
+         std::isspace(static_cast<unsigned char>(str.front()))) {
     str.remove_prefix(1);
   }
   while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back()))) {

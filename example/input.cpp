@@ -10,15 +10,9 @@ class InputDemo : public Component<InputDemo> {
  public:
   std::string text = "Hello, RTXUI!";
 
-  InputDemo() {
-    Bind(text);
-  }
+  InputDemo() { Bind(text); }
 
   std::string_view Setup() override {
-
-
-
-
     return R"html(
       <div class="container">
         <p class="title">Interactive Input Element</p>

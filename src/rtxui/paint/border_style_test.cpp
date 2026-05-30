@@ -4,11 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/internal/component.hpp"
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
@@ -92,7 +92,7 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
   struct BorderGridApp : Component<BorderGridApp> {
     std::string_view Setup() {
       Import<div>();
-      // We define a 4x3 grid using flexbox wrapping. 
+      // We define a 4x3 grid using flexbox wrapping.
       // Each item is exactly 1/3 of the width and 1/4 of the height.
       return R"html(
         <style>
@@ -375,7 +375,8 @@ TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
 
   // Track height is 4, scrollbar column is index 9.
   // Under corrected math, the thumb must be at the very bottom (y=3).
-  // Scrollbar now uses background colors: track=RGBA(80,80,80,120), thumb=RGBA(200,200,200,200).
+  // Scrollbar now uses background colors: track=RGBA(80,80,80,120),
+  // thumb=RGBA(200,200,200,200).
   CHECK(texture[9, 0].character == " ");
   CHECK(texture[9, 1].character == " ");
   CHECK(texture[9, 2].character == " ");
@@ -421,7 +422,8 @@ TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
   scroll_element->set_scroll_x(10);
 
   // Render to a texture of size 10x4.
-  // The scrollbar should be on the bottom row (y=3) of the scrollable container.
+  // The scrollbar should be on the bottom row (y=3) of the scrollable
+  // container.
   auto texture = RenderComponent(app, 10, 4);
 
   // Scrollbar row is index 3.

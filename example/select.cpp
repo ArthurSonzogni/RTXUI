@@ -10,16 +10,9 @@ class SelectDemo : public Component<SelectDemo> {
  public:
   std::string my_theme = "light";
 
-  SelectDemo() {
-    Bind(my_theme);
-  }
+  SelectDemo() { Bind(my_theme); }
 
   std::string_view Setup() override {
-
-
-
-
-
     return R"html(
       <div class="container">
         <p class="title">Interactive Select & Option Elements</p>

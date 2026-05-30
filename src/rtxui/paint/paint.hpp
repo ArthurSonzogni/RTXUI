@@ -3,8 +3,8 @@
 
 #include <optional>
 
-#include "rtxui/paint/color.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
+#include "rtxui/paint/color.hpp"
 #include "rtxui/paint/texture.hpp"
 
 namespace rtxui {

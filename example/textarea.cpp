@@ -21,7 +21,9 @@ class TextareaDemo : public Component<TextareaDemo> {
   int line_count() const {
     int n = 1;
     for (char c : text) {
-      if (c == '\n') ++n;
+      if (c == '\n') {
+        ++n;
+      }
     }
     return n;
   }
@@ -35,10 +37,6 @@ class TextareaDemo : public Component<TextareaDemo> {
   }
 
   std::string_view Setup() override {
-
-
-
-
     return R"html(
       <div class="container">
         <p class="title">Multi-line Textarea Editor</p>

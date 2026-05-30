@@ -3,11 +3,12 @@
 // the LICENSE file.
 #include "rtxui/internal/screen.hpp"
 
-#include <cerrno>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <iostream>
+
 #include <algorithm>
+#include <cerrno>
+#include <iostream>
 
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -15,8 +16,8 @@
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
-#include "rtxui/terminal/terminal_input_parser.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/terminal/terminal_input_parser.hpp"
 
 namespace rtxui {
 
@@ -24,15 +25,19 @@ namespace {
 
 void handle_sigwinch(int sig) {}
 
-Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment, int target_x, int target_y) {
+Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
+                       int target_x,
+                       int target_y) {
   if (!fragment) {
     return nullptr;
   }
-  if (target_x < 0 || target_y < 0 || target_x >= fragment->width || target_y >= fragment->height) {
+  if (target_x < 0 || target_y < 0 || target_x >= fragment->width ||
+      target_y >= fragment->height) {
     return nullptr;
   }
   // Traverse children in reverse order (top-most elements first)
-  for (auto it = fragment->children.rbegin(); it != fragment->children.rend(); ++it) {
+  for (auto it = fragment->children.rbegin(); it != fragment->children.rend();
+       ++it) {
     int rel_x = target_x - it->x;
     int rel_y = target_y - it->y;
     if (fragment->clips_descendants) {
@@ -59,7 +64,9 @@ ComponentBase* GetOwningComponent(Element* element) {
 }
 
 ComponentBase* GetAttributeOwnerComponent(Element* element) {
-  if (!element) return nullptr;
+  if (!element) {
+    return nullptr;
+  }
   if (element->component()) {
     return GetOwningComponent(element->Parent());
   }
@@ -67,20 +74,26 @@ ComponentBase* GetAttributeOwnerComponent(Element* element) {
 }
 
 ComponentBase* GetParentComponent(ComponentBase* comp) {
-  if (!comp || !comp->Root()) return nullptr;
+  if (!comp || !comp->Root()) {
+    return nullptr;
+  }
   return GetOwningComponent(comp->Root()->Parent());
 }
 
 std::shared_ptr<PhysicalFragment> FindScrollableFragmentAt(
-    const std::shared_ptr<PhysicalFragment>& fragment, int target_x, int target_y) {
+    const std::shared_ptr<PhysicalFragment>& fragment,
+    int target_x,
+    int target_y) {
   if (!fragment) {
     return nullptr;
   }
-  if (target_x < 0 || target_y < 0 || target_x >= fragment->width || target_y >= fragment->height) {
+  if (target_x < 0 || target_y < 0 || target_x >= fragment->width ||
+      target_y >= fragment->height) {
     return nullptr;
   }
   // Traverse children in reverse order (top-most elements first)
-  for (auto it = fragment->children.rbegin(); it != fragment->children.rend(); ++it) {
+  for (auto it = fragment->children.rbegin(); it != fragment->children.rend();
+       ++it) {
     int rel_x = target_x - it->x;
     int rel_y = target_y - it->y;
     if (fragment->clips_descendants) {
@@ -91,16 +104,20 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAt(
       return found;
     }
   }
-  if (fragment->dom_node && (fragment->dom_node->style.overflow_y == Overflow::Scroll ||
-                             fragment->dom_node->style.overflow_x == Overflow::Scroll)) {
+  if (fragment->dom_node &&
+      (fragment->dom_node->style.overflow_y == Overflow::Scroll ||
+       fragment->dom_node->style.overflow_x == Overflow::Scroll)) {
     return fragment;
   }
   return nullptr;
 }
 
 std::shared_ptr<PhysicalFragment> FindFragmentForElement(
-    const std::shared_ptr<PhysicalFragment>& fragment, Element* element) {
-  if (!fragment) return nullptr;
+    const std::shared_ptr<PhysicalFragment>& fragment,
+    Element* element) {
+  if (!fragment) {
+    return nullptr;
+  }
   if (fragment->dom_node == element) {
     return fragment;
   }
@@ -114,9 +131,12 @@ std::shared_ptr<PhysicalFragment> FindFragmentForElement(
 
 std::shared_ptr<PhysicalFragment> FindFirstScrollableFragment(
     const std::shared_ptr<PhysicalFragment>& fragment) {
-  if (!fragment) return nullptr;
-  if (fragment->dom_node && (fragment->dom_node->style.overflow_y == Overflow::Scroll ||
-                             fragment->dom_node->style.overflow_x == Overflow::Scroll)) {
+  if (!fragment) {
+    return nullptr;
+  }
+  if (fragment->dom_node &&
+      (fragment->dom_node->style.overflow_y == Overflow::Scroll ||
+       fragment->dom_node->style.overflow_x == Overflow::Scroll)) {
     return fragment;
   }
   for (const auto& child : fragment->children) {
@@ -127,43 +147,46 @@ std::shared_ptr<PhysicalFragment> FindFirstScrollableFragment(
   return nullptr;
 }
 
-} // namespace
-
+}  // namespace
 
 class ScreenImpl {
  public:
-   ScreenImpl(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device);
-   ~ScreenImpl();
+  ScreenImpl(Ref<ComponentBase> component,
+             std::shared_ptr<TerminalDevice> device);
+  ~ScreenImpl();
 
-   void Loop();
-   void Step();
-   void Dispatch(Event event);
-   void Draw();
+  void Loop();
+  void Step();
+  void Dispatch(Event event);
+  void Draw();
 
-   void UpdateSize();
-   void DigestAndDraw();
-   void HandleEvent(const Event& event);
+  void UpdateSize();
+  void DigestAndDraw();
+  void HandleEvent(const Event& event);
 
-   Ref<ComponentBase> component_;
-   int width_ = 80;
-   int height_ = 24;
-   int last_height_ = 0;
-   bool has_drawn_ = false;
-   bool running_ = true;
-   std::shared_ptr<PhysicalFragment> root_fragment_;
-   std::shared_ptr<TerminalDevice> device_;
-   std::unique_ptr<TerminalInputParser> parser_;
-   Element* focused_element_ = nullptr;
+  Ref<ComponentBase> component_;
+  int width_ = 80;
+  int height_ = 24;
+  int last_height_ = 0;
+  bool has_drawn_ = false;
+  bool running_ = true;
+  std::shared_ptr<PhysicalFragment> root_fragment_;
+  std::shared_ptr<TerminalDevice> device_;
+  std::unique_ptr<TerminalInputParser> parser_;
+  Element* focused_element_ = nullptr;
 
-   struct RawTerminal {
-     TerminalDevice* device_ = nullptr;
-     explicit RawTerminal(TerminalDevice* device);
-     ~RawTerminal();
-   };
+  struct RawTerminal {
+    TerminalDevice* device_ = nullptr;
+    explicit RawTerminal(TerminalDevice* device);
+    ~RawTerminal();
+  };
 };
 
-ScreenImpl::ScreenImpl(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device)
-    : component_(std::move(component)), device_(std::move(device)), parser_(std::make_unique<TerminalInputParser>()) {
+ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
+                       std::shared_ptr<TerminalDevice> device)
+    : component_(std::move(component)),
+      device_(std::move(device)),
+      parser_(std::make_unique<TerminalInputParser>()) {
   if (!device_) {
     device_ = std::make_shared<SystemTerminalDevice>();
   }
@@ -218,9 +241,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
         int ty = mouse.y - 1;
         if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
           if (component_->Root()) {
-            component_->Root()->Visit([](Element& el) {
-              el.set_focused(false);
-            });
+            component_->Root()->Visit(
+                [](Element& el) { el.set_focused(false); });
           }
           focused_element_ = clicked_element;
           focused_element_->set_focused(true);
@@ -273,12 +295,15 @@ void ScreenImpl::HandleEvent(const Event& event) {
       if (root_fragment_) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
-        if (auto scroll_frag = FindScrollableFragmentAt(root_fragment_, tx, ty)) {
+        if (auto scroll_frag =
+                FindScrollableFragmentAt(root_fragment_, tx, ty)) {
           Element* curr = scroll_frag->dom_node;
           while (curr) {
-            bool is_horizontal_wheel = (mouse.button == Event::Mouse::Button::WheelLeft ||
-                                        mouse.button == Event::Mouse::Button::WheelRight);
-            if (curr->style.overflow_y == Overflow::Scroll && !is_horizontal_wheel) {
+            bool is_horizontal_wheel =
+                (mouse.button == Event::Mouse::Button::WheelLeft ||
+                 mouse.button == Event::Mouse::Button::WheelRight);
+            if (curr->style.overflow_y == Overflow::Scroll &&
+                !is_horizontal_wheel) {
               auto frag = FindFragmentForElement(root_fragment_, curr);
               if (frag) {
                 int scroll_height = curr->scroll_height();
@@ -308,7 +333,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 int speed = curr->style.scroll_speed_x;
 
                 int new_x = curr_x;
-                if (mouse.button == Event::Mouse::Button::WheelLeft || mouse.button == Event::Mouse::Button::WheelUp) {
+                if (mouse.button == Event::Mouse::Button::WheelLeft ||
+                    mouse.button == Event::Mouse::Button::WheelUp) {
                   new_x = std::max(0, curr_x - speed);
                 } else {
                   new_x = std::min(max_scroll, curr_x + speed);
@@ -336,19 +362,24 @@ void ScreenImpl::HandleEvent(const Event& event) {
   if (event == Event::Tab() || event == Event::TabReverse()) {
     std::vector<Element*> focusable;
     auto IsFocusable = [](Element* el) {
-      if (!el) return false;
+      if (!el) {
+        return false;
+      }
       if (el->Attributes().count("focusable")) {
         std::string val = el->Attributes().at("focusable");
         return (val == "true" || val == "1");
       }
       std::string_view tag = el->tag();
-      if (tag == "input" || tag == "textarea" || tag == "checkbox" || tag == "slider" || tag == "button" || tag == "select") {
+      if (tag == "input" || tag == "textarea" || tag == "checkbox" ||
+          tag == "slider" || tag == "button" || tag == "select") {
         return true;
       }
       return false;
     };
     std::function<void(Element*)> CollectFocusable = [&](Element* el) {
-      if (!el) return;
+      if (!el) {
+        return;
+      }
       if (IsFocusable(el)) {
         focusable.push_back(el);
       }
@@ -373,14 +404,13 @@ void ScreenImpl::HandleEvent(const Event& event) {
       if (event == Event::Tab()) {
         next_idx = (curr_idx == -1) ? 0 : (curr_idx + 1) % focusable.size();
       } else {
-        next_idx = (curr_idx == -1) ? (focusable.size() - 1)
-                                    : (curr_idx - 1 + focusable.size()) % focusable.size();
+        next_idx = (curr_idx == -1)
+                       ? (focusable.size() - 1)
+                       : (curr_idx - 1 + focusable.size()) % focusable.size();
       }
 
       if (component_->Root()) {
-        component_->Root()->Visit([](Element& el) {
-          el.set_focused(false);
-        });
+        component_->Root()->Visit([](Element& el) { el.set_focused(false); });
       }
       focusable[next_idx]->set_focused(true);
       focused_element_ = focusable[next_idx];
@@ -392,7 +422,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
   if (event == Event::ArrowUp() || event == Event::ArrowDown() ||
       event == Event::PageUp() || event == Event::PageDown() ||
       event == Event::ArrowLeft() || event == Event::ArrowRight()) {
-    bool is_horiz = (event == Event::ArrowLeft() || event == Event::ArrowRight());
+    bool is_horiz =
+        (event == Event::ArrowLeft() || event == Event::ArrowRight());
     if (focused_element_) {
       Element* curr = focused_element_;
       while (curr) {
@@ -504,14 +535,18 @@ void ScreenImpl::Draw() {
   focused_element_ = nullptr;
   if (root) {
     std::function<void(Element*)> FindFocused = [&](Element* el) {
-      if (!el) return;
+      if (!el) {
+        return;
+      }
       if (el->focused()) {
         focused_element_ = el;
         return;
       }
       for (size_t i = 0; i < el->ChildCount(); ++i) {
         FindFocused(el->ChildAt(i));
-        if (focused_element_) return;
+        if (focused_element_) {
+          return;
+        }
       }
     };
     FindFocused(root);
@@ -592,9 +627,10 @@ ScreenImpl::RawTerminal::~RawTerminal() {
   }
 }
 
-
-Screen::Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device)
-    : impl_(std::make_unique<ScreenImpl>(std::move(component), std::move(device))) {}
+Screen::Screen(Ref<ComponentBase> component,
+               std::shared_ptr<TerminalDevice> device)
+    : impl_(std::make_unique<ScreenImpl>(std::move(component),
+                                         std::move(device))) {}
 
 Screen::~Screen() = default;
 
@@ -614,4 +650,4 @@ void Screen::Draw() {
   impl_->Draw();
 }
 
-} // namespace rtxui
+}  // namespace rtxui

@@ -1,14 +1,15 @@
 #ifndef RTXUI_TERMINAL_TERMINAL_DEVICE_HPP_
 #define RTXUI_TERMINAL_TERMINAL_DEVICE_HPP_
 
-#include <termios.h>
 #include <signal.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
-#include <string_view>
-#include <string>
-#include <iostream>
+#include <termios.h>
+#include <unistd.h>
+
 #include <algorithm>
+#include <iostream>
+#include <string>
+#include <string_view>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -47,13 +48,13 @@ class TerminalDevice {
 
 class SystemTerminalDevice : public TerminalDevice {
  public:
-  bool IsAtty() override {
-    return isatty(STDIN_FILENO);
-  }
+  bool IsAtty() override { return isatty(STDIN_FILENO); }
 
   int Read(char* buf, int len) override {
 #ifdef __EMSCRIPTEN__
-    if (len <= 0) return 0;
+    if (len <= 0) {
+      return 0;
+    }
     buf[0] = emscripten_get_char();
     return 1;
 #else
@@ -64,14 +65,16 @@ class SystemTerminalDevice : public TerminalDevice {
   void Write(std::string_view data) override {
 #ifdef __EMSCRIPTEN__
     std::string str(data);
-    EM_ASM({
-      let s = UTF8ToString($0);
-      if (window.rtxui_on_output) {
-        window.rtxui_on_output(s);
-      } else {
-        console.log(s);
-      }
-    }, str.c_str());
+    EM_ASM(
+        {
+          let s = UTF8ToString($0);
+          if (window.rtxui_on_output) {
+            window.rtxui_on_output(s);
+          } else {
+            console.log(s);
+          }
+        },
+        str.c_str());
 #else
     std::cout << data << std::flush;
 #endif
@@ -79,16 +82,13 @@ class SystemTerminalDevice : public TerminalDevice {
 
   bool GetSize(int& width, int& height) override {
 #ifdef __EMSCRIPTEN__
-    width = EM_ASM_INT({
-      return window.rtxui_columns || 80;
-    });
-    height = EM_ASM_INT({
-      return window.rtxui_lines || 24;
-    });
+    width = EM_ASM_INT({ return window.rtxui_columns || 80; });
+    height = EM_ASM_INT({ return window.rtxui_lines || 24; });
     return true;
 #else
     struct winsize w;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0 && w.ws_row > 0) {
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0 &&
+        w.ws_row > 0) {
       width = w.ws_col;
       height = w.ws_row;
       return true;
@@ -167,9 +167,7 @@ class MockTerminalDevice : public TerminalDevice {
     return to_read;
   }
 
-  void Write(std::string_view data) override {
-    output_buffer_ += data;
-  }
+  void Write(std::string_view data) override { output_buffer_ += data; }
 
   bool GetSize(int& width, int& height) override {
     width = mock_width_;
@@ -182,13 +180,9 @@ class MockTerminalDevice : public TerminalDevice {
     sigwinch_handler_ = sigwinch_handler;
   }
 
-  void ExitRawMode() override {
-    is_raw_ = false;
-  }
+  void ExitRawMode() override { is_raw_ = false; }
 
-  void PushInput(std::string_view data) {
-    input_buffer_ += data;
-  }
+  void PushInput(std::string_view data) { input_buffer_ += data; }
 
   void TriggerResize(int new_width, int new_height) {
     mock_width_ = new_width;
@@ -211,6 +205,6 @@ class MockTerminalDevice : public TerminalDevice {
   void (*sigwinch_handler_)(int) = nullptr;
 };
 
-} // namespace rtxui
+}  // namespace rtxui
 
-#endif // RTXUI_TERMINAL_TERMINAL_DEVICE_HPP_
+#endif  // RTXUI_TERMINAL_TERMINAL_DEVICE_HPP_

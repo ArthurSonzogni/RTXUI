@@ -2,15 +2,15 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include "rtxui/internal/component.hpp"
-#include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/internal/screen.hpp"
-#include "rtxui/dom/element.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
 
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/core/string.hpp"
+#include "rtxui/dom/element.hpp"
+#include "rtxui/internal/screen.hpp"
 
 namespace {
 
@@ -191,7 +191,7 @@ TEST_CASE("Import alias", "[component]") {
       </div>
     </Inverted>
   )";
-  
+
   auto inverted = rtxui::Ref<Inverted>::New();
   inverted->Mount();
   REQUIRE(inverted->Root()->Print() == StripIndent(expected));
@@ -227,15 +227,15 @@ class Counter : public rtxui::Component<Counter> {
 TEST_CASE("Transparent Reactivity", "[component]") {
   auto counter = rtxui::Ref<Counter>::New();
   counter->Mount();
-  
+
   REQUIRE(counter->count == 0);
   REQUIRE(counter->Root()->Print().find("Count: 0") != std::string::npos);
   REQUIRE(counter->Root()->Print().find("Double: 0") != std::string::npos);
-  
+
   // Simulate an action
   counter->increment();
   counter->Digest();
-  
+
   REQUIRE(counter->count == 1);
   REQUIRE(counter->Root()->Print().find("Count: 1") != std::string::npos);
   REQUIRE(counter->Root()->Print().find("Double: 2") != std::string::npos);
@@ -416,45 +416,45 @@ class InputTestComponent : public rtxui::Component<InputTestComponent> {
 TEST_CASE("Input Component Basic Interactions", "[component]") {
   auto container = rtxui::Ref<InputTestComponent>::New();
   container->Mount();
-  
+
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  
+
   auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
   REQUIRE(input_comp != nullptr);
-  
+
   auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
   REQUIRE(input_ptr != nullptr);
-  
+
   // Verify initial state
   CHECK(input_ptr->value == "hello world");
   CHECK(input_ptr->cursor_pos == 0);
-  
+
   // Focus to accept events
   input_el->set_focused(true);
-  
+
   // ArrowRight
   input_ptr->OnEvent(Event::ArrowRight());
   input_ptr->Digest();
   CHECK(input_ptr->cursor_pos == 1);
-  
+
   // Type a char '!'
   input_ptr->OnEvent(Event::Keyboard::From('!'));
   input_ptr->Digest();
   CHECK(input_ptr->value == "h!ello world");
   CHECK(input_ptr->cursor_pos == 2);
-  
+
   // Backspace
   input_ptr->OnEvent(Event::Backspace());
   input_ptr->Digest();
   CHECK(input_ptr->value == "hello world");
   CHECK(input_ptr->cursor_pos == 1);
-  
+
   // Ctrl + ArrowRight to skip word boundary
   input_ptr->OnEvent(Event::ArrowRightCtrl());
   input_ptr->Digest();
   CHECK(input_ptr->cursor_pos == 5);
-  
+
   // Ctrl + Backspace to delete the word "hello"
   input_ptr->OnEvent(Event::BackspaceCtrl());
   input_ptr->Digest();
@@ -471,12 +471,12 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
   input_ptr->value = "hello world";
   input_ptr->cursor_pos = 1;
   input_ptr->Digest();
-  
+
   // Alt + ArrowRight to skip word boundary
   input_ptr->OnEvent(Event::ArrowRightAlt());
   input_ptr->Digest();
   CHECK(input_ptr->cursor_pos == 5);
-  
+
   // Alt + Backspace to delete the word "hello"
   input_ptr->OnEvent(Event::BackspaceAlt());
   input_ptr->Digest();
@@ -488,24 +488,25 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
   input_ptr->Digest();
   CHECK(input_ptr->value == "");
   CHECK(input_ptr->cursor_pos == 0);
-  
+
   // Test CJK navigation
   input_ptr->value = "你好world";
   input_ptr->cursor_pos = 0;
   input_ptr->Digest();
-  
+
   input_ptr->OnEvent(Event::ArrowRight());
   input_ptr->Digest();
   CHECK(input_ptr->cursor_pos == 1);
-  
+
   input_ptr->OnEvent(Event::Keyboard::From('x'));
   input_ptr->Digest();
   CHECK(input_ptr->value == "你x好world");
   CHECK(input_ptr->cursor_pos == 2);
-  
+
   // Test Scrolling keeping cursor visible
-  input_el->set_layout_width(10); // total layout width of 10 cells
-  // With 1 cell border and 1 cell padding on left and right, inner visible width is 6.
+  input_el->set_layout_width(10);  // total layout width of 10 cells
+  // With 1 cell border and 1 cell padding on left and right, inner visible
+  // width is 6.
   input_ptr->value = "123456789";
   input_ptr->cursor_pos = 7;
   input_ptr->Digest();
@@ -520,7 +521,8 @@ TEST_CASE("Input Component Layout Height", "[component]") {
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  // The layout height should be 3 cells: 1 cell for text content, plus 2 cells for top/bottom borders.
+  // The layout height should be 3 cells: 1 cell for text content, plus 2 cells
+  // for top/bottom borders.
   CHECK(input_el->layout_height() == 3);
 }
 
@@ -607,7 +609,8 @@ TEST_CASE("Textarea Component Enter Key", "[component][textarea]") {
   CHECK(ta_ptr->cursor_pos == 6);
 }
 
-TEST_CASE("Textarea Component Arrow Up/Down Navigation", "[component][textarea]") {
+TEST_CASE("Textarea Component Arrow Up/Down Navigation",
+          "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
   container->Mount();
 
@@ -627,14 +630,16 @@ TEST_CASE("Textarea Component Arrow Up/Down Navigation", "[component][textarea]"
   ta_ptr->Digest();
   CHECK(ta_ptr->cursor_pos == 2);
 
-  // ArrowDown should land on line 1, col 2 -> grapheme index 6 (4 for "abc\n" + 2)
+  // ArrowDown should land on line 1, col 2 -> grapheme index 6 (4 for "abc\n" +
+  // 2)
   ta_ptr->OnEvent(Event::ArrowDown());
   ta_ptr->Digest();
   CHECK(ta_ptr->cursor_pos == 6);  // "abc\n" = 4, then 2 more = 6
 
-  // ArrowDown again -> line 2, col 2 -> grapheme index 11 (4 + 6 + 1 = 11? "abc\n"=4, "defgh\n"=6, "ij"=2)
-  // "abc\n" = indices 0..3 (4 graphemes), "defgh\n" = 4..9 (6 graphemes), "ij" = 10..11 (2)
-  // On line 2, col 2 -> index 12 (past last character), clamped to 12 which equals size
+  // ArrowDown again -> line 2, col 2 -> grapheme index 11 (4 + 6 + 1 = 11?
+  // "abc\n"=4, "defgh\n"=6, "ij"=2) "abc\n" = indices 0..3 (4 graphemes),
+  // "defgh\n" = 4..9 (6 graphemes), "ij" = 10..11 (2) On line 2, col 2 -> index
+  // 12 (past last character), clamped to 12 which equals size
   ta_ptr->OnEvent(Event::ArrowDown());
   ta_ptr->Digest();
   CHECK(ta_ptr->cursor_pos == 12);  // End of "ij" = 10 + 2 = 12
@@ -713,9 +718,7 @@ class CheckboxTestComponent : public rtxui::Component<CheckboxTestComponent> {
   void InitReflection() override {
     Bind(my_checked);
     Import<rtxui::checkbox>();
-    Import("ToggleEnabled", [this]() {
-      onchange_called = true;
-    });
+    Import("ToggleEnabled", [this]() { onchange_called = true; });
     rtxui::Component<CheckboxTestComponent>::InitReflection();
   }
   std::string_view view = R"(
@@ -741,7 +744,7 @@ TEST_CASE("Checkbox Component Basic Interactions", "[component][checkbox]") {
 
   // Focus and trigger space
   cb_el->set_focused(true);
-  cb_ptr->OnEvent(Event::Keyboard::From(' ')); // Space
+  cb_ptr->OnEvent(Event::Keyboard::From(' '));  // Space
   container->Digest();
 
   CHECK(cb_ptr->checked == true);
@@ -766,9 +769,7 @@ class SliderTestComponent : public rtxui::Component<SliderTestComponent> {
   void InitReflection() override {
     Bind(my_val);
     Import<rtxui::slider>();
-    Import("OnSliderChange", [this]() {
-      onchange_called = true;
-    });
+    Import("OnSliderChange", [this]() { onchange_called = true; });
     rtxui::Component<SliderTestComponent>::InitReflection();
   }
   std::string_view view = R"(
@@ -833,15 +834,17 @@ TEST_CASE("Progress Component Basic Rendering", "[component][progress]") {
 
   auto* progress_el = container->Root()->QuerySelector("progress");
   REQUIRE(progress_el != nullptr);
-  auto* progress_comp = const_cast<rtxui::ComponentBase*>(progress_el->component());
+  auto* progress_comp =
+      const_cast<rtxui::ComponentBase*>(progress_el->component());
   REQUIRE(progress_comp != nullptr);
   auto* progress_ptr = dynamic_cast<rtxui::progress*>(progress_comp);
   REQUIRE(progress_ptr != nullptr);
 
-  // Initial state (value = 25.0) -> width is 10, so 2.5 rounded to 3 characters filled.
+  // Initial state (value = 25.0) -> width is 10, so 2.5 rounded to 3 characters
+  // filled.
   CHECK(progress_ptr->value == 25.0);
   CHECK(progress_ptr->filled_track == "███");
-  CHECK(progress_ptr->empty_track == "       "); // 7 spaces
+  CHECK(progress_ptr->empty_track == "       ");  // 7 spaces
 
   // Update value
   container->my_progress = 70.0;
@@ -850,7 +853,7 @@ TEST_CASE("Progress Component Basic Rendering", "[component][progress]") {
   // Value = 70.0 -> 7 characters filled.
   CHECK(progress_ptr->value == 70.0);
   CHECK(progress_ptr->filled_track == "███████");
-  CHECK(progress_ptr->empty_track == "   "); // 3 spaces
+  CHECK(progress_ptr->empty_track == "   ");  // 3 spaces
 }
 
 class SelectTestComponent : public rtxui::Component<SelectTestComponent> {
@@ -886,11 +889,12 @@ TEST_CASE("Select and Option Components", "[component][select]") {
 
   // Check initial state
   std::cout << "DOM TREE:\n" << container->Root()->Print() << std::endl;
-  std::cout << "select_el absolute_x=" << select_el->absolute_x() 
+  std::cout << "select_el absolute_x=" << select_el->absolute_x()
             << " absolute_y=" << select_el->absolute_y()
             << " width=" << select_el->layout_width()
             << " height=" << select_el->layout_height() << std::endl;
-  std::cout << "select_ptr->Root() absolute_x=" << select_ptr->Root()->absolute_x() 
+  std::cout << "select_ptr->Root() absolute_x="
+            << select_ptr->Root()->absolute_x()
             << " absolute_y=" << select_ptr->Root()->absolute_y()
             << " width=" << select_ptr->Root()->layout_width()
             << " height=" << select_ptr->Root()->layout_height() << std::endl;
@@ -910,7 +914,7 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   container->Digest();
   screen.Draw();
   CHECK(select_ptr->is_open == true);
-  CHECK(select_ptr->hovered_index == 1); // "light" is at index 1
+  CHECK(select_ptr->hovered_index == 1);  // "light" is at index 1
 
   // Use keyboard: ArrowDown to "solarized" (index 2)
   Event down_event = Event::Keyboard({
@@ -953,7 +957,8 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   // Let's find the "dark" option element
   auto* dark_option_el = container->Root()->QuerySelector("option");
   REQUIRE(dark_option_el != nullptr);
-  auto* dark_option_comp = const_cast<rtxui::ComponentBase*>(dark_option_el->component());
+  auto* dark_option_comp =
+      const_cast<rtxui::ComponentBase*>(dark_option_el->component());
   REQUIRE(dark_option_comp != nullptr);
   auto* dark_option_ptr = dynamic_cast<rtxui::option*>(dark_option_comp);
   REQUIRE(dark_option_ptr != nullptr);

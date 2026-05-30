@@ -2,10 +2,10 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 
+#include "rtxui/geometry/PhysicalDirection.hpp"
+
 #include <format>
 #include <ostream>
-
-#include "rtxui/geometry/PhysicalDirection.hpp"
 
 namespace rtxui {
 

@@ -44,27 +44,23 @@ struct RawTerminal {
     terminal.c_cc[VTIME] = 0;  // Timeout in deciseconds for non-canonical read.
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal);
 
-    std::cout << "\x1b[?1000h"; // Enable mouse tracking.
-    std::cout << "\x1b[?1003h"; // Enable mouse motion tracking.
-    std::cout << "\x1b[?1015h"; // Enable urxvt mouse mode.
-    std::cout << "\x1b[?1006h"; // Enable SGR mouse mode.
+    std::cout << "\x1b[?1000h";  // Enable mouse tracking.
+    std::cout << "\x1b[?1003h";  // Enable mouse motion tracking.
+    std::cout << "\x1b[?1015h";  // Enable urxvt mouse mode.
+    std::cout << "\x1b[?1006h";  // Enable SGR mouse mode.
 
-  
+    std::cout << "\x1b[?7l";  // Disable line wrapping.
 
-    std::cout << "\x1b[?7l"; // Disable line wrapping.
-
-
-    std::cout << "\x1b[?25l"  << std::flush;
+    std::cout << "\x1b[?25l" << std::flush;
 
     // Enable cursor
   }
   ~RawTerminal() {
-
-    std::cout << "\x1b[?1000l"; // Disable mouse tracking.
-    std::cout << "\x1b[?1003l"; // Disable mouse motion tracking.
-    std::cout << "\x1b[?1015l"; // Disable urxvt mouse mode.
-    std::cout << "\x1b[?1006l"; // Disable SGR mouse mode.
-    std::cout << "\x1b[?25h"; // Enable cursor.
+    std::cout << "\x1b[?1000l";  // Disable mouse tracking.
+    std::cout << "\x1b[?1003l";  // Disable mouse motion tracking.
+    std::cout << "\x1b[?1015l";  // Disable urxvt mouse mode.
+    std::cout << "\x1b[?1006l";  // Disable SGR mouse mode.
+    std::cout << "\x1b[?25h";    // Enable cursor.
 
     std::cout << std::flush;
 
