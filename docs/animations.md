@@ -23,26 +23,76 @@ RTXUI supports the following interactive pseudo-classes:
 ```
 
 ### Minimal Interactive Demo
-```html
-<div class="box">Interact with me</div>
 
-<style>
-  .box {
-    background-color: rgb(30, 58, 138); /* Slate Blue */
-    color: rgb(241, 245, 249);
-    padding: 1 2;
-    text-align: center;
-    border: solid;
-    border-color: rgb(59, 130, 246);
+Below is the C++ code and the live WebAssembly terminal illustrating `:hover`, `:active`, and `:focus` interactive pseudo-classes. This file is located in `example/pseudo_classes.cpp`.
+
+```cpp
+#include <iostream>
+#include <rtxui/rtxui.hpp>
+
+using namespace rtxui;
+
+class PseudoClassesDemo : public Component<PseudoClassesDemo> {
+ public:
+  std::string_view Setup() override {
+    return R"html(
+      <div class="container">
+        <h3>Interactive Pseudo-Classes</h3>
+        <p>Hover/Click/Focus the button below:</p>
+        <div class="btn" tabindex="0">Interactive Button</div>
+      </div>
+
+      <style>
+        self {
+          display: block;
+          padding: 1 2;
+          background-color: rgb(15, 23, 42);
+          color: rgb(241, 245, 249);
+        }
+        h3 {
+          color: rgb(59, 130, 246);
+          margin-bottom: 0;
+        }
+        p {
+          color: rgb(148, 163, 184);
+          margin-bottom: 1;
+        }
+        .btn {
+          display: block;
+          border: tall;
+          border-color: rgb(30, 58, 138);
+          background-color: rgb(17, 24, 39);
+          color: rgb(191, 219, 254);
+          padding: 1 3;
+          text-align: center;
+          width: 24;
+        }
+        .btn:hover {
+          background-color: rgb(30, 58, 138);
+          border-color: rgb(59, 130, 246);
+          color: rgb(255, 255, 255);
+        }
+        .btn:active {
+          background-color: rgb(29, 78, 216);
+          border-color: rgb(96, 165, 250);
+        }
+        .btn:focus {
+          border-color: rgb(147, 197, 253);
+        }
+      </style>
+    )html";
   }
-  .box:hover {
-    background-color: rgb(29, 78, 216); /* Modern Blue */
-  }
-  .box:active {
-    background-color: rgb(30, 64, 175); /* Dark Blue */
-  }
-</style>
+};
+
+int main() {
+  auto app = Ref<PseudoClassesDemo>::New();
+  Screen screen(app);
+  screen.Loop();
+  return 0;
+}
 ```
+
+<WasmTerminal src="/wasm/rtxui_example_pseudo_classes.js" :cols="80" :rows="8" />
 
 ---
 
@@ -74,24 +124,70 @@ The following timing/easing curves are supported:
 * `cubic-bezier(x1, y1, x2, y2)` (custom cubic bézier curves)
 
 ### Minimal Transition Demo
-```html
-<div class="transition-box">Hover for transition</div>
 
-<style>
-  .transition-box {
-    background-color: rgb(30, 58, 138);
-    color: rgb(241, 245, 249);
-    padding: 1 2;
-    border: solid;
-    border-color: rgb(59, 130, 246);
-    transition: background-color 0.3s ease, border-color 0.2s linear;
+Below is the C++ code and the live WebAssembly terminal illustrating smooth background-color and border-color transitions. This file is located in `example/transitions.cpp`.
+
+```cpp
+#include <iostream>
+#include <rtxui/rtxui.hpp>
+
+using namespace rtxui;
+
+class TransitionsDemo : public Component<TransitionsDemo> {
+ public:
+  std::string_view Setup() override {
+    return R"html(
+      <div class="container">
+        <h3>CSS Transitions</h3>
+        <p>Hover over the box to trigger a smooth color transition:</p>
+        <div class="box">Hover Me</div>
+      </div>
+
+      <style>
+        self {
+          display: block;
+          padding: 1 2;
+          background-color: rgb(15, 23, 42);
+          color: rgb(241, 245, 249);
+        }
+        h3 {
+          color: rgb(59, 130, 246);
+          margin-bottom: 0;
+        }
+        p {
+          color: rgb(148, 163, 184);
+          margin-bottom: 1;
+        }
+        .box {
+          display: block;
+          border: solid;
+          border-color: rgb(30, 58, 138);
+          background-color: rgb(17, 24, 39);
+          color: rgb(191, 219, 254);
+          padding: 1 3;
+          text-align: center;
+          width: 24;
+          transition: background-color 0.4s ease-in-out, border-color 0.3s ease-out, color 0.3s ease;
+        }
+        .box:hover {
+          background-color: rgb(29, 78, 216);
+          border-color: rgb(96, 165, 250);
+          color: rgb(255, 255, 255);
+        }
+      </style>
+    )html";
   }
-  .transition-box:hover {
-    background-color: rgb(29, 78, 216);
-    border-color: rgb(96, 165, 250);
-  }
-</style>
+};
+
+int main() {
+  auto app = Ref<TransitionsDemo>::New();
+  Screen screen(app);
+  screen.Loop();
+  return 0;
+}
 ```
+
+<WasmTerminal src="/wasm/rtxui_example_transitions.js" :cols="80" :rows="8" />
 
 ---
 

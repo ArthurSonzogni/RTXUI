@@ -173,6 +173,15 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_hr example/hr.cpp)
   target_link_libraries(rtxui_example_hr PRIVATE rtxui)
+
+  add_executable(rtxui_example_pseudo_classes example/pseudo_classes.cpp)
+  target_link_libraries(rtxui_example_pseudo_classes PRIVATE rtxui)
+
+  add_executable(rtxui_example_transitions example/transitions.cpp)
+  target_link_libraries(rtxui_example_transitions PRIVATE rtxui)
+
+  add_executable(rtxui_example_animation example/animation.cpp)
+  target_link_libraries(rtxui_example_animation PRIVATE rtxui)
 endif()
 
 # An option to enable testing
