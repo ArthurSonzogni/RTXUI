@@ -3,6 +3,8 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <charconv>
+#include <cstdlib>
 
 #include "rtxui/paint/color.hpp"
 
@@ -10,16 +12,22 @@ namespace rtxui {
 namespace {
 
 float StoF(std::string_view s) {
+  if (s.empty()) return 0.0f;
   std::string temp(s);
-  return std::stof(temp);
+  char* endptr = nullptr;
+  float val = std::strtof(temp.c_str(), &endptr);
+  if (endptr == temp.c_str()) {
+    return 0.0f;
+  }
+  return val;
 }
 int StoI(std::string_view s) {
-  try {
-    std::string temp(s);
-    return std::stoi(temp);
-  } catch (...) {
-    return 0;
+  int value = 0;
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+  if (ec == std::errc()) {
+    return value;
   }
+  return 0;
 }
 
 std::optional<Color> ParseColor(std::string_view value) {

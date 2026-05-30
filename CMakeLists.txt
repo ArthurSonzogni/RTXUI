@@ -97,7 +97,7 @@ target_include_directories(rtxui_lib PUBLIC "src" "include")
 
 if(EMSCRIPTEN)
   add_compile_options("-sASYNCIFY")
-  add_link_options("-sASYNCIFY" "-sEXPORTED_RUNTIME_METHODS=[ccall,cwrap]")
+  add_link_options("-sASYNCIFY" "-sEXPORTED_RUNTIME_METHODS=[ccall,cwrap]" "-sASYNCIFY_IMPORTS=[emscripten_asm_const_int]")
 endif()
 
 # Enable experimental reflection if supported by the compiler

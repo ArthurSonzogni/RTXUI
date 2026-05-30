@@ -5,6 +5,7 @@
 #define RTXUI_COMPONENT_HPP_
 
 #include <functional>
+#include <charconv>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -91,7 +92,13 @@ void from_string(std::string_view str, T& value) {
   if constexpr (std::is_same_v<T, std::string>) {
     value = std::string(str);
   } else if constexpr (std::is_same_v<T, int>) {
-    value = std::stoi(std::string(str));
+    int val = 0;
+    auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), val);
+    if (ec == std::errc()) {
+      value = val;
+    } else {
+      value = 0;
+    }
   } else if constexpr (std::is_same_v<T, bool>) {
     value = (str == "true" || str == "1");
   } else {
