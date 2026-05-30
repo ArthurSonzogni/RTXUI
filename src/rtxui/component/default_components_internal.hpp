@@ -4,10 +4,11 @@
 #ifndef RTXUI_DEFAULT_COMPONENTS_INTERNAL_HPP_
 #define RTXUI_DEFAULT_COMPONENTS_INTERNAL_HPP_
 
-#include "rtxui/internal/component.hpp"
-#include <string_view>
 #include <string>
+#include <string_view>
 #include <vector>
+
+#include "rtxui/internal/component.hpp"
 
 namespace rtxui {
 

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+
 #include "rtxui/internal/component.hpp"
 
 namespace rtxui {
@@ -63,13 +64,17 @@ std::string Element::Print(int depth) const {
   if (!classes.empty()) {
     out += " class=\"";
     for (size_t i = 0; i < classes.size(); ++i) {
-      if (i > 0) out += " ";
+      if (i > 0) {
+        out += " ";
+      }
       out += classes[i];
     }
     out += "\"";
   }
   for (const auto& [name, value] : attributes_) {
-    if (name == "id" || name == "class") continue;
+    if (name == "id" || name == "class") {
+      continue;
+    }
     out += " " + name + "=\"" + value + "\"";
   }
   out += ">\n";
@@ -81,7 +86,9 @@ std::string Element::Print(int depth) const {
 }
 
 std::string_view Element::tag() const {
-  if (component_) return component_->Tag();
+  if (component_) {
+    return component_->Tag();
+  }
   return tag_;
 }
 
@@ -96,7 +103,8 @@ Element* Element::QuerySelector(std::string_view selector) {
     }
   } else if (selector[0] == '.') {
     std::string_view target_class = selector.substr(1);
-    if (std::find(classes.begin(), classes.end(), target_class) != classes.end()) {
+    if (std::find(classes.begin(), classes.end(), target_class) !=
+        classes.end()) {
       return this;
     }
   } else {

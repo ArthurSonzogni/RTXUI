@@ -1,21 +1,21 @@
 #ifndef STRING_HPP_
 #define STRING_HPP_
 
+#include <cstdint>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <cstdint>
-#include <iterator>
 
 // Split a string by a delimiter, return a vector of string views.
-auto Split(std::string_view text,
-           char delimiter) -> std::vector<std::string_view>;
-auto Split(std::string_view text,
-           std::string_view delimiter) -> std::vector<std::string_view>;
+auto Split(std::string_view text, char delimiter)
+    -> std::vector<std::string_view>;
+auto Split(std::string_view text, std::string_view delimiter)
+    -> std::vector<std::string_view>;
 auto Join(const std::vector<std::string_view>& parts,
           std::string_view delimiter) -> std::string;
-auto Join(const std::vector<std::string>& parts,
-          std::string_view delimiter) -> std::string;
+auto Join(const std::vector<std::string>& parts, std::string_view delimiter)
+    -> std::string;
 auto StripIndent(const std::string_view& text) -> std::string;
 auto Repeat(std::string_view text, int count) -> std::string;
 auto CodePointToString(uint32_t codepoint) -> std::string;
@@ -31,7 +31,8 @@ auto string_width(std::string_view input) -> int;
 auto Utf8ToGlyphs(std::string_view input) -> std::vector<std::string>;
 auto GlyphPrevious(std::string_view input, size_t start) -> size_t;
 auto GlyphNext(std::string_view input, size_t start) -> size_t;
-auto GlyphIterate(std::string_view input, int glyph_offset, size_t start = 0) -> size_t;
+auto GlyphIterate(std::string_view input, int glyph_offset, size_t start = 0)
+    -> size_t;
 auto CellToGlyphIndex(std::string_view input) -> std::vector<int>;
 auto GlyphCount(std::string_view input) -> int;
 

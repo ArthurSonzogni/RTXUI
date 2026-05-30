@@ -1,11 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/core/string.hpp"
-
 #include <catch2/catch_test_macros.hpp>
 #include <string>
 #include <vector>
+
+#include "rtxui/core/string.hpp"
 
 // --- EatCodePoint ---
 
@@ -86,9 +86,9 @@ TEST_CASE("CodePointToString.FourByte", "[unicode]") {
 // --- IsCombining / IsFullWidth / IsControl ---
 
 TEST_CASE("IsControl", "[unicode]") {
-  CHECK(IsControl(0));       // NUL
-  CHECK(IsControl(1));       // SOH
-  CHECK(IsControl(0x7F));    // DEL
+  CHECK(IsControl(0));     // NUL
+  CHECK(IsControl(1));     // SOH
+  CHECK(IsControl(0x7F));  // DEL
   CHECK_FALSE(IsControl('A'));
   CHECK_FALSE(IsControl(0x00E9));  // é
   // Newline is NOT a control character (by design in FTXUI/RTXUI)
@@ -121,8 +121,8 @@ TEST_CASE("string_width.ASCII", "[unicode]") {
 }
 
 TEST_CASE("string_width.MultiByte", "[unicode]") {
-  CHECK(string_width("é") == 1);   // 2 bytes, 1 cell
-  CHECK(string_width("₿") == 1);   // 3 bytes, 1 cell
+  CHECK(string_width("é") == 1);  // 2 bytes, 1 cell
+  CHECK(string_width("₿") == 1);  // 3 bytes, 1 cell
 }
 
 TEST_CASE("string_width.FullWidth", "[unicode]") {
@@ -309,10 +309,10 @@ TEST_CASE("Graphemes.Empty", "[unicode]") {
 TEST_CASE("Graphemes.Mixed", "[unicode]") {
   // Mix of ASCII, multibyte, fullwidth, combining
   std::string input = "A";
-  input += "é";      // 2-byte
-  input += "一";      // fullwidth
+  input += "é";   // 2-byte
+  input += "一";  // fullwidth
   input += "e";
-  input += CodePointToString(0x0301); // combining
+  input += CodePointToString(0x0301);  // combining
 
   std::vector<Grapheme> result;
   for (auto g : Graphemes(input)) {

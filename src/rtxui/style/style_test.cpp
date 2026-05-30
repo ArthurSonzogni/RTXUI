@@ -7,8 +7,8 @@
 #include <string>
 
 #include "rtxui/core/string.hpp"
-#include "rtxui/style/apply_style.hpp"
 #include "rtxui/layout/style.hpp"
+#include "rtxui/style/apply_style.hpp"
 
 TEST_CASE("CSS parser works correctly", "[css]") {
   const std::string input = R"(

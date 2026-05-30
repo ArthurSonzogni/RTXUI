@@ -12,7 +12,7 @@ void Fuzz(const std::string& s) {
   for (const char c : s) {
     parser.Add(c);
 
-    while(auto event = parser.GetEvent()) {
+    while (auto event = parser.GetEvent()) {
       // Do nothing.
     }
   }

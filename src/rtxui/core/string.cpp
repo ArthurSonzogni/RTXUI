@@ -1191,8 +1191,8 @@ int codepoint_width(uint32_t ucs) {
 }  // namespace
 
 // Split a string by a delimiter, return a vector of string views.
-auto Split(std::string_view text,
-           char delimiter) -> std::vector<std::string_view> {
+auto Split(std::string_view text, char delimiter)
+    -> std::vector<std::string_view> {
   std::vector<std::string_view> result;
   size_t start = 0;
   for (size_t i = 0; i < text.size(); ++i) {
@@ -1206,8 +1206,8 @@ auto Split(std::string_view text,
 }
 
 // Split a string by a delimiter, return a vector of string views.
-auto Split(std::string_view text,
-           std::string_view delimiter) -> std::vector<std::string_view> {
+auto Split(std::string_view text, std::string_view delimiter)
+    -> std::vector<std::string_view> {
   std::vector<std::string_view> result;
   size_t start = 0;
   for (size_t i = 0; i < text.size(); ++i) {
@@ -1232,8 +1232,8 @@ auto Join(const std::vector<std::string_view>& parts,
   return result;
 }
 
-auto Join(const std::vector<std::string>& parts,
-          std::string_view delimiter) -> std::string {
+auto Join(const std::vector<std::string>& parts, std::string_view delimiter)
+    -> std::string {
   std::string result;
   for (size_t i = 0; i < parts.size(); ++i) {
     result += parts[i];
@@ -1696,7 +1696,7 @@ void GraphemeIterator::Next() {
   size_t start = pos_;
   size_t end = start;
   uint32_t codepoint = 0;
-  
+
   if (!EatCodePoint(text_, start, &end, &codepoint)) {
     current_ = Grapheme{text_.substr(start, 1), 1};
     return;
@@ -1741,7 +1741,8 @@ void GraphemeIterator::Next() {
           while (end < text_.size()) {
             size_t comb_end = end;
             uint32_t comb_cp = 0;
-            if (EatCodePoint(text_, end, &comb_end, &comb_cp) && IsCombining(comb_cp)) {
+            if (EatCodePoint(text_, end, &comb_end, &comb_cp) &&
+                IsCombining(comb_cp)) {
               end = comb_end;
             } else {
               break;

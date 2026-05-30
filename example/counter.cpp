@@ -20,9 +20,6 @@ class Counter : public Component<Counter> {
   }
 
   std::string_view Setup() override {
-
-
-
     return R"html(
       <div class="counter-container">
         <div class="row">

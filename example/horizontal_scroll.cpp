@@ -9,9 +9,6 @@ using namespace rtxui;
 class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
  public:
   std::string_view Setup() override {
-
-
-
     return R"html(
       <div class="header">
         <h1>RTXUI Horizontal Scrolling Demo</h1>

@@ -1,12 +1,12 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/internal/component.hpp"
-#include "rtxui/component/default_components_internal.hpp"
-
 #include <catch2/catch_test_macros.hpp>
+
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/internal/component.hpp"
 
 namespace {
 
@@ -19,7 +19,7 @@ class InterpolationComponent : public rtxui::Component<InterpolationComponent> {
     Import("name", name);
     Import("version", version);
   }
-  
+
   std::string get_greeting() const { return "Hello " + name; }
   int get_next_version() const { return version + 1; }
 

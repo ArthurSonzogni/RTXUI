@@ -2,6 +2,7 @@
 #define RTXUI_LAYOUT_LAYOUT_HPP
 
 #include <memory>
+
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/style.hpp"

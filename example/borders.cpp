@@ -19,7 +19,6 @@ class BorderBox : public Component<BorderBox> {
   }
 
   std::string_view Setup() override {
-
     return R"html(
       <div class="box-wrapper">
         <div class="label">{title}</div>
@@ -50,9 +49,6 @@ class BorderBox : public Component<BorderBox> {
 class BordersDemo : public Component<BordersDemo> {
  public:
   std::string_view Setup() override {
-
-
-
     Import<BorderBox>();
     return R"html(
       <div>

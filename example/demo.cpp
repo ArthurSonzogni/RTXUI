@@ -1,10 +1,8 @@
 #include <iostream>
 #include <memory>
+#include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
-
-#include <rtxui/rtxui.hpp>
-
 
 using namespace rtxui;
 
@@ -14,12 +12,9 @@ class LabeledBox : public Component<LabeledBox> {
     std::string title = "Box";
   } props;
 
-  LabeledBox() {
-    Bind(props.title);
-  }
+  LabeledBox() { Bind(props.title); }
 
   std::string_view Setup() override {
-
     return R"html(
       <div class="box">
         <div class="title">{title}</div>
@@ -65,18 +60,12 @@ class App : public Component<App> {
   }
 
   // --- Actions ---
-  void Increment() {
-    count++;
-  }
+  void Increment() { count++; }
 
-  void Decrement() {
-    count--;
-  }
+  void Decrement() { count--; }
 
   // --- Computed ---
-  int double_clicks() const {
-    return count * 2;
-  }
+  int double_clicks() const { return count * 2; }
 
   bool OnEvent(Event event) override {
     if (event == Event::a() || event == Event::Keyboard::From(' ')) {
@@ -87,9 +76,6 @@ class App : public Component<App> {
   }
 
   std::string_view Setup() override {
-
-
-
     Import<LabeledBox>();
     return R"html(
       <div class="header">

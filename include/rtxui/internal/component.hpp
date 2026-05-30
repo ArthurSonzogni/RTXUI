@@ -14,10 +14,11 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
-#include "rtxui/internal/import.hpp"
-#include "rtxui/internal/refcounted.hpp"
+
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/event.hpp"
+#include "rtxui/internal/import.hpp"
+#include "rtxui/internal/refcounted.hpp"
 
 namespace rtxui {
 class Element;
@@ -91,9 +92,11 @@ int ParseInt(std::string_view str);
 
 template <typename T>
 std::string to_string(const T& value) {
-  if constexpr (std::is_convertible_v<T, std::string>) return static_cast<std::string>(value);
-  else if constexpr (requires { std::to_string(value); }) return std::to_string(value);
-  else {
+  if constexpr (std::is_convertible_v<T, std::string>) {
+    return static_cast<std::string>(value);
+  } else if constexpr (requires { std::to_string(value); }) {
+    return std::to_string(value);
+  } else {
     std::stringstream ss;
     ss << value;
     return ss.str();
@@ -130,9 +133,7 @@ class Component : public ComponentBase {
     return const_cast<Component<Derived>*>(this)->Setup();
   }
 
-  std::string_view Setup() override {
-    return "";
-  }
+  std::string_view Setup() override { return ""; }
 
   bool Digest() override {
     bool changed = false;
@@ -158,7 +159,9 @@ class Component : public ComponentBase {
       target = target.substr(6);
     }
     for (const auto& entry : entries_) {
-      if (entry.name == target) return entry.get_value();
+      if (entry.name == target) {
+        return entry.get_value();
+      }
     }
     return std::string(expression);
   }
@@ -181,6 +184,7 @@ class Component : public ComponentBase {
   void Import(std::string name, Ret (Derived::*method)() const) {
     RegisterComputed(name, method);
   }
+
  protected:
   template <typename T>
   void RegisterState(std::string name, T* ptr) {
@@ -200,7 +204,8 @@ class Component : public ComponentBase {
     auto set_value = [ptr](std::string_view val) {
       reflection::from_string(val, *ptr);
     };
-    entries_.push_back({std::move(clean_name), std::move(get_value), std::move(check_and_update), std::move(set_value)});
+    entries_.push_back({std::move(clean_name), std::move(get_value),
+                        std::move(check_and_update), std::move(set_value)});
   }
 
   template <typename Ret>
@@ -210,8 +215,7 @@ class Component : public ComponentBase {
                           return reflection::to_string(
                               (static_cast<const Derived*>(this)->*method)());
                         },
-                        nullptr,
-                        nullptr});
+                        nullptr, nullptr});
   }
 };
 
@@ -222,17 +226,17 @@ class Component : public ComponentBase {
 #define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
 
 // Legacy compatibility macros
-#define RTXUI_STATE(TYPE, NAME) \
-  TYPE NAME; \
-  int init_##NAME = [this]() { \
+#define RTXUI_STATE(TYPE, NAME)              \
+  TYPE NAME;                                 \
+  int init_##NAME = [this]() {               \
     this->RegisterState(#NAME, &this->NAME); \
-    return 0; \
+    return 0;                                \
   }()
 
-#define RTXUI_COMPUTED(NAME) \
-  int init_##NAME = [this]() { \
+#define RTXUI_COMPUTED(NAME)                                             \
+  int init_##NAME = [this]() {                                           \
     this->RegisterComputed(#NAME, &std::decay_t<decltype(*this)>::NAME); \
-    return 0; \
+    return 0;                                                            \
   }()
 
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory);

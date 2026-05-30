@@ -110,7 +110,8 @@ enum class WhiteSpace {
 struct ComputedStyle {
   DisplayOutside display_outside = DisplayOutside::Inline;
   DisplayInside display_inside = DisplayInside::Flow;  // Default to flow
-  bool display_none = false;  // true when display: none — element takes no space
+  bool display_none =
+      false;  // true when display: none — element takes no space
 
   Direction flex_direction = Direction::Row;
 
@@ -141,9 +142,7 @@ struct ComputedStyle {
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
 
-  bool IsBlockLevel() const {
-    return display_outside == DisplayOutside::Block;
-  }
+  bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }
   bool IsInlineLevel() const {
     return display_outside == DisplayOutside::Inline;
   }

@@ -1,11 +1,11 @@
 #include "rtxui/style/apply_style.hpp"
 
+#include <cctype>
+#include <charconv>
+#include <cstdlib>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <charconv>
-#include <cstdlib>
-#include <cctype>
 
 #include "rtxui/paint/color.hpp"
 
@@ -13,7 +13,9 @@ namespace rtxui {
 namespace {
 
 float StoF(std::string_view s) {
-  if (s.empty()) return 0.0f;
+  if (s.empty()) {
+    return 0.0f;
+  }
   std::string temp(s);
   char* endptr = nullptr;
   float val = std::strtof(temp.c_str(), &endptr);
@@ -38,16 +40,23 @@ int StoI(std::string_view s) {
 }
 
 std::optional<Color> ParseColor(std::string_view value) {
-  if (value.empty())
+  if (value.empty()) {
     return std::nullopt;
+  }
 
   // Parse hex colors: #RGB, #RGBA, #RRGGBB, #RRGGBBAA
   if (value.front() == '#') {
     std::string_view hex = value.substr(1);
     auto hex_val = [](char c) -> std::optional<uint8_t> {
-      if (c >= '0' && c <= '9') return c - '0';
-      if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-      if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+      if (c >= '0' && c <= '9') {
+        return c - '0';
+      }
+      if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+      }
+      if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+      }
       return std::nullopt;
     };
 
@@ -55,7 +64,8 @@ std::optional<Color> ParseColor(std::string_view value) {
       auto r_digit = hex_val(hex[0]);
       auto g_digit = hex_val(hex[1]);
       auto b_digit = hex_val(hex[2]);
-      auto a_digit = (hex.length() == 4) ? hex_val(hex[3]) : std::optional<uint8_t>(15);
+      auto a_digit =
+          (hex.length() == 4) ? hex_val(hex[3]) : std::optional<uint8_t>(15);
       if (r_digit && g_digit && b_digit && a_digit) {
         uint8_t r = (*r_digit << 4) | *r_digit;
         uint8_t g = (*g_digit << 4) | *g_digit;
@@ -90,13 +100,16 @@ std::optional<Color> ParseColor(std::string_view value) {
     value.remove_prefix(4);
     value.remove_suffix(1);
     size_t first_comma = value.find(',');
-    if (first_comma == std::string_view::npos)
+    if (first_comma == std::string_view::npos) {
       return std::nullopt;
+    }
     size_t second_comma = value.find(',', first_comma + 1);
-    if (second_comma == std::string_view::npos)
+    if (second_comma == std::string_view::npos) {
       return std::nullopt;
+    }
     std::string_view r_str = value.substr(0, first_comma);
-    std::string_view g_str = value.substr(first_comma + 1, second_comma - first_comma - 1);
+    std::string_view g_str =
+        value.substr(first_comma + 1, second_comma - first_comma - 1);
     std::string_view b_str = value.substr(second_comma + 1);
     try {
       int r = StoI(r_str);
@@ -115,17 +128,22 @@ std::optional<Color> ParseColor(std::string_view value) {
     value.remove_prefix(5);
     value.remove_suffix(1);
     size_t first_comma = value.find(',');
-    if (first_comma == std::string_view::npos)
+    if (first_comma == std::string_view::npos) {
       return std::nullopt;
+    }
     size_t second_comma = value.find(',', first_comma + 1);
-    if (second_comma == std::string_view::npos)
+    if (second_comma == std::string_view::npos) {
       return std::nullopt;
+    }
     size_t third_comma = value.find(',', second_comma + 1);
-    if (third_comma == std::string_view::npos)
+    if (third_comma == std::string_view::npos) {
       return std::nullopt;
+    }
     std::string_view r_str = value.substr(0, first_comma);
-    std::string_view g_str = value.substr(first_comma + 1, second_comma - first_comma - 1);
-    std::string_view b_str = value.substr(second_comma + 1, third_comma - second_comma - 1);
+    std::string_view g_str =
+        value.substr(first_comma + 1, second_comma - first_comma - 1);
+    std::string_view b_str =
+        value.substr(second_comma + 1, third_comma - second_comma - 1);
     std::string_view a_str = value.substr(third_comma + 1);
     try {
       int r = StoI(r_str);
@@ -140,36 +158,51 @@ std::optional<Color> ParseColor(std::string_view value) {
     }
   }
 
-  if (value == "red")
+  if (value == "red") {
     return Color::RGB(255, 0, 0);
-  if (value == "white")
+  }
+  if (value == "white") {
     return Color::RGB(255, 255, 255);
-  if (value == "blue")
+  }
+  if (value == "blue") {
     return Color::RGB(0, 0, 255);
-  if (value == "yellow")
+  }
+  if (value == "yellow") {
     return Color::RGB(255, 255, 0);
-  if (value == "green" || value == "lime")
+  }
+  if (value == "green" || value == "lime") {
     return Color::RGB(0, 255, 0);
-  if (value == "black")
+  }
+  if (value == "black") {
     return Color::RGB(0, 0, 0);
-  if (value == "gray" || value == "grey")
+  }
+  if (value == "gray" || value == "grey") {
     return Color::RGB(128, 128, 128);
-  if (value == "cyan" || value == "aqua")
+  }
+  if (value == "cyan" || value == "aqua") {
     return Color::RGB(0, 255, 255);
-  if (value == "magenta" || value == "fuchsia")
+  }
+  if (value == "magenta" || value == "fuchsia") {
     return Color::RGB(255, 0, 255);
-  if (value == "silver")
+  }
+  if (value == "silver") {
     return Color::RGB(192, 192, 192);
-  if (value == "maroon")
+  }
+  if (value == "maroon") {
     return Color::RGB(128, 0, 0);
-  if (value == "purple")
+  }
+  if (value == "purple") {
     return Color::RGB(128, 0, 128);
-  if (value == "olive")
+  }
+  if (value == "olive") {
     return Color::RGB(128, 128, 0);
-  if (value == "navy")
+  }
+  if (value == "navy") {
     return Color::RGB(0, 0, 128);
-  if (value == "teal")
+  }
+  if (value == "teal") {
     return Color::RGB(0, 128, 128);
+  }
   return std::nullopt;
 }
 
@@ -182,72 +215,101 @@ Length ParseLength(std::string_view value) {
 }
 
 std::optional<BorderStyle> ParseBorderStyle(std::string_view v) {
-  if (v == "none")
+  if (v == "none") {
     return BorderStyle::None;
-  if (v == "ascii")
+  }
+  if (v == "ascii") {
     return BorderStyle::Ascii;
-  if (v == "blank")
+  }
+  if (v == "blank") {
     return BorderStyle::Blank;
-  if (v == "dashed")
+  }
+  if (v == "dashed") {
     return BorderStyle::Dashed;
-  if (v == "double")
+  }
+  if (v == "double") {
     return BorderStyle::Double;
-  if (v == "heavy")
+  }
+  if (v == "heavy") {
     return BorderStyle::Heavy;
-  if (v == "hkey")
+  }
+  if (v == "hkey") {
     return BorderStyle::HKey;
-  if (v == "inner")
+  }
+  if (v == "inner") {
     return BorderStyle::Inner;
-  if (v == "outer")
+  }
+  if (v == "outer") {
     return BorderStyle::Outer;
-  if (v == "panel")
+  }
+  if (v == "panel") {
     return BorderStyle::Panel;
-  if (v == "round" || v == "rounded")
+  }
+  if (v == "round" || v == "rounded") {
     return BorderStyle::Round;
-  if (v == "solid")
+  }
+  if (v == "solid") {
     return BorderStyle::Solid;
-  if (v == "tall")
+  }
+  if (v == "tall") {
     return BorderStyle::Tall;
-  if (v == "thick")
+  }
+  if (v == "thick") {
     return BorderStyle::Thick;
-  if (v == "vkey")
+  }
+  if (v == "vkey") {
     return BorderStyle::VKey;
-  if (v == "wide")
+  }
+  if (v == "wide") {
     return BorderStyle::Wide;
-  if (v == "dotted")
+  }
+  if (v == "dotted") {
     return BorderStyle::Dotted;
-  if (v == "double-horizontal")
+  }
+  if (v == "double-horizontal") {
     return BorderStyle::DoubleHorizontal;
-  if (v == "double-vertical")
+  }
+  if (v == "double-vertical") {
     return BorderStyle::DoubleVertical;
-  if (v == "shadow" || v == "3d")
+  }
+  if (v == "shadow" || v == "3d") {
     return BorderStyle::Shadow;
-  if (v == "shade-light")
+  }
+  if (v == "shade-light") {
     return BorderStyle::ShadeLight;
-  if (v == "shade-medium")
+  }
+  if (v == "shade-medium") {
     return BorderStyle::ShadeMedium;
-  if (v == "shade-dark")
+  }
+  if (v == "shade-dark") {
     return BorderStyle::ShadeDark;
-  if (v == "squiggle" || v == "wave")
+  }
+  if (v == "squiggle" || v == "wave") {
     return BorderStyle::Squiggle;
+  }
   return std::nullopt;
 }
 
 std::optional<Overflow> ParseOverflow(std::string_view v) {
-  if (v == "visible")
+  if (v == "visible") {
     return Overflow::Visible;
-  if (v == "hidden")
+  }
+  if (v == "hidden") {
     return Overflow::Hidden;
-  if (v == "scroll" || v == "auto")
+  }
+  if (v == "scroll" || v == "auto") {
     return Overflow::Scroll;
+  }
   return std::nullopt;
 }
 
 std::optional<ScrollbarWidth> ParseScrollbarWidth(std::string_view v) {
-  if (v == "auto")
+  if (v == "auto") {
     return ScrollbarWidth::Auto;
-  if (v == "none")
+  }
+  if (v == "none") {
     return ScrollbarWidth::None;
+  }
   return std::nullopt;
 }
 
@@ -326,7 +388,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     style.padding.right = p;
     return;
   }
-  
+
   if (p == "border-width") {
     int bw = StoI(v);
     style.border = {bw, bw, bw, bw};
@@ -355,7 +417,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
     return;
   }
-  
+
   if (p == "border-top") {
     int bw = StoI(v);
     style.border.top = bw;
@@ -471,12 +533,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "display") {
     // Parse combined display property (display-outside and display-inside)
-    // For simplicity, handle common single-keyword values and assume default display-inside: flow
-    // For two-keyword values, parse them as specified.
+    // For simplicity, handle common single-keyword values and assume default
+    // display-inside: flow For two-keyword values, parse them as specified.
 
     // Split the value string by space
     std::string s_value(v.data(), v.size());
-    
+
     size_t space_pos = s_value.find(' ');
     if (space_pos == std::string::npos) {
       // Single keyword value
@@ -578,7 +640,6 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     style.scroll_speed_y = StoI(v);
     return;
   }
-
 }
 
 }  // namespace rtxui

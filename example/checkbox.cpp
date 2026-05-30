@@ -10,15 +10,9 @@ class CheckboxDemo : public Component<CheckboxDemo> {
  public:
   bool checked = false;
 
-  CheckboxDemo() {
-    Bind(checked);
-  }
+  CheckboxDemo() { Bind(checked); }
 
   std::string_view Setup() override {
-
-
-
-
     return R"html(
       <div class="container">
         <p class="title">Interactive Checkbox Element</p>

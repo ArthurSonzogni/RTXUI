@@ -32,4 +32,3 @@ std::string LayoutBox::Print(int indent) const {
 }
 
 }  // namespace rtxui
-

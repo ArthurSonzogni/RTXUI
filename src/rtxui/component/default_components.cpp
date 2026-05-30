@@ -1,12 +1,11 @@
-#include "rtxui/component/default_components_internal.hpp"
-
 #include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
+
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/text_element.hpp"
-
 
 namespace rtxui {
 
@@ -20,32 +19,45 @@ std::vector<Grapheme> GetGraphemesList(std::string_view val) {
   return res;
 }
 
-std::string GraphemesToString(const std::vector<Grapheme>& graphemes, size_t start = 0, size_t count = std::string::npos) {
+std::string GraphemesToString(const std::vector<Grapheme>& graphemes,
+                              size_t start = 0,
+                              size_t count = std::string::npos) {
   std::string s;
-  size_t end = (count == std::string::npos) ? graphemes.size() : std::min(graphemes.size(), start + count);
+  size_t end = (count == std::string::npos)
+                   ? graphemes.size()
+                   : std::min(graphemes.size(), start + count);
   for (size_t i = start; i < end; ++i) {
     s.append(graphemes[i].text);
   }
   return s;
 }
 
-int FindWordBoundaryLeft(const std::vector<Grapheme>& graphemes, int start_pos) {
+int FindWordBoundaryLeft(const std::vector<Grapheme>& graphemes,
+                         int start_pos) {
   int pos = start_pos;
-  if (pos <= 0) return 0;
-  while (pos > 0 && (graphemes[pos - 1].text == " " || graphemes[pos - 1].text == "\t")) {
+  if (pos <= 0) {
+    return 0;
+  }
+  while (pos > 0 &&
+         (graphemes[pos - 1].text == " " || graphemes[pos - 1].text == "\t")) {
     pos--;
   }
-  while (pos > 0 && graphemes[pos - 1].text != " " && graphemes[pos - 1].text != "\t") {
+  while (pos > 0 && graphemes[pos - 1].text != " " &&
+         graphemes[pos - 1].text != "\t") {
     pos--;
   }
   return pos;
 }
 
-int FindWordBoundaryRight(const std::vector<Grapheme>& graphemes, int start_pos) {
+int FindWordBoundaryRight(const std::vector<Grapheme>& graphemes,
+                          int start_pos) {
   int pos = start_pos;
   int n = static_cast<int>(graphemes.size());
-  if (pos >= n) return n;
-  while (pos < n && (graphemes[pos].text == " " || graphemes[pos].text == "\t")) {
+  if (pos >= n) {
+    return n;
+  }
+  while (pos < n &&
+         (graphemes[pos].text == " " || graphemes[pos].text == "\t")) {
     pos++;
   }
   while (pos < n && graphemes[pos].text != " " && graphemes[pos].text != "\t") {
@@ -54,8 +66,12 @@ int FindWordBoundaryRight(const std::vector<Grapheme>& graphemes, int start_pos)
   return pos;
 }
 
-void HandleBackspace(std::vector<Grapheme>& graphemes, int& cursor_pos, bool ctrl) {
-  if (cursor_pos <= 0) return;
+void HandleBackspace(std::vector<Grapheme>& graphemes,
+                     int& cursor_pos,
+                     bool ctrl) {
+  if (cursor_pos <= 0) {
+    return;
+  }
   if (ctrl) {
     int target = FindWordBoundaryLeft(graphemes, cursor_pos);
     graphemes.erase(graphemes.begin() + target, graphemes.begin() + cursor_pos);
@@ -66,9 +82,13 @@ void HandleBackspace(std::vector<Grapheme>& graphemes, int& cursor_pos, bool ctr
   }
 }
 
-void HandleDelete(std::vector<Grapheme>& graphemes, int& cursor_pos, bool ctrl) {
+void HandleDelete(std::vector<Grapheme>& graphemes,
+                  int& cursor_pos,
+                  bool ctrl) {
   int n = static_cast<int>(graphemes.size());
-  if (cursor_pos >= n) return;
+  if (cursor_pos >= n) {
+    return;
+  }
   if (ctrl) {
     int target = FindWordBoundaryRight(graphemes, cursor_pos);
     graphemes.erase(graphemes.begin() + cursor_pos, graphemes.begin() + target);
@@ -77,8 +97,11 @@ void HandleDelete(std::vector<Grapheme>& graphemes, int& cursor_pos, bool ctrl) 
   }
 }
 
-int GetCursorPositionFromColumn(const std::vector<Grapheme>& graphemes, int target_col) {
-  if (target_col < 0) return 0;
+int GetCursorPositionFromColumn(const std::vector<Grapheme>& graphemes,
+                                int target_col) {
+  if (target_col < 0) {
+    return 0;
+  }
   int best_pos = 0;
   int min_dist = std::abs(target_col);
   int current_col = 0;
@@ -93,7 +116,7 @@ int GetCursorPositionFromColumn(const std::vector<Grapheme>& graphemes, int targ
   return best_pos;
 }
 
-} // namespace
+}  // namespace
 
 struct Position2D {
   int line = 0;
@@ -104,7 +127,8 @@ Position2D GetCursor2D(const std::vector<Grapheme>& graphemes, int cursor_pos) {
   Position2D pos;
   int limit = std::min(static_cast<int>(graphemes.size()), cursor_pos);
   for (int i = 0; i < limit; ++i) {
-    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" || graphemes[i].text == "\r") {
+    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" ||
+        graphemes[i].text == "\r") {
       pos.line++;
       pos.column = 0;
     } else {
@@ -114,7 +138,9 @@ Position2D GetCursor2D(const std::vector<Grapheme>& graphemes, int cursor_pos) {
   return pos;
 }
 
-int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes, int target_line, int target_col) {
+int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes,
+                       int target_line,
+                       int target_col) {
   int cur_line = 0;
   int cur_col = 0;
   int best_pos = 0;
@@ -123,7 +149,8 @@ int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes, int target_line, 
 
   int i = 0;
   while (i < n && cur_line < target_line) {
-    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" || graphemes[i].text == "\r") {
+    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" ||
+        graphemes[i].text == "\r") {
       cur_line++;
     }
     i++;
@@ -134,14 +161,15 @@ int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes, int target_line, 
 
   best_pos = i;
   min_dist = std::abs(target_col);
-  
+
   while (i < n) {
-    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" || graphemes[i].text == "\r") {
+    if (graphemes[i].text == "\n" || graphemes[i].text == "\r\n" ||
+        graphemes[i].text == "\r") {
       break;
     }
     cur_col += graphemes[i].width;
     i++;
-    
+
     int dist = std::abs(cur_col - target_col);
     if (dist < min_dist) {
       min_dist = dist;
@@ -154,7 +182,8 @@ int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes, int target_line, 
 int FindLineStart(const std::vector<Grapheme>& graphemes, int start_pos) {
   int pos = start_pos;
   while (pos > 0) {
-    if (graphemes[pos - 1].text == "\n" || graphemes[pos - 1].text == "\r\n" || graphemes[pos - 1].text == "\r") {
+    if (graphemes[pos - 1].text == "\n" || graphemes[pos - 1].text == "\r\n" ||
+        graphemes[pos - 1].text == "\r") {
       break;
     }
     pos--;
@@ -166,7 +195,8 @@ int FindLineEnd(const std::vector<Grapheme>& graphemes, int start_pos) {
   int pos = start_pos;
   int n = static_cast<int>(graphemes.size());
   while (pos < n) {
-    if (graphemes[pos].text == "\n" || graphemes[pos].text == "\r\n" || graphemes[pos].text == "\r") {
+    if (graphemes[pos].text == "\n" || graphemes[pos].text == "\r\n" ||
+        graphemes[pos].text == "\r") {
       break;
     }
     pos++;
@@ -175,7 +205,9 @@ int FindLineEnd(const std::vector<Grapheme>& graphemes, int start_pos) {
 }
 
 void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
-  if (!root) return;
+  if (!root) {
+    return;
+  }
 
   auto current_graphemes = GetGraphemesList(value);
   auto pos2d = GetCursor2D(current_graphemes, cursor_pos);
@@ -183,7 +215,7 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
   int cursor_col = pos2d.column;
 
   int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
-  
+
   // Horizontal Scroll
   int padding_left = root->style.padding.left;
   int padding_right = root->style.padding.right;
@@ -221,12 +253,17 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
   }
 }
 
-bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_multiline) {
+bool TextInputBase::OnEventShared(ComponentBase* self,
+                                  Event event,
+                                  bool is_multiline) {
   auto* root = self->Root();
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
-      if (!root) return false;
+    if (mouse.button == Event::Mouse::Button::Left &&
+        mouse.motion == Event::Mouse::Motion::Pressed) {
+      if (!root) {
+        return false;
+      }
       int click_x = mouse.x - 1;
       int click_y = mouse.y - 1;
       int abs_x = root->absolute_x();
@@ -234,22 +271,20 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w &&
-          click_y >= abs_y && click_y < abs_y + layout_h) {
-        
+      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+          click_y < abs_y + layout_h) {
         // Unfocus all other elements
         if (root->Parent()) {
           Element* root_el = root;
           while (root_el->Parent()) {
             root_el = root_el->Parent();
           }
-          root_el->Visit([](Element& el) {
-            el.set_focused(false);
-          });
+          root_el->Visit([](Element& el) { el.set_focused(false); });
         }
         root->set_focused(true);
 
-        int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
+        int border_offset =
+            (root->style.border_style != BorderStyle::None) ? 1 : 0;
         int padding_left = root->style.padding.left;
         int padding_top = root->style.padding.top;
         int inner_click_x = click_x - abs_x - border_offset - padding_left;
@@ -259,8 +294,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
         int target_row = is_multiline ? (inner_click_y + root->scroll_y()) : 0;
 
         auto graphemes = GetGraphemesList(value);
-        cursor_pos = is_multiline ? GetCursorPosFrom2D(graphemes, target_row, target_col)
-                                  : GetCursorPositionFromColumn(graphemes, target_col);
+        cursor_pos = is_multiline
+                         ? GetCursorPosFrom2D(graphemes, target_row, target_col)
+                         : GetCursorPositionFromColumn(graphemes, target_col);
 
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
@@ -274,7 +310,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed || kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion == Event::Keyboard::Motion::Pressed ||
+        kb.motion == Event::Keyboard::Motion::Repeat) {
       if (!root || !root->focused()) {
         return false;
       }
@@ -306,13 +343,15 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::ArrowUp) {
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
-        cursor_pos = GetCursorPosFrom2D(graphemes, pos2d.line - 1, ideal_column_);
+        cursor_pos =
+            GetCursorPosFrom2D(graphemes, pos2d.line - 1, ideal_column_);
         KeepCursorVisible(root, is_multiline);
         return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::ArrowDown) {
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
-        cursor_pos = GetCursorPosFrom2D(graphemes, pos2d.line + 1, ideal_column_);
+        cursor_pos =
+            GetCursorPosFrom2D(graphemes, pos2d.line + 1, ideal_column_);
         KeepCursorVisible(root, is_multiline);
         return true;
       }
@@ -339,7 +378,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
         return true;
       }
       if (kb.special == Event::Keyboard::Special::Backspace) {
-        HandleBackspace(graphemes, cursor_pos, kb.modifier.ctrl || kb.modifier.alt);
+        HandleBackspace(graphemes, cursor_pos,
+                        kb.modifier.ctrl || kb.modifier.alt);
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
@@ -348,7 +388,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
         return true;
       }
       if (kb.special == Event::Keyboard::Special::Delete) {
-        HandleDelete(graphemes, cursor_pos, kb.modifier.ctrl || kb.modifier.alt);
+        HandleDelete(graphemes, cursor_pos,
+                     kb.modifier.ctrl || kb.modifier.alt);
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
@@ -359,10 +400,15 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
       if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
         std::string character = "\n";
         auto new_graphemes = GetGraphemesList(character);
-        if (cursor_pos < 0) cursor_pos = 0;
-        if (cursor_pos > n) cursor_pos = n;
+        if (cursor_pos < 0) {
+          cursor_pos = 0;
+        }
+        if (cursor_pos > n) {
+          cursor_pos = n;
+        }
 
-        graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(), new_graphemes.end());
+        graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(),
+                         new_graphemes.end());
         cursor_pos += static_cast<int>(new_graphemes.size());
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
@@ -372,13 +418,19 @@ bool TextInputBase::OnEventShared(ComponentBase* self, Event event, bool is_mult
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::None && kb.codepoint >= 32 && !kb.modifier.ctrl && !kb.modifier.meta) {
+      if (kb.special == Event::Keyboard::Special::None && kb.codepoint >= 32 &&
+          !kb.modifier.ctrl && !kb.modifier.meta) {
         std::string character = CodePointToString(kb.codepoint);
         auto new_graphemes = GetGraphemesList(character);
-        if (cursor_pos < 0) cursor_pos = 0;
-        if (cursor_pos > n) cursor_pos = n;
+        if (cursor_pos < 0) {
+          cursor_pos = 0;
+        }
+        if (cursor_pos > n) {
+          cursor_pos = n;
+        }
 
-        graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(), new_graphemes.end());
+        graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(),
+                         new_graphemes.end());
         cursor_pos += static_cast<int>(new_graphemes.size());
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
@@ -409,11 +461,14 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
   }
 
   left_text = GraphemesToString(graphemes, 0, cursor_pos);
-  if (cursor_pos < n && (graphemes[cursor_pos].text == "\n" || graphemes[cursor_pos].text == "\r\n" || graphemes[cursor_pos].text == "\r")) {
+  if (cursor_pos < n && (graphemes[cursor_pos].text == "\n" ||
+                         graphemes[cursor_pos].text == "\r\n" ||
+                         graphemes[cursor_pos].text == "\r")) {
     cursor_char = " ";
     right_text = GraphemesToString(graphemes, cursor_pos);
   } else {
-    cursor_char = (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
+    cursor_char =
+        (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
     right_text = GraphemesToString(graphemes, cursor_pos + 1);
   }
   cursor_class = is_focused_ ? "cursor cursor-focused" : "cursor";
@@ -536,8 +591,11 @@ bool checkbox::OnEvent(Event event) {
   auto* root = Root();
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
-      if (!root) return false;
+    if (mouse.button == Event::Mouse::Button::Left &&
+        mouse.motion == Event::Mouse::Motion::Pressed) {
+      if (!root) {
+        return false;
+      }
       int click_x = mouse.x - 1;
       int click_y = mouse.y - 1;
       int abs_x = root->absolute_x();
@@ -545,18 +603,15 @@ bool checkbox::OnEvent(Event event) {
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w &&
-          click_y >= abs_y && click_y < abs_y + layout_h) {
-        
+      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+          click_y < abs_y + layout_h) {
         // Focus this element
         if (root->Parent()) {
           Element* root_el = root;
           while (root_el->Parent()) {
             root_el = root_el->Parent();
           }
-          root_el->Visit([](Element& el) {
-            el.set_focused(false);
-          });
+          root_el->Visit([](Element& el) { el.set_focused(false); });
         }
         root->set_focused(true);
 
@@ -584,7 +639,8 @@ bool checkbox::OnEvent(Event event) {
               parent_comp = nullptr;
               while (parent_el) {
                 if (parent_el->component()) {
-                  parent_comp = const_cast<ComponentBase*>(parent_el->component());
+                  parent_comp =
+                      const_cast<ComponentBase*>(parent_el->component());
                   break;
                 }
                 parent_el = parent_el->Parent();
@@ -602,12 +658,14 @@ bool checkbox::OnEvent(Event event) {
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed || kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion == Event::Keyboard::Motion::Pressed ||
+        kb.motion == Event::Keyboard::Motion::Repeat) {
       if (!root || !root->focused()) {
         return false;
       }
 
-      if (kb.special == Event::Keyboard::Special::None && kb.codepoint == 32) { // Space
+      if (kb.special == Event::Keyboard::Special::None &&
+          kb.codepoint == 32) {  // Space
         checked = !checked;
         PropagateBinding("checked", checked ? "true" : "false");
 
@@ -632,7 +690,8 @@ bool checkbox::OnEvent(Event event) {
               parent_comp = nullptr;
               while (parent_el) {
                 if (parent_el->component()) {
-                  parent_comp = const_cast<ComponentBase*>(parent_el->component());
+                  parent_comp =
+                      const_cast<ComponentBase*>(parent_el->component());
                   break;
                 }
                 parent_el = parent_el->Parent();
@@ -697,13 +756,16 @@ std::string_view slider::Setup() {
 
 bool slider::OnEvent(Event event) {
   auto* root = Root();
-  if (!root) return false;
+  if (!root) {
+    return false;
+  }
 
   bool value_changed = false;
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
+    if (mouse.button == Event::Mouse::Button::Left &&
+        mouse.motion == Event::Mouse::Motion::Pressed) {
       int click_x = mouse.x - 1;
       int click_y = mouse.y - 1;
       int abs_x = root->absolute_x();
@@ -711,18 +773,15 @@ bool slider::OnEvent(Event event) {
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w &&
-          click_y >= abs_y && click_y < abs_y + layout_h) {
-        
+      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+          click_y < abs_y + layout_h) {
         // Focus this element
         if (root->Parent()) {
           Element* root_el = root;
           while (root_el->Parent()) {
             root_el = root_el->Parent();
           }
-          root_el->Visit([](Element& el) {
-            el.set_focused(false);
-          });
+          root_el->Visit([](Element& el) { el.set_focused(false); });
         }
         root->set_focused(true);
 
@@ -730,11 +789,11 @@ bool slider::OnEvent(Event event) {
         int inner_x = click_x - abs_x;
         int track_w = std::max(2, width);
         int pos = std::clamp(inner_x, 0, track_w - 1);
-        
+
         // Map pos to [min, max]
         double pct = static_cast<double>(pos) / (track_w - 1);
         int raw_val = min + static_cast<int>(std::round(pct * (max - min)));
-        
+
         // Snap to nearest step
         int remainder = (raw_val - min) % step;
         int new_val = raw_val;
@@ -755,12 +814,15 @@ bool slider::OnEvent(Event event) {
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed || kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion == Event::Keyboard::Motion::Pressed ||
+        kb.motion == Event::Keyboard::Motion::Repeat) {
       if (root->focused()) {
         int delta = 0;
-        if (kb.special == Event::Keyboard::Special::ArrowLeft || kb.special == Event::Keyboard::Special::ArrowDown) {
+        if (kb.special == Event::Keyboard::Special::ArrowLeft ||
+            kb.special == Event::Keyboard::Special::ArrowDown) {
           delta = -step;
-        } else if (kb.special == Event::Keyboard::Special::ArrowRight || kb.special == Event::Keyboard::Special::ArrowUp) {
+        } else if (kb.special == Event::Keyboard::Special::ArrowRight ||
+                   kb.special == Event::Keyboard::Special::ArrowUp) {
           delta = step;
         }
 
@@ -824,7 +886,8 @@ bool slider::Digest() {
   int range = max - min;
   int pos = 0;
   if (range > 0) {
-    pos = static_cast<int>(std::round(static_cast<double>(value - min) / range * (track_w - 1)));
+    pos = static_cast<int>(
+        std::round(static_cast<double>(value - min) / range * (track_w - 1)));
   }
   pos = std::clamp(pos, 0, track_w - 1);
 
@@ -869,7 +932,8 @@ bool progress::Digest() {
   double range = max;
   int pos = 0;
   if (range > 0) {
-    pos = static_cast<int>(std::round(std::clamp(value / range, 0.0, 1.0) * track_w));
+    pos = static_cast<int>(
+        std::round(std::clamp(value / range, 0.0, 1.0) * track_w));
   }
   pos = std::clamp(pos, 0, track_w);
 
@@ -939,7 +1003,9 @@ std::string_view select::Setup() {
 std::vector<OptionInfo> select::GetOptions() {
   std::vector<OptionInfo> opts;
   auto* root = Root();
-  if (!root) return opts;
+  if (!root) {
+    return opts;
+  }
 
   root->Visit([&](Element& el) {
     if (el.tag() == "option") {
@@ -961,13 +1027,16 @@ std::vector<OptionInfo> select::GetOptions() {
 
 bool select::OnEvent(Event event) {
   auto* root = Root();
-  if (!root) return false;
+  if (!root) {
+    return false;
+  }
 
   bool changed = false;
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
+    if (mouse.button == Event::Mouse::Button::Left &&
+        mouse.motion == Event::Mouse::Motion::Pressed) {
       int click_x = mouse.x - 1;
       int click_y = mouse.y - 1;
       int abs_x = root->absolute_x();
@@ -975,18 +1044,15 @@ bool select::OnEvent(Event event) {
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w &&
-          click_y >= abs_y && click_y < abs_y + layout_h) {
-        
+      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+          click_y < abs_y + layout_h) {
         // Focus this element
         if (root->Parent()) {
           Element* root_el = root;
           while (root_el->Parent()) {
             root_el = root_el->Parent();
           }
-          root_el->Visit([](Element& el) {
-            el.set_focused(false);
-          });
+          root_el->Visit([](Element& el) { el.set_focused(false); });
         }
         root->set_focused(true);
 
@@ -1013,7 +1079,8 @@ bool select::OnEvent(Event event) {
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed || kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion == Event::Keyboard::Motion::Pressed ||
+        kb.motion == Event::Keyboard::Motion::Repeat) {
       if (root->focused()) {
         auto options = GetOptions();
         if (is_open) {
@@ -1026,13 +1093,17 @@ bool select::OnEvent(Event event) {
           }
           if (kb.special == Event::Keyboard::Special::ArrowUp) {
             if (!options.empty()) {
-              hovered_index = (hovered_index - 1 + options.size()) % options.size();
+              hovered_index =
+                  (hovered_index - 1 + options.size()) % options.size();
               changed = true;
             }
             return true;
           }
-          if (kb.special == Event::Keyboard::Special::Return || (kb.special == Event::Keyboard::Special::None && kb.codepoint == 32)) {
-            if (hovered_index >= 0 && hovered_index < static_cast<int>(options.size())) {
+          if (kb.special == Event::Keyboard::Special::Return ||
+              (kb.special == Event::Keyboard::Special::None &&
+               kb.codepoint == 32)) {
+            if (hovered_index >= 0 &&
+                hovered_index < static_cast<int>(options.size())) {
               SelectOption(options[hovered_index].value);
             } else {
               is_open = false;
@@ -1046,7 +1117,8 @@ bool select::OnEvent(Event event) {
             return true;
           }
         } else {
-          if (kb.special == Event::Keyboard::Special::ArrowDown || kb.special == Event::Keyboard::Special::ArrowUp) {
+          if (kb.special == Event::Keyboard::Special::ArrowDown ||
+              kb.special == Event::Keyboard::Special::ArrowUp) {
             if (!options.empty()) {
               int curr_idx = -1;
               for (int i = 0; i < static_cast<int>(options.size()); ++i) {
@@ -1057,7 +1129,10 @@ bool select::OnEvent(Event event) {
               }
               int new_idx = curr_idx;
               if (kb.special == Event::Keyboard::Special::ArrowDown) {
-                new_idx = (curr_idx == -1) ? 0 : std::min(static_cast<int>(options.size() - 1), curr_idx + 1);
+                new_idx = (curr_idx == -1)
+                              ? 0
+                              : std::min(static_cast<int>(options.size() - 1),
+                                         curr_idx + 1);
               } else {
                 new_idx = (curr_idx == -1) ? 0 : std::max(0, curr_idx - 1);
               }
@@ -1068,7 +1143,9 @@ bool select::OnEvent(Event event) {
             }
             return true;
           }
-          if (kb.special == Event::Keyboard::Special::Return || (kb.special == Event::Keyboard::Special::None && kb.codepoint == 32)) {
+          if (kb.special == Event::Keyboard::Special::Return ||
+              (kb.special == Event::Keyboard::Special::None &&
+               kb.codepoint == 32)) {
             is_open = true;
             if (!options.empty()) {
               hovered_index = 0;
@@ -1091,7 +1168,8 @@ bool select::OnEvent(Event event) {
 }
 
 bool select::Digest() {
-  std::cout << "select::Digest this=" << this << " value=" << value << " is_open=" << is_open << std::endl;
+  std::cout << "select::Digest this=" << this << " value=" << value
+            << " is_open=" << is_open << std::endl;
   auto* root = Root();
   if (root) {
     bool is_focused = root->focused();
@@ -1181,11 +1259,14 @@ std::string_view option::Setup() {
 
 bool option::OnEvent(Event event) {
   auto* root = Root();
-  if (!root) return false;
+  if (!root) {
+    return false;
+  }
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left && mouse.motion == Event::Mouse::Motion::Pressed) {
+    if (mouse.button == Event::Mouse::Button::Left &&
+        mouse.motion == Event::Mouse::Motion::Pressed) {
       int click_x = mouse.x - 1;
       int click_y = mouse.y - 1;
       int abs_x = root->absolute_x();
@@ -1193,12 +1274,13 @@ bool option::OnEvent(Event event) {
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w &&
-          click_y >= abs_y && click_y < abs_y + layout_h) {
+      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+          click_y < abs_y + layout_h) {
         Element* parent_el = root->Parent();
         while (parent_el) {
           if (parent_el->tag() == "select" && parent_el->component()) {
-            auto* select_comp = const_cast<ComponentBase*>(parent_el->component());
+            auto* select_comp =
+                const_cast<ComponentBase*>(parent_el->component());
             auto* sel = static_cast<rtxui::select*>(select_comp);
             sel->SelectOption(value);
             return true;
@@ -1271,6 +1353,6 @@ int RegisterDefaults = []() {
   RegisterGlobalComponent("option", []() { return Ref<option>::New(); });
   return 0;
 }();
-} // namespace
+}  // namespace
 
 }  // namespace rtxui

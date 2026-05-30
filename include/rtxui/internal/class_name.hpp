@@ -16,8 +16,7 @@ constexpr std::string_view ClassName() {
   constexpr std::string_view suffix = "]";
 #elif defined(__GNUC__)
   constexpr std::string_view full = __PRETTY_FUNCTION__;
-  constexpr std::string_view prefix =
-      "ClassName() [with T = ";
+  constexpr std::string_view prefix = "ClassName() [with T = ";
   constexpr std::string_view suffix = ";";
 #elif defined(_MSC_VER)
   const std::string_view full = __FUNCSIG__;

@@ -5,11 +5,11 @@
 #define RTXUI_TERMINAL_TERMINAL_INPUT_PARSER
 
 #include <functional>
-#include <optional> // for std::optional
-#include <string>  // for string
-#include <vector>  // for vector
+#include <optional>  // for std::optional
+#include <string>    // for string
+#include <vector>    // for vector
 
-#include "rtxui/internal/event.hpp"   // for Event
+#include "rtxui/internal/event.hpp"  // for Event
 
 // Parse a sequence of |char| across |time|. Produces |Event|.
 class TerminalInputParser {

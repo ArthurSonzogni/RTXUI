@@ -8,7 +8,6 @@ using namespace rtxui;
 class HelloWorldApp : public Component<HelloWorldApp> {
  public:
   std::string_view Setup() override {
-
     return R"html(
       <div class="card">
         Hello World from RTXUI!

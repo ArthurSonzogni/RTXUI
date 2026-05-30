@@ -19,7 +19,6 @@ class Box : public Component<Box> {
   }
 
   std::string_view Setup() override {
-
     return R"html(
       <div class="box-content">
         {text}
@@ -45,9 +44,6 @@ class Box : public Component<Box> {
 class LayoutDemo : public Component<LayoutDemo> {
  public:
   std::string_view Setup() override {
-
-
-
     Import<Box>();
     return R"html(
       <div>
