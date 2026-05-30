@@ -502,9 +502,12 @@ void Screen::Draw() {
 
   std::string new_output = texture.Render();
 
-  if (has_drawn_ && last_height_ > 0) {
-    // Reset cursor up by the number of printed lines
-    device_->Write("\x1b[" + std::to_string(last_height_) + "A");
+  if (has_drawn_) {
+    if (last_height_ > 0) {
+      device_->Write("\r\x1b[" + std::to_string(last_height_) + "A");
+    }
+  } else {
+    device_->Write("\x1b[2J\x1b[H");
   }
 
   device_->Write(new_output);
