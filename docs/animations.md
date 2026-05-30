@@ -1,3 +1,14 @@
+<script setup>
+import { ref } from 'vue'
+const tabPseudo = ref('demo')
+const tabTransitions = ref('demo')
+const tabAnimation = ref('demo')
+const tabSlider = ref('demo')
+const tabCheckbox = ref('demo')
+const tabSelect = ref('demo')
+</script>
+
+
 # Animations & Hover
 
 RTXUI supports CSS-style animations and dynamic interactive states (pseudo-classes) on DOM elements. This allows you to build terminals with smooth color transitions, scaling borders, and responsive hover/active effects without writing manual frame loops or blocking input polling.
@@ -24,7 +35,18 @@ RTXUI supports the following interactive pseudo-classes:
 
 ### Minimal Interactive Demo
 
-Below is the C++ code and the live WebAssembly terminal illustrating `:hover`, `:active`, and `:focus` interactive pseudo-classes. This file is located in `example/pseudo_classes.cpp`.
+Below is the interactive tab view for `:hover`, `:active`, and `:focus` pseudo-classes (defined in `example/pseudo_classes.cpp`).
+
+<div class="tabs-container">
+  <div class="tabs-nav">
+    <button class="tab-btn" :class="{ active: tabPseudo === 'demo' }" @click="tabPseudo = 'demo'">Interactive Demo</button>
+    <button class="tab-btn" :class="{ active: tabPseudo === 'code' }" @click="tabPseudo = 'code'">C++ Source Code</button>
+  </div>
+  <div class="tab-content">
+    <div v-show="tabPseudo === 'demo'">
+      <WasmTerminal src="/wasm/rtxui_example_pseudo_classes.js" :cols="80" :rows="8" />
+    </div>
+    <div v-show="tabPseudo === 'code'" v-pre>
 
 ```cpp
 #include <iostream>
@@ -92,7 +114,9 @@ int main() {
 }
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_pseudo_classes.js" :cols="80" :rows="8" />
+    </div>
+  </div>
+</div>
 
 ---
 
@@ -125,7 +149,18 @@ The following timing/easing curves are supported:
 
 ### Minimal Transition Demo
 
-Below is the C++ code and the live WebAssembly terminal illustrating smooth background-color and border-color transitions. This file is located in `example/transitions.cpp`.
+Below is the interactive tab view for smooth background-color and border-color transitions (defined in `example/transitions.cpp`).
+
+<div class="tabs-container">
+  <div class="tabs-nav">
+    <button class="tab-btn" :class="{ active: tabTransitions === 'demo' }" @click="tabTransitions = 'demo'">Interactive Demo</button>
+    <button class="tab-btn" :class="{ active: tabTransitions === 'code' }" @click="tabTransitions = 'code'">C++ Source Code</button>
+  </div>
+  <div class="tab-content">
+    <div v-show="tabTransitions === 'demo'">
+      <WasmTerminal src="/wasm/rtxui_example_transitions.js" :cols="80" :rows="8" />
+    </div>
+    <div v-show="tabTransitions === 'code'" v-pre>
 
 ```cpp
 #include <iostream>
@@ -187,15 +222,34 @@ int main() {
 }
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_transitions.js" :cols="80" :rows="8" />
+    </div>
+  </div>
+</div>
 
 ---
 
-## 3. Code Example: Animation & Layout Demo
+## 3. Interactive Demos
 
-Here is a complete, compilable example illustrating hover transitions and flex layout grows. This file is located in `example/animation.cpp`.
+Here are several interactive demos built with RTXUI and compiled to WebAssembly. For each example, you can interact with the live terminal display or inspect the underlying C++ source code. The demo is displayed first by default.
+
+### Primary Animation & Flex Layout Demo
+Move your mouse cursor over the **Hover Me** button and the **Grow Me** flex box to see the transitions interpolate in real-time.
+
+<div class="tabs-container">
+  <div class="tabs-nav">
+    <button class="tab-btn" :class="{ active: tabAnimation === 'demo' }" @click="tabAnimation = 'demo'">Interactive Demo</button>
+    <button class="tab-btn" :class="{ active: tabAnimation === 'code' }" @click="tabAnimation = 'code'">C++ Source Code</button>
+  </div>
+  <div class="tab-content">
+    <div v-show="tabAnimation === 'demo'">
+      <WasmTerminal src="/wasm/rtxui_example_animation.js" :cols="80" :rows="20" />
+    </div>
+    <div v-show="tabAnimation === 'code'" v-pre>
 
 ```cpp
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
 #include <iostream>
 #include <rtxui/rtxui.hpp>
 
@@ -328,28 +382,350 @@ int main() {
 }
 ```
 
----
-
-## 4. Interactive Easing & Transitions Demo
-
-Below is the live interactive WebAssembly build of `example/animation.cpp`. Move your mouse cursor over the **Hover Me** button and the **Grow** flex box to see the CSS transitions interpolate in real-time.
-
-<WasmTerminal src="/wasm/rtxui_example_animation.js" :cols="80" :rows="20" />
+    </div>
+  </div>
+</div>
 
 ---
 
-## 5. Other Interactive Components Using Transitions
+### Slider Component Demo
+The Slider component utilizes `:hover` and `:active` transitions to smoothly highlight the track and adjust the value slider thumb.
 
-Transitions are deeply integrated into RTXUI's default component library to provide micro-animations on interactive states.
+<div class="tabs-container">
+  <div class="tabs-nav">
+    <button class="tab-btn" :class="{ active: tabSlider === 'demo' }" @click="tabSlider = 'demo'">Interactive Demo</button>
+    <button class="tab-btn" :class="{ active: tabSlider === 'code' }" @click="tabSlider = 'code'">C++ Source Code</button>
+  </div>
+  <div class="tab-content">
+    <div v-show="tabSlider === 'demo'">
+      <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="10" />
+    </div>
+    <div v-show="tabSlider === 'code'" v-pre>
 
-### Slider Component
-The Slider component utilizes `:hover` and `:active` transitions to smoothly highlight the track and handle.
-<WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="10" />
+```cpp
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+#include <iostream>
+#include <rtxui/rtxui.hpp>
 
-### Checkbox & Button Transitions
+using namespace rtxui;
+
+class SliderDemo : public Component<SliderDemo> {
+ public:
+  int volume = 50;
+
+  SliderDemo() { Bind(volume); }
+
+  std::string_view Setup() override {
+    return R"html(
+      <div class="container">
+        <p class="title">Interactive Slider Element</p>
+        <p class="desc">
+          Drag the thumb with mouse click or navigate using Arrow Keys (Left/Right or Up/Down) when focused to adjust the value.
+        </p>
+        
+        <div class="slider-wrapper">
+          <span class="label">Volume:</span>
+          <slider value="{volume}" min="0" max="100" step="5" width="30" />
+        </div>
+        
+        <div class="output-box">
+          <span class="label">Live Volume Value:</span>
+          <span class="value">{volume}%</span>
+        </div>
+      </div>
+
+      <style>
+        self {
+          display: block;
+          padding: 1;
+          background-color: rgb(15, 23, 42);
+          color: white;
+          border: tall;
+          border-color: rgb(56, 189, 248);
+        }
+        .container {
+          display: block;
+        }
+        .title {
+          display: block;
+          font-weight: bold;
+          color: rgb(56, 189, 248);
+          margin-bottom: 1;
+        }
+        .desc {
+          display: block;
+          color: rgb(156, 163, 175);
+          margin-bottom: 2;
+        }
+        .slider-wrapper {
+          display: flex;
+          gap: 2;
+          margin-bottom: 2;
+          align-items: center;
+        }
+        .output-box {
+          display: flex;
+          gap: 2;
+          margin-top: 2;
+        }
+        .label {
+          color: rgb(56, 189, 248);
+        }
+        .value {
+          font-weight: bold;
+          color: rgb(244, 63, 94);
+        }
+      </style>
+    )html";
+  }
+};
+
+int main() {
+  auto app = Ref<SliderDemo>::New();
+  Screen screen(app);
+  screen.Loop();
+  return 0;
+}
+```
+
+    </div>
+  </div>
+</div>
+
+---
+
+### Checkbox & Button Transitions Demo
 Buttons and checkboxes fade their background colors and borders on hover/clicks using transitions.
-<WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="12" />
 
-### Dropdown Select Component
+<div class="tabs-container">
+  <div class="tabs-nav">
+    <button class="tab-btn" :class="{ active: tabCheckbox === 'demo' }" @click="tabCheckbox = 'demo'">Interactive Demo</button>
+    <button class="tab-btn" :class="{ active: tabCheckbox === 'code' }" @click="tabCheckbox = 'code'">C++ Source Code</button>
+  </div>
+  <div class="tab-content">
+    <div v-show="tabCheckbox === 'demo'">
+      <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="12" />
+    </div>
+    <div v-show="tabCheckbox === 'code'" v-pre>
+
+```cpp
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+#include <iostream>
+#include <rtxui/rtxui.hpp>
+
+using namespace rtxui;
+
+class CheckboxDemo : public Component<CheckboxDemo> {
+ public:
+  bool checked = false;
+
+  CheckboxDemo() { Bind(checked); }
+
+  std::string_view Setup() override {
+    return R"html(
+      <div class="container">
+        <p class="title">Interactive Checkbox Element</p>
+        <p class="desc">A binary toggle component. Click on the checkbox or focus it and press Space to toggle the state.</p>
+        
+        <checkbox checked="{checked}">Enable Notifications</checkbox>
+        
+        <div class="output-box">
+          <span class="label">Live Checked State:</span>
+          <span class="value">{checked}</span>
+        </div>
+      </div>
+
+      <style>
+        self {
+          display: block;
+          padding: 1;
+          background-color: rgb(15, 23, 42);
+          color: white;
+          border: tall;
+          border-color: rgb(56, 189, 248);
+        }
+        .container {
+          display: block;
+        }
+        .title {
+          display: block;
+          font-weight: bold;
+          color: rgb(56, 189, 248);
+          margin-bottom: 1;
+        }
+        .desc {
+          display: block;
+          color: rgb(156, 163, 175);
+          margin-bottom: 2;
+        }
+        .output-box {
+          display: flex;
+          gap: 2;
+          margin-top: 2;
+        }
+        .label {
+          color: rgb(56, 189, 248);
+        }
+        .value {
+          font-weight: bold;
+          color: rgb(244, 63, 94);
+        }
+      </style>
+    )html";
+  }
+};
+
+int main() {
+  auto app = Ref<CheckboxDemo>::New();
+  Screen screen(app);
+  screen.Loop();
+  return 0;
+}
+```
+
+    </div>
+  </div>
+</div>
+
+---
+
+### Dropdown Select Component Demo
 The Select dropdown list transitions menu items smoothly during keyboard navigation or mouse hovering.
-<WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="15" />
+
+<div class="tabs-container">
+  <div class="tabs-nav">
+    <button class="tab-btn" :class="{ active: tabSelect === 'demo' }" @click="tabSelect = 'demo'">Interactive Demo</button>
+    <button class="tab-btn" :class="{ active: tabSelect === 'code' }" @click="tabSelect = 'code'">C++ Source Code</button>
+  </div>
+  <div class="tab-content">
+    <div v-show="tabSelect === 'demo'">
+      <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="15" />
+    </div>
+    <div v-show="tabSelect === 'code'" v-pre>
+
+```cpp
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+#include <iostream>
+#include <rtxui/rtxui.hpp>
+
+using namespace rtxui;
+
+class SelectDemo : public Component<SelectDemo> {
+ public:
+  std::string my_theme = "light";
+
+  SelectDemo() { Bind(my_theme); }
+
+  std::string_view Setup() override {
+    return R"html(
+      <div class="container">
+        <p class="title">Interactive Select & Option Elements</p>
+        <p class="desc">Click the select dropdown or focus it with Tab and use Enter/Space to open. Navigate options using ArrowUp/ArrowDown, and select with Enter.</p>
+        
+        <select value="{my_theme}">
+          <option value="dark">Dark Theme</option>
+          <option value="light">Light Theme</option>
+          <option value="solarized">Solarized</option>
+        </select>
+        
+        <div class="output-box">
+          <span class="label">Current Theme Value:</span>
+          <span class="value">{my_theme}</span>
+        </div>
+      </div>
+
+      <style>
+        self {
+          display: block;
+          padding: 1;
+          background-color: rgb(15, 23, 42);
+          color: white;
+          border: tall;
+          border-color: rgb(56, 189, 248);
+        }
+        .container {
+          display: block;
+        }
+        .title {
+          display: block;
+          font-weight: bold;
+          color: rgb(56, 189, 248);
+          margin-bottom: 1;
+        }
+        .desc {
+          display: block;
+          color: rgb(156, 163, 175);
+          margin-bottom: 2;
+        }
+        .output-box {
+          display: flex;
+          gap: 2;
+          margin-top: 2;
+        }
+        .label {
+          color: rgb(56, 189, 248);
+        }
+        .value {
+          font-weight: bold;
+          color: rgb(244, 63, 94);
+        }
+      </style>
+    )html";
+  }
+};
+
+int main() {
+  auto app = Ref<SelectDemo>::New();
+  Screen screen(app);
+  screen.Loop();
+  return 0;
+}
+```
+
+    </div>
+  </div>
+</div>
+
+<style>
+.tabs-container {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  margin: 20px 0;
+  overflow: hidden;
+  background-color: var(--vp-c-bg-soft);
+}
+.tabs-nav {
+  display: flex;
+  background-color: var(--vp-c-bg-mute);
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding: 0 12px;
+}
+.tab-btn {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+.tab-btn:hover {
+  color: var(--vp-c-text-1);
+}
+.tab-btn.active {
+  color: var(--vp-c-brand-1);
+  border-bottom-color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+.tab-content {
+  padding: 16px;
+}
+</style>
