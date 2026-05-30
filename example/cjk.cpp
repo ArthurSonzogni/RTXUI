@@ -75,7 +75,7 @@ class CJKDemo : public Component<CJKDemo> {
           display: block;
           margin-top: 1;
           padding: 1;
-          border: solid;
+          border: tall;
           border-color: #3b82f6;
         }
         .title {

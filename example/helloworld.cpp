@@ -20,7 +20,7 @@ class HelloWorldApp : public Component<HelloWorldApp> {
           background-color: rgb(15, 23, 42);
         }
         .card {
-          border: solid;
+          border: tall;
           border-color: rgb(59, 130, 246);
           padding: 1;
           color: rgb(241, 245, 249);

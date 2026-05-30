@@ -148,7 +148,7 @@ class App : public Component<App> {
         button {
           background-color: #1d4ed8;
           color: white;
-          border: solid;
+          border: tall;
           border-color: #3b82f6;
           padding-left: 1;
           padding-right: 1;
@@ -168,7 +168,7 @@ class App : public Component<App> {
           height: 6;
           overflow-y: scroll;
           scroll-speed: 1;
-          border: ascii;
+          border: tall;
           border-color: #3b82f6;
         }
       </style>

@@ -31,7 +31,7 @@ class Box : public Component<Box> {
           flex-grow: 1;
         }
         .box-content {
-          border: round;
+          border: tall;
           padding-left: 1;
           padding-right: 1;
           color: {color};
@@ -65,7 +65,7 @@ class LayoutDemo : public Component<LayoutDemo> {
         self {
           display: block;
           padding: 1;
-          border: double;
+          border: tall;
           border-color: magenta;
           background-color: rgb(10, 10, 10);
           color: white;

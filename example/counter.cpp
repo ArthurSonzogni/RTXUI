@@ -59,7 +59,7 @@ class Counter : public Component<Counter> {
           margin-right: 2;
         }
         button {
-          border: solid;
+          border: tall;
           border-color: rgb(59, 130, 246);
           padding-left: 1;
           padding-right: 1;
