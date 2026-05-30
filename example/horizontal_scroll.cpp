@@ -13,69 +13,77 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
     Import<rtxui::h1>();
     Import<rtxui::p>();
     return R"html(
-      <div class="main-container">
+      <div class="header">
         <h1>RTXUI Horizontal Scrolling Demo</h1>
         <p class="desc">
           This demo showcases horizontal scrollable elements. Scroll horizontally using Shift + mouse wheel,
           WheelLeft/Right events, or ArrowLeft/ArrowRight keys when focused.
         </p>
+      </div>
 
-        <div class="outer-scroll">
-          <div class="item first">[Outer Start]</div>
-          <div class="item">[Scroll right to find nested scrollboxes...]</div>
-          <div class="item">[Item A]</div>
-          <div class="item">[Item B]</div>
+      <div class="item first">[Outer Start]</div>
+      <div class="item">[Scroll right to find nested scrollboxes...]</div>
+      <div class="item">[Item A]</div>
+      <div class="item">[Item B]</div>
 
-          <div class="nested-container">
-            <div class="inner-title">Nested Box A (Light Blue tall Border)</div>
-            <div class="inner-scroll box-a">
-              <div class="inner-item first">[A-1]</div>
-              <div class="inner-item">[A-2]</div>
-              <div class="inner-item">[A-3]</div>
-              <div class="inner-item">[A-4]</div>
-              <div class="inner-item">[A-5]</div>
-              <div class="inner-item">[A-6]</div>
-              <div class="inner-item">[A-7]</div>
-              <div class="inner-item">[A-8]</div>
-              <div class="inner-item">[A-9]</div>
-              <div class="inner-item last">[A-End]</div>
-            </div>
-          </div>
-
-          <div class="item">[Middle Item]</div>
-
-          <div class="nested-container">
-            <div class="inner-title">Nested Box B (Steel Blue tall Border)</div>
-            <div class="inner-scroll box-b">
-              <div class="inner-item first">[B-1]</div>
-              <div class="inner-item">[B-2]</div>
-              <div class="inner-item">[B-3]</div>
-              <div class="inner-item">[B-4]</div>
-              <div class="inner-item">[B-5]</div>
-              <div class="inner-item">[B-6]</div>
-              <div class="inner-item">[B-7]</div>
-              <div class="inner-item">[B-8]</div>
-              <div class="inner-item">[B-9]</div>
-              <div class="inner-item last">[B-End]</div>
-            </div>
-          </div>
-
-          <div class="item last">[Outer End]</div>
+      <div class="nested-container">
+        <div class="inner-title">Nested Box A (Light Blue Border)</div>
+        <div class="inner-scroll box-a">
+          <div class="inner-item first">[A-1]</div>
+          <div class="inner-item">[A-2]</div>
+          <div class="inner-item">[A-3]</div>
+          <div class="inner-item">[A-4]</div>
+          <div class="inner-item">[A-5]</div>
+          <div class="inner-item">[A-6]</div>
+          <div class="inner-item">[A-7]</div>
+          <div class="inner-item">[A-8]</div>
+          <div class="inner-item">[A-9]</div>
+          <div class="inner-item last">[A-End]</div>
         </div>
       </div>
 
+      <div class="item">[Middle Item]</div>
+
+      <div class="nested-container">
+        <div class="inner-title">Nested Box B (Steel Blue Border)</div>
+        <div class="inner-scroll box-b">
+          <div class="inner-item first">[B-1]</div>
+          <div class="inner-item">[B-2]</div>
+          <div class="inner-item">[B-3]</div>
+          <div class="inner-item">[B-4]</div>
+          <div class="inner-item">[B-5]</div>
+          <div class="inner-item">[B-6]</div>
+          <div class="inner-item">[B-7]</div>
+          <div class="inner-item">[B-8]</div>
+          <div class="inner-item">[B-9]</div>
+          <div class="inner-item last">[B-End]</div>
+        </div>
+      </div>
+
+      <div class="item last">[Outer End]</div>
+
       <style>
         self {
-          display: block;
-          padding: 1;
+          display: flex;
+          flex-direction: row;
+          width: 100%;
+          height: 100%;
+          overflow-x: scroll;
+          scroll-speed-x: 2;
+          border: tall;
+          border-color: rgb(29, 78, 216);
           background-color: rgb(15, 23, 42);
           color: rgb(241, 245, 249);
+          padding: 1;
         }
-        .main-container {
+        .header {
           display: block;
+          width: 35;
+          height: 8;
+          flex-shrink: 0;
+          margin-right: 2;
           border: tall;
           border-color: rgb(30, 41, 59);
-          background-color: rgb(30, 41, 59);
           padding: 1;
         }
         h1 {
@@ -87,21 +95,10 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           color: rgb(148, 163, 184);
           margin-bottom: 1;
         }
-        .outer-scroll {
-          display: flex;
-          flex-direction: row;
-          width: 80;
-          height: 10;
-          overflow-x: scroll;
-          scroll-speed-x: 2;
-          border: tall;
-          border-color: rgb(29, 78, 216);
-          background-color: rgb(10, 25, 52);
-          padding: 1;
-        }
         .item {
           display: block;
           width: 25;
+          height: 8;
           margin-right: 2;
           background-color: rgb(30, 41, 59);
           color: rgb(219, 234, 254);
@@ -112,6 +109,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
         .nested-container {
           display: block;
           width: 40;
+          height: 8;
           margin-right: 2;
         }
         .inner-title {
