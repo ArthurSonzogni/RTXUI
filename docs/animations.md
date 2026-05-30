@@ -44,9 +44,10 @@ Below is the interactive tab view for `:hover`, `:active`, and `:focus` pseudo-c
   </div>
   <div class="tab-content">
     <div v-show="tabPseudo === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_pseudo_classes.js" :cols="80" :rows="8" />
+      <WasmTerminal src="/wasm/rtxui_example_pseudo_classes.js" :cols="80" :rows="60" />
     </div>
-    <div v-show="tabPseudo === 'code'" v-pre>
+    <div v-show="tabPseudo === 'code'">
+      <div v-pre>
 
 ```cpp
 #include <iostream>
@@ -113,9 +114,9 @@ int main() {
   return 0;
 }
 ```
-
-    </div>
   </div>
+</div>
+</div>
 </div>
 
 ---
@@ -158,9 +159,10 @@ Below is the interactive tab view for smooth background-color and border-color t
   </div>
   <div class="tab-content">
     <div v-show="tabTransitions === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_transitions.js" :cols="80" :rows="8" />
+      <WasmTerminal src="/wasm/rtxui_example_transitions.js" :cols="80" :rows="60" />
     </div>
-    <div v-show="tabTransitions === 'code'" v-pre>
+    <div v-show="tabTransitions === 'code'">
+      <div v-pre>
 
 ```cpp
 #include <iostream>
@@ -221,9 +223,9 @@ int main() {
   return 0;
 }
 ```
-
-    </div>
   </div>
+</div>
+</div>
 </div>
 
 ---
@@ -242,9 +244,10 @@ Move your mouse cursor over the **Hover Me** button and the **Grow Me** flex box
   </div>
   <div class="tab-content">
     <div v-show="tabAnimation === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_animation.js" :cols="80" :rows="20" />
+      <WasmTerminal src="/wasm/rtxui_example_animation.js" :cols="80" :rows="60" />
     </div>
-    <div v-show="tabAnimation === 'code'" v-pre>
+    <div v-show="tabAnimation === 'code'">
+      <div v-pre>
 
 ```cpp
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
@@ -381,9 +384,9 @@ int main() {
   return 0;
 }
 ```
-
-    </div>
   </div>
+</div>
+</div>
 </div>
 
 ---
@@ -398,9 +401,10 @@ The Slider component utilizes `:hover` and `:active` transitions to smoothly hig
   </div>
   <div class="tab-content">
     <div v-show="tabSlider === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="10" />
+      <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="60" />
     </div>
-    <div v-show="tabSlider === 'code'" v-pre>
+    <div v-show="tabSlider === 'code'">
+      <div v-pre>
 
 ```cpp
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
@@ -427,7 +431,7 @@ class SliderDemo : public Component<SliderDemo> {
         
         <div class="slider-wrapper">
           <span class="label">Volume:</span>
-          <slider value="{volume}" min="0" max="100" step="5" width="30" />
+          <slider value="{volume}" min="0" max="100" step="5" width="30"></slider>
         </div>
         
         <div class="output-box">
@@ -489,9 +493,9 @@ int main() {
   return 0;
 }
 ```
-
-    </div>
   </div>
+</div>
+</div>
 </div>
 
 ---
@@ -506,9 +510,10 @@ Buttons and checkboxes fade their background colors and borders on hover/clicks 
   </div>
   <div class="tab-content">
     <div v-show="tabCheckbox === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="12" />
+      <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="60" />
     </div>
-    <div v-show="tabCheckbox === 'code'" v-pre>
+    <div v-show="tabCheckbox === 'code'">
+      <div v-pre>
 
 ```cpp
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
@@ -586,9 +591,9 @@ int main() {
   return 0;
 }
 ```
-
-    </div>
   </div>
+</div>
+</div>
 </div>
 
 ---
@@ -603,9 +608,10 @@ The Select dropdown list transitions menu items smoothly during keyboard navigat
   </div>
   <div class="tab-content">
     <div v-show="tabSelect === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="15" />
+      <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="60" />
     </div>
-    <div v-show="tabSelect === 'code'" v-pre>
+    <div v-show="tabSelect === 'code'">
+      <div v-pre>
 
 ```cpp
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
@@ -687,9 +693,9 @@ int main() {
   return 0;
 }
 ```
-
-    </div>
   </div>
+</div>
+</div>
 </div>
 
 <style>

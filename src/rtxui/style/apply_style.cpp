@@ -319,6 +319,56 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   auto p = declaration.property;
   auto v = declaration.value;
 
+  if (p == "transition") {
+    std::string_view value_view = v;
+    style.transitions.clear();
+    while (!value_view.empty()) {
+      size_t comma = value_view.find(',');
+      std::string_view token = (comma == std::string_view::npos) ? value_view : value_view.substr(0, comma);
+      while (!token.empty() && std::isspace(static_cast<unsigned char>(token.front()))) {
+        token.remove_prefix(1);
+      }
+      while (!token.empty() && std::isspace(static_cast<unsigned char>(token.back()))) {
+        token.remove_suffix(1);
+      }
+      if (!token.empty()) {
+        size_t space1 = token.find(' ');
+        if (space1 != std::string_view::npos) {
+          std::string_view prop_name = token.substr(0, space1);
+          std::string_view remaining = token.substr(space1 + 1);
+          while (!remaining.empty() && std::isspace(static_cast<unsigned char>(remaining.front()))) {
+            remaining.remove_prefix(1);
+          }
+          size_t space2 = remaining.find(' ');
+          std::string_view dur_str = (space2 == std::string_view::npos) ? remaining : remaining.substr(0, space2);
+          float dur = 0.0f;
+          if (dur_str.ends_with("ms")) {
+            dur = StoF(dur_str.substr(0, dur_str.size() - 2)) / 1000.0f;
+          } else if (dur_str.ends_with("s")) {
+            dur = StoF(dur_str.substr(0, dur_str.size() - 1));
+          } else {
+            dur = StoF(dur_str);
+          }
+          std::string_view timing = "ease";
+          if (space2 != std::string_view::npos) {
+            std::string_view remaining2 = remaining.substr(space2 + 1);
+            while (!remaining2.empty() && std::isspace(static_cast<unsigned char>(remaining2.front()))) {
+              remaining2.remove_prefix(1);
+            }
+            size_t space3 = remaining2.find(' ');
+            timing = (space3 == std::string_view::npos) ? remaining2 : remaining2.substr(0, space3);
+          }
+          style.transitions.push_back({std::string(prop_name), dur, 0.0f, std::string(timing)});
+        }
+      }
+      if (comma == std::string_view::npos) {
+        break;
+      }
+      value_view = value_view.substr(comma + 1);
+    }
+    return;
+  }
+
   if (p == "background-color") {
     style.background_color = ParseColor(v);
     return;

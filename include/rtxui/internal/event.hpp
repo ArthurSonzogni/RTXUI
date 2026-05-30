@@ -168,31 +168,38 @@ struct Event {
   static const Event& UC();         \
   static const Event& Ctrl##UC();   \
   static const Event& Alt##UC();    \
-  static const Event& CtrlAlt##UC();
+  static const Event& CtrlAlt##UC()
 
-  RTXUI_DECLARE_LETTER(a, A)
-  RTXUI_DECLARE_LETTER(b, B) RTXUI_DECLARE_LETTER(c, C) RTXUI_DECLARE_LETTER(
-      d,
-      D) RTXUI_DECLARE_LETTER(e, E) RTXUI_DECLARE_LETTER(f, F)
-      RTXUI_DECLARE_LETTER(g, G) RTXUI_DECLARE_LETTER(h, H)
-          RTXUI_DECLARE_LETTER(i, I) RTXUI_DECLARE_LETTER(j, J)
-              RTXUI_DECLARE_LETTER(k, K) RTXUI_DECLARE_LETTER(l, L)
-                  RTXUI_DECLARE_LETTER(m, M) RTXUI_DECLARE_LETTER(n, N)
-                      RTXUI_DECLARE_LETTER(o, O) RTXUI_DECLARE_LETTER(p, P)
-                          RTXUI_DECLARE_LETTER(q, Q) RTXUI_DECLARE_LETTER(r, R)
-                              RTXUI_DECLARE_LETTER(s, S) RTXUI_DECLARE_LETTER(t,
-                                                                              T)
-                                  RTXUI_DECLARE_LETTER(u, U)
-                                      RTXUI_DECLARE_LETTER(v, V)
-                                          RTXUI_DECLARE_LETTER(w, W)
-                                              RTXUI_DECLARE_LETTER(x, X)
-                                                  RTXUI_DECLARE_LETTER(y, Y)
-                                                      RTXUI_DECLARE_LETTER(z, Z)
+  RTXUI_DECLARE_LETTER(a, A);
+  RTXUI_DECLARE_LETTER(b, B);
+  RTXUI_DECLARE_LETTER(c, C);
+  RTXUI_DECLARE_LETTER(d, D);
+  RTXUI_DECLARE_LETTER(e, E);
+  RTXUI_DECLARE_LETTER(f, F);
+  RTXUI_DECLARE_LETTER(g, G);
+  RTXUI_DECLARE_LETTER(h, H);
+  RTXUI_DECLARE_LETTER(i, I);
+  RTXUI_DECLARE_LETTER(j, J);
+  RTXUI_DECLARE_LETTER(k, K);
+  RTXUI_DECLARE_LETTER(l, L);
+  RTXUI_DECLARE_LETTER(m, M);
+  RTXUI_DECLARE_LETTER(n, N);
+  RTXUI_DECLARE_LETTER(o, O);
+  RTXUI_DECLARE_LETTER(p, P);
+  RTXUI_DECLARE_LETTER(q, Q);
+  RTXUI_DECLARE_LETTER(r, R);
+  RTXUI_DECLARE_LETTER(s, S);
+  RTXUI_DECLARE_LETTER(t, T);
+  RTXUI_DECLARE_LETTER(u, U);
+  RTXUI_DECLARE_LETTER(v, V);
+  RTXUI_DECLARE_LETTER(w, W);
+  RTXUI_DECLARE_LETTER(x, X);
+  RTXUI_DECLARE_LETTER(y, Y);
+  RTXUI_DECLARE_LETTER(z, Z);
 
 #undef RTXUI_DECLARE_LETTER
 
-                                                          std::string
-      Print() const;
+  std::string Print() const;
   std::strong_ordering operator<=>(const Event&) const = default;
   template <typename T>
   bool is() const {

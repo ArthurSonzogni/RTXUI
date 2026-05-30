@@ -5,7 +5,6 @@
 #define RTXUI_RTXUI_HPP_
 
 #include "rtxui/internal/component.hpp"
-#include "rtxui/internal/default_components.hpp"
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/refcounted.hpp"
 #include "rtxui/internal/screen.hpp"

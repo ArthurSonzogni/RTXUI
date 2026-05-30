@@ -19,6 +19,10 @@
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/import.hpp"
 #include "rtxui/internal/refcounted.hpp"
+namespace css {
+struct Ruleset;
+using StyleSheet = std::vector<Ruleset>;
+}
 
 namespace rtxui {
 class Element;
@@ -47,11 +51,14 @@ class ComponentBase : public RefCounted, public Bindings {
 
   void Mount();
   void Render();
+  void ResolveTargetStyles();
+  void ResolveTargetStyles(double current_time_ms);
+  const css::StyleSheet* stylesheet() const;
   virtual bool Digest() = 0;
   virtual void InitReflection();
   virtual bool OnEvent(Event event);
 
-  Element* Root();
+  Element* Root() const;
   Ref<Element> Slot(std::string_view name);
   void SetProperty(std::string_view name, std::string_view value);
   void PropagateBinding(std::string_view child_prop, std::string_view value);
@@ -65,6 +72,8 @@ class ComponentBase : public RefCounted, public Bindings {
   };
 
  protected:
+  std::unique_ptr<css::StyleSheet> stylesheet_;
+  std::vector<std::string> css_strings_;
   std::vector<BindingLink> two_way_bindings_;
   void Render(const xml::Node& node, Element* element, ComponentBase* source);
   std::string template_;
