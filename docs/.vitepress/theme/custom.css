@@ -1,0 +1,17 @@
+/* Glue the C++, HTML, and CSS reference buttons together on wider screens */
+@media (min-width: 640px) {
+  .VPHero .actions a.alt {
+    border-radius: 0;
+  }
+  .VPHero .actions a.alt ~ a.alt {
+    margin-left: -13px; /* counteract gap + border overlap */
+  }
+  .VPHero .actions a.brand + a.alt {
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+  }
+  .VPHero .actions a.alt:last-child {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+}
