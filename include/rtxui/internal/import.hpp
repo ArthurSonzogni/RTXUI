@@ -10,8 +10,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "rtxui/core/refcounted.hpp"
-#include "rtxui/reflection/class_name.hpp"
+#include "rtxui/internal/refcounted.hpp"
+#include "rtxui/internal/class_name.hpp"
 
 namespace rtxui {
 

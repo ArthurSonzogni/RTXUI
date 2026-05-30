@@ -1,9 +1,9 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/component/component.hpp"
-#include "rtxui/component/default_components.hpp"
-#include "rtxui/terminal/screen.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/default_components.hpp"
+#include "rtxui/internal/screen.hpp"
 #include "rtxui/dom/element.hpp"
 
 #include <catch2/catch_approx.hpp>

@@ -11,8 +11,6 @@
 #include <variant>  // for variant
 #include <vector>
 
-#include "rtxui/core/string.hpp"
-
 struct Event {
   struct Modifier {
     bool alt : 1 = false;

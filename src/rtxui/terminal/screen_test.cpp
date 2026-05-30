@@ -1,8 +1,9 @@
-#include "rtxui/terminal/screen.hpp"
+#include "rtxui/internal/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
-#include "rtxui/component/component.hpp"
-#include "rtxui/component/default_components.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/default_components.hpp"
 #include "catch2/catch_test_macros.hpp"
+#include "rtxui/dom/element.hpp"
 #include <memory>
 
 namespace rtxui {

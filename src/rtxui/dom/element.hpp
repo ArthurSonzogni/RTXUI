@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/core/refcounted.hpp"
+#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/style.hpp"
 
 namespace rtxui {

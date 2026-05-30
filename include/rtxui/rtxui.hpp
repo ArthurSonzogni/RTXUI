@@ -4,10 +4,10 @@
 #ifndef RTXUI_RTXUI_HPP_
 #define RTXUI_RTXUI_HPP_
 
-#include "rtxui/component/component.hpp"
-#include "rtxui/component/default_components.hpp"
-#include "rtxui/core/refcounted.hpp"
-#include "rtxui/terminal/event.hpp"
-#include "rtxui/terminal/screen.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/default_components.hpp"
+#include "rtxui/internal/refcounted.hpp"
+#include "rtxui/internal/event.hpp"
+#include "rtxui/internal/screen.hpp"
 
 #endif  // RTXUI_RTXUI_HPP_

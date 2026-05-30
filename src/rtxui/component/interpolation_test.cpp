@@ -1,11 +1,12 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/component/component.hpp"
-#include "rtxui/component/default_components.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/default_components.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include "rtxui/core/string.hpp"
+#include "rtxui/dom/element.hpp"
 
 namespace {
 

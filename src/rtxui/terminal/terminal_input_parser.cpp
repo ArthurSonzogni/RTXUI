@@ -10,7 +10,7 @@
 #include <utility>  // for move
 #include <vector>
 
-#include "rtxui/terminal/event.hpp"  // for Event
+#include "rtxui/internal/event.hpp"  // for Event
 
 std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
   static const auto& mapping = *new std::map<std::string, Event>{

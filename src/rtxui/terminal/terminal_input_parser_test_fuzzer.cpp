@@ -4,7 +4,7 @@
 #include <fuzztest/fuzztest.h>
 #include <gtest/gtest.h>
 
-#include "rtxui/terminal/event.hpp"
+#include "rtxui/internal/event.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
 void Fuzz(const std::string& s) {

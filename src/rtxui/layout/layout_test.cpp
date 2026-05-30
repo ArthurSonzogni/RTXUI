@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/component/component.hpp"
-#include "rtxui/component/default_components.hpp"
-#include "rtxui/core/refcounted.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/default_components.hpp"
+#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"

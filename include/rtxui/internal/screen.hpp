@@ -4,15 +4,18 @@
 #ifndef RTXUI_TERMINAL_SCREEN_HPP_
 #define RTXUI_TERMINAL_SCREEN_HPP_
 
-#include <termios.h>
-#include <signal.h>
 #include <memory>
 #include <string>
 
-#include "rtxui/component/component.hpp"
-#include "rtxui/terminal/terminal_device.hpp"
-#include "rtxui/terminal/event.hpp"
-#include "rtxui/terminal/terminal_input_parser.hpp"
+#include "rtxui/internal/component.hpp"
+#include "rtxui/internal/event.hpp"
+
+class TerminalInputParser;
+
+namespace rtxui {
+class TerminalDevice;
+struct PhysicalFragment;
+} // namespace rtxui
 
 namespace rtxui {
 
@@ -48,7 +51,7 @@ class Screen {
    bool running_ = true;
    std::shared_ptr<PhysicalFragment> root_fragment_;
    std::shared_ptr<TerminalDevice> device_;
-   TerminalInputParser parser_;
+   std::unique_ptr<TerminalInputParser> parser_;
    Element* focused_element_ = nullptr;
 
    // RAII raw terminal controller

@@ -1,4 +1,4 @@
-#include "rtxui/component/component.hpp"
+#include "rtxui/internal/component.hpp"
 
 #include <charconv>
 #include <cctype>
@@ -23,6 +23,10 @@
 #include "rtxui/xml/xml.hpp"
 
 namespace rtxui {
+
+ComponentBase::ComponentBase() = default;
+ComponentBase::~ComponentBase() = default;
+
 namespace {
 
 struct ElementState {
