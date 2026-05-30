@@ -4,7 +4,7 @@
 #ifndef RTXUI_DEFAULT_COMPONENTS_HPP_
 #define RTXUI_DEFAULT_COMPONENTS_HPP_
 
-#include "rtxui/component/component.hpp"
+#include "rtxui/internal/component.hpp"
 #include <string_view>
 
 namespace rtxui {

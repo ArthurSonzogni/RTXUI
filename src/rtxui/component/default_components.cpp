@@ -1,4 +1,4 @@
-#include "rtxui/component/default_components.hpp"
+#include "rtxui/internal/default_components.hpp"
 
 #include <algorithm>
 #include <cmath>

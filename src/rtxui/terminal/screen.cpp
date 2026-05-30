@@ -1,7 +1,7 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/terminal/screen.hpp"
+#include "rtxui/internal/screen.hpp"
 
 #include <cerrno>
 #include <sys/ioctl.h>
@@ -16,6 +16,7 @@
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
+#include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
 
@@ -129,7 +130,7 @@ std::shared_ptr<PhysicalFragment> FindFirstScrollableFragment(
 } // namespace
 
 Screen::Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device)
-    : component_(std::move(component)), device_(std::move(device)) {
+    : component_(std::move(component)), device_(std::move(device)), parser_(std::make_unique<TerminalInputParser>()) {
   if (!device_) {
     device_ = std::make_shared<SystemTerminalDevice>();
   }
@@ -162,9 +163,9 @@ void Screen::Step() {
   }
 
   UpdateSize();
-  parser_.Add(c);
+  parser_->Add(c);
 
-  while (auto event = parser_.GetEvent()) {
+  while (auto event = parser_->GetEvent()) {
     HandleEvent(*event);
   }
 }

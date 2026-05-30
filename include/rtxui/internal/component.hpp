@@ -14,18 +14,30 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
-#include "rtxui/component/import.hpp"
-#include "rtxui/core/refcounted.hpp"
-#include "rtxui/dom/element.hpp"
-#include "rtxui/reflection/class_name.hpp"
-#include "rtxui/terminal/event.hpp"
-#include "rtxui/xml/xml.hpp"
+#include "rtxui/internal/import.hpp"
+#include "rtxui/internal/refcounted.hpp"
+#include "rtxui/internal/class_name.hpp"
+#include "rtxui/internal/event.hpp"
+
+namespace rtxui {
+class Element;
+}  // namespace rtxui
+
+namespace xml {
+struct Node;
+using Nodes = std::vector<Node>;
+}  // namespace xml
 
 namespace rtxui {
 
 class ComponentBase : public RefCounted, public Bindings {
  public:
-  virtual ~ComponentBase() = default;
+  ComponentBase();
+  virtual ~ComponentBase();
+  ComponentBase(const ComponentBase&) = delete;
+  ComponentBase& operator=(const ComponentBase&) = delete;
+  ComponentBase(ComponentBase&&) = delete;
+  ComponentBase& operator=(ComponentBase&&) = delete;
 
   virtual std::string_view Setup() { return ""; }
   virtual std::string_view GetView() const = 0;

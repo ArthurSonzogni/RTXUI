@@ -9,7 +9,7 @@
 #include <string>  // for string
 #include <vector>  // for vector
 
-#include "rtxui/terminal/event.hpp"   // for Event
+#include "rtxui/internal/event.hpp"   // for Event
 
 // Parse a sequence of |char| across |time|. Produces |Event|.
 class TerminalInputParser {

@@ -34,17 +34,17 @@ add_library(rtxui_lib STATIC
   "src/rtxui/terminal/terminal_input_parser.cpp"
   "src/rtxui/terminal/terminal_input_parser.hpp"
   "src/rtxui/terminal/event.cpp"
-  "src/rtxui/terminal/event.hpp"
+  "include/rtxui/internal/event.hpp"
   "src/rtxui/terminal/screen.cpp"
-  "src/rtxui/terminal/screen.hpp"
+  "include/rtxui/internal/screen.hpp"
   "src/rtxui/component/component.cpp"
-  "src/rtxui/component/component.hpp"
+  "include/rtxui/internal/component.hpp"
   "src/rtxui/component/default_components.cpp"
-  "src/rtxui/component/default_components.hpp"
-  "src/rtxui/component/import.hpp"
+  "include/rtxui/internal/default_components.hpp"
+  "include/rtxui/internal/import.hpp"
   "src/rtxui/core/expected.hpp"
   "src/rtxui/core/likely.hpp"
-  "src/rtxui/core/refcounted.hpp"
+  "include/rtxui/internal/refcounted.hpp"
   "src/rtxui/core/string.cpp"
   "src/rtxui/core/string.hpp"
   "src/rtxui/core/task.cpp"
@@ -93,7 +93,7 @@ add_library(rtxui_lib STATIC
 )
 
 target_compile_features(rtxui_lib PUBLIC cxx_std_26)
-target_include_directories(rtxui_lib PUBLIC "src" "include")
+target_include_directories(rtxui_lib PUBLIC "include" PRIVATE "src")
 
 if(EMSCRIPTEN)
   add_compile_options("-sASYNCIFY")
@@ -212,6 +212,7 @@ if(RTXUI_BUILD_TESTS)
   )
   target_link_libraries(rtxui_test PRIVATE rtxui_lib)
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
+  target_include_directories(rtxui_test PRIVATE "src")
   list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
   include(CTest)
   include(Catch)
@@ -221,6 +222,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/terminal/terminal_input_parser_main.cpp"
   )
   target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui_lib)
+  target_include_directories(rtxui_terminal_input_parser PRIVATE "src")
 
 endif()
 
@@ -244,6 +246,7 @@ if (RTXUI_BUILD_FUZZERS)
   )
   include(GoogleTest)
   target_link_libraries(rtxui_fuzzer PRIVATE rtxui_lib)
+  target_include_directories(rtxui_fuzzer PRIVATE "src")
   link_fuzztest(rtxui_fuzzer)
   gtest_discover_tests(rtxui_fuzzer)
 

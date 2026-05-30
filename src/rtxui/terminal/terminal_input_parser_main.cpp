@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/terminal/event.hpp"
+#include "rtxui/internal/event.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
 // A simple RAII class to configure the terminal in raw mode.
