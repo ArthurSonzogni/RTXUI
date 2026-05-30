@@ -37,7 +37,7 @@ class TextAlignDemo : public Component<TextAlignDemo> {
         self {
           display: block;
           padding: 1;
-          border: round;
+          border: tall;
           border-color: blue;
           background-color: rgb(10, 10, 15);
           color: white;
@@ -59,7 +59,7 @@ class TextAlignDemo : public Component<TextAlignDemo> {
           display: block;
           margin-top: 1;
           padding: 1;
-          border: solid;
+          border: tall;
           border-color: gray;
         }
         .title {
