@@ -35,13 +35,13 @@ class LabeledBox : public Component<LabeledBox> {
         }
         .box {
           border: tall;
-          border-color: rgb(150, 150, 150);
+          border-color: #2563eb;
           padding-left: 1;
           display: block;
         }
         .title {
           font-weight: bold;
-          color: yellow;
+          color: #60a5fa;
           margin-bottom: 1;
         }
         .content {
@@ -132,14 +132,26 @@ class App : public Component<App> {
       <style>
         self {
           color: white;
-          background-color: rgb(30, 30, 30);
+          background-color: #0f172a;
           width: 100%;
           border: tall;
+          border-color: #1e3a8a;
         }
         .header {
           padding: 1;
           border-bottom: tall;
-          border-color: gray;
+          border-color: #1e293b;
+        }
+        h1 {
+          color: #38bdf8;
+        }
+        button {
+          background-color: #1d4ed8;
+          color: white;
+          border: solid;
+          border-color: #3b82f6;
+          padding-left: 1;
+          padding-right: 1;
         }
         #flex {
           display: flex;
@@ -147,9 +159,9 @@ class App : public Component<App> {
           gap: 1;
           border: tall;
           margin: 1;
-          background-color: rgb(50, 50, 50);
+          background-color: #1e293b;
           color: white;
-          border-color: black;
+          border-color: #334155;
         }
         .scroll-container {
           display: block;
@@ -157,7 +169,7 @@ class App : public Component<App> {
           overflow-y: scroll;
           scroll-speed: 1;
           border: ascii;
-          border-color: yellow;
+          border-color: #3b82f6;
         }
       </style>
     )html";
