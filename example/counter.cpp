@@ -20,9 +20,9 @@ class Counter : public Component<Counter> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::button>();
+
+
+
     return R"html(
       <div class="counter-container">
         <div class="row">

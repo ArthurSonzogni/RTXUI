@@ -85,6 +85,23 @@ void Bindings::Import(std::string_view name, ComponentFactory factory) {
 }
 
 namespace {
+std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
+  static auto* registry = new std::unordered_map<std::string, ComponentFactory>();
+  return *registry;
+}
+} // namespace
+
+void RegisterGlobalComponent(std::string_view name, ComponentFactory factory) {
+  GetGlobalRegistry()[std::string(name)] = std::move(factory);
+}
+
+ComponentFactory GetGlobalComponentFactory(std::string_view name) {
+  auto& reg = GetGlobalRegistry();
+  auto it = reg.find(std::string(name));
+  return (it != reg.end()) ? it->second : nullptr;
+}
+
+namespace {
 
 struct ElementState {
   int scroll_x = 0;
@@ -288,9 +305,10 @@ void ComponentBase::Render() {
 
   if (!root_) {
     root_ = Ref<Element>::New(this);
-    root_->id = id_;
-    root_->classes = classes_;
   }
+  root_->style = ComputedStyle();
+  root_->id = id_;
+  root_->classes = classes_;
   root_->RemoveChildren();
 
   xml::Node template_node;
@@ -433,7 +451,7 @@ void ComponentBase::Render(const xml::Node& node,
                                       ? ""
                                       : std::string(child_node.tag.substr(5));
           auto slot_element = Ref<SlotElement>::New();
-          slots_[slot_name] = slot_element;
+          import_source->slots_[slot_name] = slot_element;
           slot->AddChild(slot_element);
           break;
         }
@@ -448,8 +466,15 @@ void ComponentBase::Render(const xml::Node& node,
           break;
         }
 
+        ComponentFactory factory = nullptr;
         auto it = import_source->imports_.find(std::string(child_node.tag));
         if (it != import_source->imports_.end()) {
+          factory = it->second;
+        } else {
+          factory = GetGlobalComponentFactory(child_node.tag);
+        }
+
+        if (factory) {
           Ref<ComponentBase> child;
           for (auto it_old = old_children_.begin(); it_old != old_children_.end(); ++it_old) {
             if ((*it_old)->Tag() == child_node.tag) {
@@ -461,7 +486,7 @@ void ComponentBase::Render(const xml::Node& node,
 
           bool is_new = false;
           if (!child) {
-            child = it->second();
+            child = factory();
             is_new = true;
           }
           children_.insert(child);

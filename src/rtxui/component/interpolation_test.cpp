@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include "rtxui/internal/component.hpp"
-#include "rtxui/internal/default_components.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include "rtxui/core/string.hpp"

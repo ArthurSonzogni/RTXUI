@@ -9,9 +9,9 @@ using namespace rtxui;
 class TextAlignDemo : public Component<TextAlignDemo> {
  public:
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::h1>();
-    Import<rtxui::p>();
+
+
+
     return R"html(
       <div>
         <h1>RTXUI Text Alignment Demo</h1>

@@ -1,7 +1,7 @@
 #include "rtxui/internal/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/internal/component.hpp"
-#include "rtxui/internal/default_components.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/dom/element.hpp"
 #include <memory>

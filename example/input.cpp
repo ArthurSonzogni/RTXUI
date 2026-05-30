@@ -15,10 +15,10 @@ class InputDemo : public Component<InputDemo> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::input>();
-    Import<rtxui::p>();
+
+
+
+
     return R"html(
       <div class="container">
         <p class="title">Interactive Input Element</p>

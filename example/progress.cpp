@@ -15,11 +15,11 @@ class ProgressDemo : public Component<ProgressDemo> {
   }
 
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::slider>();
-    Import<rtxui::progress>();
-    Import<rtxui::p>();
+
+
+
+
+
     return R"html(
       <div class="container">
         <p class="title">Interactive Progress Bar Element</p>

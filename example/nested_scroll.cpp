@@ -9,9 +9,9 @@ using namespace rtxui;
 class NestedScrollDemo : public Component<NestedScrollDemo> {
  public:
   std::string_view Setup() override {
-    Import<rtxui::div>();
-    Import<rtxui::h1>();
-    Import<rtxui::p>();
+
+
+
     return R"html(
       <h1>RTXUI Nested Scrolling & Chaining Demo</h1>
       <p class="desc">
