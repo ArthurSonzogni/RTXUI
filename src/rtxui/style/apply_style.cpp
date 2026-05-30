@@ -5,6 +5,7 @@
 #include <string>
 #include <charconv>
 #include <cstdlib>
+#include <cctype>
 
 #include "rtxui/paint/color.hpp"
 
@@ -22,6 +23,12 @@ float StoF(std::string_view s) {
   return val;
 }
 int StoI(std::string_view s) {
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+    s.remove_prefix(1);
+  }
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+    s.remove_suffix(1);
+  }
   int value = 0;
   auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
   if (ec == std::errc()) {
