@@ -1,10 +1,10 @@
 # Value Interpolation
 
-RTXUI uses compile-time reflection to track class variables as reactive state. You can reference these variables directly in your HTML templates using curly braces `{}`.
+RTXUI uses compile-time reflection to track class variables as reactive state. These variables are referenced in HTML templates using curly braces `{}`.
 
 ## State Variables
 
-Simply define public members in your component class and register them using the `Bind()` macro in the constructor.
+Public members in a component class are registered using the `Bind()` macro in the constructor.
 
 ```cpp
 class CounterApp : public Component<CounterApp> {
@@ -27,6 +27,7 @@ class CounterApp : public Component<CounterApp> {
 
 You can also bind to C++ methods. This is useful for derived data or complex logic that shouldn't live in the template. Use the `Bind()` macro to register a `const` member function.
 
+
 ```cpp
 class CounterApp : public Component<CounterApp> {
  public:
@@ -34,7 +35,7 @@ class CounterApp : public Component<CounterApp> {
 
   CounterApp() {
     Bind(count);
-    Bind(double_count); // Unified binding for methods too!
+    Bind(double_count);
   }
 
   int double_count() const { return count * 2; }

@@ -339,7 +339,7 @@ class Component : public ComponentBase {
     return false;
   }
 
-  // 1. Member Pointer Binding (Variables or Computed Properties)
+  // Member Pointer Binding (Variables or Computed Properties)
   template <typename T, typename C, typename... Args>
   void Import(std::string name, T C::*member, Args&&... args) {
     if constexpr (std::is_member_function_pointer_v<T C::*>) {
@@ -370,7 +370,7 @@ class Component : public ComponentBase {
     }
   }
 
-  // 2. Generic Binding (Event Handlers, Collections, or State References)
+  // Generic Binding (Event Handlers, Collections, or State References)
   template <typename T, typename... Args>
   requires(!std::is_member_pointer_v<std::decay_t<T>>)
   void Import(std::string name, T&& item, Args&&... args) {
@@ -463,14 +463,14 @@ class Component : public ComponentBase {
   }
 };
 
-// Bind(x) is for state variables and direct members.
+// Bind(x) registers state variables or direct members.
 #define Bind(x, ...) this->Import(#x, this->x, ##__VA_ARGS__)
 
-// BindComputed(x) and BindCallback(x) are for member functions.
+// BindComputed(x) and BindCallback(x) register member functions.
 #define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
 #define BindCallback(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
 
-// BindCollection(name, x) for explicit names or pointers.
+// BindCollection(name, x) registers a collection with an explicit name.
 #define BindCollection(name, ...) this->Import(name, ##__VA_ARGS__)
 
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory);

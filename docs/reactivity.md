@@ -2,8 +2,9 @@
 
 This document describes the design for RTXUI, a framework for building reactive terminal user interfaces using C++26 reflection.
 
-## 1. The Unified Component Model
-In RTXUI, there is only one way to define a component. You do not need to choose between a "normal" and a "transparent" component. Every component is "transparent" by default.
+## 1. Component Model
+In RTXUI, there is only one way to define a component.
+ You do not need to choose between a "normal" and a "transparent" component. Every component is "transparent" by default.
 
 ```cpp
 class MyComponent : public rtxui::Component<MyComponent> {
