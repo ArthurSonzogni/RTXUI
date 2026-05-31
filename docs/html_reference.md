@@ -25,6 +25,43 @@ This reference lists all the built-in HTML/XML elements supported by RTXUI out-o
 | `<select>` | Block | `inline flex` | Dropdown selection list. |
 | `<option>` | Block | `block` | A selectable option item inside a `<select>`. |
 | `<hr>` | Block | `block` | A horizontal rule/separator line. |
+| `<if>` | Logic | N/A | Conditional rendering block. |
+| `<elif>` | Logic | N/A | Alternative conditional block (must follow `<if>` or `<elif>`). |
+| `<else>` | Logic | N/A | Fallback conditional block (must follow `<if>` or `<elif>`). |
+
+---
+
+## Global Attributes
+
+The following attributes are supported on all elements (including custom components):
+
+### `if`
+Specifies a condition for rendering the element.
+- **Value**: An expression that evaluates to `true` or `1` for the element to be rendered.
+- **Example**:
+  ```html
+  <div if="{is_visible}">Visible Content</div>
+  ```
+
+---
+
+## `<if>` & `<elif>` & `<else>`
+Used for block-level conditional rendering.
+- **Attributes**:
+  - `condition` (on `<if>` and `<elif>`): Expression to evaluate.
+- **Behavior**: Consecutive blocks form a chain; only the first block whose condition is met (or the `<else>` block if no conditions match) will be rendered. Whitespace and comments between blocks are ignored.
+- **Example**:
+  ```html
+  <if condition="{status == 'loading'}">
+    <progress value="50" />
+  </if>
+  <elif condition="{status == 'error'}">
+    <span>Error occurred!</span>
+  </elif>
+  <else>
+    <span>Loaded successfully.</span>
+  </else>
+  ```
 
 ---
 

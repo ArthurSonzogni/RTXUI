@@ -169,6 +169,9 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_loop_complex example/loop_complex.cpp)
   target_link_libraries(rtxui_example_loop_complex PRIVATE rtxui)
 
+  add_executable(rtxui_example_conditional example/conditional.cpp)
+  target_link_libraries(rtxui_example_conditional PRIVATE rtxui)
+
   add_executable(rtxui_example_colors example/colors.cpp)
   target_link_libraries(rtxui_example_colors PRIVATE rtxui)
 

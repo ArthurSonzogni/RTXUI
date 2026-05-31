@@ -321,3 +321,59 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
 
 <WasmTerminal src="/wasm/rtxui_example_loop_complex.js" :cols="80" :rows="40" />
 
+---
+
+## 7. Conditional Rendering
+
+RTXUI supports conditional rendering using both specialized logic tags and the `if` attribute on standard elements.
+
+### Logic Tags: `<if>`, `<elif>`, `<else>`
+
+You can group multiple elements inside conditional blocks. These blocks must be consecutive (ignoring whitespace and comments) to form a chain.
+
+```cpp
+class ConditionalApp : public Component<ConditionalApp> {
+ public:
+  int mode = 0; // 0: Home, 1: Settings, 2: About
+
+  ConditionalApp() {
+    Bind(mode);
+  }
+
+  std::string_view Setup() override {
+    return R"html(
+      <div>
+        <if condition="{mode == 0}">
+          <h1>Welcome Home!</h1>
+        </if>
+        <elif condition="{mode == 1}">
+          <h1>Settings</h1>
+        </elif>
+        <else>
+          <h1>About</h1>
+        </else>
+      </div>
+    )html";
+  }
+
+  // Define how expressions are evaluated
+  std::string GetInterpolatedValue(std::string_view expr) override {
+    if (expr == "mode == 0") return mode == 0 ? "true" : "false";
+    if (expr == "mode == 1") return mode == 1 ? "true" : "false";
+    return Component<ConditionalApp>::GetInterpolatedValue(expr);
+  }
+};
+```
+
+### The `if` Attribute
+
+For single elements, you can use the `if` attribute directly. If the expression evaluates to `true` (or `1`), the element is rendered; otherwise, it is skipped.
+
+```html
+<span if="{mode == 0}">Home Page Footer</span>
+```
+
+The `if` attribute can be used on any element, including custom components.
+
+<WasmTerminal src="/wasm/rtxui_example_conditional.js" :cols="80" :rows="40" />
+
