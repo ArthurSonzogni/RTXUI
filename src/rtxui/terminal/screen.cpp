@@ -398,10 +398,21 @@ void ScreenImpl::HandleEvent(const Event& event) {
             }
 
             if (!action.empty()) {
+              std::string_view action_view = action;
+              std::string callback_name = action;
+              std::string callback_arg = "";
+
+              size_t paren_open = action.find('(');
+              if (paren_open != std::string::npos && action.ends_with(')')) {
+                callback_name = action.substr(0, paren_open);
+                callback_arg =
+                    action.substr(paren_open + 1, action.size() - paren_open - 2);
+              }
+
               ComponentBase* comp = GetAttributeOwnerComponent(curr);
               bool executed = false;
               while (comp) {
-                if (comp->RunCallback(action)) {
+                if (comp->RunCallback(callback_name, callback_arg)) {
                   DigestAndDraw();
                   handled = true;
                   executed = true;

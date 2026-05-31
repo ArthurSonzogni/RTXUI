@@ -23,6 +23,15 @@ class Component : public ComponentBase {
   virtual void InitReflection() {
     ComponentBase::InitReflection();
   }
+
+  // Registers a member variable for two-way binding.
+  void Bind(T& ref);
+
+  // Registers a range/collection for use with the <for> tag.
+  void BindCollection(std::string name, const Container* ptr);
+
+  // Registers a range with a custom visitor for complex objects.
+  void BindCollection(std::string name, const Container* ptr, MapperFn mapper);
 };
 ```
 

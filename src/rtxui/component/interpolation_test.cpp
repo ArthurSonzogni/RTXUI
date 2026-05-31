@@ -82,4 +82,107 @@ TEST_CASE("Style Interpolation", "[component][interpolation]") {
   CHECK(output.find("background-color: red") != std::string::npos);
 }
 
+class LoopInterpolation : public rtxui::Component<LoopInterpolation> {
+ public:
+  std::vector<std::string> items = {"a", "b", "c"};
+
+  void InitReflection() override {
+    BindCollection("items", &items);
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<LoopInterpolation>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <div>
+      <for each="{items}" as="it">
+        <span>{it}</span>
+      </for>
+    </div>
+  )";
+};
+
+TEST_CASE("Loop Interpolation", "[component][interpolation]") {
+  auto component = rtxui::Ref<LoopInterpolation>::New();
+  component->Mount();
+
+  std::string output = component->Root()->Print();
+  // UNCOMMENT to debug: std::cout << output << std::endl;
+  CHECK(output.find("a") != std::string::npos);
+  CHECK(output.find("b") != std::string::npos);
+  CHECK(output.find("c") != std::string::npos);
+}
+
+struct SubItem {
+  std::string val;
+  bool operator==(const SubItem& other) const = default;
+};
+
+class StructLoopInterpolation : public rtxui::Component<StructLoopInterpolation> {
+ public:
+  std::vector<SubItem> items = {{"x"}, {"y"}};
+
+  void InitReflection() override {
+    BindCollection("items", &items, [](const SubItem& s) {
+        return std::make_shared<rtxui::ManualStructVisitor>(std::unordered_map<std::string, std::string>{
+          {"val", s.val}
+        });
+    });
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<StructLoopInterpolation>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <div>
+      <for each="{items}" as="it">
+        <span>{it.val}</span>
+      </for>
+    </div>
+  )";
+};
+
+TEST_CASE("Struct Loop Interpolation", "[component][interpolation]") {
+  auto component = rtxui::Ref<StructLoopInterpolation>::New();
+  component->Mount();
+
+  std::string output = component->Root()->Print();
+  CHECK(output.find("x") != std::string::npos);
+  CHECK(output.find("y") != std::string::npos);
+}
+
+struct AutoItem {
+  std::string name;
+  bool operator==(const AutoItem& other) const = default;
+};
+
+class AutoLoopInterpolation : public rtxui::Component<AutoLoopInterpolation> {
+ public:
+  std::vector<AutoItem> items = {{"Apple"}, {"Banana"}};
+
+  void InitReflection() override {
+    BindCollection("items", &items);
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<AutoLoopInterpolation>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <div>
+      <for each="{items}" as="it">
+        <span>{it.name}</span>
+      </for>
+    </div>
+  )";
+};
+
+TEST_CASE("Automatic Reflection Loop Interpolation", "[component][interpolation]") {
+  auto component = rtxui::Ref<AutoLoopInterpolation>::New();
+  component->Mount();
+
+  std::string output = component->Root()->Print();
+  CHECK(output.find("Apple") != std::string::npos);
+  CHECK(output.find("Banana") != std::string::npos);
+}
+
 }  // namespace
