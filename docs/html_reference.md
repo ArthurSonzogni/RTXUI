@@ -183,7 +183,14 @@ An interactive single-line text entry field.
 
 - **Interactive Demo**:
   
-  <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="40" />
+  <ExampleTabs src="/wasm/rtxui_example_input.js">
+  <template #source>
+
+<<< @/../example/input.cpp
+
+  </template>
+  </ExampleTabs>
+
 
 ---
 
@@ -219,7 +226,14 @@ An interactive multi-line text editing area. Shares the same event-handling base
 
 - **Interactive Demo**:
   
-  <WasmTerminal src="/wasm/rtxui_example_textarea.js" :cols="80" :rows="40" />
+  <ExampleTabs src="/wasm/rtxui_example_textarea.js">
+  <template #source>
+
+<<< @/../example/textarea.cpp
+
+  </template>
+  </ExampleTabs>
+
 
 ---
 
@@ -253,7 +267,14 @@ An interactive toggle control for boolean values.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="40" />
+  <ExampleTabs src="/wasm/rtxui_example_checkbox.js">
+  <template #source>
+
+<<< @/../example/checkbox.cpp
+
+  </template>
+  </ExampleTabs>
+
 
 ---
 
@@ -298,7 +319,14 @@ An interactive horizontal range slider component.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="40" />
+  <ExampleTabs src="/wasm/rtxui_example_slider.js">
+  <template #source>
+
+<<< @/../example/slider.cpp
+
+  </template>
+  </ExampleTabs>
+
 
 ---
 
@@ -327,7 +355,14 @@ A read-only horizontal progress bar indicator.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_progress.js" :cols="80" :rows="40" />
+  <ExampleTabs src="/wasm/rtxui_example_progress.js">
+  <template #source>
+
+<<< @/../example/progress.cpp
+
+  </template>
+  </ExampleTabs>
+
 
 ---
 
@@ -386,7 +421,14 @@ An interactive dropdown menu for picking from a list of options.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="40" />
+  <ExampleTabs src="/wasm/rtxui_example_select.js">
+  <template #source>
+
+<<< @/../example/select.cpp
+
+  </template>
+  </ExampleTabs>
+
 
 ---
 
@@ -412,5 +454,12 @@ A block-level horizontal separator rule. Renders a continuous horizontal line `â
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_hr.js" :cols="80" :rows="40" />
+  <ExampleTabs src="/wasm/rtxui_example_hr.js">
+  <template #source>
+
+<<< @/../example/hr.cpp
+
+  </template>
+  </ExampleTabs>
+
 

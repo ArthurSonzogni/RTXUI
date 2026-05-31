@@ -46,7 +46,14 @@ int main() {
 }
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_helloworld.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_helloworld.js">
+<template #source>
+
+<<< @/../example/helloworld.cpp
+
+</template>
+</ExampleTabs>
+
 
 ---
 
@@ -87,7 +94,14 @@ class CounterApp : public Component<CounterApp> {
 ```
 - **Reactivity Model**: Whenever a button is clicked, an event handler modifies `count`. The screen runs a Digest cycle, detects that `count` has changed, and updates the DOM elements.
 
-<WasmTerminal src="/wasm/rtxui_example_counter.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_counter.js">
+<template #source>
+
+<<< @/../example/counter.cpp
+
+</template>
+</ExampleTabs>
+
 
 ---
 
@@ -130,7 +144,14 @@ class ScrollBox : public Component<ScrollBox> {
 
 By adding `overflow-y: scroll` and restricting `height`, RTXUI automatically crops overflowing elements and displays a modern, responsive scrollbar on the right. Scroll events bubble up nested containers when boundaries are reached.
 
-<WasmTerminal src="/wasm/rtxui_example_nested_scroll.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_nested_scroll.js">
+<template #source>
+
+<<< @/../example/nested_scroll.cpp
+
+</template>
+</ExampleTabs>
+
 
 ---
 
@@ -162,7 +183,14 @@ class CJKApp : public Component<CJKApp> {
 };
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_cjk.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_cjk.js">
+<template #source>
+
+<<< @/../example/cjk.cpp
+
+</template>
+</ExampleTabs>
+
 
 ---
 
@@ -203,7 +231,14 @@ class InputApp : public Component<InputApp> {
 };
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_input.js">
+<template #source>
+
+<<< @/../example/input.cpp
+
+</template>
+</ExampleTabs>
+
 
 ---
 
@@ -261,7 +296,14 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
 };
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_loop_simple.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_loop_simple.js">
+<template #source>
+
+<<< @/../example/loop_simple.cpp
+
+</template>
+</ExampleTabs>
+
 
 ### Complex Collection with Field Mapping
 
@@ -319,7 +361,14 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
 };
 ```
 
-<WasmTerminal src="/wasm/rtxui_example_loop_complex.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_loop_complex.js">
+<template #source>
+
+<<< @/../example/loop_complex.cpp
+
+</template>
+</ExampleTabs>
+
 
 ---
 
@@ -375,5 +424,11 @@ For single elements, you can use the `if` attribute directly. If the expression 
 
 The `if` attribute can be used on any element, including custom components.
 
-<WasmTerminal src="/wasm/rtxui_example_conditional.js" :cols="80" :rows="40" />
+<ExampleTabs src="/wasm/rtxui_example_conditional.js">
+<template #source>
+
+<<< @/../example/conditional.cpp
+
+</template>
+</ExampleTabs>
 
