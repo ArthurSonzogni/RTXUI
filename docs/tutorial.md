@@ -59,7 +59,11 @@ int main() {
 
 ## 2. Adding Reactive State
 
-RTXUI uses compile-time reflection to track class variables as reactive state. Simply define members on your component class, and reference them in curly braces `{}` inside your template:
+RTXUI uses compile-time reflection to track class variables as reactive state. Simply define members on your component class, and reference them in curly braces `{}` inside your template.
+
+RTXUI supports two styles of attribute binding:
+*   **React-style**: `attribute="{variable}"` for data and `onclick="handler"` for events.
+*   **Vue-style**: `:attribute="variable"` for data and `@click="handler"` for events.
 
 ```cpp
 class CounterApp : public Component<CounterApp> {
@@ -85,8 +89,10 @@ class CounterApp : public Component<CounterApp> {
       <div>
         <span>Count: {count}</span>
         <span>Double: {double_count}</span>
+        <!-- You can use React-style callbacks: -->
         <button onclick="Increment">Increment</button>
-        <button onclick="Decrement">Decrement</button>
+        <!-- Or Vue-style shorthand: -->
+        <button @click="Decrement">Decrement</button>
       </div>
     )html";
   }
