@@ -28,9 +28,7 @@ This reference lists all the built-in HTML/XML elements supported by RTXUI out-o
 
 ---
 
-## Component Details
-
-### `<div>`
+## `<div>`
 Used as a block-level wrapper to group elements vertically.
 - **Default Styles**:
   ```css
@@ -44,14 +42,14 @@ Used as a block-level wrapper to group elements vertically.
   </div>
   ```
 
-### `<span>`
+## `<span>`
 Used as an inline wrapper for text elements.
 - **Default Styles**:
   ```css
   self { display: inline; }
   ```
 
-### `<h1>`
+## `<h1>`
 Renders a major section heading.
 - **Default Styles**:
   ```css
@@ -63,7 +61,7 @@ Renders a major section heading.
   }
   ```
 
-### `<p>`
+## `<p>`
 Used to format paragraph blocks.
 - **Default Styles**:
   ```css
@@ -74,7 +72,7 @@ Used to format paragraph blocks.
   }
   ```
 
-### `<strong>`
+## `<strong>`
 Highlights inline text with bold styling.
 - **Default Styles**:
   ```css
@@ -84,7 +82,7 @@ Highlights inline text with bold styling.
   }
   ```
 
-### `<ul>` & `<ol>` & `<li>`
+## `<ul>` & `<ol>` & `<li>`
 Used to create structured lists.
 - **Default Styles**:
   ```css
@@ -97,7 +95,7 @@ Used to create structured lists.
   }
   ```
 
-### `<button>`
+## `<button>`
 An interactive button that responds to left-click and right-click actions.
 - **Default Styles**:
   ```css
@@ -116,7 +114,7 @@ An interactive button that responds to left-click and right-click actions.
   <button onclick="MyCallback">Click Me</button>
   ```
 
-### `<input>`
+## `<input>`
 An interactive single-line text entry field.
 - **Default Styles**:
   ```css
@@ -148,11 +146,11 @@ An interactive single-line text entry field.
 
 - **Interactive Demo**:
   
-  <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="40" />
 
 ---
 
-### `<textarea>`
+## `<textarea>`
 An interactive multi-line text editing area. Shares the same event-handling base as `<input>` but supports newlines, vertical cursor navigation, and vertical scrolling.
 - **Default Styles**:
   ```css
@@ -184,11 +182,11 @@ An interactive multi-line text editing area. Shares the same event-handling base
 
 - **Interactive Demo**:
   
-  <WasmTerminal src="/wasm/rtxui_example_textarea.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_textarea.js" :cols="80" :rows="40" />
 
 ---
 
-### `<checkbox>`
+## `<checkbox>`
 An interactive toggle control for boolean values.
 - **Default Styles**:
   ```css
@@ -218,11 +216,11 @@ An interactive toggle control for boolean values.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="40" />
 
 ---
 
-### `<slider>`
+## `<slider>`
 An interactive horizontal range slider component.
 - **Default Styles**:
   ```css
@@ -263,11 +261,11 @@ An interactive horizontal range slider component.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="40" />
 
 ---
 
-### `<progress>`
+## `<progress>`
 A read-only horizontal progress bar indicator.
 - **Default Styles**:
   ```css
@@ -292,11 +290,11 @@ A read-only horizontal progress bar indicator.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_progress.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_progress.js" :cols="80" :rows="40" />
 
 ---
 
-### `<select>` & `<option>`
+## `<select>` & `<option>`
 An interactive dropdown menu for picking from a list of options.
 - **Default Styles**:
   ```css
@@ -351,11 +349,11 @@ An interactive dropdown menu for picking from a list of options.
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="40" />
 
 ---
 
-### `<hr>`
+## `<hr>`
 A block-level horizontal separator rule. Renders a continuous horizontal line `â”€` across the layout width.
 - **Default Styles**:
   ```css
@@ -377,5 +375,5 @@ A block-level horizontal separator rule. Renders a continuous horizontal line `â
 
 - **Interactive Demo**:
 
-  <WasmTerminal src="/wasm/rtxui_example_hr.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_hr.js" :cols="80" :rows="40" />
 

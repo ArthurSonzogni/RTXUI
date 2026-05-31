@@ -31,7 +31,7 @@ features:
     This live interactive WebAssembly terminal showcases RTXUI's reflection-based reactivity, flexbox layouts, borders, and nested scrolling. 
     Click the "Clicks" button to increment, right-click to decrement, or click the scrollable box and use your keyboard or mouse wheel.
   </p>
-  <WasmTerminal src="/wasm/rtxui_example_demo.js" :cols="80" :rows="60" />
+  <WasmTerminal src="/wasm/rtxui_example_demo.js" :cols="80" :rows="40" />
 </div>
 
 <style>
