@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /tutorial
+      link: /guide/hello-world
     - theme: alt
       text: C++ API Reference
       link: /cpp_api
@@ -31,13 +31,15 @@ features:
     This live interactive WebAssembly terminal showcases RTXUI's reflection-based reactivity, flexbox layouts, borders, and nested scrolling. 
     Click the "Clicks" button to increment, right-click to decrement, or click the scrollable box and use your keyboard or mouse wheel.
   </p>
-  <ExampleTabs src="/wasm/rtxui_example_demo.js">
-    <template #source>
+
+<ExampleTabs src="/wasm/rtxui_example_demo.js">
+<template #source>
 
 <<< @/../example/demo.cpp
 
-    </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
+
 </div>
 
 <style>
