@@ -59,7 +59,7 @@ Color formatting for component text and backgrounds.
 - `text-align` `left | right | center`: Configures the horizontal alignment of text/inline content within the element. (not animatable)
 - `white-space` `normal | nowrap`: Configures word wrapping. `nowrap` prevents automated text wrapping. (not animatable)
 
-<WasmTerminal src="/wasm/rtxui_example_text_align.js" :cols="80" :rows="60" />
+<WasmTerminal src="/wasm/rtxui_example_text_align.js" :cols="80" :rows="40" />
 
 ---
 
@@ -72,7 +72,7 @@ RTXUI includes a subset of CSS Flexbox for horizontal and vertical layouts.
 - `flex-grow` [`<number>`](#numbers) **(animatable)**: Portion of free space assigned to the item along the main axis. Supports layout transitions.
 - `flex-shrink` [`<number>`](#numbers) **(animatable)**: Portion of shrinkage space assigned to the item. Supports layout transitions.
 
-<WasmTerminal src="/wasm/rtxui_example_layout.js" :cols="80" :rows="60" />
+<WasmTerminal src="/wasm/rtxui_example_layout.js" :cols="80" :rows="40" />
 
 ---
 
@@ -88,7 +88,7 @@ Enables viewport scrolling when children overflow parent boundaries. These prope
   - `scroll-speed-x` [`<integer>`](#integers): Step scroll distance horizontally on event triggers.
   - `scroll-speed-y` [`<integer>`](#integers): Step scroll distance vertically on event triggers.
 
-<WasmTerminal src="/wasm/rtxui_example_horizontal_scroll.js" :cols="80" :rows="60" />
+<WasmTerminal src="/wasm/rtxui_example_horizontal_scroll.js" :cols="80" :rows="40" />
 
 ---
 
@@ -152,7 +152,7 @@ Colors define foreground text, background cells, or border colors.
     - `teal`
     - `aqua` (or `cyan`)
 
-<WasmTerminal src="/wasm/rtxui_example_colors.js" :cols="80" :rows="60" />
+<WasmTerminal src="/wasm/rtxui_example_colors.js" :cols="80" :rows="40" />
 
 ### Border Styles
 
@@ -182,7 +182,7 @@ RTXUI supports 24 different character sets for border drawing.
 - `outer`: Outer frame border style.
 - `panel`: Panel frame border style.
 
-<WasmTerminal src="/wasm/rtxui_example_borders.js" :cols="80" :rows="60" />
+<WasmTerminal src="/wasm/rtxui_example_borders.js" :cols="80" :rows="40" />
 
 ### Overflow Modes
 

@@ -87,4 +87,4 @@ During parent rendering:
 - **Zero Boilerplate**: You write a standard C++ class. The framework handles the "magic" of connecting it to the UI.
 - **Performance**: Reflection happens at compile-time. At runtime, the framework only performs a few comparisons to see if anything changed.
 
-<WasmTerminal src="/wasm/rtxui_example_demo.js" :cols="80" :rows="60" />
+<WasmTerminal src="/wasm/rtxui_example_demo.js" :cols="80" :rows="40" />

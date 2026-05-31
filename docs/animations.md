@@ -44,7 +44,7 @@ Below is the interactive tab view for `:hover`, `:active`, and `:focus` pseudo-c
   </div>
   <div class="tab-content">
     <div v-show="tabPseudo === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_pseudo_classes.js" :cols="80" :rows="60" />
+      <WasmTerminal src="/wasm/rtxui_example_pseudo_classes.js" :cols="80" :rows="40" />
     </div>
     <div v-show="tabPseudo === 'code'">
       <div v-pre>
@@ -159,7 +159,7 @@ Below is the interactive tab view for smooth background-color and border-color t
   </div>
   <div class="tab-content">
     <div v-show="tabTransitions === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_transitions.js" :cols="80" :rows="60" />
+      <WasmTerminal src="/wasm/rtxui_example_transitions.js" :cols="80" :rows="40" />
     </div>
     <div v-show="tabTransitions === 'code'">
       <div v-pre>
@@ -244,7 +244,7 @@ Move your mouse cursor over the **Hover Me** button and the **Grow Me** flex box
   </div>
   <div class="tab-content">
     <div v-show="tabAnimation === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_animation.js" :cols="80" :rows="60" />
+      <WasmTerminal src="/wasm/rtxui_example_animation.js" :cols="80" :rows="40" />
     </div>
     <div v-show="tabAnimation === 'code'">
       <div v-pre>
@@ -401,7 +401,7 @@ The Slider component utilizes `:hover` and `:active` transitions to smoothly hig
   </div>
   <div class="tab-content">
     <div v-show="tabSlider === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="60" />
+      <WasmTerminal src="/wasm/rtxui_example_slider.js" :cols="80" :rows="40" />
     </div>
     <div v-show="tabSlider === 'code'">
       <div v-pre>
@@ -510,7 +510,7 @@ Buttons and checkboxes fade their background colors and borders on hover/clicks 
   </div>
   <div class="tab-content">
     <div v-show="tabCheckbox === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="60" />
+      <WasmTerminal src="/wasm/rtxui_example_checkbox.js" :cols="80" :rows="40" />
     </div>
     <div v-show="tabCheckbox === 'code'">
       <div v-pre>
@@ -608,7 +608,7 @@ The Select dropdown list transitions menu items smoothly during keyboard navigat
   </div>
   <div class="tab-content">
     <div v-show="tabSelect === 'demo'">
-      <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="60" />
+      <WasmTerminal src="/wasm/rtxui_example_select.js" :cols="80" :rows="40" />
     </div>
     <div v-show="tabSelect === 'code'">
       <div v-pre>
