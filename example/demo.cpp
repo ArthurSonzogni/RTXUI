@@ -52,20 +52,19 @@ class App : public Component<App> {
   // --- Transparent State ---
   int count = 0;
 
-  App() {
-    Bind(count);
-    BindComputed(double_clicks);
-    Import("Increment", [this]() { Increment(); });
-    Import("Decrement", [this]() { Decrement(); });
-  }
-
   // --- Actions ---
   void Increment() { count++; }
-
   void Decrement() { count--; }
 
   // --- Computed ---
   int double_clicks() const { return count * 2; }
+
+  App() {
+    Bind(count);
+    Bind(double_clicks);
+    Bind(Increment);
+    Bind(Decrement);
+  }
 
   bool OnEvent(Event event) override {
     if (event == Event::a() || event == Event::Keyboard::From(' ')) {

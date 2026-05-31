@@ -9,21 +9,25 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
   std::vector<std::string> items = {"Apple", "Banana", "Cherry"};
   std::string new_fruit = "";
 
+  void AddItem() {
+    if (!new_fruit.empty()) {
+      items.push_back(new_fruit);
+      new_fruit = "";
+    }
+  }
+
+  void RemoveItem(std::string index_str) {
+    size_t index = std::stoull(index_str);
+    if (index < items.size()) {
+      items.erase(items.begin() + index);
+    }
+  }
+
   SimpleLoopApp() {
-    BindCollection("items", &items);
+    Bind(items);
     Bind(new_fruit);
-    Import("AddItem", [this]() {
-      if (!new_fruit.empty()) {
-        items.push_back(new_fruit);
-        new_fruit = "";
-      }
-    });
-    Import("RemoveItem", [this](std::string index_str) {
-      size_t index = std::stoull(index_str);
-      if (index < items.size()) {
-        items.erase(items.begin() + index);
-      }
-    });
+    Bind(AddItem);
+    Bind(RemoveItem);
   }
 
   std::string_view Setup() override {

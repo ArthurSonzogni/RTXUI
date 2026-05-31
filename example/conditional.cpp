@@ -9,16 +9,15 @@ class ConditionalApp : public Component<ConditionalApp> {
 
   ConditionalApp() {
     Bind(mode);
-    BindComputed(is_home);
-    BindComputed(is_settings);
-    BindComputed(is_about);
-    BindComputed(home_class);
-    BindComputed(settings_class);
-    BindComputed(about_class);
-
-    Import("SetHome", [this]() { mode = 0; });
-    Import("SetSettings", [this]() { mode = 1; });
-    Import("SetAbout", [this]() { mode = 2; });
+    Bind(is_home);
+    Bind(is_settings);
+    Bind(is_about);
+    Bind(home_class);
+    Bind(settings_class);
+    Bind(about_class);
+    Bind(SetHome);
+    Bind(SetSettings);
+    Bind(SetAbout);
   }
 
   // Computed properties
@@ -29,6 +28,11 @@ class ConditionalApp : public Component<ConditionalApp> {
   std::string home_class() const { return mode == 0 ? "active" : ""; }
   std::string settings_class() const { return mode == 1 ? "active" : ""; }
   std::string about_class() const { return mode == 2 ? "active" : ""; }
+
+  // Event handlers
+  void SetHome() { mode = 0; }
+  void SetSettings() { mode = 1; }
+  void SetAbout() { mode = 2; }
 
   std::string_view Setup() override {
     return R"html(

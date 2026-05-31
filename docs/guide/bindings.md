@@ -2,15 +2,18 @@
 
 RTXUI allows you to bind user interactions (like mouse clicks or keyboard events) to C++ callback functions.
 
-## Importing Callbacks
+## Binding Callbacks
 
-Callbacks are registered using the `Import()` method in your component's constructor. You can import standard functions or lambda expressions.
+Member functions can be bound using the unified `Bind()` macro. You can also import standard functions or lambda expressions using `Import()`.
 
 ```cpp
 CounterApp() {
-  Import("Increment", [this]() { count++; });
-  Import("Decrement", [this]() { count--; });
+  Bind(Increment);
+  Bind(Decrement);
 }
+
+void Increment() { count++; }
+void Decrement() { count--; }
 ```
 
 ## Binding in Templates

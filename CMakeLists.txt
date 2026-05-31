@@ -117,22 +117,42 @@ if(EMSCRIPTEN)
 endif()
 
 # Enable experimental reflection if supported by the compiler
-include(CheckCXXCompilerFlag)
+include(CheckCXXSourceCompiles)
+set(SAFE_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+set(CMAKE_REQUIRED_FLAGS "-std=c++26")
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  check_cxx_compiler_flag("-freflection-latest" HAS_REFLECTION_CLANG)
+  set(CMAKE_REQUIRED_FLAGS "-std=c++26 -freflection-latest")
+  check_cxx_source_compiles("
+    #include <meta>
+    struct S { int x; };
+    int main() {
+      constexpr auto m = std::meta::nonstatic_data_members_of(^^S);
+      return 0;
+    }
+  " HAS_REFLECTION_CLANG)
   if(HAS_REFLECTION_CLANG)
     target_compile_options(rtxui_lib PUBLIC "-freflection-latest")
     add_definitions(-DRTXUI_HAS_REFLECTION)
     message(STATUS "RTXUI: C++26 Reflection enabled (-freflection-latest)")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  check_cxx_compiler_flag("-freflection" HAS_REFLECTION_GCC)
+  set(CMAKE_REQUIRED_FLAGS "-std=c++26 -freflection")
+  check_cxx_source_compiles("
+    #include <meta>
+    struct S { int x; };
+    int main() {
+      constexpr auto m = std::meta::nonstatic_data_members_of(^^S);
+      return 0;
+    }
+  " HAS_REFLECTION_GCC)
   if(HAS_REFLECTION_GCC)
     target_compile_options(rtxui_lib PUBLIC "-freflection")
     add_definitions(-DRTXUI_HAS_REFLECTION)
     message(STATUS "RTXUI: C++26 Reflection enabled (-freflection)")
   endif()
 endif()
+set(CMAKE_REQUIRED_FLAGS "${SAFE_CMAKE_REQUIRED_FLAGS}")
 
 # See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
 add_library(rtxui "src/rtxui/dummy.cpp")
