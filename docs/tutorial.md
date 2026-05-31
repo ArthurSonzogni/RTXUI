@@ -387,15 +387,21 @@ class ConditionalApp : public Component<ConditionalApp> {
 
   ConditionalApp() {
     Bind(mode);
+    BindComputed(is_home);
+    BindComputed(is_settings);
   }
+
+  // Computed properties
+  bool is_home() const { return mode == 0; }
+  bool is_settings() const { return mode == 1; }
 
   std::string_view Setup() override {
     return R"html(
       <div>
-        <if condition="{mode == 0}">
+        <if condition="{is_home}">
           <h1>Welcome Home!</h1>
         </if>
-        <elif condition="{mode == 1}">
+        <elif condition="{is_settings}">
           <h1>Settings</h1>
         </elif>
         <else>
@@ -403,13 +409,6 @@ class ConditionalApp : public Component<ConditionalApp> {
         </else>
       </div>
     )html";
-  }
-
-  // Define how expressions are evaluated
-  std::string GetInterpolatedValue(std::string_view expr) override {
-    if (expr == "mode == 0") return mode == 0 ? "true" : "false";
-    if (expr == "mode == 1") return mode == 1 ? "true" : "false";
-    return Component<ConditionalApp>::GetInterpolatedValue(expr);
   }
 };
 ```
@@ -419,7 +418,7 @@ class ConditionalApp : public Component<ConditionalApp> {
 For single elements, you can use the `if` attribute directly. If the expression evaluates to `true` (or `1`), the element is rendered; otherwise, it is skipped.
 
 ```html
-<span if="{mode == 0}">Home Page Footer</span>
+<span if="{is_home}">Home Page Footer</span>
 ```
 
 The `if` attribute can be used on any element, including custom components.

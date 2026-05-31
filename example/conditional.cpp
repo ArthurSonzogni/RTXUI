@@ -9,26 +9,42 @@ class ConditionalApp : public Component<ConditionalApp> {
 
   ConditionalApp() {
     Bind(mode);
+    BindComputed(is_home);
+    BindComputed(is_settings);
+    BindComputed(is_about);
+    BindComputed(home_class);
+    BindComputed(settings_class);
+    BindComputed(about_class);
+
     Import("SetHome", [this]() { mode = 0; });
     Import("SetSettings", [this]() { mode = 1; });
     Import("SetAbout", [this]() { mode = 2; });
   }
 
+  // Computed properties
+  bool is_home() const { return mode == 0; }
+  bool is_settings() const { return mode == 1; }
+  bool is_about() const { return mode == 2; }
+
+  std::string home_class() const { return mode == 0 ? "active" : ""; }
+  std::string settings_class() const { return mode == 1 ? "active" : ""; }
+  std::string about_class() const { return mode == 2 ? "active" : ""; }
+
   std::string_view Setup() override {
     return R"html(
       <div class="container">
         <div class="tabs">
-          <button onclick="SetHome" class="{mode == 0 ? 'active' : ''}">Home</button>
-          <button onclick="SetSettings" class="{mode == 1 ? 'active' : ''}">Settings</button>
-          <button onclick="SetAbout" class="{mode == 2 ? 'active' : ''}">About</button>
+          <button onclick="SetHome" class="{home_class}">Home</button>
+          <button onclick="SetSettings" class="{settings_class}">Settings</button>
+          <button onclick="SetAbout" class="{about_class}">About</button>
         </div>
 
         <div class="content">
-          <if condition="{mode == 0}">
+          <if condition="{is_home}">
             <h1>Welcome Home!</h1>
             <p>This is the home screen of the conditional rendering demo.</p>
           </if>
-          <elif condition="{mode == 1}">
+          <elif condition="{is_settings}">
             <h1>Settings</h1>
             <p>Here you can configure your application.</p>
             <div class="card">
@@ -41,7 +57,7 @@ class ConditionalApp : public Component<ConditionalApp> {
             <p>RTXUI is a reactive terminal UI library for C++.</p>
           </else>
 
-          <div if="{mode == 0}" class="footer">
+          <div if="{is_home}" class="footer">
             Home-specific footer content
           </div>
         </div>
@@ -59,18 +75,7 @@ class ConditionalApp : public Component<ConditionalApp> {
     )html";
   }
 
-  std::string GetInterpolatedValue(std::string_view expr) override {
-    if (expr == "mode == 0") return mode == 0 ? "true" : "false";
-    if (expr == "mode == 1") return mode == 1 ? "true" : "false";
-    if (expr == "mode == 2") return mode == 2 ? "true" : "false";
-    
-    // Ternary-like logic for classes
-    if (expr == "mode == 0 ? 'active' : ''") return mode == 0 ? "active" : "";
-    if (expr == "mode == 1 ? 'active' : ''") return mode == 1 ? "active" : "";
-    if (expr == "mode == 2 ? 'active' : ''") return mode == 2 ? "active" : "";
-
-    return Component<ConditionalApp>::GetInterpolatedValue(expr);
-  }
+  // No longer needed to override GetInterpolatedValue for complex logic!
 };
 
 int main() {
