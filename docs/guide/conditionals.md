@@ -13,8 +13,8 @@ class ConditionalApp : public Component<ConditionalApp> {
 
   ConditionalApp() {
     Bind(mode);
-    BindComputed(is_home);
-    BindComputed(is_settings);
+    Bind(is_home);
+    Bind(is_settings);
   }
 
   // Computed properties

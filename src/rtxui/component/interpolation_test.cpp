@@ -161,7 +161,7 @@ class AutoLoopInterpolation : public rtxui::Component<AutoLoopInterpolation> {
   std::vector<AutoItem> items = {{"Apple"}, {"Banana"}};
 
   void InitReflection() override {
-    BindCollection("items", &items);
+    Bind(items);
     Import<rtxui::div>();
     Import<rtxui::span>();
     rtxui::Component<AutoLoopInterpolation>::InitReflection();
@@ -177,12 +177,16 @@ class AutoLoopInterpolation : public rtxui::Component<AutoLoopInterpolation> {
 };
 
 TEST_CASE("Automatic Reflection Loop Interpolation", "[component][interpolation]") {
+#if defined(RTXUI_HAS_REFLECTION)
   auto component = rtxui::Ref<AutoLoopInterpolation>::New();
   component->Mount();
 
   std::string output = component->Root()->Print();
   CHECK(output.find("Apple") != std::string::npos);
   CHECK(output.find("Banana") != std::string::npos);
+#else
+  SKIP("Reflection not supported by compiler");
+#endif
 }
 
 class ConditionalApp : public rtxui::Component<ConditionalApp> {

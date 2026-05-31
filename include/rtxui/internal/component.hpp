@@ -339,14 +339,66 @@ class Component : public ComponentBase {
     return false;
   }
 
-  template <typename T>
-  void Import(std::string name, T& ref) {
-    RegisterState(name, &ref);
+  // 1. Member Pointer Binding (Variables or Computed Properties)
+  template <typename T, typename C, typename... Args>
+  void Import(std::string name, T C::*member, Args&&... args) {
+    if constexpr (std::is_member_function_pointer_v<T C::*>) {
+      if constexpr (requires { (std::declval<const Derived>().*member)(); }) {
+        // Const member function -> Computed property
+        entries_.push_back(
+            {name,
+             [this, member]() {
+               return reflection::to_string(
+                   (static_cast<const Derived*>(this)->*member)());
+             },
+             nullptr, nullptr});
+      } else {
+        // Non-const member function -> Event handler
+        Bindings::Import(name, [this, member]() {
+          (static_cast<Derived*>(this)->*member)();
+        });
+      }
+    } else {
+      // Member variable pointer
+      auto& ref = static_cast<Derived*>(this)->*member;
+      using V = std::remove_reference_t<decltype(ref)>;
+      if constexpr (std::ranges::range<V> && !std::is_same_v<V, std::string>) {
+        RegisterCollection(name, &ref, std::forward<Args>(args)...);
+      } else {
+        RegisterState(name, &ref);
+      }
+    }
   }
 
-  template <typename Ret>
-  void Import(std::string name, Ret (Derived::*method)() const) {
-    RegisterComputed(name, method);
+  // 2. Generic Binding (Event Handlers, Collections, or State References)
+  template <typename T, typename... Args>
+  requires(!std::is_member_pointer_v<std::decay_t<T>>)
+  void Import(std::string name, T&& item, Args&&... args) {
+    using U = std::decay_t<T>;
+    if constexpr (std::is_invocable_v<U> || std::is_invocable_v<U, std::string>) {
+      if constexpr (std::is_invocable_v<U, std::string>) {
+        Bindings::Import(
+            name, std::function<void(std::string)>(std::forward<T>(item)));
+      } else if constexpr (std::is_convertible_v<U, ComponentFactory>) {
+        Bindings::Import(name,
+                         static_cast<ComponentFactory>(std::forward<T>(item)));
+      } else {
+        Bindings::Import(name, std::function<void()>(std::forward<T>(item)));
+      }
+    } else if constexpr (std::is_pointer_v<U>) {
+      using V = std::remove_pointer_t<U>;
+      if constexpr (std::ranges::range<V> && !std::is_same_v<V, std::string>) {
+        RegisterCollection(name, item, std::forward<Args>(args)...);
+      } else {
+        RegisterState(name, item);
+      }
+    } else {
+      if constexpr (std::ranges::range<U> && !std::is_same_v<U, std::string>) {
+        RegisterCollection(name, &item, std::forward<Args>(args)...);
+      } else {
+        RegisterState(name, &item);
+      }
+    }
   }
 
   template <typename Container>
@@ -355,16 +407,24 @@ class Component : public ComponentBase {
     if (clean_name.starts_with("props.")) {
       clean_name = clean_name.substr(6);
     }
-    range_entries_.push_back({std::move(clean_name), std::make_shared<TypeErasedRangeImpl<Container>>(ptr)});
+    range_entries_.push_back(
+        {std::move(clean_name),
+         std::make_shared<TypeErasedRangeImpl<Container>>(ptr)});
   }
 
   template <typename Container>
-  void RegisterCollection(std::string name, const Container* ptr, std::function<std::shared_ptr<StructVisitor>(const std::ranges::range_value_t<Container>&)> mapper) {
+  void RegisterCollection(
+      std::string name,
+      const Container* ptr,
+      std::function<std::shared_ptr<StructVisitor>(
+          const std::ranges::range_value_t<Container>&)> mapper) {
     std::string clean_name = name;
     if (clean_name.starts_with("props.")) {
       clean_name = clean_name.substr(6);
     }
-    range_entries_.push_back({std::move(clean_name), std::make_shared<TypeErasedRangeImpl<Container>>(ptr, mapper)});
+    range_entries_.push_back(
+        {std::move(clean_name),
+         std::make_shared<TypeErasedRangeImpl<Container>>(ptr, mapper)});
   }
 
  protected:
@@ -384,7 +444,9 @@ class Component : public ComponentBase {
       return false;
     };
     auto set_value = [ptr](std::string_view val) {
-      reflection::from_string(val, *ptr);
+      if constexpr (requires(std::stringstream ss) { ss >> *ptr; }) {
+        reflection::from_string(val, *ptr);
+      }
     };
     entries_.push_back({std::move(clean_name), std::move(get_value),
                         std::move(check_and_update), std::move(set_value)});
@@ -401,28 +463,15 @@ class Component : public ComponentBase {
   }
 };
 
-// Bind(x) registers a member variable for interpolation and snapshot checking.
-#define Bind(x) this->Import(#x, this->x)
+// Bind(x) is for state variables and direct members.
+#define Bind(x, ...) this->Import(#x, this->x, ##__VA_ARGS__)
 
-// BindComputed(x) registers a const member function for interpolation.
+// BindComputed(x) and BindCallback(x) are for member functions.
 #define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
+#define BindCallback(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
 
-// BindCollection(x) registers a range variable for collection interpolation.
-#define BindCollection(...) this->RegisterCollection(__VA_ARGS__)
-
-// Legacy compatibility macros
-#define RTXUI_STATE(TYPE, NAME)              \
-  TYPE NAME;                                 \
-  int init_##NAME = [this]() {               \
-    this->RegisterState(#NAME, &this->NAME); \
-    return 0;                                \
-  }()
-
-#define RTXUI_COMPUTED(NAME)                                             \
-  int init_##NAME = [this]() {                                           \
-    this->RegisterComputed(#NAME, &std::decay_t<decltype(*this)>::NAME); \
-    return 0;                                                            \
-  }()
+// BindCollection(name, x) for explicit names or pointers.
+#define BindCollection(name, ...) this->Import(name, ##__VA_ARGS__)
 
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory);
 ComponentFactory GetGlobalComponentFactory(std::string_view name);

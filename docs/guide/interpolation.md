@@ -25,7 +25,7 @@ class CounterApp : public Component<CounterApp> {
 
 ## Computed Properties
 
-You can also bind to C++ methods. This is useful for derived data or complex logic that shouldn't live in the template. Use the `BindComputed()` macro to register a `const` member function.
+You can also bind to C++ methods. This is useful for derived data or complex logic that shouldn't live in the template. Use the `Bind()` macro to register a `const` member function.
 
 ```cpp
 class CounterApp : public Component<CounterApp> {
@@ -34,7 +34,7 @@ class CounterApp : public Component<CounterApp> {
 
   CounterApp() {
     Bind(count);
-    BindComputed(double_count);
+    Bind(double_count); // Unified binding for methods too!
   }
 
   int double_count() const { return count * 2; }

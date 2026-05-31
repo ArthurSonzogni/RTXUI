@@ -1,6 +1,6 @@
 # Loops
 
-RTXUI supports iterating over collections using the `<for>` tag. You can bind `std::vector` or any range-compatible container.
+RTXUI supports iterating over collections using the `<for>` tag. You can bind `std::vector` or any range-compatible container using the unified `Bind()` macro.
 
 ## Simple Collection
 
@@ -12,10 +12,11 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
   std::vector<std::string> items = {"Apple", "Banana", "Cherry"};
 
   SimpleLoopApp() {
-    BindCollection("items", &items);
+    Bind(items); // Unified binding automatically detects ranges
   }
+...
+```
 
-  std::string_view Setup() override {
     return R"html(
       <ul>
         <for each="{items}" as="fruit">
@@ -42,7 +43,7 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
   std::vector<Task> tasks = {{"Build", true}, {"Test", false}};
 
   ComplexLoopApp() {
-    BindCollection("tasks", &tasks, [](const Task& t) {
+    Bind(tasks, [](const Task& t) {
       return std::make_shared<ManualStructVisitor>(std::unordered_map<std::string, std::string>{
         {"name", t.name},
         {"status", t.completed ? "✅ Done" : "⏳ Pending"}

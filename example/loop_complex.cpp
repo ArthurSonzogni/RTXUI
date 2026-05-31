@@ -19,28 +19,30 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
   };
   std::string new_task_name = "";
 
+  void AddTask() {
+    if (!new_task_name.empty()) {
+      tasks.push_back({new_task_name, false});
+      new_task_name = "";
+    }
+  }
+
+  void RemoveTask(std::string index_str) {
+    size_t index = std::stoull(index_str);
+    if (index < tasks.size()) {
+      tasks.erase(tasks.begin() + index);
+    }
+  }
+
   ComplexLoopApp() {
-    BindCollection("tasks", &tasks, [](const Task& t) {
+    Bind(tasks, [](const Task& t) {
       return std::make_shared<ManualStructVisitor>(std::unordered_map<std::string, std::string>{
         {"name", t.name},
         {"status", t.completed ? "✅ Done" : "⏳ Pending"}
       });
     });
     Bind(new_task_name);
-
-    Import("AddTask", [this]() {
-      if (!new_task_name.empty()) {
-        tasks.push_back({new_task_name, false});
-        new_task_name = "";
-      }
-    });
-
-    Import("RemoveTask", [this](std::string index_str) {
-      size_t index = std::stoull(index_str);
-      if (index < tasks.size()) {
-        tasks.erase(tasks.begin() + index);
-      }
-    });
+    Bind(AddTask);
+    Bind(RemoveTask);
   }
 
   std::string_view Setup() override {

@@ -12,11 +12,14 @@ class Counter : public Component<Counter> {
 
   int double_count() const { return count * 2; }
 
+  void Increment() { count++; }
+  void Decrement() { count--; }
+
   Counter() {
     Bind(count);
-    BindComputed(double_count);
-    Import("Increment", [this]() { count++; });
-    Import("Decrement", [this]() { count--; });
+    Bind(double_count);
+    Bind(Increment);
+    Bind(Decrement);
   }
 
   std::string_view Setup() override {
