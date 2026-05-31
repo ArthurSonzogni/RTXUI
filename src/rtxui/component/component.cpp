@@ -202,7 +202,8 @@ std::string Interpolate(std::string_view text, ComponentBase* source, std::share
         bool is_ident = !trimmed.empty();
         for (char c : trimmed) {
           if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' &&
-              c != '.' && c != '-' && c != '$') {
+              c != '.' && c != '-' && c != '$' && c != ' ' && c != '=' &&
+              c != '!' && c != '>' && c != '<' && c != '&' && c != '|') {
             is_ident = false;
             break;
           }
@@ -644,6 +645,8 @@ void ComponentBase::Render(const xml::Node& node,
     return rtxui::Interpolate(text, import_source, scope);
   };
 
+  bool last_condition_chain_met = false;
+
   for (const auto& child_node : node.children) {
     switch (child_node.type) {
       case xml::Node::Type::kComment:
@@ -651,6 +654,18 @@ void ComponentBase::Render(const xml::Node& node,
 
       case xml::Node::Type::kText: {
         std::string text = Interpolate(child_node.text);
+
+        bool is_whitespace = true;
+        for (char c : text) {
+          if (!std::isspace(static_cast<unsigned char>(c))) {
+            is_whitespace = false;
+            break;
+          }
+        }
+        if (!is_whitespace) {
+          last_condition_chain_met = true;
+        }
+
         bool preserve_newlines = false;
         for (Element* curr = slot; curr; curr = curr->Parent()) {
           if (curr->tag() == "textarea" || curr->tag() == "pre") {
@@ -674,6 +689,44 @@ void ComponentBase::Render(const xml::Node& node,
       case xml::Node::Type::kElement: {
         if (child_node.tag == "style") {
           break;
+        }
+
+        if (child_node.tag == "if") {
+          std::string cond = Interpolate(child_node.attributes.at("condition"));
+          last_condition_chain_met = (cond == "true" || cond == "1");
+          if (last_condition_chain_met) {
+            Render(child_node, slot, import_source, scope);
+          }
+          break;
+        }
+
+        if (child_node.tag == "elif") {
+          if (!last_condition_chain_met) {
+            std::string cond =
+                Interpolate(child_node.attributes.at("condition"));
+            if (cond == "true" || cond == "1") {
+              last_condition_chain_met = true;
+              Render(child_node, slot, import_source, scope);
+            }
+          }
+          break;
+        }
+
+        if (child_node.tag == "else") {
+          if (!last_condition_chain_met) {
+            Render(child_node, slot, import_source, scope);
+          }
+          last_condition_chain_met = true;
+          break;
+        }
+
+        last_condition_chain_met = true;
+
+        if (child_node.attributes.contains("if")) {
+          std::string cond = Interpolate(child_node.attributes.at("if"));
+          if (!(cond == "true" || cond == "1")) {
+            break;
+          }
         }
 
         if (child_node.tag == "for") {

@@ -185,4 +185,68 @@ TEST_CASE("Automatic Reflection Loop Interpolation", "[component][interpolation]
   CHECK(output.find("Banana") != std::string::npos);
 }
 
+class ConditionalApp : public rtxui::Component<ConditionalApp> {
+ public:
+  int value = 1;
+
+  void InitReflection() override {
+    Bind(value);
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<ConditionalApp>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <div>
+      <if condition="{value == 1}">
+        <span>One</span>
+      </if>
+      <!-- a comment -->
+      <elif condition="{value == 2}">
+        <span>Two</span>
+      </elif>
+      
+      <else>
+        <span>Other</span>
+      </else>
+
+      <span if="{value == 1}">Always One</span>
+    </div>
+  )";
+
+  std::string GetInterpolatedValue(std::string_view expr) override {
+    if (expr == "value == 1") return value == 1 ? "true" : "false";
+    if (expr == "value == 2") return value == 2 ? "true" : "false";
+    return rtxui::Component<ConditionalApp>::GetInterpolatedValue(expr);
+  }
+};
+
+TEST_CASE("Conditional Rendering", "[component][interpolation]") {
+  auto component = rtxui::Ref<ConditionalApp>::New();
+  
+  component->value = 1;
+  component->Mount();
+  std::string output = component->Root()->Print();
+  CHECK(output.find("One") != std::string::npos);
+  CHECK(output.find("Always One") != std::string::npos);
+  CHECK(output.find("Two") == std::string::npos);
+  CHECK(output.find("Other") == std::string::npos);
+
+  component->value = 2;
+  component->Render();
+  output = component->Root()->Print();
+  CHECK(output.find("One") == std::string::npos);
+  CHECK(output.find("Always One") == std::string::npos);
+  CHECK(output.find("Two") != std::string::npos);
+  CHECK(output.find("Other") == std::string::npos);
+
+  component->value = 3;
+  component->Render();
+  output = component->Root()->Print();
+  CHECK(output.find("One") == std::string::npos);
+  CHECK(output.find("Always One") == std::string::npos);
+  CHECK(output.find("Two") == std::string::npos);
+  CHECK(output.find("Other") != std::string::npos);
+}
+
 }  // namespace
