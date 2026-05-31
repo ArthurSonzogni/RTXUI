@@ -58,22 +58,43 @@ Element* ComponentBase::Root() const {
   return root_.get();
 }
 
-bool Bindings::RunCallback(std::string_view name) {
-  auto it = callbacks_.find(std::string(name));
-  if (it != callbacks_.end()) {
-    it->second();
+bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
+  if (arg.empty()) {
+    auto it = callbacks_.find(std::string(name));
+    if (it != callbacks_.end()) {
+      it->second();
+      return true;
+    }
+  }
+
+  auto it_param = parameterized_callbacks_.find(std::string(name));
+  if (it_param != parameterized_callbacks_.end()) {
+    it_param->second(std::string(arg));
     return true;
   }
+
   return false;
 }
 
 void Bindings::Import(std::string_view name, std::function<void()> callback) {
-  if (callbacks_.count(std::string(name))) {
+  if (callbacks_.count(std::string(name)) ||
+      parameterized_callbacks_.count(std::string(name))) {
     std::println("Error: Callback '{}' is already imported.", name);
     std::exit(1);
   }
 
   callbacks_[std::string(name)] = std::move(callback);
+}
+
+void Bindings::Import(std::string_view name,
+                      std::function<void(std::string)> callback) {
+  if (callbacks_.count(std::string(name)) ||
+      parameterized_callbacks_.count(std::string(name))) {
+    std::println("Error: Callback '{}' is already imported.", name);
+    std::exit(1);
+  }
+
+  parameterized_callbacks_[std::string(name)] = std::move(callback);
 }
 
 void Bindings::Import(std::string_view name, ComponentFactory factory) {
@@ -147,7 +168,7 @@ void RestoreElementStates(
   }
 }
 
-std::string Interpolate(std::string_view text, ComponentBase* source) {
+std::string Interpolate(std::string_view text, ComponentBase* source, std::shared_ptr<LocalScope> scope) {
   struct Placeholder {
     size_t open_idx;
     size_t close_idx;
@@ -181,7 +202,7 @@ std::string Interpolate(std::string_view text, ComponentBase* source) {
         bool is_ident = !trimmed.empty();
         for (char c : trimmed) {
           if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' &&
-              c != '.' && c != '-') {
+              c != '.' && c != '-' && c != '$') {
             is_ident = false;
             break;
           }
@@ -202,7 +223,35 @@ std::string Interpolate(std::string_view text, ComponentBase* source) {
 
   std::string result(text);
   for (const auto& ph : placeholders) {
-    std::string val = source->GetInterpolatedValue(ph.trimmed_expr);
+    std::string val;
+    bool resolved = false;
+    if (scope) {
+      auto dot_pos = ph.trimmed_expr.find('.');
+      std::string var_name = (dot_pos == std::string_view::npos)
+                                 ? ph.trimmed_expr
+                                 : std::string(ph.trimmed_expr.substr(0, dot_pos));
+      auto val_opt = scope->Get(var_name);
+      if (val_opt) {
+        resolved = true;
+        if (dot_pos == std::string_view::npos) {
+          if (std::holds_alternative<std::string>(*val_opt)) {
+            val = std::get<std::string>(*val_opt);
+          }
+        } else {
+          std::string_view expr_view = ph.trimmed_expr;
+          std::string_view field_name = expr_view.substr(dot_pos + 1);
+          if (std::holds_alternative<std::shared_ptr<StructVisitor>>(*val_opt)) {
+            auto visitor = std::get<std::shared_ptr<StructVisitor>>(*val_opt);
+            if (visitor) {
+              val = visitor->GetFieldValue(field_name);
+            }
+          }
+        }
+      }
+    }
+    if (!resolved) {
+      val = source->GetInterpolatedValue(ph.trimmed_expr);
+    }
     result.replace(ph.open_idx, ph.close_idx - ph.open_idx + 1, val);
   }
   return result;
@@ -483,7 +532,7 @@ void ComponentBase::Render() {
           continue;
         }
         css_strings_.push_back(
-            Interpolate(node.children[0].text, this));
+            Interpolate(node.children[0].text, this, nullptr));
         const auto& css_str = css_strings_.back();
         auto maybe_stylesheet = css::Parse(css_str);
         if (maybe_stylesheet) {
@@ -589,9 +638,10 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
 
 void ComponentBase::Render(const xml::Node& node,
                            Element* slot,
-                           ComponentBase* import_source) {
+                           ComponentBase* import_source,
+                           std::shared_ptr<LocalScope> scope) {
   auto Interpolate = [&](std::string_view text) -> std::string {
-    return rtxui::Interpolate(text, import_source);
+    return rtxui::Interpolate(text, import_source, scope);
   };
 
   for (const auto& child_node : node.children) {
@@ -626,6 +676,46 @@ void ComponentBase::Render(const xml::Node& node,
           break;
         }
 
+        if (child_node.tag == "for") {
+          std::string each_attr = std::string(child_node.attributes.at("each"));
+          // Strip {} if present
+          std::string range_name = each_attr;
+          if (range_name.starts_with("{") && range_name.ends_with("}")) {
+            range_name = range_name.substr(1, range_name.size() - 2);
+          }
+
+          std::string as_attr = "item";
+          if (child_node.attributes.contains("as")) {
+            as_attr = std::string(child_node.attributes.at("as"));
+          }
+
+          std::shared_ptr<TypeErasedRange> range;
+          for (const auto& entry : import_source->range_entries_) {
+            if (entry.name == range_name) {
+              range = entry.range;
+              break;
+            }
+          }
+
+          if (range) {
+            for (size_t i = 0; i < range->Size(); ++i) {
+              auto new_scope = std::make_shared<LocalScope>();
+              new_scope->parent = scope;
+
+              auto visitor = range->GetItemVisitor(i);
+              if (visitor) {
+                new_scope->variables[as_attr] = visitor;
+              } else {
+                new_scope->variables[as_attr] = range->GetItemString(i);
+              }
+              new_scope->variables["$index"] = std::to_string(i);
+
+              Render(child_node, slot, import_source, new_scope);
+            }
+          }
+          break;
+        }
+
         if (child_node.tag == "slot" || child_node.tag.starts_with("slot.")) {
           std::string slot_name = child_node.tag == "slot"
                                       ? ""
@@ -642,7 +732,7 @@ void ComponentBase::Render(const xml::Node& node,
           Ref<Element> target_slot = Slot(template_name);
           if (target_slot) {
             target_slot->RemoveChildren();
-            Render(child_node, target_slot.get(), import_source);
+            Render(child_node, target_slot.get(), import_source, scope);
           }
           break;
         }
@@ -713,7 +803,7 @@ void ComponentBase::Render(const xml::Node& node,
           Ref<Element> default_slot = child->Slot("");
           if (default_slot) {
             default_slot->RemoveChildren();
-            child->Render(child_node, default_slot.get(), import_source);
+            child->Render(child_node, default_slot.get(), import_source, scope);
           }
           break;
         }
@@ -725,7 +815,7 @@ void ComponentBase::Render(const xml::Node& node,
           child_element->SetAttribute(std::string(key), Interpolate(value));
         }
         slot->AddChild(child_element);
-        Render(child_node, child_element.get(), import_source);
+        Render(child_node, child_element.get(), import_source, scope);
         break;
       }
     }

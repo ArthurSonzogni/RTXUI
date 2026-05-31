@@ -160,6 +160,15 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_helloworld example/helloworld.cpp)
   target_link_libraries(rtxui_example_helloworld PRIVATE rtxui)
 
+  add_executable(rtxui_example_loop example/loop.cpp)
+  target_link_libraries(rtxui_example_loop PRIVATE rtxui)
+
+  add_executable(rtxui_example_loop_simple example/loop_simple.cpp)
+  target_link_libraries(rtxui_example_loop_simple PRIVATE rtxui)
+
+  add_executable(rtxui_example_loop_complex example/loop_complex.cpp)
+  target_link_libraries(rtxui_example_loop_complex PRIVATE rtxui)
+
   add_executable(rtxui_example_colors example/colors.cpp)
   target_link_libraries(rtxui_example_colors PRIVATE rtxui)
 

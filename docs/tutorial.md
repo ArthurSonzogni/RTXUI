@@ -205,3 +205,119 @@ class InputApp : public Component<InputApp> {
 
 <WasmTerminal src="/wasm/rtxui_example_input.js" :cols="80" :rows="60" />
 
+---
+
+## 6. Loops with `<for>`
+
+RTXUI supports iterating over collections using the `<for>` tag. You can bind `std::vector` or any range-compatible container.
+
+### Simple Collection
+
+For simple types like `std::string` or `int`, RTXUI automatically converts the item to text. You can use the built-in `$index` variable to get the current iteration index.
+
+```cpp
+class SimpleLoopApp : public Component<SimpleLoopApp> {
+ public:
+  std::vector<std::string> items = {"Apple", "Banana", "Cherry"};
+  std::string new_fruit = "";
+
+  SimpleLoopApp() {
+    BindCollection("items", &items);
+    Bind(new_fruit);
+    
+    Import("AddItem", [this]() {
+      if (!new_fruit.empty()) {
+        items.push_back(new_fruit);
+        new_fruit = "";
+      }
+    });
+
+    Import("RemoveItem", [this](std::string index_str) {
+      size_t index = std::stoull(index_str);
+      if (index < items.size()) {
+        items.erase(items.begin() + index);
+      }
+    });
+  }
+
+  std::string_view Setup() override {
+    return R"html(
+      <div class="container">
+        <div class="input-row">
+          <input value="{new_fruit}" placeholder="Enter fruit name..." />
+          <button onclick="AddItem">Add Fruit</button>
+        </div>
+        <ul>
+          <for each="{items}" as="fruit">
+            <li>
+              <span>{fruit}</span>
+              <button onclick="RemoveItem({$index})">Remove</button>
+            </li>
+          </for>
+        </ul>
+      </div>
+    )html";
+  }
+};
+```
+
+<WasmTerminal src="/wasm/rtxui_example_loop_simple.js" :cols="60" :rows="60" />
+
+### Complex Collection with Field Mapping
+
+For complex objects, you can provide a mapper function. This example demonstrates using `$index` to remove specific items from the list.
+
+```cpp
+struct Task {
+  std::string name;
+  bool completed;
+};
+
+class ComplexLoopApp : public Component<ComplexLoopApp> {
+ public:
+  std::vector<Task> tasks = {{"Build", true}, {"Test", false}};
+  std::string new_task_name = "";
+
+  ComplexLoopApp() {
+    BindCollection("tasks", &tasks, [](const Task& t) {
+      return std::make_shared<ManualStructVisitor>(std::unordered_map<std::string, std::string>{
+        {"name", t.name},
+        {"status", t.completed ? "✅ Done" : "⏳ Pending"}
+      });
+    });
+    Bind(new_task_name);
+
+    Import("AddTask", [this]() {
+      if (!new_task_name.empty()) {
+        tasks.push_back({new_task_name, false});
+        new_task_name = "";
+      }
+    });
+
+    Import("RemoveTask", [this](std::string index_str) {
+      size_t index = std::stoull(index_str);
+      if (index < tasks.size()) {
+        tasks.erase(tasks.begin() + index);
+      }
+    });
+  }
+
+  std::string_view Setup() override {
+    return R"html(
+      <div>
+        <input value="{new_task_name}" placeholder="New task..." />
+        <button onclick="AddTask">Add Task</button>
+        <for each="{tasks}" as="t">
+          <div>
+            <span>{t.status} - {t.name}</span>
+            <button onclick="RemoveTask({$index})">X</button>
+          </div>
+        </for>
+      </div>
+    )html";
+  }
+};
+```
+
+<WasmTerminal src="/wasm/rtxui_example_loop_complex.js" :cols="80" :rows="60" />
+

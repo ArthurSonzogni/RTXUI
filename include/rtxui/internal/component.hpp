@@ -14,11 +14,18 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
+#include <variant>
+#include <unordered_map>
+#include <ranges>
+#if defined(RTXUI_HAS_REFLECTION)
+#include <meta>
+#endif
 
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/import.hpp"
 #include "rtxui/internal/refcounted.hpp"
+
 namespace css {
 struct Ruleset;
 using StyleSheet = std::vector<Ruleset>;
@@ -34,6 +41,37 @@ using Nodes = std::vector<Node>;
 }  // namespace xml
 
 namespace rtxui {
+
+class StructVisitor {
+ public:
+  virtual ~StructVisitor() = default;
+  virtual std::string GetFieldValue(std::string_view field_name) const = 0;
+};
+
+class TypeErasedRange {
+ public:
+  virtual ~TypeErasedRange() = default;
+  virtual size_t Size() const = 0;
+  virtual std::string GetItemString(size_t index) const = 0;
+  virtual std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const = 0;
+  virtual bool CheckAndUpdate() = 0;
+};
+
+struct LocalScope {
+  std::shared_ptr<LocalScope> parent;
+  std::unordered_map<std::string, std::variant<std::string, std::shared_ptr<StructVisitor>>> variables;
+
+  std::optional<std::variant<std::string, std::shared_ptr<StructVisitor>>> Get(std::string_view name) const {
+    auto it = variables.find(std::string(name));
+    if (it != variables.end()) {
+      return it->second;
+    }
+    if (parent) {
+      return parent->Get(name);
+    }
+    return std::nullopt;
+  }
+};
 
 class ComponentBase : public RefCounted, public Bindings {
  public:
@@ -71,11 +109,17 @@ class ComponentBase : public RefCounted, public Bindings {
     std::string parent_prop;
   };
 
+  struct RangeEntry {
+    std::string name;
+    std::shared_ptr<TypeErasedRange> range;
+  };
+  std::vector<RangeEntry> range_entries_;
+
  protected:
   std::unique_ptr<css::StyleSheet> stylesheet_;
   std::vector<std::string> css_strings_;
   std::vector<BindingLink> two_way_bindings_;
-  void Render(const xml::Node& node, Element* element, ComponentBase* source);
+  void Render(const xml::Node& node, Element* element, ComponentBase* source, std::shared_ptr<LocalScope> scope = nullptr);
   std::string template_;
   std::string xml_string_;
   xml::Nodes xml_nodes_;
@@ -105,10 +149,12 @@ std::string to_string(const T& value) {
     return static_cast<std::string>(value);
   } else if constexpr (requires { std::to_string(value); }) {
     return std::to_string(value);
-  } else {
+  } else if constexpr (requires(std::ostream& os, const T& v) { os << v; }) {
     std::stringstream ss;
     ss << value;
     return ss.str();
+  } else {
+    return "";
   }
 }
 
@@ -127,6 +173,110 @@ void from_string(std::string_view str, T& value) {
   }
 }
 }  // namespace reflection
+
+#if defined(RTXUI_HAS_REFLECTION)
+template <typename T>
+consteval size_t get_members_size() {
+  return std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::unchecked()).size();
+}
+
+template <typename T>
+consteval auto get_members() {
+  constexpr size_t N = get_members_size<T>();
+  std::array<std::meta::info, N> arr{};
+  auto vec = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::unchecked());
+  for (size_t i = 0; i < N; ++i) {
+    arr[i] = vec[i];
+  }
+  return arr;
+}
+
+template <auto Arr, typename T, size_t... Is>
+std::string get_field_value_impl(const T& obj, std::string_view field_name, std::index_sequence<Is...>) {
+  std::string result;
+  ((std::meta::identifier_of(Arr[Is]) == field_name ? (result = reflection::to_string(obj.[:Arr[Is]:])) : std::string{}), ...);
+  return result;
+}
+
+template <typename T>
+class ReflectedStructVisitor : public StructVisitor {
+  const T& obj_;
+ public:
+  ReflectedStructVisitor(const T& obj) : obj_(obj) {}
+
+  std::string GetFieldValue(std::string_view field_name) const override {
+    constexpr auto members = get_members<T>();
+    return get_field_value_impl<members>(obj_, field_name, std::make_index_sequence<members.size()>{});
+  }
+};
+#endif
+
+class ManualStructVisitor : public StructVisitor {
+  std::unordered_map<std::string, std::string> fields_;
+ public:
+  ManualStructVisitor(std::unordered_map<std::string, std::string> fields)
+    : fields_(std::move(fields)) {}
+
+  std::string GetFieldValue(std::string_view field_name) const override {
+    auto it = fields_.find(std::string(field_name));
+    return (it != fields_.end()) ? it->second : "";
+  }
+};
+
+template <typename Container>
+class TypeErasedRangeImpl : public TypeErasedRange {
+  const Container* container_ptr_;
+  std::decay_t<Container> snapshot_;
+  std::function<std::shared_ptr<StructVisitor>(const std::ranges::range_value_t<Container>&)> mapper_;
+ public:
+  TypeErasedRangeImpl(const Container* ptr)
+    : container_ptr_(ptr), snapshot_(*ptr) {}
+
+  TypeErasedRangeImpl(const Container* ptr, std::function<std::shared_ptr<StructVisitor>(const std::ranges::range_value_t<Container>&)> mapper)
+    : container_ptr_(ptr), snapshot_(*ptr), mapper_(mapper) {}
+
+  size_t Size() const override {
+    return std::ranges::size(*container_ptr_);
+  }
+
+  std::string GetItemString(size_t index) const override {
+    auto it = std::ranges::begin(*container_ptr_);
+    std::advance(it, index);
+    return reflection::to_string(*it);
+  }
+
+  std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const override {
+    using ItemType = std::ranges::range_value_t<Container>;
+    auto it = std::ranges::begin(*container_ptr_);
+    std::advance(it, index);
+    
+    if (mapper_) {
+      return mapper_(*it);
+    }
+    
+#if defined(RTXUI_HAS_REFLECTION)
+    if constexpr (std::is_class_v<ItemType> && !std::is_same_v<ItemType, std::string>) {
+      return std::make_shared<ReflectedStructVisitor<ItemType>>(*it);
+    }
+#endif
+    return nullptr;
+  }
+
+  bool CheckAndUpdate() override {
+    if constexpr (requires { *container_ptr_ != snapshot_; }) {
+      if (*container_ptr_ != snapshot_) {
+        snapshot_ = *container_ptr_;
+        return true;
+      }
+    } else {
+      if (std::ranges::size(*container_ptr_) != std::ranges::size(snapshot_)) {
+        snapshot_ = *container_ptr_;
+        return true;
+      }
+    }
+    return false;
+  }
+};
 
 template <typename Derived>
 class Component : public ComponentBase {
@@ -148,6 +298,11 @@ class Component : public ComponentBase {
     bool changed = false;
     for (auto& entry : entries_) {
       if (entry.check_and_update && entry.check_and_update()) {
+        changed = true;
+      }
+    }
+    for (auto& range_entry : range_entries_) {
+      if (range_entry.range->CheckAndUpdate()) {
         changed = true;
       }
     }
@@ -194,6 +349,24 @@ class Component : public ComponentBase {
     RegisterComputed(name, method);
   }
 
+  template <typename Container>
+  void RegisterCollection(std::string name, const Container* ptr) {
+    std::string clean_name = name;
+    if (clean_name.starts_with("props.")) {
+      clean_name = clean_name.substr(6);
+    }
+    range_entries_.push_back({std::move(clean_name), std::make_shared<TypeErasedRangeImpl<Container>>(ptr)});
+  }
+
+  template <typename Container>
+  void RegisterCollection(std::string name, const Container* ptr, std::function<std::shared_ptr<StructVisitor>(const std::ranges::range_value_t<Container>&)> mapper) {
+    std::string clean_name = name;
+    if (clean_name.starts_with("props.")) {
+      clean_name = clean_name.substr(6);
+    }
+    range_entries_.push_back({std::move(clean_name), std::make_shared<TypeErasedRangeImpl<Container>>(ptr, mapper)});
+  }
+
  protected:
   template <typename T>
   void RegisterState(std::string name, T* ptr) {
@@ -233,6 +406,9 @@ class Component : public ComponentBase {
 
 // BindComputed(x) registers a const member function for interpolation.
 #define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
+
+// BindCollection(x) registers a range variable for collection interpolation.
+#define BindCollection(...) this->RegisterCollection(__VA_ARGS__)
 
 // Legacy compatibility macros
 #define RTXUI_STATE(TYPE, NAME)              \

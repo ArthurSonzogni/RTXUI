@@ -21,18 +21,21 @@ using ComponentFactory = std::function<Ref<ComponentBase>()>;
 using ComponentImportMap = std::unordered_map<std::string, ComponentFactory>;
 
 using Callback = std::function<void()>;
+using ParameterizedCallback = std::function<void(std::string)>;
 using CallbackImportMap = std::unordered_map<std::string, Callback>;
+using ParameterizedCallbackImportMap = std::unordered_map<std::string, ParameterizedCallback>;
 
 /// Bindings is a structure that allows you to import components and callbacks
 /// into a component.
 class Bindings {
  protected:
   CallbackImportMap callbacks_;
+  ParameterizedCallbackImportMap parameterized_callbacks_;
   ComponentImportMap imports_;
 
  public:
-  /// Invoke an imported callback by name.
-  bool RunCallback(std::string_view name);
+  /// Invoke an imported callback by name, optionally with an argument.
+  bool RunCallback(std::string_view name, std::string_view arg = "");
 
   /// Bind a callback into the template.
   ///
@@ -42,6 +45,9 @@ class Bindings {
   /// Import("callback", callback);
   /// ```
   void Import(std::string_view name, std::function<void()> callback);
+
+  /// Bind a parameterized callback into the template.
+  void Import(std::string_view name, std::function<void(std::string)> callback);
 
   /// Import a component using a custom factory function.
   void Import(std::string_view name, ComponentFactory factory);
