@@ -832,19 +832,42 @@ void ComponentBase::Render(const xml::Node& node,
             child->two_way_bindings_.clear();
           }
 
-          for (auto& [key, value] : child_node.attributes) {
+          for (auto& [key_view, value] : child_node.attributes) {
+            std::string key(key_view);
+            std::string actual_value(value);
+
+            // Handle Vue-style dynamic attribute prefix ':'
+            if (key.starts_with(':')) {
+              key = key.substr(1);
+              if (!actual_value.starts_with('{')) {
+                actual_value = "{" + actual_value + "}";
+              }
+            }
+
+            // Handle Vue-style event prefix '@'
+            if (key.starts_with('@')) {
+              if (key == "@click") key = "onclick";
+              else if (key == "@click.left") key = "onclick";
+              else if (key == "@click.right") key = "oncontextmenu";
+              else if (key == "@change") key = "onchange";
+              else {
+                // Generic mapping: @event -> onevent
+                key = "on" + key.substr(1);
+              }
+            }
+
             if (key == "id" || key == "class") {
               continue;
             }
-            std::string interpolated_value = Interpolate(value);
-            child->SetProperty(std::string(key), interpolated_value);
-            child->Root()->SetAttribute(std::string(key), interpolated_value);
+            std::string interpolated_value = Interpolate(actual_value);
+            child->SetProperty(key, interpolated_value);
+            child->Root()->SetAttribute(key, interpolated_value);
 
-            if (value.starts_with("{") && value.ends_with("}")) {
+            if (actual_value.starts_with("{") && actual_value.ends_with("}")) {
               std::string parent_prop =
-                  std::string(value.substr(1, value.size() - 2));
+                  std::string(actual_value.substr(1, actual_value.size() - 2));
               child->two_way_bindings_.push_back(
-                  {std::string(key), import_source, parent_prop});
+                  {key, import_source, parent_prop});
             }
           }
 
@@ -864,8 +887,31 @@ void ComponentBase::Render(const xml::Node& node,
         auto child_element = Ref<Element>::New();
         child_element->set_owner_component(import_source);
         child_element->SetTag(std::string(child_node.tag));
-        for (auto& [key, value] : child_node.attributes) {
-          child_element->SetAttribute(std::string(key), Interpolate(value));
+        for (auto& [key_view, value] : child_node.attributes) {
+          std::string key(key_view);
+          std::string actual_value(value);
+
+          // Handle Vue-style dynamic attribute prefix ':'
+          if (key.starts_with(':')) {
+            key = key.substr(1);
+            if (!actual_value.starts_with('{')) {
+              actual_value = "{" + actual_value + "}";
+            }
+          }
+
+          // Handle Vue-style event prefix '@'
+          if (key.starts_with('@')) {
+            if (key == "@click") key = "onclick";
+            else if (key == "@click.left") key = "onclick";
+            else if (key == "@click.right") key = "oncontextmenu";
+            else if (key == "@change") key = "onchange";
+            else {
+              // Generic mapping: @event -> onevent
+              key = "on" + key.substr(1);
+            }
+          }
+
+          child_element->SetAttribute(key, Interpolate(actual_value));
         }
         slot->AddChild(child_element);
         Render(child_node, child_element.get(), import_source, scope);

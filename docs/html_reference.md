@@ -33,7 +33,17 @@ This reference lists all the built-in HTML/XML elements supported by RTXUI out-o
 
 ## Global Attributes
 
-The following attributes are supported on all elements (including custom components):
+The following attributes and syntaxes are supported on all elements (including custom components):
+
+### Data Binding
+You can bind element attributes to reactive state or computed properties using two styles:
+- **React-style**: `attribute="{expression}"`
+- **Vue-style**: `:attribute="expression"` (Short for `attribute="{expression}"`)
+
+### Event Listeners
+Interactive elements support event listeners using two styles:
+- **React-style**: `onclick="handler"`, `oncontextmenu="handler"`, `onchange="handler"`.
+- **Vue-style**: `@click="handler"`, `@click.right="handler"`, `@change="handler"`.
 
 ### `if`
 Specifies a condition for rendering the element.
@@ -41,6 +51,8 @@ Specifies a condition for rendering the element.
 - **Example**:
   ```html
   <div if="{is_visible}">Visible Content</div>
+  <!-- or -->
+  <div :if="is_visible">Visible Content</div>
   ```
 
 ---
