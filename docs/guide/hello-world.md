@@ -1,6 +1,6 @@
 # Hello World
 
-Every RTXUI application begins with a main component and a `Screen` runner. Let's create a minimal component that prints a greeting.
+RTXUI applications consist of a main component and a `Screen` runner. This example creates a minimal component that prints a greeting.
 
 ### Minimal Application Setup
 

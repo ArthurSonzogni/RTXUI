@@ -1,10 +1,10 @@
 # Event Bindings
 
-RTXUI allows you to bind user interactions (like mouse clicks or keyboard events) to C++ callback functions.
+RTXUI binds user interactions (like mouse clicks or keyboard events) to C++ callback functions.
 
 ## Binding Callbacks
 
-Member functions can be bound using the unified `Bind()` macro. You can also import standard functions or lambda expressions using `Import()`.
+Member functions are registered using the `Bind()` macro. Standard functions or lambda expressions are imported using `Import()`.
 
 ```cpp
 CounterApp() {
@@ -38,7 +38,7 @@ Use the `@` shorthand without braces.
 
 ## Parameterized Callbacks
 
-You can pass arguments to your callbacks from the template. The argument is received as a `std::string`.
+Callbacks can receive arguments from the template as `std::string` parameters.
 
 ```cpp
 Import("RemoveItem", [this](std::string index_str) {

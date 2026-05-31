@@ -78,8 +78,6 @@ class ConditionalApp : public Component<ConditionalApp> {
       </style>
     )html";
   }
-
-  // No longer needed to override GetInterpolatedValue for complex logic!
 };
 
 int main() {

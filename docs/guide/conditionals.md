@@ -1,6 +1,6 @@
 # Conditional Rendering
 
-RTXUI supports conditional rendering using both specialized logic tags and the `if` attribute on standard elements.
+Conditional rendering is supported through specialized logic tags or the `if` attribute on standard elements.
 
 ## Logic Tags: `<if>`, `<elif>`, `<else>`
 
@@ -41,7 +41,7 @@ class ConditionalApp : public Component<ConditionalApp> {
 
 ## The `if` Attribute
 
-For single elements, you can use the `if` attribute directly. If the expression evaluates to `true` (or `1`), the element is rendered; otherwise, it is skipped.
+The `if` attribute specifies conditions for single elements. Elements are rendered when the expression evaluates to `true` (or `1`).
 
 ```html
 <span if="{is_home}">Home Page Footer</span>
