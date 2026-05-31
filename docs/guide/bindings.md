@@ -22,11 +22,15 @@ RTXUI supports two styles for binding events:
 
 ### 1. React-style (`onclick`, `onchange`, etc.)
 
+Use the full attribute name with curly braces around the handler.
+
 ```html
-<button onclick="Increment">Increment</button>
+<button onclick="{Increment}">Increment</button>
 ```
 
 ### 2. Vue-style (`@click`, `@change`, etc.)
+
+Use the `@` shorthand without braces.
 
 ```html
 <button @click="Decrement">Decrement</button>
