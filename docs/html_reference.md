@@ -57,7 +57,7 @@ Specifies a condition for rendering the element.
 
 ---
 
-## `<if>` & `<elif>` & `<else>`
+## `&lt;if&gt;` &amp; `&lt;elif&gt;` &amp; `&lt;else&gt;`
 Used for block-level conditional rendering.
 - **Attributes**:
   - `condition` (on `<if>` and `<elif>`): Expression to evaluate.
@@ -77,7 +77,7 @@ Used for block-level conditional rendering.
 
 ---
 
-## `<div>`
+## `&lt;div&gt;`
 Used as a block-level wrapper to group elements vertically.
 - **Default Styles**:
   ```css
@@ -91,14 +91,14 @@ Used as a block-level wrapper to group elements vertically.
   </div>
   ```
 
-## `<span>`
+## `&lt;span&gt;`
 Used as an inline wrapper for text elements.
 - **Default Styles**:
   ```css
   self { display: inline; }
   ```
 
-## `<h1>`
+## `&lt;h1&gt;`
 Renders a major section heading.
 - **Default Styles**:
   ```css
@@ -110,7 +110,7 @@ Renders a major section heading.
   }
   ```
 
-## `<p>`
+## `&lt;p&gt;`
 Used to format paragraph blocks.
 - **Default Styles**:
   ```css
@@ -121,7 +121,7 @@ Used to format paragraph blocks.
   }
   ```
 
-## `<strong>`
+## `&lt;strong&gt;`
 Highlights inline text with bold styling.
 - **Default Styles**:
   ```css
@@ -131,7 +131,7 @@ Highlights inline text with bold styling.
   }
   ```
 
-## `<ul>` & `<ol>` & `<li>`
+## `&lt;ul&gt;` &amp; `&lt;ol&gt;` &amp; `&lt;li&gt;`
 Used to create structured lists.
 - **Default Styles**:
   ```css
@@ -144,7 +144,7 @@ Used to create structured lists.
   }
   ```
 
-## `<button>`
+## `&lt;button&gt;`
 An interactive button that responds to left-click and right-click actions.
 - **Default Styles**:
   ```css
@@ -163,7 +163,7 @@ An interactive button that responds to left-click and right-click actions.
   <button onclick="MyCallback">Click Me</button>
   ```
 
-## `<input>`
+## `&lt;input&gt;`
 An interactive single-line text entry field.
 - **Default Styles**:
   ```css
@@ -195,18 +195,18 @@ An interactive single-line text entry field.
 
 - **Interactive Demo**:
   
-  <ExampleTabs src="/wasm/rtxui_example_input.js">
-  <template #source>
+<ExampleTabs src="/wasm/rtxui_example_input.js">
+<template #source>
 
 <<< @/../example/input.cpp
 
-  </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
 
 
 ---
 
-## `<textarea>`
+## `&lt;textarea&gt;`
 An interactive multi-line text editing area. Shares the same event-handling base as `<input>` but supports newlines, vertical cursor navigation, and vertical scrolling.
 - **Default Styles**:
   ```css
@@ -238,18 +238,18 @@ An interactive multi-line text editing area. Shares the same event-handling base
 
 - **Interactive Demo**:
   
-  <ExampleTabs src="/wasm/rtxui_example_textarea.js">
-  <template #source>
+<ExampleTabs src="/wasm/rtxui_example_textarea.js">
+<template #source>
 
 <<< @/../example/textarea.cpp
 
-  </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
 
 
 ---
 
-## `<checkbox>`
+## `&lt;checkbox&gt;`
 An interactive toggle control for boolean values.
 - **Default Styles**:
   ```css
@@ -279,18 +279,18 @@ An interactive toggle control for boolean values.
 
 - **Interactive Demo**:
 
-  <ExampleTabs src="/wasm/rtxui_example_checkbox.js">
-  <template #source>
+<ExampleTabs src="/wasm/rtxui_example_checkbox.js">
+<template #source>
 
 <<< @/../example/checkbox.cpp
 
-  </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
 
 
 ---
 
-## `<slider>`
+## `&lt;slider&gt;`
 An interactive horizontal range slider component.
 - **Default Styles**:
   ```css
@@ -331,18 +331,18 @@ An interactive horizontal range slider component.
 
 - **Interactive Demo**:
 
-  <ExampleTabs src="/wasm/rtxui_example_slider.js">
-  <template #source>
+<ExampleTabs src="/wasm/rtxui_example_slider.js">
+<template #source>
 
 <<< @/../example/slider.cpp
 
-  </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
 
 
 ---
 
-## `<progress>`
+## `&lt;progress&gt;`
 A read-only horizontal progress bar indicator.
 - **Default Styles**:
   ```css
@@ -367,18 +367,18 @@ A read-only horizontal progress bar indicator.
 
 - **Interactive Demo**:
 
-  <ExampleTabs src="/wasm/rtxui_example_progress.js">
-  <template #source>
+<ExampleTabs src="/wasm/rtxui_example_progress.js">
+<template #source>
 
 <<< @/../example/progress.cpp
 
-  </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
 
 
 ---
 
-## `<select>` & `<option>`
+## `&lt;select&gt;` &amp; `&lt;option&gt;`
 An interactive dropdown menu for picking from a list of options.
 - **Default Styles**:
   ```css
@@ -433,18 +433,18 @@ An interactive dropdown menu for picking from a list of options.
 
 - **Interactive Demo**:
 
-  <ExampleTabs src="/wasm/rtxui_example_select.js">
-  <template #source>
+<ExampleTabs src="/wasm/rtxui_example_select.js">
+<template #source>
 
 <<< @/../example/select.cpp
 
-  </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
 
 
 ---
 
-## `<hr>`
+## `&lt;hr&gt;`
 A block-level horizontal separator rule. Renders a continuous horizontal line `â”€` across the layout width.
 - **Default Styles**:
   ```css
@@ -466,12 +466,12 @@ A block-level horizontal separator rule. Renders a continuous horizontal line `â
 
 - **Interactive Demo**:
 
-  <ExampleTabs src="/wasm/rtxui_example_hr.js">
-  <template #source>
+<ExampleTabs src="/wasm/rtxui_example_hr.js">
+<template #source>
 
 <<< @/../example/hr.cpp
 
-  </template>
-  </ExampleTabs>
+</template>
+</ExampleTabs>
 
 
