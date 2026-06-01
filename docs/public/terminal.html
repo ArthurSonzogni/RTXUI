@@ -103,11 +103,11 @@
         }
 
         // Report dimensions to parent iframe container
-        const screenEl = document.querySelector('.xterm-screen');
+        const screenEl = document.querySelector('.xterm');
         if (screenEl && window.ResizeObserver) {
           const observer = new ResizeObserver(() => {
-            const width = screenEl.offsetWidth + 24;
-            const height = screenEl.offsetHeight + 24;
+            const width = screenEl.offsetWidth + 24 + 4;
+            const height = screenEl.offsetHeight + 24 + 4;
             window.parent.postMessage({
               type: 'rtxui-terminal-resize',
               width: width,
