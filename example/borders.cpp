@@ -47,7 +47,7 @@ class BorderBox : public Component<BorderBox> {
 class BordersDemo : public Component<BordersDemo> {
  public:
   std::string_view view = R"html(
-      <div>
+      <div class="content">
         <h1>RTXUI Border Styles Gallery</h1>
         <p>This demo showcases the 24 different border styles supported by RTXUI.</p>
 
@@ -105,6 +105,11 @@ class BordersDemo : public Component<BordersDemo> {
           width: 100%;
           height: 100%;
           overflow-y: scroll;
+        }
+        .content {
+          display: block;
+          max-width: 80;
+          margin: 0 auto;
         }
         h1 {
           font-weight: bold;
