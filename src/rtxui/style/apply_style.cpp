@@ -858,6 +858,15 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     style.scroll_speed_y = StoI(v);
     return;
   }
+
+  if (p == "scroll-behavior") {
+    if (v == "smooth") {
+      style.scroll_behavior = ScrollBehavior::Smooth;
+    } else {
+      style.scroll_behavior = ScrollBehavior::Auto;
+    }
+    return;
+  }
 }
 
 }  // namespace rtxui

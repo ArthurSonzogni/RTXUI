@@ -182,6 +182,7 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
 
   auto component = Ref<ScrollTestComponent>::New();
   Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
 
   auto* scroll_element = component->Root()->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
@@ -264,6 +265,7 @@ TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
 
   auto component = Ref<ScrollTestComponent>::New();
   Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
 
   auto* scroll_element = component->Root()->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
@@ -351,6 +353,7 @@ TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
 
   auto component = Ref<NestedScrollComponent>::New();
   Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
 
   auto* outer = component->Root()->QuerySelector("#outer");
   auto* inner = component->Root()->QuerySelector("#inner");
@@ -1170,6 +1173,7 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
 
   auto component = Ref<HitTestFixedComponent>::New();
   Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
   auto* fixed_el = component->Root()->QuerySelector("#fixed_item");
@@ -1390,6 +1394,7 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
 
   auto component = Ref<ScrollFocusComponent>::New();
   Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
   auto* scrollable = component->Root()->QuerySelector("#scrollable");
@@ -1443,6 +1448,149 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
   screen.Dispatch(Event::TabReverse());
   REQUIRE(item1->focused());
   REQUIRE(scrollable->scroll_y() == 3);
+}
+
+TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
+  struct ClockRestorer {
+    ~ClockRestorer() {
+      time::SetCustomClock(nullptr);
+    }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double {
+    return mock_now_ms;
+  });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ScrollAnimComponent : public Component<ScrollAnimComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ScrollAnimComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable_auto">
+        <div>Line 1</div>
+        <div>Line 2</div>
+        <div>Line 3</div>
+        <div>Line 4</div>
+        <div>Line 5</div>
+        <div>Line 6</div>
+        <div>Line 7</div>
+        <div>Line 8</div>
+        <div>Line 9</div>
+        <div>Line 10</div>
+      </div>
+      <div id="scrollable_smooth">
+        <div>Line 1</div>
+        <div>Line 2</div>
+        <div>Line 3</div>
+        <div>Line 4</div>
+        <div>Line 5</div>
+        <div>Line 6</div>
+        <div>Line 7</div>
+        <div>Line 8</div>
+        <div>Line 9</div>
+        <div>Line 10</div>
+      </div>
+      <style>
+        #scrollable_auto {
+          display: block;
+          height: 4;
+          overflow-y: scroll;
+          scroll-speed: 2;
+          scroll-behavior: auto;
+        }
+        #scrollable_smooth {
+          display: block;
+          height: 4;
+          overflow-y: scroll;
+          scroll-speed: 2;
+          scroll-behavior: smooth;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ScrollAnimComponent>::New();
+  Screen screen(component, device);
+
+  auto* scrollable_auto = component->Root()->QuerySelector("#scrollable_auto");
+  auto* scrollable_smooth = component->Root()->QuerySelector("#scrollable_smooth");
+  REQUIRE(scrollable_auto != nullptr);
+  REQUIRE(scrollable_smooth != nullptr);
+
+  // SetSmoothScrollEnabled defaults to true.
+  REQUIRE(screen.smooth_scroll_enabled());
+
+  // Test 1: Scroll behavior 'auto' (instant content scroll, smooth visual scrollbar)
+  REQUIRE(scrollable_auto->scroll_y() == 0);
+  REQUIRE(scrollable_auto->visual_scroll_y() == 0.0f);
+
+  // Trigger wheel scroll down on scrollable_auto
+  Event::Mouse wheel_auto;
+  wheel_auto.button = Event::Mouse::Button::WheelDown;
+  wheel_auto.motion = Event::Mouse::Motion::Pressed;
+  // Locate inside scrollable_auto
+  wheel_auto.x = 2;
+  wheel_auto.y = 1;
+  screen.Dispatch(wheel_auto);
+
+  // Content scroll snaps instantly
+  REQUIRE(scrollable_auto->scroll_y() == 2);
+  REQUIRE(scrollable_auto->target_scroll_y() == 2);
+  // Visual scrollbar thumb is still 0 before ticking
+  REQUIRE(scrollable_auto->visual_scroll_y() == 0.0f);
+
+  // Advance by 25ms
+  mock_now_ms = 1025.0;
+  screen.Step();
+  // Visual scrollbar position is transitioning smoothly
+  REQUIRE(scrollable_auto->visual_scroll_y() > 0.0f);
+  REQUIRE(scrollable_auto->visual_scroll_y() < 2.0f);
+  REQUIRE(scrollable_auto->scroll_y() == 2);
+
+  // Complete visual transition
+  mock_now_ms = 1050.0;
+  screen.Step();
+  REQUIRE(scrollable_auto->visual_scroll_y() == 2.0f);
+
+
+  // Test 2: Scroll behavior 'smooth' (smooth content scroll, smooth visual scrollbar)
+  mock_now_ms = 2000.0;
+  REQUIRE(scrollable_smooth->scroll_y() == 0);
+  REQUIRE(scrollable_smooth->visual_scroll_y() == 0.0f);
+
+  // Trigger wheel scroll down on scrollable_smooth
+  Event::Mouse wheel_smooth;
+  wheel_smooth.button = Event::Mouse::Button::WheelDown;
+  wheel_smooth.motion = Event::Mouse::Motion::Pressed;
+  // Locate inside scrollable_smooth
+  wheel_smooth.x = 2;
+  wheel_smooth.y = 5;
+  screen.Dispatch(wheel_smooth);
+
+  // Target is updated immediately
+  REQUIRE(scrollable_smooth->target_scroll_y() == 2);
+  // Both content and visual remain 0 before ticking
+  REQUIRE(scrollable_smooth->scroll_y() == 0);
+  REQUIRE(scrollable_smooth->visual_scroll_y() == 0.0f);
+
+  // Advance by 25ms
+  mock_now_ms = 2025.0;
+  screen.Step();
+  // Content scroll is smooth
+  REQUIRE(scrollable_smooth->scroll_y() >= 0);
+  REQUIRE(scrollable_smooth->scroll_y() <= 2);
+
+  // Complete smooth content transition
+  mock_now_ms = 2050.0;
+  screen.Step();
+  REQUIRE(scrollable_smooth->scroll_y() == 2);
+  REQUIRE(scrollable_smooth->visual_scroll_y() == 2.0f);
 }
 
 }  // namespace

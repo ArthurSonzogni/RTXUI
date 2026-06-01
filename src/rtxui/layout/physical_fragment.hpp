@@ -17,6 +17,8 @@ struct PhysicalFragment {
   int x, y, width, height;
   int scroll_x = 0;
   int scroll_y = 0;
+  float visual_scroll_x = 0.0f;
+  float visual_scroll_y = 0.0f;
   bool clips_descendants = false;
   bool is_text = false;
   std::string text_content;

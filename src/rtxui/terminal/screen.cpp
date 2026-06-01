@@ -208,6 +208,9 @@ class ScreenImpl {
   bool TickTransitions(double current_time_ms);
   void ScrollIntoView(Element* element);
 
+  void SetSmoothScrollEnabled(bool enabled) { smooth_scroll_enabled_ = enabled; }
+  bool smooth_scroll_enabled() const { return smooth_scroll_enabled_; }
+
   Ref<ComponentBase> component_;
   int width_ = 80;
   int height_ = 24;
@@ -218,6 +221,7 @@ class ScreenImpl {
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
   Element* focused_element_ = nullptr;
+  bool smooth_scroll_enabled_ = true;
 
   struct RawTerminal {
     TerminalDevice* device_ = nullptr;
@@ -320,7 +324,7 @@ bool ScreenImpl::HasActiveTransitions() {
   }
   std::function<bool(Element*)> CheckActive = [&](Element* element) {
     if (!element) return false;
-    if (!element->active_transitions.empty()) return true;
+    if (!element->active_transitions.empty() || element->IsAnimatingScroll()) return true;
     for (size_t i = 0; i < element->ChildCount(); ++i) {
       if (CheckActive(element->ChildAt(i))) return true;
     }
@@ -492,7 +496,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
               if (frag) {
                 int scroll_height = curr->scroll_height();
                 int max_scroll = std::max(0, scroll_height - frag->height);
-                int curr_y = curr->scroll_y();
+                int curr_y = curr->target_scroll_y();
                 int speed = curr->style.scroll_speed_y;
 
                 int new_y = curr_y;
@@ -503,7 +507,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 }
 
                 if (new_y != curr_y) {
-                  curr->set_scroll_y(new_y);
+                  curr->set_scroll_y(new_y, smooth_scroll_enabled_);
                   Draw();
                   return;
                 }
@@ -513,7 +517,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
               if (frag) {
                 int scroll_width = curr->scroll_width();
                 int max_scroll = std::max(0, scroll_width - frag->width);
-                int curr_x = curr->scroll_x();
+                int curr_x = curr->target_scroll_x();
                 int speed = curr->style.scroll_speed_x;
 
                 int new_x = curr_x;
@@ -525,7 +529,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 }
 
                 if (new_x != curr_x) {
-                  curr->set_scroll_x(new_x);
+                  curr->set_scroll_x(new_x, smooth_scroll_enabled_);
                   Draw();
                   return;
                 }
@@ -651,13 +655,13 @@ void ScreenImpl::HandleEvent(const Event& event) {
             if (scroll_frag) {
               int scroll_width = curr->scroll_width();
               int max_scroll = std::max(0, scroll_width - scroll_frag->width);
-              int curr_x = curr->scroll_x();
+              int curr_x = curr->target_scroll_x();
               int speed = curr->style.scroll_speed_x;
 
               int delta = (event == Event::ArrowLeft()) ? -speed : speed;
               int new_x = std::clamp(curr_x + delta, 0, max_scroll);
               if (new_x != curr_x) {
-                curr->set_scroll_x(new_x);
+                curr->set_scroll_x(new_x, smooth_scroll_enabled_);
                 Draw();
                 return;
               }
@@ -669,7 +673,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
             if (scroll_frag) {
               int scroll_height = curr->scroll_height();
               int max_scroll = std::max(0, scroll_height - scroll_frag->height);
-              int curr_y = curr->scroll_y();
+              int curr_y = curr->target_scroll_y();
               int speed = curr->style.scroll_speed_y;
 
               int delta = 0;
@@ -685,7 +689,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
               int new_y = std::clamp(curr_y + delta, 0, max_scroll);
               if (new_y != curr_y) {
-                curr->set_scroll_y(new_y);
+                curr->set_scroll_y(new_y, smooth_scroll_enabled_);
                 Draw();
                 return;
               }
@@ -701,13 +705,13 @@ void ScreenImpl::HandleEvent(const Event& event) {
         if (scroll_frag->dom_node->style.overflow_x == Overflow::Scroll) {
           int scroll_width = scroll_frag->dom_node->scroll_width();
           int max_scroll = std::max(0, scroll_width - scroll_frag->width);
-          int curr_x = scroll_frag->dom_node->scroll_x();
+          int curr_x = scroll_frag->dom_node->target_scroll_x();
           int speed = scroll_frag->dom_node->style.scroll_speed_x;
 
           int delta = (event == Event::ArrowLeft()) ? -speed : speed;
           int new_x = std::clamp(curr_x + delta, 0, max_scroll);
           if (new_x != curr_x) {
-            scroll_frag->dom_node->set_scroll_x(new_x);
+            scroll_frag->dom_node->set_scroll_x(new_x, smooth_scroll_enabled_);
             Draw();
             return;
           }
@@ -716,7 +720,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
         if (scroll_frag->dom_node->style.overflow_y == Overflow::Scroll) {
           int scroll_height = scroll_frag->dom_node->scroll_height();
           int max_scroll = std::max(0, scroll_height - scroll_frag->height);
-          int curr_y = scroll_frag->dom_node->scroll_y();
+          int curr_y = scroll_frag->dom_node->target_scroll_y();
           int speed = scroll_frag->dom_node->style.scroll_speed_y;
 
           int delta = 0;
@@ -732,7 +736,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
           int new_y = std::clamp(curr_y + delta, 0, max_scroll);
           if (new_y != curr_y) {
-            scroll_frag->dom_node->set_scroll_y(new_y);
+            scroll_frag->dom_node->set_scroll_y(new_y, smooth_scroll_enabled_);
             Draw();
             return;
           }
@@ -893,7 +897,7 @@ void ScreenImpl::ScrollIntoView(Element* element) {
           (parent.fragment->dom_node->style.overflow_x == Overflow::Scroll);
 
       if (parent_scrollable_y) {
-        int curr_scroll_y = parent.fragment->dom_node->scroll_y();
+        int curr_scroll_y = parent.fragment->dom_node->target_scroll_y();
         int new_scroll_y = curr_scroll_y;
         int viewport_h = parent.fragment->height;
 
@@ -911,13 +915,13 @@ void ScreenImpl::ScrollIntoView(Element* element) {
         new_scroll_y = std::clamp(new_scroll_y, 0, max_scroll_y);
 
         if (new_scroll_y != curr_scroll_y) {
-          parent.fragment->dom_node->set_scroll_y(new_scroll_y);
-          parent.fragment->scroll_y = new_scroll_y;
+          parent.fragment->dom_node->set_scroll_y(new_scroll_y, smooth_scroll_enabled_);
+          parent.fragment->scroll_y = parent.fragment->dom_node->scroll_y();
         }
       }
 
       if (parent_scrollable_x) {
-        int curr_scroll_x = parent.fragment->dom_node->scroll_x();
+        int curr_scroll_x = parent.fragment->dom_node->target_scroll_x();
         int new_scroll_x = curr_scroll_x;
         int viewport_w = parent.fragment->width;
 
@@ -935,8 +939,8 @@ void ScreenImpl::ScrollIntoView(Element* element) {
         new_scroll_x = std::clamp(new_scroll_x, 0, max_scroll_x);
 
         if (new_scroll_x != curr_scroll_x) {
-          parent.fragment->dom_node->set_scroll_x(new_scroll_x);
-          parent.fragment->scroll_x = new_scroll_x;
+          parent.fragment->dom_node->set_scroll_x(new_scroll_x, smooth_scroll_enabled_);
+          parent.fragment->scroll_x = parent.fragment->dom_node->scroll_x();
         }
       }
     }
@@ -983,6 +987,14 @@ void Screen::Dispatch(Event event) {
 
 void Screen::Draw() {
   impl_->Draw();
+}
+
+void Screen::SetSmoothScrollEnabled(bool enabled) {
+  impl_->SetSmoothScrollEnabled(enabled);
+}
+
+bool Screen::smooth_scroll_enabled() const {
+  return impl_->smooth_scroll_enabled();
 }
 
 }  // namespace rtxui

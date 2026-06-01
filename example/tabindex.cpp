@@ -62,6 +62,9 @@ class TabIndexDemo : public Component<TabIndexDemo> {
       }
       .list {
         display: block;
+        height: 8;
+        overflow-y: scroll;
+        scroll-behavior: smooth;
       }
       .item {
         display: block;

@@ -32,6 +32,10 @@ class Screen {
   // Render and draw the component to the terminal
   void Draw();
 
+  // Enable or disable smooth scrolling animations
+  void SetSmoothScrollEnabled(bool enabled);
+  bool smooth_scroll_enabled() const;
+
  private:
   std::unique_ptr<ScreenImpl> impl_;
 };
