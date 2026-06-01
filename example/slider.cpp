@@ -10,10 +10,7 @@ class SliderDemo : public Component<SliderDemo> {
  public:
   int volume = 50;
 
-  SliderDemo() { Bind(volume); }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <p class="title">Interactive Slider Element</p>
         <p class="desc">
@@ -74,7 +71,8 @@ class SliderDemo : public Component<SliderDemo> {
         }
       </style>
     )html";
-  }
+
+  SliderDemo() { Bind(volume); }
 };
 
 int main() {

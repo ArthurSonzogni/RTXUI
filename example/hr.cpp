@@ -8,8 +8,7 @@ using namespace rtxui;
 
 class HrDemo : public Component<HrDemo> {
  public:
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <p class="title">Horizontal Rule Element Demo</p>
         <p class="desc">The &lt;hr&gt; component renders a light box-drawing line horizontally, acting as a section separator.</p>
@@ -58,7 +57,6 @@ class HrDemo : public Component<HrDemo> {
         }
       </style>
     )html";
-  }
 };
 
 int main() {

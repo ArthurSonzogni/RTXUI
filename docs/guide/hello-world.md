@@ -11,9 +11,7 @@ using namespace rtxui;
 
 class HelloWorldApp : public Component<HelloWorldApp> {
  public:
-  std::string_view Setup() override {
-    Import<rtxui::div>();
-    return R"html(
+  std::string_view view = R"html(
       <div class="card">
         Hello World from RTXUI!
       </div>
@@ -31,6 +29,9 @@ class HelloWorldApp : public Component<HelloWorldApp> {
         }
       </style>
     )html";
+
+  HelloWorldApp() {
+    Import<rtxui::div>();
   }
 };
 

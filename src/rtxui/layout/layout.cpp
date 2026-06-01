@@ -17,12 +17,15 @@ namespace rtxui {
 // --- Forward Declarations ---
 std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
     LayoutInputNode node,
-    LayoutConstraints constraints);
+    LayoutConstraints constraints,
+    LayoutContext context);
 std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutInputNode node,
-    LayoutConstraints constraints);
+    LayoutConstraints constraints,
+    LayoutContext context);
 std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
-                                             LayoutConstraints constraints);
+                                             LayoutConstraints constraints,
+                                             LayoutContext context);
 
 /**
  * Resolves a StyleLength against a parent dimension.
@@ -40,19 +43,25 @@ int ResolveSize(const Length& length, int parent_size) {
 
 // --- Dispatcher ---
 std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
-                                            LayoutConstraints constraints) {
+                                            LayoutConstraints constraints,
+                                            LayoutContext context) {
   auto* box = node.box;
   if (!box) {
     throw std::runtime_error("LayoutInputNode has null LayoutBox.");
   }
 
+  if (context.viewport_w == 80 && context.viewport_h == 24) {
+    context.viewport_w = constraints.width.value;
+    context.viewport_h = constraints.height.value;
+  }
+
   switch (node.box->algorithm) {
     case LayoutBox::Algorithm::BlockFlow:
-      return LayoutBlockFlow(node, constraints);
+      return LayoutBlockFlow(node, constraints, context);
     case LayoutBox::Algorithm::InlineFlow:
-      return LayoutInlineFlow(node, constraints);
+      return LayoutInlineFlow(node, constraints, context);
     case LayoutBox::Algorithm::Flex:
-      return LayoutFlex(node, constraints);
+      return LayoutFlex(node, constraints, context);
     case LayoutBox::Algorithm::Text:
       throw std::runtime_error(
           "Text nodes should not be laid out directly. Use InlineFlow.");
@@ -60,10 +69,97 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
   return nullptr;
 }
 
+LayoutContext CreateChildContext(LayoutBox* parent,
+                                 int parent_w,
+                                 int parent_h,
+                                 int child_flow_x,
+                                 int child_flow_y,
+                                 const LayoutContext& parent_context) {
+  LayoutContext child_context = parent_context;
+  child_context.viewport_offset_x += child_flow_x;
+  child_context.viewport_offset_y += child_flow_y;
+
+  if (parent->style.position != PositionType::Static) {
+    child_context.npa_w = parent_w;
+    child_context.npa_h = parent_h;
+    child_context.npa_offset_x = child_flow_x;
+    child_context.npa_offset_y = child_flow_y;
+  } else {
+    child_context.npa_offset_x += child_flow_x;
+    child_context.npa_offset_y += child_flow_y;
+  }
+  return child_context;
+}
+
+void LayoutOutOfFlowChildren(LayoutBox* parent,
+                             std::shared_ptr<PhysicalFragment>& fragment,
+                             const LayoutContext& parent_context) {
+  for (auto& child_box : parent->children) {
+    if (child_box->style.position == PositionType::Absolute ||
+        child_box->style.position == PositionType::Fixed) {
+      
+      bool is_fixed = child_box->style.position == PositionType::Fixed;
+      int container_w = is_fixed ? parent_context.viewport_w : parent_context.npa_w;
+      int container_h = is_fixed ? parent_context.viewport_h : parent_context.npa_h;
+
+      LayoutConstraints child_c;
+      int child_w = ResolveSize(child_box->style.width, container_w);
+      int child_h = ResolveSize(child_box->style.height, container_h);
+
+      child_c.width = {child_w != -1 ? child_w : container_w,
+                       child_w != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
+      child_c.height = {child_h != -1 ? child_h : container_h,
+                        child_h != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
+
+      LayoutContext child_context = parent_context;
+      if (child_box->style.position != PositionType::Static) {
+        child_context.npa_w = child_w != -1 ? child_w : container_w;
+        child_context.npa_h = child_h != -1 ? child_h : container_h;
+        child_context.npa_offset_x = 0;
+        child_context.npa_offset_y = 0;
+      }
+
+      auto child_frag = RunLayout({child_box.get()}, child_c, child_context);
+
+      int x = 0;
+      int y = 0;
+
+      if (child_box->style.left.unit != Unit::Auto) {
+        x = child_box->style.left.Resolve(container_w);
+      } else if (child_box->style.right.unit != Unit::Auto) {
+        x = container_w - child_box->style.right.Resolve(container_w) - child_frag->width;
+      }
+
+      if (child_box->style.top.unit != Unit::Auto) {
+        y = child_box->style.top.Resolve(container_h);
+      } else if (child_box->style.bottom.unit != Unit::Auto) {
+        y = container_h - child_box->style.bottom.Resolve(container_h) - child_frag->height;
+      }
+
+      x += child_box->style.margin.left;
+      y += child_box->style.margin.top;
+
+      int relative_to_parent_x = 0;
+      int relative_to_parent_y = 0;
+
+      if (is_fixed) {
+        relative_to_parent_x = x - parent_context.viewport_offset_x;
+        relative_to_parent_y = y - parent_context.viewport_offset_y;
+      } else {
+        relative_to_parent_x = x - parent_context.npa_offset_x;
+        relative_to_parent_y = y - parent_context.npa_offset_y;
+      }
+
+      fragment->children.push_back({child_frag, relative_to_parent_x, relative_to_parent_y});
+    }
+  }
+}
+
 // --- Block Layout ---
 std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
     LayoutInputNode node,
-    LayoutConstraints constraints) {
+    LayoutConstraints constraints,
+    LayoutContext context) {
   auto* box = node.box;
   int avail_width = constraints.width.value;
 
@@ -122,6 +218,11 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   bool is_first_child = true;
 
   for (auto& child_box : box->children) {
+    if (child_box->style.position == PositionType::Absolute ||
+        child_box->style.position == PositionType::Fixed) {
+      continue;
+    }
+
     LayoutConstraints child_c;
     child_c.width = {
         child_width_limit - child_box->style.margin.Horiz(),
@@ -132,23 +233,40 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
         MeasureMode::Undefined,
     };
 
-    auto child_frag = RunLayout({child_box.get()}, child_c);
-
     int margin_top = child_box->style.margin.top;
     int margin_bottom = child_box->style.margin.bottom;
 
-    // Sibling margin collapse: use the maximum of the previous child's bottom
-    // margin and the current child's top margin.
     int collapsed_margin =
         is_first_child ? margin_top : std::max(prev_margin_bottom, margin_top);
 
+    int cx = cur_x;
+    int cy = cur_y + collapsed_margin;
+
+    LayoutContext child_context = CreateChildContext(box, width, 0, cx, cy, context);
+    auto child_frag = RunLayout({child_box.get()}, child_c, child_context);
+
+    int rx = cx + child_box->style.margin.left;
+    int ry = cy;
+
+    if (child_box->style.position == PositionType::Relative) {
+      if (child_box->style.left.unit != Unit::Auto) {
+        rx += child_box->style.left.Resolve(width);
+      } else if (child_box->style.right.unit != Unit::Auto) {
+        rx -= child_box->style.right.Resolve(width);
+      }
+      if (child_box->style.top.unit != Unit::Auto) {
+        ry += child_box->style.top.Resolve(0); // unresolved container height is 0
+      } else if (child_box->style.bottom.unit != Unit::Auto) {
+        ry -= child_box->style.bottom.Resolve(0);
+      }
+    }
+
     fragment->children.push_back({
         child_frag,
-        cur_x + child_box->style.margin.left,
-        cur_y + collapsed_margin,
+        rx,
+        ry,
     });
 
-    // Advance cur_y to the bottom of the current fragment content.
     cur_y += collapsed_margin + child_frag->height;
     prev_margin_bottom = margin_bottom;
     is_first_child = false;
@@ -157,8 +275,6 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
         max_child_width, child_frag->width + child_box->style.margin.Horiz());
   }
 
-  // Final height includes the bottom margin of the last child and container
-  // padding/border.
   cur_y += prev_margin_bottom;
   cur_y += box->style.border.bottom + box->style.padding.bottom;
 
@@ -173,6 +289,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
     int resolved_h = ResolveSize(box->style.height, constraints.height.value);
     fragment->height = (resolved_h != -1) ? resolved_h : cur_y;
   }
+
+  LayoutOutOfFlowChildren(box, fragment, context);
 
   if (box->style.overflow_y != Overflow::Visible ||
       box->style.overflow_x != Overflow::Visible) {
@@ -205,7 +323,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
 // --- Inline Layout ---
 std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutInputNode node,
-    LayoutConstraints constraints) {
+    LayoutConstraints constraints,
+    LayoutContext context) {
   auto* box = node.box;
   int avail_width = (constraints.width.mode == MeasureMode::Undefined)
                         ? 10000
@@ -258,11 +377,6 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     line_start_index = container_frag->children.size();
   };
 
-  // Helper: process a span of text in this inline-flow context.
-  // Newlines in |text| call commit_line() at THIS level so they break the
-  // enclosing anonymous block's lines, not just the span's internal layout.
-  // |dom_node|, |fg|, and |bg| come from the owning element (e.g. <span>)
-  // so cursor highlights (background-color: white) are preserved.
   auto process_text_in_flow = [&](const std::string& text, Element* dom_node,
                                   std::optional<Color> fg,
                                   std::optional<Color> bg) {
@@ -348,9 +462,11 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     }
   };
 
-  // Helper: place an element as an opaque inline box (existing behaviour for
-  // block-level, flex, or elements with non-text children).
   auto place_opaque_box = [&](LayoutBox* elem) {
+    if (elem->style.position == PositionType::Absolute ||
+        elem->style.position == PositionType::Fixed) {
+      return;
+    }
     int m_left = elem->style.margin.left;
     int m_right = elem->style.margin.right;
     int m_top = elem->style.margin.top;
@@ -361,25 +477,49 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutConstraints child_c = {
         {content_width_limit - child_m_horiz, MeasureMode::AtMost},
         {0, MeasureMode::Undefined}};
-    auto child_frag = RunLayout({elem}, child_c);
+
+    int cx = box->style.padding.left + box->style.border.left + cursor_x + m_left;
+    int cy = cursor_y + m_top;
+
+    LayoutContext child_context = CreateChildContext(box, width, 0, cx, cy, context);
+    auto child_frag = RunLayout({elem}, child_c, child_context);
 
     if (box->style.white_space != WhiteSpace::Nowrap &&
         cursor_x + child_frag->width + child_m_horiz > content_width_limit &&
         cursor_x > 0) {
       commit_line();
+      cx = box->style.padding.left + box->style.border.left + cursor_x + m_left;
+      cy = cursor_y + m_top;
+      child_context = CreateChildContext(box, width, 0, cx, cy, context);
     }
 
-    container_frag->children.push_back(
-        {child_frag,
-         box->style.padding.left + box->style.border.left + cursor_x + m_left,
-         cursor_y + m_top});
+    int rx = cx;
+    int ry = cy;
+
+    if (elem->style.position == PositionType::Relative) {
+      if (elem->style.left.unit != Unit::Auto) {
+        rx += elem->style.left.Resolve(width);
+      } else if (elem->style.right.unit != Unit::Auto) {
+        rx -= elem->style.right.Resolve(width);
+      }
+      if (elem->style.top.unit != Unit::Auto) {
+        ry += elem->style.top.Resolve(0);
+      } else if (elem->style.bottom.unit != Unit::Auto) {
+        ry -= elem->style.bottom.Resolve(0);
+      }
+    }
+
+    container_frag->children.push_back({child_frag, rx, ry});
     line_height = std::max(line_height, child_frag->height + child_m_vert);
     cursor_x += child_frag->width + child_m_horiz;
   };
 
   for (auto& child : box->children) {
+    if (child->style.position == PositionType::Absolute ||
+        child->style.position == PositionType::Fixed) {
+      continue;
+    }
     if (child->is_text) {
-      // Direct text node: process in this flow so \n breaks lines here.
       process_text_in_flow(child->text_data, child->dom_node,
                            child->style.foreground_color,
                            child->style.background_color);
@@ -391,21 +531,16 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
                child->style.margin.Vert() == 0 &&
                child->style.padding.Horiz() == 0 &&
                child->style.padding.Vert() == 0) {
-      // Inline element (e.g. <span>): flatten its children into this flow so
-      // that a \n in the text breaks lines at the OUTER anonymous-block level.
-      // This is correct CSS Inline Formatting Context (IFC) behaviour.
       for (auto& grandchild : child->children) {
         if (grandchild->is_text) {
           process_text_in_flow(grandchild->text_data, child->dom_node,
                                child->style.foreground_color,
                                child->style.background_color);
         } else {
-          // Non-text element nested inside inline span: opaque box.
           place_opaque_box(grandchild.get());
         }
       }
     } else {
-      // Block-level or flex element: treat as opaque inline box.
       place_opaque_box(child.get());
     }
   }
@@ -417,6 +552,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     container_frag->width =
         max_line_width + box->style.padding.Horiz() + box->style.border.Horiz();
   }
+
+  LayoutOutOfFlowChildren(box, container_frag, context);
 
   if (box->dom_node) {
     box->dom_node->set_layout_width(container_frag->width);
@@ -454,7 +591,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
  * Handles flex-direction, weighted flex-shrink, flex-grow, and basis.
  */
 std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
-                                             LayoutConstraints constraints) {
+                                             LayoutConstraints constraints,
+                                             LayoutContext context) {
   auto* box = node.box;
   bool is_row = box->style.flex_direction == Direction::Row;
 
@@ -463,10 +601,10 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   int my_width = (constraints.width.mode == MeasureMode::Exactly)
                      ? parent_w
-                     : ResolveSize(box->style.width, parent_w);
+                      : ResolveSize(box->style.width, parent_w);
   int my_height = (constraints.height.mode == MeasureMode::Exactly)
                       ? parent_h
-                      : ResolveSize(box->style.height, parent_h);
+                       : ResolveSize(box->style.height, parent_h);
 
   bool auto_width = (my_width == -1);
   bool auto_height = (my_height == -1);
@@ -508,6 +646,10 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   // Pass 1: Determine Flex Base Sizes
   for (auto& child : box->children) {
+    if (child->style.position == PositionType::Absolute ||
+        child->style.position == PositionType::Fixed) {
+      continue;
+    }
     int basis = is_row ? ResolveSize(child->style.width, content_w)
                        : ResolveSize(child->style.height, content_h);
 
@@ -536,7 +678,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                                                      : MeasureMode::Undefined};
     }
 
-    auto frag = RunLayout({child.get()}, child_c);
+    auto frag = RunLayout({child.get()}, child_c, context);
     int m_margin =
         is_row ? child->style.margin.Horiz() : child->style.margin.Vert();
     int main_size = (is_row ? frag->width : frag->height) + m_margin;
@@ -624,14 +766,31 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       final_c.height = {item.main_resolved_size - m_vert, MeasureMode::Exactly};
     }
 
-    item.fragment = RunLayout({item.box}, final_c);
-
     int x = is_row ? main_pos + item.box->style.margin.left
                    : cross_start + item.box->style.margin.left;
     int y = is_row ? cross_start + item.box->style.margin.top
                    : main_pos + item.box->style.margin.top;
 
-    fragment->children.push_back({item.fragment, x, y});
+    LayoutContext child_context = CreateChildContext(box, my_width, my_height, x, y, context);
+    item.fragment = RunLayout({item.box}, final_c, child_context);
+
+    int rx = x;
+    int ry = y;
+
+    if (item.box->style.position == PositionType::Relative) {
+      if (item.box->style.left.unit != Unit::Auto) {
+        rx += item.box->style.left.Resolve(my_width);
+      } else if (item.box->style.right.unit != Unit::Auto) {
+        rx -= item.box->style.right.Resolve(my_width);
+      }
+      if (item.box->style.top.unit != Unit::Auto) {
+        ry += item.box->style.top.Resolve(my_height);
+      } else if (item.box->style.bottom.unit != Unit::Auto) {
+        ry -= item.box->style.bottom.Resolve(my_height);
+      }
+    }
+
+    fragment->children.push_back({item.fragment, rx, ry});
 
     main_pos += item.main_resolved_size;
     max_cross_used =
@@ -652,6 +811,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                box->style.border.Vert())
             : (main_pos + box->style.padding.bottom + box->style.border.bottom);
   }
+
+  LayoutOutOfFlowChildren(box, fragment, context);
 
   int total_content_height =
       is_row

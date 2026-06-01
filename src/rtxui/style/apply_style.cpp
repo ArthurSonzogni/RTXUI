@@ -545,6 +545,51 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "position") {
+    if (v == "static") {
+      style.position = PositionType::Static;
+      return;
+    }
+    if (v == "relative") {
+      style.position = PositionType::Relative;
+      return;
+    }
+    if (v == "absolute") {
+      style.position = PositionType::Absolute;
+      return;
+    }
+    if (v == "fixed") {
+      style.position = PositionType::Fixed;
+      return;
+    }
+  }
+
+  if (p == "top") {
+    style.top = ParseLength(v);
+    return;
+  }
+  if (p == "right") {
+    style.right = ParseLength(v);
+    return;
+  }
+  if (p == "bottom") {
+    style.bottom = ParseLength(v);
+    return;
+  }
+  if (p == "left") {
+    style.left = ParseLength(v);
+    return;
+  }
+
+  if (p == "z-index") {
+    if (v == "auto") {
+      style.z_index = std::nullopt;
+    } else {
+      style.z_index = StoI(v);
+    }
+    return;
+  }
+
   if (p == "width") {
     style.width = ParseLength(v);
     return;

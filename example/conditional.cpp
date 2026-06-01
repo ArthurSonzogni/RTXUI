@@ -5,26 +5,12 @@ using namespace rtxui;
 
 class ConditionalApp : public Component<ConditionalApp> {
  public:
-  int mode = 0; // 0: Home, 1: Settings, 2: About
-
-  ConditionalApp() {
-    Bind(mode);
-    Bind(is_home);
-    Bind(is_settings);
-    Bind(is_about);
-    Bind(home_class);
-    Bind(settings_class);
-    Bind(about_class);
-    Bind(SetHome);
-    Bind(SetSettings);
-    Bind(SetAbout);
-  }
+  int mode = 0;
 
   // Computed properties
   bool is_home() const { return mode == 0; }
   bool is_settings() const { return mode == 1; }
   bool is_about() const { return mode == 2; }
-
   std::string home_class() const { return mode == 0 ? "active" : ""; }
   std::string settings_class() const { return mode == 1 ? "active" : ""; }
   std::string about_class() const { return mode == 2 ? "active" : ""; }
@@ -34,8 +20,7 @@ class ConditionalApp : public Component<ConditionalApp> {
   void SetSettings() { mode = 1; }
   void SetAbout() { mode = 2; }
 
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <div class="tabs">
           <button onclick="SetHome" class="{home_class}">Home</button>
@@ -77,6 +62,18 @@ class ConditionalApp : public Component<ConditionalApp> {
         .footer { margin-top: 2; color: gray; font-style: italic; }
       </style>
     )html";
+
+  ConditionalApp() {
+    Bind(mode);
+    Bind(is_home);
+    Bind(is_settings);
+    Bind(is_about);
+    Bind(home_class);
+    Bind(settings_class);
+    Bind(about_class);
+    Bind(SetHome);
+    Bind(SetSettings);
+    Bind(SetAbout);
   }
 };
 

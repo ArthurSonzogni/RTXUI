@@ -121,6 +121,28 @@ Properties to control styling animations and transitions.
 
 ---
 
+## 8. Positioning & Layering
+
+Used to position elements outside the standard flex flow. These properties are **not animatable**.
+
+- `position` `static | relative | absolute | fixed`: Configures the layout positioning mode.
+- `top` [`<length>`](#lengths): Vertical coordinate offset from the top boundary.
+- `bottom` [`<length>`](#lengths): Vertical coordinate offset from the bottom boundary.
+- `left` [`<length>`](#lengths): Horizontal coordinate offset from the left boundary.
+- `right` [`<length>`](#lengths): Horizontal coordinate offset from the right boundary.
+- `z-index` [`<integer>`](#integers): Determines the drawing order layer of overlapping elements (higher values paint on top).
+
+<ExampleTabs src="/wasm/rtxui_example_positioning.js">
+<template #source>
+
+<<< @/../example/positioning.cpp
+
+</template>
+</ExampleTabs>
+
+
+---
+
 ## Value Types Reference
 
 This section details the formatting, syntax, and allowed values for the placeholders referenced above.

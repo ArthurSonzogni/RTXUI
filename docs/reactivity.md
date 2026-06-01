@@ -24,6 +24,12 @@ class MyComponent : public rtxui::Component<MyComponent> {
       <button onclick="count++">Increment</button>
     </div>
   )html";
+
+  MyComponent() {
+    Bind(count);
+    Bind(label);
+    Bind(double_count);
+  }
 };
 ```
 
@@ -59,15 +65,14 @@ class MyChild : public rtxui::Component<MyChild> {
     int count = 0;
   } props;
 
-  void InitReflection() override {
-    Bind(props.title);
-    Bind(props.count);
-    rtxui::Component<MyChild>::InitReflection();
-  }
-
   std::string_view view = R"html(
     <div>Title: {props.title}, Count: {props.count}</div>
   )html";
+
+  MyChild() {
+    Bind(props.title);
+    Bind(props.count);
+  }
 };
 ```
 

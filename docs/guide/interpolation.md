@@ -11,14 +11,12 @@ class CounterApp : public Component<CounterApp> {
  public:
   int count = 0;
 
-  CounterApp() {
-    Bind(count);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div>Count: {count}</div>
     )html";
+
+  CounterApp() {
+    Bind(count);
   }
 };
 ```
@@ -33,20 +31,18 @@ class CounterApp : public Component<CounterApp> {
  public:
   int count = 0;
 
-  CounterApp() {
-    Bind(count);
-    Bind(double_count);
-  }
-
   int double_count() const { return count * 2; }
 
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div>
         <span>Count: {count}</span>
         <span>Double: {double_count}</span>
       </div>
     )html";
+
+  CounterApp() {
+    Bind(count);
+    Bind(double_count);
   }
 };
 ```

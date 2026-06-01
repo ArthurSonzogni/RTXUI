@@ -27,17 +27,9 @@ class TextareaDemo : public Component<TextareaDemo> {
     }
     return n;
   }
-
   int char_count() const { return static_cast<int>(text.size()); }
 
-  TextareaDemo() {
-    Bind(text);
-    BindComputed(line_count);
-    BindComputed(char_count);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <p class="title">Multi-line Textarea Editor</p>
         <p class="desc">
@@ -105,6 +97,11 @@ class TextareaDemo : public Component<TextareaDemo> {
         }
       </style>
     )html";
+
+  TextareaDemo() {
+    Bind(text);
+    BindComputed(line_count);
+    BindComputed(char_count);
   }
 };
 

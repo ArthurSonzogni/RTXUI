@@ -60,14 +60,13 @@ The `<input>`, `<textarea>`, `<checkbox>`, and `<select>` elements support two-w
 class InputApp : public Component<InputApp> {
  public:
   std::string my_text = "Hello World";
-  InputApp() { Bind(my_text); }
 
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <input value="{my_text}" />
       <div>Value: {my_text}</div>
     )html";
-  }
+
+  InputApp() { Bind(my_text); }
 };
 ```
 

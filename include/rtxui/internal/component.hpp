@@ -352,6 +352,10 @@ class Component : public ComponentBase {
                    (static_cast<const Derived*>(this)->*member)());
              },
              nullptr, nullptr});
+      } else if constexpr (requires { (std::declval<Derived>().*member)(std::string{}); }) {
+        Bindings::Import(name, std::function<void(std::string)>([this, member](std::string s) {
+          (static_cast<Derived*>(this)->*member)(s);
+        }));
       } else {
         // Non-const member function -> Event handler
         Bindings::Import(name, [this, member]() {
@@ -463,8 +467,8 @@ class Component : public ComponentBase {
   }
 };
 
-// Bind(x) registers state variables or direct members.
-#define Bind(x, ...) this->Import(#x, this->x, ##__VA_ARGS__)
+// Bind(x) registers state variables, computed properties, or callbacks.
+#define Bind(x, ...) this->Import(#x, &std::decay_t<decltype(*this)>::x, ##__VA_ARGS__)
 
 // BindComputed(x) and BindCallback(x) register member functions.
 #define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)

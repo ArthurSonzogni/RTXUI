@@ -367,6 +367,8 @@ void PaintImpl(const PhysicalFragment* frag,
                Texture& texture,
                int off_x,
                int off_y,
+               int accum_scroll_x,
+               int accum_scroll_y,
                Color inherited_foreground_color,
                Color parent_background_color,
                ClipRect clip) {
@@ -669,10 +671,42 @@ void PaintImpl(const PhysicalFragment* frag,
     child_clip = clip.Intersect(local_content_box);
   }
 
-  for (auto& child : frag->children) {
-    PaintImpl(child.fragment.get(), texture, abs_x + child.x - scroll_x_offset,
-              abs_y + child.y - scroll_y_offset, current_foreground_color,
-              current_background_color, child_clip);
+  auto sorted_children = frag->children;
+  std::stable_sort(sorted_children.begin(), sorted_children.end(),
+                   [](const PhysicalFragment::ChildLink& a, const PhysicalFragment::ChildLink& b) {
+                     int az = (a.fragment && a.fragment->dom_node) ? a.fragment->dom_node->style.z_index.value_or(0) : 0;
+                     int bz = (b.fragment && b.fragment->dom_node) ? b.fragment->dom_node->style.z_index.value_or(0) : 0;
+                     return az < bz;
+                   });
+
+  int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
+  int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
+
+  for (auto& child : sorted_children) {
+    bool is_fixed = (child.fragment && child.fragment->dom_node &&
+                     child.fragment->dom_node->style.position == PositionType::Fixed);
+
+    int child_off_x = abs_x + child.x;
+    int child_off_y = abs_y + child.y;
+    int child_accum_scroll_x = next_accum_scroll_x;
+    int child_accum_scroll_y = next_accum_scroll_y;
+    ClipRect child_clip_to_pass = child_clip;
+
+    if (is_fixed) {
+      child_off_x += accum_scroll_x;
+      child_off_y += accum_scroll_y;
+      child_accum_scroll_x = 0;
+      child_accum_scroll_y = 0;
+      child_clip_to_pass = ClipRect{0, 0, texture.width(), texture.height()};
+    } else {
+      child_off_x -= scroll_x_offset;
+      child_off_y -= scroll_y_offset;
+    }
+
+    PaintImpl(child.fragment.get(), texture, child_off_x, child_off_y,
+              child_accum_scroll_x, child_accum_scroll_y,
+              current_foreground_color, current_background_color,
+              child_clip_to_pass);
   }
 }
 }  // namespace
@@ -681,7 +715,7 @@ void Paint(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
            int off_y) {
-  PaintImpl(frag, texture, off_x, off_y, Color::RGB(255, 255, 255),
+  PaintImpl(frag, texture, off_x, off_y, 0, 0, Color::RGB(255, 255, 255),
             Color::RGB(0, 0, 0),
             ClipRect{0, 0, texture.width(), texture.height()});
 }

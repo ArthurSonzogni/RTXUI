@@ -32,7 +32,8 @@ export default defineConfig({
         items: [
           { text: 'Animations & Hover', link: '/animations' },
           { text: 'Scrolling Containers', link: '/guide/scrolling' },
-          { text: 'Unicode & CJK', link: '/guide/unicode' }
+          { text: 'Unicode & CJK', link: '/guide/unicode' },
+          { text: 'Positioning & Layering', link: '/guide/positioning' }
         ]
       },
       {

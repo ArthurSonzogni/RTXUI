@@ -1,6 +1,6 @@
 #include <rtxui/rtxui.hpp>
-#include <vector>
 #include <string>
+#include <vector>
 
 using namespace rtxui;
 
@@ -12,11 +12,9 @@ struct Task {
 
 class ComplexLoopApp : public Component<ComplexLoopApp> {
  public:
-  std::vector<Task> tasks = {
-    {"Setup Project", true},
-    {"Implement Loops", true},
-    {"Write Docs", false}
-  };
+  std::vector<Task> tasks = {{"Setup Project", true},
+                             {"Implement Loops", true},
+                             {"Write Docs", false}};
   std::string new_task_name = "";
 
   void AddTask() {
@@ -25,7 +23,6 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
       new_task_name = "";
     }
   }
-
   void RemoveTask(std::string index_str) {
     size_t index = std::stoull(index_str);
     if (index < tasks.size()) {
@@ -33,20 +30,7 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
     }
   }
 
-  ComplexLoopApp() {
-    Bind(tasks, [](const Task& t) {
-      return std::make_shared<ManualStructVisitor>(std::unordered_map<std::string, std::string>{
-        {"name", t.name},
-        {"status", t.completed ? "✅ Done" : "⏳ Pending"}
-      });
-    });
-    Bind(new_task_name);
-    Bind(AddTask);
-    Bind(RemoveTask);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <div class="input-row">
           <input value="{new_task_name}" placeholder="New task name..." />
@@ -74,6 +58,17 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
         button { background-color: blue; color: white; }
       </style>
     )html";
+
+  ComplexLoopApp() {
+    Bind(tasks, [](const Task& t) {
+      return std::make_shared<ManualStructVisitor>(
+          std::unordered_map<std::string, std::string>{
+              {"name", t.name},
+              {"status", t.completed ? "✅ Done" : "⏳ Pending"}});
+    });
+    Bind(new_task_name);
+    Bind(AddTask);
+    Bind(RemoveTask);
   }
 };
 

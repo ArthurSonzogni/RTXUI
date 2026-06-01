@@ -11,18 +11,11 @@ class ConditionalApp : public Component<ConditionalApp> {
  public:
   int mode = 0; // 0: Home, 1: Settings, 2: About
 
-  ConditionalApp() {
-    Bind(mode);
-    Bind(is_home);
-    Bind(is_settings);
-  }
-
   // Computed properties
   bool is_home() const { return mode == 0; }
   bool is_settings() const { return mode == 1; }
 
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div>
         <if condition="{is_home}">
           <h1>Welcome Home!</h1>
@@ -35,6 +28,11 @@ class ConditionalApp : public Component<ConditionalApp> {
         </else>
       </div>
     )html";
+
+  ConditionalApp() {
+    Bind(mode);
+    Bind(is_home);
+    Bind(is_settings);
   }
 };
 ```

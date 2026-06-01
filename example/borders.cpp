@@ -13,13 +13,7 @@ class BorderBox : public Component<BorderBox> {
     std::string border_class = "solid";
   } props;
 
-  BorderBox() {
-    Bind(props.title);
-    Bind(props.border_class);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="box-wrapper">
         <div class="label">{title}</div>
       </div>
@@ -43,14 +37,16 @@ class BorderBox : public Component<BorderBox> {
         }
       </style>
     )html";
+
+  BorderBox() {
+    Bind(props.title);
+    Bind(props.border_class);
   }
 };
 
 class BordersDemo : public Component<BordersDemo> {
  public:
-  std::string_view Setup() override {
-    Import<BorderBox>();
-    return R"html(
+  std::string_view view = R"html(
       <div>
         <h1>RTXUI Border Styles Gallery</h1>
         <p>This demo showcases the 24 different border styles supported by RTXUI.</p>
@@ -127,7 +123,8 @@ class BordersDemo : public Component<BordersDemo> {
         }
       </style>
     )html";
-  }
+
+  BordersDemo() { Import<BorderBox>(); }
 };
 
 int main() {

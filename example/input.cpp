@@ -10,10 +10,7 @@ class InputDemo : public Component<InputDemo> {
  public:
   std::string text = "Hello, RTXUI!";
 
-  InputDemo() { Bind(text); }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <p class="title">Interactive Input Element</p>
         <p class="desc">Two-way data binding, arrow navigation (Ctrl to move by words), deletion (Ctrl to delete words), mouse click positioning, and horizontal scrolling on overflow.</p>
@@ -73,7 +70,8 @@ class InputDemo : public Component<InputDemo> {
         }
       </style>
     )html";
-  }
+
+  InputDemo() { Bind(text); }
 };
 
 int main() {

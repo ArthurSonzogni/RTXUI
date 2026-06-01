@@ -13,14 +13,7 @@ class ColorBox : public Component<ColorBox> {
     std::string fg_color = "black";
   } props;
 
-  ColorBox() {
-    Bind(props.text);
-    Bind(props.bg_color);
-    Bind(props.fg_color);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="box-content">
         {text}
       </div>
@@ -40,14 +33,17 @@ class ColorBox : public Component<ColorBox> {
         }
       </style>
     )html";
+
+  ColorBox() {
+    Bind(props.text);
+    Bind(props.bg_color);
+    Bind(props.fg_color);
   }
 };
 
 class ColorDemo : public Component<ColorDemo> {
  public:
-  std::string_view Setup() override {
-    Import<ColorBox>();
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <h1>RTXUI Color System Demo</h1>
         <p>Scroll to see standard keywords, hex codes, rgb(), and rgba() syntaxes.</p>
@@ -154,7 +150,8 @@ class ColorDemo : public Component<ColorDemo> {
         }
       </style>
     )html";
-  }
+
+  ColorDemo() { Import<ColorBox>(); }
 };
 
 int main() {

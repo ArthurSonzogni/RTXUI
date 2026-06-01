@@ -8,8 +8,7 @@ using namespace rtxui;
 
 class AnimationDemo : public Component<AnimationDemo> {
  public:
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <h1>Animation & Transition Demo</h1>
         <p>Hover over the elements below to see smooth C++ terminal animations.</p>
@@ -131,7 +130,6 @@ class AnimationDemo : public Component<AnimationDemo> {
         }
       </style>
     )html";
-  }
 };
 
 int main() {
