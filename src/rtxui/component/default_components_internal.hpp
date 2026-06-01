@@ -18,6 +18,7 @@
 #include "rtxui/component/default/select/select.hpp"
 #include "rtxui/component/default/slider/slider.hpp"
 #include "rtxui/component/default/span/span.hpp"
+#include "rtxui/component/default/b/b.hpp"
 #include "rtxui/component/default/strong/strong.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/component/default/ul/ul.hpp"

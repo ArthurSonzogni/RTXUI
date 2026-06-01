@@ -54,6 +54,7 @@ add_library(rtxui_lib STATIC
   "src/rtxui/component/default/select/select.cpp"
   "src/rtxui/component/default/slider/slider.cpp"
   "src/rtxui/component/default/span/span.cpp"
+  "src/rtxui/component/default/b/b.cpp"
   "src/rtxui/component/default/strong/strong.cpp"
   "src/rtxui/component/default/textarea/textarea.cpp"
   "src/rtxui/component/default/ul/ul.cpp"
@@ -127,7 +128,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     #include <meta>
     struct S { int x; };
     int main() {
-      constexpr auto m = std::meta::nonstatic_data_members_of(^^S);
+      constexpr auto m = std::meta::nonstatic_data_members_of(^^S, std::meta::access_context::unchecked()).size();
       return 0;
     }
   " HAS_REFLECTION_CLANG)
@@ -142,7 +143,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #include <meta>
     struct S { int x; };
     int main() {
-      constexpr auto m = std::meta::nonstatic_data_members_of(^^S);
+      constexpr auto m = std::meta::nonstatic_data_members_of(^^S, std::meta::access_context::unchecked()).size();
       return 0;
     }
   " HAS_REFLECTION_GCC)
@@ -239,6 +240,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_media example/media.cpp)
   target_link_libraries(rtxui_example_media PRIVATE rtxui)
+
+  add_executable(rtxui_example_focus_scroll example/focus_scroll.cpp)
+  target_link_libraries(rtxui_example_focus_scroll PRIVATE rtxui)
 endif()
 
 # An option to enable testing
@@ -282,7 +286,9 @@ if(RTXUI_BUILD_TESTS)
   list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
   include(CTest)
   include(Catch)
-  catch_discover_tests(rtxui_test)
+  catch_discover_tests(rtxui_test
+    PROPERTIES SKIP_RETURN_CODE 4
+  )
 
   add_executable(rtxui_terminal_input_parser
     "src/rtxui/terminal/terminal_input_parser_main.cpp"

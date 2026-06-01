@@ -201,6 +201,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
+  fragment->bold = box->style.bold;
   fragment->border_style = box->style.border_style;
   fragment->border_color_top = box->style.border_color_top;
   fragment->border_color_right = box->style.border_color_right;
@@ -344,6 +345,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   container_frag->dom_node = box->dom_node;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
+  container_frag->bold = box->style.bold;
   container_frag->border_style = box->style.border_style;
   container_frag->border_color_top = box->style.border_color_top;
   container_frag->border_color_right = box->style.border_color_right;
@@ -379,7 +381,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   auto process_text_in_flow = [&](const std::string& text, Element* dom_node,
                                   std::optional<Color> fg,
-                                  std::optional<Color> bg) {
+                                  std::optional<Color> bg,
+                                  std::optional<bool> bold) {
     size_t byte_start = 0;
     int col_start = 0;
     size_t last_space_byte = 0;
@@ -396,6 +399,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
       text_frag->foreground_color = fg;
       text_frag->background_color = bg;
+      text_frag->bold = bold;
       container_frag->children.push_back(
           {text_frag,
            box->style.padding.left + box->style.border.left + cursor_x,
@@ -522,7 +526,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     if (child->is_text) {
       process_text_in_flow(child->text_data, child->dom_node,
                            child->style.foreground_color,
-                           child->style.background_color);
+                           child->style.background_color,
+                           child->style.bold);
     } else if (child->style.display_outside == DisplayOutside::Inline &&
                child->style.display_inside == DisplayInside::Flow &&
                child->style.border.Horiz() == 0 &&
@@ -535,7 +540,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         if (grandchild->is_text) {
           process_text_in_flow(grandchild->text_data, child->dom_node,
                                child->style.foreground_color,
-                               child->style.background_color);
+                               child->style.background_color,
+                               child->style.bold);
         } else {
           place_opaque_box(grandchild.get());
         }
@@ -726,6 +732,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
+  fragment->bold = box->style.bold;
   fragment->border_style = box->style.border_style;
   fragment->border_color_top = box->style.border_color_top;
   fragment->border_color_right = box->style.border_color_right;

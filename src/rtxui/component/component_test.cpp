@@ -11,6 +11,10 @@
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/screen.hpp"
+#include "rtxui/layout/layout.hpp"
+#include "rtxui/layout/layout_tree_builder.hpp"
+#include "rtxui/paint/paint.hpp"
+#include "rtxui/paint/texture.hpp"
 
 namespace {
 
@@ -94,7 +98,7 @@ class MyPage : public rtxui::Component<MyPage> {
   }
 
   std::string_view view = R"(
-      <p> This is a page: </p>
+      <p>This is a page:</p>
       <Page>
         <template.header>
           <p>
@@ -1009,6 +1013,142 @@ TEST_CASE("Horizontal Rule Component", "[component][hr]") {
 
   CHECK(hr_ptr->line_chars.size() > 0);
   CHECK(hr_ptr->line_chars.substr(0, 3) == "─");
+}
+
+class BoldTestComponent : public rtxui::Component<BoldTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::b>();
+    Import<rtxui::strong>();
+    rtxui::Component<BoldTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <b>Bold text</b>
+      <strong>Strong text</strong>
+    </div>
+  )";
+};
+
+TEST_CASE("Bold and Strong Components", "[component][b][strong]") {
+  auto container = rtxui::Ref<BoldTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* b_el = container->Root()->QuerySelector("b");
+  REQUIRE(b_el != nullptr);
+  auto* b_comp = const_cast<rtxui::ComponentBase*>(b_el->component());
+  REQUIRE(b_comp != nullptr);
+  auto* b_ptr = dynamic_cast<rtxui::b*>(b_comp);
+  REQUIRE(b_ptr != nullptr);
+
+  auto* strong_el = container->Root()->QuerySelector("strong");
+  REQUIRE(strong_el != nullptr);
+  auto* strong_comp = const_cast<rtxui::ComponentBase*>(strong_el->component());
+  REQUIRE(strong_comp != nullptr);
+  auto* strong_ptr = dynamic_cast<rtxui::strong*>(strong_comp);
+  REQUIRE(strong_ptr != nullptr);
+}
+
+TEST_CASE("Bold and Strong Components cell.bold rendering", "[component][b][strong][paint]") {
+  auto container = rtxui::Ref<BoldTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  bool found_bold = false;
+  bool found_strong = false;
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      const auto& cell = texture[x, y];
+      if (cell.character == "B") {
+        if (x + 8 < texture.width()) {
+          std::string text = "";
+          bool all_bold = true;
+          for (int i = 0; i < 9; ++i) {
+            text += texture[x + i, y].character;
+            if (!texture[x + i, y].bold) {
+              all_bold = false;
+            }
+          }
+          if (text == "Bold text") {
+            CHECK(all_bold);
+            found_bold = true;
+          }
+        }
+      }
+      if (cell.character == "S") {
+        if (x + 10 < texture.width()) {
+          std::string text = "";
+          bool all_bold = true;
+          for (int i = 0; i < 11; ++i) {
+            text += texture[x + i, y].character;
+            if (!texture[x + i, y].bold) {
+              all_bold = false;
+            }
+          }
+          if (text == "Strong text") {
+            CHECK(all_bold);
+            found_strong = true;
+          }
+        }
+      }
+    }
+  }
+  CHECK(found_bold);
+  CHECK(found_strong);
+
+  std::string rendered = texture.Render();
+  CHECK(rendered.find("\x1B[1m") != std::string::npos);
+  CHECK(rendered.find("\x1B[22m") != std::string::npos);
+}
+
+class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::b>();
+    rtxui::Component<SpaceTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>This text is a <b>bold</b> statement</div>
+  )";
+};
+
+TEST_CASE("Whitespace preservation around inline tags", "[component][xml][space]") {
+  auto container = rtxui::Ref<SpaceTestComponent>::New();
+  container->Mount();
+
+  auto* root = container->Root();
+  REQUIRE(root != nullptr);
+  auto* div = root->QuerySelector("div");
+  REQUIRE(div != nullptr);
+
+  auto* slot = div->children()[0].get();
+  REQUIRE(slot != nullptr);
+  REQUIRE(slot->children().size() == 3);
+
+  auto* child1 = dynamic_cast<rtxui::TextElement*>(slot->children()[0].get());
+  REQUIRE(child1 != nullptr);
+  CHECK(child1->text() == "This text is a ");
+
+  const rtxui::ComponentBase* child2 = slot->children()[1]->component();
+  REQUIRE(child2 != nullptr);
+  CHECK(child2->Tag() == "b");
+
+  auto* child3 = dynamic_cast<rtxui::TextElement*>(slot->children()[2].get());
+  REQUIRE(child3 != nullptr);
+  CHECK(child3->text() == " statement");
 }
 
 }  // namespace

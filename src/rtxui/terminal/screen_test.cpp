@@ -1256,8 +1256,10 @@ TEST_CASE("Screen.KeyboardFocusTabindexNavigation", "[terminal][focus]") {
   REQUIRE_FALSE(fifth->focused());
 
   // 1. Press Tab -> should focus 'third' (tabindex=1)
+  device->ClearOutput();
   screen.Dispatch(Event::Tab());
   REQUIRE(third->focused());
+  REQUIRE_FALSE(device->GetOutput().empty());
   REQUIRE_FALSE(first->focused());
   REQUIRE_FALSE(second->focused());
   REQUIRE_FALSE(fifth->focused());
@@ -1350,6 +1352,97 @@ TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
 
   REQUIRE(target->style.background_color.has_value());
   CHECK(target->style.background_color == Color::RGB(0, 255, 0));
+}
+
+TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ScrollFocusComponent : public Component<ScrollFocusComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ScrollFocusComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div class="spacer">Spacer 1</div>
+        <div id="item1" class="item" tabindex="0">Item 1</div>
+        <div id="item2" class="item" tabindex="0">Item 2</div>
+        <div id="item3" class="item" tabindex="0">Item 3</div>
+      </div>
+      <style>
+        #scrollable {
+          height: 5;
+          overflow-y: scroll;
+          display: block;
+        }
+        .spacer {
+          height: 3;
+          display: block;
+        }
+        .item {
+          height: 2;
+          display: block;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ScrollFocusComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* scrollable = component->Root()->QuerySelector("#scrollable");
+  auto* item1 = component->Root()->QuerySelector("#item1");
+  auto* item2 = component->Root()->QuerySelector("#item2");
+  auto* item3 = component->Root()->QuerySelector("#item3");
+
+  REQUIRE(scrollable != nullptr);
+  REQUIRE(item1 != nullptr);
+  REQUIRE(item2 != nullptr);
+  REQUIRE(item3 != nullptr);
+
+  // Initially: scroll_y should be 0
+  REQUIRE(scrollable->scroll_y() == 0);
+
+  // 1. Dispatch Tab to focus item1
+  // item1 is at top offset = 3, height = 2, so bottom = 5.
+  // Viewport height is 5.
+  // Sizable area fits [0, 5], so item1 is visible within scroll_y = 0.
+  screen.Dispatch(Event::Tab());
+  REQUIRE(item1->focused());
+  REQUIRE(scrollable->scroll_y() == 0);
+
+  // 2. Dispatch Tab to focus item2
+  // item2 is at top offset = 5, height = 2, so bottom = 7.
+  // It is out of view (visible was [0, 5]).
+  // ScrollIntoView should adjust scroll_y to bottom - height = 7 - 5 = 2.
+  screen.Dispatch(Event::Tab());
+  REQUIRE(item2->focused());
+  REQUIRE(scrollable->scroll_y() == 2);
+
+  // 3. Dispatch Tab to focus item3
+  // item3 is at top offset = 7, height = 2, so bottom = 9.
+  // It is out of view (visible was [2, 7]).
+  // ScrollIntoView should adjust scroll_y to 9 - 5 = 4.
+  screen.Dispatch(Event::Tab());
+  REQUIRE(item3->focused());
+  REQUIRE(scrollable->scroll_y() == 4);
+
+  // 4. Dispatch Shift-Tab (TabReverse) to focus item2
+  // item2 top = 5, bottom = 7.
+  // Current scroll_y = 4 (visible [4, 9]), so item2 is fully visible. scroll_y should remain 4.
+  screen.Dispatch(Event::TabReverse());
+  REQUIRE(item2->focused());
+  REQUIRE(scrollable->scroll_y() == 4);
+
+  // 5. Dispatch Shift-Tab to focus item1
+  // item1 top = 3, bottom = 5.
+  // Visible was [4, 9], so item1 is out of view (top = 3 < scroll_y = 4).
+  // ScrollIntoView should adjust scroll_y to its top = 3.
+  screen.Dispatch(Event::TabReverse());
+  REQUIRE(item1->focused());
+  REQUIRE(scrollable->scroll_y() == 3);
 }
 
 }  // namespace
