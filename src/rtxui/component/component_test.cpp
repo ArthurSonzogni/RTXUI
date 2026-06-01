@@ -1151,4 +1151,80 @@ TEST_CASE("Whitespace preservation around inline tags", "[component][xml][space]
   CHECK(child3->text() == " statement");
 }
 
+class StyleDecorationTestComponent : public rtxui::Component<StyleDecorationTestComponent> {
+ public:
+  void InitReflection() override {
+    rtxui::Component<StyleDecorationTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <box>
+      <item id="u">u</item>
+      <item id="ud">ud</item>
+      <item id="s">s</item>
+      <item id="bl">bl</item>
+    </box>
+    <style>
+      box { display: block; }
+      item { display: inline; }
+      #u { text-decoration: underline; }
+      #ud { text-decoration: double-underline; }
+      #s { text-decoration: strikethrough; }
+      #bl { text-decoration: blink; }
+    </style>
+  )";
+};
+
+TEST_CASE("Text Decoration rendering onto cells", "[component][style][paint][decoration]") {
+  auto container = rtxui::Ref<StyleDecorationTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  bool found_u = false;
+  bool found_ud = false;
+  bool found_s = false;
+  bool found_bl = false;
+
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      const auto& cell = texture[x, y];
+      if (cell.character == "u" && x + 1 < texture.width() && texture[x + 1, y].character != "d") {
+        CHECK(cell.underlined);
+        CHECK_FALSE(cell.underlined_double);
+        found_u = true;
+      }
+      if (cell.character == "u" && x + 1 < texture.width() && texture[x + 1, y].character == "d") {
+        CHECK_FALSE(cell.underlined);
+        CHECK(cell.underlined_double);
+        CHECK(texture[x + 1, y].underlined_double);
+        found_ud = true;
+      }
+      if (cell.character == "s") {
+        CHECK(cell.strikethrough);
+        found_s = true;
+      }
+      if (cell.character == "b" && x + 1 < texture.width() && texture[x + 1, y].character == "l") {
+        CHECK(cell.blink);
+        CHECK(texture[x + 1, y].blink);
+        found_bl = true;
+      }
+    }
+  }
+  CHECK(found_u);
+  CHECK(found_ud);
+  CHECK(found_s);
+  CHECK(found_bl);
+}
+
 }  // namespace

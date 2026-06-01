@@ -157,6 +157,10 @@ struct ComputedStyle {
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
   std::optional<bool> bold;
+  std::optional<bool> underlined;
+  std::optional<bool> underlined_double;
+  std::optional<bool> strikethrough;
+  std::optional<bool> blink;
 
   Overflow overflow_x = Overflow::Visible;
   Overflow overflow_y = Overflow::Visible;
