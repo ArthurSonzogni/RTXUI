@@ -45,3 +45,15 @@ Scroll events automatically bubble up to nested containers when boundaries are r
 
 </template>
 </ExampleTabs>
+
+### Scroll-Into-View on Keyboard Focus
+
+RTXUI automatically scrolls containers to keep focused elements visible when users navigate using the keyboard (`Tab` and `Shift+Tab`).
+
+<ExampleTabs src="/wasm/rtxui_example_focus_scroll.js">
+<template #source>
+
+<<< @/../example/focus_scroll.cpp
+
+</template>
+</ExampleTabs>

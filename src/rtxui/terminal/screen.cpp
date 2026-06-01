@@ -206,6 +206,7 @@ class ScreenImpl {
   void HandleEvent(const Event& event);
   bool HasActiveTransitions();
   bool TickTransitions(double current_time_ms);
+  void ScrollIntoView(Element* element);
 
   Ref<ComponentBase> component_;
   int width_ = 80;
@@ -413,6 +414,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
           }
           focused_element_ = clicked_element;
           focused_element_->set_focused(true);
+          ScrollIntoView(focused_element_);
           if (focus_changed) {
             component_->ResolveTargetStyles();
             Draw();
@@ -629,7 +631,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
       navigable[next_idx].element->set_focused(true);
       focused_element_ = navigable[next_idx].element;
       component_->ResolveTargetStyles();
-      DigestAndDraw();
+      ScrollIntoView(focused_element_);
+      Draw();
       return;
     }
   }
@@ -829,6 +832,119 @@ void ScreenImpl::UpdateSize() {
 void ScreenImpl::DigestAndDraw() {
   if (component_->Digest()) {
     Draw();
+  }
+}
+
+void ScreenImpl::ScrollIntoView(Element* element) {
+  if (!element || !root_fragment_) {
+    return;
+  }
+
+  struct FragmentNode {
+    std::shared_ptr<PhysicalFragment> fragment;
+    int x_rel_parent = 0;
+    int y_rel_parent = 0;
+  };
+
+  std::vector<FragmentNode> path;
+
+  std::function<bool(const std::shared_ptr<PhysicalFragment>&)> find_path =
+      [&](const std::shared_ptr<PhysicalFragment>& frag) -> bool {
+    if (!frag) {
+      return false;
+    }
+    if (frag->dom_node == element) {
+      return true;
+    }
+    for (const auto& child : frag->children) {
+      path.push_back({child.fragment, child.x, child.y});
+      if (find_path(child.fragment)) {
+        return true;
+      }
+      path.pop_back();
+    }
+    return false;
+  };
+
+  path.push_back({root_fragment_, 0, 0});
+  if (!find_path(root_fragment_)) {
+    return;
+  }
+
+  // The last node in path is the fragment for element
+  int target_left = 0;
+  int target_top = 0;
+  int target_right = path.back().fragment->width;
+  int target_bottom = path.back().fragment->height;
+
+  for (size_t i = path.size() - 1; i > 0; --i) {
+    const auto& curr = path[i];
+    auto& parent = path[i - 1];
+
+    target_left += curr.x_rel_parent;
+    target_right += curr.x_rel_parent;
+    target_top += curr.y_rel_parent;
+    target_bottom += curr.y_rel_parent;
+
+    if (parent.fragment->dom_node) {
+      bool parent_scrollable_y =
+          (parent.fragment->dom_node->style.overflow_y == Overflow::Scroll);
+      bool parent_scrollable_x =
+          (parent.fragment->dom_node->style.overflow_x == Overflow::Scroll);
+
+      if (parent_scrollable_y) {
+        int curr_scroll_y = parent.fragment->dom_node->scroll_y();
+        int new_scroll_y = curr_scroll_y;
+        int viewport_h = parent.fragment->height;
+
+        if (target_top < curr_scroll_y) {
+          new_scroll_y = target_top;
+        } else if (target_bottom > curr_scroll_y + viewport_h) {
+          new_scroll_y = target_bottom - viewport_h;
+          if (target_top < new_scroll_y) {
+            new_scroll_y = target_top;
+          }
+        }
+
+        int scroll_h = parent.fragment->dom_node->scroll_height();
+        int max_scroll_y = std::max(0, scroll_h - viewport_h);
+        new_scroll_y = std::clamp(new_scroll_y, 0, max_scroll_y);
+
+        if (new_scroll_y != curr_scroll_y) {
+          parent.fragment->dom_node->set_scroll_y(new_scroll_y);
+          parent.fragment->scroll_y = new_scroll_y;
+        }
+      }
+
+      if (parent_scrollable_x) {
+        int curr_scroll_x = parent.fragment->dom_node->scroll_x();
+        int new_scroll_x = curr_scroll_x;
+        int viewport_w = parent.fragment->width;
+
+        if (target_left < curr_scroll_x) {
+          new_scroll_x = target_left;
+        } else if (target_right > curr_scroll_x + viewport_w) {
+          new_scroll_x = target_right - viewport_w;
+          if (target_left < new_scroll_x) {
+            new_scroll_x = target_left;
+          }
+        }
+
+        int scroll_w = parent.fragment->dom_node->scroll_width();
+        int max_scroll_x = std::max(0, scroll_w - viewport_w);
+        new_scroll_x = std::clamp(new_scroll_x, 0, max_scroll_x);
+
+        if (new_scroll_x != curr_scroll_x) {
+          parent.fragment->dom_node->set_scroll_x(new_scroll_x);
+          parent.fragment->scroll_x = new_scroll_x;
+        }
+      }
+    }
+
+    target_left -= parent.fragment->scroll_x;
+    target_right -= parent.fragment->scroll_x;
+    target_top -= parent.fragment->scroll_y;
+    target_bottom -= parent.fragment->scroll_y;
   }
 }
 

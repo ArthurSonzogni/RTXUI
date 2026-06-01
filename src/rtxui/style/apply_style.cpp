@@ -379,6 +379,11 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "font-weight") {
+    style.bold = (v == "bold");
+    return;
+  }
+
   if (p == "margin") {
     int m = StoI(v);
     style.margin = {m, m, m, m};

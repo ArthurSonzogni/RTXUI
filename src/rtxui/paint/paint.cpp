@@ -371,6 +371,7 @@ void PaintImpl(const PhysicalFragment* frag,
                int accum_scroll_y,
                Color inherited_foreground_color,
                Color parent_background_color,
+               bool inherited_bold,
                ClipRect clip) {
   int abs_x = off_x;
   int abs_y = off_y;
@@ -385,6 +386,7 @@ void PaintImpl(const PhysicalFragment* frag,
       frag->foreground_color.value_or(inherited_foreground_color);
   Color current_background_color =
       frag->background_color.value_or(Color::RGBA(0, 0, 0, 0));
+  bool current_bold = frag->bold.value_or(inherited_bold);
 
   // 0. Draw Background
   if (frag->background_color) {
@@ -503,6 +505,7 @@ void PaintImpl(const PhysicalFragment* frag,
         Color fg = current_foreground_color;
         Color bg = cell.background_color;
         cell.foreground_color = Blend(fg, bg);
+        cell.bold = current_bold;
       }
       // For double-width graphemes, mark the continuation cell so the renderer
       // skips it — the terminal cursor already advanced 2 columns.
@@ -706,6 +709,7 @@ void PaintImpl(const PhysicalFragment* frag,
     PaintImpl(child.fragment.get(), texture, child_off_x, child_off_y,
               child_accum_scroll_x, child_accum_scroll_y,
               current_foreground_color, current_background_color,
+              current_bold,
               child_clip_to_pass);
   }
 }
@@ -717,6 +721,7 @@ void Paint(const PhysicalFragment* frag,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, 0, 0, Color::RGB(255, 255, 255),
             Color::RGB(0, 0, 0),
+            false,
             ClipRect{0, 0, texture.width(), texture.height()});
 }
 

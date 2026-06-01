@@ -76,6 +76,7 @@ struct ComputedStyle {
   // Colors:
   std::optional<Color> background_color;  // Background color of the element
   std::optional<Color> foreground_color;  // Text color of the element
+  std::optional<bool> bold;
 };
 
 #endif  // STYLE_HPP
