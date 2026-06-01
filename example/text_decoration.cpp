@@ -43,22 +43,20 @@ class TextDecorationDemo : public Component<TextDecorationDemo> {
         self {
           display: block;
           padding: 1;
-          border: tall;
-          border-color: fuchsia;
-          background-color: rgb(15, 10, 20);
+          background-color: rgb(10, 15, 30);
           color: white;
           width: 50;
           height: 24;
           overflow-y: scroll;
         }
         h1 {
-          color: magenta;
+          color: rgb(100, 180, 255);
           font-weight: bold;
           text-align: center;
         }
         p {
           margin-bottom: 1;
-          color: gray;
+          color: rgb(140, 160, 190);
           text-align: center;
         }
         .card {
@@ -66,15 +64,16 @@ class TextDecorationDemo : public Component<TextDecorationDemo> {
           margin-top: 1;
           padding: 1;
           border: round;
-          border-color: rgb(80, 80, 100);
+          border-color: rgb(40, 60, 90);
+          background-color: rgb(20, 30, 50);
         }
         .title {
           font-weight: bold;
-          color: yellow;
+          color: rgb(180, 220, 255);
           margin-bottom: 1;
         }
         .content {
-          color: aqua;
+          color: rgb(200, 230, 255);
         }
         .underline-text {
           text-decoration: underline;
