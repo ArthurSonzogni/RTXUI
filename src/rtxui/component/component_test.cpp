@@ -1227,4 +1227,99 @@ TEST_CASE("Text Decoration rendering onto cells", "[component][style][paint][dec
   CHECK(found_bl);
 }
 
+class MarginAutoTestComponent : public rtxui::Component<MarginAutoTestComponent> {
+ public:
+  void InitReflection() override {
+    rtxui::Component<MarginAutoTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <box id="parent">
+      <box id="child">centered</box>
+    </box>
+    <style>
+      #parent {
+        display: block;
+        width: 80;
+      }
+      #child {
+        display: block;
+        max-width: 40;
+        margin: 0 auto;
+      }
+    </style>
+  )";
+};
+
+TEST_CASE("Block layout max-width and margin auto centering", "[component][layout][margin][max-width]") {
+  auto container = rtxui::Ref<MarginAutoTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  REQUIRE(root_fragment->children.size() == 1);
+  auto parent_frag = root_fragment->children[0].fragment;
+  REQUIRE(parent_frag->children.size() == 1);
+  auto child_link = parent_frag->children[0];
+  CHECK(child_link.fragment->width == 40);
+  CHECK(child_link.x == 20);
+}
+
+class MaxHeightTestComponent : public rtxui::Component<MaxHeightTestComponent> {
+ public:
+  void InitReflection() override {
+    rtxui::Component<MaxHeightTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <box id="parent">
+      <box id="child">
+        <box>1</box>
+        <box>2</box>
+        <box>3</box>
+        <box>4</box>
+        <box>5</box>
+      </box>
+    </box>
+    <style>
+      box {
+        display: block;
+      }
+      #parent {
+        height: 20;
+      }
+      #child {
+        max-height: 3;
+      }
+    </style>
+  )";
+};
+
+TEST_CASE("Block layout max-height constraint", "[component][layout][max-height]") {
+  auto container = rtxui::Ref<MaxHeightTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  REQUIRE(root_fragment->children.size() == 1);
+  auto parent_frag = root_fragment->children[0].fragment;
+  REQUIRE(parent_frag->children.size() == 1);
+  auto child_link = parent_frag->children[0];
+  CHECK(child_link.fragment->height == 3);
+}
+
 }  // namespace

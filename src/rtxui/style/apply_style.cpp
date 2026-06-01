@@ -39,6 +39,23 @@ int StoI(std::string_view s) {
   return 0;
 }
 
+std::vector<std::string_view> SplitWords(std::string_view s) {
+  std::vector<std::string_view> words;
+  while (!s.empty()) {
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+      s.remove_prefix(1);
+    }
+    if (s.empty()) break;
+    size_t end = 0;
+    while (end < s.size() && !std::isspace(static_cast<unsigned char>(s[end]))) {
+      ++end;
+    }
+    words.push_back(s.substr(0, end));
+    s.remove_prefix(end);
+  }
+  return words;
+}
+
 std::optional<Color> ParseColor(std::string_view value) {
   if (value.empty()) {
     return std::nullopt;
@@ -407,8 +424,67 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "margin") {
-    int m = StoI(v);
-    style.margin = {m, m, m, m};
+    auto parts = SplitWords(v);
+    if (parts.size() == 1) {
+      if (parts[0] == "auto") {
+        style.margin_left_auto = true;
+        style.margin_right_auto = true;
+        style.margin = {0, 0, 0, 0};
+      } else {
+        int m = StoI(parts[0]);
+        style.margin_left_auto = false;
+        style.margin_right_auto = false;
+        style.margin = {m, m, m, m};
+      }
+    } else if (parts.size() == 2) {
+      int v_val = StoI(parts[0]);
+      style.margin.top = v_val;
+      style.margin.bottom = v_val;
+      if (parts[1] == "auto") {
+        style.margin_left_auto = true;
+        style.margin_right_auto = true;
+        style.margin.left = 0;
+        style.margin.right = 0;
+      } else {
+        int h_val = StoI(parts[1]);
+        style.margin_left_auto = false;
+        style.margin_right_auto = false;
+        style.margin.left = h_val;
+        style.margin.right = h_val;
+      }
+    } else if (parts.size() == 3) {
+      style.margin.top = StoI(parts[0]);
+      style.margin.bottom = StoI(parts[2]);
+      if (parts[1] == "auto") {
+        style.margin_left_auto = true;
+        style.margin_right_auto = true;
+        style.margin.left = 0;
+        style.margin.right = 0;
+      } else {
+        int h_val = StoI(parts[1]);
+        style.margin_left_auto = false;
+        style.margin_right_auto = false;
+        style.margin.left = h_val;
+        style.margin.right = h_val;
+      }
+    } else if (parts.size() >= 4) {
+      style.margin.top = StoI(parts[0]);
+      style.margin.bottom = StoI(parts[2]);
+      if (parts[1] == "auto") {
+        style.margin_right_auto = true;
+        style.margin.right = 0;
+      } else {
+        style.margin_right_auto = false;
+        style.margin.right = StoI(parts[1]);
+      }
+      if (parts[3] == "auto") {
+        style.margin_left_auto = true;
+        style.margin.left = 0;
+      } else {
+        style.margin_left_auto = false;
+        style.margin.left = StoI(parts[3]);
+      }
+    }
     return;
   }
 
@@ -425,14 +501,24 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "margin-left") {
-    int m = StoI(v);
-    style.margin.left = m;
+    if (v == "auto") {
+      style.margin_left_auto = true;
+      style.margin.left = 0;
+    } else {
+      style.margin_left_auto = false;
+      style.margin.left = StoI(v);
+    }
     return;
   }
 
   if (p == "margin-right") {
-    int m = StoI(v);
-    style.margin.right = m;
+    if (v == "auto") {
+      style.margin_right_auto = true;
+      style.margin.right = 0;
+    } else {
+      style.margin_right_auto = false;
+      style.margin.right = StoI(v);
+    }
     return;
   }
 
@@ -619,6 +705,16 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "width") {
     style.width = ParseLength(v);
+    return;
+  }
+
+  if (p == "max-width") {
+    style.max_width = ParseLength(v);
+    return;
+  }
+
+  if (p == "max-height") {
+    style.max_height = ParseLength(v);
     return;
   }
 

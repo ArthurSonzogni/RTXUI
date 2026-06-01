@@ -381,3 +381,55 @@ TEST_CASE("Text decoration parsing in ApplyStyle", "[style][text-decoration]") {
     CHECK(style.blink.value_or(true) == false);
   }
 }
+
+TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle", "[style][max-width][max-height][margin]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("max-width") {
+    rtxui::ApplyStyle(style, {"max-width", "50"});
+    CHECK(style.max_width.unit == rtxui::Unit::Cells);
+    CHECK(style.max_width.value == 50);
+
+    rtxui::ApplyStyle(style, {"max-width", "80%"});
+    CHECK(style.max_width.unit == rtxui::Unit::Percent);
+    CHECK(style.max_width.value == 80);
+  }
+
+  SECTION("max-height") {
+    rtxui::ApplyStyle(style, {"max-height", "40"});
+    CHECK(style.max_height.unit == rtxui::Unit::Cells);
+    CHECK(style.max_height.value == 40);
+
+    rtxui::ApplyStyle(style, {"max-height", "60%"});
+    CHECK(style.max_height.unit == rtxui::Unit::Percent);
+    CHECK(style.max_height.value == 60);
+  }
+
+  SECTION("margin: auto shorthand") {
+    rtxui::ApplyStyle(style, {"margin", "auto"});
+    CHECK(style.margin_left_auto);
+    CHECK(style.margin_right_auto);
+    CHECK(style.margin.left == 0);
+    CHECK(style.margin.right == 0);
+  }
+
+  SECTION("margin: 2 auto shorthand") {
+    rtxui::ApplyStyle(style, {"margin", "2 auto"});
+    CHECK(style.margin.top == 2);
+    CHECK(style.margin.bottom == 2);
+    CHECK(style.margin_left_auto);
+    CHECK(style.margin_right_auto);
+    CHECK(style.margin.left == 0);
+    CHECK(style.margin.right == 0);
+  }
+
+  SECTION("margin-left: auto and margin-right: auto sub-properties") {
+    rtxui::ApplyStyle(style, {"margin-left", "auto"});
+    CHECK(style.margin_left_auto);
+    CHECK(style.margin.left == 0);
+
+    rtxui::ApplyStyle(style, {"margin-right", "auto"});
+    CHECK(style.margin_right_auto);
+    CHECK(style.margin.right == 0);
+  }
+}
