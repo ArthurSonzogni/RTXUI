@@ -202,6 +202,9 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_text_align example/text_align.cpp)
   target_link_libraries(rtxui_example_text_align PRIVATE rtxui)
 
+  add_executable(rtxui_example_text_decoration example/text_decoration.cpp)
+  target_link_libraries(rtxui_example_text_decoration PRIVATE rtxui)
+
   add_executable(rtxui_example_input example/input.cpp)
   target_link_libraries(rtxui_example_input PRIVATE rtxui)
 
