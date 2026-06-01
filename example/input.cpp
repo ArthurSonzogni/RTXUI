@@ -34,6 +34,8 @@ class InputDemo : public Component<InputDemo> {
         }
         .container {
           display: block;
+          max-width: 60;
+          margin: 0 auto;
         }
         .title {
           display: block;

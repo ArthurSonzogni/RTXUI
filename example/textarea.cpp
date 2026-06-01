@@ -59,6 +59,8 @@ class TextareaDemo : public Component<TextareaDemo> {
         }
         .container {
           display: block;
+          max-width: 72;
+          margin: 0 auto;
         }
         .title {
           display: block;
