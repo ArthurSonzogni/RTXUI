@@ -2,6 +2,8 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include <rtxui/rtxui.hpp>
+#include "rtxui/dom/element.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 #include <fstream>
 #include <sstream>
 
@@ -10,12 +12,27 @@ using namespace rtxui;
 class MarkdownDemo : public Component<MarkdownDemo> {
  public:
   MarkdownDemo() {
-    // Try to load the documentation file
-    std::ifstream file("../docs/guide/markdown.md");
-    if (file.is_open()) {
-      std::stringstream ss;
-      ss << file.rdbuf();
-      markdown_content = ss.str();
+    // Try to load the documentation file from various relative paths
+    std::vector<std::string> paths = {
+        "docs/guide/markdown.md",      // From project root
+        "../docs/guide/markdown.md",   // From build directory
+        "../../docs/guide/markdown.md" // From deep build directory
+    };
+
+    bool loaded = false;
+    for (const auto& path : paths) {
+      std::ifstream file(path);
+      if (file.is_open()) {
+        std::stringstream ss;
+        ss << file.rdbuf();
+        markdown_content = ss.str();
+        loaded = true;
+        break;
+      }
+    }
+    
+    if (!loaded) {
+      markdown_content = "# Error\nCould not find `docs/guide/markdown.md`.\nMake sure you run this from the project root or build directory.";
     }
   }
 
@@ -60,6 +77,11 @@ You can style the generated HTML tags using the `stylesheet` property.
   )css";
 
   void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::h1>();
+    Import<rtxui::p>();
+    Import<rtxui::textarea>();
+    Import<rtxui::markdown>();
     Bind(markdown_content);
     Bind(custom_css);
     Component<MarkdownDemo>::InitReflection();
