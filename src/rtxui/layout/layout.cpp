@@ -245,6 +245,23 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   int prev_margin_bottom = 0;
   bool is_first_child = true;
 
+  int parent_resolved_height = -1;
+  if (constraints.height.mode == MeasureMode::Exactly) {
+    parent_resolved_height = constraints.height.value;
+  } else {
+    int resolved = ResolveSize(box->style.height, constraints.height.value);
+    if (resolved != -1) {
+      parent_resolved_height = resolved;
+    }
+  }
+
+  int child_height_limit = 0;
+  if (parent_resolved_height != -1) {
+    child_height_limit = std::max(0, parent_resolved_height - box->style.padding.Vert() - box->style.border.Vert());
+  } else if (constraints.height.mode == MeasureMode::AtMost) {
+    child_height_limit = std::max(0, constraints.height.value - box->style.padding.Vert() - box->style.border.Vert());
+  }
+
   for (auto& child_box : box->children) {
     if (child_box->style.position == PositionType::Absolute ||
         child_box->style.position == PositionType::Fixed) {
@@ -257,7 +274,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
         MeasureMode::AtMost,
     };
     child_c.height = {
-        0,
+        std::max(0, child_height_limit - child_box->style.margin.Vert()),
         MeasureMode::Undefined,
     };
 
@@ -355,19 +372,36 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
   }
 
   if (box->dom_node) {
+    int total_scroll_height = cur_y;
+    int total_scroll_width = max_child_width + box->style.padding.Horiz() + box->style.border.Horiz();
+
+    for (const auto& child_link : fragment->children) {
+      if (child_link.fragment && child_link.fragment->dom_node) {
+        int child_bottom = child_link.y + (child_link.fragment->clips_descendants 
+                                           ? child_link.fragment->height 
+                                           : child_link.fragment->dom_node->scroll_height());
+        int parent_bottom_needed = child_bottom + box->style.padding.bottom + box->style.border.bottom;
+        total_scroll_height = std::max(total_scroll_height, parent_bottom_needed);
+
+        int child_right = child_link.x + (child_link.fragment->clips_descendants 
+                                          ? child_link.fragment->width 
+                                          : child_link.fragment->dom_node->scroll_width());
+        int parent_right_needed = child_right + box->style.padding.right + box->style.border.right;
+        total_scroll_width = std::max(total_scroll_width, parent_right_needed);
+      }
+    }
+
     box->dom_node->set_layout_width(fragment->width);
     box->dom_node->set_layout_height(fragment->height);
-    box->dom_node->set_scroll_height(cur_y);
-    int max_scroll = std::max(0, cur_y - fragment->height);
+    box->dom_node->set_scroll_height(total_scroll_height);
+    int max_scroll = std::max(0, total_scroll_height - fragment->height);
     if (box->dom_node->scroll_y() > max_scroll) {
       box->dom_node->set_scroll_y(max_scroll);
     }
     fragment->scroll_y = box->dom_node->scroll_y();
 
-    int total_content_width = max_child_width + box->style.padding.Horiz() +
-                              box->style.border.Horiz();
-    box->dom_node->set_scroll_width(total_content_width);
-    int max_scroll_x = std::max(0, total_content_width - fragment->width);
+    box->dom_node->set_scroll_width(total_scroll_width);
+    int max_scroll_x = std::max(0, total_scroll_width - fragment->width);
     if (box->dom_node->scroll_x() > max_scroll_x) {
       box->dom_node->set_scroll_x(max_scroll_x);
     }
@@ -546,9 +580,14 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     int child_m_horiz = m_left + m_right;
     int child_m_vert = m_top + m_bottom;
 
+    int child_height_limit = 0;
+    if (constraints.height.mode == MeasureMode::Exactly || constraints.height.mode == MeasureMode::AtMost) {
+      child_height_limit = std::max(0, constraints.height.value - box->style.padding.Vert() - box->style.border.Vert());
+    }
+
     LayoutConstraints child_c = {
         {content_width_limit - child_m_horiz, MeasureMode::AtMost},
-        {0, MeasureMode::Undefined}};
+        {std::max(0, child_height_limit - child_m_vert), MeasureMode::Undefined}};
 
     int cx = box->style.padding.left + box->style.border.left + cursor_x + m_left;
     int cy = cursor_y + m_top;
@@ -769,7 +808,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                                                     ? MeasureMode::Exactly
                                                     : MeasureMode::Undefined};
       if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
-        child_c.height = {0, MeasureMode::Undefined};
+        child_c.height = {content_h, MeasureMode::Undefined};
       } else {
         int max_h =
             (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
@@ -777,7 +816,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       }
     } else {
       if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
-        child_c.width = {0, MeasureMode::Undefined};
+        child_c.width = {content_w, MeasureMode::Undefined};
       } else {
         int max_w =
             (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
@@ -864,7 +903,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     if (is_row) {
       final_c.width = {item.main_resolved_size - m_horiz, MeasureMode::Exactly};
       if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
-        final_c.height = {0, MeasureMode::Undefined};
+        final_c.height = {content_h, MeasureMode::Undefined};
       } else {
         int max_h =
             (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
@@ -872,7 +911,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       }
     } else {
       if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
-        final_c.width = {0, MeasureMode::Undefined};
+        final_c.width = {content_w, MeasureMode::Undefined};
       } else {
         int max_w =
             (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
@@ -961,6 +1000,22 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   }
 
   if (box->dom_node) {
+    for (const auto& child_link : fragment->children) {
+      if (child_link.fragment && child_link.fragment->dom_node) {
+        int child_bottom = child_link.y + (child_link.fragment->clips_descendants 
+                                           ? child_link.fragment->height 
+                                           : child_link.fragment->dom_node->scroll_height());
+        int parent_bottom_needed = child_bottom + box->style.padding.bottom + box->style.border.bottom;
+        total_content_height = std::max(total_content_height, parent_bottom_needed);
+
+        int child_right = child_link.x + (child_link.fragment->clips_descendants 
+                                          ? child_link.fragment->width 
+                                          : child_link.fragment->dom_node->scroll_width());
+        int parent_right_needed = child_right + box->style.padding.right + box->style.border.right;
+        total_content_width = std::max(total_content_width, parent_right_needed);
+      }
+    }
+
     box->dom_node->set_layout_width(fragment->width);
     box->dom_node->set_layout_height(fragment->height);
     box->dom_node->set_scroll_height(total_content_height);
