@@ -1109,5 +1109,99 @@ TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
   CHECK(input->style.background_color == Color::RGB(0, 0, 63));
 }
 
+TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class HitTestFixedComponent : public Component<HitTestFixedComponent> {
+   public:
+    int fixed_clicks = 0;
+    int scroll_clicks = 0;
+
+    void on_fixed_click() { fixed_clicks++; }
+    void on_scroll_click() { scroll_clicks++; }
+
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<HitTestFixedComponent>::InitReflection();
+    }
+
+    HitTestFixedComponent() {
+      Import("on_fixed_click", [this]() { on_fixed_click(); });
+      Import("on_scroll_click", [this]() { on_scroll_click(); });
+      Bind(fixed_clicks);
+      Bind(scroll_clicks);
+    }
+
+    std::string_view view = R"html(
+      <div id="container">
+        <div id="scroller">
+          <div id="spacer"></div>
+          <div id="scrolled_item" onclick="on_scroll_click">Scrolled Item</div>
+          <div id="fixed_item" onclick="on_fixed_click">Fixed Item</div>
+        </div>
+      </div>
+      <style>
+        #container {
+          width: 20;
+          height: 10;
+        }
+        #scroller {
+          display: block;
+          width: 20;
+          height: 5;
+          overflow-y: scroll;
+        }
+        #spacer {
+          height: 8;
+        }
+        #scrolled_item {
+          height: 1;
+        }
+        #fixed_item {
+          position: fixed;
+          left: 5;
+          top: 2;
+          width: 10;
+          height: 1;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<HitTestFixedComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* fixed_el = component->Root()->QuerySelector("#fixed_item");
+  auto* scroll_el = component->Root()->QuerySelector("#scroller");
+  REQUIRE(fixed_el != nullptr);
+  REQUIRE(scroll_el != nullptr);
+
+  // Scroll position is initially 0
+  REQUIRE(scroll_el->scroll_y() == 0);
+
+  // Click on the fixed element. It is at top: 2, left: 5, which means y=2 (1-based mouse coordinates are x=6, y=3).
+  Event::Mouse click_fixed;
+  click_fixed.button = Event::Mouse::Button::Left;
+  click_fixed.motion = Event::Mouse::Motion::Pressed;
+  click_fixed.x = 6;
+  click_fixed.y = 3;
+  screen.Dispatch(click_fixed);
+
+  REQUIRE(component->fixed_clicks == 1);
+  REQUIRE(component->scroll_clicks == 0);
+
+  // Now scroll the scrollable container by 3 lines down
+  scroll_el->set_scroll_y(3);
+  screen.Draw();
+
+  // Click at the exact same physical coordinates x=6, y=3 (where the fixed element stays painted)
+  screen.Dispatch(click_fixed);
+
+  // The fixed element should receive the click, since it is position: fixed and does not move!
+  REQUIRE(component->fixed_clicks == 2);
+  REQUIRE(component->scroll_clicks == 0);
+}
+
 }  // namespace
 }  // namespace rtxui
