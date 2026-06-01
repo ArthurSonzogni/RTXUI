@@ -753,10 +753,9 @@ TEST_CASE("Layout: z-index stacking", "[layout][z-index]") {
   CHECK(layer == "X\n");
 }
 
-TEST_CASE("Layout: position fixed does not scroll",
-          "[layout][fixed][scroll]") {
+TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
   struct TestComponent : Component<TestComponent> {
-      std::string_view view = R"html(
+    std::string_view view = R"html(
       <div class="scrollable">
         <div class="spacer"></div>
         <div class="fixed-element">F</div>
@@ -781,39 +780,39 @@ TEST_CASE("Layout: position fixed does not scroll",
         }
       </style>
     )html";
-    };
+  };
 
-    auto c = Ref<TestComponent>::New();
-    c->Mount();
-    c->Digest();
+  auto c = Ref<TestComponent>::New();
+  c->Mount();
+  c->Digest();
 
-    // Scroll the scrollable container down by 2 cells
-    auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
-    REQUIRE(scrollable_element != nullptr);
-    scrollable_element->set_scroll_y(2);
+  // Scroll the scrollable container down by 2 cells
+  auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+  REQUIRE(scrollable_element != nullptr);
+  scrollable_element->set_scroll_y(2);
 
-    // Render
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
-    Texture texture(5, 3);
-    for (int y = 0; y < 3; ++y) {
-      for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
-      }
+  // Render
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  Texture texture(5, 3);
+  for (int y = 0; y < 3; ++y) {
+    for (int x = 0; x < 5; ++x) {
+      texture[x, y].character = " ";
     }
-    if (layout_box) {
-      LayoutConstraints constraints;
-      constraints.width = {5, MeasureMode::Exactly};
-      constraints.height = {3, MeasureMode::Exactly};
-      auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
-    }
-
-    std::string layer = GetTextLayer(texture);
-    INFO("Scroll fixed render:\n" << layer);
-
-    // The fixed element must remain at top:1, left:1 (which is x=1, y=1)
-    // regardless of the parent scroll position.
-    CHECK(texture[1, 1].character == "F");
   }
+  if (layout_box) {
+    LayoutConstraints constraints;
+    constraints.width = {5, MeasureMode::Exactly};
+    constraints.height = {3, MeasureMode::Exactly};
+    auto fragment = RunLayout({layout_box.get()}, constraints);
+    Paint(fragment.get(), texture);
+  }
+
+  std::string layer = GetTextLayer(texture);
+  INFO("Scroll fixed render:\n" << layer);
+
+  // The fixed element must remain at top:1, left:1 (which is x=1, y=1)
+  // regardless of the parent scroll position.
+  CHECK(texture[1, 1].character == "F");
+}
 
 }  // namespace rtxui

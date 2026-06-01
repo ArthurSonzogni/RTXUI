@@ -118,15 +118,15 @@ struct SubItem {
   bool operator==(const SubItem& other) const = default;
 };
 
-class StructLoopInterpolation : public rtxui::Component<StructLoopInterpolation> {
+class StructLoopInterpolation
+    : public rtxui::Component<StructLoopInterpolation> {
  public:
   std::vector<SubItem> items = {{"x"}, {"y"}};
 
   void InitReflection() override {
     BindCollection("items", &items, [](const SubItem& s) {
-        return std::make_shared<rtxui::ManualStructVisitor>(std::unordered_map<std::string, std::string>{
-          {"val", s.val}
-        });
+      return std::make_shared<rtxui::ManualStructVisitor>(
+          std::unordered_map<std::string, std::string>{{"val", s.val}});
     });
     Import<rtxui::div>();
     Import<rtxui::span>();
@@ -176,7 +176,8 @@ class AutoLoopInterpolation : public rtxui::Component<AutoLoopInterpolation> {
   )";
 };
 
-TEST_CASE("Automatic Reflection Loop Interpolation", "[component][interpolation]") {
+TEST_CASE("Automatic Reflection Loop Interpolation",
+          "[component][interpolation]") {
 #if defined(RTXUI_HAS_REFLECTION)
   auto component = rtxui::Ref<AutoLoopInterpolation>::New();
   component->Mount();
@@ -219,15 +220,19 @@ class ConditionalApp : public rtxui::Component<ConditionalApp> {
   )";
 
   std::string GetInterpolatedValue(std::string_view expr) override {
-    if (expr == "value == 1") return value == 1 ? "true" : "false";
-    if (expr == "value == 2") return value == 2 ? "true" : "false";
+    if (expr == "value == 1") {
+      return value == 1 ? "true" : "false";
+    }
+    if (expr == "value == 2") {
+      return value == 2 ? "true" : "false";
+    }
     return rtxui::Component<ConditionalApp>::GetInterpolatedValue(expr);
   }
 };
 
 TEST_CASE("Conditional Rendering", "[component][interpolation]") {
   auto component = rtxui::Ref<ConditionalApp>::New();
-  
+
   component->value = 1;
   component->Mount();
   std::string output = component->Root()->Print();

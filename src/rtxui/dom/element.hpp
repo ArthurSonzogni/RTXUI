@@ -80,7 +80,9 @@ class Element : public RefCounted {
 
   const ComponentBase* component() const { return component_; }
   const ComponentBase* owner_component() const { return owner_component_; }
-  void set_owner_component(const ComponentBase* owner) { owner_component_ = owner; }
+  void set_owner_component(const ComponentBase* owner) {
+    owner_component_ = owner;
+  }
 
   bool is_slot() const { return is_slot_; }
   bool is_text() const { return is_text_; }
@@ -182,7 +184,7 @@ namespace time {
 using ClockFn = double (*)();
 void SetCustomClock(ClockFn clock);
 double GetTimeMs();
-}
+}  // namespace time
 
 }  // namespace rtxui
 

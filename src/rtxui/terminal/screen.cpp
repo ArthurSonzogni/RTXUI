@@ -22,9 +22,9 @@
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/style/style.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
-#include "rtxui/style/style.hpp"
 
 namespace rtxui {
 
@@ -58,8 +58,9 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
   // Traverse children in reverse order (top-most elements first)
   for (auto it = fragment->children.rbegin(); it != fragment->children.rend();
        ++it) {
-    bool is_fixed = (it->fragment && it->fragment->dom_node &&
-                     it->fragment->dom_node->style.position == PositionType::Fixed);
+    bool is_fixed =
+        (it->fragment && it->fragment->dom_node &&
+         it->fragment->dom_node->style.position == PositionType::Fixed);
 
     int rel_x = target_x - it->x;
     int rel_y = target_y - it->y;
@@ -76,8 +77,9 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
       rel_y += scroll_y_offset;
     }
 
-    if (auto* found = FindElementAtImpl(it->fragment, rel_x, rel_y,
-                                        child_accum_scroll_x, child_accum_scroll_y)) {
+    if (auto* found =
+            FindElementAtImpl(it->fragment, rel_x, rel_y, child_accum_scroll_x,
+                              child_accum_scroll_y)) {
       return found;
     }
   }
@@ -208,7 +210,9 @@ class ScreenImpl {
   bool TickTransitions(double current_time_ms);
   void ScrollIntoView(Element* element);
 
-  void SetSmoothScrollEnabled(bool enabled) { smooth_scroll_enabled_ = enabled; }
+  void SetSmoothScrollEnabled(bool enabled) {
+    smooth_scroll_enabled_ = enabled;
+  }
   bool smooth_scroll_enabled() const { return smooth_scroll_enabled_; }
 
   Ref<ComponentBase> component_;
@@ -260,9 +264,7 @@ void ScreenImpl::Loop() {
 
 void ScreenImpl::Step() {
 #ifdef __EMSCRIPTEN__
-  EM_ASM({
-    window.rtxui_has_active_transitions = $0;
-  }, HasActiveTransitions());
+  EM_ASM({ window.rtxui_has_active_transitions = $0; }, HasActiveTransitions());
 #endif
 
   bool input_available = true;
@@ -277,7 +279,7 @@ void ScreenImpl::Step() {
     struct timeval* timeout = nullptr;
     if (HasActiveTransitions()) {
       tv.tv_sec = 0;
-      tv.tv_usec = 16667; // ~60 FPS
+      tv.tv_usec = 16667;  // ~60 FPS
       timeout = &tv;
     }
 
@@ -323,10 +325,16 @@ bool ScreenImpl::HasActiveTransitions() {
     return false;
   }
   std::function<bool(Element*)> CheckActive = [&](Element* element) {
-    if (!element) return false;
-    if (!element->active_transitions.empty() || element->IsAnimatingScroll()) return true;
+    if (!element) {
+      return false;
+    }
+    if (!element->active_transitions.empty() || element->IsAnimatingScroll()) {
+      return true;
+    }
     for (size_t i = 0; i < element->ChildCount(); ++i) {
-      if (CheckActive(element->ChildAt(i))) return true;
+      if (CheckActive(element->ChildAt(i))) {
+        return true;
+      }
     }
     return false;
   };
@@ -338,7 +346,9 @@ bool ScreenImpl::TickTransitions(double current_time_ms) {
     return false;
   }
   std::function<bool(Element*)> TickAll = [&](Element* element) {
-    if (!element) return false;
+    if (!element) {
+      return false;
+    }
     bool updated = element->TickTransitions(current_time_ms);
     for (size_t i = 0; i < element->ChildCount(); ++i) {
       if (TickAll(element->ChildAt(i))) {
@@ -450,8 +460,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
               size_t paren_open = action.find('(');
               if (paren_open != std::string::npos && action.ends_with(')')) {
                 callback_name = action.substr(0, paren_open);
-                callback_arg =
-                    action.substr(paren_open + 1, action.size() - paren_open - 2);
+                callback_arg = action.substr(paren_open + 1,
+                                             action.size() - paren_open - 2);
               }
 
               ComponentBase* comp = GetAttributeOwnerComponent(curr);
@@ -550,7 +560,9 @@ void ScreenImpl::HandleEvent(const Event& event) {
   if (event == Event::Tab() || event == Event::TabReverse()) {
     std::vector<Element*> document_order;
     std::function<void(Element*)> CollectAll = [&](Element* el) {
-      if (!el) return;
+      if (!el) {
+        return;
+      }
       document_order.push_back(el);
       for (const auto& child : el->children()) {
         CollectAll(child.get());
@@ -567,7 +579,9 @@ void ScreenImpl::HandleEvent(const Event& event) {
     };
 
     auto GetEffectiveTabIndex = [](Element* el) -> std::optional<int> {
-      if (!el) return std::nullopt;
+      if (!el) {
+        return std::nullopt;
+      }
       const auto& attrs = el->Attributes();
       if (attrs.count("tabindex")) {
         try {
@@ -600,17 +614,22 @@ void ScreenImpl::HandleEvent(const Event& event) {
     }
 
     if (!navigable.empty()) {
-      std::sort(navigable.begin(), navigable.end(), [](const FocusEntry& a, const FocusEntry& b) {
-        if (a.tabindex > 0 && b.tabindex > 0) {
-          if (a.tabindex != b.tabindex) {
-            return a.tabindex < b.tabindex;
-          }
-          return a.document_index < b.document_index;
-        }
-        if (a.tabindex > 0) return true;
-        if (b.tabindex > 0) return false;
-        return a.document_index < b.document_index;
-      });
+      std::sort(navigable.begin(), navigable.end(),
+                [](const FocusEntry& a, const FocusEntry& b) {
+                  if (a.tabindex > 0 && b.tabindex > 0) {
+                    if (a.tabindex != b.tabindex) {
+                      return a.tabindex < b.tabindex;
+                    }
+                    return a.document_index < b.document_index;
+                  }
+                  if (a.tabindex > 0) {
+                    return true;
+                  }
+                  if (b.tabindex > 0) {
+                    return false;
+                  }
+                  return a.document_index < b.document_index;
+                });
 
       int curr_idx = -1;
       for (int i = 0; i < static_cast<int>(navigable.size()); ++i) {
@@ -915,7 +934,8 @@ void ScreenImpl::ScrollIntoView(Element* element) {
         new_scroll_y = std::clamp(new_scroll_y, 0, max_scroll_y);
 
         if (new_scroll_y != curr_scroll_y) {
-          parent.fragment->dom_node->set_scroll_y(new_scroll_y, smooth_scroll_enabled_);
+          parent.fragment->dom_node->set_scroll_y(new_scroll_y,
+                                                  smooth_scroll_enabled_);
           parent.fragment->scroll_y = parent.fragment->dom_node->scroll_y();
         }
       }
@@ -939,7 +959,8 @@ void ScreenImpl::ScrollIntoView(Element* element) {
         new_scroll_x = std::clamp(new_scroll_x, 0, max_scroll_x);
 
         if (new_scroll_x != curr_scroll_x) {
-          parent.fragment->dom_node->set_scroll_x(new_scroll_x, smooth_scroll_enabled_);
+          parent.fragment->dom_node->set_scroll_x(new_scroll_x,
+                                                  smooth_scroll_enabled_);
           parent.fragment->scroll_x = parent.fragment->dom_node->scroll_x();
         }
       }

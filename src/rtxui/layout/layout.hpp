@@ -12,7 +12,8 @@ struct LayoutContext {
   // Nearest positioned ancestor dimensions:
   int npa_w = 80;
   int npa_h = 24;
-  // Accumulated offsets from the nearest positioned ancestor to the current container's content box origin:
+  // Accumulated offsets from the nearest positioned ancestor to the current
+  // container's content box origin:
   int npa_offset_x = 0;
   int npa_offset_y = 0;
   int viewport_offset_x = 0;

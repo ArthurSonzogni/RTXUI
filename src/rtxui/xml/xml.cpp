@@ -45,7 +45,8 @@ std::string_view TrimWhitespaceWithNewlines(std::string_view sv) {
   // Trim leading if it contains a newline
   size_t start = 0;
   bool has_newline = false;
-  while (start < sv.size() && (sv[start] == ' ' || sv[start] == '\n' || sv[start] == '\r' || sv[start] == '\t')) {
+  while (start < sv.size() && (sv[start] == ' ' || sv[start] == '\n' ||
+                               sv[start] == '\r' || sv[start] == '\t')) {
     if (sv[start] == '\n' || sv[start] == '\r') {
       has_newline = true;
     }
@@ -58,7 +59,8 @@ std::string_view TrimWhitespaceWithNewlines(std::string_view sv) {
   // Trim trailing if it contains a newline
   size_t end = sv.size();
   has_newline = false;
-  while (end > 0 && (sv[end - 1] == ' ' || sv[end - 1] == '\n' || sv[end - 1] == '\r' || sv[end - 1] == '\t')) {
+  while (end > 0 && (sv[end - 1] == ' ' || sv[end - 1] == '\n' ||
+                     sv[end - 1] == '\r' || sv[end - 1] == '\t')) {
     if (sv[end - 1] == '\n' || sv[end - 1] == '\r') {
       has_newline = true;
     }
@@ -207,13 +209,15 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
   Nodes children;
   while (true) {
     int check_pos = pos_;
-    while (check_pos < xml_.size() && Contains(xml_[check_pos], {' ', '\n', '\r', '\t'})) {
+    while (check_pos < xml_.size() &&
+           Contains(xml_[check_pos], {' ', '\n', '\r', '\t'})) {
       check_pos++;
     }
     if (check_pos >= xml_.size() || xml_[check_pos] == '\0') {
       return MakeErrorExpected("</");
     }
-    if (xml_[check_pos] == '<' && check_pos + 1 < xml_.size() && xml_[check_pos + 1] == '/') {
+    if (xml_[check_pos] == '<' && check_pos + 1 < xml_.size() &&
+        xml_[check_pos + 1] == '/') {
       pos_ = check_pos;
       break;
     }

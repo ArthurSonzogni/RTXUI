@@ -1050,7 +1050,8 @@ TEST_CASE("Bold and Strong Components", "[component][b][strong]") {
   REQUIRE(strong_ptr != nullptr);
 }
 
-TEST_CASE("Bold and Strong Components cell.bold rendering", "[component][b][strong][paint]") {
+TEST_CASE("Bold and Strong Components cell.bold rendering",
+          "[component][b][strong][paint]") {
   auto container = rtxui::Ref<BoldTestComponent>::New();
   container->Mount();
 
@@ -1125,7 +1126,8 @@ class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
   )";
 };
 
-TEST_CASE("Whitespace preservation around inline tags", "[component][xml][space]") {
+TEST_CASE("Whitespace preservation around inline tags",
+          "[component][xml][space]") {
   auto container = rtxui::Ref<SpaceTestComponent>::New();
   container->Mount();
 
@@ -1151,7 +1153,8 @@ TEST_CASE("Whitespace preservation around inline tags", "[component][xml][space]
   CHECK(child3->text() == " statement");
 }
 
-class StyleDecorationTestComponent : public rtxui::Component<StyleDecorationTestComponent> {
+class StyleDecorationTestComponent
+    : public rtxui::Component<StyleDecorationTestComponent> {
  public:
   void InitReflection() override {
     rtxui::Component<StyleDecorationTestComponent>::InitReflection();
@@ -1174,7 +1177,8 @@ class StyleDecorationTestComponent : public rtxui::Component<StyleDecorationTest
   )";
 };
 
-TEST_CASE("Text Decoration rendering onto cells", "[component][style][paint][decoration]") {
+TEST_CASE("Text Decoration rendering onto cells",
+          "[component][style][paint][decoration]") {
   auto container = rtxui::Ref<StyleDecorationTestComponent>::New();
   container->Mount();
 
@@ -1199,12 +1203,14 @@ TEST_CASE("Text Decoration rendering onto cells", "[component][style][paint][dec
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
       const auto& cell = texture[x, y];
-      if (cell.character == "u" && x + 1 < texture.width() && texture[x + 1, y].character != "d") {
+      if (cell.character == "u" && x + 1 < texture.width() &&
+          texture[x + 1, y].character != "d") {
         CHECK(cell.underlined);
         CHECK_FALSE(cell.underlined_double);
         found_u = true;
       }
-      if (cell.character == "u" && x + 1 < texture.width() && texture[x + 1, y].character == "d") {
+      if (cell.character == "u" && x + 1 < texture.width() &&
+          texture[x + 1, y].character == "d") {
         CHECK_FALSE(cell.underlined);
         CHECK(cell.underlined_double);
         CHECK(texture[x + 1, y].underlined_double);
@@ -1214,7 +1220,8 @@ TEST_CASE("Text Decoration rendering onto cells", "[component][style][paint][dec
         CHECK(cell.strikethrough);
         found_s = true;
       }
-      if (cell.character == "b" && x + 1 < texture.width() && texture[x + 1, y].character == "l") {
+      if (cell.character == "b" && x + 1 < texture.width() &&
+          texture[x + 1, y].character == "l") {
         CHECK(cell.blink);
         CHECK(texture[x + 1, y].blink);
         found_bl = true;
@@ -1227,7 +1234,8 @@ TEST_CASE("Text Decoration rendering onto cells", "[component][style][paint][dec
   CHECK(found_bl);
 }
 
-class MarginAutoTestComponent : public rtxui::Component<MarginAutoTestComponent> {
+class MarginAutoTestComponent
+    : public rtxui::Component<MarginAutoTestComponent> {
  public:
   void InitReflection() override {
     rtxui::Component<MarginAutoTestComponent>::InitReflection();
@@ -1250,7 +1258,8 @@ class MarginAutoTestComponent : public rtxui::Component<MarginAutoTestComponent>
   )";
 };
 
-TEST_CASE("Block layout max-width and margin auto centering", "[component][layout][margin][max-width]") {
+TEST_CASE("Block layout max-width and margin auto centering",
+          "[component][layout][margin][max-width]") {
   auto container = rtxui::Ref<MarginAutoTestComponent>::New();
   container->Mount();
 
@@ -1301,7 +1310,8 @@ class MaxHeightTestComponent : public rtxui::Component<MaxHeightTestComponent> {
   )";
 };
 
-TEST_CASE("Block layout max-height constraint", "[component][layout][max-height]") {
+TEST_CASE("Block layout max-height constraint",
+          "[component][layout][max-height]") {
   auto container = rtxui::Ref<MaxHeightTestComponent>::New();
   container->Mount();
 
@@ -1320,6 +1330,35 @@ TEST_CASE("Block layout max-height constraint", "[component][layout][max-height]
   REQUIRE(parent_frag->children.size() == 1);
   auto child_link = parent_frag->children[0];
   CHECK(child_link.fragment->height == 3);
+}
+
+class MarkdownTestContainer : public rtxui::Component<MarkdownTestContainer> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::markdown>();
+    rtxui::Component<MarkdownTestContainer>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <markdown id="md" content="# Title" stylesheet="h1 { color: red; }"></markdown>
+  )";
+};
+
+TEST_CASE("Markdown Component rendering", "[component][markdown]") {
+  auto container = rtxui::Ref<MarkdownTestContainer>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* root = container->Root();
+  auto* md_el = root->QuerySelector("#md");
+  REQUIRE(md_el != nullptr);
+
+  auto* h1_el = root->QuerySelector("h1");
+  REQUIRE(h1_el != nullptr);
+
+  // The stylesheet inside the markdown component should apply to the h1
+  // since the markdown component's GetView prepends the <style> block.
+  CHECK(h1_el->style.foreground_color.has_value());
 }
 
 }  // namespace

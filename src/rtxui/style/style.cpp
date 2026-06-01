@@ -234,7 +234,7 @@ auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {
       if (Get() != '{') {
         return MakeErrorExpected("'{'");
       }
-      Advance(); // Skip '{'
+      Advance();  // Skip '{'
 
       while (true) {
         ParseWhiteSpaces();
@@ -254,7 +254,7 @@ auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {
       if (Get() != '}') {
         return MakeErrorExpected("'}'");
       }
-      Advance(); // Skip '}'
+      Advance();  // Skip '}'
       continue;
     }
 
@@ -312,8 +312,10 @@ auto EvaluateMediaQuery(std::string_view query) -> bool {
       parts.push_back(query.substr(start));
       break;
     }
-    bool before_ok = (pos == 0 || IsWhiteSpace(query[pos - 1]) || query[pos - 1] == ')');
-    bool after_ok = (pos + 3 >= query.size() || IsWhiteSpace(query[pos + 3]) || query[pos + 3] == '(');
+    bool before_ok =
+        (pos == 0 || IsWhiteSpace(query[pos - 1]) || query[pos - 1] == ')');
+    bool after_ok = (pos + 3 >= query.size() || IsWhiteSpace(query[pos + 3]) ||
+                     query[pos + 3] == '(');
     if (before_ok && after_ok) {
       parts.push_back(query.substr(start, pos - start));
       start = pos + 3;
@@ -323,7 +325,8 @@ auto EvaluateMediaQuery(std::string_view query) -> bool {
   }
 
   for (auto part : parts) {
-    while (!part.empty() && (IsWhiteSpace(part.front()) || part.front() == '(')) {
+    while (!part.empty() &&
+           (IsWhiteSpace(part.front()) || part.front() == '(')) {
       part.remove_prefix(1);
     }
     while (!part.empty() && (IsWhiteSpace(part.back()) || part.back() == ')')) {
@@ -344,10 +347,18 @@ auto EvaluateMediaQuery(std::string_view query) -> bool {
     std::string_view key = part.substr(0, colon);
     std::string_view val_str = part.substr(colon + 1);
 
-    while (!key.empty() && IsWhiteSpace(key.front())) key.remove_prefix(1);
-    while (!key.empty() && IsWhiteSpace(key.back())) key.remove_suffix(1);
-    while (!val_str.empty() && IsWhiteSpace(val_str.front())) val_str.remove_prefix(1);
-    while (!val_str.empty() && IsWhiteSpace(val_str.back())) val_str.remove_suffix(1);
+    while (!key.empty() && IsWhiteSpace(key.front())) {
+      key.remove_prefix(1);
+    }
+    while (!key.empty() && IsWhiteSpace(key.back())) {
+      key.remove_suffix(1);
+    }
+    while (!val_str.empty() && IsWhiteSpace(val_str.front())) {
+      val_str.remove_prefix(1);
+    }
+    while (!val_str.empty() && IsWhiteSpace(val_str.back())) {
+      val_str.remove_suffix(1);
+    }
 
     int val = 0;
     try {
@@ -357,17 +368,29 @@ auto EvaluateMediaQuery(std::string_view query) -> bool {
     }
 
     if (key == "max-width") {
-      if (g_terminal_width > val) return false;
+      if (g_terminal_width > val) {
+        return false;
+      }
     } else if (key == "min-width") {
-      if (g_terminal_width < val) return false;
+      if (g_terminal_width < val) {
+        return false;
+      }
     } else if (key == "width") {
-      if (g_terminal_width != val) return false;
+      if (g_terminal_width != val) {
+        return false;
+      }
     } else if (key == "max-height") {
-      if (g_terminal_height > val) return false;
+      if (g_terminal_height > val) {
+        return false;
+      }
     } else if (key == "min-height") {
-      if (g_terminal_height < val) return false;
+      if (g_terminal_height < val) {
+        return false;
+      }
     } else if (key == "height") {
-      if (g_terminal_height != val) return false;
+      if (g_terminal_height != val) {
+        return false;
+      }
     } else {
       return false;
     }

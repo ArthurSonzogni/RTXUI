@@ -23,7 +23,8 @@ using ComponentImportMap = std::unordered_map<std::string, ComponentFactory>;
 using Callback = std::function<void()>;
 using ParameterizedCallback = std::function<void(std::string)>;
 using CallbackImportMap = std::unordered_map<std::string, Callback>;
-using ParameterizedCallbackImportMap = std::unordered_map<std::string, ParameterizedCallback>;
+using ParameterizedCallbackImportMap =
+    std::unordered_map<std::string, ParameterizedCallback>;
 
 /// Bindings is a structure that allows you to import components and callbacks
 /// into a component.

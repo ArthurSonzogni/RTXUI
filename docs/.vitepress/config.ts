@@ -24,7 +24,8 @@ export default defineConfig({
           { text: 'Value Interpolation', link: '/guide/interpolation' },
           { text: 'Event Bindings', link: '/guide/bindings' },
           { text: 'Conditional Rendering', link: '/guide/conditionals' },
-          { text: 'Loops', link: '/guide/loops' }
+          { text: 'Loops', link: '/guide/loops' },
+          { text: 'Markdown', link: '/guide/markdown' }
         ]
       },
       {
