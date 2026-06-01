@@ -9,7 +9,7 @@ using namespace rtxui;
 class TextDecorationDemo : public Component<TextDecorationDemo> {
  public:
   std::string_view view = R"html(
-      <div>
+      <div class="content">
         <h1>RTXUI Text Decoration Demo</h1>
         <p>Demonstrates various text-decoration styling attributes supported by the layout and painting engine.</p>
         
@@ -45,21 +45,23 @@ class TextDecorationDemo : public Component<TextDecorationDemo> {
           padding: 1;
           background-color: rgb(10, 15, 30);
           color: white;
-          max-width: 50;
-          max-height: 20;
-          margin: 0 auto;
-          height: 24;
           overflow-y: scroll;
         }
+
+        .content {
+          display: block;
+          max-width: 60;
+          max-height: 100%;
+          margin: 0 auto;
+        }
+
         h1 {
           color: rgb(100, 180, 255);
           font-weight: bold;
-          text-align: center;
         }
         p {
           margin-bottom: 1;
           color: rgb(140, 160, 190);
-          text-align: center;
         }
         .card {
           display: block;
