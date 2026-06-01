@@ -178,6 +178,9 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_horizontal_scroll example/horizontal_scroll.cpp)
   target_link_libraries(rtxui_example_horizontal_scroll PRIVATE rtxui)
 
+  add_executable(rtxui_example_scroll_behavior example/scroll_behavior.cpp)
+  target_link_libraries(rtxui_example_scroll_behavior PRIVATE rtxui)
+
   add_executable(rtxui_example_helloworld example/helloworld.cpp)
   target_link_libraries(rtxui_example_helloworld PRIVATE rtxui)
 

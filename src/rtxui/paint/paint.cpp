@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,9 @@
 namespace rtxui {
 
 namespace {
+
+const Color kDefaultScrollbarThumbColor = Color::RGBA(200, 200, 200, 200);
+const Color kDefaultScrollbarTrackColor = Color::RGBA(80, 80, 80, 120);
 
 struct BorderData {
   const char* charset[3][3];
@@ -575,11 +579,11 @@ void PaintImpl(const PhysicalFragment* frag,
 
       int max_scroll = scroll_height - h;
       int thumb_y_eighths = (max_scroll > 0)
-                                ? (frag->scroll_y * ((track_h * 8) - thumb_h_eighths)) / max_scroll
+                                ? static_cast<int>(std::round(frag->visual_scroll_y * ((track_h * 8) - thumb_h_eighths) / max_scroll))
                                 : 0;
 
-      Color thumb_bg = Color::RGBA(200, 200, 200, 200);
-      Color track_bg = Color::RGBA(80, 80, 80, 120);
+      Color thumb_bg = kDefaultScrollbarThumbColor;
+      Color track_bg = kDefaultScrollbarTrackColor;
 
       const char* lower_blocks[] = {
           " ",
@@ -664,11 +668,11 @@ void PaintImpl(const PhysicalFragment* frag,
 
       int max_scroll = scroll_width - w;
       int thumb_x_eighths = (max_scroll > 0)
-                                ? (frag->scroll_x * ((track_w * 8) - thumb_w_eighths)) / max_scroll
+                                ? static_cast<int>(std::round(frag->visual_scroll_x * ((track_w * 8) - thumb_w_eighths) / max_scroll))
                                 : 0;
 
-      Color thumb_bg = Color::RGBA(200, 200, 200, 200);
-      Color track_bg = Color::RGBA(80, 80, 80, 120);
+      Color thumb_bg = kDefaultScrollbarThumbColor;
+      Color track_bg = kDefaultScrollbarTrackColor;
 
       const char* left_blocks[] = {
           " ",

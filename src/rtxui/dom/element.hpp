@@ -86,14 +86,28 @@ class Element : public RefCounted {
   bool is_text() const { return is_text_; }
 
   int scroll_y() const { return scroll_y_; }
-  void set_scroll_y(int y) { scroll_y_ = y; }
+  void set_scroll_y(int y, bool smooth = false);
   int scroll_height() const { return scroll_height_; }
   void set_scroll_height(int h) { scroll_height_ = h; }
 
   int scroll_x() const { return scroll_x_; }
-  void set_scroll_x(int x) { scroll_x_ = x; }
+  void set_scroll_x(int x, bool smooth = false);
   int scroll_width() const { return scroll_width_; }
   void set_scroll_width(int w) { scroll_width_ = w; }
+
+  int target_scroll_y() const { return target_scroll_y_; }
+  int target_scroll_x() const { return target_scroll_x_; }
+
+  float visual_scroll_y() const { return visual_scroll_y_; }
+  float visual_scroll_x() const { return visual_scroll_x_; }
+
+  bool IsAnimatingScroll() const {
+    return scroll_y_animating_ || scroll_x_animating_ ||
+           visual_scroll_y_animating_ || visual_scroll_x_animating_;
+  }
+
+  void ClampScrollY(int max_scroll);
+  void ClampScrollX(int max_scroll);
 
   int layout_width() const { return layout_width_; }
   void set_layout_width(int w) { layout_width_ = w; }
@@ -133,6 +147,28 @@ class Element : public RefCounted {
   bool active_ = false;
   int absolute_x_ = 0;
   int absolute_y_ = 0;
+
+  int target_scroll_y_ = 0;
+  int target_scroll_x_ = 0;
+  float anim_scroll_y_ = 0.0f;
+  float anim_scroll_x_ = 0.0f;
+  float start_scroll_y_ = 0.0f;
+  float start_scroll_x_ = 0.0f;
+  double scroll_y_anim_start_time_ = 0.0;
+  double scroll_x_anim_start_time_ = 0.0;
+  bool scroll_y_animating_ = false;
+  bool scroll_x_animating_ = false;
+
+  float visual_scroll_y_ = 0.0f;
+  float visual_scroll_x_ = 0.0f;
+  float visual_start_scroll_y_ = 0.0f;
+  float visual_start_scroll_x_ = 0.0f;
+  float visual_target_scroll_y_ = 0.0f;
+  float visual_target_scroll_x_ = 0.0f;
+  double visual_scroll_y_anim_start_time_ = 0.0;
+  double visual_scroll_x_anim_start_time_ = 0.0;
+  bool visual_scroll_y_animating_ = false;
+  bool visual_scroll_x_animating_ = false;
 
   std::string tag_ = "div";
   std::map<std::string, std::string> attributes_;

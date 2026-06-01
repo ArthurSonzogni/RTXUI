@@ -95,6 +95,11 @@ enum class ScrollbarWidth {
   None,
 };
 
+enum class ScrollBehavior {
+  Auto,
+  Smooth,
+};
+
 enum class TextAlign {
   Left,
   Right,
@@ -173,6 +178,7 @@ struct ComputedStyle {
   std::optional<WhiteSpace> white_space;
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
+  ScrollBehavior scroll_behavior = ScrollBehavior::Auto;
 
   bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }
   bool IsInlineLevel() const {

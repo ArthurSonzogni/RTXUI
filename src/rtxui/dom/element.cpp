@@ -117,6 +117,8 @@ const TransitionConfig* FindTransitionConfig(const Element* element, std::string
   return nullptr;
 }
 
+constexpr double kScrollAnimationDurationMs = 50.0;
+
 } // namespace
 
 Element::Element() {}
@@ -359,74 +361,303 @@ void Element::TriggerTransitions(double current_time_ms) {
 }
 
 bool Element::TickTransitions(double current_time_ms) {
-  if (active_transitions.empty()) {
+  if (active_transitions.empty() &&
+      !scroll_y_animating_ && !scroll_x_animating_ &&
+      !visual_scroll_y_animating_ && !visual_scroll_x_animating_) {
     return false;
   }
 
   bool updated = false;
-  std::vector<std::string> to_remove;
 
-  for (auto& [prop_name, trans] : active_transitions) {
-    if (current_time_ms < trans.start_time_ms) {
-      continue;
-    }
-
-    float t = 1.0f;
-    if (trans.duration_ms > 0.0f) {
-      t = static_cast<float>((current_time_ms - trans.start_time_ms) / trans.duration_ms);
-    }
-    if (t < 0.0f) t = 0.0f;
-    if (t > 1.0f) t = 1.0f;
-
-    float eased_t = ApplyEasing(t, trans.timing_function);
-
-    if (trans.type == ActiveTransition::Type::Color) {
-      std::optional<Color> start = trans.start_color;
-      std::optional<Color> target = trans.target_color;
-      auto val = InterpolateOptionalColor(start, target, eased_t);
-
-      if (prop_name == "background-color") {
-        style.background_color = val;
-      } else if (prop_name == "color" || prop_name == "foreground-color") {
-        style.foreground_color = val;
-      } else if (prop_name == "border-top-color") {
-        style.border_color_top = val;
-      } else if (prop_name == "border-right-color") {
-        style.border_color_right = val;
-      } else if (prop_name == "border-bottom-color") {
-        style.border_color_bottom = val;
-      } else if (prop_name == "border-left-color") {
-        style.border_color_left = val;
+  if (scroll_y_animating_) {
+    if (current_time_ms >= scroll_y_anim_start_time_) {
+      float t = static_cast<float>((current_time_ms - scroll_y_anim_start_time_) / kScrollAnimationDurationMs);
+      if (t < 0.0f) t = 0.0f;
+      if (t >= 1.0f) {
+        scroll_y_ = target_scroll_y_;
+        anim_scroll_y_ = static_cast<float>(target_scroll_y_);
+        scroll_y_animating_ = false;
+        visual_scroll_y_ = static_cast<float>(target_scroll_y_);
+        updated = true;
+      } else {
+        float eased_t = ApplyEasing(t, "ease");
+        float next_anim = start_scroll_y_ + (target_scroll_y_ - start_scroll_y_) * eased_t;
+        int next_scroll = static_cast<int>(std::round(next_anim));
+        if (next_scroll != scroll_y_ || next_anim != anim_scroll_y_) {
+          scroll_y_ = next_scroll;
+          anim_scroll_y_ = next_anim;
+          visual_scroll_y_ = next_anim;
+          updated = true;
+        }
       }
-      updated = true;
-    } else if (trans.type == ActiveTransition::Type::Float) {
-      float val = trans.start_float + (trans.target_float - trans.start_float) * eased_t;
-      if (prop_name == "flex-grow") {
-        style.flex_grow = val;
-      } else if (prop_name == "flex-shrink") {
-        style.flex_shrink = val;
-      }
-      updated = true;
-    } else if (trans.type == ActiveTransition::Type::Length) {
-      Length val = InterpolateLength(trans.start_length, trans.target_length, eased_t);
-      if (prop_name == "width") {
-        style.width = val;
-      } else if (prop_name == "height") {
-        style.height = val;
-      }
-      updated = true;
     }
-
-    if (t >= 1.0f) {
-      to_remove.push_back(prop_name);
+  } else if (visual_scroll_y_animating_) {
+    if (current_time_ms >= visual_scroll_y_anim_start_time_) {
+      float t = static_cast<float>((current_time_ms - visual_scroll_y_anim_start_time_) / kScrollAnimationDurationMs);
+      if (t < 0.0f) t = 0.0f;
+      if (t >= 1.0f) {
+        visual_scroll_y_ = visual_target_scroll_y_;
+        visual_scroll_y_animating_ = false;
+        updated = true;
+      } else {
+        float eased_t = ApplyEasing(t, "ease");
+        float next_anim = visual_start_scroll_y_ + (visual_target_scroll_y_ - visual_start_scroll_y_) * eased_t;
+        if (next_anim != visual_scroll_y_) {
+          visual_scroll_y_ = next_anim;
+          updated = true;
+        }
+      }
     }
   }
 
-  for (const auto& prop : to_remove) {
-    active_transitions.erase(prop);
+  if (scroll_x_animating_) {
+    if (current_time_ms >= scroll_x_anim_start_time_) {
+      float t = static_cast<float>((current_time_ms - scroll_x_anim_start_time_) / kScrollAnimationDurationMs);
+      if (t < 0.0f) t = 0.0f;
+      if (t >= 1.0f) {
+        scroll_x_ = target_scroll_x_;
+        anim_scroll_x_ = static_cast<float>(target_scroll_x_);
+        scroll_x_animating_ = false;
+        visual_scroll_x_ = static_cast<float>(target_scroll_x_);
+        updated = true;
+      } else {
+        float eased_t = ApplyEasing(t, "ease");
+        float next_anim = start_scroll_x_ + (target_scroll_x_ - start_scroll_x_) * eased_t;
+        int next_scroll = static_cast<int>(std::round(next_anim));
+        if (next_scroll != scroll_x_ || next_anim != anim_scroll_x_) {
+          scroll_x_ = next_scroll;
+          anim_scroll_x_ = next_anim;
+          visual_scroll_x_ = next_anim;
+          updated = true;
+        }
+      }
+    }
+  } else if (visual_scroll_x_animating_) {
+    if (current_time_ms >= visual_scroll_x_anim_start_time_) {
+      float t = static_cast<float>((current_time_ms - visual_scroll_x_anim_start_time_) / kScrollAnimationDurationMs);
+      if (t < 0.0f) t = 0.0f;
+      if (t >= 1.0f) {
+        visual_scroll_x_ = visual_target_scroll_x_;
+        visual_scroll_x_animating_ = false;
+        updated = true;
+      } else {
+        float eased_t = ApplyEasing(t, "ease");
+        float next_anim = visual_start_scroll_x_ + (visual_target_scroll_x_ - visual_start_scroll_x_) * eased_t;
+        if (next_anim != visual_scroll_x_) {
+          visual_scroll_x_ = next_anim;
+          updated = true;
+        }
+      }
+    }
+  }
+
+  if (!active_transitions.empty()) {
+    std::vector<std::string> to_remove;
+
+    for (auto& [prop_name, trans] : active_transitions) {
+      if (current_time_ms < trans.start_time_ms) {
+        continue;
+      }
+
+      float t = 1.0f;
+      if (trans.duration_ms > 0.0f) {
+        t = static_cast<float>((current_time_ms - trans.start_time_ms) / trans.duration_ms);
+      }
+      if (t < 0.0f) t = 0.0f;
+      if (t > 1.0f) t = 1.0f;
+
+      float eased_t = ApplyEasing(t, trans.timing_function);
+
+      if (trans.type == ActiveTransition::Type::Color) {
+        std::optional<Color> start = trans.start_color;
+        std::optional<Color> target = trans.target_color;
+        auto val = InterpolateOptionalColor(start, target, eased_t);
+
+        if (prop_name == "background-color") {
+          style.background_color = val;
+        } else if (prop_name == "color" || prop_name == "foreground-color") {
+          style.foreground_color = val;
+        } else if (prop_name == "border-top-color") {
+          style.border_color_top = val;
+        } else if (prop_name == "border-right-color") {
+          style.border_color_right = val;
+        } else if (prop_name == "border-bottom-color") {
+          style.border_color_bottom = val;
+        } else if (prop_name == "border-left-color") {
+          style.border_color_left = val;
+        }
+        updated = true;
+      } else if (trans.type == ActiveTransition::Type::Float) {
+        float val = trans.start_float + (trans.target_float - trans.start_float) * eased_t;
+        if (prop_name == "flex-grow") {
+          style.flex_grow = val;
+        } else if (prop_name == "flex-shrink") {
+          style.flex_shrink = val;
+        }
+        updated = true;
+      } else if (trans.type == ActiveTransition::Type::Length) {
+        Length val = InterpolateLength(trans.start_length, trans.target_length, eased_t);
+        if (prop_name == "width") {
+          style.width = val;
+        } else if (prop_name == "height") {
+          style.height = val;
+        }
+        updated = true;
+      }
+
+      if (t >= 1.0f) {
+        to_remove.push_back(prop_name);
+      }
+    }
+
+    for (const auto& prop : to_remove) {
+      active_transitions.erase(prop);
+    }
   }
 
   return updated;
+}
+
+void Element::set_scroll_y(int y, bool smooth) {
+  if (!smooth) {
+    scroll_y_ = y;
+    target_scroll_y_ = y;
+    anim_scroll_y_ = static_cast<float>(y);
+    scroll_y_animating_ = false;
+
+    visual_scroll_y_ = static_cast<float>(y);
+    visual_target_scroll_y_ = static_cast<float>(y);
+    visual_scroll_y_animating_ = false;
+  } else {
+    if (style.scroll_behavior == ScrollBehavior::Smooth) {
+      if (y == target_scroll_y_) {
+        return;
+      }
+      start_scroll_y_ = anim_scroll_y_;
+      target_scroll_y_ = y;
+      scroll_y_anim_start_time_ = time::GetTimeMs();
+      scroll_y_animating_ = true;
+
+      visual_target_scroll_y_ = static_cast<float>(y);
+      visual_scroll_y_animating_ = false;
+    } else {
+      if (y == scroll_y_) {
+        return;
+      }
+      scroll_y_ = y;
+      target_scroll_y_ = y;
+      anim_scroll_y_ = static_cast<float>(y);
+      scroll_y_animating_ = false;
+
+      visual_start_scroll_y_ = visual_scroll_y_;
+      visual_target_scroll_y_ = static_cast<float>(y);
+      visual_scroll_y_anim_start_time_ = time::GetTimeMs();
+      visual_scroll_y_animating_ = true;
+    }
+  }
+}
+
+void Element::set_scroll_x(int x, bool smooth) {
+  if (!smooth) {
+    scroll_x_ = x;
+    target_scroll_x_ = x;
+    anim_scroll_x_ = static_cast<float>(x);
+    scroll_x_animating_ = false;
+
+    visual_scroll_x_ = static_cast<float>(x);
+    visual_target_scroll_x_ = static_cast<float>(x);
+    visual_scroll_x_animating_ = false;
+  } else {
+    if (style.scroll_behavior == ScrollBehavior::Smooth) {
+      if (x == target_scroll_x_) {
+        return;
+      }
+      start_scroll_x_ = anim_scroll_x_;
+      target_scroll_x_ = x;
+      scroll_x_anim_start_time_ = time::GetTimeMs();
+      scroll_x_animating_ = true;
+
+      visual_target_scroll_x_ = static_cast<float>(x);
+      visual_scroll_x_animating_ = false;
+    } else {
+      if (x == scroll_x_) {
+        return;
+      }
+      scroll_x_ = x;
+      target_scroll_x_ = x;
+      anim_scroll_x_ = static_cast<float>(x);
+      scroll_x_animating_ = false;
+
+      visual_start_scroll_x_ = visual_scroll_x_;
+      visual_target_scroll_x_ = static_cast<float>(x);
+      visual_scroll_x_anim_start_time_ = time::GetTimeMs();
+      visual_scroll_x_animating_ = true;
+    }
+  }
+}
+
+void Element::ClampScrollY(int max_scroll) {
+  if (target_scroll_y_ > max_scroll) {
+    target_scroll_y_ = max_scroll;
+  }
+  if (scroll_y_ > max_scroll) {
+    scroll_y_ = max_scroll;
+  }
+  if (anim_scroll_y_ > max_scroll) {
+    anim_scroll_y_ = static_cast<float>(max_scroll);
+  }
+  if (start_scroll_y_ > max_scroll) {
+    start_scroll_y_ = static_cast<float>(max_scroll);
+  }
+
+  if (visual_target_scroll_y_ > max_scroll) {
+    visual_target_scroll_y_ = static_cast<float>(max_scroll);
+  }
+  if (visual_scroll_y_ > max_scroll) {
+    visual_scroll_y_ = static_cast<float>(max_scroll);
+  }
+  if (visual_start_scroll_y_ > max_scroll) {
+    visual_start_scroll_y_ = static_cast<float>(max_scroll);
+  }
+
+  if (anim_scroll_y_ == static_cast<float>(target_scroll_y_)) {
+    scroll_y_animating_ = false;
+  }
+  if (visual_scroll_y_ == visual_target_scroll_y_) {
+    visual_scroll_y_animating_ = false;
+  }
+}
+
+void Element::ClampScrollX(int max_scroll) {
+  if (target_scroll_x_ > max_scroll) {
+    target_scroll_x_ = max_scroll;
+  }
+  if (scroll_x_ > max_scroll) {
+    scroll_x_ = max_scroll;
+  }
+  if (anim_scroll_x_ > max_scroll) {
+    anim_scroll_x_ = static_cast<float>(max_scroll);
+  }
+  if (start_scroll_x_ > max_scroll) {
+    start_scroll_x_ = static_cast<float>(max_scroll);
+  }
+
+  if (visual_target_scroll_x_ > max_scroll) {
+    visual_target_scroll_x_ = static_cast<float>(max_scroll);
+  }
+  if (visual_scroll_x_ > max_scroll) {
+    visual_scroll_x_ = static_cast<float>(max_scroll);
+  }
+  if (visual_start_scroll_x_ > max_scroll) {
+    visual_start_scroll_x_ = static_cast<float>(max_scroll);
+  }
+
+  if (anim_scroll_x_ == static_cast<float>(target_scroll_x_)) {
+    scroll_x_animating_ = false;
+  }
+  if (visual_scroll_x_ == visual_target_scroll_x_) {
+    visual_scroll_x_animating_ = false;
+  }
 }
 
 }  // namespace rtxui
