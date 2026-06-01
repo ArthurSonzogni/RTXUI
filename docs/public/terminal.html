@@ -109,7 +109,7 @@
         const screenEl = document.querySelector('.xterm');
         if (screenEl && window.ResizeObserver) {
           const observer = new ResizeObserver(() => {
-            const width = screenEl.offsetWidth + 24 + 4;
+            const width = screenEl.offsetWidth + 24 + 16;
             const height = screenEl.offsetHeight + 24 + 4;
             window.parent.postMessage({
               type: 'rtxui-terminal-resize',
