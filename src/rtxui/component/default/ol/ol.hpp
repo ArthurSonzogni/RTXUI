@@ -5,6 +5,7 @@
 #define RTXUI_COMPONENT_DEFAULT_OL_HPP_
 
 #include <string_view>
+
 #include "rtxui/internal/component.hpp"
 
 namespace rtxui {

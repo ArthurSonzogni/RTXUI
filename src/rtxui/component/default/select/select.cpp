@@ -2,7 +2,9 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include "rtxui/component/default/select/select.hpp"
+
 #include <iostream>
+
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 

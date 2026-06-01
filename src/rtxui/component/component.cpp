@@ -168,7 +168,9 @@ void RestoreElementStates(
   }
 }
 
-std::string Interpolate(std::string_view text, ComponentBase* source, std::shared_ptr<LocalScope> scope) {
+std::string Interpolate(std::string_view text,
+                        ComponentBase* source,
+                        std::shared_ptr<LocalScope> scope) {
   struct Placeholder {
     size_t open_idx;
     size_t close_idx;
@@ -228,9 +230,10 @@ std::string Interpolate(std::string_view text, ComponentBase* source, std::share
     bool resolved = false;
     if (scope) {
       auto dot_pos = ph.trimmed_expr.find('.');
-      std::string var_name = (dot_pos == std::string_view::npos)
-                                 ? ph.trimmed_expr
-                                 : std::string(ph.trimmed_expr.substr(0, dot_pos));
+      std::string var_name =
+          (dot_pos == std::string_view::npos)
+              ? ph.trimmed_expr
+              : std::string(ph.trimmed_expr.substr(0, dot_pos));
       auto val_opt = scope->Get(var_name);
       if (val_opt) {
         resolved = true;
@@ -241,7 +244,8 @@ std::string Interpolate(std::string_view text, ComponentBase* source, std::share
         } else {
           std::string_view expr_view = ph.trimmed_expr;
           std::string_view field_name = expr_view.substr(dot_pos + 1);
-          if (std::holds_alternative<std::shared_ptr<StructVisitor>>(*val_opt)) {
+          if (std::holds_alternative<std::shared_ptr<StructVisitor>>(
+                  *val_opt)) {
             auto visitor = std::get<std::shared_ptr<StructVisitor>>(*val_opt);
             if (visitor) {
               val = visitor->GetFieldValue(field_name);
@@ -318,10 +322,12 @@ struct ParsedSelector {
 };
 
 ParsedSelector SplitSelector(std::string_view selector_str) {
-  while (!selector_str.empty() && std::isspace(static_cast<unsigned char>(selector_str.front()))) {
+  while (!selector_str.empty() &&
+         std::isspace(static_cast<unsigned char>(selector_str.front()))) {
     selector_str.remove_prefix(1);
   }
-  while (!selector_str.empty() && std::isspace(static_cast<unsigned char>(selector_str.back()))) {
+  while (!selector_str.empty() &&
+         std::isspace(static_cast<unsigned char>(selector_str.back()))) {
     selector_str.remove_suffix(1);
   }
 
@@ -332,7 +338,8 @@ ParsedSelector SplitSelector(std::string_view selector_str) {
     return parsed;
   }
   parsed.base = selector_str.substr(0, colon);
-  while (!parsed.base.empty() && std::isspace(static_cast<unsigned char>(parsed.base.back()))) {
+  while (!parsed.base.empty() &&
+         std::isspace(static_cast<unsigned char>(parsed.base.back()))) {
     parsed.base.remove_suffix(1);
   }
 
@@ -341,10 +348,12 @@ ParsedSelector SplitSelector(std::string_view selector_str) {
     rest.remove_prefix(1);
     size_t next_colon = rest.find(':');
     std::string_view pseudo = rest.substr(0, next_colon);
-    while (!pseudo.empty() && std::isspace(static_cast<unsigned char>(pseudo.front()))) {
+    while (!pseudo.empty() &&
+           std::isspace(static_cast<unsigned char>(pseudo.front()))) {
       pseudo.remove_prefix(1);
     }
-    while (!pseudo.empty() && std::isspace(static_cast<unsigned char>(pseudo.back()))) {
+    while (!pseudo.empty() &&
+           std::isspace(static_cast<unsigned char>(pseudo.back()))) {
       pseudo.remove_suffix(1);
     }
     parsed.pseudo_classes.push_back(pseudo);
@@ -356,12 +365,16 @@ ParsedSelector SplitSelector(std::string_view selector_str) {
   return parsed;
 }
 
-bool MatchSelector(const Element* element, const Element* root, const ParsedSelector& selector, bool check_pseudos) {
+bool MatchSelector(const Element* element,
+                   const Element* root,
+                   const ParsedSelector& selector,
+                   bool check_pseudos) {
   bool base_match = false;
   if (selector.base == "self") {
     base_match = (element == root);
   } else if (selector.base.starts_with("#")) {
-    base_match = (!element->id.empty() && element->id == selector.base.substr(1));
+    base_match =
+        (!element->id.empty() && element->id == selector.base.substr(1));
   } else if (selector.base.starts_with(".")) {
     std::string_view class_name = selector.base.substr(1);
     for (const auto& cls : element->classes) {
@@ -399,7 +412,8 @@ bool MatchSelector(const Element* element, const Element* root, const ParsedSele
   return true;
 }
 
-bool IsStyledByComponent(const Element* element, const ComponentBase* component) {
+bool IsStyledByComponent(const Element* element,
+                         const ComponentBase* component) {
   if (!element) {
     return false;
   }
@@ -412,7 +426,10 @@ bool IsStyledByComponent(const Element* element, const ComponentBase* component)
   return false;
 }
 
-void ResolveStylesRecursive(Element* element, const ComponentBase* component, const std::unique_ptr<css::StyleSheet>& stylesheet, bool check_pseudos) {
+void ResolveStylesRecursive(Element* element,
+                            const ComponentBase* component,
+                            const std::unique_ptr<css::StyleSheet>& stylesheet,
+                            bool check_pseudos) {
   if (!element) {
     return;
   }
@@ -425,7 +442,8 @@ void ResolveStylesRecursive(Element* element, const ComponentBase* component, co
             continue;
           }
           auto parsed = SplitSelector(ruleset.selector);
-          if (!parsed.pseudo_classes.empty() && MatchSelector(element, component->Root(), parsed, true)) {
+          if (!parsed.pseudo_classes.empty() &&
+              MatchSelector(element, component->Root(), parsed, true)) {
             for (const auto& declaration : ruleset.declarations) {
               ApplyStyle(element->target_style, declaration);
             }
@@ -439,7 +457,8 @@ void ResolveStylesRecursive(Element* element, const ComponentBase* component, co
             continue;
           }
           auto parsed = SplitSelector(ruleset.selector);
-          if (parsed.pseudo_classes.empty() && MatchSelector(element, component->Root(), parsed, false)) {
+          if (parsed.pseudo_classes.empty() &&
+              MatchSelector(element, component->Root(), parsed, false)) {
             for (const auto& declaration : ruleset.declarations) {
               ApplyStyle(element->base_style, declaration);
             }
@@ -450,7 +469,8 @@ void ResolveStylesRecursive(Element* element, const ComponentBase* component, co
   }
 
   for (size_t i = 0; i < element->ChildCount(); ++i) {
-    ResolveStylesRecursive(element->ChildAt(i), component, stylesheet, check_pseudos);
+    ResolveStylesRecursive(element->ChildAt(i), component, stylesheet,
+                           check_pseudos);
   }
 }
 
@@ -543,7 +563,8 @@ void ComponentBase::Render() {
         const auto& css_str = css_strings_.back();
         auto maybe_stylesheet = css::Parse(css_str);
         if (maybe_stylesheet) {
-          stylesheet_ = std::make_unique<css::StyleSheet>(std::move(maybe_stylesheet.value()));
+          stylesheet_ = std::make_unique<css::StyleSheet>(
+              std::move(maybe_stylesheet.value()));
         } else {
           CssParseError(maybe_stylesheet.error(), css_str);
         }
@@ -624,7 +645,9 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
   ResetTarget(root_.get());
 
   std::function<void(ComponentBase*)> ResolveAll = [&](ComponentBase* comp) {
-    if (!comp || !comp->Root()) return;
+    if (!comp || !comp->Root()) {
+      return;
+    }
     ResolveStylesRecursive(comp->Root(), comp, comp->stylesheet_, true);
     for (auto& child : comp->children_) {
       ResolveAll(child.get());
@@ -852,11 +875,15 @@ void ComponentBase::Render(const xml::Node& node,
 
             // Handle Vue-style event prefix '@'
             if (key.starts_with('@')) {
-              if (key == "@click") key = "onclick";
-              else if (key == "@click.left") key = "onclick";
-              else if (key == "@click.right") key = "oncontextmenu";
-              else if (key == "@change") key = "onchange";
-              else {
+              if (key == "@click") {
+                key = "onclick";
+              } else if (key == "@click.left") {
+                key = "onclick";
+              } else if (key == "@click.right") {
+                key = "oncontextmenu";
+              } else if (key == "@change") {
+                key = "onchange";
+              } else {
                 // Generic mapping: @event -> onevent
                 key = "on" + key.substr(1);
               }
@@ -907,11 +934,15 @@ void ComponentBase::Render(const xml::Node& node,
 
           // Handle Vue-style event prefix '@'
           if (key.starts_with('@')) {
-            if (key == "@click") key = "onclick";
-            else if (key == "@click.left") key = "onclick";
-            else if (key == "@click.right") key = "oncontextmenu";
-            else if (key == "@change") key = "onchange";
-            else {
+            if (key == "@click") {
+              key = "onclick";
+            } else if (key == "@click.left") {
+              key = "onclick";
+            } else if (key == "@click.right") {
+              key = "oncontextmenu";
+            } else if (key == "@change") {
+              key = "onchange";
+            } else {
               // Generic mapping: @event -> onevent
               key = "on" + key.substr(1);
             }

@@ -57,6 +57,7 @@ add_library(rtxui_lib STATIC
   "src/rtxui/component/default/b/b.cpp"
   "src/rtxui/component/default/strong/strong.cpp"
   "src/rtxui/component/default/textarea/textarea.cpp"
+  "src/rtxui/component/default/markdown/markdown.cpp"
   "src/rtxui/component/default/ul/ul.cpp"
   "include/rtxui/internal/import.hpp"
   "src/rtxui/core/expected.hpp"
@@ -107,6 +108,8 @@ add_library(rtxui_lib STATIC
   "src/rtxui/style/style.hpp"
   "src/rtxui/xml/xml.cpp"
   "src/rtxui/xml/xml.hpp"
+  "src/rtxui/markdown/markdown.cpp"
+  "src/rtxui/markdown/markdown.hpp"
 )
 
 target_compile_features(rtxui_lib PUBLIC cxx_std_26)
@@ -248,7 +251,10 @@ if(RTXUI_BUILD_EXAMPLES)
   target_link_libraries(rtxui_example_media PRIVATE rtxui)
 
   add_executable(rtxui_example_focus_scroll example/focus_scroll.cpp)
-  target_link_libraries(rtxui_example_focus_scroll PRIVATE rtxui)
+  target_link_libraries(rtxui_example_focus_scroll PRIVATE rtxui_lib)
+
+  add_executable(rtxui_example_markdown example/markdown.cpp)
+  target_link_libraries(rtxui_example_markdown PRIVATE rtxui_lib)
 endif()
 
 # An option to enable testing
@@ -285,6 +291,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/reflection/reflection_test.cpp"
     "src/rtxui/style/style_test.cpp"
     "src/rtxui/xml/xml_test.cpp"
+    "src/rtxui/markdown/markdown_test.cpp"
   )
   target_link_libraries(rtxui_test PRIVATE rtxui_lib)
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)

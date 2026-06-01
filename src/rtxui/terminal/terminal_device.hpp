@@ -22,13 +22,17 @@ inline int emscripten_get_char() {
       }
       let timer = null;
       if (window.rtxui_has_active_transitions) {
-        timer = setTimeout(function() {
-          window.rtxui_on_input = null;
-          wakeUp(-1);
-        }, 16);
+        timer = setTimeout(
+            function() {
+              window.rtxui_on_input = null;
+              wakeUp(-1);
+            },
+            16);
       }
       window.rtxui_on_input = function(char_code) {
-        if (timer) clearTimeout(timer);
+        if (timer) {
+          clearTimeout(timer);
+        }
         window.rtxui_on_input = null;
         wakeUp(char_code);
       };
@@ -40,7 +44,8 @@ inline int emscripten_get_char() {
 namespace rtxui {
 
 #ifdef __EMSCRIPTEN__
-// Forward declaration or empty namespace content is fine as long as we define SystemTerminalDevice below.
+// Forward declaration or empty namespace content is fine as long as we define
+// SystemTerminalDevice below.
 #endif
 
 class TerminalDevice {

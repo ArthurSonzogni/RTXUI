@@ -45,9 +45,12 @@ std::vector<std::string_view> SplitWords(std::string_view s) {
     while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
       s.remove_prefix(1);
     }
-    if (s.empty()) break;
+    if (s.empty()) {
+      break;
+    }
     size_t end = 0;
-    while (end < s.size() && !std::isspace(static_cast<unsigned char>(s[end]))) {
+    while (end < s.size() &&
+           !std::isspace(static_cast<unsigned char>(s[end]))) {
       ++end;
     }
     words.push_back(s.substr(0, end));
@@ -341,11 +344,15 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     style.transitions.clear();
     while (!value_view.empty()) {
       size_t comma = value_view.find(',');
-      std::string_view token = (comma == std::string_view::npos) ? value_view : value_view.substr(0, comma);
-      while (!token.empty() && std::isspace(static_cast<unsigned char>(token.front()))) {
+      std::string_view token = (comma == std::string_view::npos)
+                                   ? value_view
+                                   : value_view.substr(0, comma);
+      while (!token.empty() &&
+             std::isspace(static_cast<unsigned char>(token.front()))) {
         token.remove_prefix(1);
       }
-      while (!token.empty() && std::isspace(static_cast<unsigned char>(token.back()))) {
+      while (!token.empty() &&
+             std::isspace(static_cast<unsigned char>(token.back()))) {
         token.remove_suffix(1);
       }
       if (!token.empty()) {
@@ -353,11 +360,14 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         if (space1 != std::string_view::npos) {
           std::string_view prop_name = token.substr(0, space1);
           std::string_view remaining = token.substr(space1 + 1);
-          while (!remaining.empty() && std::isspace(static_cast<unsigned char>(remaining.front()))) {
+          while (!remaining.empty() &&
+                 std::isspace(static_cast<unsigned char>(remaining.front()))) {
             remaining.remove_prefix(1);
           }
           size_t space2 = remaining.find(' ');
-          std::string_view dur_str = (space2 == std::string_view::npos) ? remaining : remaining.substr(0, space2);
+          std::string_view dur_str = (space2 == std::string_view::npos)
+                                         ? remaining
+                                         : remaining.substr(0, space2);
           float dur = 0.0f;
           if (dur_str.ends_with("ms")) {
             dur = StoF(dur_str.substr(0, dur_str.size() - 2)) / 1000.0f;
@@ -369,13 +379,18 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
           std::string_view timing = "ease";
           if (space2 != std::string_view::npos) {
             std::string_view remaining2 = remaining.substr(space2 + 1);
-            while (!remaining2.empty() && std::isspace(static_cast<unsigned char>(remaining2.front()))) {
+            while (
+                !remaining2.empty() &&
+                std::isspace(static_cast<unsigned char>(remaining2.front()))) {
               remaining2.remove_prefix(1);
             }
             size_t space3 = remaining2.find(' ');
-            timing = (space3 == std::string_view::npos) ? remaining2 : remaining2.substr(0, space3);
+            timing = (space3 == std::string_view::npos)
+                         ? remaining2
+                         : remaining2.substr(0, space3);
           }
-          style.transitions.push_back({std::string(prop_name), dur, 0.0f, std::string(timing)});
+          style.transitions.push_back(
+              {std::string(prop_name), dur, 0.0f, std::string(timing)});
         }
       }
       if (comma == std::string_view::npos) {
@@ -412,11 +427,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     style.underlined = ((v.find("underline") != std::string_view::npos ||
                          v.find("underlined") != std::string_view::npos) &&
                         v.find("double") == std::string_view::npos);
-    style.underlined_double = (v.find("double-underline") != std::string_view::npos ||
-                               v.find("underlined-double") != std::string_view::npos ||
-                               ((v.find("underline") != std::string_view::npos ||
-                                 v.find("underlined") != std::string_view::npos) &&
-                                v.find("double") != std::string_view::npos));
+    style.underlined_double =
+        (v.find("double-underline") != std::string_view::npos ||
+         v.find("underlined-double") != std::string_view::npos ||
+         ((v.find("underline") != std::string_view::npos ||
+           v.find("underlined") != std::string_view::npos) &&
+          v.find("double") != std::string_view::npos));
     style.strikethrough = (v.find("line-through") != std::string_view::npos ||
                            v.find("strikethrough") != std::string_view::npos);
     style.blink = (v.find("blink") != std::string_view::npos);

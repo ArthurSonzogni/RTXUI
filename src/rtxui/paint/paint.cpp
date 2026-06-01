@@ -396,8 +396,10 @@ void PaintImpl(const PhysicalFragment* frag,
       frag->background_color.value_or(Color::RGBA(0, 0, 0, 0));
   bool current_bold = frag->bold.value_or(inherited_bold);
   bool current_underlined = frag->underlined.value_or(inherited_underlined);
-  bool current_underlined_double = frag->underlined_double.value_or(inherited_underlined_double);
-  bool current_strikethrough = frag->strikethrough.value_or(inherited_strikethrough);
+  bool current_underlined_double =
+      frag->underlined_double.value_or(inherited_underlined_double);
+  bool current_strikethrough =
+      frag->strikethrough.value_or(inherited_strikethrough);
   bool current_blink = frag->blink.value_or(inherited_blink);
 
   // 0. Draw Background
@@ -573,28 +575,32 @@ void PaintImpl(const PhysicalFragment* frag,
           (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
       int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
 
-      int thumb_h_eighths = (viewport_h * track_h * 8) / std::max(1, scroll_height);
+      int thumb_h_eighths =
+          (viewport_h * track_h * 8) / std::max(1, scroll_height);
       thumb_h_eighths = std::max(8, thumb_h_eighths);
       thumb_h_eighths = std::min(track_h * 8, thumb_h_eighths);
 
       int max_scroll = scroll_height - h;
-      int thumb_y_eighths = (max_scroll > 0)
-                                ? static_cast<int>(std::round(frag->visual_scroll_y * ((track_h * 8) - thumb_h_eighths) / max_scroll))
-                                : 0;
+      int thumb_y_eighths =
+          (max_scroll > 0)
+              ? static_cast<int>(std::round(frag->visual_scroll_y *
+                                            ((track_h * 8) - thumb_h_eighths) /
+                                            max_scroll))
+              : 0;
 
       Color thumb_bg = kDefaultScrollbarThumbColor;
       Color track_bg = kDefaultScrollbarTrackColor;
 
       const char* lower_blocks[] = {
           " ",
-          " ", // U+2581
-          "▂", // U+2582
-          "▃", // U+2583
-          "▄", // U+2584
-          "▅", // U+2585
-          "▆", // U+2586
-          "▇", // U+2587
-          "█"  // U+2588
+          " ",  // U+2581
+          "▂",  // U+2582
+          "▃",  // U+2583
+          "▄",  // U+2584
+          "▅",  // U+2585
+          "▆",  // U+2586
+          "▇",  // U+2587
+          "█"   // U+2588
       };
 
       for (int i = 0; i < track_h; ++i) {
@@ -606,7 +612,8 @@ void PaintImpl(const PhysicalFragment* frag,
           int cell_end = (i + 1) * 8;
 
           int start_eighth = std::max(cell_start, thumb_y_eighths);
-          int end_eighth = std::min(cell_end, thumb_y_eighths + thumb_h_eighths);
+          int end_eighth =
+              std::min(cell_end, thumb_y_eighths + thumb_h_eighths);
 
           if (start_eighth >= end_eighth) {
             cell.character = " ";
@@ -662,28 +669,32 @@ void PaintImpl(const PhysicalFragment* frag,
           (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
       int viewport_w = std::max(1, w - border_horiz - padding_horiz);
 
-      int thumb_w_eighths = (viewport_w * track_w * 8) / std::max(1, scroll_width);
+      int thumb_w_eighths =
+          (viewport_w * track_w * 8) / std::max(1, scroll_width);
       thumb_w_eighths = std::max(8, thumb_w_eighths);
       thumb_w_eighths = std::min(track_w * 8, thumb_w_eighths);
 
       int max_scroll = scroll_width - w;
-      int thumb_x_eighths = (max_scroll > 0)
-                                ? static_cast<int>(std::round(frag->visual_scroll_x * ((track_w * 8) - thumb_w_eighths) / max_scroll))
-                                : 0;
+      int thumb_x_eighths =
+          (max_scroll > 0)
+              ? static_cast<int>(std::round(frag->visual_scroll_x *
+                                            ((track_w * 8) - thumb_w_eighths) /
+                                            max_scroll))
+              : 0;
 
       Color thumb_bg = kDefaultScrollbarThumbColor;
       Color track_bg = kDefaultScrollbarTrackColor;
 
       const char* left_blocks[] = {
           " ",
-          "▏", // U+258F
-          "▎", // U+258E
-          "▍", // U+258D
-          "▌", // U+258C
-          "▋", // U+258B
-          "▊", // U+258A
-          "▉", // U+2589
-          "█"  // U+2588
+          "▏",  // U+258F
+          "▎",  // U+258E
+          "▍",  // U+258D
+          "▌",  // U+258C
+          "▋",  // U+258B
+          "▊",  // U+258A
+          "▉",  // U+2589
+          "█"   // U+2588
       };
 
       for (int i = 0; i < track_w; ++i) {
@@ -695,7 +706,8 @@ void PaintImpl(const PhysicalFragment* frag,
           int cell_end = (i + 1) * 8;
 
           int start_eighth = std::max(cell_start, thumb_x_eighths);
-          int end_eighth = std::min(cell_end, thumb_x_eighths + thumb_w_eighths);
+          int end_eighth =
+              std::min(cell_end, thumb_x_eighths + thumb_w_eighths);
 
           if (start_eighth >= end_eighth) {
             cell.character = " ";
@@ -773,19 +785,26 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   auto sorted_children = frag->children;
-  std::stable_sort(sorted_children.begin(), sorted_children.end(),
-                   [](const PhysicalFragment::ChildLink& a, const PhysicalFragment::ChildLink& b) {
-                     int az = (a.fragment && a.fragment->dom_node) ? a.fragment->dom_node->style.z_index.value_or(0) : 0;
-                     int bz = (b.fragment && b.fragment->dom_node) ? b.fragment->dom_node->style.z_index.value_or(0) : 0;
-                     return az < bz;
-                   });
+  std::stable_sort(
+      sorted_children.begin(), sorted_children.end(),
+      [](const PhysicalFragment::ChildLink& a,
+         const PhysicalFragment::ChildLink& b) {
+        int az = (a.fragment && a.fragment->dom_node)
+                     ? a.fragment->dom_node->style.z_index.value_or(0)
+                     : 0;
+        int bz = (b.fragment && b.fragment->dom_node)
+                     ? b.fragment->dom_node->style.z_index.value_or(0)
+                     : 0;
+        return az < bz;
+      });
 
   int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
   int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
 
   for (auto& child : sorted_children) {
-    bool is_fixed = (child.fragment && child.fragment->dom_node &&
-                     child.fragment->dom_node->style.position == PositionType::Fixed);
+    bool is_fixed =
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Fixed);
 
     int child_off_x = abs_x + child.x;
     int child_off_y = abs_y + child.y;
@@ -806,13 +825,9 @@ void PaintImpl(const PhysicalFragment* frag,
 
     PaintImpl(child.fragment.get(), texture, child_off_x, child_off_y,
               child_accum_scroll_x, child_accum_scroll_y,
-              current_foreground_color, current_background_color,
-              current_bold,
-              current_underlined,
-              current_underlined_double,
-              current_strikethrough,
-              current_blink,
-              child_clip_to_pass);
+              current_foreground_color, current_background_color, current_bold,
+              current_underlined, current_underlined_double,
+              current_strikethrough, current_blink, child_clip_to_pass);
   }
 }
 }  // namespace
@@ -822,12 +837,7 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, 0, 0, Color::RGB(255, 255, 255),
-            Color::RGB(0, 0, 0),
-            false,
-            false,
-            false,
-            false,
-            false,
+            Color::RGB(0, 0, 0), false, false, false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()});
 }
 

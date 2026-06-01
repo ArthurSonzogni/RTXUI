@@ -8,15 +8,15 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <vector>
-#include <variant>
 #include <unordered_map>
-#include <ranges>
+#include <variant>
+#include <vector>
 #if defined(RTXUI_HAS_REFLECTION)
 #include <meta>
 #endif
@@ -29,7 +29,7 @@
 namespace css {
 struct Ruleset;
 using StyleSheet = std::vector<Ruleset>;
-}
+}  // namespace css
 
 namespace rtxui {
 class Element;
@@ -59,9 +59,12 @@ class TypeErasedRange {
 
 struct LocalScope {
   std::shared_ptr<LocalScope> parent;
-  std::unordered_map<std::string, std::variant<std::string, std::shared_ptr<StructVisitor>>> variables;
+  std::unordered_map<std::string,
+                     std::variant<std::string, std::shared_ptr<StructVisitor>>>
+      variables;
 
-  std::optional<std::variant<std::string, std::shared_ptr<StructVisitor>>> Get(std::string_view name) const {
+  std::optional<std::variant<std::string, std::shared_ptr<StructVisitor>>> Get(
+      std::string_view name) const {
     auto it = variables.find(std::string(name));
     if (it != variables.end()) {
       return it->second;
@@ -119,7 +122,10 @@ class ComponentBase : public RefCounted, public Bindings {
   std::unique_ptr<css::StyleSheet> stylesheet_;
   std::vector<std::string> css_strings_;
   std::vector<BindingLink> two_way_bindings_;
-  void Render(const xml::Node& node, Element* element, ComponentBase* source, std::shared_ptr<LocalScope> scope = nullptr);
+  void Render(const xml::Node& node,
+              Element* element,
+              ComponentBase* source,
+              std::shared_ptr<LocalScope> scope = nullptr);
   std::string template_;
   std::string xml_string_;
   xml::Nodes xml_nodes_;
@@ -177,14 +183,17 @@ void from_string(std::string_view str, T& value) {
 #if defined(RTXUI_HAS_REFLECTION)
 template <typename T>
 consteval size_t get_members_size() {
-  return std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::unchecked()).size();
+  return std::meta::nonstatic_data_members_of(
+             ^^T, std::meta::access_context::unchecked())
+      .size();
 }
 
 template <typename T>
 consteval auto get_members() {
   constexpr size_t N = get_members_size<T>();
   std::array<std::meta::info, N> arr{};
-  auto vec = std::meta::nonstatic_data_members_of(^^T, std::meta::access_context::unchecked());
+  auto vec = std::meta::nonstatic_data_members_of(
+      ^^T, std::meta::access_context::unchecked());
   for (size_t i = 0; i < N; ++i) {
     arr[i] = vec[i];
   }
@@ -192,30 +201,38 @@ consteval auto get_members() {
 }
 
 template <auto Arr, typename T, size_t... Is>
-std::string get_field_value_impl(const T& obj, std::string_view field_name, std::index_sequence<Is...>) {
+std::string get_field_value_impl(const T& obj,
+                                 std::string_view field_name,
+                                 std::index_sequence<Is...>) {
   std::string result;
-  ((std::meta::identifier_of(Arr[Is]) == field_name ? (result = reflection::to_string(obj.[:Arr[Is]:])) : std::string{}), ...);
+  ((std::meta::identifier_of(Arr[Is]) == field_name
+        ? (result = reflection::to_string(obj.[:Arr[Is]:]))
+        : std::string{}),
+   ...);
   return result;
 }
 
 template <typename T>
 class ReflectedStructVisitor : public StructVisitor {
   const T& obj_;
+
  public:
   ReflectedStructVisitor(const T& obj) : obj_(obj) {}
 
   std::string GetFieldValue(std::string_view field_name) const override {
     constexpr auto members = get_members<T>();
-    return get_field_value_impl<members>(obj_, field_name, std::make_index_sequence<members.size()>{});
+    return get_field_value_impl<members>(
+        obj_, field_name, std::make_index_sequence<members.size()>{});
   }
 };
 #endif
 
 class ManualStructVisitor : public StructVisitor {
   std::unordered_map<std::string, std::string> fields_;
+
  public:
   ManualStructVisitor(std::unordered_map<std::string, std::string> fields)
-    : fields_(std::move(fields)) {}
+      : fields_(std::move(fields)) {}
 
   std::string GetFieldValue(std::string_view field_name) const override {
     auto it = fields_.find(std::string(field_name));
@@ -227,17 +244,20 @@ template <typename Container>
 class TypeErasedRangeImpl : public TypeErasedRange {
   const Container* container_ptr_;
   std::decay_t<Container> snapshot_;
-  std::function<std::shared_ptr<StructVisitor>(const std::ranges::range_value_t<Container>&)> mapper_;
+  std::function<std::shared_ptr<StructVisitor>(
+      const std::ranges::range_value_t<Container>&)>
+      mapper_;
+
  public:
   TypeErasedRangeImpl(const Container* ptr)
-    : container_ptr_(ptr), snapshot_(*ptr) {}
+      : container_ptr_(ptr), snapshot_(*ptr) {}
 
-  TypeErasedRangeImpl(const Container* ptr, std::function<std::shared_ptr<StructVisitor>(const std::ranges::range_value_t<Container>&)> mapper)
-    : container_ptr_(ptr), snapshot_(*ptr), mapper_(mapper) {}
+  TypeErasedRangeImpl(const Container* ptr,
+                      std::function<std::shared_ptr<StructVisitor>(
+                          const std::ranges::range_value_t<Container>&)> mapper)
+      : container_ptr_(ptr), snapshot_(*ptr), mapper_(mapper) {}
 
-  size_t Size() const override {
-    return std::ranges::size(*container_ptr_);
-  }
+  size_t Size() const override { return std::ranges::size(*container_ptr_); }
 
   std::string GetItemString(size_t index) const override {
     auto it = std::ranges::begin(*container_ptr_);
@@ -249,13 +269,14 @@ class TypeErasedRangeImpl : public TypeErasedRange {
     using ItemType = std::ranges::range_value_t<Container>;
     auto it = std::ranges::begin(*container_ptr_);
     std::advance(it, index);
-    
+
     if (mapper_) {
       return mapper_(*it);
     }
-    
+
 #if defined(RTXUI_HAS_REFLECTION)
-    if constexpr (std::is_class_v<ItemType> && !std::is_same_v<ItemType, std::string>) {
+    if constexpr (std::is_class_v<ItemType> &&
+                  !std::is_same_v<ItemType, std::string>) {
       return std::make_shared<ReflectedStructVisitor<ItemType>>(*it);
     }
 #endif
@@ -341,7 +362,7 @@ class Component : public ComponentBase {
 
   // Member Pointer Binding (Variables or Computed Properties)
   template <typename T, typename C, typename... Args>
-  void Import(std::string name, T C::*member, Args&&... args) {
+  void Import(std::string name, T C::* member, Args&&... args) {
     if constexpr (std::is_member_function_pointer_v<T C::*>) {
       if constexpr (requires { (std::declval<const Derived>().*member)(); }) {
         // Const member function -> Computed property
@@ -352,10 +373,13 @@ class Component : public ComponentBase {
                    (static_cast<const Derived*>(this)->*member)());
              },
              nullptr, nullptr});
-      } else if constexpr (requires { (std::declval<Derived>().*member)(std::string{}); }) {
-        Bindings::Import(name, std::function<void(std::string)>([this, member](std::string s) {
-          (static_cast<Derived*>(this)->*member)(s);
-        }));
+      } else if constexpr (requires {
+                             (std::declval<Derived>().*member)(std::string{});
+                           }) {
+        Bindings::Import(name, std::function<void(std::string)>(
+                                   [this, member](std::string s) {
+                                     (static_cast<Derived*>(this)->*member)(s);
+                                   }));
       } else {
         // Non-const member function -> Event handler
         Bindings::Import(name, [this, member]() {
@@ -376,10 +400,11 @@ class Component : public ComponentBase {
 
   // Generic Binding (Event Handlers, Collections, or State References)
   template <typename T, typename... Args>
-  requires(!std::is_member_pointer_v<std::decay_t<T>>)
+    requires(!std::is_member_pointer_v<std::decay_t<T>>)
   void Import(std::string name, T&& item, Args&&... args) {
     using U = std::decay_t<T>;
-    if constexpr (std::is_invocable_v<U> || std::is_invocable_v<U, std::string>) {
+    if constexpr (std::is_invocable_v<U> ||
+                  std::is_invocable_v<U, std::string>) {
       if constexpr (std::is_invocable_v<U, std::string>) {
         Bindings::Import(
             name, std::function<void(std::string)>(std::forward<T>(item)));
@@ -468,7 +493,8 @@ class Component : public ComponentBase {
 };
 
 // Bind(x) registers state variables, computed properties, or callbacks.
-#define Bind(x, ...) this->Import(#x, &std::decay_t<decltype(*this)>::x, ##__VA_ARGS__)
+#define Bind(x, ...) \
+  this->Import(#x, &std::decay_t<decltype(*this)>::x, ##__VA_ARGS__)
 
 // BindComputed(x) and BindCallback(x) register member functions.
 #define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)

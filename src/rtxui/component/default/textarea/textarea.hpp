@@ -5,6 +5,7 @@
 #define RTXUI_COMPONENT_DEFAULT_TEXTAREA_TEXTAREA_HPP_
 
 #include <string_view>
+
 #include "rtxui/component/default/input/text_input_base.hpp"
 #include "rtxui/internal/component.hpp"
 

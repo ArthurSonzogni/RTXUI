@@ -1,0 +1,120 @@
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+#include <rtxui/rtxui.hpp>
+
+using namespace rtxui;
+
+class MarkdownDemo : public Component<MarkdownDemo> {
+ public:
+  std::string markdown_content = R"md(
+# Markdown in RTXUI
+
+RTXUI now supports **Markdown** natively via the `<markdown>` component!
+
+## Supported Features
+
+- **Bold** and _Italic_ text
+- [Links](https://github.com/ArthurSonzogni/RTXUI)
+- Inline `code` and fenced code blocks:
+```cpp
+#include <rtxui/rtxui.hpp>
+int main() {
+  return 0;
+}
+```
+- Unordered and Ordered lists
+- Blockquotes
+
+> "Markdown is a lightweight markup language for creating formatted text."
+
+## Custom Styling
+
+You can style the generated HTML tags using the `stylesheet` property.
+)md";
+
+  std::string custom_css = R"css(
+    h1 { color: #3b82f6; border-bottom: solid; border-color: #3b82f6; margin-bottom: 1; }
+    h2 { color: #60a5fa; margin-top: 1; }
+    strong { color: #facc15; }
+    em { color: #a78bfa; }
+    code { background-color: #1e293b; color: #94a3b8; padding-left: 1; padding-right: 1; }
+    pre { background-color: #0f172a; border: solid; border-color: #334155; padding: 1; margin: 1; }
+    blockquote { border-left: heavy; border-color: #4b5563; padding-left: 2; font-style: italic; color: #9ca3af; }
+    ul, ol { margin-left: 2; color: #d1d5db; }
+    a { color: #3b82f6; text-decoration: underline; }
+  )css";
+
+  void InitReflection() override {
+    Bind(markdown_content);
+    Bind(custom_css);
+    Component<MarkdownDemo>::InitReflection();
+  }
+
+  std::string_view view = R"html(
+    <div class="container">
+      <div class="sidebar">
+        <h1 class="sidebar-title">Editor</h1>
+        <p>Markdown Source:</p>
+        <textarea class="editor" value="{markdown_content}"></textarea>
+        <p>Custom CSS:</p>
+        <textarea class="css-editor" value="{custom_css}"></textarea>
+      </div>
+      <div class="preview-pane">
+        <h1 class="preview-title">Preview</h1>
+        <markdown class="md-preview" content="{markdown_content}" stylesheet="{custom_css}"></markdown>
+      </div>
+    </div>
+
+    <style>
+      self {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 100%;
+        background-color: #0f172a;
+        color: #f1f5f9;
+      }
+      .container {
+        display: flex;
+        flex-direction: row;
+        flex: 1;
+      }
+      .sidebar {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: solid;
+        border-color: #334155;
+        padding: 1;
+      }
+      .preview-pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 1;
+        overflow-y: scroll;
+      }
+      .sidebar-title, .preview-title {
+        color: #3b82f6;
+        margin-bottom: 1;
+      }
+      .editor, .css-editor {
+        flex: 1;
+        margin-bottom: 1;
+        border: solid;
+        border-color: #334155;
+        background-color: #1e293b;
+      }
+      .editor { min-height: 10; }
+      .css-editor { min-height: 5; }
+    </style>
+  )html";
+};
+
+int main() {
+  auto app = Ref<MarkdownDemo>::New();
+  Screen screen(app);
+  screen.Loop();
+  return 0;
+}

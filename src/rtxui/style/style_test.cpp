@@ -295,7 +295,8 @@ TEST_CASE("CSS with media queries", "[css][media]") {
   CHECK(stylesheet.value()[1].declarations.size() == 1);
 
   CHECK(stylesheet.value()[2].selector == "button");
-  CHECK(stylesheet.value()[2].media_query == "(min-width: 100) and (max-height: 50)");
+  CHECK(stylesheet.value()[2].media_query ==
+        "(min-width: 100) and (max-height: 50)");
   CHECK(stylesheet.value()[2].declarations.size() == 1);
 
   // Test evaluation of media queries
@@ -382,7 +383,8 @@ TEST_CASE("Text decoration parsing in ApplyStyle", "[style][text-decoration]") {
   }
 }
 
-TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle", "[style][max-width][max-height][margin]") {
+TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle",
+          "[style][max-width][max-height][margin]") {
   rtxui::ComputedStyle style;
 
   SECTION("max-width") {

@@ -536,16 +536,12 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
 TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
   // Reset clock to normal when test finishes
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
@@ -605,16 +601,12 @@ TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
 
 TEST_CASE("Transitions.EasingFunctions", "[transitions][easing]") {
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
@@ -671,20 +663,17 @@ TEST_CASE("Transitions.EasingFunctions", "[transitions][easing]") {
 
 TEST_CASE("Transitions.Interruption", "[transitions]") {
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
-  class InterruptionTestComponent : public Component<InterruptionTestComponent> {
+  class InterruptionTestComponent
+      : public Component<InterruptionTestComponent> {
    public:
     void InitReflection() override {
       Import<rtxui::div>();
@@ -721,7 +710,8 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
   screen.Step();
   CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
 
-  // Advance to t = 1500ms (50% progress) -> color is intermediate red (127, 0, 0)
+  // Advance to t = 1500ms (50% progress) -> color is intermediate red (127, 0,
+  // 0)
   mock_now_ms = 1500.0;
   screen.Step();
   CHECK(btn->style.background_color == Color::RGB(127, 0, 0));
@@ -730,9 +720,9 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
   btn->set_hovered(false);
   component->ResolveTargetStyles();
 
-  // At the moment of interruption (t = 1500ms), it should start from current value (127, 0, 0)
-  // target is now #000000.
-  // Advance to t = 2000ms (500ms later, which is 50% of the new 1s transition)
+  // At the moment of interruption (t = 1500ms), it should start from current
+  // value (127, 0, 0) target is now #000000. Advance to t = 2000ms (500ms
+  // later, which is 50% of the new 1s transition)
   mock_now_ms = 2000.0;
   screen.Step();
   // Halfway between 127 and 0 is 63
@@ -747,16 +737,12 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
 
 TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
@@ -785,7 +771,8 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
   auto component = Ref<MouseTransitionComponent>::New();
   Screen screen(component, device);
 
-  // We need to render/draw first so that root_fragment_ layout bounds are populated
+  // We need to render/draw first so that root_fragment_ layout bounds are
+  // populated
   screen.Draw();
 
   auto* btn = component->Root()->QuerySelector("#btn");
@@ -794,7 +781,8 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
   CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
 
   // Send a mouse hover event inside the button bounds
-  // Coordinates are 1-indexed. The button starts at (0, 0) in layout, which is (1, 1) in screen coords.
+  // Coordinates are 1-indexed. The button starts at (0, 0) in layout, which is
+  // (1, 1) in screen coords.
   Event::Mouse hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
@@ -841,20 +829,17 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
 
 TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
-  class FlexGrowTransitionComponent : public Component<FlexGrowTransitionComponent> {
+  class FlexGrowTransitionComponent
+      : public Component<FlexGrowTransitionComponent> {
    public:
     void InitReflection() override {
       Import<rtxui::div>();
@@ -911,14 +896,16 @@ TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
   CHECK(item2->layout_width() == 10);
 
   // Advance to t = 1500ms (50% progress): item2 flex-grow is 2.0.
-  // total grow = 3.0. item1 gets 1/3 (base 6 + 2 extra = 8), item2 gets 2/3 (base 6 + 5 extra = 11).
+  // total grow = 3.0. item1 gets 1/3 (base 6 + 2 extra = 8), item2 gets 2/3
+  // (base 6 + 5 extra = 11).
   mock_now_ms = 1500.0;
   screen.Step();
   CHECK(item1->layout_width() == 8);
   CHECK(item2->layout_width() == 11);
 
   // Advance to t = 2000ms (100% progress): item2 flex-grow is 3.0.
-  // total grow = 4.0. item1 gets 1/4 (base 6 + 2 extra = 8), item2 gets 3/4 (base 6 + 6 extra = 12).
+  // total grow = 4.0. item1 gets 1/4 (base 6 + 2 extra = 8), item2 gets 3/4
+  // (base 6 + 6 extra = 12).
   mock_now_ms = 2000.0;
   screen.Step();
   CHECK(item1->layout_width() == 8);
@@ -927,20 +914,17 @@ TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
 
 TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
-  class ActiveTransitionComponent : public Component<ActiveTransitionComponent> {
+  class ActiveTransitionComponent
+      : public Component<ActiveTransitionComponent> {
    public:
     void InitReflection() override {
       Import<rtxui::div>();
@@ -1001,7 +985,8 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
 
   CHECK(btn->hovered());
   CHECK(btn->active());
-  // The transition should start from current style Color::RGB(127, 0, 0) to Color::RGB(0, 255, 0)
+  // The transition should start from current style Color::RGB(127, 0, 0) to
+  // Color::RGB(0, 255, 0)
   REQUIRE(btn->active_transitions.count("background-color") == 1);
 
   // Tick 500ms after press (t = 2000ms): 50% from (127, 0, 0) to (0, 255, 0)
@@ -1022,7 +1007,8 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
 
   CHECK(btn->hovered());
   CHECK_FALSE(btn->active());
-  // Transitions to hover target: Color::RGB(255, 0, 0) from current Color::RGB(63, 127, 0)
+  // Transitions to hover target: Color::RGB(255, 0, 0) from current
+  // Color::RGB(63, 127, 0)
   REQUIRE(btn->active_transitions.count("background-color") == 1);
 
   // Tick 500ms after release (t = 2500ms): 50% from (63, 127, 0) to (255, 0, 0)
@@ -1036,16 +1022,12 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
 
 TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
@@ -1184,7 +1166,8 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
   // Scroll position is initially 0
   REQUIRE(scroll_el->scroll_y() == 0);
 
-  // Click on the fixed element. It is at top: 2, left: 5, which means y=2 (1-based mouse coordinates are x=6, y=3).
+  // Click on the fixed element. It is at top: 2, left: 5, which means y=2
+  // (1-based mouse coordinates are x=6, y=3).
   Event::Mouse click_fixed;
   click_fixed.button = Event::Mouse::Button::Left;
   click_fixed.motion = Event::Mouse::Motion::Pressed;
@@ -1199,10 +1182,12 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
   scroll_el->set_scroll_y(3);
   screen.Draw();
 
-  // Click at the exact same physical coordinates x=6, y=3 (where the fixed element stays painted)
+  // Click at the exact same physical coordinates x=6, y=3 (where the fixed
+  // element stays painted)
   screen.Dispatch(click_fixed);
 
-  // The fixed element should receive the click, since it is position: fixed and does not move!
+  // The fixed element should receive the click, since it is position: fixed and
+  // does not move!
   REQUIRE(component->fixed_clicks == 2);
   REQUIRE(component->scroll_clicks == 0);
 }
@@ -1341,7 +1326,8 @@ TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
   REQUIRE(target->style.background_color.has_value());
   CHECK(target->style.background_color == Color::RGB(0, 0, 0));
 
-  // Now resize to width 50 (should trigger max-width: 60 -> red background: RGB(255,0,0))
+  // Now resize to width 50 (should trigger max-width: 60 -> red background:
+  // RGB(255,0,0))
   device->TriggerResize(50, 20);
   device->PushInput(" ");
   screen.Step();
@@ -1349,7 +1335,8 @@ TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
   REQUIRE(target->style.background_color.has_value());
   CHECK(target->style.background_color == Color::RGB(255, 0, 0));
 
-  // Now resize to width 90 (should trigger min-width: 80 -> green background: RGB(0,255,0))
+  // Now resize to width 90 (should trigger min-width: 80 -> green background:
+  // RGB(0,255,0))
   device->TriggerResize(90, 20);
   device->PushInput(" ");
   screen.Step();
@@ -1436,7 +1423,8 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
 
   // 4. Dispatch Shift-Tab (TabReverse) to focus item2
   // item2 top = 5, bottom = 7.
-  // Current scroll_y = 4 (visible [4, 9]), so item2 is fully visible. scroll_y should remain 4.
+  // Current scroll_y = 4 (visible [4, 9]), so item2 is fully visible. scroll_y
+  // should remain 4.
   screen.Dispatch(Event::TabReverse());
   REQUIRE(item2->focused());
   REQUIRE(scrollable->scroll_y() == 4);
@@ -1452,16 +1440,12 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
 
 TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   struct ClockRestorer {
-    ~ClockRestorer() {
-      time::SetCustomClock(nullptr);
-    }
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
 
   static double mock_now_ms = 1000.0;
   mock_now_ms = 1000.0;
-  time::SetCustomClock([]() -> double {
-    return mock_now_ms;
-  });
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
 
   auto device = std::make_shared<MockTerminalDevice>();
 
@@ -1519,14 +1503,16 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   Screen screen(component, device);
 
   auto* scrollable_auto = component->Root()->QuerySelector("#scrollable_auto");
-  auto* scrollable_smooth = component->Root()->QuerySelector("#scrollable_smooth");
+  auto* scrollable_smooth =
+      component->Root()->QuerySelector("#scrollable_smooth");
   REQUIRE(scrollable_auto != nullptr);
   REQUIRE(scrollable_smooth != nullptr);
 
   // SetSmoothScrollEnabled defaults to true.
   REQUIRE(screen.smooth_scroll_enabled());
 
-  // Test 1: Scroll behavior 'auto' (instant content scroll, smooth visual scrollbar)
+  // Test 1: Scroll behavior 'auto' (instant content scroll, smooth visual
+  // scrollbar)
   REQUIRE(scrollable_auto->scroll_y() == 0);
   REQUIRE(scrollable_auto->visual_scroll_y() == 0.0f);
 
@@ -1558,8 +1544,8 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   screen.Step();
   REQUIRE(scrollable_auto->visual_scroll_y() == 2.0f);
 
-
-  // Test 2: Scroll behavior 'smooth' (smooth content scroll, smooth visual scrollbar)
+  // Test 2: Scroll behavior 'smooth' (smooth content scroll, smooth visual
+  // scrollbar)
   mock_now_ms = 2000.0;
   REQUIRE(scrollable_smooth->scroll_y() == 0);
   REQUIRE(scrollable_smooth->visual_scroll_y() == 0.0f);
