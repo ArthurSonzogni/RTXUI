@@ -67,6 +67,17 @@ Color formatting for component text and backgrounds.
 </template>
 </ExampleTabs>
 
+- `font-weight` `bold | normal`: Configures bold styling for the text. (not animatable)
+- `text-decoration` `underline | double-underline | line-through | strikethrough | blink | none`: Configures text decoration styling (such as single and double underlining, strikethrough/line-through, or blinking). Multiple space-separated styles can be specified (e.g. `double-underline strikethrough`). (not animatable)
+
+<ExampleTabs src="/wasm/rtxui_example_text_decoration.js">
+<template #source>
+
+<<< @/../example/text_decoration.cpp
+
+</template>
+</ExampleTabs>
+
 
 ---
 
