@@ -31,9 +31,11 @@ namespace {
 
 void handle_sigwinch(int sig) {}
 
-Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
-                       int target_x,
-                       int target_y) {
+Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
+                           int target_x,
+                           int target_y,
+                           int accum_scroll_x,
+                           int accum_scroll_y) {
   if (!fragment) {
     return nullptr;
   }
@@ -41,22 +43,54 @@ Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
       target_y >= fragment->height) {
     return nullptr;
   }
+
+  int scroll_x_offset = 0;
+  int scroll_y_offset = 0;
+  if (fragment->clips_descendants) {
+    scroll_x_offset = fragment->scroll_x;
+    scroll_y_offset = fragment->scroll_y;
+  }
+
+  int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
+  int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
+
   // Traverse children in reverse order (top-most elements first)
   for (auto it = fragment->children.rbegin(); it != fragment->children.rend();
        ++it) {
+    bool is_fixed = (it->fragment && it->fragment->dom_node &&
+                     it->fragment->dom_node->style.position == PositionType::Fixed);
+
     int rel_x = target_x - it->x;
     int rel_y = target_y - it->y;
-    if (fragment->clips_descendants) {
-      rel_y += fragment->scroll_y;
+    int child_accum_scroll_x = next_accum_scroll_x;
+    int child_accum_scroll_y = next_accum_scroll_y;
+
+    if (is_fixed) {
+      rel_x -= accum_scroll_x;
+      rel_y -= accum_scroll_y;
+      child_accum_scroll_x = 0;
+      child_accum_scroll_y = 0;
+    } else {
+      rel_x += scroll_x_offset;
+      rel_y += scroll_y_offset;
     }
-    if (auto* found = FindElementAt(it->fragment, rel_x, rel_y)) {
+
+    if (auto* found = FindElementAtImpl(it->fragment, rel_x, rel_y,
+                                        child_accum_scroll_x, child_accum_scroll_y)) {
       return found;
     }
   }
+
   if (fragment->dom_node) {
     return fragment->dom_node;
   }
   return nullptr;
+}
+
+Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
+                       int target_x,
+                       int target_y) {
+  return FindElementAtImpl(fragment, target_x, target_y, 0, 0);
 }
 
 ComponentBase* GetOwningComponent(Element* element) {
