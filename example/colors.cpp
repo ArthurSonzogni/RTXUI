@@ -141,6 +141,8 @@ class ColorDemo : public Component<ColorDemo> {
         }
         .container {
           display: block;
+          max-width: 80;
+          margin: 0 auto;
         }
         .row {
           display: flex;
