@@ -55,6 +55,25 @@ Specifies a condition for rendering the element.
   <div :if="is_visible">Visible Content</div>
   ```
 
+### `tabindex`
+Specifies the sequential keyboard focus navigation order of the element.
+- **Values**:
+  - `tabindex >= 0` (e.g. `0`, `1`, `2`): The element is sequentially focusable using the **Tab** and **Shift-Tab** keys. Positive values determine the order of focus traversal (lower values first), followed by elements with `tabindex="0"` in document order.
+  - `tabindex="-1"`: The element is focusable (e.g., clickable or programmatically focusable), but is excluded from sequential tab focus traversal.
+- **Example**:
+  ```html
+  <div tabindex="1">First in Tab Order</div>
+  <div tabindex="0">Second in Tab Order</div>
+  <div tabindex="-1">Excluded from Tab order, but still focusable</div>
+  ```
+
+### `focusable`
+A boolean attribute specifying if an element is focusable. If set to `true`, it is equivalent to setting `tabindex="0"`.
+- **Example**:
+  ```html
+  <div focusable="true">Interactive Div</div>
+  ```
+
 ---
 
 ## `&lt;if&gt;` &amp; `&lt;elif&gt;` &amp; `&lt;else&gt;`

@@ -421,6 +421,9 @@ void ResolveStylesRecursive(Element* element, const ComponentBase* component, co
     if (check_pseudos) {
       if (stylesheet) {
         for (const auto& ruleset : *stylesheet) {
+          if (!css::EvaluateMediaQuery(ruleset.media_query)) {
+            continue;
+          }
           auto parsed = SplitSelector(ruleset.selector);
           if (!parsed.pseudo_classes.empty() && MatchSelector(element, component->Root(), parsed, true)) {
             for (const auto& declaration : ruleset.declarations) {
@@ -432,6 +435,9 @@ void ResolveStylesRecursive(Element* element, const ComponentBase* component, co
     } else {
       if (stylesheet) {
         for (const auto& ruleset : *stylesheet) {
+          if (!css::EvaluateMediaQuery(ruleset.media_query)) {
+            continue;
+          }
           auto parsed = SplitSelector(ruleset.selector);
           if (parsed.pseudo_classes.empty() && MatchSelector(element, component->Root(), parsed, false)) {
             for (const auto& declaration : ruleset.declarations) {

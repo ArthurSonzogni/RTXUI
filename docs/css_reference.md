@@ -143,6 +143,46 @@ Used to position elements outside the standard flex flow. These properties are *
 
 ---
 
+## 9. Responsive Media Queries
+
+Used to apply styles conditionally based on the terminal's viewport dimensions. Whenever the terminal window is resized, the queries are automatically re-evaluated.
+
+- `@media (feature: value) { ... rulesets ... }`
+  - **Supported Features**:
+    - `max-width` / `min-width` / `width` [`<integer>`](#integers): Matches when the terminal width (column count) meets the condition.
+    - `max-height` / `min-height` / `height` [`<integer>`](#integers): Matches when the terminal height (row count) meets the condition.
+  - **Combining clauses**: Multiple conditions can be combined using the `and` operator.
+  
+- **Example**:
+  ```css
+  /* Apply padding and large border color on desktop */
+  @media (min-width: 80) {
+    div {
+      border-color: green;
+      padding: 1 2;
+    }
+  }
+
+  /* Stack layouts and use compact sizing on small screens */
+  @media (max-width: 59) and (max-height: 15) {
+    div {
+      border-color: red;
+      padding: 0 1;
+    }
+  }
+  ```
+
+<ExampleTabs src="/wasm/rtxui_example_media.js">
+<template #source>
+
+<<< @/../example/media.cpp
+
+</template>
+</ExampleTabs>
+
+
+---
+
 ## Value Types Reference
 
 This section details the formatting, syntax, and allowed values for the placeholders referenced above.
