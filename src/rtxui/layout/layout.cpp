@@ -41,6 +41,22 @@ int ResolveSize(const Length& length, int parent_size) {
   return -1;  // Represents 'Auto'
 }
 
+void AdjustOutOfFlowCoordinates(PhysicalFragment* frag, int shift_x, int shift_y) {
+  if (shift_x == 0 && shift_y == 0) return;
+  for (auto& child : frag->children) {
+    if (child.fragment) {
+      if (child.fragment->dom_node &&
+          (child.fragment->dom_node->style.position == PositionType::Absolute ||
+           child.fragment->dom_node->style.position == PositionType::Fixed)) {
+        child.x -= shift_x;
+        child.y -= shift_y;
+      } else {
+        AdjustOutOfFlowCoordinates(child.fragment.get(), shift_x, shift_y);
+      }
+    }
+  }
+}
+
 // --- Dispatcher ---
 std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
                                             LayoutConstraints constraints,
@@ -180,6 +196,13 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
     }
   }
 
+  // Apply max-width constraint
+  int max_width_resolved = ResolveSize(box->style.max_width, avail_width);
+  if (max_width_resolved != -1 && width > max_width_resolved) {
+    width = max_width_resolved;
+    is_auto_width = false;
+  }
+
   bool has_v_scrollbar = (box->style.overflow_y == Overflow::Scroll &&
                           box->style.scrollbar_width == ScrollbarWidth::Auto);
   bool has_h_scrollbar = (box->style.overflow_x == Overflow::Scroll &&
@@ -250,8 +273,21 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
     LayoutContext child_context = CreateChildContext(box, width, 0, cx, cy, context);
     auto child_frag = RunLayout({child_box.get()}, child_c, child_context);
 
-    int rx = cx + child_box->style.margin.left;
+    int rx = cx;
+    int shift = 0;
+    if (child_box->style.margin_left_auto && child_box->style.margin_right_auto) {
+      shift = std::max(0, child_width_limit - child_frag->width) / 2;
+    } else if (child_box->style.margin_left_auto) {
+      shift = std::max(0, child_width_limit - child_frag->width);
+    } else {
+      shift = child_box->style.margin.left;
+    }
+    rx += shift;
     int ry = cy;
+
+    if (shift != child_box->style.margin.left) {
+      AdjustOutOfFlowCoordinates(child_frag.get(), shift - child_box->style.margin.left, 0);
+    }
 
     if (child_box->style.position == PositionType::Relative) {
       if (child_box->style.left.unit != Unit::Auto) {
@@ -288,11 +324,27 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(
                       box->style.border.Horiz();
   }
 
+  // Cap width by max-width if needed
+  {
+    int max_w = ResolveSize(box->style.max_width, avail_width);
+    if (max_w != -1 && fragment->width > max_w) {
+      fragment->width = max_w;
+    }
+  }
+
   if (constraints.height.mode == MeasureMode::Exactly) {
     fragment->height = constraints.height.value;
   } else {
     int resolved_h = ResolveSize(box->style.height, constraints.height.value);
     fragment->height = (resolved_h != -1) ? resolved_h : cur_y;
+  }
+
+  // Cap height by max-height if needed
+  {
+    int max_h = ResolveSize(box->style.max_height, constraints.height.value);
+    if (max_h != -1 && fragment->height > max_h) {
+      fragment->height = max_h;
+    }
   }
 
   LayoutOutOfFlowChildren(box, fragment, context);
@@ -583,6 +635,22 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         max_line_width + box->style.padding.Horiz() + box->style.border.Horiz();
   }
 
+  // Cap width by max-width if needed
+  {
+    int max_w = ResolveSize(box->style.max_width, avail_width);
+    if (max_w != -1 && container_frag->width > max_w) {
+      container_frag->width = max_w;
+    }
+  }
+
+  // Cap height by max-height if needed
+  {
+    int max_h = ResolveSize(box->style.max_height, constraints.height.value);
+    if (max_h != -1 && container_frag->height > max_h) {
+      container_frag->height = max_h;
+    }
+  }
+
   LayoutOutOfFlowChildren(box, container_frag, context);
 
   if (box->dom_node) {
@@ -635,6 +703,18 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   int my_height = (constraints.height.mode == MeasureMode::Exactly)
                       ? parent_h
                        : ResolveSize(box->style.height, parent_h);
+
+  // Apply max-width constraint
+  int max_width_resolved = ResolveSize(box->style.max_width, parent_w);
+  if (max_width_resolved != -1 && my_width > max_width_resolved) {
+    my_width = max_width_resolved;
+  }
+
+  // Apply max-height constraint
+  int max_height_resolved = ResolveSize(box->style.max_height, parent_h);
+  if (max_height_resolved != -1 && my_height > max_height_resolved) {
+    my_height = max_height_resolved;
+  }
 
   bool auto_width = (my_width == -1);
   bool auto_height = (my_height == -1);
@@ -845,6 +925,22 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
             ? (max_cross_used + box->style.padding.Vert() +
                box->style.border.Vert())
             : (main_pos + box->style.padding.bottom + box->style.border.bottom);
+  }
+
+  // Cap width by max-width if needed
+  {
+    int max_w = ResolveSize(box->style.max_width, parent_w);
+    if (max_w != -1 && fragment->width > max_w) {
+      fragment->width = max_w;
+    }
+  }
+
+  // Cap height by max-height if needed
+  {
+    int max_h = ResolveSize(box->style.max_height, parent_h);
+    if (max_h != -1 && fragment->height > max_h) {
+      fragment->height = max_h;
+    }
   }
 
   LayoutOutOfFlowChildren(box, fragment, context);

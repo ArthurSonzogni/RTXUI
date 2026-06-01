@@ -45,7 +45,9 @@ class TextDecorationDemo : public Component<TextDecorationDemo> {
           padding: 1;
           background-color: rgb(10, 15, 30);
           color: white;
-          width: 50;
+          max-width: 50;
+          max-height: 20;
+          margin: 0 auto;
           height: 24;
           overflow-y: scroll;
         }
@@ -63,7 +65,7 @@ class TextDecorationDemo : public Component<TextDecorationDemo> {
           display: block;
           margin-top: 1;
           padding: 1;
-          border: round;
+          border: tall;
           border-color: rgb(40, 60, 90);
           background-color: rgb(20, 30, 50);
         }

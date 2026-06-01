@@ -140,6 +140,10 @@ struct ComputedStyle {
 
   Length width = Length::Auto();
   Length height = Length::Auto();
+  Length max_width = Length::Auto();
+  Length max_height = Length::Auto();
+  bool margin_left_auto = false;
+  bool margin_right_auto = false;
 
   float flex_grow = 0.0f;
   float flex_shrink = 1.0f;
