@@ -384,6 +384,28 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "text-decoration") {
+    if (v == "none") {
+      style.underlined = false;
+      style.underlined_double = false;
+      style.strikethrough = false;
+      style.blink = false;
+      return;
+    }
+    style.underlined = ((v.find("underline") != std::string_view::npos ||
+                         v.find("underlined") != std::string_view::npos) &&
+                        v.find("double") == std::string_view::npos);
+    style.underlined_double = (v.find("double-underline") != std::string_view::npos ||
+                               v.find("underlined-double") != std::string_view::npos ||
+                               ((v.find("underline") != std::string_view::npos ||
+                                 v.find("underlined") != std::string_view::npos) &&
+                                v.find("double") != std::string_view::npos));
+    style.strikethrough = (v.find("line-through") != std::string_view::npos ||
+                           v.find("strikethrough") != std::string_view::npos);
+    style.blink = (v.find("blink") != std::string_view::npos);
+    return;
+  }
+
   if (p == "margin") {
     int m = StoI(v);
     style.margin = {m, m, m, m};

@@ -316,3 +316,68 @@ TEST_CASE("CSS with media queries", "[css][media]") {
   CHECK_FALSE(css::EvaluateMediaQuery("(min-height: 30)"));
   CHECK_FALSE(css::EvaluateMediaQuery("(max-width: 120) and (min-width: 90)"));
 }
+
+TEST_CASE("Text decoration parsing in ApplyStyle", "[style][text-decoration]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("underline") {
+    rtxui::ApplyStyle(style, {"text-decoration", "underline"});
+    CHECK(style.underlined.has_value());
+    CHECK(style.underlined.value() == true);
+    CHECK(style.underlined_double.value_or(false) == false);
+    CHECK(style.strikethrough.value_or(false) == false);
+    CHECK(style.blink.value_or(false) == false);
+  }
+
+  SECTION("underlined") {
+    rtxui::ApplyStyle(style, {"text-decoration", "underlined"});
+    CHECK(style.underlined.has_value());
+    CHECK(style.underlined.value() == true);
+    CHECK(style.underlined_double.value_or(false) == false);
+  }
+
+  SECTION("double-underline") {
+    rtxui::ApplyStyle(style, {"text-decoration", "double-underline"});
+    CHECK(style.underlined.value_or(false) == false);
+    CHECK(style.underlined_double.has_value());
+    CHECK(style.underlined_double.value() == true);
+  }
+
+  SECTION("underlined-double") {
+    rtxui::ApplyStyle(style, {"text-decoration", "underlined-double"});
+    CHECK(style.underlined.value_or(false) == false);
+    CHECK(style.underlined_double.has_value());
+    CHECK(style.underlined_double.value() == true);
+  }
+
+  SECTION("double underline") {
+    rtxui::ApplyStyle(style, {"text-decoration", "double underline"});
+    CHECK(style.underlined.value_or(false) == false);
+    CHECK(style.underlined_double.has_value());
+    CHECK(style.underlined_double.value() == true);
+  }
+
+  SECTION("line-through / strikethrough") {
+    rtxui::ApplyStyle(style, {"text-decoration", "line-through"});
+    CHECK(style.strikethrough.has_value());
+    CHECK(style.strikethrough.value() == true);
+
+    rtxui::ApplyStyle(style, {"text-decoration", "strikethrough"});
+    CHECK(style.strikethrough.has_value());
+    CHECK(style.strikethrough.value() == true);
+  }
+
+  SECTION("blink") {
+    rtxui::ApplyStyle(style, {"text-decoration", "blink"});
+    CHECK(style.blink.has_value());
+    CHECK(style.blink.value() == true);
+  }
+
+  SECTION("none") {
+    rtxui::ApplyStyle(style, {"text-decoration", "none"});
+    CHECK(style.underlined.value_or(true) == false);
+    CHECK(style.underlined_double.value_or(true) == false);
+    CHECK(style.strikethrough.value_or(true) == false);
+    CHECK(style.blink.value_or(true) == false);
+  }
+}

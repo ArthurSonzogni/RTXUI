@@ -30,6 +30,10 @@ struct PhysicalFragment {
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
   std::optional<bool> bold;
+  std::optional<bool> underlined;
+  std::optional<bool> underlined_double;
+  std::optional<bool> strikethrough;
+  std::optional<bool> blink;
 
   struct ChildLink {
     std::shared_ptr<PhysicalFragment> fragment;
