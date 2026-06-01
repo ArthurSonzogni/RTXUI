@@ -25,7 +25,7 @@ One of the most powerful features of the `<markdown>` component is the ability t
 
 Below is an interactive demo showing the Markdown component in action. You can see how the Markdown source is rendered and styled in real-time.
 
-<WasmTerminal example="rtxui_example_markdown" />
+<WasmTerminal example="`rtxui_example_markdown`" />
 
 ## Supported Syntax
 
