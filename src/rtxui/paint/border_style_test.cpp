@@ -206,9 +206,7 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
 
 TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
   struct RemainingGridApp : Component<RemainingGridApp> {
-    std::string_view Setup() override {
-      Import<div>();
-      return R"html(
+    std::string_view view = R"html(
         <style>
           self {
             display: flow;
@@ -245,7 +243,8 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
         <div class="cell shade-dark">dark</div>
         <div class="cell squiggle">squigg</div>
       )html";
-    }
+
+    RemainingGridApp() { Import<div>(); }
   };
 
   auto texture = RenderComponent(Ref<RemainingGridApp>::New(), 50, 22);
@@ -334,9 +333,7 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
 
 TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
   struct ScrollDemoApp : Component<ScrollDemoApp> {
-    std::string_view Setup() override {
-      Import<div>();
-      return R"html(
+    std::string_view view = R"html(
         <div id="scrollable">
           <div>Line 1</div>
           <div>Line 2</div>
@@ -358,7 +355,8 @@ TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
           }
         </style>
       )html";
-    }
+
+    ScrollDemoApp() { Import<div>(); }
   };
 
   auto app = Ref<ScrollDemoApp>::New();
@@ -387,9 +385,7 @@ TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
 
 TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
   struct ScrollDemoApp : Component<ScrollDemoApp> {
-    std::string_view Setup() override {
-      Import<div>();
-      return R"html(
+    std::string_view view = R"html(
         <div id="scrollable">
           <div class="wide-item">Wide content line!</div>
         </div>
@@ -409,7 +405,8 @@ TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
           }
         </style>
       )html";
-    }
+
+    ScrollDemoApp() { Import<div>(); }
   };
 
   auto app = Ref<ScrollDemoApp>::New();

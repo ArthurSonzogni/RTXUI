@@ -15,15 +15,7 @@ class Counter : public Component<Counter> {
   void Increment() { count++; }
   void Decrement() { count--; }
 
-  Counter() {
-    Bind(count);
-    Bind(double_count);
-    Bind(Increment);
-    Bind(Decrement);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="counter-container">
         <div class="row">
           <span>Count: {count}</span>
@@ -66,6 +58,12 @@ class Counter : public Component<Counter> {
         }
       </style>
     )html";
+
+  Counter() {
+    Bind(count);
+    Bind(double_count);
+    Bind(Increment);
+    Bind(Decrement);
   }
 };
 

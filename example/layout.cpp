@@ -13,13 +13,7 @@ class Box : public Component<Box> {
     std::string color = "white";
   } props;
 
-  Box() {
-    Bind(props.text);
-    Bind(props.color);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="box-content">
         {text}
       </div>
@@ -38,14 +32,16 @@ class Box : public Component<Box> {
         }
       </style>
     )html";
+
+  Box() {
+    Bind(props.text);
+    Bind(props.color);
   }
 };
 
 class LayoutDemo : public Component<LayoutDemo> {
  public:
-  std::string_view Setup() override {
-    Import<Box>();
-    return R"html(
+  std::string_view view = R"html(
       <div>
         <h1>RTXUI Layout Demonstration</h1>
         <p>This layout uses nested custom Box components inside a flex row container.</p>
@@ -82,7 +78,8 @@ class LayoutDemo : public Component<LayoutDemo> {
         }
       </style>
     )html";
-  }
+
+  LayoutDemo() { Import<Box>(); }
 };
 
 int main() {

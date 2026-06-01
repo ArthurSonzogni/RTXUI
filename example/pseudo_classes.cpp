@@ -8,8 +8,7 @@ using namespace rtxui;
 
 class PseudoClassesDemo : public Component<PseudoClassesDemo> {
  public:
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <h3>Interactive Pseudo-Classes</h3>
         <p>Hover/Click/Focus the button below:</p>
@@ -55,7 +54,6 @@ class PseudoClassesDemo : public Component<PseudoClassesDemo> {
         }
       </style>
     )html";
-  }
 };
 
 int main() {

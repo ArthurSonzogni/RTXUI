@@ -1,6 +1,6 @@
 #include <rtxui/rtxui.hpp>
-#include <vector>
 #include <string>
+#include <vector>
 
 using namespace rtxui;
 
@@ -13,32 +13,11 @@ struct Item {
 class LoopApp : public Component<LoopApp> {
  public:
   std::vector<std::string> simple_items = {"Apple", "Banana", "Cherry"};
-  std::vector<Item> complex_items = {
-    {"Red", "rgb(255, 0, 0)"},
-    {"Green", "rgb(0, 255, 0)"},
-    {"Blue", "rgb(0, 0, 255)"}
-  };
+  std::vector<Item> complex_items = {{"Red", "rgb(255, 0, 0)"},
+                                     {"Green", "rgb(0, 255, 0)"},
+                                     {"Blue", "rgb(0, 0, 255)"}};
 
-  LoopApp() {
-    BindCollection("simple_items", &simple_items);
-    BindCollection("complex_items", &complex_items, [](const Item& item) {
-      return std::make_shared<ManualStructVisitor>(std::unordered_map<std::string, std::string>{
-        {"name", item.name},
-        {"color", item.color}
-      });
-    });
-
-    Import("AddFruit", [this]() {
-      simple_items.push_back("New Fruit " + std::to_string(simple_items.size() + 1));
-    });
-
-    Import("AddColor", [this]() {
-      complex_items.push_back({"New Color " + std::to_string(complex_items.size() + 1), "rgb(128, 128, 128)"});
-    });
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <h1>Simple Loop</h1>
         <button onclick="AddFruit">Add Fruit</button>
@@ -81,6 +60,25 @@ class LoopApp : public Component<LoopApp> {
         }
       </style>
     )html";
+
+  LoopApp() {
+    BindCollection("simple_items", &simple_items);
+    BindCollection("complex_items", &complex_items, [](const Item& item) {
+      return std::make_shared<ManualStructVisitor>(
+          std::unordered_map<std::string, std::string>{{"name", item.name},
+                                                       {"color", item.color}});
+    });
+
+    Import("AddFruit", [this]() {
+      simple_items.push_back("New Fruit " +
+                             std::to_string(simple_items.size() + 1));
+    });
+
+    Import("AddColor", [this]() {
+      complex_items.push_back(
+          {"New Color " + std::to_string(complex_items.size() + 1),
+           "rgb(128, 128, 128)"});
+    });
   }
 };
 

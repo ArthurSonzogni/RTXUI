@@ -1,6 +1,6 @@
 #include <rtxui/rtxui.hpp>
-#include <vector>
 #include <string>
+#include <vector>
 
 using namespace rtxui;
 
@@ -15,7 +15,6 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
       new_fruit = "";
     }
   }
-
   void RemoveItem(std::string index_str) {
     size_t index = std::stoull(index_str);
     if (index < items.size()) {
@@ -23,15 +22,7 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
     }
   }
 
-  SimpleLoopApp() {
-    Bind(items);
-    Bind(new_fruit);
-    Bind(AddItem);
-    Bind(RemoveItem);
-  }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <div class="input-row">
           <input value="{new_fruit}" placeholder="Enter fruit name..." />
@@ -55,6 +46,12 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
         .item-row button { border: solid; border-color: red; color: red; padding: 0 1; }
       </style>
     )html";
+
+  SimpleLoopApp() {
+    Bind(items);
+    Bind(new_fruit);
+    Bind(AddItem);
+    Bind(RemoveItem);
   }
 };
 

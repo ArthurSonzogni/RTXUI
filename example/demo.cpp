@@ -12,10 +12,7 @@ class LabeledBox : public Component<LabeledBox> {
     std::string title = "Box";
   } props;
 
-  LabeledBox() { Bind(props.title); }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="box">
         <div class="title">{title}</div>
         <div class="content">
@@ -44,7 +41,8 @@ class LabeledBox : public Component<LabeledBox> {
         }
       </style>
     )html";
-  }
+
+  LabeledBox() { Bind(props.title); }
 };
 
 class App : public Component<App> {
@@ -52,20 +50,12 @@ class App : public Component<App> {
   // --- Transparent State ---
   int count = 0;
 
-  // --- Actions ---
-  void Increment() { count++; }
-  void Decrement() { count--; }
-
   // --- Computed ---
   int double_clicks() const { return count * 2; }
 
-  App() {
-    Bind(count);
-    Bind(double_clicks);
-    Bind(Increment);
-    Bind(Decrement);
-  }
-
+  // --- Actions ---
+  void Increment() { count++; }
+  void Decrement() { count--; }
   bool OnEvent(Event event) override {
     if (event == Event::a() || event == Event::Keyboard::From(' ')) {
       Increment();
@@ -74,9 +64,7 @@ class App : public Component<App> {
     return Component<App>::OnEvent(event);
   }
 
-  std::string_view Setup() override {
-    Import<LabeledBox>();
-    return R"html(
+  std::string_view view = R"html(
       <div class="header">
         <h1>RTXUI Reflection Demo</h1>
         <button
@@ -158,6 +146,13 @@ class App : public Component<App> {
         }
       </style>
     )html";
+
+  App() {
+    Import<LabeledBox>();
+    Bind(count);
+    Bind(double_clicks);
+    Bind(Increment);
+    Bind(Decrement);
   }
 };
 

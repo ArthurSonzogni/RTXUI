@@ -11,19 +11,16 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
  public:
   std::vector<std::string> items = {"Apple", "Banana", "Cherry"};
 
-  SimpleLoopApp() {
-    Bind(items);
-  }
-...
-```
-
-    return R"html(
+  std::string_view view = R"html(
       <ul>
         <for each="{items}" as="fruit">
           <li>{fruit} (Index: {$index})</li>
         </for>
       </ul>
     )html";
+
+  SimpleLoopApp() {
+    Bind(items);
   }
 };
 ```
@@ -42,6 +39,12 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
  public:
   std::vector<Task> tasks = {{"Build", true}, {"Test", false}};
 
+  std::string_view view = R"html(
+      <for each="{tasks}" as="t">
+        <div>{t.status} - {t.name}</div>
+      </for>
+    )html";
+
   ComplexLoopApp() {
     Bind(tasks, [](const Task& t) {
       return std::make_shared<ManualStructVisitor>(std::unordered_map<std::string, std::string>{
@@ -49,14 +52,6 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
         {"status", t.completed ? "✅ Done" : "⏳ Pending"}
       });
     });
-  }
-
-  std::string_view Setup() override {
-    return R"html(
-      <for each="{tasks}" as="t">
-        <div>{t.status} - {t.name}</div>
-      </for>
-    )html";
   }
 };
 ```

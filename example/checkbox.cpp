@@ -10,10 +10,7 @@ class CheckboxDemo : public Component<CheckboxDemo> {
  public:
   bool checked = false;
 
-  CheckboxDemo() { Bind(checked); }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <p class="title">Interactive Checkbox Element</p>
         <p class="desc">A binary toggle component. Click on the checkbox or focus it and press Space to toggle the state.</p>
@@ -63,7 +60,8 @@ class CheckboxDemo : public Component<CheckboxDemo> {
         }
       </style>
     )html";
-  }
+
+  CheckboxDemo() { Bind(checked); }
 };
 
 int main() {

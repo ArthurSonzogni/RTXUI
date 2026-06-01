@@ -9,15 +9,16 @@ Wide characters (such as Chinese, Japanese, and Korean) take up exactly two term
 ```cpp
 class CJKApp : public Component<CJKApp> {
  public:
-  std::string_view Setup() override {
-    Import<rtxui::div>();
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <div>Chinese: 中文 (Width = 4 cells)</div>
         <div>Japanese: 日本語 (Width = 6 cells)</div>
         <div>Korean: 한국어 (Width = 6 cells)</div>
       </div>
     )html";
+
+  CJKApp() {
+    Import<rtxui::div>();
   }
 };
 ```

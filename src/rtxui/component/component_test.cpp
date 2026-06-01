@@ -204,7 +204,7 @@ class Counter : public rtxui::Component<Counter> {
 
   Counter() {
     Bind(count);
-    BindComputed(double_count);
+    Bind(double_count);
   }
 
   void increment() { count++; }

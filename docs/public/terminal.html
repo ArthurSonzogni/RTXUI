@@ -102,6 +102,21 @@
           console.warn('WebGL addon failed to load, falling back to standard renderer:', e);
         }
 
+        // Report dimensions to parent iframe container
+        const screenEl = document.querySelector('.xterm-screen');
+        if (screenEl && window.ResizeObserver) {
+          const observer = new ResizeObserver(() => {
+            const width = screenEl.offsetWidth + 24;
+            const height = screenEl.offsetHeight + 24;
+            window.parent.postMessage({
+              type: 'rtxui-terminal-resize',
+              width: width,
+              height: height
+            }, '*');
+          });
+          observer.observe(screenEl);
+        }
+
         window.rtxui_columns = xtermInstance.cols;
         window.rtxui_lines = xtermInstance.rows;
         window.rtxui_input_queue = [];

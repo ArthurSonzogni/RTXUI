@@ -644,4 +644,176 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
         "└───── ┘\n");
 }
 
+TEST_CASE("Layout: position absolute and relative", "[layout][position]") {
+  struct TestComponent : Component<TestComponent> {
+    std::string_view Setup() {
+      return R"html(
+        <div class="relative-parent">
+          <div class="static-child">A</div>
+          <div class="absolute-child">B</div>
+        </div>
+        <style>
+          .relative-parent {
+            position: relative;
+            width: 5;
+            height: 3;
+            background-color: #000;
+          }
+          .static-child {
+            width: 1;
+            height: 1;
+          }
+          .absolute-child {
+            position: absolute;
+            top: 1;
+            left: 2;
+            width: 1;
+            height: 1;
+          }
+        </style>
+      )html";
+    }
+  };
+  auto c = Ref<TestComponent>::New();
+  c->Mount();
+  c->Digest();
+
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  Texture texture(5, 3);
+  for (int y = 0; y < 3; ++y) {
+    for (int x = 0; x < 5; ++x) {
+      texture[x, y].character = " ";
+    }
+  }
+  if (layout_box) {
+    LayoutConstraints constraints;
+    constraints.width = {5, MeasureMode::Exactly};
+    constraints.height = {3, MeasureMode::Exactly};
+    auto fragment = RunLayout({layout_box.get()}, constraints);
+    Paint(fragment.get(), texture);
+  }
+  std::string layer = GetTextLayer(texture);
+  INFO("Position render:\n" << layer);
+  CHECK(layer ==
+        "A    \n"
+        "  B  \n"
+        "     \n");
+}
+
+TEST_CASE("Layout: z-index stacking", "[layout][z-index]") {
+  struct TestComponent : Component<TestComponent> {
+    std::string_view Setup() {
+      return R"html(
+        <div class="parent">
+          <div class="absolute-child1">X</div>
+          <div class="absolute-child2">Y</div>
+        </div>
+        <style>
+          .parent {
+            position: relative;
+            width: 1;
+            height: 1;
+          }
+          .absolute-child1 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1;
+            height: 1;
+            z-index: 10;
+          }
+          .absolute-child2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1;
+            height: 1;
+            z-index: 5;
+          }
+        </style>
+      )html";
+    }
+  };
+  auto c = Ref<TestComponent>::New();
+  c->Mount();
+  c->Digest();
+
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  Texture texture(1, 1);
+  texture[0, 0].character = " ";
+  if (layout_box) {
+    LayoutConstraints constraints;
+    constraints.width = {1, MeasureMode::Exactly};
+    constraints.height = {1, MeasureMode::Exactly};
+    auto fragment = RunLayout({layout_box.get()}, constraints);
+    Paint(fragment.get(), texture);
+  }
+  std::string layer = GetTextLayer(texture);
+  INFO("Z-index render:\n" << layer);
+  CHECK(layer == "X\n");
+}
+
+TEST_CASE("Layout: position fixed does not scroll",
+          "[layout][fixed][scroll]") {
+  struct TestComponent : Component<TestComponent> {
+      std::string_view view = R"html(
+      <div class="scrollable">
+        <div class="spacer"></div>
+        <div class="fixed-element">F</div>
+      </div>
+      <style>
+        .scrollable {
+          display: block;
+          width: 5;
+          height: 3;
+          overflow-y: scroll;
+        }
+        .spacer {
+          width: 5;
+          height: 10;
+        }
+        .fixed-element {
+          position: fixed;
+          top: 1;
+          left: 1;
+          width: 1;
+          height: 1;
+        }
+      </style>
+    )html";
+    };
+
+    auto c = Ref<TestComponent>::New();
+    c->Mount();
+    c->Digest();
+
+    // Scroll the scrollable container down by 2 cells
+    auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+    REQUIRE(scrollable_element != nullptr);
+    scrollable_element->set_scroll_y(2);
+
+    // Render
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 3);
+    for (int y = 0; y < 3; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {3, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+
+    std::string layer = GetTextLayer(texture);
+    INFO("Scroll fixed render:\n" << layer);
+
+    // The fixed element must remain at top:1, left:1 (which is x=1, y=1)
+    // regardless of the parent scroll position.
+    CHECK(texture[1, 1].character == "F");
+  }
+
 }  // namespace rtxui

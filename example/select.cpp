@@ -10,10 +10,7 @@ class SelectDemo : public Component<SelectDemo> {
  public:
   std::string my_theme = "light";
 
-  SelectDemo() { Bind(my_theme); }
-
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <p class="title">Interactive Select & Option Elements</p>
         <p class="desc">Click the select dropdown or focus it with Tab and use Enter/Space to open. Navigate options using ArrowUp/ArrowDown, and select with Enter.</p>
@@ -67,7 +64,8 @@ class SelectDemo : public Component<SelectDemo> {
         }
       </style>
     )html";
-  }
+
+  SelectDemo() { Bind(my_theme); }
 };
 
 int main() {

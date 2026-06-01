@@ -8,8 +8,7 @@ using namespace rtxui;
 
 class TextAlignDemo : public Component<TextAlignDemo> {
  public:
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div>
         <h1>RTXUI Text Alignment Demo</h1>
         <p>Demonstrates text-align left, right, and center horizontal alignment.</p>
@@ -75,7 +74,6 @@ class TextAlignDemo : public Component<TextAlignDemo> {
         }
       </style>
     )html";
-  }
 };
 
 int main() {

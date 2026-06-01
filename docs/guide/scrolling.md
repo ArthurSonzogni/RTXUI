@@ -9,9 +9,7 @@ By adding `overflow-y: scroll` (or `overflow-x: scroll`) and restricting the dim
 ```cpp
 class ScrollBox : public Component<ScrollBox> {
  public:
-  std::string_view Setup() override {
-    Import<rtxui::div>();
-    return R"html(
+  std::string_view view = R"html(
       <div class="scroll-container">
         <div>Item 1</div>
         <div>Item 2</div>
@@ -29,6 +27,9 @@ class ScrollBox : public Component<ScrollBox> {
         }
       </style>
     )html";
+
+  ScrollBox() {
+    Import<rtxui::div>();
   }
 };
 ```

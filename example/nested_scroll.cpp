@@ -8,8 +8,7 @@ using namespace rtxui;
 
 class NestedScrollDemo : public Component<NestedScrollDemo> {
  public:
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <h1>RTXUI Nested Scrolling & Chaining Demo</h1>
       <p class="desc">
         This demo showcases nested scrollable elements. Reaching the boundaries (top or bottom)
@@ -123,7 +122,6 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
         }
       </style>
     )html";
-  }
 };
 
 int main() {

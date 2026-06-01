@@ -7,8 +7,7 @@ using namespace rtxui;
 
 class CJKDemo : public Component<CJKDemo> {
  public:
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <h1>RTXUI CJK Character Demo</h1>
         <p>This demo showcases full-width CJK (Chinese, Japanese, Korean) characters taking exactly 2 terminal cell slots, aligning perfectly inside layout boxes.</p>
@@ -95,7 +94,6 @@ class CJKDemo : public Component<CJKDemo> {
         }
       </style>
     )html";
-  }
 };
 
 int main() {

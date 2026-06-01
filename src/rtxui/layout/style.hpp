@@ -106,6 +106,13 @@ enum class WhiteSpace {
   Nowrap,
 };
 
+enum class PositionType {
+  Static,
+  Relative,
+  Absolute,
+  Fixed,
+};
+
 struct TransitionConfig {
   std::string property;
   float duration_seconds = 0.0f;
@@ -116,6 +123,13 @@ struct TransitionConfig {
 // Represents the "Computed CSS values"
 struct ComputedStyle {
   std::vector<TransitionConfig> transitions;
+
+  PositionType position = PositionType::Static;
+  Length top = Length::Auto();
+  Length right = Length::Auto();
+  Length bottom = Length::Auto();
+  Length left = Length::Auto();
+  std::optional<int> z_index;
 
   DisplayOutside display_outside = DisplayOutside::Inline;
   DisplayInside display_inside = DisplayInside::Flow;  // Default to flow

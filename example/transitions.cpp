@@ -8,8 +8,7 @@ using namespace rtxui;
 
 class TransitionsDemo : public Component<TransitionsDemo> {
  public:
-  std::string_view Setup() override {
-    return R"html(
+  std::string_view view = R"html(
       <div class="container">
         <h3>CSS Transitions</h3>
         <p>Hover over the box to trigger a smooth color transition:</p>
@@ -59,7 +58,6 @@ class TransitionsDemo : public Component<TransitionsDemo> {
         }
       </style>
     )html";
-  }
 };
 
 int main() {
