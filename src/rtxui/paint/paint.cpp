@@ -569,23 +569,65 @@ void PaintImpl(const PhysicalFragment* frag,
           (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
       int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
 
-      int thumb_h =
-          std::max(1, (viewport_h * track_h) / std::max(1, scroll_height));
-      thumb_h = std::min(track_h, thumb_h);
+      int thumb_h_eighths = (viewport_h * track_h * 8) / std::max(1, scroll_height);
+      thumb_h_eighths = std::max(8, thumb_h_eighths);
+      thumb_h_eighths = std::min(track_h * 8, thumb_h_eighths);
+
       int max_scroll = scroll_height - h;
-      int thumb_y = (max_scroll > 0)
-                        ? ((track_h - thumb_h) * frag->scroll_y) / max_scroll
-                        : 0;
+      int thumb_y_eighths = (max_scroll > 0)
+                                ? (frag->scroll_y * ((track_h * 8) - thumb_h_eighths)) / max_scroll
+                                : 0;
+
+      Color thumb_bg = Color::RGBA(200, 200, 200, 200);
+      Color track_bg = Color::RGBA(80, 80, 80, 120);
+
+      const char* lower_blocks[] = {
+          " ",
+          " ", // U+2581
+          "▂", // U+2582
+          "▃", // U+2583
+          "▄", // U+2584
+          "▅", // U+2585
+          "▆", // U+2586
+          "▇", // U+2587
+          "█"  // U+2588
+      };
 
       for (int i = 0; i < track_h; ++i) {
         int y = track_y_start + i;
         if (y >= 0 && y < texture.height() && clip.Contains(scrollbar_x, y)) {
           auto& cell = texture[scrollbar_x, y];
-          cell.character = " ";
-          if (i >= thumb_y && i < thumb_y + thumb_h) {
-            cell.background_color = Color::RGBA(200, 200, 200, 200);
+
+          int cell_start = i * 8;
+          int cell_end = (i + 1) * 8;
+
+          int start_eighth = std::max(cell_start, thumb_y_eighths);
+          int end_eighth = std::min(cell_end, thumb_y_eighths + thumb_h_eighths);
+
+          if (start_eighth >= end_eighth) {
+            cell.character = " ";
+            cell.background_color = track_bg;
           } else {
-            cell.background_color = Color::RGBA(80, 80, 80, 120);
+            int t_start = start_eighth - cell_start;
+            int t_end = end_eighth - cell_start;
+
+            if (t_start == 0 && t_end == 8) {
+              cell.character = " ";
+              cell.background_color = thumb_bg;
+            } else if (t_start > 0 && t_end == 8) {
+              int thumb_len = 8 - t_start;
+              cell.character = lower_blocks[thumb_len];
+              cell.background_color = track_bg;
+              cell.foreground_color = thumb_bg;
+            } else if (t_start == 0 && t_end < 8) {
+              int track_len = 8 - t_end;
+              cell.character = lower_blocks[track_len];
+              cell.background_color = thumb_bg;
+              cell.foreground_color = track_bg;
+            } else {
+              cell.character = " ";
+              cell.background_color = thumb_bg;
+            }
           }
         }
       }
@@ -616,23 +658,63 @@ void PaintImpl(const PhysicalFragment* frag,
           (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
       int viewport_w = std::max(1, w - border_horiz - padding_horiz);
 
-      int thumb_w =
-          std::max(1, (viewport_w * track_w) / std::max(1, scroll_width));
-      thumb_w = std::min(track_w, thumb_w);
+      int thumb_w_eighths = (viewport_w * track_w * 8) / std::max(1, scroll_width);
+      thumb_w_eighths = std::max(8, thumb_w_eighths);
+      thumb_w_eighths = std::min(track_w * 8, thumb_w_eighths);
+
       int max_scroll = scroll_width - w;
-      int thumb_x = (max_scroll > 0)
-                        ? ((track_w - thumb_w) * frag->scroll_x) / max_scroll
-                        : 0;
+      int thumb_x_eighths = (max_scroll > 0)
+                                ? (frag->scroll_x * ((track_w * 8) - thumb_w_eighths)) / max_scroll
+                                : 0;
+
+      Color thumb_bg = Color::RGBA(200, 200, 200, 200);
+      Color track_bg = Color::RGBA(80, 80, 80, 120);
+
+      const char* left_blocks[] = {
+          " ",
+          "▏", // U+258F
+          "▎", // U+258E
+          "▍", // U+258D
+          "▌", // U+258C
+          "▋", // U+258B
+          "▊", // U+258A
+          "▉", // U+2589
+          "█"  // U+2588
+      };
 
       for (int i = 0; i < track_w; ++i) {
         int x = track_x_start + i;
         if (x >= 0 && x < texture.width() && clip.Contains(x, scrollbar_y)) {
           auto& cell = texture[x, scrollbar_y];
-          cell.character = " ";
-          if (i >= thumb_x && i < thumb_x + thumb_w) {
-            cell.background_color = Color::RGBA(200, 200, 200, 200);
+
+          int cell_start = i * 8;
+          int cell_end = (i + 1) * 8;
+
+          int start_eighth = std::max(cell_start, thumb_x_eighths);
+          int end_eighth = std::min(cell_end, thumb_x_eighths + thumb_w_eighths);
+
+          if (start_eighth >= end_eighth) {
+            cell.character = " ";
+            cell.background_color = track_bg;
           } else {
-            cell.background_color = Color::RGBA(80, 80, 80, 120);
+            int t_start = start_eighth - cell_start;
+            int t_end = end_eighth - cell_start;
+
+            if (t_start == 0 && t_end == 8) {
+              cell.character = " ";
+              cell.background_color = thumb_bg;
+            } else if (t_start > 0 && t_end == 8) {
+              cell.character = left_blocks[t_start];
+              cell.background_color = thumb_bg;
+              cell.foreground_color = track_bg;
+            } else if (t_start == 0 && t_end < 8) {
+              cell.character = left_blocks[t_end];
+              cell.background_color = track_bg;
+              cell.foreground_color = thumb_bg;
+            } else {
+              cell.character = " ";
+              cell.background_color = thumb_bg;
+            }
           }
         }
       }
