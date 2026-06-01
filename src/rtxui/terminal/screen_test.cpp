@@ -1203,5 +1203,154 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
   REQUIRE(component->scroll_clicks == 0);
 }
 
+TEST_CASE("Screen.KeyboardFocusTabindexNavigation", "[terminal][focus]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class FocusTabindexComponent : public Component<FocusTabindexComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<FocusTabindexComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div>
+        <div id="first" tabindex="2">Item 1 (tabindex=2)</div>
+        <div id="second" tabindex="0">Item 2 (tabindex=0)</div>
+        <div id="third" tabindex="1">Item 3 (tabindex=1)</div>
+        <div id="fourth" tabindex="-1">Item 4 (tabindex="-1")</div>
+        <div id="fifth" focusable="true">Item 5 (focusable=true, implicit 0)</div>
+      </div>
+    )html";
+  };
+
+  auto component = Ref<FocusTabindexComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* first = component->Root()->QuerySelector("#first");
+  auto* second = component->Root()->QuerySelector("#second");
+  auto* third = component->Root()->QuerySelector("#third");
+  auto* fourth = component->Root()->QuerySelector("#fourth");
+  auto* fifth = component->Root()->QuerySelector("#fifth");
+
+  REQUIRE(first != nullptr);
+  REQUIRE(second != nullptr);
+  REQUIRE(third != nullptr);
+  REQUIRE(fourth != nullptr);
+  REQUIRE(fifth != nullptr);
+
+  // Tab index order:
+  // 1. positive tabindexes in ascending order:
+  //    - third (tabindex="1")
+  //    - first (tabindex="2")
+  // 2. tabindex="0" and focusable="true" in document order:
+  //    - second (tabindex="0")
+  //    - fifth (focusable="true")
+  // 3. fourth (tabindex="-1") is skipped entirely.
+
+  // Initially, no element is focused
+  REQUIRE_FALSE(first->focused());
+  REQUIRE_FALSE(second->focused());
+  REQUIRE_FALSE(third->focused());
+  REQUIRE_FALSE(fourth->focused());
+  REQUIRE_FALSE(fifth->focused());
+
+  // 1. Press Tab -> should focus 'third' (tabindex=1)
+  screen.Dispatch(Event::Tab());
+  REQUIRE(third->focused());
+  REQUIRE_FALSE(first->focused());
+  REQUIRE_FALSE(second->focused());
+  REQUIRE_FALSE(fifth->focused());
+
+  // 2. Press Tab -> should focus 'first' (tabindex=2)
+  screen.Dispatch(Event::Tab());
+  REQUIRE(first->focused());
+  REQUIRE_FALSE(third->focused());
+
+  // 3. Press Tab -> should focus 'second' (tabindex=0)
+  screen.Dispatch(Event::Tab());
+  REQUIRE(second->focused());
+  REQUIRE_FALSE(first->focused());
+
+  // 4. Press Tab -> should focus 'fifth' (focusable=true)
+  screen.Dispatch(Event::Tab());
+  REQUIRE(fifth->focused());
+  REQUIRE_FALSE(second->focused());
+
+  // 5. Press Tab -> should wrap back to 'third'
+  screen.Dispatch(Event::Tab());
+  REQUIRE(third->focused());
+  REQUIRE_FALSE(fifth->focused());
+
+  // 6. Press Shift-Tab (TabReverse) -> should wrap to 'fifth'
+  screen.Dispatch(Event::TabReverse());
+  REQUIRE(fifth->focused());
+  REQUIRE_FALSE(third->focused());
+
+  // 7. Press Shift-Tab -> should focus 'second'
+  screen.Dispatch(Event::TabReverse());
+  REQUIRE(second->focused());
+  REQUIRE_FALSE(fifth->focused());
+}
+
+TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ResponsiveComponent : public Component<ResponsiveComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ResponsiveComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="target">Content</div>
+      <style>
+        #target {
+          background-color: #000000;
+        }
+        @media (max-width: 60) {
+          #target {
+            background-color: #ff0000;
+          }
+        }
+        @media (min-width: 80) {
+          #target {
+            background-color: #00ff00;
+          }
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ResponsiveComponent>::New();
+  device->TriggerResize(70, 20);
+
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* target = component->Root()->QuerySelector("#target");
+  REQUIRE(target != nullptr);
+
+  // At 70 width, only base style is active (black background: RGB(0,0,0))
+  REQUIRE(target->style.background_color.has_value());
+  CHECK(target->style.background_color == Color::RGB(0, 0, 0));
+
+  // Now resize to width 50 (should trigger max-width: 60 -> red background: RGB(255,0,0))
+  device->TriggerResize(50, 20);
+  device->PushInput(" ");
+  screen.Step();
+
+  REQUIRE(target->style.background_color.has_value());
+  CHECK(target->style.background_color == Color::RGB(255, 0, 0));
+
+  // Now resize to width 90 (should trigger min-width: 80 -> green background: RGB(0,255,0))
+  device->TriggerResize(90, 20);
+  device->PushInput(" ");
+  screen.Step();
+
+  REQUIRE(target->style.background_color.has_value());
+  CHECK(target->style.background_color == Color::RGB(0, 255, 0));
+}
+
 }  // namespace
 }  // namespace rtxui

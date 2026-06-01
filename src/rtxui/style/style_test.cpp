@@ -261,3 +261,58 @@ TEST_CASE("Color parsing in ApplyStyle", "[style][color]") {
     CHECK(style.foreground_color->a == 136);
   }
 }
+
+TEST_CASE("CSS with media queries", "[css][media]") {
+  const std::string input = R"(
+    div {
+      color: red;
+    }
+    @media (max-width: 80) {
+      span {
+        color: blue;
+      }
+    }
+    @media (min-width: 100) and (max-height: 50) {
+      button {
+        color: green;
+      }
+    }
+  )";
+
+  auto stylesheet = css::Parse(input);
+  if (!stylesheet) {
+    FAIL(stylesheet.error().message);
+  }
+
+  REQUIRE(stylesheet.value().size() == 3);
+
+  CHECK(stylesheet.value()[0].selector == "div");
+  CHECK(stylesheet.value()[0].media_query.empty());
+  CHECK(stylesheet.value()[0].declarations.size() == 1);
+
+  CHECK(stylesheet.value()[1].selector == "span");
+  CHECK(stylesheet.value()[1].media_query == "(max-width: 80)");
+  CHECK(stylesheet.value()[1].declarations.size() == 1);
+
+  CHECK(stylesheet.value()[2].selector == "button");
+  CHECK(stylesheet.value()[2].media_query == "(min-width: 100) and (max-height: 50)");
+  CHECK(stylesheet.value()[2].declarations.size() == 1);
+
+  // Test evaluation of media queries
+  css::g_terminal_width = 80;
+  css::g_terminal_height = 24;
+
+  CHECK(css::EvaluateMediaQuery(""));
+  CHECK(css::EvaluateMediaQuery("(max-width: 80)"));
+  CHECK(css::EvaluateMediaQuery("(min-width: 60)"));
+  CHECK(css::EvaluateMediaQuery("(max-width: 120) and (min-width: 60)"));
+  CHECK(css::EvaluateMediaQuery("(max-height: 30)"));
+  CHECK(css::EvaluateMediaQuery("(min-height: 20)"));
+
+  // False conditions
+  CHECK_FALSE(css::EvaluateMediaQuery("(max-width: 79)"));
+  CHECK_FALSE(css::EvaluateMediaQuery("(min-width: 81)"));
+  CHECK_FALSE(css::EvaluateMediaQuery("(max-height: 20)"));
+  CHECK_FALSE(css::EvaluateMediaQuery("(min-height: 30)"));
+  CHECK_FALSE(css::EvaluateMediaQuery("(max-width: 120) and (min-width: 90)"));
+}

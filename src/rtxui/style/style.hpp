@@ -24,10 +24,18 @@ struct Ruleset {
   std::string_view selector;
   /// The list of declarations inside the ruleset.
   std::vector<Declaration> declarations;
+  /// The media query condition (e.g., "(max-width: 80)"), empty if none.
+  std::string_view media_query;
 };
 
 /// A stylesheet is a collection of rulesets.
 using StyleSheet = std::vector<Ruleset>;
+
+extern thread_local int g_terminal_width;
+extern thread_local int g_terminal_height;
+
+/// Evaluate the given media query condition against the current terminal size.
+auto EvaluateMediaQuery(std::string_view query) -> bool;
 
 /// The error object, which contains the error message, line, and column.
 struct Error {

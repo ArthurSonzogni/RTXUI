@@ -24,6 +24,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
+#include "rtxui/style/style.hpp"
 
 namespace rtxui {
 
@@ -233,6 +234,8 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
     device_ = std::make_shared<SystemTerminalDevice>();
   }
   UpdateSize();
+  css::g_terminal_width = width_;
+  css::g_terminal_height = height_;
   component_->Mount();
   component_->Digest();
   Draw();
@@ -347,6 +350,8 @@ void ScreenImpl::Dispatch(Event event) {
 }
 
 void ScreenImpl::HandleEvent(const Event& event) {
+  css::g_terminal_width = width_;
+  css::g_terminal_height = height_;
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
 
@@ -537,41 +542,73 @@ void ScreenImpl::HandleEvent(const Event& event) {
   }
 
   if (event == Event::Tab() || event == Event::TabReverse()) {
-    std::vector<Element*> focusable;
-    auto IsFocusable = [](Element* el) {
-      if (!el) {
-        return false;
+    std::vector<Element*> document_order;
+    std::function<void(Element*)> CollectAll = [&](Element* el) {
+      if (!el) return;
+      document_order.push_back(el);
+      for (const auto& child : el->children()) {
+        CollectAll(child.get());
       }
-      if (el->Attributes().count("focusable")) {
-        std::string val = el->Attributes().at("focusable");
-        return (val == "true" || val == "1");
+    };
+    if (component_->Root()) {
+      CollectAll(component_->Root());
+    }
+
+    struct FocusEntry {
+      Element* element;
+      int tabindex;
+      int document_index;
+    };
+
+    auto GetEffectiveTabIndex = [](Element* el) -> std::optional<int> {
+      if (!el) return std::nullopt;
+      const auto& attrs = el->Attributes();
+      if (attrs.count("tabindex")) {
+        try {
+          return std::stoi(attrs.at("tabindex"));
+        } catch (...) {
+          // ignore invalid values
+        }
+      }
+      if (attrs.count("focusable")) {
+        std::string val = attrs.at("focusable");
+        if (val == "true" || val == "1") {
+          return 0;
+        }
       }
       std::string_view tag = el->tag();
       if (tag == "input" || tag == "textarea" || tag == "checkbox" ||
           tag == "slider" || tag == "button" || tag == "select") {
-        return true;
+        return 0;
       }
-      return false;
+      return std::nullopt;
     };
-    std::function<void(Element*)> CollectFocusable = [&](Element* el) {
-      if (!el) {
-        return;
+
+    std::vector<FocusEntry> navigable;
+    for (int i = 0; i < static_cast<int>(document_order.size()); ++i) {
+      Element* el = document_order[i];
+      auto tab_index_opt = GetEffectiveTabIndex(el);
+      if (tab_index_opt.has_value() && tab_index_opt.value() >= 0) {
+        navigable.push_back({el, tab_index_opt.value(), i});
       }
-      if (IsFocusable(el)) {
-        focusable.push_back(el);
-      }
-      for (const auto& child : el->children()) {
-        CollectFocusable(child.get());
-      }
-    };
-    if (component_->Root()) {
-      CollectFocusable(component_->Root());
     }
 
-    if (!focusable.empty()) {
+    if (!navigable.empty()) {
+      std::sort(navigable.begin(), navigable.end(), [](const FocusEntry& a, const FocusEntry& b) {
+        if (a.tabindex > 0 && b.tabindex > 0) {
+          if (a.tabindex != b.tabindex) {
+            return a.tabindex < b.tabindex;
+          }
+          return a.document_index < b.document_index;
+        }
+        if (a.tabindex > 0) return true;
+        if (b.tabindex > 0) return false;
+        return a.document_index < b.document_index;
+      });
+
       int curr_idx = -1;
-      for (int i = 0; i < static_cast<int>(focusable.size()); ++i) {
-        if (focusable[i]->focused()) {
+      for (int i = 0; i < static_cast<int>(navigable.size()); ++i) {
+        if (navigable[i].element->focused()) {
           curr_idx = i;
           break;
         }
@@ -579,18 +616,18 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
       int next_idx = 0;
       if (event == Event::Tab()) {
-        next_idx = (curr_idx == -1) ? 0 : (curr_idx + 1) % focusable.size();
+        next_idx = (curr_idx == -1) ? 0 : (curr_idx + 1) % navigable.size();
       } else {
         next_idx = (curr_idx == -1)
-                       ? (focusable.size() - 1)
-                       : (curr_idx - 1 + focusable.size()) % focusable.size();
+                       ? (static_cast<int>(navigable.size()) - 1)
+                       : (curr_idx - 1 + navigable.size()) % navigable.size();
       }
 
       if (component_->Root()) {
         component_->Root()->Visit([](Element& el) { el.set_focused(false); });
       }
-      focusable[next_idx]->set_focused(true);
-      focused_element_ = focusable[next_idx];
+      navigable[next_idx].element->set_focused(true);
+      focused_element_ = navigable[next_idx].element;
       component_->ResolveTargetStyles();
       DigestAndDraw();
       return;
@@ -708,6 +745,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
 }
 
 void ScreenImpl::Draw() {
+  css::g_terminal_width = width_;
+  css::g_terminal_height = height_;
   auto root = component_->Root();
 
   focused_element_ = nullptr;
@@ -775,6 +814,8 @@ void ScreenImpl::UpdateSize() {
     if (new_width != width_ || new_height != height_) {
       width_ = new_width;
       height_ = new_height;
+      css::g_terminal_width = width_;
+      css::g_terminal_height = height_;
       if (has_drawn_) {
         device_->Write("\x1b[2J\x1b[H");
         last_height_ = 0;
