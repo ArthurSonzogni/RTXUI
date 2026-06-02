@@ -6,22 +6,6 @@ RTXUI includes native support for Unicode grapheme cluster parsing and string la
 
 Wide characters (such as Chinese, Japanese, and Korean) take up exactly two terminal cell columns. RTXUI correctly calculates these widths to ensure they align properly in flexbox and grid layouts.
 
-```cpp
-class CJKApp : public Component<CJKApp> {
- public:
-  std::string_view view = R"html(
-      <div class="container">
-        <div>Chinese: 中文 (Width = 4 cells)</div>
-        <div>Japanese: 日本語 (Width = 6 cells)</div>
-        <div>Korean: 한국어 (Width = 6 cells)</div>
-      </div>
-    )html";
-
-  CJKApp() {
-    Import<rtxui::div>();
-  }
-};
-```
 
 ### Layout Alignment
 
