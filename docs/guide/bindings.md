@@ -56,19 +56,6 @@ Binding in template:
 
 The `<input>`, `<textarea>`, `<checkbox>`, and `<select>` elements support two-way data binding. When the user modifies the element, the bound C++ variable is updated automatically.
 
-```cpp
-class InputApp : public Component<InputApp> {
- public:
-  std::string my_text = "Hello World";
-
-  std::string_view view = R"html(
-      <input value="{my_text}" />
-      <div>Value: {my_text}</div>
-    )html";
-
-  InputApp() { Bind(my_text); }
-};
-```
 
 <ExampleTabs src="/wasm/rtxui_example_input.js">
 <template #source>

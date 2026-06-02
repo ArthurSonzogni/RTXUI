@@ -80,7 +80,6 @@ You can style the generated HTML tags using the `stylesheet` property.
     Import<rtxui::div>();
     Import<rtxui::h1>();
     Import<rtxui::p>();
-    Import<rtxui::textarea>();
     Import<rtxui::markdown>();
     Bind(markdown_content);
     Bind(custom_css);
@@ -89,13 +88,6 @@ You can style the generated HTML tags using the `stylesheet` property.
 
   std::string_view view = R"html(
     <div class="container">
-      <div class="sidebar">
-        <h1 class="sidebar-title">Editor</h1>
-        <p>Markdown Source:</p>
-        <textarea class="editor" value="{markdown_content}"></textarea>
-        <p>Custom CSS:</p>
-        <textarea class="css-editor" value="{custom_css}"></textarea>
-      </div>
       <div class="preview-pane">
         <h1 class="preview-title">Preview</h1>
         <markdown class="md-preview" content="{markdown_content}" stylesheet="{custom_css}"></markdown>
@@ -110,6 +102,7 @@ You can style the generated HTML tags using the `stylesheet` property.
         height: 100%;
         background-color: #0f172a;
         color: #f1f5f9;
+        overflow-y: scroll;
       }
       .container {
         display: flex;
@@ -129,7 +122,6 @@ You can style the generated HTML tags using the `stylesheet` property.
         display: flex;
         flex-direction: column;
         padding: 1;
-        overflow-y: scroll;
       }
       .sidebar-title, .preview-title {
         color: #3b82f6;
