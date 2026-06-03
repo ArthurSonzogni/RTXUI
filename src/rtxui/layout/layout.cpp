@@ -11,8 +11,124 @@
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/style.hpp"
+#include <cstddef>
 
 namespace rtxui {
+
+class LayoutArena {
+ public:
+  struct Chunk {
+    char* ptr = nullptr;
+    size_t capacity = 0;
+  };
+
+  LayoutArena() = default;
+  ~LayoutArena() {
+    for (const auto& chunk : allocated_chunks_) {
+      delete[] chunk.ptr;
+    }
+  }
+
+  LayoutArena(const LayoutArena&) = delete;
+  LayoutArena& operator=(const LayoutArena&) = delete;
+
+  void* Allocate(size_t size, size_t alignment) {
+    if (current_chunk_idx_ < allocated_chunks_.size()) {
+      void* ptr = buffer_ + used_;
+      size_t space = capacity_ - used_;
+      if (std::align(alignment, size, ptr, space)) {
+        used_ = capacity_ - space + size;
+        return ptr;
+      }
+      current_chunk_idx_++;
+      if (current_chunk_idx_ < allocated_chunks_.size()) {
+        buffer_ = allocated_chunks_[current_chunk_idx_].ptr;
+        capacity_ = allocated_chunks_[current_chunk_idx_].capacity;
+        used_ = 0;
+        ptr = buffer_ + used_;
+        space = capacity_ - used_;
+        if (std::align(alignment, size, ptr, space)) {
+          used_ = capacity_ - space + size;
+          return ptr;
+        }
+      }
+    }
+
+    size_t new_cap = std::max(capacity_ * 2, size + alignment + 65536);
+    char* new_buf = new char[new_cap];
+    allocated_chunks_.push_back({new_buf, new_cap});
+    current_chunk_idx_ = allocated_chunks_.size() - 1;
+    buffer_ = new_buf;
+    capacity_ = new_cap;
+    used_ = 0;
+
+    void* ptr = buffer_ + used_;
+    size_t space = capacity_ - used_;
+    if (std::align(alignment, size, ptr, space)) {
+      used_ = capacity_ - space + size;
+      return ptr;
+    }
+    return nullptr;
+  }
+
+  void Reset() {
+    current_chunk_idx_ = 0;
+    used_ = 0;
+    if (!allocated_chunks_.empty()) {
+      buffer_ = allocated_chunks_[0].ptr;
+      capacity_ = allocated_chunks_[0].capacity;
+    } else {
+      buffer_ = nullptr;
+      capacity_ = 0;
+    }
+  }
+
+ private:
+  std::vector<Chunk> allocated_chunks_;
+  size_t current_chunk_idx_ = 0;
+  char* buffer_ = nullptr;
+  size_t capacity_ = 0;
+  size_t used_ = 0;
+};
+
+thread_local LayoutArena g_layout_arena;
+
+void ResetLayoutArena() {
+  g_layout_arena.Reset();
+}
+
+template <typename T>
+class ArenaAllocator {
+ public:
+  using value_type = T;
+
+  ArenaAllocator() = default;
+
+  template <typename U>
+  constexpr ArenaAllocator(const ArenaAllocator<U>&) noexcept {}
+
+  T* allocate(std::size_t n) {
+    void* ptr = g_layout_arena.Allocate(n * sizeof(T), alignof(T));
+    if (!ptr) {
+      throw std::bad_alloc();
+    }
+    return static_cast<T*>(ptr);
+  }
+
+  void deallocate(T*, std::size_t) noexcept {
+    // No-op: handled by arena reset
+  }
+
+  template <typename U>
+  bool operator==(const ArenaAllocator<U>&) const noexcept {
+    return true;
+  }
+
+  template <typename U>
+  bool operator!=(const ArenaAllocator<U>&) const noexcept {
+    return false;
+  }
+};
 
 // --- Forward Declarations ---
 std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
@@ -228,7 +344,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     child_width_limit = 10000;
   }
 
-  auto fragment = std::make_shared<PhysicalFragment>(width, 0);
+  auto fragment = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, width, 0);
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
@@ -454,7 +570,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   int content_width_limit = std::max(
       0, width - box->style.padding.Horiz() - box->style.border.Horiz());
-  auto container_frag = std::make_shared<PhysicalFragment>(width, 0);
+  auto container_frag = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, width, 0);
   container_frag->dom_node = box->dom_node;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
@@ -515,7 +631,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       if (byte_end == byte_start && col_width == 0 && byte_end != text.size()) {
         return;
       }
-      auto text_frag = std::make_shared<PhysicalFragment>(col_width, 1);
+      auto text_frag = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, col_width, 1);
       text_frag->dom_node = dom_node;
       text_frag->is_text = true;
       text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
@@ -932,7 +1048,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   }
 
   // Pass 3: Final Measurement & Positioning
-  auto fragment = std::make_shared<PhysicalFragment>(my_width, my_height);
+  auto fragment = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, my_width, my_height);
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;

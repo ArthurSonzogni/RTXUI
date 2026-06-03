@@ -806,6 +806,9 @@ void ScreenImpl::Draw() {
       {width_, MeasureMode::Exactly},
       {height_, MeasureMode::Exactly},
   };
+  root_fragment_ = nullptr;
+  ResetLayoutArena();
+
   std::shared_ptr<PhysicalFragment> root_fragment = nullptr;
   if (root_box) {
     root_fragment = RunLayout({root_box.get()}, viewport);

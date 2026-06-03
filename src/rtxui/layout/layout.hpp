@@ -27,6 +27,8 @@ struct LayoutContext {
 std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
                                             LayoutConstraints constraints,
                                             LayoutContext context = {});
+
+void ResetLayoutArena();
 }  // namespace rtxui
 
 #endif  // RTXUI_LAYOUT_LAYOUT_HPP
