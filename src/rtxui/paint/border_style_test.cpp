@@ -472,4 +472,45 @@ TEST_CASE("Individual Border Colors") {
                                                             }));
 }
 
+TEST_CASE("Paint: Tall Border Parent Background Propagation") {
+  struct TallBorderParentBgTest : Component<TallBorderParentBgTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            self {
+              display: block;
+              background-color: rgb(15, 23, 42);
+            }
+            .container {
+              display: block;
+            }
+            .box {
+              border: tall;
+              border-color: rgb(30, 41, 59);
+              display: block;
+            }
+          </style>
+          <div class="container">
+            <div class="box">Hi</div>
+          </div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<TallBorderParentBgTest>::New(), 6, 3);
+  Color expected_bg = Color::RGB(15, 23, 42);
+
+  // Right border uses mode Parent -> background should be expected_bg
+  CHECK(texture[5, 0].background_color == expected_bg);
+  CHECK(texture[5, 1].background_color == expected_bg);
+  CHECK(texture[5, 2].background_color == expected_bg);
+
+  // Left border uses mode ReverseOuter -> foreground should be expected_bg
+  CHECK(texture[0, 0].foreground_color == expected_bg);
+  CHECK(texture[0, 1].foreground_color == expected_bg);
+  CHECK(texture[0, 2].foreground_color == expected_bg);
+}
+
 }  // namespace rtxui
+
