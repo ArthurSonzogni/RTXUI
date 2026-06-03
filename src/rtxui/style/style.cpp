@@ -164,6 +164,47 @@ auto Parser::ParseDeclaration() -> Expected<Declaration, Error> {
   return Declaration{property, value.value()};
 }
 
+auto ParseSelectorString(std::string_view selector_str) -> ParsedSelector {
+  std::string_view current = selector_str;
+  while (!current.empty() && IsWhiteSpace(current.front())) {
+    current.remove_prefix(1);
+  }
+  while (!current.empty() && IsWhiteSpace(current.back())) {
+    current.remove_suffix(1);
+  }
+
+  ParsedSelector parsed;
+  size_t colon = current.find(':');
+  if (colon == std::string_view::npos) {
+    parsed.base = current;
+    return parsed;
+  }
+  std::string_view base_view = current.substr(0, colon);
+  while (!base_view.empty() && IsWhiteSpace(base_view.back())) {
+    base_view.remove_suffix(1);
+  }
+  parsed.base = base_view;
+
+  std::string_view rest = current.substr(colon);
+  while (!rest.empty() && rest.front() == ':') {
+    rest.remove_prefix(1);
+    size_t next_colon = rest.find(':');
+    std::string_view pseudo = rest.substr(0, next_colon);
+    while (!pseudo.empty() && IsWhiteSpace(pseudo.front())) {
+      pseudo.remove_prefix(1);
+    }
+    while (!pseudo.empty() && IsWhiteSpace(pseudo.back())) {
+      pseudo.remove_suffix(1);
+    }
+    parsed.pseudo_classes.push_back(pseudo);
+    if (next_colon == std::string_view::npos) {
+      break;
+    }
+    rest = rest.substr(next_colon);
+  }
+  return parsed;
+}
+
 auto Parser::ParseRuleset() -> Expected<Ruleset, Error> {
   ParseWhiteSpaces();
   auto selector = ParseSelector();
@@ -196,7 +237,8 @@ auto Parser::ParseRuleset() -> Expected<Ruleset, Error> {
   }
   Advance();  // Skip '}'
 
-  return Ruleset{selector.value(), declarations};
+  auto parsed_sel = ParseSelectorString(selector.value());
+  return Ruleset{selector.value(), declarations, "", std::move(parsed_sel)};
 }
 
 auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {

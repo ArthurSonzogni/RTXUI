@@ -18,6 +18,11 @@ struct Declaration {
   std::string_view value;
 };
 
+struct ParsedSelector {
+  std::string_view base;
+  std::vector<std::string_view> pseudo_classes;
+};
+
 /// A CSS ruleset (selector { declarations }).
 struct Ruleset {
   /// The selector name (e.g., "div", ".class", "#id").
@@ -26,6 +31,8 @@ struct Ruleset {
   std::vector<Declaration> declarations;
   /// The media query condition (e.g., "(max-width: 80)"), empty if none.
   std::string_view media_query;
+  /// Pre-parsed selector representation.
+  ParsedSelector parsed_selector;
 };
 
 /// A stylesheet is a collection of rulesets.
