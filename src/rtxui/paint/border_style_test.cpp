@@ -512,5 +512,44 @@ TEST_CASE("Paint: Tall Border Parent Background Propagation") {
   CHECK(texture[0, 2].foreground_color == expected_bg);
 }
 
+TEST_CASE("Paint: Transparent Overlay Blending on Tall Border") {
+  struct OverlayTest : Component<OverlayTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            .root-container {
+              display: block;
+              background-color: rgb(0, 0, 0);
+            }
+            .box {
+              border: tall;
+              border-color: rgb(255, 0, 0);
+              display: block;
+            }
+            .overlay {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 6;
+              height: 3;
+              background-color: rgba(0, 0, 255, 0.5);
+            }
+          </style>
+          <div class="root-container">
+            <div class="box">Hi</div>
+            <div class="overlay"></div>
+          </div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<OverlayTest>::New(), 6, 3);
+  Color expected_blended = Blend(Color::RGBA(0, 0, 255, 127), Color::RGB(0, 0, 0));
+
+  // The left border's foreground color should be correctly blended with the semi-transparent overlay
+  CHECK(texture[0, 1].foreground_color == expected_blended);
+}
+
 }  // namespace rtxui
 
