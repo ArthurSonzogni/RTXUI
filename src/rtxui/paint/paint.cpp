@@ -393,7 +393,9 @@ void PaintImpl(const PhysicalFragment* frag,
   Color current_foreground_color =
       frag->foreground_color.value_or(inherited_foreground_color);
   Color current_background_color =
-      frag->background_color.value_or(Color::RGBA(0, 0, 0, 0));
+      frag->background_color
+          ? Blend(*frag->background_color, parent_background_color)
+          : parent_background_color;
   bool current_bold = frag->bold.value_or(inherited_bold);
   bool current_underlined = frag->underlined.value_or(inherited_underlined);
   bool current_underlined_double =
