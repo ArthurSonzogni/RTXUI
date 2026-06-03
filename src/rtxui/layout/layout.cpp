@@ -232,6 +232,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
+  fragment->opacity = box->style.opacity;
   fragment->bold = box->style.bold;
   fragment->underlined = box->style.underlined;
   fragment->underlined_double = box->style.underlined_double;
@@ -457,6 +458,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   container_frag->dom_node = box->dom_node;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
+  container_frag->opacity = box->style.opacity;
   container_frag->bold = box->style.bold;
   container_frag->underlined = box->style.underlined;
   container_frag->underlined_double = box->style.underlined_double;
@@ -934,6 +936,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
+  fragment->opacity = box->style.opacity;
   fragment->bold = box->style.bold;
   fragment->underlined = box->style.underlined;
   fragment->underlined_double = box->style.underlined_double;

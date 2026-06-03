@@ -657,6 +657,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "opacity") {
+    float val = StoF(v);
+    style.opacity = val < 0.0f ? 0.0f : (val > 1.0f ? 1.0f : val);
+    return;
+  }
+
   if (p == "flex-grow") {
     style.flex_grow = StoF(v);
     return;

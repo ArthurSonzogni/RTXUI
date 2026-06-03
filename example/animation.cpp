@@ -11,21 +11,21 @@ class AnimationDemo : public Component<AnimationDemo> {
   std::string_view view = R"html(
       <div class="container">
         <h1>Animation & Transition Demo</h1>
-        <p>Hover over the elements below to see smooth C++ terminal animations.</p>
+        <p>
+          Hover over the elements below to see smooth C++ terminal animations.
+        </p>
 
-        <div class="row">
-          <div class="card btn-card">
-            <h3>Button Hover Transitions</h3>
-            <div class="btn">Hover Me</div>
-          </div>
+        <div class="card btn-card">
+          <h2>Button Hover Transitions</h2>
+          <div class="btn">Hover Me</div>
+        </div>
 
-          <div class="card grow-card">
-            <h3>Hover Grow Effect (Flex)</h3>
-            <div class="grow-container">
-              <div class="grow-box grow-box-1">Box 1</div>
-              <div class="grow-box grow-box-2">Grow</div>
-              <div class="grow-box grow-box-3">Box 3</div>
-            </div>
+        <div class="card grow-card">
+          <h2>Hover Grow Effect (Flex)</h2>
+          <div class="grow-container">
+            <div class="grow-box grow-box-1">Box 1</div>
+            <div class="grow-box grow-box-2">Grow</div>
+            <div class="grow-box grow-box-3">Box 3</div>
           </div>
         </div>
       </div>
@@ -37,39 +37,35 @@ class AnimationDemo : public Component<AnimationDemo> {
           background-color: rgb(15, 23, 42);
           color: rgb(241, 245, 249);
         }
+
+        .container {
+          max-width: 80;
+          margin: auto
+        }
+
         h1 {
           color: rgb(59, 130, 246);
           margin-bottom: 1;
         }
+
+        h2 {
+          color: rgb(148, 163, 184);
+          margin-bottom: 1;
+        }
+
         p {
           color: rgb(148, 163, 184);
           margin-bottom: 2;
         }
-        .container {
-          display: block;
-        }
-        .row {
-          display: flex;
-          flex-direction: row;
-          gap: 4;
-        }
+
         .card {
           display: block;
           border: tall;
           border-color: rgb(30, 41, 59);
           padding: 1 2;
-          width: 20%;
           height: 10;
         }
-        .grow-card {
-          width: 80%;
-        }
-        h3 {
-          color: rgb(148, 163, 184);
-          margin-bottom: 1;
-        }
-        
-        /* 1. Button Animations */
+
         .btn {
           display: block;
           border: tall;
@@ -79,12 +75,17 @@ class AnimationDemo : public Component<AnimationDemo> {
           padding: 1 3;
           text-align: center;
           width: 16;
-          transition: background-color 0.3s ease-in-out, border-color 0.2s linear, color 0.2s ease;
+          transition:
+            background-color 0.2s ease-in-out,
+            border-color 0.2s linear,
+            color 0.2s ease,
+            border-color 1s linear
+            ;
         }
         .btn:hover {
           background-color: rgb(29, 78, 216);
-          border-color: rgb(96, 165, 250);
-          color: rgb(255, 255, 255);
+          border-color: white;
+          color: white;
         }
         .btn:active {
           background-color: rgb(30, 64, 175);
@@ -99,7 +100,7 @@ class AnimationDemo : public Component<AnimationDemo> {
           height: 3;
         }
         .grow-box {
-          border: solid;
+          border: tall;
           border-color: rgb(30, 41, 59);
           text-align: center;
           padding-top: 0;
@@ -126,7 +127,7 @@ class AnimationDemo : public Component<AnimationDemo> {
           transition: background-color 0.3s linear;
         }
         .grow-box-3:hover {
-          background-color: rgb(172, 12, 255);
+          background-color: rgb(147, 197, 253);
         }
       </style>
     )html";

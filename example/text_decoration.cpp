@@ -43,7 +43,7 @@ class TextDecorationDemo : public Component<TextDecorationDemo> {
         self {
           display: block;
           padding: 1;
-          background-color: rgb(10, 15, 30);
+          background-color: rgb(15, 23, 42);
           color: white;
           overflow-y: scroll;
         }

@@ -53,13 +53,29 @@ class ConditionalApp : public Component<ConditionalApp> {
       </div>
 
       <style>
-        .container { padding: 1; display: flex; flex-direction: column; gap: 1; }
+        self {
+          display: block;
+          padding: 1;
+          background-color: rgb(15, 23, 42);
+          color: white;
+        }
+        .container { display: flex; flex-direction: column; gap: 1; }
         .tabs { display: flex; gap: 1; }
-        .tabs button { border: solid; padding: 0 1; }
-        .tabs button.active { background-color: blue; color: white; }
-        .content { border: wide; border-color: gray; padding: 1; min-height: 10; }
-        .card { border: solid; padding: 1; margin-top: 1; display: flex; justify-content: space-between; }
-        .footer { margin-top: 2; color: gray; font-style: italic; }
+        .tabs button {
+          border: tall;
+          border-color: rgb(71, 85, 105);
+          background-color: rgb(30, 41, 59);
+          color: white;
+          padding: 0 1;
+        }
+        .tabs button:hover {
+          background-color: rgb(59, 130, 246);
+          border-color: rgb(96, 165, 250);
+        }
+        .tabs button.active { background-color: rgb(59, 130, 246); color: white; border-color: rgb(96, 165, 250); }
+        .content { border: tall; border-color: rgb(51, 65, 85); padding: 1; min-height: 10; }
+        .card { border: tall; border-color: rgb(51, 65, 85); padding: 1; margin-top: 1; display: flex; justify-content: space-between; }
+        .footer { margin-top: 2; color: rgb(148, 163, 184); font-style: italic; }
       </style>
     )html";
 

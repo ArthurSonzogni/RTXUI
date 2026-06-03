@@ -33,22 +33,20 @@ class TextAlignDemo : public Component<TextAlignDemo> {
         self {
           display: block;
           padding: 1;
-          border: tall;
-          border-color: blue;
-          background-color: rgb(10, 10, 15);
+          background-color: rgb(15, 23, 42);
           color: white;
           width: 50;
           height: 18;
           overflow-y: scroll;
         }
         h1 {
-          color: cyan;
+          color: rgb(56, 189, 248);
           font-weight: bold;
           text-align: center;
         }
         p {
           margin-bottom: 1;
-          color: gray;
+          color: rgb(148, 163, 184);
           text-align: center;
         }
         .card {
@@ -56,11 +54,11 @@ class TextAlignDemo : public Component<TextAlignDemo> {
           margin-top: 1;
           padding: 1;
           border: tall;
-          border-color: gray;
+          border-color: rgb(71, 85, 105);
         }
         .title {
           font-weight: bold;
-          color: yellow;
+          color: rgb(96, 165, 250);
           margin-bottom: 1;
         }
         .left-align {

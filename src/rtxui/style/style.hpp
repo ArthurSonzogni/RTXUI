@@ -53,6 +53,10 @@ struct Error {
 /// If the CSS is invalid, return an error.
 auto Parse(std::string_view css) -> Expected<StyleSheet, Error>;
 
+/// Parse the given inline CSS style string and return the declarations.
+/// If the CSS is invalid, return an error.
+auto ParseDeclarations(std::string_view css) -> Expected<std::vector<Declaration>, Error>;
+
 /// Print the stylesheet (useful for debugging).
 auto Print(const StyleSheet& stylesheet) -> std::string;
 

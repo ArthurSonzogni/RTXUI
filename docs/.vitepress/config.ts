@@ -14,31 +14,55 @@ export default defineConfig({
         text: 'Introduction',
         items: [
           { text: 'Getting Started', link: '/' },
+          { text: 'Hello World', link: '/guide/hello-world' },
           { text: 'Reactive Model', link: '/reactivity' }
         ]
       },
       {
-        text: 'Guide',
+        text: 'Core Concepts (HTML & Logic)',
+        collapsed: false,
         items: [
-          { text: 'Hello World', link: '/guide/hello-world' },
           { text: 'Value Interpolation', link: '/guide/interpolation' },
-          { text: 'Event Bindings', link: '/guide/bindings' },
+          { text: 'Event Handlers & Inputs', link: '/guide/bindings' },
           { text: 'Conditional Rendering', link: '/guide/conditionals' },
-          { text: 'Loops', link: '/guide/loops' },
-          { text: 'Markdown', link: '/guide/markdown' }
+          { text: 'Loops & Lists', link: '/guide/loops' },
+          { text: 'Focus & Tab Navigation', link: '/guide/html/focus' }
         ]
       },
       {
-        text: 'Advanced Features',
+        text: 'C++ Integration Guide',
+        collapsed: true,
         items: [
-          { text: 'Animations & Hover', link: '/animations' },
+          { text: 'Creating Components', link: '/guide/cpp/components' },
+          { text: 'State & Collections Reflection', link: '/guide/cpp/bindings' },
+          { text: 'Navigating the DOM', link: '/guide/cpp/dom' },
+          { text: 'Screen Loop & Lifecycle', link: '/guide/cpp/lifecycle' }
+        ]
+      },
+      {
+        text: 'CSS & Layout Guide',
+        collapsed: true,
+        items: [
+          { text: 'Styling Basics & Selectors', link: '/guide/css/basics' },
+          { text: 'Box Model & Spacing', link: '/guide/css/box-model' },
+          { text: 'Flexbox Layouts', link: '/guide/css/flexbox' },
+          { text: 'Positioning & Layers', link: '/guide/css/positioning' },
+          { text: 'Responsive Media Queries', link: '/guide/css/media-queries' },
+          { text: 'Transitions & Animations', link: '/guide/css/animations' }
+        ]
+      },
+      {
+        text: 'Specialized Features',
+        collapsed: true,
+        items: [
           { text: 'Scrolling Containers', link: '/guide/scrolling' },
           { text: 'Unicode & CJK', link: '/guide/unicode' },
-          { text: 'Positioning & Layering', link: '/guide/positioning' }
+          { text: 'Markdown rendering', link: '/guide/markdown' }
         ]
       },
       {
-        text: 'Reference',
+        text: 'Reference Manual',
+        collapsed: false,
         items: [
           { text: 'C++ API Reference', link: '/cpp_api' },
           { text: 'HTML Element Reference', link: '/html_reference' },

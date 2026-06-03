@@ -47,15 +47,23 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
         </div>
       </div>
       <style>
+        self {
+          display: block;
+          padding: 1;
+          background-color: rgb(15, 23, 42);
+          color: white;
+        }
         .container { padding: 1; }
         .input-row { display: flex; gap: 1; margin-bottom: 1; }
-        input { border: solid; width: 25; padding: 0 1; }
-        .list { display: flex; flex-direction: column; gap: 0; border: tall; }
+        input { border: tall; border-color: rgb(71, 85, 105); background-color: rgb(30, 41, 59); color: white; width: 25; padding: 0 1; }
+        .list { display: flex; flex-direction: column; gap: 0; border: tall; border-color: rgb(51, 65, 85); }
         .item { display: flex; gap: 2; padding: 0 1; align-items: center; }
-        .status { width: 10; color: yellow; }
+        .status { width: 10; color: rgb(56, 189, 248); }
         .name { flex-grow: 1; color: white; }
-        .remove-btn { color: red; border: none; padding: 0 1; }
-        button { background-color: blue; color: white; }
+        .remove-btn { color: rgb(239, 68, 68); border: none; padding: 0 1; background-color: transparent; }
+        .remove-btn:hover { color: white; background-color: rgb(239, 68, 68); }
+        button { background-color: rgb(30, 41, 59); color: white; border: tall; border-color: rgb(71, 85, 105); padding: 0 1; }
+        button:hover { background-color: rgb(59, 130, 246); border-color: rgb(96, 165, 250); }
       </style>
     )html";
 

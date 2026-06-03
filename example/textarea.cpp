@@ -54,8 +54,6 @@ class TextareaDemo : public Component<TextareaDemo> {
           padding: 1;
           background-color: rgb(15, 23, 42);
           color: white;
-          border: tall;
-          border-color: rgb(99, 102, 241);
         }
         .container {
           display: block;
@@ -77,7 +75,7 @@ class TextareaDemo : public Component<TextareaDemo> {
           display: block;
           width: 70;
           height: 12;
-          border-color: rgb(99, 102, 241);
+          border-color: rgb(59, 130, 246);
           background-color: rgb(30, 41, 59);
           color: white;
           padding-left: 1;
@@ -94,7 +92,7 @@ class TextareaDemo : public Component<TextareaDemo> {
         }
         .value {
           font-weight: bold;
-          color: rgb(244, 63, 94);
+          color: rgb(129, 140, 248);
           margin-right: 2;
         }
       </style>

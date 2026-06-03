@@ -33,8 +33,6 @@ class Counter : public Component<Counter> {
           padding: 1;
           background-color: rgb(15, 23, 42);
           color: white;
-          border: tall;
-          border-color: rgb(59, 130, 246);
         }
         .counter-container {
           display: block;

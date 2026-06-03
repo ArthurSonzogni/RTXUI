@@ -1,321 +1,112 @@
-# RTXUI CSS Attribute Reference
+# CSS Attribute Reference
 
-This reference catalog lists all CSS-like styling properties supported by the RTXUI layout and painting engine.
-
----
-
-## 1. Box Model (Margin & Padding)
-
-Standard spacing properties to control layout positioning. These properties are **not animatable**.
-
-- `margin` [`<integer>`](#integers): Shorthand to configure margin width on all sides of the element.
-  - `margin-top` [`<integer>`](#integers): Vertical space above the element. Sibling block margins collapse according to standard block flow rules.
-  - `margin-bottom` [`<integer>`](#integers): Vertical space below the element.
-  - `margin-left` [`<integer>`](#integers): Horizontal space to the left of the element.
-  - `margin-right` [`<integer>`](#integers): Horizontal space to the right of the element.
-- `padding` [`<integer>`](#integers): Shorthand to configure padding width inside the boundary on all sides of the element.
-  - `padding-top` [`<integer>`](#integers): Internal vertical padding at the top.
-  - `padding-bottom` [`<integer>`](#integers): Internal vertical padding at the bottom.
-  - `padding-left` [`<integer>`](#integers): Internal horizontal padding at the left.
-  - `padding-right` [`<integer>`](#integers): Internal horizontal padding at the right.
+This reference lists all CSS-like styling properties supported by the RTXUI layout and painting engine, indicating whether each property supports smooth animations/transitions.
 
 ---
 
-## 2. Dimensions & Sizing
+## 1. Spacing, Sizing, and Box Model
 
-Used to control element widths and heights. These properties are **animatable**.
-
-- `width` [`<length>`](#lengths) **(animatable)**: Constrains the width of the element. Supports smooth length/pixel transitions.
-- `height` [`<length>`](#lengths) **(animatable)**: Constrains the height of the element. Supports smooth length/pixel transitions.
-
----
-
-## 3. Borders
-
-Borders are drawn using ASCII/Unicode styling characters around elements.
-
-- `border` [`<border-style>`](#border-styles) | [`<integer>`](#integers): Shorthand to enable borders on all sides of the box. Specifying a `<border-style>` keyword defaults the border width to 1. Specifying an `<integer>` width defaults the style to `solid`. (not animatable)
-  - `border-width` [`<integer>`](#integers): Shorthand to set the border width on all sides of the element. (not animatable)
-  - `border-top` [`<integer>`](#integers): Enables or configures the top border width. (not animatable)
-  - `border-bottom` [`<integer>`](#integers): Enables or configures the bottom border width. (not animatable)
-  - `border-left` [`<integer>`](#integers): Enables or configures the left border width. (not animatable)
-  - `border-right` [`<integer>`](#integers): Enables or configures the right border width. (not animatable)
-  - `border-style` [`<border-style>`](#border-styles): Chooses the character set style of the border. (not animatable)
-  - `border-color` [`<color>`](#colors) **(animatable)**: Shorthand for the color of all border sides. Animates all border colors.
-    - `border-top-color` / `border-color-top` [`<color>`](#colors) **(animatable)**: Specifies color of the top border line.
-    - `border-bottom-color` / `border-color-bottom` [`<color>`](#colors) **(animatable)**: Specifies color of the bottom border line.
-    - `border-left-color` / `border-color-left` [`<color>`](#colors) **(animatable)**: Specifies color of the left border line.
-    - `border-right-color` / `border-color-right` [`<color>`](#colors) **(animatable)**: Specifies color of the right border line.
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `margin` | [`<integer>`](#value-types) | ❌ | Shorthand margin width on all sides. |
+| `margin-top` | [`<integer>`](#value-types) | ❌ | Vertical space above the element. |
+| `margin-bottom` | [`<integer>`](#value-types) | ❌ | Vertical space below the element. |
+| `margin-left` | [`<integer>`](#value-types) | ❌ | Horizontal space to the left. |
+| `margin-right` | [`<integer>`](#value-types) | ❌ | Horizontal space to the right. |
+| `padding` | [`<integer>`](#value-types) | ❌ | Shorthand internal padding on all sides. |
+| `padding-top` | [`<integer>`](#value-types) | ❌ | Internal vertical padding at the top. |
+| `padding-bottom` | [`<integer>`](#value-types) | ❌ | Internal vertical padding at the bottom. |
+| `padding-left` | [`<integer>`](#value-types) | ❌ | Internal horizontal padding at the left. |
+| `padding-right` | [`<integer>`](#value-types) | ❌ | Internal horizontal padding at the right. |
+| `width` | [`<length>`](#value-types) |   | Constrains element layout width. |
+| `height` | [`<length>`](#value-types) |   | Constrains element layout height. |
 
 ---
 
-## 4. Typography & Coloring
+## 2. Borders and Frames
 
-Color formatting for component text and backgrounds.
-
-- `color` / `foreground-color` [`<color>`](#colors) **(animatable)**: Configures the foreground text color of the element. Supports smooth color transitions.
-- `background-color` [`<color>`](#colors) **(animatable)**: Configures the background color of cells within the element's box boundary. Supports smooth color transitions.
-
-- `text-align` `left | right | center`: Configures the horizontal alignment of text/inline content within the element. (not animatable)
-- `white-space` `normal | nowrap`: Configures word wrapping. `nowrap` prevents automated text wrapping. (not animatable)
-
-<ExampleTabs src="/wasm/rtxui_example_text_align.js">
-<template #source>
-
-<<< @/../example/text_align.cpp
-
-</template>
-</ExampleTabs>
-
-- `font-weight` `bold | normal`: Configures bold styling for the text. (not animatable)
-- `text-decoration` `underline | double-underline | line-through | strikethrough | blink | none`: Configures text decoration styling (such as single and double underlining, strikethrough/line-through, or blinking). Multiple space-separated styles can be specified (e.g. `double-underline strikethrough`). (not animatable)
-
-<ExampleTabs src="/wasm/rtxui_example_text_decoration.js">
-<template #source>
-
-<<< @/../example/text_decoration.cpp
-
-</template>
-</ExampleTabs>
-
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `border` | [`<border-style>`](#border-styles) \| [`<integer>`](#value-types) | ❌ | Shorthand to configure borders on all sides. |
+| `border-width` | [`<integer>`](#value-types) | ❌ | Border frame cell thickness on all sides. |
+| `border-top` | [`<integer>`](#value-types) | ❌ | Top border frame thickness. |
+| `border-bottom` | [`<integer>`](#value-types) | ❌ | Bottom border frame thickness. |
+| `border-left` | [`<integer>`](#value-types) | ❌ | Left border frame thickness. |
+| `border-right` | [`<integer>`](#value-types) | ❌ | Right border frame thickness. |
+| `border-style` | [`<border-style>`](#border-styles) | ❌ | Character set mapping style of the frame. |
+| `border-color` | [`<color>`](#colors) |   | Color of all border frame lines. |
+| `border-top-color` | [`<color>`](#colors) |   | Color of the top border line. |
+| `border-bottom-color` | [`<color>`](#colors) |   | Color of the bottom border line. |
+| `border-left-color` | [`<color>`](#colors) |   | Color of the left border line. |
+| `border-right-color` | [`<color>`](#colors) |   | Color of the right border line. |
 
 ---
 
-## 5. Layout Alignment (Flexbox)
+## 3. Typography and Coloring
 
-RTXUI includes a subset of CSS Flexbox for horizontal and vertical layouts.
-
-- `display` [`<display>`](#display-modes): Enables the flex layout engine. (not animatable)
-- `flex-direction` `row | column`: Layout axis for flex items. (not animatable)
-- `flex-grow` [`<number>`](#numbers) **(animatable)**: Portion of free space assigned to the item along the main axis. Supports layout transitions.
-- `flex-shrink` [`<number>`](#numbers) **(animatable)**: Portion of shrinkage space assigned to the item. Supports layout transitions.
-
-<ExampleTabs src="/wasm/rtxui_example_layout.js">
-<template #source>
-
-<<< @/../example/layout.cpp
-
-</template>
-</ExampleTabs>
-
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `color` | [`<color>`](#colors) |   | Foreground text character color. |
+| `background-color` | [`<color>`](#colors) |   | Background block container cell color. |
+| `opacity` | [`<number>`](#value-types) |   | Transparency value (`0.0` for transparent to `1.0` for opaque). |
+| `text-align` | `left \| right \| center` | ❌ | Horizontal alignment of inline text flows. |
+| `white-space` | `normal \| nowrap` | ❌ | `nowrap` disables text wrapping. |
+| `font-weight` | `bold \| normal` | ❌ | Applies bold styling to text. |
+| `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
 
 ---
 
-## 6. Scrolling & Overflow
+## 4. Flexbox Layout
 
-Enables viewport scrolling when children overflow parent boundaries. These properties are **not animatable**.
-
-- `overflow` [`<overflow>`](#overflow-modes): Shorthand to configure horizontal and vertical overflow behavior.
-  - `overflow-x` [`<overflow>`](#overflow-modes): Horizontal overflow behavior (`visible`, `hidden`, `scroll`).
-  - `overflow-y` [`<overflow>`](#overflow-modes): Vertical overflow behavior (`visible`, `hidden`, `scroll`).
-- `scrollbar-width` [`<scrollbar-width>`](#scrollbar-widths): Controls scrollbar rendering footprint.
-- `scroll-speed` [`<integer>`](#integers): Shorthand to configure scrolling step speed on mouse/keyboard inputs.
-  - `scroll-speed-x` [`<integer>`](#integers): Step scroll distance horizontally on event triggers.
-  - `scroll-speed-y` [`<integer>`](#integers): Step scroll distance vertically on event triggers.
-
-<ExampleTabs src="/wasm/rtxui_example_horizontal_scroll.js">
-<template #source>
-
-<<< @/../example/horizontal_scroll.cpp
-
-</template>
-</ExampleTabs>
-
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `display` | `none \| block \| inline \| flex` | ❌ | Enables the flex layout engine or hides elements. |
+| `flex-direction` | `row \| column` | ❌ | Main formatting axis direction. |
+| `flex-grow` | [`<number>`](#value-types) |   | Portion of free space item claims along main axis. |
+| `flex-shrink` | [`<number>`](#value-types) |   | Factor determining how much item shrinks. |
 
 ---
 
-## 7. Transitions & Animations
+## 5. Scrolling & Overflow
 
-Properties to control styling animations and transitions.
-
-- `transition` `<transition>`: Configures transitions for properties (e.g. `transition: background-color 0.25s ease-in-out`). (not animatable)
-
----
-
-## 8. Positioning & Layering
-
-Used to position elements outside the standard flex flow. These properties are **not animatable**.
-
-- `position` `static | relative | absolute | fixed`: Configures the layout positioning mode.
-- `top` [`<length>`](#lengths): Vertical coordinate offset from the top boundary.
-- `bottom` [`<length>`](#lengths): Vertical coordinate offset from the bottom boundary.
-- `left` [`<length>`](#lengths): Horizontal coordinate offset from the left boundary.
-- `right` [`<length>`](#lengths): Horizontal coordinate offset from the right boundary.
-- `z-index` [`<integer>`](#integers): Determines the drawing order layer of overlapping elements (higher values paint on top).
-
-<ExampleTabs src="/wasm/rtxui_example_positioning.js">
-<template #source>
-
-<<< @/../example/positioning.cpp
-
-</template>
-</ExampleTabs>
-
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `overflow` | [`<overflow>`](#overflow-modes) | ❌ | Shorthand to configure horizontal & vertical overflow. |
+| `overflow-x` | [`<overflow>`](#overflow-modes) | ❌ | Horizontal layout overflow (`visible`, `hidden`, `scroll`). |
+| `overflow-y` | [`<overflow>`](#overflow-modes) | ❌ | Vertical layout overflow (`visible`, `hidden`, `scroll`). |
+| `scrollbar-width` | `auto \| none` | ❌ | `none` hides visual scrollbars while keeping list scrollable. |
+| `scroll-speed` | [`<integer>`](#value-types) | ❌ | Shorthand scroll step speed multiplier. |
+| `scroll-speed-x` | [`<integer>`](#value-types) | ❌ | Horizontal scroll step distance. |
+| `scroll-speed-y` | [`<integer>`](#value-types) | ❌ | Vertical scroll step distance. |
+| `scroll-behavior` | `auto \| smooth` | ❌ | Smooth scrolling transitions configuration. |
 
 ---
 
-## 9. Responsive Media Queries
+## 6. Transitions and Positioning
 
-Used to apply styles conditionally based on the terminal's viewport dimensions. Whenever the terminal window is resized, the queries are automatically re-evaluated.
-
-- `@media (feature: value) { ... rulesets ... }`
-  - **Supported Features**:
-    - `max-width` / `min-width` / `width` [`<integer>`](#integers): Matches when the terminal width (column count) meets the condition.
-    - `max-height` / `min-height` / `height` [`<integer>`](#integers): Matches when the terminal height (row count) meets the condition.
-  - **Combining clauses**: Multiple conditions can be combined using the `and` operator.
-  
-- **Example**:
-  ```css
-  /* Apply padding and large border color on desktop */
-  @media (min-width: 80) {
-    div {
-      border-color: green;
-      padding: 1 2;
-    }
-  }
-
-  /* Stack layouts and use compact sizing on small screens */
-  @media (max-width: 59) and (max-height: 15) {
-    div {
-      border-color: red;
-      padding: 0 1;
-    }
-  }
-  ```
-
-<ExampleTabs src="/wasm/rtxui_example_media.js">
-<template #source>
-
-<<< @/../example/media.cpp
-
-</template>
-</ExampleTabs>
-
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `transition` | `property duration timing-function` | ❌ | Shorthand (e.g. `transition: background-color 0.2s linear`). |
+| `position` | `static \| relative \| absolute \| fixed` | ❌ | Selects positioning flow model. |
+| `top` | [`<length>`](#value-types) | ❌ | Offset relative to top boundary. |
+| `bottom` | [`<length>`](#value-types) | ❌ | Offset relative to bottom boundary. |
+| `left` | [`<length>`](#length) | ❌ | Offset relative to left boundary. |
+| `right` | [`<length>`](#length) | ❌ | Offset relative to right boundary. |
+| `z-index` | [`<integer>`](#value-types) | ❌ | Determines rendering paint layers. |
 
 ---
 
 ## Value Types Reference
 
-This section details the formatting, syntax, and allowed values for the placeholders referenced above.
-
-### Integers
-
-An integer represents a whole number of characters/terminal cells.
-
-- **Format**: A positive or negative whole number.
-- **Examples**: `0`, `2`, `12`, `-1`
-
-### Numbers
-
-A standard floating-point or integer value.
-
-- **Format**: A decimal or integer number.
-- **Examples**: `1`, `2.5`, `0.5`
-
-### Lengths
-
-A length represents a layout dimension, which can be fixed in terminal cells or proportional to the parent container.
-
-- **Format**:
-  - Raw `<number>`: Interpreted as terminal cell count (e.g., `20`).
-  - `<number>%`: Interpreted as a percentage of the parent's layout dimension (e.g., `50%`).
+### Core Types
+*   **`<integer>`**: A whole number. E.g. `0`, `3`, `-2`.
+*   **`<number>`**: A decimal float. E.g. `0.25`, `2.0`.
+*   **`<length>`**: Dimension size. A raw number is character cells (e.g., `15`), whereas a percentage ends with `%` (e.g., `50%`).
 
 ### Colors
-
-Colors define foreground text, background cells, or border colors.
-
-- **Format**:
-  - **Hex Color Codes**: `#RGB`, `#RGBA`, `#RRGGBB`, or `#RRGGBBAA` (e.g., `#f0f`, `#ff3366`, `#00ff0088`).
-  - **RGB Function**: `rgb(R, G, B)` where `R`, `G`, `B` are integers from `0` to `255` (e.g., `rgb(255, 128, 0)`).
-  - **RGBA Function**: `rgba(R, G, B, A)` where `R`, `G`, `B` are integers from `0` to `255` and `A` is an opacity value from `0.0` to `1.0` (e.g., `rgba(0, 0, 255, 0.5)`).
-  - **Color Keywords**:
-    - `black`
-    - `silver`
-    - `gray` (or `grey`)
-    - `white`
-    - `maroon`
-    - `red`
-    - `purple`
-    - `fuchsia` (or `magenta`)
-    - `green`
-    - `lime`
-    - `olive`
-    - `yellow`
-    - `navy`
-    - `blue`
-    - `teal`
-    - `aqua` (or `cyan`)
-
-<ExampleTabs src="/wasm/rtxui_example_colors.js">
-<template #source>
-
-<<< @/../example/colors.cpp
-
-</template>
-</ExampleTabs>
-
+*   **Hex Codes**: `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA` (e.g., `#f0f`, `#00ff0088`).
+*   **RGB/RGBA**: `rgb(R, G, B)` and `rgba(R, G, B, A)` where color channels range from 0-255, and Alpha ranges 0.0-1.0.
+*   **Keywords**: `black`, `silver`, `gray`, `white`, `maroon`, `red`, `purple`, `fuchsia`, `green`, `lime`, `olive`, `yellow`, `navy`, `blue`, `teal`, `aqua`.
 
 ### Border Styles
-
-RTXUI supports 24 different character sets for border drawing.
-
-- `none`: No border line is painted.
-- `solid`: A standard thin border line.
-- `dashed`: Dashed Unicode lines.
-- `dotted`: Dotted border line.
-- `heavy` / `thick`: Bold Unicode borders.
-- `double`: Double-line borders.
-- `round` / `rounded`: Rounded corners.
-- `wide`: Double-width horizontal lines.
-- `tall`: Double-height vertical lines.
-- `ascii`: Standard `+`, `-`, `|` characters.
-- `blank`: Empty character placeholder border.
-- `shadow` / `3d`: 3D shadow blocks.
-- `shade-light`: Light shading block (`░`).
-- `shade-medium`: Medium shading block (`▒`).
-- `shade-dark`: Dark shading block (`▓`).
-- `squiggle` / `wave`: Wavy border line.
-- `double-horizontal`: Double lines horizontally, single vertical.
-- `double-vertical`: Double lines vertically, single horizontal.
-- `hkey`: Horizontal keycap style border.
-- `vkey`: Vertical keycap style border.
-- `inner`: Inner frame border style.
-- `outer`: Outer frame border style.
-- `panel`: Panel frame border style.
-
-<ExampleTabs src="/wasm/rtxui_example_borders.js">
-<template #source>
-
-<<< @/../example/borders.cpp
-
-</template>
-</ExampleTabs>
-
-
-### Overflow Modes
-
-Defines viewport behavior when child elements exceed the parent container boundaries.
-
-- **Format**:
-  - `visible`: Content renders outside the container with no clipping.
-  - `hidden`: Content is clipped to container bounds; scrolling is disabled.
-  - `scroll` (or `auto`): Content is clipped; scrollbars are displayed if needed, and scrolling is interactive.
-
-### Scrollbar Widths
-
-Controls the visibility and size layout of scrollbars.
-
-- **Format**:
-  - `auto`: Visual scrollbar track is rendered, taking up 1 cell width/height.
-  - `none`: Visual scrollbar is hidden, but the viewport remains scrollable.
-
-### Display Modes
-
-Controls the layout display formatting context of an element.
-
-- **Format**:
-  - `none`: The element and its descendants are not displayed and take up no layout space.
-  - `block`: Behaves as a block container.
-  - `inline`: Behaves as an inline container.
-  - `flex`: Behaves as a flexible box container.
-  - `<display-outside> <display-inside>`: A combination of behaviors, where `<display-outside>` is `block | inline` and `<display-inside>` is `flow | flex` (e.g., `block flow`).
+*   `none`, `solid`, `dashed`, `dotted`, `heavy`, `double`, `round`, `wide`, `tall`, `ascii`, `blank`, `shadow`, `shade-light` (`░`), `shade-medium` (`▒`), `shade-dark` (`▓`), `squiggle`, `double-horizontal`, `double-vertical`, `hkey`, `vkey`, `inner`, `outer`, `panel`.

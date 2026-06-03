@@ -29,6 +29,7 @@ struct PhysicalFragment {
   std::optional<Color> border_color_bottom;
   std::optional<Color> border_color_left;
 
+  float opacity = 1.0f;
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
   std::optional<bool> bold;
