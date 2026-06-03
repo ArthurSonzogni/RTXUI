@@ -1361,4 +1361,70 @@ TEST_CASE("Markdown Component rendering", "[component][markdown]") {
   CHECK(h1_el->style.foreground_color.has_value());
 }
 
+class ChildPropsTest : public rtxui::Component<ChildPropsTest> {
+ public:
+  struct Props {
+    int value = 0;
+  } props;
+
+  void InitReflection() override {
+    rtxui::Component<ChildPropsTest>::InitReflection();
+    Bind(props.value);
+  }
+
+  std::string_view view = R"(
+    <div>Value: {props.value}</div>
+  )";
+};
+
+class ParentPropsTest : public rtxui::Component<ParentPropsTest> {
+ public:
+  int parent_value = 10;
+
+  void InitReflection() override {
+    Import<ChildPropsTest>();
+    rtxui::Component<ParentPropsTest>::InitReflection();
+    Bind(parent_value);
+  }
+
+  std::string_view view = R"(
+    <ChildPropsTest id="child1" props.value="{parent_value}" />
+    <ChildPropsTest id="child2" value="{parent_value}" />
+  )";
+};
+
+TEST_CASE("Component props and two-way propagation", "[component][props]") {
+  auto parent = rtxui::Ref<ParentPropsTest>::New();
+  parent->Mount();
+  parent->Digest();
+
+  auto* root = parent->Root();
+  auto* child1_el = root->QuerySelector("#child1");
+  auto* child2_el = root->QuerySelector("#child2");
+  REQUIRE(child1_el != nullptr);
+  REQUIRE(child2_el != nullptr);
+
+  auto* child1 = const_cast<rtxui::ComponentBase*>(child1_el->component());
+  auto* child2 = const_cast<rtxui::ComponentBase*>(child2_el->component());
+  REQUIRE(child1 != nullptr);
+  REQUIRE(child2 != nullptr);
+
+  // Check initial properties
+  CHECK(parent->parent_value == 10);
+  CHECK(child1->GetInterpolatedValue("value") == "10");
+  CHECK(child2->GetInterpolatedValue("value") == "10");
+
+  // Simulate child1 modifying its prop (e.g. from user input)
+  child1->SetProperty("props.value", "42");
+  
+  // Running Digest to propagate reactive updates
+  parent->Digest();
+
+  // The parent should be updated to 42
+  CHECK(parent->parent_value == 42);
+
+  // child2 should also receive the updated value 42
+  CHECK(child2->GetInterpolatedValue("value") == "42");
+}
+
 }  // namespace
