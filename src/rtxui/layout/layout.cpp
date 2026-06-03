@@ -871,9 +871,15 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   int free_space = main_is_indefinite ? 0 : (container_main - total_main_base);
 
   if (free_space > 0 && total_grow > 0) {
+    int total_allocated = 0;
+    float current_grow_sum = 0.0f;
     for (auto& item : items) {
       if (item.grow > 0) {
-        int extra = (free_space * item.grow) / total_grow;
+        current_grow_sum += item.grow;
+        int next_cumulative =
+            static_cast<int>((free_space * current_grow_sum) / total_grow);
+        int extra = next_cumulative - total_allocated;
+        total_allocated = next_cumulative;
         item.main_resolved_size += extra;
       }
     }
@@ -882,12 +888,16 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         (is_row && box->style.overflow_x == Overflow::Scroll) ||
         (!is_row && box->style.overflow_y == Overflow::Scroll);
     if (!allow_overflow) {
+      int total_shrunk = 0;
+      float current_shrink_scaled_sum = 0.0f;
       for (auto& item : items) {
         if (item.shrink > 0) {
-          float shrink_factor =
-              (item.main_base_size * item.shrink) / total_shrink_scaled;
-          item.main_resolved_size +=
-              static_cast<int>(free_space * shrink_factor);
+          current_shrink_scaled_sum += (item.main_base_size * item.shrink);
+          int next_cumulative = static_cast<int>(
+              (free_space * current_shrink_scaled_sum) / total_shrink_scaled);
+          int shrink_amount = next_cumulative - total_shrunk;
+          total_shrunk = next_cumulative;
+          item.main_resolved_size += shrink_amount;
         }
       }
     }
