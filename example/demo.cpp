@@ -352,7 +352,7 @@ You can edit this **Markdown** text and see the results rendered in real-time!
           background-color: rgba(30, 59, 138, 0.75);
           color: #f8fafc;            /* Light gray text */
           border-bottom: hkey;
-          border-color: #000000;     /* Black bottom border */
+          border-color: #00c8ff;     /* Very bright blue bottom border */
           z-index: 50;
         }
         .header-row {
@@ -373,7 +373,7 @@ You can edit this **Markdown** text and see the results rendered in real-time!
           background-color: rgba(30, 59, 138, 0.75);
           color: #94a3b8;            /* Grayish blue text */
           border-top: hkey;
-          border-color: #000000;     /* Black top border */
+          border-color: #00c8ff;     /* Very bright blue top border */
           z-index: 50;
         }
         .footer-row {
