@@ -25,6 +25,8 @@
 #include "rtxui/style/style.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
+#include "rtxui/core/task_runner.hpp"
+
 
 namespace rtxui {
 
@@ -226,6 +228,7 @@ class ScreenImpl {
   std::unique_ptr<TerminalInputParser> parser_;
   Element* focused_element_ = nullptr;
   bool smooth_scroll_enabled_ = true;
+  task::TaskRunner task_runner_;
 
   struct RawTerminal {
     TerminalDevice* device_ = nullptr;
@@ -314,6 +317,8 @@ void ScreenImpl::Step() {
       }
     }
   }
+
+  task_runner_.RunUntilNextDelayedTask();
 
   if (TickTransitions(time::GetTimeMs())) {
     Draw();

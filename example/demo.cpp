@@ -971,9 +971,12 @@ You can edit this **Markdown** text and see the results rendered in real-time!
   )html";
 };
 
+#ifndef RTXUI_BENCHMARK
 int main() {
   auto app = Ref<App>::New();
   Screen screen(app);
   screen.Loop();
   return 0;
 }
+#endif
+

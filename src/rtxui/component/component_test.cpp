@@ -1428,3 +1428,27 @@ TEST_CASE("Component props and two-way propagation", "[component][props]") {
 }
 
 }  // namespace
+
+#define RTXUI_BENCHMARK
+#include "../../../example/demo.cpp"
+#include "rtxui/terminal/terminal_device.hpp"
+
+TEST_CASE("Add Todo Regression Test", "[demo]") {
+  auto app = Ref<App>::New();
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(120, 40);
+  Screen screen(app, device);
+
+  screen.Draw();
+  REQUIRE(app->todos.size() == 2);
+
+  app->AddTodo();
+  REQUIRE(app->todos.size() == 3);
+  CHECK(app->todos[2].appearing == true);
+
+  screen.Step();
+  CHECK(app->todos[2].appearing == false);
+
+  screen.Draw();
+}
+

@@ -16,6 +16,16 @@ auto TaskRunner::Current() -> TaskRunner* {
   return current_task_runner;
 }
 
+TaskRunner::TaskRunner() {
+  current_task_runner = this;
+}
+
+TaskRunner::~TaskRunner() {
+  if (current_task_runner == this) {
+    current_task_runner = nullptr;
+  }
+}
+
 auto TaskRunner::PostTask(Task task) -> void {
   queue_.PostTask(PendingTask{std::move(task)});
 }

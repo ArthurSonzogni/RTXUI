@@ -11,7 +11,8 @@ namespace task {
 
 class TaskRunner {
  public:
-  TaskRunner() = default;
+  TaskRunner();
+  ~TaskRunner();
 
   // Returns the task runner for the current thread.
   static auto Current() -> TaskRunner*;

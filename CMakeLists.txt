@@ -260,6 +260,13 @@ if(RTXUI_BUILD_EXAMPLES)
   target_link_libraries(rtxui_example_opacity PRIVATE rtxui)
 endif()
 
+option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" ON)
+if(RTXUI_BUILD_BENCHMARKS)
+  add_executable(rtxui_benchmark benchmarks/rtxui_benchmark.cpp)
+  target_link_libraries(rtxui_benchmark PRIVATE rtxui)
+endif()
+
+
 # An option to enable testing
 if(RTXUI_BUILD_TESTS)
   enable_testing()
