@@ -135,22 +135,29 @@ struct ElementState {
 };
 
 void CollectElementStates(Element* el,
-                          std::vector<int> path,
+                          std::vector<int>& path,
                           std::map<std::vector<int>, ElementState>& states) {
   if (!el) {
     return;
   }
-  states[path] = {el->scroll_x(), el->scroll_y(), el->focused(), el->style, el->active_transitions};
+  bool has_state = el->scroll_x() != 0 ||
+                   el->scroll_y() != 0 ||
+                   el->focused() ||
+                   !el->active_transitions.empty() ||
+                   !el->target_style.transitions.empty();
+  if (has_state) {
+    states[path] = {el->scroll_x(), el->scroll_y(), el->focused(), el->style, el->active_transitions};
+  }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
-    std::vector<int> child_path = path;
-    child_path.push_back(static_cast<int>(i));
-    CollectElementStates(el->ChildAt(i), child_path, states);
+    path.push_back(static_cast<int>(i));
+    CollectElementStates(el->ChildAt(i), path, states);
+    path.pop_back();
   }
 }
 
 void RestoreElementStates(
     Element* el,
-    std::vector<int> path,
+    std::vector<int>& path,
     const std::map<std::vector<int>, ElementState>& states) {
   if (!el) {
     return;
@@ -164,11 +171,12 @@ void RestoreElementStates(
     el->active_transitions = it->second.active_transitions;
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
-    std::vector<int> child_path = path;
-    child_path.push_back(static_cast<int>(i));
-    RestoreElementStates(el->ChildAt(i), child_path, states);
+    path.push_back(static_cast<int>(i));
+    RestoreElementStates(el->ChildAt(i), path, states);
+    path.pop_back();
   }
 }
+
 
 std::string Interpolate(std::string_view text,
                         ComponentBase* source,
@@ -318,58 +326,9 @@ void CssParseError(const css::Error& error, std::string_view css_string) {
   std::exit(1);
 }
 
-struct ParsedSelector {
-  std::string_view base;
-  std::vector<std::string_view> pseudo_classes;
-};
-
-ParsedSelector SplitSelector(std::string_view selector_str) {
-  while (!selector_str.empty() &&
-         std::isspace(static_cast<unsigned char>(selector_str.front()))) {
-    selector_str.remove_prefix(1);
-  }
-  while (!selector_str.empty() &&
-         std::isspace(static_cast<unsigned char>(selector_str.back()))) {
-    selector_str.remove_suffix(1);
-  }
-
-  ParsedSelector parsed;
-  size_t colon = selector_str.find(':');
-  if (colon == std::string_view::npos) {
-    parsed.base = selector_str;
-    return parsed;
-  }
-  parsed.base = selector_str.substr(0, colon);
-  while (!parsed.base.empty() &&
-         std::isspace(static_cast<unsigned char>(parsed.base.back()))) {
-    parsed.base.remove_suffix(1);
-  }
-
-  std::string_view rest = selector_str.substr(colon);
-  while (!rest.empty() && rest.front() == ':') {
-    rest.remove_prefix(1);
-    size_t next_colon = rest.find(':');
-    std::string_view pseudo = rest.substr(0, next_colon);
-    while (!pseudo.empty() &&
-           std::isspace(static_cast<unsigned char>(pseudo.front()))) {
-      pseudo.remove_prefix(1);
-    }
-    while (!pseudo.empty() &&
-           std::isspace(static_cast<unsigned char>(pseudo.back()))) {
-      pseudo.remove_suffix(1);
-    }
-    parsed.pseudo_classes.push_back(pseudo);
-    if (next_colon == std::string_view::npos) {
-      break;
-    }
-    rest = rest.substr(next_colon);
-  }
-  return parsed;
-}
-
 bool MatchSelector(const Element* element,
                    const Element* root,
-                   const ParsedSelector& selector,
+                   const css::ParsedSelector& selector,
                    bool check_pseudos) {
   bool base_match = false;
   if (selector.base == "self") {
@@ -394,20 +353,16 @@ bool MatchSelector(const Element* element,
   }
 
   if (check_pseudos) {
-    for (auto pseudo : selector.pseudo_classes) {
+    for (const auto& pseudo : selector.pseudo_classes) {
       if (pseudo == "hover" && !element->hovered()) {
-        return false;
-      }
-      if (pseudo == "active" && !element->active()) {
         return false;
       }
       if (pseudo == "focus" && !element->focused()) {
         return false;
       }
-    }
-  } else {
-    if (!selector.pseudo_classes.empty()) {
-      return false;
+      if (pseudo == "active" && !element->active()) {
+        return false;
+      }
     }
   }
 
@@ -416,7 +371,7 @@ bool MatchSelector(const Element* element,
 
 bool IsStyledByComponent(const Element* element,
                          const ComponentBase* component) {
-  if (!element) {
+  if (!element || !component) {
     return false;
   }
   if (element->component() == component) {
@@ -443,7 +398,7 @@ void ResolveStylesRecursive(Element* element,
           if (!css::EvaluateMediaQuery(ruleset.media_query)) {
             continue;
           }
-          auto parsed = SplitSelector(ruleset.selector);
+          const auto& parsed = ruleset.parsed_selector;
           if (!parsed.pseudo_classes.empty() &&
               MatchSelector(element, component->Root(), parsed, true)) {
             for (const auto& declaration : ruleset.declarations) {
@@ -458,7 +413,7 @@ void ResolveStylesRecursive(Element* element,
           if (!css::EvaluateMediaQuery(ruleset.media_query)) {
             continue;
           }
-          auto parsed = SplitSelector(ruleset.selector);
+          const auto& parsed = ruleset.parsed_selector;
           if (parsed.pseudo_classes.empty() &&
               MatchSelector(element, component->Root(), parsed, false)) {
             for (const auto& declaration : ruleset.declarations) {
@@ -501,7 +456,8 @@ void ComponentBase::Mount() {
 void ComponentBase::Render() {
   std::map<std::vector<int>, ElementState> saved_states;
   if (root_) {
-    CollectElementStates(root_.get(), {}, saved_states);
+    std::vector<int> path;
+    CollectElementStates(root_.get(), path, saved_states);
   }
 
   // Save projected slot children and clear parent pointers
@@ -610,7 +566,8 @@ void ComponentBase::Render() {
   CopyBaseStyles(root_.get());
 
   if (root_) {
-    RestoreElementStates(root_.get(), {}, saved_states);
+    std::vector<int> path;
+    RestoreElementStates(root_.get(), path, saved_states);
   }
 
   ResolveTargetStyles();
