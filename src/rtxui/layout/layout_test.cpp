@@ -815,4 +815,47 @@ TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
   CHECK(texture[1, 1].character == "F");
 }
 
+TEST_CASE("Layout: Flexbox Grow Cumulative Distribution", "[layout][flex][grow]") {
+  struct FlexGrowTest : Component<FlexGrowTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .row { display: flex; flex-direction: row; }
+          .item1 { flex-grow: 1.0; height: 1; background-color: rgb(255, 0, 0); }
+          .item2 { flex-grow: 2.5; height: 1; background-color: rgb(0, 255, 0); }
+          .item3 { flex-grow: 1.0; height: 1; background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="row">
+          <div class="item1">1</div>
+          <div class="item2">2</div>
+          <div class="item3">3</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexGrowTest>::New(), 40, 1);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  std::string color_layer = GetColorLayer(texture, true, colors);
+  int count_r = 0;
+  int count_g = 0;
+  int count_b = 0;
+  for (char c : color_layer) {
+    if (c == 'R') count_r++;
+    else if (c == 'G') count_g++;
+    else if (c == 'B') count_b++;
+  }
+
+  // Under cumulative allocation, the total width must be exactly 40.
+  CHECK(count_r + count_g + count_b == 40);
+}
+
 }  // namespace rtxui
+
