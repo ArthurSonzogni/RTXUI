@@ -894,5 +894,85 @@ TEST_CASE("Layout: Text node in flexbox row regression", "[layout][flex][regress
   }
 }
 
+TEST_CASE("Layout: Flexbox Shrink Cumulative Distribution", "[layout][flex][shrink]") {
+  struct FlexShrinkTest : Component<FlexShrinkTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .row { display: flex; flex-direction: row; }
+          .item1 { width: 20; flex-shrink: 1.0; height: 1; background-color: rgb(255, 0, 0); }
+          .item2 { width: 20; flex-shrink: 2.0; height: 1; background-color: rgb(0, 255, 0); }
+          .item3 { width: 20; flex-shrink: 1.0; height: 1; background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="row">
+          <div class="item1">1</div>
+          <div class="item2">2</div>
+          <div class="item3">3</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexShrinkTest>::New(), 40, 1);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  std::string color_layer = GetColorLayer(texture, true, colors);
+  int count_r = 0;
+  int count_g = 0;
+  int count_b = 0;
+  for (char c : color_layer) {
+    if (c == 'R') count_r++;
+    else if (c == 'G') count_g++;
+    else if (c == 'B') count_b++;
+  }
+
+  // Under cumulative allocation, total width of flex row must shrink from 60 (20+20+20) to exactly 40.
+  CHECK(count_r + count_g + count_b == 40);
+}
+
+TEST_CASE("Layout: Flexbox grow/shrink remainder allocated to final child", "[layout][flex][remainder]") {
+  SECTION("Grow remainder allocation") {
+    struct FlexRemainderGrowTest : Component<FlexRemainderGrowTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .row { display: flex; flex-direction: row; }
+            .item1 { flex-grow: 1.0; height: 1; }
+            .item2 { flex-grow: 1.0; height: 1; }
+            .item3 { flex-grow: 1.0; height: 1; }
+          </style>
+          <div class="row">
+            <div class="item1">1</div>
+            <div class="item2">2</div>
+            <div class="item3">3</div>
+          </div>
+        )html";
+      }
+    };
+
+    auto app = Ref<FlexRemainderGrowTest>::New();
+    auto texture = RenderComponent(app, 10, 1);
+    auto* item1 = app->Root()->QuerySelector(".item1");
+    auto* item2 = app->Root()->QuerySelector(".item2");
+    auto* item3 = app->Root()->QuerySelector(".item3");
+    REQUIRE(item1 != nullptr);
+    REQUIRE(item2 != nullptr);
+    REQUIRE(item3 != nullptr);
+
+    // 10 free space cannot be divided evenly by 3 grow values (3.33 each).
+    // The final child must receive the remainder, making the sizes exactly 3, 3, 4.
+    CHECK(item1->layout_width() == 3);
+    CHECK(item2->layout_width() == 3);
+    CHECK(item3->layout_width() == 4);
+  }
+}
+
 }  // namespace rtxui
 

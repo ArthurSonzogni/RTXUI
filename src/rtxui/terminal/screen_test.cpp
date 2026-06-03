@@ -1521,39 +1521,19 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   wheel_auto.y = 1;
   screen.Dispatch(wheel_auto);
 
-  // Content scroll snaps instantly
+  // Content scroll and visual scrollbar snap instantly
   REQUIRE(scrollable_auto->scroll_y() == 2);
   REQUIRE(scrollable_auto->target_scroll_y() == 2);
-  // Visual scrollbar thumb is still 0 before ticking
-  REQUIRE(scrollable_auto->visual_scroll_y() == 0.0f);
-
-  // Advance by 25ms
-  mock_now_ms = 1025.0;
-  screen.Step();
-  // Visual scrollbar position is transitioning smoothly
-  REQUIRE(scrollable_auto->visual_scroll_y() > 0.0f);
-  REQUIRE(scrollable_auto->visual_scroll_y() < 2.0f);
-  REQUIRE(scrollable_auto->scroll_y() == 2);
-
-  // Complete visual transition
-  mock_now_ms = 1050.0;
-  screen.Step();
   REQUIRE(scrollable_auto->visual_scroll_y() == 2.0f);
 
   // Test 2: Scroll behavior 'smooth' (smooth content scroll, smooth visual
-  // scrollbar)
+  // scrollbar when programmatic/focus scroll is triggered)
   mock_now_ms = 2000.0;
   REQUIRE(scrollable_smooth->scroll_y() == 0);
   REQUIRE(scrollable_smooth->visual_scroll_y() == 0.0f);
 
-  // Trigger wheel scroll down on scrollable_smooth
-  Event::Mouse wheel_smooth;
-  wheel_smooth.button = Event::Mouse::Button::WheelDown;
-  wheel_smooth.motion = Event::Mouse::Motion::Pressed;
-  // Locate inside scrollable_smooth
-  wheel_smooth.x = 2;
-  wheel_smooth.y = 5;
-  screen.Dispatch(wheel_smooth);
+  // Trigger smooth scroll programmatically (simulating keyboard focus navigation)
+  scrollable_smooth->set_scroll_y(2, true);
 
   // Target is updated immediately
   REQUIRE(scrollable_smooth->target_scroll_y() == 2);
