@@ -291,7 +291,6 @@ You can edit this **Markdown** text and see the results rendered in real-time!
       <div class="footer-bar">
         <div class="footer-row">
           <span class="footer-text">Fixed layout: sticky headers & footers frame the viewport</span>
-          <span class="footer-keys">[Ctrl+C] Quit App  [Tab] Cycle Focus</span>
         </div>
       </div>
     </div>
