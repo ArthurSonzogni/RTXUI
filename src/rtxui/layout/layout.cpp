@@ -873,11 +873,24 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   if (free_space > 0 && total_grow > 0) {
     int total_allocated = 0;
     float current_grow_sum = 0.0f;
+    int items_to_grow = 0;
     for (auto& item : items) {
       if (item.grow > 0) {
-        current_grow_sum += item.grow;
-        int next_cumulative =
-            static_cast<int>((free_space * current_grow_sum) / total_grow);
+        items_to_grow++;
+      }
+    }
+    int grown_count = 0;
+    for (auto& item : items) {
+      if (item.grow > 0) {
+        grown_count++;
+        int next_cumulative = 0;
+        if (grown_count == items_to_grow) {
+          next_cumulative = free_space;
+        } else {
+          current_grow_sum += item.grow;
+          next_cumulative =
+              static_cast<int>((free_space * current_grow_sum) / total_grow);
+        }
         int extra = next_cumulative - total_allocated;
         total_allocated = next_cumulative;
         item.main_resolved_size += extra;
@@ -890,11 +903,24 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     if (!allow_overflow) {
       int total_shrunk = 0;
       float current_shrink_scaled_sum = 0.0f;
+      int items_to_shrink = 0;
       for (auto& item : items) {
         if (item.shrink > 0) {
-          current_shrink_scaled_sum += (item.main_base_size * item.shrink);
-          int next_cumulative = static_cast<int>(
-              (free_space * current_shrink_scaled_sum) / total_shrink_scaled);
+          items_to_shrink++;
+        }
+      }
+      int shrunk_count = 0;
+      for (auto& item : items) {
+        if (item.shrink > 0) {
+          shrunk_count++;
+          int next_cumulative = 0;
+          if (shrunk_count == items_to_shrink) {
+            next_cumulative = free_space;
+          } else {
+            current_shrink_scaled_sum += (item.main_base_size * item.shrink);
+            next_cumulative = static_cast<int>(
+                (free_space * current_shrink_scaled_sum) / total_shrink_scaled);
+          }
           int shrink_amount = next_cumulative - total_shrunk;
           total_shrunk = next_cumulative;
           item.main_resolved_size += shrink_amount;

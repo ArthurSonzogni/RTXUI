@@ -895,15 +895,11 @@ TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
   CHECK(item1->layout_width() == 10);
   CHECK(item2->layout_width() == 10);
 
-  // Advance to t = 1500ms (50% progress): item2 flex-grow is 2.0.
-  // total grow = 3.0. item1 gets 1/3 (base 6 + 2 extra = 8), item2 gets 2/3
-  // (base 6 + 5 extra = 11).
+  // (base 6 + 6 extra = 12).
   mock_now_ms = 1500.0;
   screen.Step();
   CHECK(item1->layout_width() == 8);
-  CHECK(item2->layout_width() == 11);
-
-  // Advance to t = 2000ms (100% progress): item2 flex-grow is 3.0.
+  CHECK(item2->layout_width() == 12);
   // total grow = 4.0. item1 gets 1/4 (base 6 + 2 extra = 8), item2 gets 3/4
   // (base 6 + 6 extra = 12).
   mock_now_ms = 2000.0;
