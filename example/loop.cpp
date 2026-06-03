@@ -42,11 +42,27 @@ class LoopApp : public Component<LoopApp> {
         self {
           display: block;
           padding: 1;
+          background-color: rgb(15, 23, 42);
+          color: white;
         }
         .container {
           display: flex;
           flex-direction: column;
           gap: 1;
+        }
+        button {
+          background-color: rgb(30, 41, 59);
+          color: white;
+          border: tall;
+          border-color: rgb(71, 85, 105);
+          padding-left: 1;
+          padding-right: 1;
+          width: 14;
+          text-align: center;
+        }
+        button:hover {
+          background-color: rgb(59, 130, 246);
+          border-color: rgb(96, 165, 250);
         }
         .palette {
           display: flex;

@@ -255,6 +255,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_markdown example/markdown.cpp)
   target_link_libraries(rtxui_example_markdown PRIVATE rtxui_lib)
+
+  add_executable(rtxui_example_opacity example/opacity.cpp)
+  target_link_libraries(rtxui_example_opacity PRIVATE rtxui)
 endif()
 
 # An option to enable testing

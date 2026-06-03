@@ -98,9 +98,7 @@ class BordersDemo : public Component<BordersDemo> {
         self {
           display: block;
           padding: 1;
-          border: double;
-          border-color: rgb(50, 100, 200);
-          background-color: rgb(5, 10, 30);
+          background-color: rgb(15, 23, 42);
           color: white;
           width: 100%;
           height: 100%;

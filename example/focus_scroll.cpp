@@ -66,8 +66,8 @@ class FocusScrollDemo : public Component<FocusScrollDemo> {
         background-color: rgb(30, 41, 59, 0.8);
       }
       .list-item:focus {
-        border-color: rgb(16, 185, 129); /* Emerald Green focus */
-        background-color: rgb(6, 95, 70, 0.5); /* Emerald background tint */
+        border-color: rgb(59, 130, 246); /* Blue focus */
+        background-color: rgb(30, 58, 138, 0.5); /* Blue background tint */
         color: rgb(255, 255, 255);
       }
     </style>

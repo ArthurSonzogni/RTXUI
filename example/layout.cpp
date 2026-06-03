@@ -47,9 +47,9 @@ class LayoutDemo : public Component<LayoutDemo> {
         <p>This layout uses nested custom Box components inside a flex row container.</p>
         
         <div class="flex-row">
-          <Box text="Red Box" color="red"></Box>
-          <Box text="Green Box" color="green"></Box>
-          <Box text="Blue Box" color="blue"></Box>
+          <Box text="Blue-300" color="rgb(147, 197, 253)"></Box>
+          <Box text="Blue-500" color="rgb(59, 130, 246)"></Box>
+          <Box text="Blue-700" color="rgb(29, 78, 216)"></Box>
         </div>
       </div>
 
@@ -57,13 +57,11 @@ class LayoutDemo : public Component<LayoutDemo> {
         self {
           display: block;
           padding: 1;
-          border: tall;
-          border-color: magenta;
-          background-color: rgb(10, 10, 10);
+          background-color: rgb(15, 23, 42);
           color: white;
         }
         h1 {
-          color: yellow;
+          color: rgb(59, 130, 246);
           font-weight: bold;
         }
         p {

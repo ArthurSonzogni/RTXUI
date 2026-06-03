@@ -1,66 +1,106 @@
-# Value Interpolation
+# Value Interpolation & Data Binding
 
-RTXUI uses compile-time reflection to track class variables as reactive state. These variables are referenced in HTML templates using curly braces `{}`.
+RTXUI matches standard web templates by using compile-time reflection to bind C++ variables directly into your HTML templates.
 
-## State Variables
+---
 
-Public members in a component class are registered using the `Bind()` macro in the constructor.
+## 1. Text Interpolation
+
+To project dynamic content into your text nodes, wrap the C++ variable or member name in curly braces `{}`. During compilation and render ticks, the values are automatically formatted as strings and injected into the DOM:
+
+```html
+<span>Welcome back, {username}!</span>
+<div>Current Score: {score}</div>
+```
+
+---
+
+## 2. Binding Member Fields
+
+All public member variables inside a component class must be registered in the reflection system inside the `InitReflection()` method:
 
 ```cpp
-class CounterApp : public Component<CounterApp> {
+#include <rtxui/component/component.hpp>
+
+class ProfileApp : public rtxui::Component<ProfileApp> {
  public:
-  int count = 0;
+  std::string username = "Alice";
+  int score = 42;
 
-  std::string_view view = R"html(
-      <div>Count: {count}</div>
+  void InitReflection() override {
+    ComponentBase::InitReflection();
+    Bind(username);
+    Bind(score);
+  }
+
+  std::string_view Setup() override {
+    return R"html(
+      <div class="card">
+        <span>Username: {username}</span>
+        <span>Score: {score}</span>
+      </div>
     )html";
-
-  CounterApp() {
-    Bind(count);
   }
 };
 ```
 
-## Computed Properties
+---
 
-You can also bind to C++ methods. This is useful for derived data or complex logic that shouldn't live in the template. Use the `Bind()` macro to register a `const` member function.
+## 3. Computed Properties & Methods
 
+You can also bind dynamic evaluations to C++ member functions. This is useful for derived data or complex logic that shouldn't live in the template. Use the same `Bind()` method to register a `const` member function:
 
 ```cpp
-class CounterApp : public Component<CounterApp> {
+class CounterApp : public rtxui::Component<CounterApp> {
  public:
-  int count = 0;
+  int count = 10;
 
   int double_count() const { return count * 2; }
 
-  std::string_view view = R"html(
+  void InitReflection() override {
+    ComponentBase::InitReflection();
+    Bind(count);
+    Bind(double_count);
+  }
+
+  std::string_view Setup() override {
+    return R"html(
       <div>
         <span>Count: {count}</span>
         <span>Double: {double_count}</span>
       </div>
     )html";
-
-  CounterApp() {
-    Bind(count);
-    Bind(double_count);
   }
 };
 ```
 
-## Attribute Interpolation
+---
 
-Interpolation works inside attribute values as well. This is the **React-style** of data binding.
+## 4. Attribute Interpolation
 
+You can bind dynamic variables to HTML attributes (such as element classes, check statuses, or dimensions) in two styles:
+
+### React-style Binding
+Include curly braces around the C++ variable name inside the attribute's double-quotes:
 ```html
 <div class="box {color_class}"></div>
-<div border-color="{is_active ? 'blue' : 'gray'}"></div>
+<checkbox checked="{is_active}">Active Option</checkbox>
 ```
 
-Alternatively, you can use the **Vue-style** shorthand:
-
+### Vue-style Binding
+Prefix the attribute name with a colon `:` and pass the raw variable name directly as the value:
 ```html
 <div :class="color_class"></div>
+<checkbox :checked="is_active">Active Option</checkbox>
 ```
+
+Both styles perform the same underlying reactive linking, so you can choose the format you prefer.
+
+---
+
+## Interactive Demo
+
+Below is the interactive tab view for a live counter demonstrating simple value binding:
 
 <ExampleTabs src="/wasm/rtxui_example_counter.js">
 <template #source>

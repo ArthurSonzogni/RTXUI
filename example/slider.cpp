@@ -34,8 +34,6 @@ class SliderDemo : public Component<SliderDemo> {
           padding: 1;
           background-color: rgb(15, 23, 42);
           color: white;
-          border: tall;
-          border-color: rgb(56, 189, 248);
         }
         .container {
           display: block;
@@ -67,7 +65,7 @@ class SliderDemo : public Component<SliderDemo> {
         }
         .value {
           font-weight: bold;
-          color: rgb(244, 63, 94);
+          color: rgb(56, 189, 248);
         }
       </style>
     )html";

@@ -76,8 +76,6 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           height: 100%;
           overflow-y: scroll;
           scroll-speed: 1;
-          border: tall;
-          border-color: rgb(29, 78, 216);
           background-color: rgb(15, 23, 42);
           color: rgb(241, 245, 249);
           padding: 1;

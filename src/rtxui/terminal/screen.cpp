@@ -517,7 +517,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 }
 
                 if (new_y != curr_y) {
-                  curr->set_scroll_y(new_y, smooth_scroll_enabled_);
+                  curr->set_scroll_y(new_y, false);
                   Draw();
                   return;
                 }
@@ -539,7 +539,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 }
 
                 if (new_x != curr_x) {
-                  curr->set_scroll_x(new_x, smooth_scroll_enabled_);
+                  curr->set_scroll_x(new_x, false);
                   Draw();
                   return;
                 }
@@ -680,7 +680,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
               int delta = (event == Event::ArrowLeft()) ? -speed : speed;
               int new_x = std::clamp(curr_x + delta, 0, max_scroll);
               if (new_x != curr_x) {
-                curr->set_scroll_x(new_x, smooth_scroll_enabled_);
+                curr->set_scroll_x(new_x, false);
                 Draw();
                 return;
               }
@@ -708,7 +708,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
               int new_y = std::clamp(curr_y + delta, 0, max_scroll);
               if (new_y != curr_y) {
-                curr->set_scroll_y(new_y, smooth_scroll_enabled_);
+                curr->set_scroll_y(new_y, false);
                 Draw();
                 return;
               }
@@ -730,7 +730,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
           int delta = (event == Event::ArrowLeft()) ? -speed : speed;
           int new_x = std::clamp(curr_x + delta, 0, max_scroll);
           if (new_x != curr_x) {
-            scroll_frag->dom_node->set_scroll_x(new_x, smooth_scroll_enabled_);
+            scroll_frag->dom_node->set_scroll_x(new_x, false);
             Draw();
             return;
           }
@@ -755,7 +755,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
           int new_y = std::clamp(curr_y + delta, 0, max_scroll);
           if (new_y != curr_y) {
-            scroll_frag->dom_node->set_scroll_y(new_y, smooth_scroll_enabled_);
+            scroll_frag->dom_node->set_scroll_y(new_y, false);
             Draw();
             return;
           }

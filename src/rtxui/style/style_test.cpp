@@ -434,4 +434,15 @@ TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle",
     CHECK(style.margin_right_auto);
     CHECK(style.margin.right == 0);
   }
+
+  SECTION("opacity property") {
+    rtxui::ApplyStyle(style, {"opacity", "0.5"});
+    CHECK(style.opacity == 0.5f);
+
+    rtxui::ApplyStyle(style, {"opacity", "1.5"});
+    CHECK(style.opacity == 1.0f);
+
+    rtxui::ApplyStyle(style, {"opacity", "-0.5"});
+    CHECK(style.opacity == 0.0f);
+  }
 }

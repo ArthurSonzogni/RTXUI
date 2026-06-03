@@ -857,5 +857,42 @@ TEST_CASE("Layout: Flexbox Grow Cumulative Distribution", "[layout][flex][grow]"
   CHECK(count_r + count_g + count_b == 40);
 }
 
+TEST_CASE("Layout: Text node in flexbox row regression", "[layout][flex][regression]") {
+  SECTION("Wrapped text inside span does not throw") {
+    struct FlexTextSpanTest : Component<FlexTextSpanTest> {
+      std::string_view Setup() {
+        Import<div>();
+        Import<span>();
+        return R"html(
+          <style>
+            .row { display: flex; flex-direction: row; }
+          </style>
+          <div class="row">
+            <span>Valid text</span>
+          </div>
+        )html";
+      }
+    };
+    CHECK_NOTHROW(RenderComponent(Ref<FlexTextSpanTest>::New(), 20, 1));
+  }
+
+  SECTION("Direct text child of flexbox throws layout exception") {
+    struct FlexDirectTextTest : Component<FlexDirectTextTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .row { display: flex; flex-direction: row; }
+          </style>
+          <div class="row">
+            Invalid direct text
+          </div>
+        )html";
+      }
+    };
+    CHECK_THROWS_AS(RenderComponent(Ref<FlexDirectTextTest>::New(), 20, 1), std::runtime_error);
+  }
+}
+
 }  // namespace rtxui
 

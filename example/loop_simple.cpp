@@ -38,12 +38,21 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
         </ul>
       </div>
       <style>
+        self {
+          display: block;
+          padding: 1;
+          background-color: rgb(15, 23, 42);
+          color: white;
+        }
         .container { padding: 1; }
         .input-row { display: flex; gap: 1; margin-bottom: 1; }
-        input { border: solid; width: 20; padding: 0 1; }
-        .item-row { display: flex; gap: 2; align-items: center; }
+        input { border: tall; border-color: rgb(71, 85, 105); background-color: rgb(30, 41, 59); color: white; width: 20; padding: 0 1; }
+        button { background-color: rgb(30, 41, 59); color: white; border: tall; border-color: rgb(71, 85, 105); padding: 0 1; }
+        button:hover { background-color: rgb(59, 130, 246); border-color: rgb(96, 165, 250); }
+        .item-row { display: flex; gap: 2; align-items: center; margin-top: 1; }
         .fruit-name { min-width: 15; }
-        .item-row button { border: solid; border-color: red; color: red; padding: 0 1; }
+        .item-row button { border: tall; border-color: rgb(239, 68, 68); color: rgb(239, 68, 68); background-color: transparent; padding: 0 1; }
+        .item-row button:hover { background-color: rgb(239, 68, 68); color: white; border-color: rgb(248, 113, 113); }
       </style>
     )html";
 

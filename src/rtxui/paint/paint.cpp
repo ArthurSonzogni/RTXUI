@@ -380,11 +380,21 @@ void PaintImpl(const PhysicalFragment* frag,
                bool inherited_underlined_double,
                bool inherited_strikethrough,
                bool inherited_blink,
-               ClipRect clip) {
+               ClipRect clip,
+               float inherited_opacity) {
   int abs_x = off_x;
   int abs_y = off_y;
   int w = frag->width;
   int h = frag->height;
+
+  float current_opacity = inherited_opacity * frag->opacity;
+
+  auto resolve_cell = [](Cell& cell) {
+    if (cell.inverted) {
+      std::swap(cell.background_color, cell.foreground_color);
+      cell.inverted = false;
+    }
+  };
 
   if (frag->dom_node) {
     const_cast<Element*>(frag->dom_node)->set_absolute_position(abs_x, abs_y);
@@ -407,6 +417,7 @@ void PaintImpl(const PhysicalFragment* frag,
   // 0. Draw Background
   if (frag->background_color) {
     Color new_bg = frag->background_color.value();
+    new_bg.a = static_cast<uint8_t>(new_bg.a * current_opacity);
     if (new_bg.a > 0) {
       for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
@@ -415,8 +426,9 @@ void PaintImpl(const PhysicalFragment* frag,
           if (tex_x >= 0 && tex_x < texture.width() && tex_y >= 0 &&
               tex_y < texture.height() && clip.Contains(tex_x, tex_y)) {
             auto& cell = texture[tex_x, tex_y];
-            Color under_bg = cell.background_color;
-            cell.background_color = Blend(new_bg, under_bg);
+            resolve_cell(cell);
+            cell.background_color = Blend(new_bg, cell.background_color);
+            cell.foreground_color = Blend(new_bg, cell.foreground_color);
           }
         }
       }
@@ -434,6 +446,11 @@ void PaintImpl(const PhysicalFragment* frag,
     Color left_border_color =
         frag->border_color_left.value_or(current_foreground_color);
 
+    top_border_color.a = static_cast<uint8_t>(top_border_color.a * current_opacity);
+    right_border_color.a = static_cast<uint8_t>(right_border_color.a * current_opacity);
+    bottom_border_color.a = static_cast<uint8_t>(bottom_border_color.a * current_opacity);
+    left_border_color.a = static_cast<uint8_t>(left_border_color.a * current_opacity);
+
     auto set_char = [&](int x, int y, const char* c, uint8_t mode,
                         const Color& border_color) {
       if (c == nullptr || *c == '\0' || *c == ' ') {
@@ -442,6 +459,7 @@ void PaintImpl(const PhysicalFragment* frag,
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
           clip.Contains(x, y)) {
         auto& cell = texture[x, y];
+        resolve_cell(cell);
         cell.character = c;
 
         Color inner_bg = current_background_color;
@@ -452,7 +470,7 @@ void PaintImpl(const PhysicalFragment* frag,
             cell.foreground_color = Blend(border_color, cell.background_color);
             break;
           case 1:  // Parent
-            cell.foreground_color = border_color;
+            cell.foreground_color = Blend(border_color, outer_bg);
             cell.background_color = outer_bg;
             break;
           case 2:  // ReverseOuter
@@ -517,8 +535,10 @@ void PaintImpl(const PhysicalFragment* frag,
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
           clip.Contains(x, y)) {
         auto& cell = texture[x, y];
+        resolve_cell(cell);
         cell.character = std::string(g.text);
         Color fg = current_foreground_color;
+        fg.a = static_cast<uint8_t>(fg.a * current_opacity);
         Color bg = cell.background_color;
         cell.foreground_color = Blend(fg, bg);
         cell.bold = current_bold;
@@ -593,6 +613,9 @@ void PaintImpl(const PhysicalFragment* frag,
       Color thumb_bg = kDefaultScrollbarThumbColor;
       Color track_bg = kDefaultScrollbarTrackColor;
 
+      thumb_bg.a = static_cast<uint8_t>(thumb_bg.a * current_opacity);
+      track_bg.a = static_cast<uint8_t>(track_bg.a * current_opacity);
+
       const char* lower_blocks[] = {
           " ",
           " ",  // U+2581
@@ -609,6 +632,7 @@ void PaintImpl(const PhysicalFragment* frag,
         int y = track_y_start + i;
         if (y >= 0 && y < texture.height() && clip.Contains(scrollbar_x, y)) {
           auto& cell = texture[scrollbar_x, y];
+          resolve_cell(cell);
 
           int cell_start = i * 8;
           int cell_end = (i + 1) * 8;
@@ -619,27 +643,27 @@ void PaintImpl(const PhysicalFragment* frag,
 
           if (start_eighth >= end_eighth) {
             cell.character = " ";
-            cell.background_color = track_bg;
+            cell.background_color = Blend(track_bg, cell.background_color);
           } else {
             int t_start = start_eighth - cell_start;
             int t_end = end_eighth - cell_start;
 
             if (t_start == 0 && t_end == 8) {
               cell.character = " ";
-              cell.background_color = thumb_bg;
+              cell.background_color = Blend(thumb_bg, cell.background_color);
             } else if (t_start > 0 && t_end == 8) {
               int thumb_len = 8 - t_start;
               cell.character = lower_blocks[thumb_len];
-              cell.background_color = track_bg;
-              cell.foreground_color = thumb_bg;
+              cell.background_color = Blend(track_bg, cell.background_color);
+              cell.foreground_color = Blend(thumb_bg, cell.background_color);
             } else if (t_start == 0 && t_end < 8) {
               int track_len = 8 - t_end;
               cell.character = lower_blocks[track_len];
-              cell.background_color = thumb_bg;
-              cell.foreground_color = track_bg;
+              cell.background_color = Blend(thumb_bg, cell.background_color);
+              cell.foreground_color = Blend(track_bg, cell.background_color);
             } else {
               cell.character = " ";
-              cell.background_color = thumb_bg;
+              cell.background_color = Blend(thumb_bg, cell.background_color);
             }
           }
         }
@@ -687,6 +711,9 @@ void PaintImpl(const PhysicalFragment* frag,
       Color thumb_bg = kDefaultScrollbarThumbColor;
       Color track_bg = kDefaultScrollbarTrackColor;
 
+      thumb_bg.a = static_cast<uint8_t>(thumb_bg.a * current_opacity);
+      track_bg.a = static_cast<uint8_t>(track_bg.a * current_opacity);
+
       const char* left_blocks[] = {
           " ",
           "▏",  // U+258F
@@ -703,6 +730,7 @@ void PaintImpl(const PhysicalFragment* frag,
         int x = track_x_start + i;
         if (x >= 0 && x < texture.width() && clip.Contains(x, scrollbar_y)) {
           auto& cell = texture[x, scrollbar_y];
+          resolve_cell(cell);
 
           int cell_start = i * 8;
           int cell_end = (i + 1) * 8;
@@ -713,25 +741,25 @@ void PaintImpl(const PhysicalFragment* frag,
 
           if (start_eighth >= end_eighth) {
             cell.character = " ";
-            cell.background_color = track_bg;
+            cell.background_color = Blend(track_bg, cell.background_color);
           } else {
             int t_start = start_eighth - cell_start;
             int t_end = end_eighth - cell_start;
 
             if (t_start == 0 && t_end == 8) {
               cell.character = " ";
-              cell.background_color = thumb_bg;
+              cell.background_color = Blend(thumb_bg, cell.background_color);
             } else if (t_start > 0 && t_end == 8) {
               cell.character = left_blocks[t_start];
-              cell.background_color = thumb_bg;
-              cell.foreground_color = track_bg;
+              cell.background_color = Blend(thumb_bg, cell.background_color);
+              cell.foreground_color = Blend(track_bg, cell.background_color);
             } else if (t_start == 0 && t_end < 8) {
               cell.character = left_blocks[t_end];
-              cell.background_color = track_bg;
-              cell.foreground_color = thumb_bg;
+              cell.background_color = Blend(track_bg, cell.background_color);
+              cell.foreground_color = Blend(thumb_bg, cell.background_color);
             } else {
               cell.character = " ";
-              cell.background_color = thumb_bg;
+              cell.background_color = Blend(thumb_bg, cell.background_color);
             }
           }
         }
@@ -829,7 +857,8 @@ void PaintImpl(const PhysicalFragment* frag,
               child_accum_scroll_x, child_accum_scroll_y,
               current_foreground_color, current_background_color, current_bold,
               current_underlined, current_underlined_double,
-              current_strikethrough, current_blink, child_clip_to_pass);
+              current_strikethrough, current_blink, child_clip_to_pass,
+              current_opacity);
   }
 }
 }  // namespace
@@ -840,7 +869,7 @@ void Paint(const PhysicalFragment* frag,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, 0, 0, Color::RGB(255, 255, 255),
             Color::RGB(0, 0, 0), false, false, false, false, false,
-            ClipRect{0, 0, texture.width(), texture.height()});
+            ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
 }
 
 }  // namespace rtxui

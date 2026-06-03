@@ -121,7 +121,7 @@ class ColorDemo : public Component<ColorDemo> {
         self {
           display: block;
           padding: 2;
-          background-color: #111118;
+          background-color: #0f172a;
           color: #eee;
           height: 22;
           overflow-y: scroll;

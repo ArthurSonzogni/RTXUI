@@ -262,6 +262,7 @@ void Element::TriggerTransitions(double current_time_ms) {
   style.height = old_style.height;
   style.flex_grow = old_style.flex_grow;
   style.flex_shrink = old_style.flex_shrink;
+  style.opacity = old_style.opacity;
 
   auto HandleColorProperty = [&](std::string_view prop_name,
                                  std::optional<Color>& current_val,
@@ -385,6 +386,7 @@ void Element::TriggerTransitions(double current_time_ms) {
   HandleFloatProperty("flex-grow", style.flex_grow, target_style.flex_grow);
   HandleFloatProperty("flex-shrink", style.flex_shrink,
                       target_style.flex_shrink);
+  HandleFloatProperty("opacity", style.opacity, target_style.opacity);
 }
 
 bool Element::TickTransitions(double current_time_ms) {
@@ -548,6 +550,8 @@ bool Element::TickTransitions(double current_time_ms) {
           style.flex_grow = val;
         } else if (prop_name == "flex-shrink") {
           style.flex_shrink = val;
+        } else if (prop_name == "opacity") {
+          style.opacity = val;
         }
         updated = true;
       } else if (trans.type == ActiveTransition::Type::Length) {
@@ -575,7 +579,7 @@ bool Element::TickTransitions(double current_time_ms) {
 }
 
 void Element::set_scroll_y(int y, bool smooth) {
-  if (!smooth) {
+  if (!smooth || style.scroll_behavior != ScrollBehavior::Smooth) {
     scroll_y_ = y;
     target_scroll_y_ = y;
     anim_scroll_y_ = static_cast<float>(y);
@@ -585,36 +589,21 @@ void Element::set_scroll_y(int y, bool smooth) {
     visual_target_scroll_y_ = static_cast<float>(y);
     visual_scroll_y_animating_ = false;
   } else {
-    if (style.scroll_behavior == ScrollBehavior::Smooth) {
-      if (y == target_scroll_y_) {
-        return;
-      }
-      start_scroll_y_ = anim_scroll_y_;
-      target_scroll_y_ = y;
-      scroll_y_anim_start_time_ = time::GetTimeMs();
-      scroll_y_animating_ = true;
-
-      visual_target_scroll_y_ = static_cast<float>(y);
-      visual_scroll_y_animating_ = false;
-    } else {
-      if (y == scroll_y_) {
-        return;
-      }
-      scroll_y_ = y;
-      target_scroll_y_ = y;
-      anim_scroll_y_ = static_cast<float>(y);
-      scroll_y_animating_ = false;
-
-      visual_start_scroll_y_ = visual_scroll_y_;
-      visual_target_scroll_y_ = static_cast<float>(y);
-      visual_scroll_y_anim_start_time_ = time::GetTimeMs();
-      visual_scroll_y_animating_ = true;
+    if (y == target_scroll_y_) {
+      return;
     }
+    start_scroll_y_ = anim_scroll_y_;
+    target_scroll_y_ = y;
+    scroll_y_anim_start_time_ = time::GetTimeMs();
+    scroll_y_animating_ = true;
+
+    visual_target_scroll_y_ = static_cast<float>(y);
+    visual_scroll_y_animating_ = false;
   }
 }
 
 void Element::set_scroll_x(int x, bool smooth) {
-  if (!smooth) {
+  if (!smooth || style.scroll_behavior != ScrollBehavior::Smooth) {
     scroll_x_ = x;
     target_scroll_x_ = x;
     anim_scroll_x_ = static_cast<float>(x);
@@ -624,31 +613,16 @@ void Element::set_scroll_x(int x, bool smooth) {
     visual_target_scroll_x_ = static_cast<float>(x);
     visual_scroll_x_animating_ = false;
   } else {
-    if (style.scroll_behavior == ScrollBehavior::Smooth) {
-      if (x == target_scroll_x_) {
-        return;
-      }
-      start_scroll_x_ = anim_scroll_x_;
-      target_scroll_x_ = x;
-      scroll_x_anim_start_time_ = time::GetTimeMs();
-      scroll_x_animating_ = true;
-
-      visual_target_scroll_x_ = static_cast<float>(x);
-      visual_scroll_x_animating_ = false;
-    } else {
-      if (x == scroll_x_) {
-        return;
-      }
-      scroll_x_ = x;
-      target_scroll_x_ = x;
-      anim_scroll_x_ = static_cast<float>(x);
-      scroll_x_animating_ = false;
-
-      visual_start_scroll_x_ = visual_scroll_x_;
-      visual_target_scroll_x_ = static_cast<float>(x);
-      visual_scroll_x_anim_start_time_ = time::GetTimeMs();
-      visual_scroll_x_animating_ = true;
+    if (x == target_scroll_x_) {
+      return;
     }
+    start_scroll_x_ = anim_scroll_x_;
+    target_scroll_x_ = x;
+    scroll_x_anim_start_time_ = time::GetTimeMs();
+    scroll_x_animating_ = true;
+
+    visual_target_scroll_x_ = static_cast<float>(x);
+    visual_scroll_x_animating_ = false;
   }
 }
 

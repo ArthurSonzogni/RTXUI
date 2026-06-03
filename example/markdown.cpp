@@ -63,17 +63,71 @@ You can style the generated HTML tags using the `stylesheet` property.
 )md";
 
   std::string custom_css = R"css(
-    h1 { color: #3b82f6; border-bottom: solid; border-color: #3b82f6; margin-bottom: 1; }
-    h2 { color: #60a5fa; margin-top: 1; border-bottom: solid; border-color: #334155; }
-    h3 { color: #93c5fd; }
-    strong { color: #facc15; }
-    em { color: #a78bfa; }
-    code { background-color: #1e293b; color: #94a3b8; padding-left: 1; padding-right: 1; }
-    pre { background-color: #0f172a; border: solid; border-color: #334155; padding: 1; margin: 1; display: block; }
-    blockquote { border-left: heavy; border-color: #4b5563; padding-left: 2; font-style: italic; color: #9ca3af; margin-top: 1; margin-bottom: 1; }
-    ul, ol { margin-left: 2; color: #d1d5db; }
-    li { margin-bottom: 0; }
-    a { color: #3b82f6; text-decoration: underline; }
+    h1 {
+      color: #3b82f6;
+      border-bottom: solid;
+      border-color: #3b82f6;
+      margin-bottom: 1;
+    }
+
+    h2 {
+      color: #60a5fa;
+      margin-top: 1;
+      border-bottom: solid;
+      border-color: #334155;
+    }
+
+    h3 {
+      color: #93c5fd;
+    }
+
+    strong {
+      color: #facc15;
+    }
+
+    em {
+      color: #a78bfa;
+    }
+
+    code {
+      background-color: #1e293b;
+      color: #94a3b8;
+      padding-left: 1;
+      padding-right: 1;
+    }
+
+    pre {
+      background-color: #0f172a;
+      border: tall;
+      border-color: #334155;
+      padding: 1;
+      margin: 1;
+      display: block;
+    }
+
+    blockquote {
+      border-left: heavy;
+      border-color: #4b5563;
+      padding-left: 2;
+      font-style: italic;
+      color: #9ca3af;
+      margin-top: 1;
+      margin-bottom: 1;
+    }
+
+    ul, ol {
+      margin-left: 2;
+      color: #d1d5db;
+    }
+
+    li {
+      margin-bottom: 0;
+    }
+
+    a {
+      color: #3b82f6;
+      text-decoration: underline;
+    }
   )css";
 
   void InitReflection() override {
@@ -130,7 +184,7 @@ You can style the generated HTML tags using the `stylesheet` property.
       .editor, .css-editor {
         flex: 1;
         margin-bottom: 1;
-        border: solid;
+        border: tall;
         border-color: #334155;
         background-color: #1e293b;
       }
