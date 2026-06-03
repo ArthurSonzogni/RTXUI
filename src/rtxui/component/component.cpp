@@ -130,6 +130,8 @@ struct ElementState {
   int scroll_x = 0;
   int scroll_y = 0;
   bool focused = false;
+  ComputedStyle style;
+  std::map<std::string, ActiveTransition> active_transitions;
 };
 
 void CollectElementStates(Element* el,
@@ -138,9 +140,7 @@ void CollectElementStates(Element* el,
   if (!el) {
     return;
   }
-  if (el->scroll_x() != 0 || el->scroll_y() != 0 || el->focused()) {
-    states[path] = {el->scroll_x(), el->scroll_y(), el->focused()};
-  }
+  states[path] = {el->scroll_x(), el->scroll_y(), el->focused(), el->style, el->active_transitions};
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     std::vector<int> child_path = path;
     child_path.push_back(static_cast<int>(i));
@@ -160,6 +160,8 @@ void RestoreElementStates(
     el->set_scroll_x(it->second.scroll_x);
     el->set_scroll_y(it->second.scroll_y);
     el->set_focused(it->second.focused);
+    el->style = it->second.style;
+    el->active_transitions = it->second.active_transitions;
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     std::vector<int> child_path = path;
@@ -607,22 +609,11 @@ void ComponentBase::Render() {
   };
   CopyBaseStyles(root_.get());
 
-  ResolveTargetStyles();
-
-  std::function<void(Element*)> InstantStyle = [&](Element* element) {
-    if (element) {
-      element->style = element->target_style;
-      element->active_transitions.clear();
-      for (size_t i = 0; i < element->ChildCount(); ++i) {
-        InstantStyle(element->ChildAt(i));
-      }
-    }
-  };
-  InstantStyle(root_.get());
-
   if (root_) {
     RestoreElementStates(root_.get(), {}, saved_states);
   }
+
+  ResolveTargetStyles();
 }
 
 void ComponentBase::ResolveTargetStyles() {
