@@ -962,6 +962,7 @@ void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
   for (auto& entry : entries_) {
     if (entry.name == target && entry.set_value) {
       entry.set_value(value);
+      PropagateBinding(target, value);
       return;
     }
   }
@@ -969,8 +970,16 @@ void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
 
 void ComponentBase::PropagateBinding(std::string_view child_prop,
                                      std::string_view value) {
+  std::string_view clean_child_prop = child_prop;
+  if (clean_child_prop.starts_with("props.")) {
+    clean_child_prop = clean_child_prop.substr(6);
+  }
   for (const auto& binding : two_way_bindings_) {
-    if (binding.child_prop == child_prop) {
+    std::string_view clean_binding_prop = binding.child_prop;
+    if (clean_binding_prop.starts_with("props.")) {
+      clean_binding_prop = clean_binding_prop.substr(6);
+    }
+    if (clean_binding_prop == clean_child_prop) {
       binding.parent->SetProperty(binding.parent_prop, value);
     }
   }
