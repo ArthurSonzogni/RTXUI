@@ -4,8 +4,15 @@
 #include <rtxui/component/default_components_internal.hpp>
 #include <string>
 #include <vector>
+#include "rtxui/core/task_runner.hpp"
 
 using namespace rtxui;
+
+struct Todo {
+  std::string text;
+  bool appearing = true;
+  bool operator==(const Todo& other) const = default;
+};
 
 class App : public Component<App> {
  public:
@@ -15,7 +22,10 @@ class App : public Component<App> {
   bool show_secret = false;
   std::string text_input = "Interactive CSS App";
   std::string textarea_input = "RTXUI styling engine\nsupports box models,\nflexbox, & transitions.";
-  std::vector<std::string> todos = {"Style dashboard", "Expose CSS layout"};
+  std::vector<Todo> todos = {
+    {.text = "Style dashboard", .appearing = false},
+    {.text = "Expose CSS layout", .appearing = false}
+  };
 
   std::string markdown_content = R"md(
 # Markdown Live Preview
@@ -36,7 +46,17 @@ You can edit this **Markdown** text and see the results rendered in real-time!
   void ToggleSecret() { show_secret = !show_secret; }
   
   void AddTodo() {
-    todos.push_back("Task #" + std::to_string(todos.size() + 1));
+    size_t index = todos.size();
+    todos.push_back({
+        .text = "Task #" + std::to_string(index + 1),
+        .appearing = true,
+    });
+    task::TaskRunner::Current()->PostTask([this, index]() {
+      if (index < todos.size()) {
+        todos[index].appearing = false;
+        Digest();
+      }
+    });
   }
 
   void RemoveTodo(std::string index_str) {
@@ -53,7 +73,12 @@ You can edit this **Markdown** text and see the results rendered in real-time!
     Bind(show_secret);
     Bind(text_input);
     Bind(textarea_input);
-    Bind(todos);
+    BindCollection("todos", &todos, [](const Todo& item) {
+      return std::make_shared<ManualStructVisitor>(
+          std::unordered_map<std::string, std::string>{
+              {"text", item.text},
+              {"appearing_class", item.appearing ? "appearing" : ""}});
+    });
     Bind(markdown_content);
 
     Import<rtxui::markdown>();
@@ -254,8 +279,8 @@ You can edit this **Markdown** text and see the results rendered in real-time!
               </div>
               <div class="todo-list">
                 <for each="{todos}" as="todo">
-                  <div class="todo-item">
-                    <span>[{$index}] {todo}</span>
+                  <div class="todo-item {todo.appearing_class}">
+                    <span>[{$index}] {todo.text}</span>
                     <button class="btn-delete" @click="RemoveTodo({$index})">Delete</button>
                   </div>
                 </for>
@@ -326,8 +351,8 @@ You can edit this **Markdown** text and see the results rendered in real-time!
           padding: 1;
           background-color: rgba(30, 59, 138, 0.75);
           color: #f8fafc;            /* Light gray text */
-          border-bottom: tall;
-          border-color: #3b82f6;     /* Vibrant blue bottom border */
+          border-bottom: hkey;
+          border-color: #000000;     /* Black bottom border */
           z-index: 50;
         }
         .header-row {
@@ -347,8 +372,8 @@ You can edit this **Markdown** text and see the results rendered in real-time!
           padding: 1;
           background-color: rgba(30, 59, 138, 0.75);
           color: #94a3b8;            /* Grayish blue text */
-          border-top: tall;
-          border-color: #3b82f6;     /* Vibrant blue top border */
+          border-top: hkey;
+          border-color: #000000;     /* Black top border */
           z-index: 50;
         }
         .footer-row {
@@ -615,6 +640,11 @@ You can edit this **Markdown** text and see the results rendered in real-time!
           border-color: #334155;
           padding: 0 1;
           margin-bottom: 1;
+          opacity: 1.0;
+          transition: opacity 0.4s ease-in-out;
+        }
+        .todo-item.appearing {
+          opacity: 0.0;
         }
         .btn-delete {
           background-color: #9f1239;
