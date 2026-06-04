@@ -169,7 +169,7 @@ struct ElementState {
   int scroll_y = 0;
   bool focused = false;
   ComputedStyle style;
-  std::map<std::string, ActiveTransition> active_transitions;
+  ActiveTransitionsMap active_transitions;
 };
 
 void CollectElementStates(Element* el,

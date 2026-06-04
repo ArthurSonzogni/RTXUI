@@ -9,6 +9,10 @@
 
 #include "rtxui/internal/component.hpp"
 
+#include <atomic>
+std::atomic<int> g_elements_created{0};
+std::atomic<int> g_elements_destroyed{0};
+
 namespace rtxui {
 
 namespace time {
@@ -134,9 +138,17 @@ constexpr double kScrollAnimationDurationMs = 50.0;
 
 }  // namespace
 
-Element::Element() {}
+Element::Element() {
+  g_elements_created++;
+}
 Element::Element(const ComponentBase* component)
-    : component_(component), owner_component_(component) {}
+    : component_(component), owner_component_(component) {
+  g_elements_created++;
+}
+
+Element::~Element() {
+  g_elements_destroyed++;
+}
 
 void Element::AddChild(Ref<Element> child) {
   assert(child->parent_ == nullptr);
@@ -196,7 +208,10 @@ void Element::SetAttribute(std::string name, std::string value) {
       start = pos + 1;
     }
   }
-  attributes_[std::move(name)] = std::move(value);
+  if (!attributes_) {
+    attributes_ = std::make_unique<std::map<std::string, std::string>>();
+  }
+  (*attributes_)[std::move(name)] = std::move(value);
 }
 
 void Element::RemoveAttribute(const std::string& name) {
@@ -205,7 +220,12 @@ void Element::RemoveAttribute(const std::string& name) {
   } else if (name == "class") {
     classes.clear();
   }
-  attributes_.erase(name);
+  if (attributes_) {
+    attributes_->erase(name);
+    if (attributes_->empty()) {
+      attributes_.reset();
+    }
+  }
 }
 
 std::string Element::Print(int depth) const {
@@ -224,11 +244,13 @@ std::string Element::Print(int depth) const {
     }
     out += "\"";
   }
-  for (const auto& [name, value] : attributes_) {
-    if (name == "id" || name == "class") {
-      continue;
+  if (attributes_) {
+    for (const auto& [name, value] : *attributes_) {
+      if (name == "id" || name == "class") {
+        continue;
+      }
+      out += " " + name + "=\"" + value + "\"";
     }
-    out += " " + name + "=\"" + value + "\"";
   }
   out += ">\n";
   for (const auto& child : children_) {
