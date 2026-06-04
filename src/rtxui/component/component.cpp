@@ -485,7 +485,10 @@ void ComponentBase::Mount() {
 
 void ComponentBase::Render() {
   std::map<ElementPath, ElementState> saved_states;
+  Element* saved_parent = nullptr;
   if (root_) {
+    saved_parent = root_->Parent();
+    root_->set_parent(nullptr);
     ElementPath path;
     CollectElementStates(root_.get(), path, saved_states);
   }
@@ -530,7 +533,6 @@ void ComponentBase::Render() {
   root_->target_style = ComputedStyle();
   root_->id = id_;
   root_->classes = classes_;
-  root_->RemoveChildren();
 
   xml::Node template_node;
   template_node.type = xml::Node::Type::kElement;
@@ -598,6 +600,9 @@ void ComponentBase::Render() {
   if (root_) {
     ElementPath path;
     RestoreElementStates(root_.get(), path, saved_states);
+    if (saved_parent) {
+      root_->set_parent(saved_parent);
+    }
   }
 
   ResolveTargetStyles();
@@ -658,6 +663,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                                     ComponentBase* import_source,
                                     std::shared_ptr<LocalScope> scope,
                                     size_t& child_idx) {
+  Ref<Element> slot_keep_alive(slot);
   auto Interpolate = [&](std::string_view text) -> std::string {
     return rtxui::Interpolate(text, import_source, scope);
   };
@@ -923,7 +929,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
           // Now reconcile slot with child->Root()
           if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx) == child->Root()) {
-            // Already there
+            child->Root()->set_parent(slot);
           } else {
             if (child_idx < slot->ChildCount()) {
               slot->ReplaceChild(child_idx, child->Root());

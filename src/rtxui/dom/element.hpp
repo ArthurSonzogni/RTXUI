@@ -52,6 +52,7 @@ class Element : public RefCounted {
   // Hierarchical accessors.
   Element* Parent() { return parent_; }
   const Element* Parent() const { return parent_; }
+  void set_parent(Element* parent) { parent_ = parent; }
   size_t ChildCount() const { return children_.size(); }
   Element* ChildAt(size_t index) { return children_[index].get(); }
   const std::vector<Ref<Element>>& children() const { return children_; }
