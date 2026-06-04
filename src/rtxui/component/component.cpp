@@ -125,6 +125,13 @@ ComponentFactory GetGlobalComponentFactory(std::string_view name) {
   return (it != reg.end()) ? it->second : nullptr;
 }
 
+struct CategorizedRules {
+  std::vector<const css::Ruleset*> universal;
+  std::unordered_map<std::string, std::vector<const css::Ruleset*>> by_id;
+  std::unordered_map<std::string, std::vector<const css::Ruleset*>> by_class;
+  std::unordered_map<std::string, std::vector<const css::Ruleset*>> by_tag;
+};
+
 namespace {
 
 struct ElementPath {
@@ -417,40 +424,55 @@ void ResolveStylesRecursive(Element* element,
                             const ComponentBase* component,
                             const std::unique_ptr<css::StyleSheet>& stylesheet,
                             bool check_pseudos) {
-  if (!element || !stylesheet || stylesheet->empty()) {
+  if (!element || !component || !component->categorized_rules()) {
     return;
   }
 
   if (IsStyledByComponent(element, component)) {
-    if (check_pseudos) {
-      if (stylesheet) {
-        for (const auto& ruleset : *stylesheet) {
-          if (!css::EvaluateMediaQuery(ruleset.media_query)) {
-            continue;
-          }
-          const auto& parsed = ruleset.parsed_selector;
+    const auto* categorized = component->categorized_rules();
+
+    auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets) {
+      for (const auto* ruleset : rulesets) {
+        if (!css::EvaluateMediaQuery(ruleset->media_query)) {
+          continue;
+        }
+        const auto& parsed = ruleset->parsed_selector;
+        if (check_pseudos) {
           if (!parsed.pseudo_classes.empty() &&
               MatchSelector(element, component->Root(), parsed, true)) {
-            for (const auto& declaration : ruleset.declarations) {
+            for (const auto& declaration : ruleset->declarations) {
               ApplyStyle(element->target_style, declaration);
             }
           }
-        }
-      }
-    } else {
-      if (stylesheet) {
-        for (const auto& ruleset : *stylesheet) {
-          if (!css::EvaluateMediaQuery(ruleset.media_query)) {
-            continue;
-          }
-          const auto& parsed = ruleset.parsed_selector;
+        } else {
           if (parsed.pseudo_classes.empty() &&
               MatchSelector(element, component->Root(), parsed, false)) {
-            for (const auto& declaration : ruleset.declarations) {
+            for (const auto& declaration : ruleset->declarations) {
               ApplyStyle(element->base_style, declaration);
             }
           }
         }
+      }
+    };
+
+    match_and_apply(categorized->universal);
+
+    auto it_tag = categorized->by_tag.find(std::string(element->tag()));
+    if (it_tag != categorized->by_tag.end()) {
+      match_and_apply(it_tag->second);
+    }
+
+    if (!element->id.empty()) {
+      auto it_id = categorized->by_id.find(element->id);
+      if (it_id != categorized->by_id.end()) {
+        match_and_apply(it_id->second);
+      }
+    }
+
+    for (const auto& cls : element->classes) {
+      auto it_class = categorized->by_class.find(cls);
+      if (it_class != categorized->by_class.end()) {
+        match_and_apply(it_class->second);
       }
     }
   }
@@ -553,6 +575,7 @@ void ComponentBase::Render() {
   template_node.children.reserve(xml_nodes_.size());
 
   stylesheet_ = nullptr;
+  categorized_rules_ = nullptr;
 
   for (const auto& node : xml_nodes_) {
     if (node.type == xml::Node::Type::kElement) {
@@ -568,6 +591,22 @@ void ComponentBase::Render() {
         if (maybe_stylesheet) {
           stylesheet_ = std::make_unique<css::StyleSheet>(
               std::move(maybe_stylesheet.value()));
+          
+          categorized_rules_ = std::make_unique<CategorizedRules>();
+          for (const auto& ruleset : *stylesheet_) {
+            std::string_view selector = ruleset.parsed_selector.base;
+            if (selector == "self") {
+              categorized_rules_->universal.push_back(&ruleset);
+            } else if (selector.starts_with("#")) {
+              categorized_rules_->by_id[std::string(selector.substr(1))].push_back(&ruleset);
+            } else if (selector.starts_with(".")) {
+              categorized_rules_->by_class[std::string(selector.substr(1))].push_back(&ruleset);
+            } else if (selector.empty()) {
+              categorized_rules_->universal.push_back(&ruleset);
+            } else {
+              categorized_rules_->by_tag[std::string(selector)].push_back(&ruleset);
+            }
+          }
         } else {
           CssParseError(maybe_stylesheet.error(), css_str);
         }

@@ -1693,6 +1693,18 @@ GraphemeIterator& GraphemeIterator::operator++() {
 }
 
 void GraphemeIterator::Next() {
+  if (pos_ < text_.size()) {
+    unsigned char c = static_cast<unsigned char>(text_[pos_]);
+    if (c < 128 && c != '\r') {
+      if (pos_ + 1 >= text_.size() ||
+          static_cast<unsigned char>(text_[pos_ + 1]) < 128) {
+        int width = (c >= 32) ? 1 : 0;
+        current_ = Grapheme{text_.substr(pos_, 1), width};
+        return;
+      }
+    }
+  }
+
   size_t start = pos_;
   size_t end = start;
   uint32_t codepoint = 0;

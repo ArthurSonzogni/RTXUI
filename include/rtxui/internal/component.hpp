@@ -41,6 +41,7 @@ using Nodes = std::vector<Node>;
 }  // namespace xml
 
 namespace rtxui {
+struct CategorizedRules;
 
 class StructVisitor {
  public:
@@ -95,6 +96,7 @@ class ComponentBase : public RefCounted, public Bindings {
   void ResolveTargetStyles();
   void ResolveTargetStyles(double current_time_ms);
   const css::StyleSheet* stylesheet() const;
+  const CategorizedRules* categorized_rules() const { return categorized_rules_.get(); }
   virtual bool Digest() = 0;
   virtual void InitReflection();
   virtual bool OnEvent(Event event);
@@ -121,6 +123,7 @@ class ComponentBase : public RefCounted, public Bindings {
 
  protected:
   std::unique_ptr<css::StyleSheet> stylesheet_;
+  std::unique_ptr<CategorizedRules> categorized_rules_;
   std::vector<std::string> css_strings_;
   std::vector<BindingLink> two_way_bindings_;
   void Render(const xml::Node& node,
