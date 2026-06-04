@@ -45,6 +45,8 @@ class Element : public RefCounted {
 
   void AddChild(Ref<Element> child);
   void RemoveChildren();
+  void ReplaceChild(size_t index, Ref<Element> new_child);
+  void TruncateChildren(size_t count);
   void Visit(std::function<void(Element&)> f);
 
   // Hierarchical accessors.
