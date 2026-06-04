@@ -417,7 +417,7 @@ void ResolveStylesRecursive(Element* element,
                             const ComponentBase* component,
                             const std::unique_ptr<css::StyleSheet>& stylesheet,
                             bool check_pseudos) {
-  if (!element) {
+  if (!element || !stylesheet || stylesheet->empty()) {
     return;
   }
 
@@ -452,6 +452,19 @@ void ResolveStylesRecursive(Element* element,
           }
         }
       }
+    }
+  }
+
+  if (element->component() && element->component() != component) {
+    bool has_slot_children = false;
+    for (const auto& [name, slot_el] : element->component()->slots()) {
+      if (slot_el && slot_el->ChildCount() > 0) {
+        has_slot_children = true;
+        break;
+      }
+    }
+    if (!has_slot_children) {
+      return;
     }
   }
 

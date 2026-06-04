@@ -101,6 +101,7 @@ class ComponentBase : public RefCounted, public Bindings {
 
   Element* Root() const;
   Ref<Element> Slot(std::string_view name);
+  const std::map<std::string, Ref<Element>>& slots() const { return slots_; }
   void SetProperty(std::string_view name, std::string_view value);
   void PropagateBinding(std::string_view child_prop, std::string_view value);
 
