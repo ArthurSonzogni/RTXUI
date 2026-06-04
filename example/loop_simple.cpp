@@ -37,6 +37,7 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
           </for>
         </ul>
       </div>
+
       <style>
         self {
           display: block;
@@ -44,15 +45,63 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
           background-color: rgb(15, 23, 42);
           color: white;
         }
-        .container { padding: 1; }
-        .input-row { display: flex; gap: 1; margin-bottom: 1; }
-        input { border: tall; border-color: rgb(71, 85, 105); background-color: rgb(30, 41, 59); color: white; width: 20; padding: 0 1; }
-        button { background-color: rgb(30, 41, 59); color: white; border: tall; border-color: rgb(71, 85, 105); padding: 0 1; }
-        button:hover { background-color: rgb(59, 130, 246); border-color: rgb(96, 165, 250); }
-        .item-row { display: flex; gap: 2; align-items: center; margin-top: 1; }
-        .fruit-name { min-width: 15; }
-        .item-row button { border: tall; border-color: rgb(239, 68, 68); color: rgb(239, 68, 68); background-color: transparent; padding: 0 1; }
-        .item-row button:hover { background-color: rgb(239, 68, 68); color: white; border-color: rgb(248, 113, 113); }
+        .container {
+          padding: 1;
+          max-width: 80;
+          margin: auto;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 1;
+            margin-bottom: 1;
+          }
+        input {
+          border: tall;
+          border-color: rgb(71, 85, 105);
+          background-color: rgb(30, 41, 59);
+          color: white;
+          width: 20;
+          padding: 0 1;
+        }
+
+        .item-row {
+          width: 100%;
+          display: flex;
+          gap: 2;
+          align-items: center;
+          margin-top: 1;
+          background-color: rgb(30,46,84);
+        }
+        .fruit-name {
+          flex-grow: 1;
+          padding: 1;
+        }
+        .item-row button {
+          border: tall;
+          border-color: rgb(239, 68, 68);
+          color: rgb(239, 68, 68);
+          background-color: transparent;
+          padding: 0 1;
+          margin: 0;
+        }
+        .item-row button:hover { background-color: rgb(239, 68, 68);
+          color: white;
+          border-color: rgb(248, 113, 113);
+        }
+
+        button {
+          background-color: rgb(30, 41, 59);
+          color: white;
+          padding: 0 1;
+          transition: all 1s;
+        }
+
+        button:hover {
+          background-color: rgb(59, 130, 246);
+          border-color: rgb(96, 165, 250);
+        }
+
       </style>
     )html";
 
