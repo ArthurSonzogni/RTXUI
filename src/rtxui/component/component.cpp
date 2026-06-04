@@ -638,16 +638,18 @@ void ComponentBase::Render() {
 
   ResolveStylesRecursive(root_.get(), this, stylesheet_, false);
 
-  std::function<void(Element*)> CopyBaseStyles = [&](Element* element) {
-    if (IsStyledByComponent(element, this)) {
-      element->target_style = element->base_style;
-      element->style = element->base_style;
-    }
-    for (size_t i = 0; i < element->ChildCount(); ++i) {
-      CopyBaseStyles(element->ChildAt(i));
+  auto CopyBaseStyles = [&](auto& self, Element* element) -> void {
+    if (element) {
+      if (IsStyledByComponent(element, this)) {
+        element->target_style = element->base_style;
+        element->style = element->base_style;
+      }
+      for (size_t i = 0; i < element->ChildCount(); ++i) {
+        self(self, element->ChildAt(i));
+      }
     }
   };
-  CopyBaseStyles(root_.get());
+  CopyBaseStyles(CopyBaseStyles, root_.get());
 
   if (root_) {
     ElementPath path;
@@ -669,36 +671,36 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
     return;
   }
 
-  std::function<void(Element*)> ResetTarget = [&](Element* element) {
+  auto ResetTarget = [](auto& self, Element* element) -> void {
     if (element) {
       element->target_style = element->base_style;
       for (size_t i = 0; i < element->ChildCount(); ++i) {
-        ResetTarget(element->ChildAt(i));
+        self(self, element->ChildAt(i));
       }
     }
   };
-  ResetTarget(root_.get());
+  ResetTarget(ResetTarget, root_.get());
 
-  std::function<void(ComponentBase*)> ResolveAll = [&](ComponentBase* comp) {
+  auto ResolveAll = [](auto& self, ComponentBase* comp) -> void {
     if (!comp || !comp->Root()) {
       return;
     }
     ResolveStylesRecursive(comp->Root(), comp, comp->stylesheet_, true);
     for (auto& child : comp->children_) {
-      ResolveAll(child.get());
+      self(self, child.get());
     }
   };
-  ResolveAll(this);
+  ResolveAll(ResolveAll, this);
 
-  std::function<void(Element*)> TriggerAll = [&](Element* element) {
+  auto TriggerAll = [](auto& self, Element* element, double current_time_ms) -> void {
     if (element) {
       element->TriggerTransitions(current_time_ms);
       for (size_t i = 0; i < element->ChildCount(); ++i) {
-        TriggerAll(element->ChildAt(i));
+        self(self, element->ChildAt(i), current_time_ms);
       }
     }
   };
-  TriggerAll(root_.get());
+  TriggerAll(TriggerAll, root_.get(), current_time_ms);
 }
 
 void ComponentBase::Render(const xml::Node& node,
