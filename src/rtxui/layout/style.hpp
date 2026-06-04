@@ -181,6 +181,106 @@ struct ComputedStyle {
   int scroll_speed_y = 1;
   ScrollBehavior scroll_behavior = ScrollBehavior::Auto;
 
+  ComputedStyle() = default;
+
+  ComputedStyle(const ComputedStyle& other) {
+    if (!other.transitions.empty()) {
+      transitions = other.transitions;
+    }
+    position = other.position;
+    top = other.top;
+    right = other.right;
+    bottom = other.bottom;
+    left = other.left;
+    z_index = other.z_index;
+    display_outside = other.display_outside;
+    display_inside = other.display_inside;
+    display_none = other.display_none;
+    flex_direction = other.flex_direction;
+    width = other.width;
+    height = other.height;
+    max_width = other.max_width;
+    max_height = other.max_height;
+    margin_left_auto = other.margin_left_auto;
+    margin_right_auto = other.margin_right_auto;
+    flex_grow = other.flex_grow;
+    flex_shrink = other.flex_shrink;
+    margin = other.margin;
+    padding = other.padding;
+    border = other.border;
+    border_style = other.border_style;
+    border_color_top = other.border_color_top;
+    border_color_right = other.border_color_right;
+    border_color_bottom = other.border_color_bottom;
+    border_color_left = other.border_color_left;
+    background_color = other.background_color;
+    foreground_color = other.foreground_color;
+    opacity = other.opacity;
+    bold = other.bold;
+    underlined = other.underlined;
+    underlined_double = other.underlined_double;
+    strikethrough = other.strikethrough;
+    blink = other.blink;
+    overflow_x = other.overflow_x;
+    overflow_y = other.overflow_y;
+    scrollbar_width = other.scrollbar_width;
+    text_align = other.text_align;
+    white_space = other.white_space;
+    scroll_speed_x = other.scroll_speed_x;
+    scroll_speed_y = other.scroll_speed_y;
+    scroll_behavior = other.scroll_behavior;
+  }
+
+  ComputedStyle& operator=(const ComputedStyle& other) {
+    if (this == &other) return *this;
+    if (!transitions.empty() || !other.transitions.empty()) {
+      transitions = other.transitions;
+    }
+    position = other.position;
+    top = other.top;
+    right = other.right;
+    bottom = other.bottom;
+    left = other.left;
+    z_index = other.z_index;
+    display_outside = other.display_outside;
+    display_inside = other.display_inside;
+    display_none = other.display_none;
+    flex_direction = other.flex_direction;
+    width = other.width;
+    height = other.height;
+    max_width = other.max_width;
+    max_height = other.max_height;
+    margin_left_auto = other.margin_left_auto;
+    margin_right_auto = other.margin_right_auto;
+    flex_grow = other.flex_grow;
+    flex_shrink = other.flex_shrink;
+    margin = other.margin;
+    padding = other.padding;
+    border = other.border;
+    border_style = other.border_style;
+    border_color_top = other.border_color_top;
+    border_color_right = other.border_color_right;
+    border_color_bottom = other.border_color_bottom;
+    border_color_left = other.border_color_left;
+    background_color = other.background_color;
+    foreground_color = other.foreground_color;
+    opacity = other.opacity;
+    bold = other.bold;
+    underlined = other.underlined;
+    underlined_double = other.underlined_double;
+    strikethrough = other.strikethrough;
+    blink = other.blink;
+    overflow_x = other.overflow_x;
+    overflow_y = other.overflow_y;
+    scrollbar_width = other.scrollbar_width;
+    text_align = other.text_align;
+    white_space = other.white_space;
+    scroll_speed_x = other.scroll_speed_x;
+    scroll_speed_y = other.scroll_speed_y;
+    scroll_behavior = other.scroll_behavior;
+    return *this;
+  }
+
   bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }
   bool IsInlineLevel() const {
     return display_outside == DisplayOutside::Inline;
