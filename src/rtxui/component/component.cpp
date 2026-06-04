@@ -1,6 +1,7 @@
 #include "rtxui/internal/component.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cctype>
 #include <charconv>
@@ -126,6 +127,35 @@ ComponentFactory GetGlobalComponentFactory(std::string_view name) {
 
 namespace {
 
+struct ElementPath {
+  std::array<int, 32> indices{};
+  size_t depth = 0;
+
+  void push_back(int index) noexcept {
+    if (depth < indices.size()) {
+      indices[depth++] = index;
+    }
+  }
+
+  void pop_back() noexcept {
+    if (depth > 0) {
+      depth--;
+    }
+  }
+
+  bool operator<(const ElementPath& other) const noexcept {
+    if (depth != other.depth) {
+      return depth < other.depth;
+    }
+    for (size_t i = 0; i < depth; ++i) {
+      if (indices[i] != other.indices[i]) {
+        return indices[i] < other.indices[i];
+      }
+    }
+    return false;
+  }
+};
+
 struct ElementState {
   int scroll_x = 0;
   int scroll_y = 0;
@@ -135,8 +165,8 @@ struct ElementState {
 };
 
 void CollectElementStates(Element* el,
-                          std::vector<int>& path,
-                          std::map<std::vector<int>, ElementState>& states) {
+                          ElementPath& path,
+                          std::map<ElementPath, ElementState>& states) {
   if (!el) {
     return;
   }
@@ -157,8 +187,8 @@ void CollectElementStates(Element* el,
 
 void RestoreElementStates(
     Element* el,
-    std::vector<int>& path,
-    const std::map<std::vector<int>, ElementState>& states) {
+    ElementPath& path,
+    const std::map<ElementPath, ElementState>& states) {
   if (!el) {
     return;
   }
@@ -454,9 +484,9 @@ void ComponentBase::Mount() {
 }
 
 void ComponentBase::Render() {
-  std::map<std::vector<int>, ElementState> saved_states;
+  std::map<ElementPath, ElementState> saved_states;
   if (root_) {
-    std::vector<int> path;
+    ElementPath path;
     CollectElementStates(root_.get(), path, saved_states);
   }
 
@@ -566,7 +596,7 @@ void ComponentBase::Render() {
   CopyBaseStyles(root_.get());
 
   if (root_) {
-    std::vector<int> path;
+    ElementPath path;
     RestoreElementStates(root_.get(), path, saved_states);
   }
 
