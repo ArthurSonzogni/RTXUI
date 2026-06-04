@@ -1,6 +1,7 @@
 #include "rtxui/rtxui.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <numeric>
@@ -148,6 +149,16 @@ int main() {
             << "  \"min_frame_ms\": " << min_val(total_times_us) / 1000.0 << ",\n"
             << "  \"max_frame_ms\": " << max_val(total_times_us) / 1000.0 << "\n"
             << "}\n";
+
+  extern std::atomic<int> g_elements_created;
+  extern std::atomic<int> g_elements_destroyed;
+  int created = g_elements_created.load();
+  int destroyed = g_elements_destroyed.load();
+  std::cerr << "--- Element Allocations ---\n"
+            << "Created:   " << created << "\n"
+            << "Destroyed: " << destroyed << "\n"
+            << "Alive:     " << (created - destroyed) << "\n"
+            << "---------------------------\n";
 
   return 0;
 }

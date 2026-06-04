@@ -40,6 +40,17 @@ def run_benchmark():
 
 def print_metrics(data, title="Benchmark Results"):
     """Prints benchmark metrics in a clean readable layout."""
+    if "avg_parse_us" in data:
+        print("=" * 55)
+        print(f" {title.upper()} (XML PARSE)")
+        print("=" * 55)
+        print(f"Iterations: {data.get('iterations')}")
+        print("-" * 55)
+        print(f"Total time: {data.get('total_time_ms'):.4f} ms")
+        print(f"Avg parse:  {data.get('avg_parse_us'):.4f} us")
+        print("=" * 55)
+        return
+
     print("=" * 55)
     print(f" {title.upper()}")
     print("=" * 55)
@@ -64,6 +75,27 @@ def compare_results(baseline_path, current_data):
     except Exception as e:
         print(f"Failed to read baseline file '{baseline_path}': {e}")
         sys.exit(1)
+
+    if "avg_parse_us" in current_data:
+        print("=" * 65)
+        print(f" PERFORMANCE COMPARISON VS: {os.path.basename(baseline_path)}")
+        print("=" * 65)
+        print(f"{'Metric':<20} | {'Baseline (us)':<15} | {'Current (us)':<15} | {'Change':<10}")
+        print("-" * 65)
+        b_val = baseline.get("avg_parse_us", 0.0)
+        c_val = current_data.get("avg_parse_us", 0.0)
+        if b_val > 0:
+            diff_percent = ((c_val - b_val) / b_val) * 100.0
+            diff_str = f"{diff_percent:+.2f}%"
+            if diff_percent < -1.0:
+                diff_str = f"\033[92m{diff_str}\033[0m" # Green
+            elif diff_percent > 1.0:
+                diff_str = f"\033[91m{diff_str}\033[0m" # Red
+        else:
+            diff_str = "N/A"
+        print(f"{'XML Parse':<20} | {b_val:<15.4f} | {c_val:<15.4f} | {diff_str:<10}")
+        print("=" * 65)
+        return
 
     print("=" * 65)
     print(f" PERFORMANCE COMPARISON VS: {os.path.basename(baseline_path)}")
@@ -132,17 +164,20 @@ def run_profiler():
     print("=" * 80)
 
 def main():
+    global BENCHMARK_BIN
     parser = argparse.ArgumentParser(description="RTXUI Benchmark & Profiler Automator")
     parser.add_argument("--save", type=str, metavar="FILE", help="Run benchmark and save results to JSON file")
     parser.add_argument("--compare", type=str, metavar="FILE", help="Run benchmark and compare with saved baseline JSON file")
     parser.add_argument("--profile", action="store_true", help="Run under CPU perf profiler and show top symbols")
     parser.add_argument("--layout", action="store_true", help="Use rtxui_layout_benchmark instead of rtxui_benchmark")
+    parser.add_argument("--xml", action="store_true", help="Use rtxui_xml_benchmark instead of rtxui_benchmark")
 
     args = parser.parse_args()
 
     if args.layout:
-        global BENCHMARK_BIN
         BENCHMARK_BIN = "./build/rtxui_layout_benchmark"
+    elif args.xml:
+        BENCHMARK_BIN = "./build/rtxui_xml_benchmark"
 
     if args.profile:
         run_profiler()
