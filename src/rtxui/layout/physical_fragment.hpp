@@ -21,7 +21,7 @@ struct PhysicalFragment {
   float visual_scroll_y = 0.0f;
   bool clips_descendants = false;
   bool is_text = false;
-  std::string text_content;
+  std::string_view text_content;
   bool has_border = false;
   BorderStyle border_style = BorderStyle::None;
   std::optional<Color> border_color_top;

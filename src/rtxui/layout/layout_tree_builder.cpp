@@ -1,4 +1,5 @@
 #include "rtxui/layout/layout_tree_builder.hpp"
+#include "rtxui/layout/layout_arena.hpp"
 
 namespace rtxui {
 
@@ -11,7 +12,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   }
   auto text_node = dynamic_cast<TextElement*>(dom_node);
 
-  auto box = std::make_shared<LayoutBox>();
+  auto box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+      LayoutArenaAllocator<LayoutBox>());
   box->style = dom_node->style;
   box->dom_node = dom_node;
 
@@ -64,7 +66,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     for (const auto& child_box : raw_children) {
       if (child_box->style.display_outside == DisplayOutside::Inline) {
         if (!anonymous_box) {
-          anonymous_box = std::make_shared<LayoutBox>();
+          anonymous_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+              LayoutArenaAllocator<LayoutBox>());
           anonymous_box->is_anonymous = true;
           anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
           anonymous_box->style.text_align = resolved_align;

@@ -127,9 +127,9 @@ ComponentFactory GetGlobalComponentFactory(std::string_view name) {
 
 struct CategorizedRules {
   std::vector<const css::Ruleset*> universal;
-  std::unordered_map<std::string, std::vector<const css::Ruleset*>> by_id;
-  std::unordered_map<std::string, std::vector<const css::Ruleset*>> by_class;
-  std::unordered_map<std::string, std::vector<const css::Ruleset*>> by_tag;
+  std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_id;
+  std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_class;
+  std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_tag;
 };
 
 namespace {
@@ -457,7 +457,7 @@ void ResolveStylesRecursive(Element* element,
 
     match_and_apply(categorized->universal);
 
-    auto it_tag = categorized->by_tag.find(std::string(element->tag()));
+    auto it_tag = categorized->by_tag.find(element->tag());
     if (it_tag != categorized->by_tag.end()) {
       match_and_apply(it_tag->second);
     }
@@ -598,13 +598,13 @@ void ComponentBase::Render() {
             if (selector == "self") {
               categorized_rules_->universal.push_back(&ruleset);
             } else if (selector.starts_with("#")) {
-              categorized_rules_->by_id[std::string(selector.substr(1))].push_back(&ruleset);
+              categorized_rules_->by_id[selector.substr(1)].push_back(&ruleset);
             } else if (selector.starts_with(".")) {
-              categorized_rules_->by_class[std::string(selector.substr(1))].push_back(&ruleset);
+              categorized_rules_->by_class[selector.substr(1)].push_back(&ruleset);
             } else if (selector.empty()) {
               categorized_rules_->universal.push_back(&ruleset);
             } else {
-              categorized_rules_->by_tag[std::string(selector)].push_back(&ruleset);
+              categorized_rules_->by_tag[selector].push_back(&ruleset);
             }
           }
         } else {

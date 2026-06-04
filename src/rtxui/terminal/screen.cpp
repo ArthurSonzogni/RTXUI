@@ -829,15 +829,16 @@ void ScreenImpl::Draw() {
     FindFocused(root);
   }
 
+  root_fragment_ = nullptr;
+  root_box_ = nullptr;
+  ResetLayoutArena();
+
   auto root_box = LayoutTreeBuilder::Build(root);
 
   LayoutConstraints viewport = {
       {width_, MeasureMode::Exactly},
       {height_, MeasureMode::Exactly},
   };
-  root_fragment_ = nullptr;
-  root_box_ = nullptr;
-  ResetLayoutArena();
 
   std::shared_ptr<PhysicalFragment> root_fragment = nullptr;
   if (root_box) {
