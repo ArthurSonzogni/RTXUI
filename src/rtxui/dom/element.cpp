@@ -274,6 +274,10 @@ Element* Element::QuerySelector(std::string_view selector) {
 }
 
 void Element::TriggerTransitions(double current_time_ms) {
+  if (target_style.transitions.empty() && active_transitions.empty()) {
+    style = target_style;
+    return;
+  }
   auto old_style = style;
   style = target_style;
 
