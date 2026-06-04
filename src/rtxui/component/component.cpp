@@ -648,6 +648,16 @@ void ComponentBase::Render(const xml::Node& node,
                            Element* slot,
                            ComponentBase* import_source,
                            std::shared_ptr<LocalScope> scope) {
+  size_t child_idx = 0;
+  RenderReconcile(node, slot, import_source, scope, child_idx);
+  slot->TruncateChildren(child_idx);
+}
+
+void ComponentBase::RenderReconcile(const xml::Node& node,
+                                    Element* slot,
+                                    ComponentBase* import_source,
+                                    std::shared_ptr<LocalScope> scope,
+                                    size_t& child_idx) {
   auto Interpolate = [&](std::string_view text) -> std::string {
     return rtxui::Interpolate(text, import_source, scope);
   };
@@ -687,9 +697,23 @@ void ComponentBase::Render(const xml::Node& node,
             }
           }
         }
-        auto text_el = Ref<TextElement>::New(text);
-        text_el->set_owner_component(import_source);
-        slot->AddChild(text_el);
+
+        // Reconcile/reuse or replace TextElement
+        if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx)->is_text()) {
+          auto* text_el = static_cast<TextElement*>(slot->ChildAt(child_idx));
+          if (text_el->text() != text) {
+            text_el->set_text(text);
+          }
+        } else {
+          auto text_el = Ref<TextElement>::New(text);
+          text_el->set_owner_component(import_source);
+          if (child_idx < slot->ChildCount()) {
+            slot->ReplaceChild(child_idx, text_el);
+          } else {
+            slot->AddChild(text_el);
+          }
+        }
+        child_idx++;
         break;
       }
 
@@ -702,7 +726,7 @@ void ComponentBase::Render(const xml::Node& node,
           std::string cond = Interpolate(child_node.attributes.at("condition"));
           last_condition_chain_met = (cond == "true" || cond == "1");
           if (last_condition_chain_met) {
-            Render(child_node, slot, import_source, scope);
+            RenderReconcile(child_node, slot, import_source, scope, child_idx);
           }
           break;
         }
@@ -713,7 +737,7 @@ void ComponentBase::Render(const xml::Node& node,
                 Interpolate(child_node.attributes.at("condition"));
             if (cond == "true" || cond == "1") {
               last_condition_chain_met = true;
-              Render(child_node, slot, import_source, scope);
+              RenderReconcile(child_node, slot, import_source, scope, child_idx);
             }
           }
           break;
@@ -721,7 +745,7 @@ void ComponentBase::Render(const xml::Node& node,
 
         if (child_node.tag == "else") {
           if (!last_condition_chain_met) {
-            Render(child_node, slot, import_source, scope);
+            RenderReconcile(child_node, slot, import_source, scope, child_idx);
           }
           last_condition_chain_met = true;
           break;
@@ -770,7 +794,7 @@ void ComponentBase::Render(const xml::Node& node,
               }
               new_scope->variables["$index"] = std::to_string(i);
 
-              Render(child_node, slot, import_source, new_scope);
+              RenderReconcile(child_node, slot, import_source, new_scope, child_idx);
             }
           }
           break;
@@ -780,10 +804,21 @@ void ComponentBase::Render(const xml::Node& node,
           std::string slot_name = child_node.tag == "slot"
                                       ? ""
                                       : std::string(child_node.tag.substr(5));
-          auto slot_element = Ref<SlotElement>::New();
-          slot_element->set_owner_component(import_source);
+
+          Ref<Element> slot_element;
+          if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx)->is_slot()) {
+            slot_element = slot->children()[child_idx];
+          } else {
+            slot_element = Ref<SlotElement>::New();
+            slot_element->set_owner_component(import_source);
+            if (child_idx < slot->ChildCount()) {
+              slot->ReplaceChild(child_idx, slot_element);
+            } else {
+              slot->AddChild(slot_element);
+            }
+          }
           import_source->slots_[slot_name] = slot_element;
-          slot->AddChild(slot_element);
+          child_idx++;
           break;
         }
 
@@ -791,8 +826,9 @@ void ComponentBase::Render(const xml::Node& node,
           std::string template_name = std::string(child_node.tag.substr(9));
           Ref<Element> target_slot = Slot(template_name);
           if (target_slot) {
-            target_slot->RemoveChildren();
-            Render(child_node, target_slot.get(), import_source, scope);
+            size_t sub_child_idx = 0;
+            RenderReconcile(child_node, target_slot.get(), import_source, scope, sub_child_idx);
+            target_slot->TruncateChildren(sub_child_idx);
           }
           break;
         }
@@ -885,19 +921,44 @@ void ComponentBase::Render(const xml::Node& node,
           child->Render();
           child->Root()->set_owner_component(import_source);
 
-          slot->AddChild(child->Root());
+          // Now reconcile slot with child->Root()
+          if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx) == child->Root()) {
+            // Already there
+          } else {
+            if (child_idx < slot->ChildCount()) {
+              slot->ReplaceChild(child_idx, child->Root());
+            } else {
+              slot->AddChild(child->Root());
+            }
+          }
 
           Ref<Element> default_slot = child->Slot("");
           if (default_slot) {
-            default_slot->RemoveChildren();
-            child->Render(child_node, default_slot.get(), import_source, scope);
+            size_t sub_child_idx = 0;
+            child->RenderReconcile(child_node, default_slot.get(), import_source, scope, sub_child_idx);
+            default_slot->TruncateChildren(sub_child_idx);
           }
+          child_idx++;
           break;
         }
 
-        auto child_element = Ref<Element>::New();
-        child_element->set_owner_component(import_source);
-        child_element->SetTag(std::string(child_node.tag));
+        // Reconcile standard element
+        Ref<Element> child_element;
+        bool is_reused = false;
+
+        if (child_idx < slot->ChildCount() &&
+            !slot->ChildAt(child_idx)->is_text() &&
+            !slot->ChildAt(child_idx)->is_slot() &&
+            slot->ChildAt(child_idx)->tag() == child_node.tag) {
+          child_element = slot->children()[child_idx];
+          is_reused = true;
+        } else {
+          child_element = Ref<Element>::New();
+          child_element->set_owner_component(import_source);
+          child_element->SetTag(std::string(child_node.tag));
+        }
+
+        std::vector<std::string> updated_keys;
         for (auto& [key_view, value] : child_node.attributes) {
           std::string key(key_view);
           std::string actual_value(value);
@@ -921,15 +982,45 @@ void ComponentBase::Render(const xml::Node& node,
             } else if (key == "@change") {
               key = "onchange";
             } else {
-              // Generic mapping: @event -> onevent
               key = "on" + key.substr(1);
             }
           }
 
-          child_element->SetAttribute(key, Interpolate(actual_value));
+          std::string new_val = Interpolate(actual_value);
+          const auto& current_attrs = child_element->Attributes();
+          auto it = current_attrs.find(key);
+          if (it == current_attrs.end() || it->second != new_val) {
+            child_element->SetAttribute(key, std::move(new_val));
+          }
+          updated_keys.push_back(std::move(key));
         }
-        slot->AddChild(child_element);
-        Render(child_node, child_element.get(), import_source, scope);
+
+        if (is_reused) {
+          // Remove obsolete attributes
+          std::vector<std::string> keys_to_remove;
+          for (const auto& [key, val] : child_element->Attributes()) {
+            if (std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end()) {
+              keys_to_remove.push_back(key);
+            }
+          }
+          for (const auto& key : keys_to_remove) {
+            child_element->RemoveAttribute(key);
+          }
+        }
+
+        if (!is_reused) {
+          if (child_idx < slot->ChildCount()) {
+            slot->ReplaceChild(child_idx, child_element);
+          } else {
+            slot->AddChild(child_element);
+          }
+        }
+
+        size_t sub_child_idx = 0;
+        RenderReconcile(child_node, child_element.get(), import_source, scope, sub_child_idx);
+        child_element->TruncateChildren(sub_child_idx);
+
+        child_idx++;
         break;
       }
     }
