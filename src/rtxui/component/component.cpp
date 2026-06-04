@@ -420,10 +420,25 @@ bool IsStyledByComponent(const Element* element,
   return false;
 }
 
+bool MatchPseudos(const Element* element, const std::vector<std::string_view>& pseudo_classes) {
+  for (const auto& pseudo : pseudo_classes) {
+    if (pseudo == "hover" && !element->hovered()) {
+      return false;
+    }
+    if (pseudo == "focus" && !element->focused()) {
+      return false;
+    }
+    if (pseudo == "active" && !element->active()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void ResolveStylesRecursive(Element* element,
-                            const ComponentBase* component,
-                            const std::unique_ptr<css::StyleSheet>& stylesheet,
-                            bool check_pseudos) {
+                             const ComponentBase* component,
+                             const std::unique_ptr<css::StyleSheet>& stylesheet,
+                             bool check_pseudos) {
   if (!element || !component || !component->categorized_rules()) {
     return;
   }
@@ -431,22 +446,23 @@ void ResolveStylesRecursive(Element* element,
   if (IsStyledByComponent(element, component)) {
     const auto* categorized = component->categorized_rules();
 
-    auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets) {
+    auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets, bool is_universal) {
       for (const auto* ruleset : rulesets) {
         if (!css::EvaluateMediaQuery(ruleset->media_query)) {
           continue;
         }
         const auto& parsed = ruleset->parsed_selector;
+        if (is_universal && parsed.base == "self" && element != component->Root()) {
+          continue;
+        }
         if (check_pseudos) {
-          if (!parsed.pseudo_classes.empty() &&
-              MatchSelector(element, component->Root(), parsed, true)) {
+          if (!parsed.pseudo_classes.empty() && MatchPseudos(element, parsed.pseudo_classes)) {
             for (const auto& declaration : ruleset->declarations) {
               ApplyStyle(element->target_style, declaration);
             }
           }
         } else {
-          if (parsed.pseudo_classes.empty() &&
-              MatchSelector(element, component->Root(), parsed, false)) {
+          if (parsed.pseudo_classes.empty()) {
             for (const auto& declaration : ruleset->declarations) {
               ApplyStyle(element->base_style, declaration);
             }
@@ -455,24 +471,24 @@ void ResolveStylesRecursive(Element* element,
       }
     };
 
-    match_and_apply(categorized->universal);
+    match_and_apply(categorized->universal, true);
 
     auto it_tag = categorized->by_tag.find(element->tag());
     if (it_tag != categorized->by_tag.end()) {
-      match_and_apply(it_tag->second);
+      match_and_apply(it_tag->second, false);
     }
 
     if (!element->id.empty()) {
       auto it_id = categorized->by_id.find(element->id);
       if (it_id != categorized->by_id.end()) {
-        match_and_apply(it_id->second);
+        match_and_apply(it_id->second, false);
       }
     }
 
     for (const auto& cls : element->classes) {
       auto it_class = categorized->by_class.find(cls);
       if (it_class != categorized->by_class.end()) {
-        match_and_apply(it_class->second);
+        match_and_apply(it_class->second, false);
       }
     }
   }
