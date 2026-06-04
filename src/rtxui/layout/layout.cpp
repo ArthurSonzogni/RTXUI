@@ -97,38 +97,24 @@ void ResetLayoutArena() {
   g_layout_arena.Reset();
 }
 
-template <typename T>
-class ArenaAllocator {
- public:
-  using value_type = T;
-
-  ArenaAllocator() = default;
-
-  template <typename U>
-  constexpr ArenaAllocator(const ArenaAllocator<U>&) noexcept {}
-
-  T* allocate(std::size_t n) {
-    void* ptr = g_layout_arena.Allocate(n * sizeof(T), alignof(T));
-    if (!ptr) {
-      throw std::bad_alloc();
-    }
-    return static_cast<T*>(ptr);
+// Helper: allocate a PhysicalFragment in the arena (for fast bump allocation
+// and cache locality) but keep the shared_ptr control block on the heap.
+// This is safe across frame boundaries: even after ResetLayoutArena() the
+// control block (on the heap) remains valid as long as any shared_ptr holds it.
+template <typename... Args>
+std::shared_ptr<PhysicalFragment> MakeArenaFragment(Args&&... args) {
+  void* raw = g_layout_arena.Allocate(sizeof(PhysicalFragment),
+                                      alignof(PhysicalFragment));
+  if (!raw) {
+    throw std::bad_alloc();
   }
-
-  void deallocate(T*, std::size_t) noexcept {
-    // No-op: handled by arena reset
-  }
-
-  template <typename U>
-  bool operator==(const ArenaAllocator<U>&) const noexcept {
-    return true;
-  }
-
-  template <typename U>
-  bool operator!=(const ArenaAllocator<U>&) const noexcept {
-    return false;
-  }
-};
+  // Placement-new constructs the object in arena memory.
+  PhysicalFragment* ptr = new (raw) PhysicalFragment(std::forward<Args>(args)...);
+  // The deleter calls the destructor but does NOT free memory (arena owns it).
+  return std::shared_ptr<PhysicalFragment>(ptr, [](PhysicalFragment* p) {
+    p->~PhysicalFragment();
+  });
+}
 
 // --- Forward Declarations ---
 std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
@@ -344,7 +330,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     child_width_limit = 10000;
   }
 
-  auto fragment = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, width, 0);
+  auto fragment = MakeArenaFragment(width, 0);
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
@@ -570,7 +556,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   int content_width_limit = std::max(
       0, width - box->style.padding.Horiz() - box->style.border.Horiz());
-  auto container_frag = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, width, 0);
+  auto container_frag = MakeArenaFragment(width, 0);
   container_frag->dom_node = box->dom_node;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
@@ -631,7 +617,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       if (byte_end == byte_start && col_width == 0 && byte_end != text.size()) {
         return;
       }
-      auto text_frag = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, col_width, 1);
+      auto text_frag = MakeArenaFragment(col_width, 1);
       text_frag->dom_node = dom_node;
       text_frag->is_text = true;
       text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
@@ -1048,7 +1034,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   }
 
   // Pass 3: Final Measurement & Positioning
-  auto fragment = std::allocate_shared<PhysicalFragment>(ArenaAllocator<PhysicalFragment>{}, my_width, my_height);
+  auto fragment = MakeArenaFragment(my_width, my_height);
   fragment->dom_node = box->dom_node;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;

@@ -224,6 +224,7 @@ class ScreenImpl {
   bool has_drawn_ = false;
   bool running_ = true;
   std::shared_ptr<PhysicalFragment> root_fragment_;
+  std::shared_ptr<LayoutBox> root_box_;
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
   Element* focused_element_ = nullptr;
@@ -498,9 +499,21 @@ void ScreenImpl::HandleEvent(const Event& event) {
       if (root_fragment_) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
+        // Collect scroll info from fragments first, then release them before
+        // calling Draw() to avoid use-after-arena-reset (Draw() resets the
+        // arena while fragment shared_ptrs might still be in scope).
+        struct ScrollAction {
+          Element* element = nullptr;
+          bool is_vertical = false;
+          int new_value = 0;
+        };
+        ScrollAction action;
+
         if (auto scroll_frag =
                 FindScrollableFragmentAt(root_fragment_, tx, ty)) {
           Element* curr = scroll_frag->dom_node;
+          // Release scroll_frag immediately — we only needed dom_node.
+          scroll_frag.reset();
           while (curr) {
             bool is_horizontal_wheel =
                 (mouse.button == Event::Mouse::Button::WheelLeft ||
@@ -513,6 +526,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 int max_scroll = std::max(0, scroll_height - frag->height);
                 int curr_y = curr->target_scroll_y();
                 int speed = curr->style.scroll_speed_y;
+                frag.reset();  // Release before Draw().
 
                 int new_y = curr_y;
                 if (mouse.button == Event::Mouse::Button::WheelUp) {
@@ -522,9 +536,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 }
 
                 if (new_y != curr_y) {
-                  curr->set_scroll_y(new_y, false);
-                  Draw();
-                  return;
+                  action = {curr, true, new_y};
+                  break;
                 }
               }
             } else if (curr->style.overflow_x == Overflow::Scroll) {
@@ -534,6 +547,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 int max_scroll = std::max(0, scroll_width - frag->width);
                 int curr_x = curr->target_scroll_x();
                 int speed = curr->style.scroll_speed_x;
+                frag.reset();  // Release before Draw().
 
                 int new_x = curr_x;
                 if (mouse.button == Event::Mouse::Button::WheelLeft ||
@@ -544,14 +558,23 @@ void ScreenImpl::HandleEvent(const Event& event) {
                 }
 
                 if (new_x != curr_x) {
-                  curr->set_scroll_x(new_x, false);
-                  Draw();
-                  return;
+                  action = {curr, false, new_x};
+                  break;
                 }
               }
             }
             curr = curr->Parent();
           }
+        }
+
+        if (action.element) {
+          if (action.is_vertical) {
+            action.element->set_scroll_y(action.new_value, false);
+          } else {
+            action.element->set_scroll_x(action.new_value, false);
+          }
+          Draw();
+          return;
         }
       }
     }
@@ -681,6 +704,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
               int max_scroll = std::max(0, scroll_width - scroll_frag->width);
               int curr_x = curr->target_scroll_x();
               int speed = curr->style.scroll_speed_x;
+              scroll_frag.reset();  // Release before Draw().
 
               int delta = (event == Event::ArrowLeft()) ? -speed : speed;
               int new_x = std::clamp(curr_x + delta, 0, max_scroll);
@@ -710,6 +734,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
               } else if (event == Event::PageDown()) {
                 delta = scroll_frag->height;
               }
+              scroll_frag.reset();  // Release before Draw().
 
               int new_y = std::clamp(curr_y + delta, 0, max_scroll);
               if (new_y != curr_y) {
@@ -731,11 +756,13 @@ void ScreenImpl::HandleEvent(const Event& event) {
           int max_scroll = std::max(0, scroll_width - scroll_frag->width);
           int curr_x = scroll_frag->dom_node->target_scroll_x();
           int speed = scroll_frag->dom_node->style.scroll_speed_x;
+          Element* el = scroll_frag->dom_node;
+          scroll_frag.reset();  // Release before Draw().
 
           int delta = (event == Event::ArrowLeft()) ? -speed : speed;
           int new_x = std::clamp(curr_x + delta, 0, max_scroll);
           if (new_x != curr_x) {
-            scroll_frag->dom_node->set_scroll_x(new_x, false);
+            el->set_scroll_x(new_x, false);
             Draw();
             return;
           }
@@ -757,10 +784,12 @@ void ScreenImpl::HandleEvent(const Event& event) {
           } else if (event == Event::PageDown()) {
             delta = scroll_frag->height;
           }
+          Element* el = scroll_frag->dom_node;
+          scroll_frag.reset();  // Release before Draw().
 
           int new_y = std::clamp(curr_y + delta, 0, max_scroll);
           if (new_y != curr_y) {
-            scroll_frag->dom_node->set_scroll_y(new_y, false);
+            el->set_scroll_y(new_y, false);
             Draw();
             return;
           }
@@ -807,6 +836,7 @@ void ScreenImpl::Draw() {
       {height_, MeasureMode::Exactly},
   };
   root_fragment_ = nullptr;
+  root_box_ = nullptr;
   ResetLayoutArena();
 
   std::shared_ptr<PhysicalFragment> root_fragment = nullptr;
@@ -814,6 +844,7 @@ void ScreenImpl::Draw() {
     root_fragment = RunLayout({root_box.get()}, viewport);
   }
   root_fragment_ = root_fragment;
+  root_box_ = root_box;
 
   Texture texture(width_, height_);
   if (root_fragment) {
