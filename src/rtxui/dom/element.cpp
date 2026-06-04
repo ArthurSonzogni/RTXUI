@@ -151,6 +151,22 @@ void Element::RemoveChildren() {
   children_.clear();
 }
 
+void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
+  assert(index < children_.size());
+  children_[index]->parent_ = nullptr;
+  new_child->parent_ = this;
+  children_[index] = std::move(new_child);
+}
+
+void Element::TruncateChildren(size_t count) {
+  if (count < children_.size()) {
+    for (size_t i = count; i < children_.size(); ++i) {
+      children_[i]->parent_ = nullptr;
+    }
+    children_.resize(count);
+  }
+}
+
 void Element::Visit(std::function<void(Element&)> f) {
   f(*this);
   for (auto& child : children_) {
