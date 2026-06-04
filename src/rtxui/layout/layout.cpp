@@ -483,7 +483,15 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   int content_width_limit = std::max(
       0, width - box->style.padding.Horiz() - box->style.border.Horiz());
   auto container_frag = MakeArenaFragment(width, 0);
-  container_frag->children.reserve(box->children.size() * 2 + 8);
+  size_t estimated_children = 0;
+  for (const auto& child : box->children) {
+    if (child->is_text) {
+      estimated_children += std::max<size_t>(1, child->text_data.size() / 6);
+    } else {
+      estimated_children += 1;
+    }
+  }
+  container_frag->children.reserve(estimated_children + 8);
   container_frag->dom_node = box->dom_node;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
