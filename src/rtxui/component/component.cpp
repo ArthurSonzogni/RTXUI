@@ -130,6 +130,7 @@ struct CategorizedRules {
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_id;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_class;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_tag;
+  bool has_pseudo_classes = false;
 };
 
 namespace {
@@ -611,6 +612,9 @@ void ComponentBase::Render() {
             std::move(maybe_stylesheet.value()));
         categorized_rules_ = std::make_unique<CategorizedRules>();
         for (const auto& ruleset : *stylesheet_) {
+          if (!ruleset.parsed_selector.pseudo_classes.empty()) {
+            categorized_rules_->has_pseudo_classes = true;
+          }
           std::string_view selector = ruleset.parsed_selector.base;
           if (selector == "self") {
             categorized_rules_->universal.push_back(&ruleset);
@@ -708,7 +712,9 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
     if (!comp || !comp->Root()) {
       return;
     }
-    ResolveStylesRecursive(comp->Root(), comp, comp->stylesheet_, true);
+    if (comp->categorized_rules() && comp->categorized_rules()->has_pseudo_classes) {
+      ResolveStylesRecursive(comp->Root(), comp, comp->stylesheet_, true);
+    }
     for (auto& child : comp->children_) {
       self(self, child.get());
     }
