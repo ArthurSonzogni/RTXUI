@@ -11,85 +11,10 @@
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/style.hpp"
+#include "rtxui/layout/layout_arena.hpp"
 #include <cstddef>
 
 namespace rtxui {
-
-class LayoutArena {
- public:
-  struct Chunk {
-    char* ptr = nullptr;
-    size_t capacity = 0;
-  };
-
-  LayoutArena() = default;
-  ~LayoutArena() {
-    for (const auto& chunk : allocated_chunks_) {
-      delete[] chunk.ptr;
-    }
-  }
-
-  LayoutArena(const LayoutArena&) = delete;
-  LayoutArena& operator=(const LayoutArena&) = delete;
-
-  void* Allocate(size_t size, size_t alignment) {
-    if (current_chunk_idx_ < allocated_chunks_.size()) {
-      void* ptr = buffer_ + used_;
-      size_t space = capacity_ - used_;
-      if (std::align(alignment, size, ptr, space)) {
-        used_ = capacity_ - space + size;
-        return ptr;
-      }
-      current_chunk_idx_++;
-      if (current_chunk_idx_ < allocated_chunks_.size()) {
-        buffer_ = allocated_chunks_[current_chunk_idx_].ptr;
-        capacity_ = allocated_chunks_[current_chunk_idx_].capacity;
-        used_ = 0;
-        ptr = buffer_ + used_;
-        space = capacity_ - used_;
-        if (std::align(alignment, size, ptr, space)) {
-          used_ = capacity_ - space + size;
-          return ptr;
-        }
-      }
-    }
-
-    size_t new_cap = std::max(capacity_ * 2, size + alignment + 65536);
-    char* new_buf = new char[new_cap];
-    allocated_chunks_.push_back({new_buf, new_cap});
-    current_chunk_idx_ = allocated_chunks_.size() - 1;
-    buffer_ = new_buf;
-    capacity_ = new_cap;
-    used_ = 0;
-
-    void* ptr = buffer_ + used_;
-    size_t space = capacity_ - used_;
-    if (std::align(alignment, size, ptr, space)) {
-      used_ = capacity_ - space + size;
-      return ptr;
-    }
-    return nullptr;
-  }
-
-  void Reset() {
-    current_chunk_idx_ = 0;
-    used_ = 0;
-    if (!allocated_chunks_.empty()) {
-      buffer_ = allocated_chunks_[0].ptr;
-      capacity_ = allocated_chunks_[0].capacity;
-    } else {
-      buffer_ = nullptr;
-      capacity_ = 0;
-    }
-  }
-
- private:
-  std::vector<Chunk> allocated_chunks_;
-  size_t current_chunk_idx_ = 0;
-  char* buffer_ = nullptr;
-  size_t capacity_ = 0;
-  size_t used_ = 0;
-};
 
 thread_local LayoutArena g_layout_arena;
 
@@ -97,24 +22,14 @@ void ResetLayoutArena() {
   g_layout_arena.Reset();
 }
 
-// Helper: allocate a PhysicalFragment in the arena (for fast bump allocation
-// and cache locality) but keep the shared_ptr control block on the heap.
-// This is safe across frame boundaries: even after ResetLayoutArena() the
-// control block (on the heap) remains valid as long as any shared_ptr holds it.
+// Helper: allocate a PhysicalFragment in the arena using std::allocate_shared
+// so that both the control block and the object reside in the arena.
 template <typename... Args>
 std::shared_ptr<PhysicalFragment> MakeArenaFragment(Args&&... args) {
-  void* raw = g_layout_arena.Allocate(sizeof(PhysicalFragment),
-                                      alignof(PhysicalFragment));
-  if (!raw) {
-    throw std::bad_alloc();
-  }
-  // Placement-new constructs the object in arena memory.
-  PhysicalFragment* ptr = new (raw) PhysicalFragment(std::forward<Args>(args)...);
-  // The deleter calls the destructor but does NOT free memory (arena owns it).
-  return std::shared_ptr<PhysicalFragment>(ptr, [](PhysicalFragment* p) {
-    p->~PhysicalFragment();
-  });
+  return std::allocate_shared<PhysicalFragment, LayoutArenaAllocator<PhysicalFragment>>(
+      LayoutArenaAllocator<PhysicalFragment>(), std::forward<Args>(args)...);
 }
+
 
 // --- Forward Declarations ---
 std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
@@ -599,7 +514,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     line_start_index = container_frag->children.size();
   };
 
-  auto process_text_in_flow = [&](const std::string& text, Element* dom_node,
+  auto process_text_in_flow = [&](std::string_view text, Element* dom_node,
                                   std::optional<Color> fg,
                                   std::optional<Color> bg,
                                   std::optional<bool> bold,
