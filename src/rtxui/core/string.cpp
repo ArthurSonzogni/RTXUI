@@ -1674,37 +1674,7 @@ auto CodePointToString(uint32_t codepoint) -> std::string {
   return std::string{};
 }
 
-GraphemeIterator::GraphemeIterator(std::string_view text, size_t pos)
-    : text_(text), pos_(pos) {
-  if (pos_ < text_.size()) {
-    Next();
-  }
-}
-
-GraphemeIterator& GraphemeIterator::operator++() {
-  pos_ += current_.text.size();
-  if (pos_ < text_.size()) {
-    Next();
-  } else {
-    pos_ = text_.size();
-    current_ = Grapheme{"", 0};
-  }
-  return *this;
-}
-
-void GraphemeIterator::Next() {
-  if (pos_ < text_.size()) {
-    unsigned char c = static_cast<unsigned char>(text_[pos_]);
-    if (c < 128 && c != '\r') {
-      if (pos_ + 1 >= text_.size() ||
-          static_cast<unsigned char>(text_[pos_ + 1]) < 128) {
-        int width = (c >= 32) ? 1 : 0;
-        current_ = Grapheme{text_.substr(pos_, 1), width};
-        return;
-      }
-    }
-  }
-
+void GraphemeIterator::NextSlow() {
   size_t start = pos_;
   size_t end = start;
   uint32_t codepoint = 0;
