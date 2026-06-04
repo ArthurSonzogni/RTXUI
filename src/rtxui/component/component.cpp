@@ -558,8 +558,6 @@ void ComponentBase::Render() {
   children_.clear();
   slots_.clear();
 
-  css_strings_.clear();
-
   if (!root_) {
     root_ = Ref<Element>::New(this);
   }
@@ -574,42 +572,51 @@ void ComponentBase::Render() {
   template_node.tag = "template";
   template_node.children.reserve(xml_nodes_.size());
 
-  stylesheet_ = nullptr;
-  categorized_rules_ = nullptr;
+  std::vector<std::string> new_css_strings;
+  for (const auto& node : xml_nodes_) {
+    if (node.type == xml::Node::Type::kElement && node.tag == "style") {
+      if (!node.children.empty() &&
+          node.children[0].type == xml::Node::Type::kText) {
+        new_css_strings.push_back(
+            Interpolate(node.children[0].text, this, nullptr));
+      }
+    }
+  }
+
+  bool css_changed = (new_css_strings != css_strings_);
+  if (css_changed) {
+    css_strings_ = std::move(new_css_strings);
+    stylesheet_ = nullptr;
+    categorized_rules_ = nullptr;
+    for (const auto& css_str : css_strings_) {
+      auto maybe_stylesheet = css::Parse(css_str);
+      if (maybe_stylesheet) {
+        stylesheet_ = std::make_unique<css::StyleSheet>(
+            std::move(maybe_stylesheet.value()));
+        categorized_rules_ = std::make_unique<CategorizedRules>();
+        for (const auto& ruleset : *stylesheet_) {
+          std::string_view selector = ruleset.parsed_selector.base;
+          if (selector == "self") {
+            categorized_rules_->universal.push_back(&ruleset);
+          } else if (selector.starts_with("#")) {
+            categorized_rules_->by_id[selector.substr(1)].push_back(&ruleset);
+          } else if (selector.starts_with(".")) {
+            categorized_rules_->by_class[selector.substr(1)].push_back(&ruleset);
+          } else if (selector.empty()) {
+            categorized_rules_->universal.push_back(&ruleset);
+          } else {
+            categorized_rules_->by_tag[selector].push_back(&ruleset);
+          }
+        }
+      } else {
+        CssParseError(maybe_stylesheet.error(), css_str);
+      }
+    }
+  }
 
   for (const auto& node : xml_nodes_) {
     if (node.type == xml::Node::Type::kElement) {
       if (node.tag == "style") {
-        if (node.children.empty() ||
-            node.children[0].type != xml::Node::Type::kText) {
-          continue;
-        }
-        css_strings_.push_back(
-            Interpolate(node.children[0].text, this, nullptr));
-        const auto& css_str = css_strings_.back();
-        auto maybe_stylesheet = css::Parse(css_str);
-        if (maybe_stylesheet) {
-          stylesheet_ = std::make_unique<css::StyleSheet>(
-              std::move(maybe_stylesheet.value()));
-          
-          categorized_rules_ = std::make_unique<CategorizedRules>();
-          for (const auto& ruleset : *stylesheet_) {
-            std::string_view selector = ruleset.parsed_selector.base;
-            if (selector == "self") {
-              categorized_rules_->universal.push_back(&ruleset);
-            } else if (selector.starts_with("#")) {
-              categorized_rules_->by_id[selector.substr(1)].push_back(&ruleset);
-            } else if (selector.starts_with(".")) {
-              categorized_rules_->by_class[selector.substr(1)].push_back(&ruleset);
-            } else if (selector.empty()) {
-              categorized_rules_->universal.push_back(&ruleset);
-            } else {
-              categorized_rules_->by_tag[selector].push_back(&ruleset);
-            }
-          }
-        } else {
-          CssParseError(maybe_stylesheet.error(), css_str);
-        }
         continue;
       }
       template_node.children.push_back(node);
