@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "rtxui/layout/layout_arena.hpp"
+
 #include "rtxui/layout/style.hpp"
 #include "rtxui/paint/color.hpp"
 
@@ -42,7 +44,7 @@ struct PhysicalFragment {
     std::shared_ptr<PhysicalFragment> fragment;
     int x, y;
   };
-  std::vector<ChildLink> children;
+  std::vector<ChildLink, LayoutArenaAllocator<ChildLink>> children;
 
   PhysicalFragment(int w, int h) : width(w), height(h) {}
 };
