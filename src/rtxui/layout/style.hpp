@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <cstring>
+#include <cstddef>
 
 #include "rtxui/paint/color.hpp"
 
@@ -26,6 +28,8 @@ struct Length {
   float value = 0;
   Unit unit = Unit::Auto;
 
+  bool operator==(const Length&) const = default;
+
   static Length Auto() { return {0, Unit::Auto}; }
   static Length Cells(float v) { return {v, Unit::Cells}; }
   static Length Pct(float v) { return {v, Unit::Percent}; }
@@ -45,6 +49,7 @@ struct Spacing {
   int top = 0, right = 0, bottom = 0, left = 0;
   int Horiz() const { return left + right; }
   int Vert() const { return top + bottom; }
+  bool operator==(const Spacing&) const = default;
 };
 
 struct Constraint {
@@ -123,6 +128,7 @@ struct TransitionConfig {
   float duration_seconds = 0.0f;
   float delay_seconds = 0.0f;
   std::string timing_function = "ease";
+  bool operator==(const TransitionConfig&) const = default;
 };
 
 // Represents the "Computed CSS values"
@@ -187,48 +193,10 @@ struct ComputedStyle {
     if (!other.transitions.empty()) {
       transitions = other.transitions;
     }
-    position = other.position;
-    top = other.top;
-    right = other.right;
-    bottom = other.bottom;
-    left = other.left;
-    z_index = other.z_index;
-    display_outside = other.display_outside;
-    display_inside = other.display_inside;
-    display_none = other.display_none;
-    flex_direction = other.flex_direction;
-    width = other.width;
-    height = other.height;
-    max_width = other.max_width;
-    max_height = other.max_height;
-    margin_left_auto = other.margin_left_auto;
-    margin_right_auto = other.margin_right_auto;
-    flex_grow = other.flex_grow;
-    flex_shrink = other.flex_shrink;
-    margin = other.margin;
-    padding = other.padding;
-    border = other.border;
-    border_style = other.border_style;
-    border_color_top = other.border_color_top;
-    border_color_right = other.border_color_right;
-    border_color_bottom = other.border_color_bottom;
-    border_color_left = other.border_color_left;
-    background_color = other.background_color;
-    foreground_color = other.foreground_color;
-    opacity = other.opacity;
-    bold = other.bold;
-    underlined = other.underlined;
-    underlined_double = other.underlined_double;
-    strikethrough = other.strikethrough;
-    blink = other.blink;
-    overflow_x = other.overflow_x;
-    overflow_y = other.overflow_y;
-    scrollbar_width = other.scrollbar_width;
-    text_align = other.text_align;
-    white_space = other.white_space;
-    scroll_speed_x = other.scroll_speed_x;
-    scroll_speed_y = other.scroll_speed_y;
-    scroll_behavior = other.scroll_behavior;
+    char* dst = reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
+    const char* src = reinterpret_cast<const char*>(&other) + offsetof(ComputedStyle, position);
+    size_t size = sizeof(ComputedStyle) - offsetof(ComputedStyle, position);
+    std::memcpy(dst, src, size);
   }
 
   ComputedStyle& operator=(const ComputedStyle& other) {
@@ -236,48 +204,10 @@ struct ComputedStyle {
     if (!transitions.empty() || !other.transitions.empty()) {
       transitions = other.transitions;
     }
-    position = other.position;
-    top = other.top;
-    right = other.right;
-    bottom = other.bottom;
-    left = other.left;
-    z_index = other.z_index;
-    display_outside = other.display_outside;
-    display_inside = other.display_inside;
-    display_none = other.display_none;
-    flex_direction = other.flex_direction;
-    width = other.width;
-    height = other.height;
-    max_width = other.max_width;
-    max_height = other.max_height;
-    margin_left_auto = other.margin_left_auto;
-    margin_right_auto = other.margin_right_auto;
-    flex_grow = other.flex_grow;
-    flex_shrink = other.flex_shrink;
-    margin = other.margin;
-    padding = other.padding;
-    border = other.border;
-    border_style = other.border_style;
-    border_color_top = other.border_color_top;
-    border_color_right = other.border_color_right;
-    border_color_bottom = other.border_color_bottom;
-    border_color_left = other.border_color_left;
-    background_color = other.background_color;
-    foreground_color = other.foreground_color;
-    opacity = other.opacity;
-    bold = other.bold;
-    underlined = other.underlined;
-    underlined_double = other.underlined_double;
-    strikethrough = other.strikethrough;
-    blink = other.blink;
-    overflow_x = other.overflow_x;
-    overflow_y = other.overflow_y;
-    scrollbar_width = other.scrollbar_width;
-    text_align = other.text_align;
-    white_space = other.white_space;
-    scroll_speed_x = other.scroll_speed_x;
-    scroll_speed_y = other.scroll_speed_y;
-    scroll_behavior = other.scroll_behavior;
+    char* dst = reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
+    const char* src = reinterpret_cast<const char*>(&other) + offsetof(ComputedStyle, position);
+    size_t size = sizeof(ComputedStyle) - offsetof(ComputedStyle, position);
+    std::memcpy(dst, src, size);
     return *this;
   }
 
