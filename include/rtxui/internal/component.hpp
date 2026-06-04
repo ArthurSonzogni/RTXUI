@@ -126,6 +126,11 @@ class ComponentBase : public RefCounted, public Bindings {
               Element* element,
               ComponentBase* source,
               std::shared_ptr<LocalScope> scope = nullptr);
+  void RenderReconcile(const xml::Node& node,
+                       Element* element,
+                       ComponentBase* source,
+                       std::shared_ptr<LocalScope> scope,
+                       size_t& child_idx);
   std::string template_;
   std::string xml_string_;
   xml::Nodes xml_nodes_;

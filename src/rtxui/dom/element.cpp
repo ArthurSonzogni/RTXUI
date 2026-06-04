@@ -199,6 +199,15 @@ void Element::SetAttribute(std::string name, std::string value) {
   attributes_[std::move(name)] = std::move(value);
 }
 
+void Element::RemoveAttribute(const std::string& name) {
+  if (name == "id") {
+    id.clear();
+  } else if (name == "class") {
+    classes.clear();
+  }
+  attributes_.erase(name);
+}
+
 std::string Element::Print(int depth) const {
   std::string out;
   out += std::string(depth, ' ') + "<" + std::string(tag()) + "";

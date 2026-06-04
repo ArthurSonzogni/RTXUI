@@ -62,6 +62,12 @@ class Element : public RefCounted {
 
   // Attributes.
   void SetAttribute(std::string name, std::string value);
+  void RemoveAttribute(const std::string& name);
+  void ClearAttributes() {
+    id.clear();
+    classes.clear();
+    attributes_.clear();
+  }
   const std::map<std::string, std::string>& Attributes() const {
     return attributes_;
   }
