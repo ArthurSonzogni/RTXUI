@@ -552,6 +552,81 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     };
 
     int cur_col = col_start;
+
+    // Check if the string contains only ASCII characters.
+    bool is_pure_ascii = true;
+    for (char c : text) {
+      if (static_cast<unsigned char>(c) >= 128) {
+        is_pure_ascii = false;
+        break;
+      }
+    }
+
+    if (is_pure_ascii) {
+      size_t i = 0;
+      while (i < text.size()) {
+        char c = text[i];
+        bool is_newline = (c == '\n' || c == '\r');
+        size_t byte_end = i + 1;
+        int g_width = (c >= 32 && c < 127) ? 1 : 0;
+
+        if (is_newline) {
+          if (c == '\r' && i + 1 < text.size() && text[i + 1] == '\n') {
+            byte_end = i + 2;
+          }
+          size_t frag_byte_end = i;
+          emit_frag(frag_byte_end, cur_col - col_start);
+          byte_start = byte_end;
+          col_start = cur_col + g_width;
+          cur_col = col_start;
+          have_last_space = false;
+          commit_line();
+          i = byte_end;
+          continue;
+        }
+
+        if (c == ' ') {
+          last_space_byte = i;
+          last_space_col = cur_col - col_start;
+          have_last_space = true;
+        }
+
+        if (box->style.white_space == WhiteSpace::Nowrap) {
+          cur_col += g_width;
+        } else if (cursor_x + (cur_col - col_start) + g_width >
+                   content_width_limit) {
+          if (have_last_space) {
+            emit_frag(last_space_byte, last_space_col);
+            byte_start = last_space_byte + 1;
+            col_start = last_space_col + 1;
+            cur_col = col_start;
+            have_last_space = false;
+            commit_line();
+            byte_end = i + 1;
+            cur_col += g_width;
+          } else if (cursor_x > 0) {
+            commit_line();
+            cur_col += g_width;
+          } else {
+            cur_col += g_width;
+            size_t next_byte = i + 1;
+            emit_frag(next_byte, cur_col - col_start);
+            byte_start = next_byte;
+            col_start = cur_col;
+            commit_line();
+          }
+        } else {
+          cur_col += g_width;
+        }
+        i = byte_end;
+      }
+
+      if (byte_start < text.size()) {
+        emit_frag(text.size(), cur_col - col_start);
+      }
+      return;
+    }
+
     for (const Grapheme& g : Graphemes(text)) {
       size_t byte_end =
           static_cast<size_t>(g.text.data() + g.text.size() - text.data());
