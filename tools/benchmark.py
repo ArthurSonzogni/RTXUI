@@ -136,8 +136,13 @@ def main():
     parser.add_argument("--save", type=str, metavar="FILE", help="Run benchmark and save results to JSON file")
     parser.add_argument("--compare", type=str, metavar="FILE", help="Run benchmark and compare with saved baseline JSON file")
     parser.add_argument("--profile", action="store_true", help="Run under CPU perf profiler and show top symbols")
+    parser.add_argument("--layout", action="store_true", help="Use rtxui_layout_benchmark instead of rtxui_benchmark")
 
     args = parser.parse_args()
+
+    if args.layout:
+        global BENCHMARK_BIN
+        BENCHMARK_BIN = "./build/rtxui_layout_benchmark"
 
     if args.profile:
         run_profiler()

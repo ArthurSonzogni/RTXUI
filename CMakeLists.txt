@@ -264,6 +264,9 @@ option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" ON)
 if(RTXUI_BUILD_BENCHMARKS)
   add_executable(rtxui_benchmark benchmarks/rtxui_benchmark.cpp)
   target_link_libraries(rtxui_benchmark PRIVATE rtxui)
+
+  add_executable(rtxui_layout_benchmark benchmarks/rtxui_layout_benchmark.cpp)
+  target_link_libraries(rtxui_layout_benchmark PRIVATE rtxui)
 endif()
 
 
