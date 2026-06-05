@@ -974,5 +974,38 @@ TEST_CASE("Layout: Flexbox grow/shrink remainder allocated to final child", "[la
   }
 }
 
+TEST_CASE("Layout: Table Grid Rendering", "[layout][table]") {
+  struct TableTest : Component<TableTest> {
+    std::string_view Setup() override {
+      return R"html(
+        <table>
+          <tr>
+            <td>col1</td>
+            <td>column2</td>
+          </tr>
+          <tr>
+            <td>val1</td>
+            <td>val2</td>
+          </tr>
+        </table>
+      )html";
+    }
+  };
+
+  auto app = Ref<TableTest>::New();
+  auto texture = RenderComponent(app, 30, 2);
+
+  auto* table = app->Root()->QuerySelector("table");
+  REQUIRE(table != nullptr);
+  CHECK(table->layout_width() > 0);
+  CHECK(table->layout_height() == 2);
+
+  std::string layout_text = GetTextLayer(texture);
+  CHECK(layout_text.find("col1") != std::string::npos);
+  CHECK(layout_text.find("column2") != std::string::npos);
+  CHECK(layout_text.find("val1") != std::string::npos);
+  CHECK(layout_text.find("val2") != std::string::npos);
+}
+
 }  // namespace rtxui
 

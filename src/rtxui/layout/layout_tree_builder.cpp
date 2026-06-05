@@ -53,6 +53,13 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   }
 
   // --- Algorithm Selection & Tree Refinement ---
+  if (dom_node->tag() == "table") {
+    box->children = raw_children;
+    box->algorithm = LayoutBox::Algorithm::Table;
+    box->style.display_outside = DisplayOutside::Block;
+    return box;
+  }
+
   if (box->style.display_inside == DisplayInside::Flex) {
     box->children = raw_children;
     box->algorithm = LayoutBox::Algorithm::Flex;
