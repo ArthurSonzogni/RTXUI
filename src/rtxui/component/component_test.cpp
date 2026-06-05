@@ -1410,6 +1410,11 @@ TEST_CASE("Default Components Registration", "[component]") {
   CHECK(rtxui::GetGlobalComponentFactory("span") != nullptr);
   CHECK(rtxui::GetGlobalComponentFactory("p") != nullptr);
   CHECK(rtxui::GetGlobalComponentFactory("h1") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("h2") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("h3") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("h4") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("h5") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("h6") != nullptr);
   CHECK(rtxui::GetGlobalComponentFactory("button") != nullptr);
   CHECK(rtxui::GetGlobalComponentFactory("input") != nullptr);
   CHECK(rtxui::GetGlobalComponentFactory("textarea") != nullptr);
@@ -1574,6 +1579,61 @@ TEST_CASE("List Rendering - ul, ol, li, and CSS", "[component][list]") {
   REQUIRE(ul_custom_none != nullptr);
   auto print_none = ul_custom_none->Print();
   CHECK(RemoveWhitespace(print_none) == "<ulid=\"ul_custom_none\"><li><span></span>noneitem</li></ul>");
+}
+
+TEST_CASE("Heading Tags Rendering h1-h6", "[component]") {
+  class HeadingsTestComponent : public rtxui::Component<HeadingsTestComponent> {
+   public:
+    std::string_view view = R"html(
+      <div>
+        <h1 id="heading1">H1</h1>
+        <h2 id="heading2">H2</h2>
+        <h3 id="heading3">H3</h3>
+        <h4 id="heading4">H4</h4>
+        <h5 id="heading5">H5</h5>
+        <h6 id="heading6">H6</h6>
+      </div>
+    )html";
+
+    HeadingsTestComponent() {
+      Import<rtxui::div>();
+      Import<rtxui::h1>();
+      Import<rtxui::h2>();
+      Import<rtxui::h3>();
+      Import<rtxui::h4>();
+      Import<rtxui::h5>();
+      Import<rtxui::h6>();
+    }
+  };
+
+  auto app = rtxui::Ref<HeadingsTestComponent>::New();
+  app->Mount();
+  app->Digest();
+
+  auto* root = app->Root();
+  REQUIRE(root != nullptr);
+
+  auto* h1_el = root->QuerySelector("#heading1");
+  auto* h2_el = root->QuerySelector("#heading2");
+  auto* h3_el = root->QuerySelector("#heading3");
+  auto* h4_el = root->QuerySelector("#heading4");
+  auto* h5_el = root->QuerySelector("#heading5");
+  auto* h6_el = root->QuerySelector("#heading6");
+
+  REQUIRE(h1_el != nullptr);
+  REQUIRE(h2_el != nullptr);
+  REQUIRE(h3_el != nullptr);
+  REQUIRE(h4_el != nullptr);
+  REQUIRE(h5_el != nullptr);
+  REQUIRE(h6_el != nullptr);
+
+  // Check that default style block display is active
+  CHECK(h1_el->style.display_outside == rtxui::DisplayOutside::Block);
+  CHECK(h2_el->style.display_outside == rtxui::DisplayOutside::Block);
+  CHECK(h3_el->style.display_outside == rtxui::DisplayOutside::Block);
+  CHECK(h4_el->style.display_outside == rtxui::DisplayOutside::Block);
+  CHECK(h5_el->style.display_outside == rtxui::DisplayOutside::Block);
+  CHECK(h6_el->style.display_outside == rtxui::DisplayOutside::Block);
 }
 
 }  // namespace
