@@ -34,28 +34,13 @@ The `<markdown>` component parses standard Markdown pipe-tables into standard HT
 | Escaped pipes \| | Supported ✅ |
 ```
 
-### Output (Generated HTML)
+### Output (Rendered)
 
-```html
-<table>
-  <thead>
-    <tr>
-      <th>Feature</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Table parsing</td>
-      <td>Live ✅</td>
-    </tr>
-    <tr>
-      <td>Escaped pipes |</td>
-      <td>Supported ✅</td>
-    </tr>
-  </tbody>
-</table>
-```
+| Feature | Status |
+|---|---|
+| Table parsing | Live ✅ |
+| Escaped pipes | Supported ✅ |
+
 
 ### Usage Example
 
