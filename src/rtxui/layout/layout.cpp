@@ -1233,7 +1233,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
     if (is_row) {
       final_c.width = {item.main_resolved_size - m_horiz, MeasureMode::Exactly};
-      if (box->style.align_items == AlignItems::Stretch && item.box->style.height.unit == Unit::Auto) {
+      if (box->style.align_items == AlignItems::Stretch && item.box->style.height.unit == Unit::Auto && !auto_height) {
         final_c.height = {content_h - m_vert, MeasureMode::Exactly};
       } else if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
         final_c.height = {content_h, MeasureMode::Undefined};
@@ -1243,7 +1243,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         final_c.height = {max_h, MeasureMode::AtMost};
       }
     } else {
-      if (box->style.align_items == AlignItems::Stretch && item.box->style.width.unit == Unit::Auto) {
+      if (box->style.align_items == AlignItems::Stretch && item.box->style.width.unit == Unit::Auto && !auto_width) {
         final_c.width = {content_w - m_horiz, MeasureMode::Exactly};
       } else if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
         final_c.width = {content_w, MeasureMode::Undefined};
