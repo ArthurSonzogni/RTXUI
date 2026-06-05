@@ -13,7 +13,7 @@
 
 namespace xml {
 
-using Attributes = std::map<std::string_view, std::string_view>;
+using Attributes = std::map<std::string, std::string>;
 
 /// The node object, which represents an XML node.
 struct Node {
@@ -26,10 +26,10 @@ struct Node {
   Type type;
 
   /// The tag name of the node. Only valid if the type is kElement.
-  std::string_view tag;
+  std::string tag;
 
   /// The text of the node. Only valid if the type is kText or kComment.
-  std::string_view text;
+  std::string text;
 
   /// The attributes of the node. Only valid if the type is kElement.
   Attributes attributes;
