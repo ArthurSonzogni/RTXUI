@@ -127,4 +127,53 @@ TEST_CASE("Markdown: HTML Escaping", "[markdown]") {
           "<p>a &lt; b &amp; c &gt; d</p>\n");
 }
 
+TEST_CASE("Markdown: Tables", "[markdown]") {
+  const std::string input = R"(| Header 1 | Header 2 |
+| --- | --- |
+| Cell 1 | Cell 2 |
+| Cell 3 | Cell 4 |)";
+  const std::string expected = R"(<table>
+<thead>
+<tr>
+<th>Header 1</th>
+<th>Header 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cell 1</td>
+<td>Cell 2</td>
+</tr>
+<tr>
+<td>Cell 3</td>
+<td>Cell 4</td>
+</tr>
+</tbody>
+</table>
+)";
+  REQUIRE(MarkdownToHtml(input) == expected);
+
+  // Test escaping of pipes in cell content
+  const std::string escaped_input = R"(| A \| B | C |
+| --- | --- |
+| D | E |)";
+  const std::string expected_escaped = R"(<table>
+<thead>
+<tr>
+<th>A | B</th>
+<th>C</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D</td>
+<td>E</td>
+</tr>
+</tbody>
+</table>
+)";
+  REQUIRE(MarkdownToHtml(escaped_input) == expected_escaped);
+}
+
 }  // namespace rtxui
+
