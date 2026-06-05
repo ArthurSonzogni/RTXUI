@@ -520,12 +520,12 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
 
   // Test Scrolling keeping cursor visible
   input_el->set_layout_width(10);  // total layout width of 10 cells
-  // With 1 cell border and 1 cell padding on left and right, inner visible
-  // width is 6.
-  input_ptr->value = "123456789";
-  input_ptr->cursor_pos = 7;
+  // With no border and 1 cell padding on left and right, inner visible
+  // width is 8.
+  input_ptr->value = "1234567890";
+  input_ptr->cursor_pos = 9;
   input_ptr->Digest();
-  // cursor_col = 7. scroll_x should adjust to 7 - 6 + 1 = 2.
+  // cursor_col = 9. scroll_x should adjust to 9 - 8 + 1 = 2.
   CHECK(input_el->scroll_x() == 2);
 }
 
@@ -536,9 +536,8 @@ TEST_CASE("Input Component Layout Height", "[component]") {
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  // The layout height should be 3 cells: 1 cell for text content, plus 2 cells
-  // for top/bottom borders.
-  CHECK(input_el->layout_height() == 3);
+  // The layout height should be 1 cell: no border, content is 1 row of text.
+  CHECK(input_el->layout_height() == 1);
 }
 
 TEST_CASE("Input Component State Preservation", "[component]") {
@@ -567,6 +566,34 @@ TEST_CASE("Input Component State Preservation", "[component]") {
   CHECK(input_ptr->cursor_pos == 2);
 }
 
+TEST_CASE("Input Click Does Not Resize", "[component][input]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+
+  int initial_width  = input_el->layout_width();
+  int initial_height = input_el->layout_height();
+  // The input should have a proper fixed size (width: 20 default).
+  REQUIRE(initial_width > 0);
+  REQUIRE(initial_height > 0);
+
+  // Click at the input's position.
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = input_el->absolute_x() + 1;  // 1-based
+  mouse.y = input_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+
+  // Dimensions must not change after click (no resize-on-focus regression).
+  CHECK(input_el->layout_width()  == initial_width);
+  CHECK(input_el->layout_height() == initial_height);
+}
+
 class TextareaTestComponent : public rtxui::Component<TextareaTestComponent> {
  public:
   std::string my_text = "line one\nline two\nline three";
@@ -580,9 +607,38 @@ class TextareaTestComponent : public rtxui::Component<TextareaTestComponent> {
   )";
 };
 
+TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+
+  int initial_width  = ta_el->layout_width();
+  int initial_height = ta_el->layout_height();
+  // The textarea should have a proper fixed size (width: 40, height: 5 default).
+  REQUIRE(initial_width > 0);
+  REQUIRE(initial_height > 0);
+
+  // Click at the textarea's position.
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = ta_el->absolute_x() + 1;  // 1-based
+  mouse.y = ta_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+
+  // Dimensions must not change after click (no resize-on-focus regression).
+  CHECK(ta_el->layout_width()  == initial_width);
+  CHECK(ta_el->layout_height() == initial_height);
+}
+
 TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
   container->Mount();
+
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);

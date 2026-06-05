@@ -584,25 +584,27 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
   c->Digest();
 
   auto layout_box = LayoutTreeBuilder::Build(c->Root());
-  // Width 10: border(1)+padding(1)+content(5)+padding(1)+scrollbar(1)+border(1)
-  // = 10 Height 3: top-border + content-row + bottom-border
-  Texture texture(10, 3);
+  // The textarea has no border (removed). Default: width=40, height=5.
+  // We render into 9x3 to observe the padding+content+blank rows.
+  // Width 9: padding(1) + content(7) + padding(1)
+  // Height 3: 3 of the 5 default rows visible
+  Texture texture(9, 3);
   if (layout_box) {
     LayoutConstraints constraints;
-    constraints.width = {10, MeasureMode::Exactly};
+    constraints.width = {9, MeasureMode::Exactly};
     constraints.height = {3, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
     Paint(fragment.get(), texture);
   }
   std::string layer = GetTextLayer(texture);
   INFO("Actual render: [" << layer << "]");
-  // Row 0: top border    "┌─────── ┐"
-  // Row 1: content line  "│ hello  │"  (padding + cursor('h') + "ello" +
-  // padding + scrollbar) Row 2: bottom border "└─────── ┘"
+  // Row 0: content with padding:  " hello  " (padding-left=1, then text, spaces)
+  // Row 1: blank row (fixed height, content shorter than 5 rows)
+  // Row 2: blank row
   CHECK(layer ==
-        "┌─────── ┐\n"
-        "│ hello  │\n"
-        "└─────── ┘\n");
+        " hello   \n"
+        "         \n"
+        "         \n");
 }
 
 TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
@@ -621,27 +623,29 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
   c->Digest();
 
   auto layout_box = LayoutTreeBuilder::Build(c->Root());
-  // Width 8: border(1)+padding(1)+content(3)+padding(1)+scrollbar(1)+border(1)
-  // = 8 Height 4: top-border + 2 content rows + bottom-border
-  Texture texture(8, 4);
+  // The textarea has no border (removed). Default: width=40, height=5.
+  // We render into 7x4 to observe the padding+content+blank rows.
+  // Width 7: padding(1) + content(5) + padding(1)
+  // Height 4: 4 of the 5 default rows visible
+  Texture texture(7, 4);
   if (layout_box) {
     LayoutConstraints constraints;
-    constraints.width = {8, MeasureMode::Exactly};
+    constraints.width = {7, MeasureMode::Exactly};
     constraints.height = {4, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
     Paint(fragment.get(), texture);
   }
   std::string layer = GetTextLayer(texture);
   INFO("Actual multiline render: [" << layer << "]");
-  // Row 0: "┌───── ┐"
-  // Row 1: "│ foo  │"   ← cursor 'f' + "oo" + padding + scrollbar, width 3 text
-  // Row 2: "│ bar  │"   ← "bar" + padding + scrollbar, width 3 text
-  // Row 3: "└───── ┘"
+  // Row 0: " foo   " (padding-left + cursor 'f' + "oo" + spaces)
+  // Row 1: " bar   " (padding-left + "bar" + spaces)
+  // Row 2: blank row
+  // Row 3: blank row
   CHECK(layer ==
-        "┌───── ┐\n"
-        "│ foo  │\n"
-        "│ bar  │\n"
-        "└───── ┘\n");
+        " foo   \n"
+        " bar   \n"
+        "       \n"
+        "       \n");
 }
 
 TEST_CASE("Layout: position absolute and relative", "[layout][position]") {

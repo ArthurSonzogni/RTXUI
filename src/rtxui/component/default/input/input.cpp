@@ -19,8 +19,7 @@ std::string_view input::Setup() {
       self {
         display: inline flex;
         flex-direction: row;
-        border: solid;
-        border-color: #555;
+        width: 20;
         padding-left: 1;
         padding-right: 1;
         overflow-x: scroll;
