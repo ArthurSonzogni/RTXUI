@@ -18,11 +18,12 @@ std::string_view textarea::Setup() {
   return R"html(<span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span><style>
       self {
         display: block;
-        border: solid;
-        border-color: #555;
+        width: 40;
+        height: 5;
         padding-left: 1;
         padding-right: 1;
         overflow-y: scroll;
+        scrollbar-width: none;
       }
       .cursor {
         background-color: transparent;
