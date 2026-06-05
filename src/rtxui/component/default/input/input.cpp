@@ -25,13 +25,21 @@ std::string_view input::Setup() {
         overflow-x: scroll;
         scrollbar-width: none;
         white-space: nowrap;
+        background-color: #1e1e1e;
+        transition: background-color 0.15s linear;
+      }
+      self:hover {
+        background-color: #2a2a2a;
+      }
+      self:focus {
+        background-color: #0d2137;
       }
       .cursor {
         background-color: transparent;
       }
       .cursor-focused {
-        background-color: white;
-        color: black;
+        background-color: #7eb8f7;
+        color: #0d2137;
       }
     </style>)html";
 }
