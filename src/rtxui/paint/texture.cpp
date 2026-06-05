@@ -100,7 +100,6 @@ std::string Texture::Render() const {
       // The terminal cursor already advanced past this column when the wide
       // character was printed, so we must emit nothing here.
       if (cell.is_continuation) {
-        prev = &cell;
         continue;
       }
       Transition(ss, prev, &cell);

@@ -1,0 +1,8 @@
+build/
+build_wasm/
+build_fuzz/
+.cache/
+.git/
+gcc-local/
+.antigravitycli/
+build_silent.log
