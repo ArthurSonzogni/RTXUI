@@ -162,6 +162,18 @@ struct ElementPath {
     }
     return false;
   }
+
+  bool operator==(const ElementPath& other) const noexcept {
+    if (depth != other.depth) {
+      return false;
+    }
+    for (size_t i = 0; i < depth; ++i) {
+      if (indices[i] != other.indices[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 };
 
 struct ElementState {
@@ -174,7 +186,7 @@ struct ElementState {
 
 void CollectElementStates(Element* el,
                           ElementPath& path,
-                          std::map<ElementPath, ElementState>& states) {
+                          std::vector<std::pair<ElementPath, ElementState>>& states) {
   if (!el) {
     return;
   }
@@ -182,9 +194,9 @@ void CollectElementStates(Element* el,
                    el->scroll_y() != 0 ||
                    el->focused() ||
                    !el->active_transitions.empty() ||
-                   !el->target_style.transitions.empty();
+                   (el->target_style.transitions && !el->target_style.transitions->empty());
   if (has_state) {
-    states[path] = {el->scroll_x(), el->scroll_y(), el->focused(), el->style, el->active_transitions};
+    states.push_back({path, {el->scroll_x(), el->scroll_y(), el->focused(), el->style, el->active_transitions}});
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     path.push_back(static_cast<int>(i));
@@ -196,17 +208,19 @@ void CollectElementStates(Element* el,
 void RestoreElementStates(
     Element* el,
     ElementPath& path,
-    const std::map<ElementPath, ElementState>& states) {
+    const std::vector<std::pair<ElementPath, ElementState>>& states) {
   if (!el) {
     return;
   }
-  auto it = states.find(path);
-  if (it != states.end()) {
-    el->set_scroll_x(it->second.scroll_x);
-    el->set_scroll_y(it->second.scroll_y);
-    el->set_focused(it->second.focused);
-    el->style = it->second.style;
-    el->active_transitions = it->second.active_transitions;
+  for (const auto& pair : states) {
+    if (pair.first == path) {
+      el->set_scroll_x(pair.second.scroll_x);
+      el->set_scroll_y(pair.second.scroll_y);
+      el->set_focused(pair.second.focused);
+      el->style = pair.second.style;
+      el->active_transitions = pair.second.active_transitions;
+      break;
+    }
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     path.push_back(static_cast<int>(i));
@@ -536,7 +550,10 @@ void ComponentBase::Mount() {
 }
 
 void ComponentBase::Render() {
-  std::map<ElementPath, ElementState> saved_states;
+  // Optimization: Use a flat vector of pairs instead of std::map<ElementPath, ElementState>.
+  // Since very few elements actually hold state (scroll, focus, transitions), this avoids
+  // the dynamic allocation and key-comparison overhead of a red-black tree map.
+  std::vector<std::pair<ElementPath, ElementState>> saved_states;
   Element* saved_parent = nullptr;
   if (root_) {
     saved_parent = root_->Parent();
@@ -696,6 +713,20 @@ void ComponentBase::ResolveTargetStyles() {
 void ComponentBase::ResolveTargetStyles(double current_time_ms) {
   if (!root_) {
     return;
+  }
+
+  if (!HasAnyPseudoClasses()) {
+    auto HasActive = [](auto& self, Element* element) -> bool {
+      if (!element) return false;
+      if (!element->active_transitions.empty() || element->IsAnimatingScroll()) return true;
+      for (size_t i = 0; i < element->ChildCount(); ++i) {
+        if (self(self, element->ChildAt(i))) return true;
+      }
+      return false;
+    };
+    if (!HasActive(HasActive, root_.get())) {
+      return;
+    }
   }
 
   auto ResetTarget = [](auto& self, Element* element) -> void {
@@ -1156,6 +1187,18 @@ void ComponentBase::PropagateBinding(std::string_view child_prop,
 
 const css::StyleSheet* ComponentBase::stylesheet() const {
   return stylesheet_.get();
+}
+
+bool ComponentBase::HasAnyPseudoClasses() const {
+  if (categorized_rules_ && categorized_rules_->has_pseudo_classes) {
+    return true;
+  }
+  for (const auto& child : children_) {
+    if (child && child->HasAnyPseudoClasses()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 namespace reflection {

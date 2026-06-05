@@ -35,6 +35,24 @@ struct Cell {
   std::string character = "";
 };
 
+inline bool operator==(const Cell& lhs, const Cell& rhs) noexcept {
+  return lhs.background_color == rhs.background_color &&
+         lhs.foreground_color == rhs.foreground_color &&
+         lhs.blink == rhs.blink &&
+         lhs.bold == rhs.bold &&
+         lhs.dim == rhs.dim &&
+         lhs.inverted == rhs.inverted &&
+         lhs.underlined == rhs.underlined &&
+         lhs.underlined_double == rhs.underlined_double &&
+         lhs.strikethrough == rhs.strikethrough &&
+         lhs.is_continuation == rhs.is_continuation &&
+         lhs.character == rhs.character;
+}
+
+inline bool operator!=(const Cell& lhs, const Cell& rhs) noexcept {
+  return !(lhs == rhs);
+}
+
 extern Cell NullCell;
 
 #endif  // PAINT_CELL_HPP_

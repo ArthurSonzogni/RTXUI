@@ -225,6 +225,7 @@ class ScreenImpl {
   bool running_ = true;
   std::shared_ptr<PhysicalFragment> root_fragment_;
   std::shared_ptr<LayoutBox> root_box_;
+  std::unique_ptr<Texture> last_texture_;
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
   Element* focused_element_ = nullptr;
@@ -232,8 +233,8 @@ class ScreenImpl {
   task::TaskRunner task_runner_;
 
   struct RawTerminal {
-    TerminalDevice* device_ = nullptr;
-    explicit RawTerminal(TerminalDevice* device);
+    ScreenImpl* screen_ = nullptr;
+    explicit RawTerminal(ScreenImpl* screen);
     ~RawTerminal();
   };
 };
@@ -257,7 +258,7 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
 ScreenImpl::~ScreenImpl() {}
 
 void ScreenImpl::Loop() {
-  RawTerminal raw_terminal(device_.get());
+  RawTerminal raw_terminal(this);
   Draw();
 
   running_ = true;
@@ -852,7 +853,15 @@ void ScreenImpl::Draw() {
     Paint(root_fragment.get(), texture);
   }
 
-  std::string new_output = texture.Render();
+  std::string new_output;
+  bool use_diff = has_drawn_ && last_texture_ &&
+                  last_texture_->width() == width_ &&
+                  last_texture_->height() == height_;
+  if (use_diff) {
+    new_output = texture.RenderDiff(*last_texture_);
+  } else {
+    new_output = texture.Render();
+  }
 
   if (has_drawn_) {
     if (last_height_ > 0) {
@@ -864,12 +873,17 @@ void ScreenImpl::Draw() {
 
   device_->Write(new_output);
 
-  last_height_ = 0;
-  for (char ch : new_output) {
-    if (ch == '\n') {
-      last_height_++;
+  if (use_diff) {
+    last_height_ = height_ - 1;
+  } else {
+    last_height_ = 0;
+    for (char ch : new_output) {
+      if (ch == '\n') {
+        last_height_++;
+      }
     }
   }
+  last_texture_ = std::make_unique<Texture>(texture);
   has_drawn_ = true;
 }
 
@@ -1015,15 +1029,19 @@ void ScreenImpl::ScrollIntoView(Element* element) {
 
 // --- RawTerminal RAII Implementation ---
 
-ScreenImpl::RawTerminal::RawTerminal(TerminalDevice* device) : device_(device) {
-  if (device_ && device_->IsAtty()) {
-    device_->EnterRawMode(handle_sigwinch);
+ScreenImpl::RawTerminal::RawTerminal(ScreenImpl* screen) : screen_(screen) {
+  if (screen_ && screen_->device_) {
+    if (screen_->device_->IsAtty()) {
+      screen_->device_->EnterRawMode(handle_sigwinch);
+    }
+    screen_->has_drawn_ = false;
+    screen_->last_texture_.reset();
   }
 }
 
 ScreenImpl::RawTerminal::~RawTerminal() {
-  if (device_ && device_->IsAtty()) {
-    device_->ExitRawMode();
+  if (screen_ && screen_->device_ && screen_->device_->IsAtty()) {
+    screen_->device_->ExitRawMode();
   }
 }
 

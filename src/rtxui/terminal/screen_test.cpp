@@ -1555,5 +1555,22 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   REQUIRE(scrollable_smooth->visual_scroll_y() == 2.0f);
 }
 
+TEST_CASE("Screen.InitialFrameInRawModeRegression", "[terminal]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<DummyComponent>::New();
+
+  Screen screen(component, device);
+
+  // Clear the initial constructor draw output from the device
+  device->ClearOutput();
+
+  // Run the loop which enters raw mode and should draw a full frame
+  screen.Loop();
+
+  std::string output = device->GetOutput();
+  REQUIRE_FALSE(output.empty());
+  REQUIRE(output.find("Hello Mock") != std::string::npos);
+}
+
 }  // namespace
 }  // namespace rtxui

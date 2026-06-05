@@ -97,6 +97,7 @@ class ComponentBase : public RefCounted, public Bindings {
   void ResolveTargetStyles(double current_time_ms);
   const css::StyleSheet* stylesheet() const;
   const CategorizedRules* categorized_rules() const { return categorized_rules_.get(); }
+  bool HasAnyPseudoClasses() const;
   virtual bool Digest() = 0;
   virtual void InitReflection();
   virtual bool OnEvent(Event event);
