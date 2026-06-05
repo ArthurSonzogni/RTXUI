@@ -229,3 +229,23 @@ TEST_CASE("XML reactive", "[xml]") {
   CHECK(nodes.value().size() == 1);
   CHECK(xml::Print(nodes.value()[0]) == StripIndent(output));
 }
+
+TEST_CASE("XML.EscapedCharacters", "[xml]") {
+  std::string_view input = R"xml(
+    <div attr="&lt;hello&gt; &amp; &quot;world&quot; &apos;!&#x1F600;">
+      &lt;escaped&gt; &amp; &quot;text&quot; &apos;! &#60; &#x3c; &#x3C; &#x1F600;
+    </div>
+  )xml";
+
+  auto nodes = xml::Parse(input);
+  REQUIRE(nodes.has_value());
+  REQUIRE(nodes.value().size() == 1);
+
+  const auto& div = nodes.value()[0];
+  CHECK(div.tag == "div");
+  CHECK(div.attributes.at("attr") == "<hello> & \"world\" '!😀");
+
+  REQUIRE(div.children.size() == 1);
+  CHECK(div.children[0].type == xml::Node::kText);
+  CHECK(div.children[0].text == "<escaped> & \"text\" '! < < < 😀");
+}
