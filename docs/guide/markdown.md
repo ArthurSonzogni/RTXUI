@@ -21,6 +21,21 @@ One of the most powerful features of the `<markdown>` component is the ability t
 />
 ```
 
+## Table Support
+
+The `<markdown>` component parses standard Markdown pipe-tables into standard HTML table elements (`<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>`), which can be styled via the `stylesheet` attribute:
+
+```html
+<markdown 
+  content="| Feature | Status |\n|---|---|\n| Table parsing | Live ✅ |\n| Escaped pipes \| | Supported ✅ |"
+  stylesheet="
+    table { border: solid; border-color: #334155; }
+    th { font-weight: bold; color: #60a5fa; border-bottom: solid; border-color: #334155; padding-left: 1; }
+    td { padding-left: 1; }
+  "
+/>
+```
+
 ## Example Demo
 
 Below is an interactive demo showing the Markdown component in action. You can see how the Markdown source is rendered and styled in real-time.
