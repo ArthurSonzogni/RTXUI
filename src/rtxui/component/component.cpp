@@ -115,6 +115,11 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
     (*reg)["checkbox"] = []() { return Ref<checkbox>::New(); };
     (*reg)["div"] = []() { return Ref<div>::New(); };
     (*reg)["h1"] = []() { return Ref<h1>::New(); };
+    (*reg)["h2"] = []() { return Ref<h2>::New(); };
+    (*reg)["h3"] = []() { return Ref<h3>::New(); };
+    (*reg)["h4"] = []() { return Ref<h4>::New(); };
+    (*reg)["h5"] = []() { return Ref<h5>::New(); };
+    (*reg)["h6"] = []() { return Ref<h6>::New(); };
     (*reg)["hr"] = []() { return Ref<hr>::New(); };
     (*reg)["input"] = []() { return Ref<input>::New(); };
     (*reg)["li"] = []() { return Ref<li>::New(); };

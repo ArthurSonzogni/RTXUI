@@ -94,6 +94,18 @@ Example:
 </style>
 ```
 
+### Live Demo
+
+Below is the interactive live demo showcasing nested unordered lists, ordered lists, and custom list style styling:
+
+<ExampleTabs src="/wasm/rtxui_example_lists.js">
+<template #source>
+
+<<< @/../example/lists.cpp
+
+</template>
+</ExampleTabs>
+
 ---
 
 ## 5. Tables

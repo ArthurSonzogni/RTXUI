@@ -28,19 +28,18 @@ The `<markdown>` component parses standard Markdown pipe-tables into standard HT
 ### Input (Markdown)
 
 ```markdown
-| Feature | Status |
-|---|---|
-| Table parsing | Live ✅ |
+| Feature          | Status       |
+|------------------|--------------|
+| Table parsing    | Live ✅      |
 | Escaped pipes \| | Supported ✅ |
 ```
 
 ### Output (Rendered)
 
-| Feature | Status |
-|---|---|
-| Table parsing | Live ✅ |
-| Escaped pipes | Supported ✅ |
-
+| Feature          | Status       |
+|------------------|--------------|
+| Table parsing    | Live ✅      |
+| Escaped pipes \| | Supported ✅ |
 
 ### Usage Example
 

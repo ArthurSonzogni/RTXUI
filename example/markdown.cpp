@@ -96,18 +96,13 @@ You can style the generated HTML tags using the `stylesheet` property.
     }
 
     code {
-      background-color: #1e293b;
       color: #94a3b8;
-      padding-left: 1;
-      padding-right: 1;
     }
 
     pre {
-      background-color: #0f172a;
+      background-color: #1e293b;
       border: tall;
       border-color: #334155;
-      padding: 1;
-      margin: 1;
       display: block;
     }
 
@@ -117,8 +112,6 @@ You can style the generated HTML tags using the `stylesheet` property.
       padding-left: 2;
       font-style: italic;
       color: #9ca3af;
-      margin-top: 1;
-      margin-bottom: 1;
     }
 
     ul, ol {
@@ -171,7 +164,11 @@ You can style the generated HTML tags using the `stylesheet` property.
     <div class="container">
       <div class="preview-pane">
         <h1 class="preview-title">Preview</h1>
-        <markdown class="md-preview" content="{markdown_content}" stylesheet="{custom_css}"></markdown>
+        <markdown
+          class="md-preview"
+          content="{markdown_content}"
+          stylesheet="{custom_css}"
+        ></markdown>
       </div>
     </div>
 
