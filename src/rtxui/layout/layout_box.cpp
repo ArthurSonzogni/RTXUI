@@ -13,6 +13,8 @@ std::string AlgorithmToString(LayoutBox::Algorithm algo) {
       return "BlockFlow";
     case LayoutBox::Algorithm::Flex:
       return "Flex";
+    case LayoutBox::Algorithm::Table:
+      return "Table";
     case LayoutBox::Algorithm::Text:
       return "Text";
     default:

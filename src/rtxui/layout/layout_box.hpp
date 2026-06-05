@@ -24,6 +24,7 @@ class LayoutBox {
     BlockFlow,
     Flex,
     Text,
+    Table,
   };
   Algorithm algorithm;
 
