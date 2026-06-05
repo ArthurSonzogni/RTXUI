@@ -101,6 +101,9 @@ class ComponentBase : public RefCounted, public Bindings {
   virtual bool Digest() = 0;
   virtual void InitReflection();
   virtual bool OnEvent(Event event);
+  void CaptureMouse();
+  void ReleaseMouse();
+  static ComponentBase* GetMouseCapturer();
 
   Element* Root() const;
   Ref<Element> Slot(std::string_view name);

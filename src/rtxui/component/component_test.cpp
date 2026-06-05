@@ -15,6 +15,7 @@
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/terminal/terminal_device.hpp"
 
 namespace {
 
@@ -825,6 +826,68 @@ TEST_CASE("Slider Component Basic Interactions", "[component][slider]") {
   CHECK(slider_ptr->value == 50);
   CHECK(container->my_val == 50);
   CHECK(container->onchange_called == true);
+}
+
+TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<SliderTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* slider_el = container->Root()->QuerySelector("slider");
+  REQUIRE(slider_el != nullptr);
+  auto* slider_comp = const_cast<rtxui::ComponentBase*>(slider_el->component());
+  REQUIRE(slider_comp != nullptr);
+  auto* slider_ptr = dynamic_cast<rtxui::slider*>(slider_comp);
+  REQUIRE(slider_ptr != nullptr);
+
+  // width=11, min=0, max=100, step=10. Root() is an inline <span> whose
+  // layout_width_ is 0; use the width attribute directly for coordinates.
+  int abs_x = slider_ptr->Root()->absolute_x();  // 0 in mock terminal
+  int abs_y = slider_ptr->Root()->absolute_y();  // 0 in mock terminal
+  int track_w = std::max(2, slider_ptr->width);   // 11
+
+  // Press at the leftmost column of the track (1-based mouse coords)
+  {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    mouse.x = abs_x + 1;  // 1-based: column 0 in 0-indexed
+    mouse.y = abs_y + 1;
+    screen.Dispatch(Event(mouse));
+  }
+
+  // Value should be 0 (leftmost) and capture active
+  CHECK(slider_ptr->value == 0);
+  CHECK(rtxui::ComponentBase::GetMouseCapturer() == slider_ptr);
+
+  // Move to the centre of the track — y deliberately far off (capture ignores it)
+  {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.motion = Event::Mouse::Motion::Moved;
+    mouse.x = abs_x + (track_w / 2) + 1;  // middle column, 1-based
+    mouse.y = abs_y + 50;
+    screen.Dispatch(Event(mouse));
+  }
+
+  // Value should be 50 and capture still held
+  CHECK(slider_ptr->value == 50);
+  CHECK(rtxui::ComponentBase::GetMouseCapturer() == slider_ptr);
+
+  // Release at the rightmost column
+  {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.motion = Event::Mouse::Motion::Released;
+    mouse.x = abs_x + track_w;  // last column, 1-based
+    mouse.y = abs_y + 1;
+    screen.Dispatch(Event(mouse));
+  }
+
+  // Value should be 100 and capture released
+  CHECK(slider_ptr->value == 100);
+  CHECK(rtxui::ComponentBase::GetMouseCapturer() == nullptr);
 }
 
 class ProgressTestComponent : public rtxui::Component<ProgressTestComponent> {
