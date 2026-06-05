@@ -32,4 +32,12 @@ To lay out children inside a container using flex rules, set the display propert
   flex-grow: 1; /* Claims remaining terminal width */
 }
 ```
-For detailed demonstrations, refer to the flexbox examples in the examples index.
+## Live Demo
+
+<ExampleTabs src="/wasm/rtxui_example_layout.js">
+<template #source>
+
+<<< @/../example/layout.cpp
+
+</template>
+</ExampleTabs>

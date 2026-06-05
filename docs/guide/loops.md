@@ -82,6 +82,30 @@ Template usage:
 
 ---
 
+## Simple Loop Example
+
+<ExampleTabs src="/wasm/rtxui_example_loop_simple.js">
+<template #source>
+
+<<< @/../example/loop_simple.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
+## Advanced Loop Example
+
+<ExampleTabs src="/wasm/rtxui_example_loop.js">
+<template #source>
+
+<<< @/../example/loop.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
 ## Interactive Demo
 
 Below is the interactive tab view demonstrating collection loops:

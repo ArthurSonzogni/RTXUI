@@ -264,6 +264,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_lists example/lists.cpp)
   target_link_libraries(rtxui_example_lists PRIVATE rtxui)
+
+  add_executable(rtxui_example_slots example/slots.cpp)
+  target_link_libraries(rtxui_example_slots PRIVATE rtxui)
 endif()
 
 option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" ON)

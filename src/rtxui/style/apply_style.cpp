@@ -734,6 +734,16 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "min-width") {
+    style.min_width = ParseLength(v);
+    return;
+  }
+
+  if (p == "min-height") {
+    style.min_height = ParseLength(v);
+    return;
+  }
+
   if (p == "max-width") {
     style.max_width = ParseLength(v);
     return;
@@ -746,6 +756,78 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "height") {
     style.height = ParseLength(v);
+    return;
+  }
+
+  if (p == "gap") {
+    style.gap = ParseLength(v);
+    return;
+  }
+
+  if (p == "justify-content") {
+    if (v == "flex-start") {
+      style.justify_content = JustifyContent::FlexStart;
+    } else if (v == "flex-end") {
+      style.justify_content = JustifyContent::FlexEnd;
+    } else if (v == "center") {
+      style.justify_content = JustifyContent::Center;
+    } else if (v == "space-between") {
+      style.justify_content = JustifyContent::SpaceBetween;
+    } else if (v == "space-around") {
+      style.justify_content = JustifyContent::SpaceAround;
+    } else if (v == "space-evenly") {
+      style.justify_content = JustifyContent::SpaceEvenly;
+    }
+    return;
+  }
+
+  if (p == "align-items") {
+    if (v == "stretch") {
+      style.align_items = AlignItems::Stretch;
+    } else if (v == "flex-start") {
+      style.align_items = AlignItems::FlexStart;
+    } else if (v == "flex-end") {
+      style.align_items = AlignItems::FlexEnd;
+    } else if (v == "center") {
+      style.align_items = AlignItems::Center;
+    } else if (v == "baseline") {
+      style.align_items = AlignItems::Baseline;
+    }
+    return;
+  }
+
+  if (p == "cursor") {
+    if (v == "pointer") {
+      style.cursor = Cursor::Pointer;
+    } else if (v == "text") {
+      style.cursor = Cursor::Text;
+    } else if (v == "wait") {
+      style.cursor = Cursor::Wait;
+    } else if (v == "help") {
+      style.cursor = Cursor::Help;
+    } else if (v == "default") {
+      style.cursor = Cursor::Default;
+    } else {
+      style.cursor = Cursor::Auto;
+    }
+    return;
+  }
+
+  if (p == "visibility") {
+    if (v == "hidden") {
+      style.visibility = Visibility::Hidden;
+    } else {
+      style.visibility = Visibility::Visible;
+    }
+    return;
+  }
+
+  if (p == "text-overflow") {
+    if (v == "ellipsis") {
+      style.text_overflow = TextOverflow::Ellipsis;
+    } else {
+      style.text_overflow = TextOverflow::Clip;
+    }
     return;
   }
 

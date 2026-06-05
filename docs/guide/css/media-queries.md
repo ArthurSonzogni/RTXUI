@@ -34,3 +34,13 @@ Define conditional styles by enclosing rules within `@media` blocks. Multiple ru
 }
 ```
 Whenever the terminal interface detects a resize event, styles are automatically re-evaluated, and layout reflow runs instantly.
+
+## Live Demo
+
+<ExampleTabs src="/wasm/rtxui_example_media.js">
+<template #source>
+
+<<< @/../example/media.cpp
+
+</template>
+</ExampleTabs>

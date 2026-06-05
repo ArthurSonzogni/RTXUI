@@ -34,3 +34,13 @@ Sizing attributes `width` and `height` accept two types of length units:
     ```css
     .half-pane { width: 50%; } /* Fills half the parent width */
     ```
+
+## Live Demo - Borders
+
+<ExampleTabs src="/wasm/rtxui_example_borders.js">
+<template #source>
+
+<<< @/../example/borders.cpp
+
+</template>
+</ExampleTabs>
