@@ -131,6 +131,42 @@ enum class PositionType {
   Fixed,
 };
 
+enum class JustifyContent {
+  FlexStart,
+  FlexEnd,
+  Center,
+  SpaceBetween,
+  SpaceAround,
+  SpaceEvenly,
+};
+
+enum class AlignItems {
+  Stretch,
+  FlexStart,
+  FlexEnd,
+  Center,
+  Baseline,
+};
+
+enum class Cursor {
+  Auto,
+  Default,
+  Pointer,
+  Text,
+  Wait,
+  Help,
+};
+
+enum class Visibility {
+  Visible,
+  Hidden,
+};
+
+enum class TextOverflow {
+  Clip,
+  Ellipsis,
+};
+
 struct TransitionConfig {
   std::string property;
   float duration_seconds = 0.0f;
@@ -164,6 +200,8 @@ struct ComputedStyle {
 
   Length width = Length::Auto();
   Length height = Length::Auto();
+  Length min_width = Length::Auto();
+  Length min_height = Length::Auto();
   Length max_width = Length::Auto();
   Length max_height = Length::Auto();
   bool margin_left_auto = false;
@@ -171,6 +209,9 @@ struct ComputedStyle {
 
   float flex_grow = 0.0f;
   float flex_shrink = 1.0f;
+  Length gap = Length::Cells(0.0f);
+  JustifyContent justify_content = JustifyContent::FlexStart;
+  AlignItems align_items = AlignItems::Stretch;
 
   Spacing margin;
   Spacing padding;
@@ -200,6 +241,10 @@ struct ComputedStyle {
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
   ScrollBehavior scroll_behavior = ScrollBehavior::Auto;
+
+  Cursor cursor = Cursor::Auto;
+  Visibility visibility = Visibility::Visible;
+  TextOverflow text_overflow = TextOverflow::Clip;
 
   ComputedStyle() = default;
 

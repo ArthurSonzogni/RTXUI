@@ -57,3 +57,23 @@ RTXUI automatically scrolls containers to keep focused elements visible when use
 
 </template>
 </ExampleTabs>
+
+### Horizontal Scrolling
+
+<ExampleTabs src="/wasm/rtxui_example_horizontal_scroll.js">
+<template #source>
+
+<<< @/../example/horizontal_scroll.cpp
+
+</template>
+</ExampleTabs>
+
+### Scroll Behavior
+
+<ExampleTabs src="/wasm/rtxui_example_scroll_behavior.js">
+<template #source>
+
+<<< @/../example/scroll_behavior.cpp
+
+</template>
+</ExampleTabs>

@@ -108,7 +108,23 @@ Below is the interactive live demo showcasing nested unordered lists, ordered li
 
 ---
 
-## 5. Tables
+## 5. Horizontal Rule (`<hr>`)
+
+The `<hr>` element renders a horizontal divider line spanning the full width of its container.
+
+### Live Demo
+
+<ExampleTabs src="/wasm/rtxui_example_hr.js">
+<template #source>
+
+<<< @/../example/hr.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
+## 6. Tables
 
 RTXUI supports structured table layouts through `<table>`, `<tr>`, `<td>`, and `<th>` elements.
 

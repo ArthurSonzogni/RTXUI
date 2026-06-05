@@ -31,6 +31,34 @@ std::shared_ptr<PhysicalFragment> MakeArenaFragment(Args&&... args) {
       LayoutArenaAllocator<PhysicalFragment>(), std::forward<Args>(args)...);
 }
 
+std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
+  if (limit <= 3) {
+    if (limit <= 0) return "";
+    if (limit == 1) return ".";
+    if (limit == 2) return "..";
+    return "...";
+  }
+  
+  int target_width = limit - 3;
+  int current_width = 0;
+  size_t truncate_byte_index = 0;
+  
+  for (const Grapheme& g : Graphemes(text)) {
+    if (current_width + g.width > target_width) {
+      break;
+    }
+    current_width += g.width;
+    truncate_byte_index = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
+  }
+  
+  size_t result_size = truncate_byte_index + 3;
+  void* ptr = g_layout_arena.Allocate(result_size, 1);
+  char* dst = static_cast<char*>(ptr);
+  std::memcpy(dst, text.data(), truncate_byte_index);
+  std::memcpy(dst + truncate_byte_index, "...", 3);
+  return std::string_view(dst, result_size);
+}
+
 
 // --- Forward Declarations ---
 std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
@@ -254,6 +282,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   auto fragment = MakeArenaFragment(width, 0);
   fragment->children.reserve(box->children.size());
   fragment->dom_node = box->dom_node;
+  fragment->visibility = box->style.visibility;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
   fragment->opacity = box->style.opacity;
@@ -390,6 +419,14 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     }
   }
 
+  // Apply min-width constraint
+  {
+    int min_w = ResolveSize(box->style.min_width, avail_width);
+    if (min_w != -1 && fragment->width < min_w) {
+      fragment->width = min_w;
+    }
+  }
+
   if (constraints.height.mode == MeasureMode::Exactly) {
     fragment->height = constraints.height.value;
   } else {
@@ -402,6 +439,14 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     int max_h = ResolveSize(box->style.max_height, constraints.height.value);
     if (max_h != -1 && fragment->height > max_h) {
       fragment->height = max_h;
+    }
+  }
+
+  // Apply min-height constraint
+  {
+    int min_h = ResolveSize(box->style.min_height, constraints.height.value);
+    if (min_h != -1 && fragment->height < min_h) {
+      fragment->height = min_h;
     }
   }
 
@@ -502,6 +547,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   }
   container_frag->children.reserve(estimated_children + 8);
   container_frag->dom_node = box->dom_node;
+  container_frag->visibility = box->style.visibility;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
   container_frag->opacity = box->style.opacity;
@@ -545,6 +591,17 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   auto process_text_in_flow = [&](std::string_view text, Element* dom_node,
                                   const TextStyle& style) {
+    if (box->style.text_overflow == TextOverflow::Ellipsis &&
+        box->style.white_space == WhiteSpace::Nowrap) {
+      int avail = content_width_limit - cursor_x;
+      int text_w = 0;
+      for (const Grapheme& g : Graphemes(text)) {
+        text_w += g.width;
+      }
+      if (cursor_x + text_w > content_width_limit) {
+        text = TruncateWithEllipsis(text, avail);
+      }
+    }
     size_t byte_start = 0;
     int col_start = 0;
     size_t last_space_byte = 0;
@@ -894,10 +951,22 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     my_width = max_width_resolved;
   }
 
+  // Apply min-width constraint
+  int min_width_resolved = ResolveSize(box->style.min_width, parent_w);
+  if (min_width_resolved != -1 && my_width < min_width_resolved) {
+    my_width = min_width_resolved;
+  }
+
   // Apply max-height constraint
   int max_height_resolved = ResolveSize(box->style.max_height, parent_h);
   if (max_height_resolved != -1 && my_height > max_height_resolved) {
     my_height = max_height_resolved;
+  }
+
+  // Apply min-height constraint
+  int min_height_resolved = ResolveSize(box->style.min_height, parent_h);
+  if (min_height_resolved != -1 && my_height < min_height_resolved) {
+    my_height = min_height_resolved;
   }
 
   bool auto_width = (my_width == -1);
@@ -939,11 +1008,17 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   float total_shrink_scaled = 0;
 
   // Pass 1: Determine Flex Base Sizes
+  int resolved_gap = ResolveSize(box->style.gap, is_row ? content_w : content_h);
+  bool is_first = true;
   for (auto& child : box->children) {
     if (child->style.position == PositionType::Absolute ||
         child->style.position == PositionType::Fixed) {
       continue;
     }
+    if (!is_first) {
+      total_main_base += resolved_gap;
+    }
+    is_first = false;
     int basis = is_row ? ResolveSize(child->style.width, content_w)
                        : ResolveSize(child->style.height, content_h);
 
@@ -1055,6 +1130,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   auto fragment = MakeArenaFragment(my_width, my_height);
   fragment->children.reserve(items.size());
   fragment->dom_node = box->dom_node;
+  fragment->visibility = box->style.visibility;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
   fragment->opacity = box->style.opacity;
@@ -1077,15 +1153,89 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   int cross_start = is_row ? (box->style.padding.top + box->style.border.top)
                            : (box->style.padding.left + box->style.border.left);
 
+  // Compute final main resolved size to determine actual remaining space
+  int total_main_resolved = 0;
+  is_first = true;
+  for (const auto& item : items) {
+    if (!is_first) {
+      total_main_resolved += resolved_gap;
+    }
+    is_first = false;
+    total_main_resolved += item.main_resolved_size;
+  }
+  int justify_free_space = main_is_indefinite ? 0 : (container_main - total_main_resolved);
+
+  std::vector<int> item_positions(items.size(), 0);
+  int cur_pos = main_pos;
+  if (justify_free_space > 0) {
+    if (box->style.justify_content == JustifyContent::FlexEnd) {
+      cur_pos += justify_free_space;
+      for (size_t i = 0; i < items.size(); ++i) {
+        item_positions[i] = cur_pos;
+        cur_pos += items[i].main_resolved_size + resolved_gap;
+      }
+    } else if (box->style.justify_content == JustifyContent::Center) {
+      cur_pos += justify_free_space / 2;
+      for (size_t i = 0; i < items.size(); ++i) {
+        item_positions[i] = cur_pos;
+        cur_pos += items[i].main_resolved_size + resolved_gap;
+      }
+    } else if (box->style.justify_content == JustifyContent::SpaceBetween) {
+      if (items.size() > 1) {
+        int extra_gap = justify_free_space / (items.size() - 1);
+        int remainder = justify_free_space % (items.size() - 1);
+        for (size_t i = 0; i < items.size(); ++i) {
+          item_positions[i] = cur_pos;
+          cur_pos += items[i].main_resolved_size + resolved_gap + extra_gap + (i < remainder ? 1 : 0);
+        }
+      } else {
+        item_positions[0] = cur_pos;
+      }
+    } else if (box->style.justify_content == JustifyContent::SpaceAround) {
+      int spacing = justify_free_space / items.size();
+      int remainder = justify_free_space % items.size();
+      cur_pos += spacing / 2;
+      for (size_t i = 0; i < items.size(); ++i) {
+        item_positions[i] = cur_pos;
+        cur_pos += items[i].main_resolved_size + resolved_gap + spacing + (i < remainder ? 1 : 0);
+      }
+    } else if (box->style.justify_content == JustifyContent::SpaceEvenly) {
+      int spacing = justify_free_space / (items.size() + 1);
+      int remainder = justify_free_space % (items.size() + 1);
+      cur_pos += spacing + (remainder > 0 ? 1 : 0);
+      if (remainder > 0) remainder--;
+      for (size_t i = 0; i < items.size(); ++i) {
+        item_positions[i] = cur_pos;
+        cur_pos += items[i].main_resolved_size + resolved_gap + spacing + (i < remainder ? 1 : 0);
+      }
+    } else {
+      // FlexStart
+      for (size_t i = 0; i < items.size(); ++i) {
+        item_positions[i] = cur_pos;
+        cur_pos += items[i].main_resolved_size + resolved_gap;
+      }
+    }
+  } else {
+    for (size_t i = 0; i < items.size(); ++i) {
+      item_positions[i] = cur_pos;
+      cur_pos += items[i].main_resolved_size + resolved_gap;
+    }
+  }
+
+  main_pos += total_main_resolved;
+
   int max_cross_used = 0;
-  for (auto& item : items) {
+  for (size_t i = 0; i < items.size(); ++i) {
+    auto& item = items[i];
     LayoutConstraints final_c;
     int m_horiz = item.box->style.margin.Horiz();
     int m_vert = item.box->style.margin.Vert();
 
     if (is_row) {
       final_c.width = {item.main_resolved_size - m_horiz, MeasureMode::Exactly};
-      if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
+      if (box->style.align_items == AlignItems::Stretch && item.box->style.height.unit == Unit::Auto) {
+        final_c.height = {content_h - m_vert, MeasureMode::Exactly};
+      } else if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
         final_c.height = {content_h, MeasureMode::Undefined};
       } else {
         int max_h =
@@ -1093,7 +1243,9 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         final_c.height = {max_h, MeasureMode::AtMost};
       }
     } else {
-      if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
+      if (box->style.align_items == AlignItems::Stretch && item.box->style.width.unit == Unit::Auto) {
+        final_c.width = {content_w - m_horiz, MeasureMode::Exactly};
+      } else if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
         final_c.width = {content_w, MeasureMode::Undefined};
       } else {
         int max_w =
@@ -1103,10 +1255,23 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       final_c.height = {item.main_resolved_size - m_vert, MeasureMode::Exactly};
     }
 
-    int x = is_row ? main_pos + item.box->style.margin.left
-                   : cross_start + item.box->style.margin.left;
-    int y = is_row ? cross_start + item.box->style.margin.top
-                   : main_pos + item.box->style.margin.top;
+    int cross_pos = cross_start;
+    if (box->style.align_items != AlignItems::Stretch) {
+      int item_cross_size = is_row ? (item.fragment->height + m_vert) : (item.fragment->width + m_horiz);
+      int cross_free_space = (is_row ? content_h : content_w) - item_cross_size;
+      if (cross_free_space > 0) {
+        if (box->style.align_items == AlignItems::FlexEnd) {
+          cross_pos += cross_free_space;
+        } else if (box->style.align_items == AlignItems::Center) {
+          cross_pos += cross_free_space / 2;
+        }
+      }
+    }
+
+    int x = is_row ? item_positions[i] + item.box->style.margin.left
+                   : cross_pos + item.box->style.margin.left;
+    int y = is_row ? cross_pos + item.box->style.margin.top
+                   : item_positions[i] + item.box->style.margin.top;
 
     LayoutContext child_context =
         CreateChildContext(box, my_width, my_height, x, y, context);
@@ -1130,7 +1295,6 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
     fragment->children.push_back({item.fragment, rx, ry});
 
-    main_pos += item.main_resolved_size;
     max_cross_used =
         std::max(max_cross_used, (is_row ? item.fragment->height + m_vert
                                          : item.fragment->width + m_horiz));
@@ -1158,11 +1322,27 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     }
   }
 
+  // Apply min-width constraint
+  {
+    int min_w = ResolveSize(box->style.min_width, parent_w);
+    if (min_w != -1 && fragment->width < min_w) {
+      fragment->width = min_w;
+    }
+  }
+
   // Cap height by max-height if needed
   {
     int max_h = ResolveSize(box->style.max_height, parent_h);
     if (max_h != -1 && fragment->height > max_h) {
       fragment->height = max_h;
+    }
+  }
+
+  // Apply min-height constraint
+  {
+    int min_h = ResolveSize(box->style.min_height, parent_h);
+    if (min_h != -1 && fragment->height < min_h) {
+      fragment->height = min_h;
     }
   }
 
@@ -1309,6 +1489,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   if (grid.empty() || num_cols == 0) {
     auto fragment = MakeArenaFragment(width, 0);
     fragment->dom_node = box->dom_node;
+    fragment->visibility = box->style.visibility;
     fragment->background_color = box->style.background_color;
     fragment->foreground_color = box->style.foreground_color;
     fragment->border_style = box->style.border_style;
@@ -1398,6 +1579,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   // Create table fragment
   auto fragment = MakeArenaFragment(width, 0);
   fragment->dom_node = box->dom_node;
+  fragment->visibility = box->style.visibility;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
   fragment->opacity = box->style.opacity;

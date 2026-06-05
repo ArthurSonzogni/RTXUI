@@ -26,3 +26,13 @@ Set `focusable="true"` as a clean shorthand for setting `tabindex="0"`:
 </div>
 ```
 Focusable items automatically capture keyboard events (`ArrowLeft`, `Enter`, etc.) and focus CSS pseudoclasses like `:focus`.
+
+## Live Demo
+
+<ExampleTabs src="/wasm/rtxui_example_tabindex.js">
+<template #source>
+
+<<< @/../example/tabindex.cpp
+
+</template>
+</ExampleTabs>

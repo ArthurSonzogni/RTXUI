@@ -26,7 +26,8 @@ export default defineConfig({
           { text: 'Event Handlers & Inputs', link: '/guide/bindings' },
           { text: 'Conditional Rendering', link: '/guide/conditionals' },
           { text: 'Loops & Lists', link: '/guide/loops' },
-          { text: 'Focus & Tab Navigation', link: '/guide/html/focus' }
+          { text: 'Focus & Tab Navigation', link: '/guide/html/focus' },
+          { text: 'Form Elements', link: '/guide/forms' }
         ]
       },
       {
@@ -34,6 +35,7 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Creating Components', link: '/guide/cpp/components' },
+          { text: 'Component Slots & Composition', link: '/guide/cpp/slots' },
           { text: 'State & Collections Reflection', link: '/guide/cpp/bindings' },
           { text: 'Navigating the DOM', link: '/guide/cpp/dom' },
           { text: 'Screen Loop & Lifecycle', link: '/guide/cpp/lifecycle' }
@@ -43,6 +45,7 @@ export default defineConfig({
         text: 'CSS & Layout Guide',
         collapsed: true,
         items: [
+          { text: 'Typography & Text Styling', link: '/guide/typography' },
           { text: 'Styling Basics & Selectors', link: '/guide/css/basics' },
           { text: 'Box Model & Spacing', link: '/guide/css/box-model' },
           { text: 'Flexbox Layouts', link: '/guide/css/flexbox' },

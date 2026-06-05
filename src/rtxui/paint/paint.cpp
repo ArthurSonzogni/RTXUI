@@ -382,6 +382,9 @@ void PaintImpl(const PhysicalFragment* frag,
                bool inherited_blink,
                ClipRect clip,
                float inherited_opacity) {
+  if (frag->visibility == Visibility::Hidden) {
+    return;
+  }
   int abs_x = off_x;
   int abs_y = off_y;
   int w = frag->width;
