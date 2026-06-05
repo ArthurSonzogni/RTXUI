@@ -53,34 +53,48 @@ bool slider::OnEvent(Event event) {
   }
 
   bool value_changed = false;
+  bool is_captured = (GetMouseCapturer() == this);
+  bool was_captured = is_captured;
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left &&
-        mouse.motion == Event::Mouse::Motion::Pressed) {
-      int click_x = mouse.x - 1;
-      int click_y = mouse.y - 1;
-      int abs_x = root->absolute_x();
-      int abs_y = root->absolute_y();
-      int layout_w = root->layout_width();
-      int layout_h = root->layout_height();
-
-      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
-          click_y < abs_y + layout_h) {
-        // Focus this element
-        if (root->Parent()) {
-          Element* root_el = root;
-          while (root_el->Parent()) {
-            root_el = root_el->Parent();
-          }
-          root_el->Visit([](Element& el) { el.set_focused(false); });
-        }
-        root->set_focused(true);
-
-        // Click positioning logic: width of slider track
-        int inner_x = click_x - abs_x;
+    if (mouse.button == Event::Mouse::Button::Left) {
+      if (mouse.motion == Event::Mouse::Motion::Pressed) {
+        int click_x = mouse.x - 1;
+        int click_y = mouse.y - 1;
+        int abs_x = root->absolute_x();
+        int abs_y = root->absolute_y();
+        // Use the `width` attribute for bounds check: Root() is an inline <span>
+        // whose layout_width_ is 0. The drag code already uses max(2, width).
         int track_w = std::max(2, width);
-        int pos = std::clamp(inner_x, 0, track_w - 1);
+
+        if (click_x >= abs_x && click_x < abs_x + track_w &&
+            click_y >= abs_y && click_y <= abs_y) {
+          // Focus this element
+          if (root->Parent()) {
+            Element* root_el = root;
+            while (root_el->Parent()) {
+              root_el = root_el->Parent();
+            }
+            root_el->Visit([](Element& el) { el.set_focused(false); });
+          }
+          root->set_focused(true);
+
+          CaptureMouse();
+          is_captured = true;
+          was_captured = true;
+        }
+      }
+    }
+
+    if (is_captured) {
+      if (mouse.motion == Event::Mouse::Motion::Moved ||
+          mouse.motion == Event::Mouse::Motion::Pressed ||
+          mouse.motion == Event::Mouse::Motion::Released) {
+        int click_x = mouse.x - 1;
+        int abs_x = root->absolute_x();
+        int track_w = std::max(2, width);
+        int pos = std::clamp(click_x - abs_x, 0, track_w - 1);
 
         // Map pos to [min, max]
         double pct = static_cast<double>(pos) / (track_w - 1);
@@ -99,6 +113,10 @@ bool slider::OnEvent(Event event) {
         if (new_val != value) {
           value = new_val;
           value_changed = true;
+        }
+
+        if (mouse.motion == Event::Mouse::Motion::Released) {
+          ReleaseMouse();
         }
       }
     }
@@ -163,6 +181,10 @@ bool slider::OnEvent(Event event) {
         }
       }
     }
+    return true;
+  }
+
+  if (was_captured) {
     return true;
   }
 

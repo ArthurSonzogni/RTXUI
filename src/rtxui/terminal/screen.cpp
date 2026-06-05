@@ -381,7 +381,13 @@ void ScreenImpl::HandleEvent(const Event& event) {
     if (root_fragment_) {
       int tx = mouse.x - 1;
       int ty = mouse.y - 1;
-      Element* target_el = FindElementAt(root_fragment_, tx, ty);
+      Element* target_el = nullptr;
+      if (auto* capturer = ComponentBase::GetMouseCapturer()) {
+        target_el = capturer->Root();
+      }
+      if (!target_el) {
+        target_el = FindElementAt(root_fragment_, tx, ty);
+      }
 
       auto IsAncestorOf = [](const Element* element, const Element* target) {
         for (const Element* curr = target; curr; curr = curr->Parent()) {
@@ -421,7 +427,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
       Draw();
     }
 
-    if (mouse.motion == Event::Mouse::Motion::Pressed &&
+    if (!ComponentBase::GetMouseCapturer() &&
+        mouse.motion == Event::Mouse::Motion::Pressed &&
         (mouse.button == Event::Mouse::Button::Left ||
          mouse.button == Event::Mouse::Button::Right)) {
       if (root_fragment_) {
@@ -493,10 +500,11 @@ void ScreenImpl::HandleEvent(const Event& event) {
           }
         }
       }
-    } else if (mouse.button == Event::Mouse::Button::WheelUp ||
-               mouse.button == Event::Mouse::Button::WheelDown ||
-               mouse.button == Event::Mouse::Button::WheelLeft ||
-               mouse.button == Event::Mouse::Button::WheelRight) {
+    } else if (!ComponentBase::GetMouseCapturer() &&
+               (mouse.button == Event::Mouse::Button::WheelUp ||
+                mouse.button == Event::Mouse::Button::WheelDown ||
+                mouse.button == Event::Mouse::Button::WheelLeft ||
+                mouse.button == Event::Mouse::Button::WheelRight)) {
       if (root_fragment_) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
@@ -581,7 +589,14 @@ void ScreenImpl::HandleEvent(const Event& event) {
     }
   }
 
-  if (component_->OnEvent(event)) {
+  bool event_handled = false;
+  if (event.is<Event::Mouse>() && ComponentBase::GetMouseCapturer()) {
+    event_handled = ComponentBase::GetMouseCapturer()->OnEvent(event);
+  } else {
+    event_handled = component_->OnEvent(event);
+  }
+
+  if (event_handled) {
     DigestAndDraw();
     return;
   }

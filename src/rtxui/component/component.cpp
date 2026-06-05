@@ -50,6 +50,24 @@ std::string_view ComponentBase::Setup() {
 
 void ComponentBase::InitReflection() {}
 
+namespace {
+ComponentBase* g_mouse_capturer = nullptr;
+}  // namespace
+
+void ComponentBase::CaptureMouse() {
+  g_mouse_capturer = this;
+}
+
+void ComponentBase::ReleaseMouse() {
+  if (g_mouse_capturer == this) {
+    g_mouse_capturer = nullptr;
+  }
+}
+
+ComponentBase* ComponentBase::GetMouseCapturer() {
+  return g_mouse_capturer;
+}
+
 bool ComponentBase::OnEvent(Event event) {
   return false;
 }
