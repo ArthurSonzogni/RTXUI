@@ -23,12 +23,12 @@ class MediaQueriesDemo : public Component<MediaQueriesDemo> {
 
       <div class="card card-small">
         <h3>Mobile/Compact Mode</h3>
-        <p>This panel is displayed when width < 60 columns.</p>
+        <p>This panel is displayed when width &lt; 60 columns.</p>
         <span class="badge rose">Compact Layout</span>
       </div>
 
       <div class="compact-alert">
-        ⚠️ Vertical space is very tight! (height <= 15 rows)
+        ⚠️ Vertical space is very tight! (height &lt;= 15 rows)
       </div>
     </div>
 

@@ -6,6 +6,7 @@
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
+#include "rtxui/paint/texture.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
@@ -1570,6 +1571,346 @@ TEST_CASE("Screen.InitialFrameInRawModeRegression", "[terminal]") {
   std::string output = device->GetOutput();
   REQUIRE_FALSE(output.empty());
   REQUIRE(output.find("Hello Mock") != std::string::npos);
+}
+
+TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
+  struct VirtualTerminal {
+    int width;
+    int height;
+    struct VCell {
+      std::string character = " ";
+      bool is_continuation = false;
+    };
+    std::vector<VCell> cells;
+    int cx = 0;
+    int cy = 0;
+
+    VirtualTerminal(int w, int h) : width(w), height(h), cells(w * h) {}
+
+    void Write(const std::string& data) {
+      size_t i = 0;
+      while (i < data.size()) {
+        if (data[i] == '\n') {
+          cy++;
+          i++;
+        } else if (data[i] == '\r') {
+          cx = 0;
+          i++;
+        } else if (data[i] == '\x1b') {
+          if (i + 1 < data.size() && data[i + 1] == '[') {
+            size_t start = i + 2;
+            size_t end = start;
+            while (end < data.size() && ((data[end] >= '0' && data[end] <= '9') || data[end] == ';')) {
+              end++;
+            }
+            if (end < data.size()) {
+              char cmd = data[end];
+              std::string params = data.substr(start, end - start);
+              int val = params.empty() ? 1 : std::stoi(params);
+              if (cmd == 'A') {
+                cy = std::max(0, cy - val);
+              } else if (cmd == 'C') {
+                cx = std::min(width - 1, cx + val);
+              } else if (cmd == 'H') {
+                cx = 0;
+                cy = 0;
+              }
+              i = end + 1;
+            } else {
+              i++;
+            }
+          } else {
+            i++;
+          }
+        } else {
+          size_t len = 1;
+          unsigned char first = data[i];
+          if (first >= 0xf0) len = 4;
+          else if (first >= 0xe0) len = 3;
+          else if (first >= 0xc0) len = 2;
+
+          if (i + len <= data.size()) {
+            std::string character = data.substr(i, len);
+            i += len;
+
+            if (cx < width && cy < height) {
+              cells[cy * width + cx].character = character;
+              cells[cy * width + cx].is_continuation = false;
+              bool is_wide = (len > 1 && character != " ");
+              if (is_wide && cx + 1 < width) {
+                cells[cy * width + cx + 1].character = "";
+                cells[cy * width + cx + 1].is_continuation = true;
+                cx += 2;
+              } else {
+                cx += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  auto VerifyDiff = [&](const Texture& old_tex, const Texture& new_tex) {
+    VirtualTerminal vt(old_tex.width(), old_tex.height());
+    vt.Write(old_tex.Render());
+    vt.cx = 0;
+    vt.cy = 0;
+    std::string diff = new_tex.RenderDiff(old_tex);
+    vt.Write(diff);
+
+    for (int y = 0; y < new_tex.height(); ++y) {
+      for (int x = 0; x < new_tex.width(); ++x) {
+        const auto& expected = new_tex[x, y];
+        const auto& actual = vt.cells[y * new_tex.width() + x];
+        std::string expected_char = expected.is_continuation ? "" : (expected.character.empty() ? " " : expected.character);
+        std::string actual_char = actual.is_continuation ? "" : actual.character;
+        if (expected_char != actual_char || expected.is_continuation != actual.is_continuation) {
+          UNSCOPED_INFO("Mismatch at (" << x << "," << y << "): expected '" 
+               << expected_char << "' (continuation=" << expected.is_continuation 
+               << "), got '" << actual_char << "' (continuation=" << actual.is_continuation << ")");
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // Test Case 1: Changing a wide character to another wide character
+  {
+    Texture old_tex(10, 1);
+    old_tex[0, 0].character = "A";
+    old_tex[1, 0].character = "中";
+    old_tex[2, 0].is_continuation = true;
+    old_tex[3, 0].character = "B";
+
+    Texture new_tex(10, 1);
+    new_tex[0, 0].character = "A";
+    new_tex[1, 0].character = "万";
+    new_tex[2, 0].is_continuation = true;
+    new_tex[3, 0].character = "B";
+
+    REQUIRE(VerifyDiff(old_tex, new_tex));
+  }
+
+  // Test Case 2: Changing a wide character to a single-width character
+  {
+    Texture old_tex(10, 1);
+    old_tex[0, 0].character = "A";
+    old_tex[1, 0].character = "中";
+    old_tex[2, 0].is_continuation = true;
+    old_tex[3, 0].character = "B";
+
+    Texture new_tex(10, 1);
+    new_tex[0, 0].character = "A";
+    new_tex[1, 0].character = "X";
+    new_tex[2, 0].character = "Y";
+    new_tex[3, 0].character = "B";
+
+    REQUIRE(VerifyDiff(old_tex, new_tex));
+  }
+
+  // Test Case 3: Changing a single-width character to a wide character
+  {
+    Texture old_tex(10, 1);
+    old_tex[0, 0].character = "A";
+    old_tex[1, 0].character = "X";
+    old_tex[2, 0].character = "Y";
+    old_tex[3, 0].character = "B";
+
+    Texture new_tex(10, 1);
+    new_tex[0, 0].character = "A";
+    new_tex[1, 0].character = "中";
+    new_tex[2, 0].is_continuation = true;
+    new_tex[3, 0].character = "B";
+
+    REQUIRE(VerifyDiff(old_tex, new_tex));
+  }
+
+  // Test Case 4: Changing a character immediately following a wide character (which stays unchanged)
+  {
+    Texture old_tex(10, 1);
+    old_tex[0, 0].character = "中";
+    old_tex[1, 0].is_continuation = true;
+    old_tex[2, 0].character = "A";
+
+    Texture new_tex(10, 1);
+    new_tex[0, 0].character = "中";
+    new_tex[1, 0].is_continuation = true;
+    new_tex[2, 0].character = "B";
+
+    REQUIRE(VerifyDiff(old_tex, new_tex));
+  }
+
+  // Test Case 5: Changing a character immediately preceding a wide character (which stays unchanged)
+  {
+    Texture old_tex(10, 1);
+    old_tex[0, 0].character = "A";
+    old_tex[1, 0].character = "中";
+    old_tex[2, 0].is_continuation = true;
+
+    Texture new_tex(10, 1);
+    new_tex[0, 0].character = "B";
+    new_tex[1, 0].character = "中";
+    new_tex[2, 0].is_continuation = true;
+
+    REQUIRE(VerifyDiff(old_tex, new_tex));
+  }
+}
+
+TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  
+  class DynamicComponent : public Component<DynamicComponent> {
+   public:
+    std::string text = "A";
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<DynamicComponent>::InitReflection();
+    }
+    DynamicComponent() {
+      Bind(text);
+    }
+    std::string_view view = R"(
+      <div>{text}</div>
+    )";
+  };
+
+  auto component = Ref<DynamicComponent>::New();
+  Screen screen(component, device);
+
+  screen.Draw();
+  std::string first_output = device->GetOutput();
+  device->ClearOutput();
+
+  component->text = "中";
+  component->Render();
+  screen.Draw();
+  std::string second_output = device->GetOutput();
+  device->ClearOutput();
+
+  component->text = "B";
+  component->Render();
+  screen.Draw();
+  std::string third_output = device->GetOutput();
+  device->ClearOutput();
+
+  struct VirtualTerminal {
+    int width;
+    int height;
+    struct VCell {
+      std::string character = " ";
+      bool is_continuation = false;
+    };
+    std::vector<VCell> cells;
+    int cx = 0;
+    int cy = 0;
+
+    VirtualTerminal(int w, int h) : width(w), height(h), cells(w * h) {}
+
+    void Write(const std::string& data) {
+      size_t i = 0;
+      while (i < data.size()) {
+        if (data[i] == '\n') {
+          cy++;
+          i++;
+        } else if (data[i] == '\r') {
+          cx = 0;
+          i++;
+        } else if (data[i] == '\x1b') {
+          if (i + 1 < data.size() && data[i + 1] == '[') {
+            size_t start = i + 2;
+            size_t end = start;
+            while (end < data.size() && ((data[end] >= '0' && data[end] <= '9') || data[end] == ';')) {
+              end++;
+            }
+            if (end < data.size()) {
+              char cmd = data[end];
+              std::string params = data.substr(start, end - start);
+              int val = params.empty() ? 1 : std::stoi(params);
+              if (cmd == 'A') {
+                cy = std::max(0, cy - val);
+              } else if (cmd == 'C') {
+                cx = std::min(width - 1, cx + val);
+              } else if (cmd == 'H') {
+                cx = 0;
+                cy = 0;
+              } else if (cmd == 'J') {
+                if (params == "2") {
+                  for (auto& cell : cells) {
+                    cell.character = "";
+                    cell.is_continuation = false;
+                  }
+                }
+              }
+              i = end + 1;
+            } else {
+              i++;
+            }
+          } else {
+            i++;
+          }
+        } else {
+          size_t len = 1;
+          unsigned char first = data[i];
+          if (first >= 0xf0) len = 4;
+          else if (first >= 0xe0) len = 3;
+          else if (first >= 0xc0) len = 2;
+
+          if (i + len <= data.size()) {
+            std::string character = data.substr(i, len);
+            i += len;
+
+            if (cx < width && cy < height) {
+              cells[cy * width + cx].character = character;
+              cells[cy * width + cx].is_continuation = false;
+              bool is_wide = (len > 1 && character != " ");
+              if (is_wide && cx + 1 < width) {
+                cells[cy * width + cx + 1].character = "";
+                cells[cy * width + cx + 1].is_continuation = true;
+                cx += 2;
+              } else {
+                cx += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  VirtualTerminal vt(80, 24);
+  vt.Write(first_output);
+  
+  vt.cx = 0;
+  vt.cy = 0;
+  vt.Write(second_output);
+
+  REQUIRE(vt.cells[0].character == "中");
+  REQUIRE_FALSE(vt.cells[0].is_continuation);
+  REQUIRE(vt.cells[1].character == "");
+  REQUIRE(vt.cells[1].is_continuation);
+
+  vt.cx = 0;
+  vt.cy = 0;
+  vt.Write(third_output);
+
+  REQUIRE(vt.cells[0].character == "B");
+  REQUIRE_FALSE(vt.cells[0].is_continuation);
+  REQUIRE(vt.cells[1].character == " ");
+  REQUIRE_FALSE(vt.cells[1].is_continuation);
+}
+
+TEST_CASE("Screen.RenderInitialFrameWideCharacterStyle", "[terminal]") {
+  Texture texture(10, 1);
+  texture[0, 0].character = "中";
+  texture[0, 0].background_color = Color::RGB(0, 0, 255);
+  texture[1, 0].is_continuation = true;
+  texture[2, 0].character = "A";
+
+  std::string output = texture.Render();
+  REQUIRE(output.find("A") != std::string::npos);
+  REQUIRE(output.find("\x1B[48;2;0;0;0mA") != std::string::npos);
 }
 
 }  // namespace
