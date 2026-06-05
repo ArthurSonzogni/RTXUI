@@ -38,6 +38,7 @@ The built-in parser supports:
 - **Lists**: Ordered (`1. `) and Unordered (`- `, `* `, `+ `)
 - **Inline Formatting**: `**bold**`, `*italic*`, `` `code` ``
 - **Links**: `[text](url)`
+- **Tables**: Standard Markdown pipe-tables (e.g. `| Col 1 | Col 2 |`), supporting inline formatting and escaped pipes (`\|`).
 
 ## Integration with Reactivity
 

@@ -54,6 +54,12 @@ int main() {
 ```
 - Unordered and Ordered lists
 - Blockquotes
+- Tables
+
+| Metric | Baseline | Optimized |
+| --- | --- | --- |
+| DOM Digest | 11.70 ms | 0.53 ms |
+| Layout/Paint | 3.85 ms | 0.52 ms |
 
 > "Markdown is a lightweight markup language for creating formatted text."
 
@@ -127,6 +133,27 @@ You can style the generated HTML tags using the `stylesheet` property.
     a {
       color: #3b82f6;
       text-decoration: underline;
+    }
+
+    table {
+      border: solid;
+      border-color: #334155;
+      margin-top: 1;
+      margin-bottom: 1;
+    }
+
+    th {
+      font-weight: bold;
+      color: #60a5fa;
+      border-bottom: solid;
+      border-color: #334155;
+      padding-left: 1;
+      padding-right: 1;
+    }
+
+    td {
+      padding-left: 1;
+      padding-right: 1;
     }
   )css";
 

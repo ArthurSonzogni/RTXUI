@@ -154,7 +154,77 @@ bool IsOrderedListItem(std::string_view line) {
   return (i > 0 && i + 1 < line.size() && line[i] == '.' && line[i + 1] == ' ');
 }
 
+bool IsTableDivider(std::string_view line) {
+  if (line.empty()) {
+    return false;
+  }
+  bool has_pipe = false;
+  bool has_dash = false;
+  for (char c : line) {
+    if (c == '|') {
+      has_pipe = true;
+    } else if (c == '-') {
+      has_dash = true;
+    } else if (c == ':' || c == ' ' || c == '\t' || c == '\r') {
+      // Allowed characters
+    } else {
+      return false;
+    }
+  }
+  return has_pipe && has_dash;
+}
+
+std::vector<std::string> SplitTableCells(std::string_view line) {
+  std::vector<std::string> cells;
+  bool starts_with_pipe = line.starts_with('|');
+  bool ends_with_pipe = line.ends_with('|');
+  
+  size_t start = 0;
+  if (starts_with_pipe) {
+    start = 1;
+  }
+  
+  size_t end_limit = line.size();
+  if (ends_with_pipe && line.size() > 1) {
+    if (line[line.size() - 2] != '\\') {
+      end_limit = line.size() - 1;
+    }
+  }
+  
+  size_t pos = start;
+  std::string current_cell;
+  while (pos < end_limit) {
+    if (line[pos] == '\\' && pos + 1 < end_limit && line[pos + 1] == '|') {
+      current_cell += '|';
+      pos += 2;
+    } else if (line[pos] == '|') {
+      cells.push_back(current_cell);
+      current_cell.clear();
+      pos++;
+    } else {
+      current_cell += line[pos];
+      pos++;
+    }
+  }
+  cells.push_back(current_cell);
+  
+  // Trim whitespace from each cell
+  for (auto& cell : cells) {
+    size_t l = 0;
+    while (l < cell.size() && std::isspace(static_cast<unsigned char>(cell[l]))) {
+      l++;
+    }
+    cell.erase(0, l);
+    while (!cell.empty() && std::isspace(static_cast<unsigned char>(cell.back()))) {
+      cell.pop_back();
+    }
+  }
+  
+  return cells;
+}
+
 }  // namespace
+
 
 std::string MarkdownToHtml(std::string_view markdown) {
   std::string html;
@@ -168,6 +238,8 @@ std::string MarkdownToHtml(std::string_view markdown) {
 
   bool in_blockquote = false;
   std::string current_blockquote;
+
+  bool in_table = false;
 
   auto close_paragraph = [&]() {
     if (in_paragraph) {
@@ -195,8 +267,15 @@ std::string MarkdownToHtml(std::string_view markdown) {
     }
   };
 
-  for (auto raw_line : lines) {
-    auto line = TrimTrailingCr(raw_line);
+  auto close_table = [&]() {
+    if (in_table) {
+      html += "</tbody>\n</table>\n";
+      in_table = false;
+    }
+  };
+
+  for (size_t line_idx = 0; line_idx < lines.size(); ++line_idx) {
+    auto line = TrimTrailingCr(lines[line_idx]);
 
     // If in code block, we only look for the closing backticks
     if (in_code_block) {
@@ -225,6 +304,56 @@ std::string MarkdownToHtml(std::string_view markdown) {
       close_paragraph();
       close_list();
       close_blockquote();
+      close_table();
+      continue;
+    }
+
+    // Handle table row if already in table
+    if (in_table) {
+      bool is_unordered_item = (line.starts_with("- ") ||
+                                line.starts_with("* ") || line.starts_with("+ "));
+      bool is_ordered_item = IsOrderedListItem(line);
+      
+      if (line.find('|') == std::string_view::npos ||
+          line.starts_with("```") || line.starts_with("#") ||
+          is_blockquote_line || is_unordered_item || is_ordered_item) {
+        close_table();
+        // Do not continue, process this line normally below
+      } else {
+        html += "<tr>\n";
+        auto cells = SplitTableCells(line);
+        for (const auto& cell : cells) {
+          html += "<td>" + ParseInline(cell) + "</td>\n";
+        }
+        html += "</tr>\n";
+        continue;
+      }
+    }
+
+    // Handle table start detection
+    bool can_start_table = false;
+    if (!in_table && line.find('|') != std::string_view::npos) {
+      if (line_idx + 1 < lines.size()) {
+        if (IsTableDivider(TrimTrailingCr(lines[line_idx + 1]))) {
+          can_start_table = true;
+        }
+      }
+    }
+
+    if (can_start_table) {
+      close_paragraph();
+      close_list();
+      close_blockquote();
+      
+      in_table = true;
+      html += "<table>\n<thead>\n<tr>\n";
+      auto cells = SplitTableCells(line);
+      for (const auto& cell : cells) {
+        html += "<th>" + ParseInline(cell) + "</th>\n";
+      }
+      html += "</tr>\n</thead>\n<tbody>\n";
+      // Skip the divider line
+      line_idx++;
       continue;
     }
 
@@ -233,6 +362,7 @@ std::string MarkdownToHtml(std::string_view markdown) {
       close_paragraph();
       close_list();
       close_blockquote();
+      close_table();
       html += "<pre><code>";
       in_code_block = true;
       continue;
@@ -242,6 +372,7 @@ std::string MarkdownToHtml(std::string_view markdown) {
     if (is_blockquote_line) {
       close_paragraph();
       close_list();
+      close_table();
 
       std::string_view content = line.substr(1);
       if (content.starts_with(" ")) {
@@ -263,6 +394,7 @@ std::string MarkdownToHtml(std::string_view markdown) {
           line[hashes] == ' ') {
         close_paragraph();
         close_list();
+        close_table();
         std::string_view text = line.substr(hashes + 1);
         std::string tag = "h" + std::to_string(hashes);
         html += "<" + tag + ">" + ParseInline(text) + "</" + tag + ">\n";
@@ -277,6 +409,7 @@ std::string MarkdownToHtml(std::string_view markdown) {
 
     if (is_unordered_item || is_ordered_item) {
       close_paragraph();
+      close_table();
 
       ListType target_type =
           is_unordered_item ? ListType::Unordered : ListType::Ordered;
@@ -307,6 +440,7 @@ std::string MarkdownToHtml(std::string_view markdown) {
 
     // Regular line (paragraph)
     close_list();
+    close_table();
     if (in_paragraph) {
       current_paragraph += " ";
       current_paragraph += line;
@@ -320,6 +454,7 @@ std::string MarkdownToHtml(std::string_view markdown) {
   close_paragraph();
   close_list();
   close_blockquote();
+  close_table();
 
   return html;
 }
