@@ -10,7 +10,7 @@ const std::string_view ol::view = R"html(
     <style>
       self { 
         display: block; 
-        padding-left: 2;
+        padding-left: 3;
       }
     </style>
   )html";

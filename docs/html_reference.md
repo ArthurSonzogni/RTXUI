@@ -14,7 +14,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<p>` | Typography | `display: block; margin-top: 1; margin-bottom: 1;` | None | Paragraph layout text block. |
 | `<strong>` | Typography | `display: inline; font-weight: bold;` | None | Highlights inline text in bold. |
 | `<ul>` | List | `display: block; padding-left: 2;` | None | Unordered list block. |
-| `<ol>` | List | `display: block; padding-left: 2;` | None | Ordered list block. |
+| `<ol>` | List | `display: block; padding-left: 3;` | None | Ordered list block. |
 | `<li>` | List | `display: block;` | None | Individual list item. |
 | `<button>` | Interactive | `display: inline-block; border: tall; padding-left: 1; padding-right: 1;` | `onclick` / `@click`, `oncontextmenu` / `@click.right` | Interactive clickable button widget. |
 | `<input>` | Interactive | `display: inline flex; flex-direction: row; border: solid; border-color: #555; padding-left: 1; padding-right: 1; overflow-x: scroll; scrollbar-width: none; white-space: nowrap;` | `value` | Interactive single-line text entry field. |
@@ -55,3 +55,37 @@ These attributes are supported on all elements:
 | **React-style** | Event Binding | `onclick="MyCallback"` | Binds trigger event to C++ callback. |
 | **Vue-style** | Event Binding | `@click="MyCallback"` | Shorthand for event callback binding. |
 | **Vue Modifier** | Event Binding | `@click.right="Menu"` | Binds modifier (e.g., mouse right-click). |
+
+---
+
+## 4. Lists
+
+RTXUI supports unordered lists (`<ul>`), ordered lists (`<ol>`), and list items (`<li>`).
+
+### Unordered Lists (`<ul>`)
+Unordered lists render markers to the left of each item. By default, they have a left padding of `2`.
+If no custom style is specified, the marker style alternates automatically based on nesting depth:
+* Nesting Level 1: Disc (`• `)
+* Nesting Level 2: Circle (`○ `)
+* Nesting Level 3+: Square (`■ `)
+
+### Ordered Lists (`<ol>`)
+Ordered lists render sequential numbers (`1. `, `2. `, etc.) prefixing each list item. They have a default left padding of `3` to accommodate double-digit list numbering.
+
+### List Items (`<li>`)
+List items render the marker (bullet or number) and flow their slot content.
+The prefix marker is styled using the `list-style-type` (or shorthand `list-style`) CSS property, which can be configured inside `<style>` blocks to affect list item descendants.
+
+Example:
+```xml
+<ul>
+  <li>First item</li>
+  <li>Second item</li>
+</ul>
+
+<style>
+  ul {
+    list-style-type: square;
+  }
+</style>
+```

@@ -102,6 +102,34 @@ std::string Unescape(std::string_view text) {
   std::string result;
   result.reserve(text.size());
   for (size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == '\\' && i + 1 < text.size()) {
+      char next = text[i + 1];
+      if (next == 'n') {
+        result += '\n';
+        i++;
+        continue;
+      } else if (next == 'r') {
+        result += '\r';
+        i++;
+        continue;
+      } else if (next == 't') {
+        result += '\t';
+        i++;
+        continue;
+      } else if (next == '\\') {
+        result += '\\';
+        i++;
+        continue;
+      } else if (next == '"') {
+        result += '"';
+        i++;
+        continue;
+      } else if (next == '\'') {
+        result += '\'';
+        i++;
+        continue;
+      }
+    }
     if (text[i] == '&') {
       size_t end = text.find(';', i);
       if (end != std::string_view::npos) {

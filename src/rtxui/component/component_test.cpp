@@ -18,6 +18,16 @@
 
 namespace {
 
+std::string RemoveWhitespace(std::string_view str) {
+  std::string result;
+  for (char c : str) {
+    if (!std::isspace(static_cast<unsigned char>(c))) {
+      result += c;
+    }
+  }
+  return result;
+}
+
 class Hello : public rtxui::Component<Hello> {
  public:
   std::string_view view = R"(
@@ -1361,6 +1371,59 @@ TEST_CASE("Markdown Component rendering", "[component][markdown]") {
   CHECK(h1_el->style.foreground_color.has_value());
 }
 
+class MarkdownListTestContainer : public rtxui::Component<MarkdownListTestContainer> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::markdown>();
+    rtxui::Component<MarkdownListTestContainer>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <markdown id="md" content="- list item 1\n- list item 2"></markdown>
+  )";
+};
+
+TEST_CASE("Markdown List rendering", "[component][markdown][list]") {
+  auto container = rtxui::Ref<MarkdownListTestContainer>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* root = container->Root();
+  auto* md_el = root->QuerySelector("#md");
+  REQUIRE(md_el != nullptr);
+
+  auto* ul_el = root->QuerySelector("ul");
+  REQUIRE(ul_el != nullptr);
+
+  auto* li_el = root->QuerySelector("li");
+  REQUIRE(li_el != nullptr);
+
+  auto print = ul_el->Print();
+  CHECK(RemoveWhitespace(print).find("•</span>listitem1") != std::string::npos);
+}
+
+TEST_CASE("Default Components Registration", "[component]") {
+  CHECK(rtxui::GetGlobalComponentFactory("ul") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("ol") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("li") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("div") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("span") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("p") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("h1") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("button") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("input") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("textarea") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("checkbox") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("slider") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("progress") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("select") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("option") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("hr") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("markdown") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("b") != nullptr);
+  CHECK(rtxui::GetGlobalComponentFactory("strong") != nullptr);
+}
+
 class ChildPropsTest : public rtxui::Component<ChildPropsTest> {
  public:
   struct Props {
@@ -1425,6 +1488,92 @@ TEST_CASE("Component props and two-way propagation", "[component][props]") {
 
   // child2 should also receive the updated value 42
   CHECK(child2->GetInterpolatedValue("value") == "42");
+}
+
+class ListTestComponent : public rtxui::Component<ListTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::ul>();
+    Import<rtxui::ol>();
+    Import<rtxui::li>();
+    rtxui::Component<ListTestComponent>::InitReflection();
+  }
+
+  std::string_view view = R"(
+      <div>
+        <ul id="ul_disc">
+          <li>item 1</li>
+          <li>item 2</li>
+        </ul>
+        <ul id="ul_nested">
+          <li>outer 1
+            <ul>
+              <li>inner 1</li>
+              <li>inner 2</li>
+            </ul>
+          </li>
+        </ul>
+        <ol id="ol_decimal">
+          <li>first</li>
+          <li>second</li>
+        </ol>
+        <ul id="ul_custom_square">
+          <li>square item</li>
+        </ul>
+        <ul id="ul_custom_none">
+          <li>none item</li>
+        </ul>
+      </div>
+
+      <style>
+        #ul_custom_square {
+          list-style-type: square;
+        }
+        #ul_custom_none {
+          list-style-type: none;
+        }
+      </style>
+    )";
+};
+
+TEST_CASE("List Rendering - ul, ol, li, and CSS", "[component][list]") {
+  auto comp = rtxui::Ref<ListTestComponent>::New();
+  comp->Mount();
+  comp->Digest();
+
+  auto* root = comp->Root();
+  REQUIRE(root != nullptr);
+
+  // 1. Unordered list with default bullet (disc -> "• ")
+  auto* ul_disc = root->QuerySelector("#ul_disc");
+  REQUIRE(ul_disc != nullptr);
+  auto print_disc = ul_disc->Print();
+  CHECK(RemoveWhitespace(print_disc) == "<ulid=\"ul_disc\"><li><span>•</span>item1</li><li><span>•</span>item2</li></ul>");
+
+  // 2. Nested unordered list (outer disc -> "• ", inner circle -> "○ ")
+  auto* ul_nested = root->QuerySelector("#ul_nested");
+  REQUIRE(ul_nested != nullptr);
+  auto print_nested = ul_nested->Print();
+  CHECK(RemoveWhitespace(print_nested) == "<ulid=\"ul_nested\"><li><span>•</span>outer1<ul><li><span>○</span>inner1</li><li><span>○</span>inner2</li></ul></li></ul>");
+
+  // 3. Ordered list with decimal numbering ("1. ", "2. ")
+  auto* ol_decimal = root->QuerySelector("#ol_decimal");
+  REQUIRE(ol_decimal != nullptr);
+  auto print_decimal = ol_decimal->Print();
+  CHECK(RemoveWhitespace(print_decimal) == "<olid=\"ol_decimal\"><li><span>1.</span>first</li><li><span>2.</span>second</li></ol>");
+
+  // 4. Custom list-style-type: square ("■ ")
+  auto* ul_custom_square = root->QuerySelector("#ul_custom_square");
+  REQUIRE(ul_custom_square != nullptr);
+  auto print_square = ul_custom_square->Print();
+  CHECK(RemoveWhitespace(print_square) == "<ulid=\"ul_custom_square\"><li><span>■</span>squareitem</li></ul>");
+
+  // 5. Custom list-style-type: none ("")
+  auto* ul_custom_none = root->QuerySelector("#ul_custom_none");
+  REQUIRE(ul_custom_none != nullptr);
+  auto print_none = ul_custom_none->Print();
+  CHECK(RemoveWhitespace(print_none) == "<ulid=\"ul_custom_none\"><li><span></span>noneitem</li></ul>");
 }
 
 }  // namespace

@@ -15,6 +15,13 @@ enum class DisplayOutside {
   Block,
   Inline,
 };
+enum class ListStyleType {
+  Disc,
+  Circle,
+  Square,
+  Decimal,
+  None,
+};
 enum class DisplayInside {
   FlowRoot,
   Flow,
@@ -189,6 +196,7 @@ struct ComputedStyle {
   ScrollbarWidth scrollbar_width = ScrollbarWidth::Auto;
   std::optional<TextAlign> text_align;
   std::optional<WhiteSpace> white_space;
+  std::optional<ListStyleType> list_style_type;
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
   ScrollBehavior scroll_behavior = ScrollBehavior::Auto;
