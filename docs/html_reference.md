@@ -142,3 +142,16 @@ Example:
   }
 </style>
 ```
+
+### Live Demo
+
+Below is the interactive live demo showcasing table borders, alternating row backgrounds, dynamic auto-column sizing, and scrollable container overflow behavior:
+
+<ExampleTabs src="/wasm/rtxui_example_table.js">
+<template #source>
+
+<<< @/../example/table.cpp
+
+</template>
+</ExampleTabs>
+
