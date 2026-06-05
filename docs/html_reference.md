@@ -25,6 +25,10 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<select>` | Interactive | `display: inline flex; flex-direction: column;` | `value`, `onchange` | Dropdown picker list menu. |
 | `<option>` | Interactive | `display: block;` | `value` | Pickable choice element inside `<select>`. |
 | `<hr>` | Display | `display: block; margin-top: 1; margin-bottom: 1; overflow: hidden; white-space: nowrap;` | None | Horizontal rule/divider line. |
+| `<table>` | Container | `display: block;` | None | Table container element. Organizes child row elements in a grid. |
+| `<tr>` | Container | `display: block;` | None | Table row element. Groups cell elements. |
+| `<td>` | Container | `display: block;` | None | Table data cell element. Fits slot content. |
+| `<th>` | Container | `display: block;` | None | Table header cell element. Fits slot content. |
 | `<if>` | Control Flow | N/A | `condition` | Dynamic conditional branch renderer. |
 | `<elif>` | Control Flow | N/A | `condition` | Alternative branch. Must follow `<if>` or `<elif>`. |
 | `<else>` | Control Flow | N/A | None | Fallback branch. Must follow `<if>` or `<elif>`. |
@@ -86,6 +90,55 @@ Example:
 <style>
   ul {
     list-style-type: square;
+  }
+</style>
+```
+
+---
+
+## 5. Tables
+
+RTXUI supports structured table layouts through `<table>`, `<tr>`, `<td>`, and `<th>` elements.
+
+### Elements
+* `<table>`: The top-level table container.
+* `<tr>`: Defines a row of cells inside a table.
+* `<td>`: Defines a data cell.
+* `<th>`: Defines a header cell.
+
+### Layout Behavior
+* **Column Sizing**: Column widths are calculated automatically. Cell widths conform to the maximum preferred width of cells in their respective column. If the table is styled with a fixed width, remaining space is distributed proportionally among columns.
+* **Row Sizing**: Row height is automatically set to the height of the tallest cell in that row. Shorter cells in the same row are stretched vertically to align backgrounds and borders.
+
+### Styling
+You can style tables, rows, and cells using CSS. Borders are fully supported on tables, rows, and cells (e.g. `border: solid;`).
+
+Example:
+```xml
+<table>
+  <tr>
+    <th>Header 1</th>
+    <th>Header 2</th>
+  </tr>
+  <tr>
+    <td>Data A</td>
+    <td>Data B</td>
+  </tr>
+</table>
+
+<style>
+  table {
+    border: solid;
+    border-color: #3b82f6;
+  }
+  th {
+    font-weight: bold;
+    border-bottom: solid;
+    border-color: #334155;
+  }
+  td, th {
+    padding-left: 1;
+    padding-right: 1;
   }
 </style>
 ```

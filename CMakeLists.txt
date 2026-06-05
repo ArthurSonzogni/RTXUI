@@ -258,6 +258,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_opacity example/opacity.cpp)
   target_link_libraries(rtxui_example_opacity PRIVATE rtxui)
+
+  add_executable(rtxui_example_table example/table.cpp)
+  target_link_libraries(rtxui_example_table PRIVATE rtxui)
 endif()
 
 option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" ON)
