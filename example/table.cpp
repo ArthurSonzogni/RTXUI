@@ -53,6 +53,118 @@ class TableDemo : public Component<TableDemo> {
               <td>$129.00</td>
               <td class="status active">Active</td>
             </tr>
+            <tr>
+              <td>#105</td>
+              <td>Smartwatch E</td>
+              <td>Wearables</td>
+              <td>$199.99</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#106</td>
+              <td>Laptop F</td>
+              <td>Computers</td>
+              <td>$899.00</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr>
+              <td>#107</td>
+              <td>Keyboard G</td>
+              <td>Accessories</td>
+              <td>$45.00</td>
+              <td class="status disabled">Inactive</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#108</td>
+              <td>Mouse H</td>
+              <td>Accessories</td>
+              <td>$25.50</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr>
+              <td>#109</td>
+              <td>Monitor I</td>
+              <td>Computers</td>
+              <td>$249.99</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#110</td>
+              <td>Desk Lamp J</td>
+              <td>Furniture</td>
+              <td>$35.00</td>
+              <td class="status disabled">Inactive</td>
+            </tr>
+            <tr>
+              <td>#111</td>
+              <td>Chair K</td>
+              <td>Furniture</td>
+              <td>$150.00</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#112</td>
+              <td>Headphones L</td>
+              <td>Audio</td>
+              <td>$79.99</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr>
+              <td>#113</td>
+              <td>Speaker M</td>
+              <td>Audio</td>
+              <td>$120.00</td>
+              <td class="status disabled">Inactive</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#114</td>
+              <td>Cable N</td>
+              <td>Accessories</td>
+              <td>$9.99</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr>
+              <td>#115</td>
+              <td>Adapter O</td>
+              <td>Accessories</td>
+              <td>$15.00</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#116</td>
+              <td>Camera P</td>
+              <td>Photography</td>
+              <td>$450.00</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr>
+              <td>#117</td>
+              <td>Lens Q</td>
+              <td>Photography</td>
+              <td>$300.00</td>
+              <td class="status disabled">Inactive</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#118</td>
+              <td>Tripod R</td>
+              <td>Photography</td>
+              <td>$60.00</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr>
+              <td>#119</td>
+              <td>Bag S</td>
+              <td>Accessories</td>
+              <td>$40.00</td>
+              <td class="status active">Active</td>
+            </tr>
+            <tr class="alt-row">
+              <td>#120</td>
+              <td>Phone T</td>
+              <td>Electronics</td>
+              <td>$699.99</td>
+              <td class="status active">Active</td>
+            </tr>
           </tbody>
         </table>
       </div>
