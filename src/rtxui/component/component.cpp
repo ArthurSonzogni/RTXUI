@@ -43,8 +43,6 @@ void RefCounted::Release() const {
   }
 }
 
-ComponentBase::ComponentBase() = default;
-ComponentBase::~ComponentBase() = default;
 
 std::string_view ComponentBase::Setup() {
   return "";
@@ -154,6 +152,9 @@ struct CategorizedRules {
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_tag;
   bool has_pseudo_classes = false;
 };
+
+ComponentBase::ComponentBase() = default;
+ComponentBase::~ComponentBase() = default;
 
 namespace {
 
