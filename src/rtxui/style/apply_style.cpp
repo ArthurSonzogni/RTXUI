@@ -6,6 +6,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <memory>
 
 #include "rtxui/paint/color.hpp"
 
@@ -341,7 +342,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "transition") {
     std::string_view value_view = v;
-    style.transitions.clear();
+    style.transitions.reset();
     while (!value_view.empty()) {
       size_t comma = value_view.find(',');
       std::string_view token = (comma == std::string_view::npos)
@@ -389,7 +390,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
                          ? remaining2
                          : remaining2.substr(0, space3);
           }
-          style.transitions.push_back(
+          if (!style.transitions) {
+            style.transitions = std::make_unique<std::vector<TransitionConfig>>();
+          }
+          style.transitions->push_back(
               {std::string(prop_name), dur, 0.0f, std::string(timing)});
         }
       }

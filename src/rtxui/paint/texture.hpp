@@ -13,10 +13,12 @@ class Texture {
  public:
   Texture(std::uint8_t width, std::uint8_t height);
   Cell& operator[](int x, int y);
+  const Cell& operator[](int x, int y) const;
 
   std::uint8_t width() const { return width_; }
   std::uint8_t height() const { return height_; }
   std::string Render() const;
+  std::string RenderDiff(const Texture& old_texture) const;
 
  private:
   const std::uint8_t width_;

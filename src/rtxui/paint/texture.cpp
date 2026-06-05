@@ -72,6 +72,13 @@ Cell& Texture::operator[](int x, int y) {
   return cells_[y * width_ + x];
 }
 
+const Cell& Texture::operator[](int x, int y) const {
+  if (x < 0 || x >= width_ || y < 0 || y >= height_) {
+    return NullCell;
+  }
+  return cells_[y * width_ + x];
+}
+
 /// @brief Render the output as a string, using terminal escape codes.
 std::string Texture::Render() const {
   std::stringstream ss;
@@ -105,6 +112,79 @@ std::string Texture::Render() const {
       }
     }
   }
+
+  // Reset the style at the end of the output.
+  Transition(ss, prev, &default_cell);
+
+  return ss.str();
+}
+
+std::string Texture::RenderDiff(const Texture& old_texture) const {
+  std::stringstream ss;
+
+  if (old_texture.width() != width_ || old_texture.height() != height_) {
+    return Render();
+  }
+
+  const Cell default_cell;
+  const Cell* prev = &default_cell;
+
+  int cursor_x = 0;
+  int cursor_y = 0;
+
+  auto MoveCursor = [&](int tx, int ty) {
+    if (ty > cursor_y) {
+      ss << std::string(ty - cursor_y, '\n') << "\r";
+      cursor_y = ty;
+      cursor_x = 0;
+    } else if (ty < cursor_y) {
+      ss << "\x1b[" << (cursor_y - ty) << "A";
+      cursor_y = ty;
+    }
+
+    if (tx > cursor_x) {
+      ss << "\x1b[" << (tx - cursor_x) << "C";
+      cursor_x = tx;
+    } else if (tx < cursor_x) {
+      ss << "\r";
+      if (tx > 0) {
+        ss << "\x1b[" << tx << "C";
+      }
+      cursor_x = tx;
+    }
+  };
+
+  for (int y = 0; y < height_; ++y) {
+    for (int x = 0; x < width_; ++x) {
+      const Cell& cell = cells_[y * width_ + x];
+      const Cell& old_cell = old_texture.cells_[y * width_ + x];
+
+      if (cell == old_cell) {
+        continue;
+      }
+
+      if (cell.is_continuation) {
+        continue;
+      }
+
+      MoveCursor(x, y);
+
+      Transition(ss, prev, &cell);
+      prev = &cell;
+
+      if (cell.character.empty()) {
+        ss << " ";
+      } else {
+        ss << cell.character;
+      }
+
+      bool is_wide = (x + 1 < width_ && cells_[y * width_ + x + 1].is_continuation);
+      cursor_x += (is_wide ? 2 : 1);
+    }
+  }
+
+  // Position cursor at the bottom-left of the screen.
+  MoveCursor(0, height_ - 1);
 
   // Reset the style at the end of the output.
   Transition(ss, prev, &default_cell);

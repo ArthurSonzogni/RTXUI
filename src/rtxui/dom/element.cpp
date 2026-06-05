@@ -119,7 +119,10 @@ Length InterpolateLength(Length start, Length target, float progress) {
 
 const TransitionConfig* FindTransitionConfig(const Element* element,
                                              std::string_view property) {
-  for (const auto& config : element->target_style.transitions) {
+  if (!element->target_style.transitions) {
+    return nullptr;
+  }
+  for (const auto& config : *element->target_style.transitions) {
     if (config.property == "all") {
       return &config;
     }
@@ -296,7 +299,7 @@ Element* Element::QuerySelector(std::string_view selector) {
 }
 
 void Element::TriggerTransitions(double current_time_ms) {
-  if (target_style.transitions.empty() && active_transitions.empty()) {
+  if (!target_style.transitions && active_transitions.empty()) {
     style = target_style;
     return;
   }
