@@ -775,6 +775,29 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "list-style" || p == "list-style-type") {
+    if (v == "disc") {
+      style.list_style_type = ListStyleType::Disc;
+      return;
+    }
+    if (v == "circle") {
+      style.list_style_type = ListStyleType::Circle;
+      return;
+    }
+    if (v == "square") {
+      style.list_style_type = ListStyleType::Square;
+      return;
+    }
+    if (v == "decimal") {
+      style.list_style_type = ListStyleType::Decimal;
+      return;
+    }
+    if (v == "none") {
+      style.list_style_type = ListStyleType::None;
+      return;
+    }
+  }
+
   if (p == "display") {
     // Parse combined display property (display-outside and display-inside)
     // For simplicity, handle common single-keyword values and assume default

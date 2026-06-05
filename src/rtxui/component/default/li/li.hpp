@@ -12,7 +12,11 @@ namespace rtxui {
 
 class li : public Component<li> {
  public:
-  static const std::string_view view;
+  std::string marker;
+
+  void InitReflection() override;
+  std::string_view Setup() override;
+  bool Digest() override;
 };
 
 }  // namespace rtxui

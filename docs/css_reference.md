@@ -96,6 +96,15 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 
 ---
 
+## 7. List Styles
+
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `list-style-type` | `disc \| circle \| square \| decimal \| none` | ❌ | Sets the marker prefix style for list items (`• `, `○ `, `■ `, numbers, or none). |
+| `list-style` | `disc \| circle \| square \| decimal \| none` | ❌ | Shorthand configuration for list styling. |
+
+---
+
 ## Value Types Reference
 
 ### Core Types

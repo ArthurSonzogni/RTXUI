@@ -24,6 +24,7 @@
 #include "rtxui/style/apply_style.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/xml/xml.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 
 namespace rtxui {
 
@@ -109,8 +110,29 @@ void Bindings::Import(std::string_view name, ComponentFactory factory) {
 
 namespace {
 std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
-  static auto* registry =
-      new std::unordered_map<std::string, ComponentFactory>();
+  static auto* registry = []() {
+    auto* reg = new std::unordered_map<std::string, ComponentFactory>();
+    (*reg)["b"] = []() { return Ref<b>::New(); };
+    (*reg)["button"] = []() { return Ref<button>::New(); };
+    (*reg)["checkbox"] = []() { return Ref<checkbox>::New(); };
+    (*reg)["div"] = []() { return Ref<div>::New(); };
+    (*reg)["h1"] = []() { return Ref<h1>::New(); };
+    (*reg)["hr"] = []() { return Ref<hr>::New(); };
+    (*reg)["input"] = []() { return Ref<input>::New(); };
+    (*reg)["li"] = []() { return Ref<li>::New(); };
+    (*reg)["markdown"] = []() { return Ref<markdown>::New(); };
+    (*reg)["ol"] = []() { return Ref<ol>::New(); };
+    (*reg)["option"] = []() { return Ref<option>::New(); };
+    (*reg)["p"] = []() { return Ref<p>::New(); };
+    (*reg)["progress"] = []() { return Ref<progress>::New(); };
+    (*reg)["select"] = []() { return Ref<select>::New(); };
+    (*reg)["slider"] = []() { return Ref<slider>::New(); };
+    (*reg)["span"] = []() { return Ref<span>::New(); };
+    (*reg)["strong"] = []() { return Ref<strong>::New(); };
+    (*reg)["textarea"] = []() { return Ref<textarea>::New(); };
+    (*reg)["ul"] = []() { return Ref<ul>::New(); };
+    return reg;
+  }();
   return *registry;
 }
 }  // namespace
