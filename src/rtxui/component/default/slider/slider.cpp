@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "rtxui/dom/element.hpp"
+#include "rtxui/component/component_internal.hpp"
 
 namespace rtxui {
 
@@ -185,6 +186,13 @@ bool slider::OnEvent(Event event) {
             value = new_val;
             value_changed = true;
             PropagateBinding("value", std::to_string(value));
+            // Trigger onchange
+            if (root->Attributes().count("onchange")) {
+                std::string onchange_cb = root->Attributes().at("onchange");
+                if (auto* comp = GetAttributeOwnerComponent(root)) {
+                    comp->RunCallback(onchange_cb);
+                }
+            }
             return true;
           }
           // If we are at the boundary and pressing in that direction, 
@@ -196,6 +204,14 @@ bool slider::OnEvent(Event event) {
 
   if (value_changed) {
     PropagateBinding("value", std::to_string(value));
+
+    // Run onchange callback if present
+    if (root->Attributes().count("onchange")) {
+      std::string onchange_cb = root->Attributes().at("onchange");
+      if (auto* comp = GetAttributeOwnerComponent(root)) {
+          comp->RunCallback(onchange_cb);
+      }
+    }
     return true;
   }
 

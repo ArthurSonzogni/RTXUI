@@ -7,6 +7,7 @@
 
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
+#include "rtxui/component/component_internal.hpp"
 
 namespace rtxui {
 
@@ -15,50 +16,62 @@ void select::InitReflection() {
   Bind(selected_label);
   Bind(arrow_char);
   Bind(dropdown_class);
-  Bind(focus_class);
   Component<select>::InitReflection();
 }
 
 std::string_view select::Setup() {
-  return R"html(<div class="select-btn {focus_class}">
+  return R"html(
+    <div class="select-btn">
       <span class="select-label">{selected_label}</span>
       <span class="select-arrow">{arrow_char}</span>
     </div>
     <div class="dropdown-list {dropdown_class}">
       <slot></slot>
     </div>
-  <style>
-    self {
-      display: inline flex;
-      flex-direction: column;
-    }
-    .select-btn {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      border: solid;
-      border-color: #555;
-      background-color: #1e293b;
-      color: white;
-      padding-left: 1;
-      padding-right: 1;
-      cursor: pointer;
-    }
-    .focused {
-      border-color: #38bdf8;
-    }
-    .dropdown-list {
-      display: flex;
-      flex-direction: column;
-      border: solid;
-      border-top: none;
-      border-color: #555;
-      background-color: #0f172a;
-    }
-    .closed {
-      display: none;
-    }
-  </style>)html";
+    <style>
+      self {
+        display: inline-flex;
+        flex-direction: column;
+        min-width: 15;
+      }
+      .select-btn {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        border: solid;
+        border-color: #334155;
+        background-color: #1e293b;
+        color: #f1f5f9;
+        padding-left: 1;
+        padding-right: 1;
+        cursor: pointer;
+        transition: all 0.1s linear;
+      }
+      self:hover .select-btn {
+        background-color: #334155;
+      }
+      self:focus .select-btn {
+        background-color: #0c4a6e;
+        border-color: #38bdf8;
+        color: #fff;
+      }
+      .dropdown-list {
+        display: flex;
+        flex-direction: column;
+        border: solid;
+        border-top: none;
+        border-color: #38bdf8;
+        background-color: #0f172a;
+        position: absolute;
+        width: 100%;
+        margin-top: 1;
+        z-index: 10;
+      }
+      .closed {
+        display: none;
+      }
+    </style>
+  )html";
 }
 
 std::vector<OptionInfo> select::GetOptions() {
@@ -200,9 +213,9 @@ bool select::OnEvent(Event event) {
               if (new_idx != curr_idx) {
                 SelectOption(options[new_idx].value);
                 changed = true;
+                return true;
               }
             }
-            return true;
           }
           if (kb.special == Event::Keyboard::Special::Return ||
               (kb.special == Event::Keyboard::Special::None &&
@@ -229,13 +242,7 @@ bool select::OnEvent(Event event) {
 }
 
 bool select::Digest() {
-  std::cout << "select::Digest this=" << this << " value=" << value
-            << " is_open=" << is_open << std::endl;
   auto* root = Root();
-  if (root) {
-    bool is_focused = root->focused();
-    focus_class = is_focused ? "focused" : "";
-  }
   dropdown_class = is_open ? "open" : "closed";
   arrow_char = is_open ? "▴" : "▾";
 
@@ -266,32 +273,8 @@ void select::SelectOption(std::string_view opt_val) {
   auto* root = Root();
   if (root && root->Attributes().count("onchange")) {
     std::string onchange_cb = root->Attributes().at("onchange");
-    Element* parent_el = root->Parent();
-    ComponentBase* parent_comp = nullptr;
-    while (parent_el) {
-      if (parent_el->component()) {
-        parent_comp = const_cast<ComponentBase*>(parent_el->component());
-        break;
-      }
-      parent_el = parent_el->Parent();
-    }
-    while (parent_comp) {
-      if (parent_comp->RunCallback(onchange_cb)) {
-        break;
-      }
-      if (parent_comp->Root()) {
-        parent_el = parent_comp->Root()->Parent();
-        parent_comp = nullptr;
-        while (parent_el) {
-          if (parent_el->component()) {
-            parent_comp = const_cast<ComponentBase*>(parent_el->component());
-            break;
-          }
-          parent_el = parent_el->Parent();
-        }
-      } else {
-        break;
-      }
+    if (auto* comp = GetAttributeOwnerComponent(root)) {
+        comp->RunCallback(onchange_cb);
     }
   }
 }

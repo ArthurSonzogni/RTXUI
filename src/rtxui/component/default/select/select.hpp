@@ -25,10 +25,9 @@ class select : public Component<select> {
   int hovered_index = -1;
 
   // Render bindings
-  std::string selected_label;
+  std::string selected_label = "Select...";
   std::string arrow_char = "▾";
   std::string dropdown_class = "closed";
-  std::string focus_class = "";
 
   void InitReflection() override;
   std::string_view Setup() override;
