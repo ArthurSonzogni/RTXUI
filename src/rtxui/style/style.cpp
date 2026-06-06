@@ -188,14 +188,20 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
     base_and_classes.remove_suffix(1);
   }
 
-  size_t dot = base_and_classes.find('.');
+  // Find the last component of the selector (e.g., "div" in "self .container div")
+  size_t last_space = base_and_classes.find_last_of(" \n\r\t");
+  std::string_view last_part = (last_space == std::string_view::npos)
+                                   ? base_and_classes
+                                   : base_and_classes.substr(last_space + 1);
+
+  size_t dot = last_part.find('.');
   if (dot == std::string_view::npos) {
-    parsed.base = std::string(base_and_classes);
+    parsed.base = std::string(last_part);
   } else if (dot == 0) {
-    parsed.base = std::string(base_and_classes);
+    parsed.base = std::string(last_part);
   } else {
-    parsed.base = std::string(base_and_classes.substr(0, dot));
-    std::string_view remaining_classes = base_and_classes.substr(dot);
+    parsed.base = std::string(last_part.substr(0, dot));
+    std::string_view remaining_classes = last_part.substr(dot);
     while (!remaining_classes.empty() && remaining_classes.front() == '.') {
       remaining_classes.remove_prefix(1);
       size_t next_dot = remaining_classes.find('.');
