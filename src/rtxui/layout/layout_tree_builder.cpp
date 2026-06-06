@@ -66,7 +66,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     return box;
   }
 
-  if (box->style.display_outside == DisplayOutside::Block) {
+  if (box->style.display_outside == DisplayOutside::Block || dom_node->is_slot()) {
     box->algorithm = LayoutBox::Algorithm::BlockFlow;
     std::vector<std::shared_ptr<LayoutBox>> refined_children;
     std::shared_ptr<LayoutBox> anonymous_box = nullptr;

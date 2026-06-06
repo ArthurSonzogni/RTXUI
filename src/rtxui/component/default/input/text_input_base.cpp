@@ -400,6 +400,47 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
+      if (kb.special == Event::Keyboard::Special::Tab) {
+        if (kb.modifier.shift) {
+          // Unindent: remove a tab or up to 4 spaces at the start of the line
+          int line_start = FindLineStart(graphemes, cursor_pos);
+          int to_remove = 0;
+          if (line_start < n) {
+            if (graphemes[line_start].text == "\t") {
+              to_remove = 1;
+            } else if (graphemes[line_start].text == " ") {
+              to_remove = 1;
+              while (to_remove < 4 && line_start + to_remove < n &&
+                     graphemes[line_start + to_remove].text == " ") {
+                to_remove++;
+              }
+            }
+          }
+          if (to_remove > 0) {
+            graphemes.erase(graphemes.begin() + line_start,
+                            graphemes.begin() + line_start + to_remove);
+            cursor_pos = std::max(line_start, cursor_pos - to_remove);
+            value = GraphemesToString(graphemes);
+            self->PropagateBinding("value", value);
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
+            ideal_column_ = pos2d.column;
+            KeepCursorVisible(root, is_multiline);
+          }
+        } else {
+          // Indent: insert a tab
+          std::string tab = "\t";
+          auto new_graphemes = GetGraphemesList(tab);
+          graphemes.insert(graphemes.begin() + cursor_pos,
+                           new_graphemes.begin(), new_graphemes.end());
+          cursor_pos += static_cast<int>(new_graphemes.size());
+          value = GraphemesToString(graphemes);
+          self->PropagateBinding("value", value);
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
+          ideal_column_ = pos2d.column;
+          KeepCursorVisible(root, is_multiline);
+        }
+        return true;
+      }
       if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
         std::string character = "\n";
         auto new_graphemes = GetGraphemesList(character);

@@ -34,6 +34,74 @@ namespace {
 
 void handle_sigwinch(int sig) {}
 
+std::optional<int> GetEffectiveTabIndex(Element* el) {
+  if (!el) {
+    return std::nullopt;
+  }
+  const auto& attrs = el->Attributes();
+  if (attrs.count("tabindex")) {
+    try {
+      return std::stoi(attrs.at("tabindex"));
+    } catch (...) {
+      // ignore invalid values
+    }
+  }
+  if (attrs.count("focusable")) {
+    std::string val = attrs.at("focusable");
+    if (val == "true" || val == "1") {
+      return 0;
+    }
+  }
+  std::string_view tag = el->tag();
+  if (tag == "input" || tag == "textarea" || tag == "checkbox" ||
+      tag == "slider" || tag == "button" || tag == "select") {
+    return 0;
+  }
+  return std::nullopt;
+}
+
+struct FocusableFragment {
+  Element* element;
+  int x, y, width, height;
+};
+
+void CollectFocusableFragments(
+    const std::shared_ptr<PhysicalFragment>& fragment,
+    int abs_x,
+    int abs_y,
+    std::vector<FocusableFragment>& focusable_fragments) {
+  if (!fragment) {
+    return;
+  }
+
+  if (fragment->dom_node) {
+    auto tab_index_opt = GetEffectiveTabIndex(fragment->dom_node);
+    if (tab_index_opt.has_value() && tab_index_opt.value() >= 0) {
+      focusable_fragments.push_back({fragment->dom_node, abs_x, abs_y,
+                                     fragment->width, fragment->height});
+    }
+  }
+
+  int scroll_x_offset = 0;
+  int scroll_y_offset = 0;
+  if (fragment->clips_descendants) {
+    scroll_x_offset = fragment->scroll_x;
+    scroll_y_offset = fragment->scroll_y;
+  }
+
+  for (const auto& child : fragment->children) {
+    bool is_fixed =
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Fixed);
+
+    int child_abs_x = is_fixed ? child.x : abs_x + child.x - scroll_x_offset;
+    int child_abs_y = is_fixed ? child.y : abs_y + child.y - scroll_y_offset;
+
+    CollectFocusableFragments(child.fragment, child_abs_x, child_abs_y,
+                              focusable_fragments);
+  }
+}
+
 Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
                            int target_x,
                            int target_y,
@@ -211,6 +279,9 @@ class ScreenImpl {
   bool HasActiveTransitions();
   bool TickTransitions(double current_time_ms);
   void ScrollIntoView(Element* element);
+
+  bool SpatialNavigate(Event event);
+  void SimulateClick(Element* element);
 
   void SetSmoothScrollEnabled(bool enabled) {
     smooth_scroll_enabled_ = enabled;
@@ -622,32 +693,6 @@ void ScreenImpl::HandleEvent(const Event& event) {
       int document_index;
     };
 
-    auto GetEffectiveTabIndex = [](Element* el) -> std::optional<int> {
-      if (!el) {
-        return std::nullopt;
-      }
-      const auto& attrs = el->Attributes();
-      if (attrs.count("tabindex")) {
-        try {
-          return std::stoi(attrs.at("tabindex"));
-        } catch (...) {
-          // ignore invalid values
-        }
-      }
-      if (attrs.count("focusable")) {
-        std::string val = attrs.at("focusable");
-        if (val == "true" || val == "1") {
-          return 0;
-        }
-      }
-      std::string_view tag = el->tag();
-      if (tag == "input" || tag == "textarea" || tag == "checkbox" ||
-          tag == "slider" || tag == "button" || tag == "select") {
-        return 0;
-      }
-      return std::nullopt;
-    };
-
     std::vector<FocusEntry> navigable;
     for (int i = 0; i < static_cast<int>(document_order.size()); ++i) {
       Element* el = document_order[i];
@@ -700,6 +745,24 @@ void ScreenImpl::HandleEvent(const Event& event) {
       component_->ResolveTargetStyles();
       ScrollIntoView(focused_element_);
       Draw();
+      return;
+    }
+  }
+
+  if (event == Event::Return() ||
+      (event.is<Event::Keyboard>() &&
+       event.get<Event::Keyboard>().codepoint == 32)) {
+    if (focused_element_) {
+      SimulateClick(focused_element_);
+      return;
+    }
+  }
+
+  if (event == Event::ArrowUp() || event == Event::ArrowDown() ||
+      event == Event::ArrowLeft() || event == Event::ArrowRight() ||
+      event == Event::h() || event == Event::j() || event == Event::k() ||
+      event == Event::l()) {
+    if (SpatialNavigate(event)) {
       return;
     }
   }
@@ -1039,10 +1102,156 @@ void ScreenImpl::ScrollIntoView(Element* element) {
     target_right -= parent.fragment->scroll_x;
     target_top -= parent.fragment->scroll_y;
     target_bottom -= parent.fragment->scroll_y;
-  }
-}
+    }
+    }
 
-// --- RawTerminal RAII Implementation ---
+    bool ScreenImpl::SpatialNavigate(Event event) {
+      enum class Direction { Up, Down, Left, Right } dir;
+      if (event == Event::ArrowUp() || event == Event::k())
+        dir = Direction::Up;
+      else if (event == Event::ArrowDown() || event == Event::j())
+        dir = Direction::Down;
+      else if (event == Event::ArrowLeft() || event == Event::h())
+        dir = Direction::Left;
+      else if (event == Event::ArrowRight() || event == Event::l())
+        dir = Direction::Right;
+      else
+        return false;
+
+  std::vector<FocusableFragment> focusable_fragments;
+  CollectFocusableFragments(root_fragment_, 0, 0, focusable_fragments);
+
+  if (focusable_fragments.empty())
+    return false;
+
+  int cur_x = 0, cur_y = 0, cur_w = 0, cur_h = 0;
+  bool start_from_element = false;
+  if (focused_element_) {
+    for (const auto& f : focusable_fragments) {
+      if (f.element == focused_element_) {
+        cur_x = f.x;
+        cur_y = f.y;
+        cur_w = f.width;
+        cur_h = f.height;
+        start_from_element = true;
+        break;
+      }
+    }
+  }
+
+  if (!start_from_element) {
+    // If no element focused, start from outside the screen depending on direction
+    switch (dir) {
+      case Direction::Down:
+        cur_x = 0;
+        cur_y = -1;
+        cur_w = width_;
+        cur_h = 0;
+        break;
+      case Direction::Up:
+        cur_x = 0;
+        cur_y = height_;
+        cur_w = width_;
+        cur_h = 0;
+        break;
+      case Direction::Right:
+        cur_x = -1;
+        cur_y = 0;
+        cur_w = 0;
+        cur_h = height_;
+        break;
+      case Direction::Left:
+        cur_x = width_;
+        cur_y = 0;
+        cur_w = 0;
+        cur_h = height_;
+        break;
+    }
+  }
+
+  int cur_cx = cur_x + cur_w / 2;
+  int cur_cy = cur_y + cur_h / 2;
+
+  FocusableFragment* best = nullptr;
+  long long best_score = -1;
+
+  for (auto& cand : focusable_fragments) {
+    if (cand.element == focused_element_)
+      continue;
+
+    int cand_cx = cand.x + cand.width / 2;
+    int cand_cy = cand.y + cand.height / 2;
+
+    long long d_primary = 0;
+    long long d_secondary = 0;
+
+    switch (dir) {
+      case Direction::Left:
+        d_primary = cur_cx - cand_cx;
+        d_secondary = std::abs(cur_cy - cand_cy);
+        break;
+      case Direction::Right:
+        d_primary = cand_cx - cur_cx;
+        d_secondary = std::abs(cur_cy - cand_cy);
+        break;
+      case Direction::Up:
+        d_primary = cur_cy - cand_cy;
+        d_secondary = std::abs(cur_cx - cand_cx);
+        break;
+      case Direction::Down:
+        d_primary = cand_cy - cur_cy;
+        d_secondary = std::abs(cur_cx - cand_cx);
+        break;
+    }
+
+    if (d_primary <= 0)
+      continue;
+
+    // Spatial navigation distance metric: primary distance squared + secondary distance squared * 2
+    long long score = d_primary * d_primary + d_secondary * d_secondary * 2;
+    if (best == nullptr || score < best_score) {
+      best = &cand;
+      best_score = score;
+    }
+  }
+
+  if (best) {
+    if (component_->Root()) {
+      component_->Root()->Visit([](Element& el) { el.set_focused(false); });
+    }
+    best->element->set_focused(true);
+    focused_element_ = best->element;
+    component_->ResolveTargetStyles();
+    ScrollIntoView(focused_element_);
+    Draw();
+    return true;
+  }
+
+  return false;
+}
+    void ScreenImpl::SimulateClick(Element* element) {
+    if (!element)
+    return;
+    std::vector<std::string> attr_keys = {"onclick", "@click.left", "@click"};
+    Element* curr = element;
+    while (curr) {
+    const auto& attrs = curr->Attributes();
+    for (const auto& key : attr_keys) {
+      if (attrs.count(key)) {
+        std::string action = attrs.at(key);
+        if (auto* comp = GetAttributeOwnerComponent(curr)) {
+          if (comp->RunCallback(action)) {
+            DigestAndDraw();
+            return;
+          }
+        }
+      }
+    }
+    curr = curr->Parent();
+    }
+    }
+
+    // --- RawTerminal RAII Implementation ---
 
 ScreenImpl::RawTerminal::RawTerminal(ScreenImpl* screen) : screen_(screen) {
   if (screen_ && screen_->device_) {

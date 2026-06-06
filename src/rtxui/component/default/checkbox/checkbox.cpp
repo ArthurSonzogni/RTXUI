@@ -10,36 +10,53 @@ namespace rtxui {
 void checkbox::InitReflection() {
   Bind(checked);
   Bind(checked_char);
-  Bind(focus_class);
   Component<checkbox>::InitReflection();
 }
 
 std::string_view checkbox::Setup() {
-  return R"html(<span class="{focus_class}">[<span class="checkmark">{checked_char}</span>] <slot></slot></span><style>
+  return R"html(
+    <span>[<span class="checkmark">{checked_char}</span>] <slot></slot></span>
+    <style>
       self {
         display: inline-block;
         cursor: pointer;
+        padding-left: 1;
+        padding-right: 1;
+        transition: background-color 0.1s linear;
       }
-      .focused {
-        background-color: #333;
+      self:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      self:focus {
+        background-color: rgba(255, 255, 255, 0.2);
         color: #fff;
+      }
+      self:active {
+        background-color: rgba(255, 255, 255, 0.3);
       }
       .checkmark {
         font-weight: bold;
         color: #38bdf8;
       }
-    </style>)html";
+      self:focus .checkmark {
+        color: #7dd3fc;
+      }
+    </style>
+  )html";
 }
 
 bool checkbox::OnEvent(Event event) {
   auto* root = Root();
+  if (!root) {
+    return false;
+  }
+
+  bool trigger = false;
+
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
     if (mouse.button == Event::Mouse::Button::Left &&
         mouse.motion == Event::Mouse::Motion::Pressed) {
-      if (!root) {
-        return false;
-      }
       int click_x = mouse.x - 1;
       int click_y = mouse.y - 1;
       int abs_x = root->absolute_x();
@@ -58,66 +75,46 @@ bool checkbox::OnEvent(Event event) {
           root_el->Visit([](Element& el) { el.set_focused(false); });
         }
         root->set_focused(true);
-
-        checked = !checked;
-        PropagateBinding("checked", checked ? "true" : "false");
-
-        // Run onchange callback if present
-        if (root->Attributes().count("onchange")) {
-          std::string onchange_cb = root->Attributes().at("onchange");
-          Element* parent_el = root->Parent();
-          ComponentBase* parent_comp = nullptr;
-          while (parent_el) {
-            if (parent_el->component()) {
-              parent_comp = const_cast<ComponentBase*>(parent_el->component());
-              break;
-            }
-            parent_el = parent_el->Parent();
-          }
-          while (parent_comp) {
-            if (parent_comp->RunCallback(onchange_cb)) {
-              break;
-            }
-            if (parent_comp->Root()) {
-              parent_el = parent_comp->Root()->Parent();
-              parent_comp = nullptr;
-              while (parent_el) {
-                if (parent_el->component()) {
-                  parent_comp =
-                      const_cast<ComponentBase*>(parent_el->component());
-                  break;
-                }
-                parent_el = parent_el->Parent();
-              }
-            } else {
-              break;
-            }
-          }
-        }
-
-        return true;
+        trigger = true;
       }
     }
   }
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed ||
-        kb.motion == Event::Keyboard::Motion::Repeat) {
-      if (!root || !root->focused()) {
-        return false;
-      }
-
+    if ((kb.motion == Event::Keyboard::Motion::Pressed ||
+         kb.motion == Event::Keyboard::Motion::Repeat) &&
+        root->focused()) {
       if (kb.special == Event::Keyboard::Special::None &&
           kb.codepoint == 32) {  // Space
-        checked = !checked;
-        PropagateBinding("checked", checked ? "true" : "false");
+        trigger = true;
+      }
+    }
+  }
 
-        // Run onchange callback if present
-        if (root->Attributes().count("onchange")) {
-          std::string onchange_cb = root->Attributes().at("onchange");
-          Element* parent_el = root->Parent();
-          ComponentBase* parent_comp = nullptr;
+  if (trigger) {
+    checked = !checked;
+    PropagateBinding("checked", checked ? "true" : "false");
+
+    // Run onchange callback if present
+    if (root->Attributes().count("onchange")) {
+      std::string onchange_cb = root->Attributes().at("onchange");
+      Element* parent_el = root->Parent();
+      ComponentBase* parent_comp = nullptr;
+      while (parent_el) {
+        if (parent_el->component()) {
+          parent_comp = const_cast<ComponentBase*>(parent_el->component());
+          break;
+        }
+        parent_el = parent_el->Parent();
+      }
+      while (parent_comp) {
+        if (parent_comp->RunCallback(onchange_cb)) {
+          break;
+        }
+        if (parent_comp->Root()) {
+          parent_el = parent_comp->Root()->Parent();
+          parent_comp = nullptr;
           while (parent_el) {
             if (parent_el->component()) {
               parent_comp = const_cast<ComponentBase*>(parent_el->component());
@@ -125,40 +122,19 @@ bool checkbox::OnEvent(Event event) {
             }
             parent_el = parent_el->Parent();
           }
-          while (parent_comp) {
-            if (parent_comp->RunCallback(onchange_cb)) {
-              break;
-            }
-            if (parent_comp->Root()) {
-              parent_el = parent_comp->Root()->Parent();
-              parent_comp = nullptr;
-              while (parent_el) {
-                if (parent_el->component()) {
-                  parent_comp =
-                      const_cast<ComponentBase*>(parent_el->component());
-                  break;
-                }
-                parent_el = parent_el->Parent();
-              }
-            } else {
-              break;
-            }
-          }
+        } else {
+          break;
         }
-
-        return true;
       }
     }
+    return true;
   }
 
   return false;
 }
 
 bool checkbox::Digest() {
-  auto* root = Root();
-  bool is_focused = root ? root->focused() : false;
-  focus_class = is_focused ? "focused" : "";
-  checked_char = checked ? "x" : " ";
+  checked_char = checked ? "v" : " ";
   return Component<checkbox>::Digest();
 }
 
