@@ -84,50 +84,54 @@ class ConditionalApp : public Component<ConditionalApp> {
           background-color: #0f172a;
           color: #eee;
           overflow-y: scroll;
-        }
-        .container {
-          max-width: 80;
-          margin: 0 auto;
-        }
 
-        button {
-          border: vkey;
-          border-color-left: rgb(71, 85, 105);
-          border-color-right: rgb(10, 10, 10);
-          background-color: rgb(30, 41, 59);
-          color: white;
-          padding: 0 1;
-          opacity: 0.6;
-          transition: all 0.2s linear;
-        }
-        button:hover, button:focus, button.active {
-          opacity: 1.0;
-        }
-        button.active {
-          font-weight: bold;
-        }
+          .container {
+            max-width: 80;
+            margin: 0 auto;
+          }
 
-        .content {
-          border: vkey;
-          border-color-left: rgb(71, 85, 105);
-          border-color-right: rgb(10, 10, 10);
-          background-color: rgb(30, 41, 59);
-          padding: 1;
-          min-height: 15;
-        }
-        .card {
-          border: tall;
-          border-color: rgb(51, 65, 85);
-          background-color: rgb(30, 41, 59);
-          padding: 1;
-          margin-top: 1;
-          display: flex;
-          justify-content: space-between;
-        }
-        .footer {
-          margin-top: 2;
-          color: rgb(148, 163, 184);
-          font-style: italic;
+          button {
+            border: vkey;
+            border-color-left: rgb(71, 85, 105);
+            border-color-right: rgb(10, 10, 10);
+            background-color: rgb(30, 41, 59);
+            color: white;
+            padding: 0 1;
+            opacity: 0.6;
+            transition: all 0.2s linear;
+
+            &:hover, &:focus, &.active {
+              opacity: 1.0;
+            }
+            &.active {
+              font-weight: bold;
+            }
+          }
+
+          .content {
+            border: vkey;
+            border-color-left: rgb(71, 85, 105);
+            border-color-right: rgb(10, 10, 10);
+            background-color: rgb(30, 41, 59);
+            padding: 1;
+            min-height: 15;
+
+            .card {
+              border: tall;
+              border-color: rgb(51, 65, 85);
+              background-color: rgb(30, 41, 59);
+              padding: 1;
+              margin-top: 1;
+              display: flex;
+              justify-content: space-between;
+            }
+          }
+
+          .footer {
+            margin-top: 2;
+            color: rgb(148, 163, 184);
+            font-style: italic;
+          }
         }
       </style>
     )html";
