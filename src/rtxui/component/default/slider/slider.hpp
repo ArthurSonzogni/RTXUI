@@ -24,6 +24,7 @@ class slider : public Component<slider> {
   std::string track_left = "";
   std::string thumb_char = "●";
   std::string track_right = "";
+  std::string container_class = "slider-container horizontal";
 
   void InitReflection() override;
   std::string_view Setup() override;

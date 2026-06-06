@@ -1,0 +1,22 @@
+Filters: [component] [slider] [layout]
+Randomness seeded to: 3895272861
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rtxui_test is a Catch2 v3.6.0 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Slider layout regression
+-------------------------------------------------------------------------------
+/home/arthursonzogni/programmation/real/RTXUI/src/rtxui/component/component_test.cpp:133
+...............................................................................
+
+/home/arthursonzogni/programmation/real/RTXUI/src/rtxui/component/component_test.cpp:163: FAILED:
+  CHECK( slider_el->layout_width() >= 20 )
+with expansion:
+  0 >= 20
+
+===============================================================================
+test cases: 1 | 1 failed
+assertions: 2 | 1 passed | 1 failed
+
