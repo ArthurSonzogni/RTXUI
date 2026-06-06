@@ -39,18 +39,21 @@ class PseudoClassesDemo : public Component<PseudoClassesDemo> {
           padding: 1 3;
           text-align: center;
           width: 24;
-        }
-        .btn:hover {
-          background-color: rgb(30, 58, 138); /* Slate blue on hover */
-          border-color: rgb(59, 130, 246); /* Bright blue border */
-          color: rgb(255, 255, 255);
-        }
-        .btn:active {
-          background-color: rgb(29, 78, 216); /* Intense blue on active */
-          border-color: rgb(96, 165, 250);
-        }
-        .btn:focus {
-          border-color: rgb(147, 197, 253); /* Accent border on focus */
+
+          &:hover {
+            background-color: rgb(30, 58, 138); /* Slate blue on hover */
+            border-color: rgb(59, 130, 246); /* Bright blue border */
+            color: rgb(255, 255, 255);
+          }
+          
+          &:active {
+            background-color: rgb(29, 78, 216); /* Intense blue on active */
+            border-color: rgb(96, 165, 250);
+          }
+          
+          &:focus {
+            border-color: rgb(147, 197, 253); /* Accent border on focus */
+          }
         }
       </style>
     )html";

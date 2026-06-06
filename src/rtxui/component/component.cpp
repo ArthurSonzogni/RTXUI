@@ -481,7 +481,7 @@ bool IsStyledByComponent(const Element* element,
   return false;
 }
 
-bool MatchPseudos(const Element* element, const std::vector<std::string_view>& pseudo_classes) {
+bool MatchPseudos(const Element* element, const std::vector<std::string>& pseudo_classes) {
   for (const auto& pseudo : pseudo_classes) {
     if (pseudo == "hover" && !element->hovered()) {
       return false;

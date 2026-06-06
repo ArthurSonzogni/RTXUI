@@ -146,6 +146,50 @@ TEST_CASE("CSS with trailing semicolon optional", "[css]") {
   CHECK(stylesheet.value()[0].declarations[0].value == "red");
 }
 
+TEST_CASE("CSS nesting", "[css]") {
+  const std::string input = R"(
+    div {
+      color: red;
+      &:hover {
+        color: blue;
+      }
+      span {
+        color: green;
+      }
+      &.active, &.focus {
+        background-color: yellow;
+      }
+    }
+  )";
+
+  auto stylesheet = css::Parse(input);
+  if (!stylesheet) {
+    FAIL(stylesheet.error().message);
+  }
+
+  REQUIRE(stylesheet.value().size() == 5);
+
+  CHECK(stylesheet.value()[0].selector == "div");
+  CHECK(stylesheet.value()[0].declarations[0].property == "color");
+  CHECK(stylesheet.value()[0].declarations[0].value == "red");
+
+  CHECK(stylesheet.value()[1].selector == "div:hover");
+  CHECK(stylesheet.value()[1].declarations[0].property == "color");
+  CHECK(stylesheet.value()[1].declarations[0].value == "blue");
+
+  CHECK(stylesheet.value()[2].selector == "div span");
+  CHECK(stylesheet.value()[2].declarations[0].property == "color");
+  CHECK(stylesheet.value()[2].declarations[0].value == "green");
+
+  CHECK(stylesheet.value()[3].selector == "div.active");
+  CHECK(stylesheet.value()[3].declarations[0].property == "background-color");
+  CHECK(stylesheet.value()[3].declarations[0].value == "yellow");
+
+  CHECK(stylesheet.value()[4].selector == "div.focus");
+  CHECK(stylesheet.value()[4].declarations[0].property == "background-color");
+  CHECK(stylesheet.value()[4].declarations[0].value == "yellow");
+}
+
 TEST_CASE("Color parsing in ApplyStyle", "[style][color]") {
   rtxui::ComputedStyle style;
 
