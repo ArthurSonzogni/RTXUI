@@ -18,6 +18,7 @@
 
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/paint.hpp"
@@ -164,33 +165,6 @@ Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
                        int target_x,
                        int target_y) {
   return FindElementAtImpl(fragment, target_x, target_y, 0, 0);
-}
-
-ComponentBase* GetOwningComponent(Element* element) {
-  while (element) {
-    if (element->component()) {
-      return const_cast<ComponentBase*>(element->component());
-    }
-    element = element->Parent();
-  }
-  return nullptr;
-}
-
-ComponentBase* GetAttributeOwnerComponent(Element* element) {
-  if (!element) {
-    return nullptr;
-  }
-  if (element->component()) {
-    return GetOwningComponent(element->Parent());
-  }
-  return GetOwningComponent(element);
-}
-
-ComponentBase* GetParentComponent(ComponentBase* comp) {
-  if (!comp || !comp->Root()) {
-    return nullptr;
-  }
-  return GetOwningComponent(comp->Root()->Parent());
 }
 
 std::shared_ptr<PhysicalFragment> FindScrollableFragmentAt(
