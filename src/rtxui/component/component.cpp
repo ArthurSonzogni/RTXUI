@@ -26,7 +26,36 @@
 #include "rtxui/xml/xml.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 
+#include "rtxui/component/component_internal.hpp"
+
 namespace rtxui {
+
+ComponentBase* GetOwningComponent(Element* element) {
+  while (element) {
+    if (element->component()) {
+      return const_cast<ComponentBase*>(element->component());
+    }
+    element = element->Parent();
+  }
+  return nullptr;
+}
+
+ComponentBase* GetAttributeOwnerComponent(Element* element) {
+  if (!element) {
+    return nullptr;
+  }
+  if (element->component()) {
+    return GetOwningComponent(element->Parent());
+  }
+  return GetOwningComponent(element);
+}
+
+ComponentBase* GetParentComponent(ComponentBase* comp) {
+  if (!comp || !comp->Root()) {
+    return nullptr;
+  }
+  return GetOwningComponent(comp->Root()->Parent());
+}
 
 RefCounted::~RefCounted() {
   assert(count_ == 0);
