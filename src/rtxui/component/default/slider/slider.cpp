@@ -21,28 +21,38 @@ void slider::InitReflection() {
   Bind(track_left);
   Bind(thumb_char);
   Bind(track_right);
+  Bind(container_class);
   Component<slider>::InitReflection();
 }
 
 std::string_view slider::Setup() {
-  return R"html(<span class="slider-container"><span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span></span><style>
+  return R"html(
+    <span class="{container_class}">
+      <span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span>
+    </span>
+    <style>
       self {
         display: inline-block;
         cursor: pointer;
         padding: 0 1;
         transition: background-color 0.1s linear;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
       .slider-container {
         display: flex;
         align-items: center;
         justify-content: center;
       }
-      self[direction="vertical"] .slider-container {
+      .slider-container.vertical {
         flex-direction: column-reverse;
         width: 1;
       }
-      self[direction="horizontal"] .slider-container {
+      .slider-container.horizontal {
         flex-direction: row;
+      }
+      .track-left, .track-right, .thumb {
+        flex-shrink: 0;
       }
 
       self:hover {
@@ -66,7 +76,8 @@ std::string_view slider::Setup() {
       self:focus .track-left {
         color: #7dd3fc;
       }
-    </style>)html";
+    </style>
+  )html";
 }
 
 bool slider::OnEvent(Event event) {
@@ -233,6 +244,7 @@ bool slider::Digest() {
   pos = std::clamp(pos, 0, track_size - 1);
 
   bool is_vertical = (direction == "vertical");
+  container_class = is_vertical ? "slider-container vertical" : "slider-container horizontal";
   std::string char_sym = is_vertical ? "│" : "─";
 
   track_left = "";

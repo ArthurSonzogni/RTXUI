@@ -18,10 +18,17 @@ struct Declaration {
   std::string_view value;
 };
 
+struct AttributeSelector {
+  std::string name;
+  std::string value;
+  bool has_value = false;
+};
+
 struct ParsedSelector {
   std::string base;
   std::vector<std::string> classes;
   std::vector<std::string> pseudo_classes;
+  std::vector<AttributeSelector> attributes;
 };
 
 /// A CSS ruleset (selector { declarations }).

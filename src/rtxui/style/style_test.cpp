@@ -146,6 +146,32 @@ TEST_CASE("CSS with trailing semicolon optional", "[css]") {
   CHECK(stylesheet.value()[0].declarations[0].value == "red");
 }
 
+TEST_CASE("CSS attribute selectors", "[css]") {
+  const std::string input = R"(
+    div[attr="val"] {
+      color: red;
+    }
+    span[data-test] {
+      color: blue;
+    }
+  )";
+
+  auto stylesheet = css::Parse(input);
+  REQUIRE(stylesheet);
+  REQUIRE(stylesheet.value().size() == 2);
+  
+  CHECK(stylesheet.value()[0].parsed_selector.base == "div");
+  REQUIRE(stylesheet.value()[0].parsed_selector.attributes.size() == 1);
+  CHECK(stylesheet.value()[0].parsed_selector.attributes[0].name == "attr");
+  CHECK(stylesheet.value()[0].parsed_selector.attributes[0].value == "val");
+  CHECK(stylesheet.value()[0].parsed_selector.attributes[0].has_value == true);
+
+  CHECK(stylesheet.value()[1].parsed_selector.base == "span");
+  REQUIRE(stylesheet.value()[1].parsed_selector.attributes.size() == 1);
+  CHECK(stylesheet.value()[1].parsed_selector.attributes[0].name == "data-test");
+  CHECK(stylesheet.value()[1].parsed_selector.attributes[0].has_value == false);
+}
+
 TEST_CASE("CSS nesting", "[css]") {
   const std::string input = R"(
     div {

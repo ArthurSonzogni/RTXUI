@@ -130,6 +130,45 @@ class MyPage : public rtxui::Component<MyPage> {
     )";
 };
 
+TEST_CASE("Slider squashed layout regression", "[component][slider][layout]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(40, 5);
+
+  class SliderTest : public rtxui::Component<SliderTest> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::slider>();
+      rtxui::Component<SliderTest>::InitReflection();
+    }
+    std::string_view view = R"(
+      <div style="display: flex; width: 5;">
+        <slider id="slider" width="20" value="50" />
+      </div>
+    )";
+  };
+
+  auto component = rtxui::Ref<SliderTest>::New();
+  rtxui::Screen screen(component, device);
+  screen.Draw();
+
+  std::string output = device->GetOutput();
+  
+  // Count track characters '─'. We expect 19 (10 + 9).
+  int track_count = 0;
+  size_t pos = 0;
+  while ((pos = output.find("─", pos)) != std::string::npos) {
+    track_count++;
+    pos += 3; // '─' is 3 bytes in UTF-8
+  }
+  
+  if (track_count < 15) { // Allow some slack but ensure it's not squashed to ~3
+    FAIL("Slider squashed. Track count=" << track_count << "\nOutput:\n" << output);
+  }
+  
+  CHECK(track_count >= 15);
+  CHECK(output.find("●") != std::string::npos);
+}
+
 TEST_CASE("Component with named slots", "[component]") {
   auto mypage = rtxui::Ref<MyPage>::New();
   mypage->Mount();
@@ -1791,8 +1830,8 @@ class ConditionalTabTestApp : public Component<ConditionalTabTestApp> {
       <button class="{get_class}">Tab</button>
     </div>
     <style>
-      button { background-color: rgb(220, 38, 38); }
-      button.active { background-color: rgb(37, 99, 235); }
+      button { background-color: red; transition: none; }
+      button.active { background-color: blue; }
     </style>
   )html";
 
@@ -1804,19 +1843,24 @@ class ConditionalTabTestApp : public Component<ConditionalTabTestApp> {
 
 TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)", "[component][css]") {
   auto app = Ref<ConditionalTabTestApp>::New();
-  app->Mount();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+  rtxui::Screen screen(app, device);
 
   auto* button = app->Root()->QuerySelector("button");
   REQUIRE(button != nullptr);
   
   // Initially is_active is false, so it doesn't have the active class
   // It should have the red background color
-  REQUIRE(button->style.background_color.value() == Color::RGB(220, 38, 38));
+  REQUIRE(button->style.background_color.value() == Color::RGB(255, 0, 0));
 
   // Now activate it
   app->is_active = true;
   app->Render();
+  
+  // Resolve styles at a later time to finish any potential transition
+  app->ResolveTargetStyles(rtxui::time::GetTimeMs() + 200.0);
 
   // It should now have the blue background color because of button.active
-  REQUIRE(button->style.background_color.value() == Color::RGB(37, 99, 235));
+  REQUIRE(button->style.background_color.value() == Color::RGB(0, 0, 255));
 }

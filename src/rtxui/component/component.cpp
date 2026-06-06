@@ -562,6 +562,21 @@ void ResolveStylesRecursive(Element* element,
         }
         if (!classes_match) continue;
 
+        bool attributes_match = true;
+        for (const auto& attr : parsed.attributes) {
+          if (!element->Attributes().count(attr.name)) {
+            attributes_match = false;
+            break;
+          }
+          if (attr.has_value) {
+            if (element->Attributes().at(attr.name) != attr.value) {
+              attributes_match = false;
+              break;
+            }
+          }
+        }
+        if (!attributes_match) continue;
+
         if (check_pseudos) {
           if (!parsed.pseudo_classes.empty() && MatchPseudos(element, parsed.pseudo_classes)) {
             for (const auto& declaration : ruleset->declarations) {
