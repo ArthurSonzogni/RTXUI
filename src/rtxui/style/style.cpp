@@ -22,6 +22,9 @@ class Parser {
 
   auto ParseStyleSheet() -> Expected<StyleSheet, Error>;
   auto ParseRuleset() -> Expected<std::vector<Ruleset>, Error>;
+  auto ParseRuleset(const std::vector<std::string>& parent_selectors,
+                    std::string_view media_query)
+      -> Expected<std::vector<Ruleset>, Error>;
   auto ParseSelector() -> Expected<std::string_view, Error>;
   auto ParseDeclaration() -> Expected<Declaration, Error>;
   auto ParseValue() -> Expected<std::string_view, Error>;
@@ -164,8 +167,7 @@ auto Parser::ParseDeclaration() -> Expected<Declaration, Error> {
   return Declaration{property, value.value()};
 }
 
-auto ParseSelectorString(std::string_view selector_str) -> ParsedSelector {
-  std::string_view current = selector_str;
+auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   while (!current.empty() && IsWhiteSpace(current.front())) {
     current.remove_prefix(1);
   }
@@ -188,17 +190,17 @@ auto ParseSelectorString(std::string_view selector_str) -> ParsedSelector {
 
   size_t dot = base_and_classes.find('.');
   if (dot == std::string_view::npos) {
-    parsed.base = base_and_classes;
+    parsed.base = std::string(base_and_classes);
   } else if (dot == 0) {
-    parsed.base = base_and_classes;
+    parsed.base = std::string(base_and_classes);
   } else {
-    parsed.base = base_and_classes.substr(0, dot);
+    parsed.base = std::string(base_and_classes.substr(0, dot));
     std::string_view remaining_classes = base_and_classes.substr(dot);
     while (!remaining_classes.empty() && remaining_classes.front() == '.') {
       remaining_classes.remove_prefix(1);
       size_t next_dot = remaining_classes.find('.');
       std::string_view cls = remaining_classes.substr(0, next_dot);
-      parsed.classes.push_back(cls);
+      parsed.classes.push_back(std::string(cls));
       if (next_dot == std::string_view::npos) break;
       remaining_classes = remaining_classes.substr(next_dot);
     }
@@ -217,7 +219,7 @@ auto ParseSelectorString(std::string_view selector_str) -> ParsedSelector {
     while (!pseudo.empty() && IsWhiteSpace(pseudo.back())) {
       pseudo.remove_suffix(1);
     }
-    parsed.pseudo_classes.push_back(pseudo);
+    parsed.pseudo_classes.push_back(std::string(pseudo));
     if (next_colon == std::string_view::npos) {
       break;
     }
@@ -226,11 +228,62 @@ auto ParseSelectorString(std::string_view selector_str) -> ParsedSelector {
   return parsed;
 }
 
+std::string CombineSelectors(const std::string& parent, std::string_view child) {
+  if (parent.empty()) return std::string(child);
+  std::string result;
+  size_t pos = child.find('&');
+  if (pos == std::string_view::npos) {
+    return parent + " " + std::string(child);
+  }
+
+  std::string_view rest = child;
+  while (true) {
+    size_t ampersand = rest.find('&');
+    if (ampersand == std::string_view::npos) {
+      result += rest;
+      break;
+    }
+    result += rest.substr(0, ampersand);
+    result += parent;
+    rest.remove_prefix(ampersand + 1);
+  }
+  return result;
+}
+
 auto Parser::ParseRuleset() -> Expected<std::vector<Ruleset>, Error> {
+  return ParseRuleset({}, "");
+}
+
+auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
+                          std::string_view media_query)
+    -> Expected<std::vector<Ruleset>, Error> {
   ParseWhiteSpaces();
   auto selector_full = ParseSelector();
   if (!selector_full) {
     return selector_full.error();
+  }
+
+  // Generate current selectors
+  std::vector<std::string> current_selectors;
+  std::string_view rest_selectors = selector_full.value();
+  while (!rest_selectors.empty()) {
+    size_t comma = rest_selectors.find(',');
+    std::string_view part = (comma == std::string_view::npos)
+                                ? rest_selectors
+                                : rest_selectors.substr(0, comma);
+    while (!part.empty() && IsWhiteSpace(part.front())) part.remove_prefix(1);
+    while (!part.empty() && IsWhiteSpace(part.back())) part.remove_suffix(1);
+
+    if (parent_selectors.empty()) {
+      current_selectors.push_back(std::string(part));
+    } else {
+      for (const auto& parent : parent_selectors) {
+        current_selectors.push_back(CombineSelectors(parent, part));
+      }
+    }
+
+    if (comma == std::string_view::npos) break;
+    rest_selectors = rest_selectors.substr(comma + 1);
   }
 
   ParseWhiteSpaces();
@@ -239,18 +292,61 @@ auto Parser::ParseRuleset() -> Expected<std::vector<Ruleset>, Error> {
   }
   Advance();  // Skip '{'
 
+  std::vector<Ruleset> rulesets;
   std::vector<Declaration> declarations;
+  std::vector<Ruleset> nested_rulesets_all;
+
   while (true) {
     ParseWhiteSpaces();
     if (Get() == '}' || Get() == '\0') {
       break;
     }
 
-    auto decl = ParseDeclaration();
-    if (!decl) {
-      return decl.error();
+    // Heuristic: determine if we should try parsing as a declaration.
+    bool has_lbrace = false;
+    size_t i = pos_;
+    while (i < css_.size() && css_[i] != ';' && css_[i] != '}') {
+      if (css_[i] == '{') {
+        has_lbrace = true;
+        break;
+      }
+      i++;
     }
-    declarations.push_back(decl.value());
+
+    bool is_declaration = false;
+    size_t saved_pos = pos_;
+
+    if (!has_lbrace) {
+      // No '{' before ';' or '}'. It MUST be a declaration (or a syntax error in one).
+      is_declaration = true;
+    } else {
+      // It has a '{'. Try parsing as a declaration to see if it's a binding.
+      auto decl = ParseDeclaration();
+      if (decl) {
+        std::string_view val = decl.value().value;
+        if (val.find('{') != std::string_view::npos) {
+          if (val.front() == '{' && val.back() == '}' && val.find(';') == std::string_view::npos) {
+            is_declaration = true;
+          }
+        } else {
+          is_declaration = true;
+        }
+      }
+    }
+    
+    pos_ = saved_pos; // Restore to branch accordingly
+
+    if (!is_declaration) {
+      auto nested_rules = ParseRuleset(current_selectors, media_query);
+      if (!nested_rules) return nested_rules.error();
+      for (auto& r : nested_rules.value()) {
+        nested_rulesets_all.push_back(std::move(r));
+      }
+    } else {
+      auto decl = ParseDeclaration(); // Re-parse to consume and get value
+      if (!decl) return decl.error();
+      declarations.push_back(decl.value());
+    }
   }
 
   if (Get() != '}') {
@@ -258,17 +354,16 @@ auto Parser::ParseRuleset() -> Expected<std::vector<Ruleset>, Error> {
   }
   Advance();  // Skip '}'
 
-  std::vector<Ruleset> rulesets;
-  std::string_view rest = selector_full.value();
-  while (!rest.empty()) {
-    size_t comma = rest.find(',');
-    std::string_view part = (comma == std::string_view::npos) ? rest : rest.substr(0, comma);
-    
-    auto parsed_sel = ParseSelectorString(part);
-    rulesets.push_back(Ruleset{part, declarations, "", std::move(parsed_sel)});
+  // If we have declarations, add rulesets for the current selectors.
+  if (!declarations.empty()) {
+    for (const auto& sel : current_selectors) {
+      rulesets.push_back(Ruleset{sel, declarations, std::string(media_query), ParsedSelector{}});
+      rulesets.back().parsed_selector = ParseSelectorString(rulesets.back().selector);
+    }
+  }
 
-    if (comma == std::string_view::npos) break;
-    rest = rest.substr(comma + 1);
+  for (auto& r : nested_rulesets_all) {
+    rulesets.push_back(std::move(r));
   }
 
   return rulesets;
@@ -481,9 +576,9 @@ auto Print(const StyleSheet& stylesheet) -> std::string {
   std::string result;
   for (const auto& ruleset : stylesheet) {
     if (!ruleset.media_query.empty()) {
-      result += "@media " + std::string(ruleset.media_query) + " {\n  ";
+      result += "@media " + ruleset.media_query + " {\n  ";
     }
-    result += std::string(ruleset.selector) + " {\n";
+    result += ruleset.selector + " {\n";
     for (const auto& decl : ruleset.declarations) {
       if (!ruleset.media_query.empty()) {
         result += "  ";

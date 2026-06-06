@@ -19,19 +19,19 @@ struct Declaration {
 };
 
 struct ParsedSelector {
-  std::string_view base;
-  std::vector<std::string_view> classes;
-  std::vector<std::string_view> pseudo_classes;
+  std::string base;
+  std::vector<std::string> classes;
+  std::vector<std::string> pseudo_classes;
 };
 
 /// A CSS ruleset (selector { declarations }).
 struct Ruleset {
   /// The selector name (e.g., "div", ".class", "#id").
-  std::string_view selector;
+  std::string selector;
   /// The list of declarations inside the ruleset.
   std::vector<Declaration> declarations;
   /// The media query condition (e.g., "(max-width: 80)"), empty if none.
-  std::string_view media_query;
+  std::string media_query;
   /// Pre-parsed selector representation.
   ParsedSelector parsed_selector;
 };
