@@ -52,20 +52,21 @@ class CJKDemo : public Component<CJKDemo> {
       <style>
         self {
           display: block;
-          padding: 1;
+          padding: 2;
           background-color: #0f172a;
-          color: #f8fafc;
-          height: 18;
+          color: #eee;
           overflow-y: scroll;
+        }
+        .container {
+          display: block;
+          max-width: 80;
+          margin: 0 auto;
         }
         h1 {
           color: #38bdf8;
         }
         p {
           margin-bottom: 1;
-        }
-        .container {
-          display: block;
         }
         .card {
           display: block;

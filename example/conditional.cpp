@@ -55,27 +55,62 @@ class ConditionalApp : public Component<ConditionalApp> {
       <style>
         self {
           display: block;
-          padding: 1;
-          background-color: rgb(15, 23, 42);
-          color: white;
+          padding: 2;
+          background-color: #0f172a;
+          color: #eee;
+          overflow-y: scroll;
         }
-        .container { display: flex; flex-direction: column; gap: 1; }
-        .tabs { display: flex; gap: 1; }
-        .tabs button {
-          border: tall;
-          border-color: rgb(71, 85, 105);
+        .container {
+          max-width: 80;
+          margin: 0 auto;
+        }
+        .tabs {
+        }
+        button {
+          border: vkey;
+          border-color-left: rgb(71, 85, 105);
+          border-color-right: rgb(10, 10, 10);
           background-color: rgb(30, 41, 59);
           color: white;
-          padding: 0 1;
+          transition: all 0.2s linear;
         }
-        .tabs button:hover {
+        button:hover {
           background-color: rgb(59, 130, 246);
           border-color: rgb(96, 165, 250);
         }
-        .tabs button.active { background-color: rgb(59, 130, 246); color: white; border-color: rgb(96, 165, 250); }
-        .content { border: tall; border-color: rgb(51, 65, 85); padding: 1; min-height: 10; }
-        .card { border: tall; border-color: rgb(51, 65, 85); padding: 1; margin-top: 1; display: flex; justify-content: space-between; }
-        .footer { margin-top: 2; color: rgb(148, 163, 184); font-style: italic; }
+        button:focus {
+          background-color: rgb(59, 130, 246);
+          color: white;
+          border-color: rgb(96, 165, 250);
+        }
+        button.active {
+          background-color: rgb(37, 99, 235);
+          color: white;
+          border-color: rgb(59, 130, 246);
+        }
+
+        .content {
+          border: vkey;
+          border-color-left: rgb(71, 85, 105);
+          border-color-right: rgb(10, 10, 10);
+          background-color: rgb(30, 41, 59);
+          padding: 1;
+          min-height: 10;
+        }
+        .card {
+          border: tall;
+          border-color: rgb(51, 65, 85);
+          background-color: rgb(30, 41, 59);
+          padding: 1;
+          margin-top: 1;
+          display: flex;
+          justify-content: space-between;
+        }
+        .footer {
+          margin-top: 2;
+          color: rgb(148, 163, 184);
+          font-style: italic;
+        }
       </style>
     )html";
 
