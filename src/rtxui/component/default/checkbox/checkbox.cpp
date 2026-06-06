@@ -4,6 +4,7 @@
 #include "rtxui/component/default/checkbox/checkbox.hpp"
 
 #include "rtxui/dom/element.hpp"
+#include "rtxui/component/component_internal.hpp"
 
 namespace rtxui {
 
@@ -99,32 +100,8 @@ bool checkbox::OnEvent(Event event) {
     // Run onchange callback if present
     if (root->Attributes().count("onchange")) {
       std::string onchange_cb = root->Attributes().at("onchange");
-      Element* parent_el = root->Parent();
-      ComponentBase* parent_comp = nullptr;
-      while (parent_el) {
-        if (parent_el->component()) {
-          parent_comp = const_cast<ComponentBase*>(parent_el->component());
-          break;
-        }
-        parent_el = parent_el->Parent();
-      }
-      while (parent_comp) {
-        if (parent_comp->RunCallback(onchange_cb)) {
-          break;
-        }
-        if (parent_comp->Root()) {
-          parent_el = parent_comp->Root()->Parent();
-          parent_comp = nullptr;
-          while (parent_el) {
-            if (parent_el->component()) {
-              parent_comp = const_cast<ComponentBase*>(parent_el->component());
-              break;
-            }
-            parent_el = parent_el->Parent();
-          }
-        } else {
-          break;
-        }
+      if (auto* comp = GetAttributeOwnerComponent(root)) {
+          comp->RunCallback(onchange_cb);
       }
     }
     return true;

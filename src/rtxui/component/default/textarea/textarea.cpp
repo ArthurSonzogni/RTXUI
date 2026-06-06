@@ -15,7 +15,9 @@ void textarea::InitReflection() {
 }
 
 std::string_view textarea::Setup() {
-  return R"html(<span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span><style>
+  return R"html(
+    <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
+    <style>
       self {
         display: block;
         width: 40;
@@ -24,23 +26,28 @@ std::string_view textarea::Setup() {
         padding-right: 1;
         overflow-y: scroll;
         scrollbar-width: none;
-        background-color: rgba(255,255,255,0.05);
-        transition: background-color 0.15s linear;
+        background-color: #1e293b;
+        border: solid;
+        border-color: #334155;
+        transition: all 0.1s linear;
       }
       self:hover {
-        background-color: rgba(255,255,255,0.10);
+        background-color: #334155;
       }
       self:focus {
-        background-color: rgba(255,255,255,0.18);
+        background-color: #0c4a6e;
+        border-color: #38bdf8;
+        color: #fff;
       }
       .cursor {
         background-color: transparent;
       }
       .cursor-focused {
-        background-color: rgba(255,255,255,0.9);
-        color: rgba(0,0,0,0.9);
+        background-color: #fff;
+        color: #000;
       }
-    </style>)html";
+    </style>
+  )html";
 }
 
 bool textarea::OnEvent(Event event) {
