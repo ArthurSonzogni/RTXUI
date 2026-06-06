@@ -516,6 +516,23 @@ void ResolveStylesRecursive(Element* element,
         if (is_universal && parsed.base == "self" && element != component->Root()) {
           continue;
         }
+
+        bool classes_match = true;
+        for (const auto& required_class : parsed.classes) {
+          bool found = false;
+          for (const auto& el_class : element->classes) {
+            if (el_class == required_class) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            classes_match = false;
+            break;
+          }
+        }
+        if (!classes_match) continue;
+
         if (check_pseudos) {
           if (!parsed.pseudo_classes.empty() && MatchPseudos(element, parsed.pseudo_classes)) {
             for (const auto& declaration : ruleset->declarations) {

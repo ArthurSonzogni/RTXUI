@@ -30,24 +30,49 @@ class ConditionalApp : public Component<ConditionalApp> {
 
         <div class="content">
           <if condition="{is_home}">
-            <h1>Welcome Home!</h1>
-            <p>This is the home screen of the conditional rendering demo.</p>
-          </if>
-          <elif condition="{is_settings}">
-            <h1>Settings</h1>
-            <p>Here you can configure your application.</p>
+            <h1>Welcome to the Void</h1>
+            <p>You have reached the home screen. It's safe here. Probably.</p>
             <div class="card">
-              <span>Notification Settings</span>
-              <button>Toggle</button>
+              <span>Daily Fortune:</span>
+              <i>"Your terminal will never betray you, unless you forget a semicolon."</i>
             </div>
-          </elif>
-          <else>
-            <h1>About</h1>
-            <p>RTXUI is a reactive terminal UI library for C++.</p>
-          </else>
+          </if>
+
+          <if condition="{is_settings}">
+            <h1>Bureaucracy Settings</h1>
+            <p>Fine-tune your existential dread and terminal aesthetics.</p>
+            
+            <div class="card">
+              <span>Gravity Level (Local)</span>
+              <button>Normalize</button>
+            </div>
+            
+            <div class="card">
+              <span>Infinite Loop Protection</span>
+              <button>Disable (Risky!)</button>
+            </div>
+
+            <div class="card">
+              <span>Coffee Intensity</span>
+              <button>Maximum</button>
+            </div>
+          </if>
+
+          <if condition="{is_about}">
+            <h1>About RTXUI</h1>
+            <p>A reactive terminal UI library so fast it might actually finish your project for you.</p>
+            <div class="card">
+              <span>Fun Fact #42:</span>
+              <span>RTXUI was originally developed to communicate with deep-space probes that only support ASCII.</span>
+            </div>
+            <div class="card">
+              <span>Disclaimer:</span>
+              <span>Side effects may include excessive use of <span style="color: #6366f1;">Indigo</span> and a sudden urge to refactor everything.</span>
+            </div>
+          </if>
 
           <div if="{is_home}" class="footer">
-            Home-specific footer content
+            Watching you from the bottom of the stack...
           </div>
         </div>
       </div>
@@ -64,29 +89,22 @@ class ConditionalApp : public Component<ConditionalApp> {
           max-width: 80;
           margin: 0 auto;
         }
-        .tabs {
-        }
+
         button {
           border: vkey;
           border-color-left: rgb(71, 85, 105);
           border-color-right: rgb(10, 10, 10);
           background-color: rgb(30, 41, 59);
           color: white;
+          padding: 0 1;
+          opacity: 0.6;
           transition: all 0.2s linear;
         }
-        button:hover {
-          background-color: rgb(59, 130, 246);
-          border-color: rgb(96, 165, 250);
-        }
-        button:focus {
-          background-color: rgb(59, 130, 246);
-          color: white;
-          border-color: rgb(96, 165, 250);
+        button:hover, button:focus, button.active {
+          opacity: 1.0;
         }
         button.active {
-          background-color: rgb(37, 99, 235);
-          color: white;
-          border-color: rgb(59, 130, 246);
+          font-weight: bold;
         }
 
         .content {
@@ -95,7 +113,7 @@ class ConditionalApp : public Component<ConditionalApp> {
           border-color-right: rgb(10, 10, 10);
           background-color: rgb(30, 41, 59);
           padding: 1;
-          min-height: 10;
+          min-height: 15;
         }
         .card {
           border: tall;
