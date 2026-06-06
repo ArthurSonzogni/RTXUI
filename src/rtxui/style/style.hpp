@@ -20,6 +20,7 @@ struct Declaration {
 
 struct ParsedSelector {
   std::string_view base;
+  std::vector<std::string_view> classes;
   std::vector<std::string_view> pseudo_classes;
 };
 

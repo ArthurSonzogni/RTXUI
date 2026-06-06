@@ -59,7 +59,7 @@ class HelloWorld : public rtxui::Component<HelloWorld> {
       <style>
         self {
           display: block;
-          background-color: red;
+          background-color: rgb(220, 38, 38);
           color: white;
         }
       </style>
@@ -1780,3 +1780,43 @@ TEST_CASE("Add Todo Regression Test", "[demo]") {
   screen.Draw();
 }
 
+
+class ConditionalTabTestApp : public Component<ConditionalTabTestApp> {
+ public:
+  bool is_active = false;
+  std::string get_class() const { return is_active ? "active" : ""; }
+
+  std::string_view view = R"html(
+    <div class="tabs">
+      <button class="{get_class}">Tab</button>
+    </div>
+    <style>
+      button { background-color: rgb(220, 38, 38); }
+      button.active { background-color: rgb(37, 99, 235); }
+    </style>
+  )html";
+
+  ConditionalTabTestApp() {
+    Bind(is_active);
+    Bind(get_class);
+  }
+};
+
+TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)", "[component][css]") {
+  auto app = Ref<ConditionalTabTestApp>::New();
+  app->Mount();
+
+  auto* button = app->Root()->QuerySelector("button");
+  REQUIRE(button != nullptr);
+  
+  // Initially is_active is false, so it doesn't have the active class
+  // It should have the red background color
+  REQUIRE(button->style.background_color.value() == Color::RGB(220, 38, 38));
+
+  // Now activate it
+  app->is_active = true;
+  app->Render();
+
+  // It should now have the blue background color because of button.active
+  REQUIRE(button->style.background_color.value() == Color::RGB(37, 99, 235));
+}

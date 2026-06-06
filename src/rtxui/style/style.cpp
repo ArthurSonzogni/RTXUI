@@ -21,7 +21,7 @@ class Parser {
   auto Advance() -> void;
 
   auto ParseStyleSheet() -> Expected<StyleSheet, Error>;
-  auto ParseRuleset() -> Expected<Ruleset, Error>;
+  auto ParseRuleset() -> Expected<std::vector<Ruleset>, Error>;
   auto ParseSelector() -> Expected<std::string_view, Error>;
   auto ParseDeclaration() -> Expected<Declaration, Error>;
   auto ParseValue() -> Expected<std::string_view, Error>;
@@ -175,15 +175,36 @@ auto ParseSelectorString(std::string_view selector_str) -> ParsedSelector {
 
   ParsedSelector parsed;
   size_t colon = current.find(':');
+  std::string_view base_and_classes;
   if (colon == std::string_view::npos) {
-    parsed.base = current;
-    return parsed;
+    base_and_classes = current;
+  } else {
+    base_and_classes = current.substr(0, colon);
   }
-  std::string_view base_view = current.substr(0, colon);
-  while (!base_view.empty() && IsWhiteSpace(base_view.back())) {
-    base_view.remove_suffix(1);
+
+  while (!base_and_classes.empty() && IsWhiteSpace(base_and_classes.back())) {
+    base_and_classes.remove_suffix(1);
   }
-  parsed.base = base_view;
+
+  size_t dot = base_and_classes.find('.');
+  if (dot == std::string_view::npos) {
+    parsed.base = base_and_classes;
+  } else if (dot == 0) {
+    parsed.base = base_and_classes;
+  } else {
+    parsed.base = base_and_classes.substr(0, dot);
+    std::string_view remaining_classes = base_and_classes.substr(dot);
+    while (!remaining_classes.empty() && remaining_classes.front() == '.') {
+      remaining_classes.remove_prefix(1);
+      size_t next_dot = remaining_classes.find('.');
+      std::string_view cls = remaining_classes.substr(0, next_dot);
+      parsed.classes.push_back(cls);
+      if (next_dot == std::string_view::npos) break;
+      remaining_classes = remaining_classes.substr(next_dot);
+    }
+  }
+
+  if (colon == std::string_view::npos) return parsed;
 
   std::string_view rest = current.substr(colon);
   while (!rest.empty() && rest.front() == ':') {
@@ -205,11 +226,11 @@ auto ParseSelectorString(std::string_view selector_str) -> ParsedSelector {
   return parsed;
 }
 
-auto Parser::ParseRuleset() -> Expected<Ruleset, Error> {
+auto Parser::ParseRuleset() -> Expected<std::vector<Ruleset>, Error> {
   ParseWhiteSpaces();
-  auto selector = ParseSelector();
-  if (!selector) {
-    return selector.error();
+  auto selector_full = ParseSelector();
+  if (!selector_full) {
+    return selector_full.error();
   }
 
   ParseWhiteSpaces();
@@ -237,8 +258,20 @@ auto Parser::ParseRuleset() -> Expected<Ruleset, Error> {
   }
   Advance();  // Skip '}'
 
-  auto parsed_sel = ParseSelectorString(selector.value());
-  return Ruleset{selector.value(), declarations, "", std::move(parsed_sel)};
+  std::vector<Ruleset> rulesets;
+  std::string_view rest = selector_full.value();
+  while (!rest.empty()) {
+    size_t comma = rest.find(',');
+    std::string_view part = (comma == std::string_view::npos) ? rest : rest.substr(0, comma);
+    
+    auto parsed_sel = ParseSelectorString(part);
+    rulesets.push_back(Ruleset{part, declarations, "", std::move(parsed_sel)});
+
+    if (comma == std::string_view::npos) break;
+    rest = rest.substr(comma + 1);
+  }
+
+  return rulesets;
 }
 
 auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {
@@ -283,13 +316,14 @@ auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {
         if (Get() == '}' || Get() == '\0') {
           break;
         }
-        auto ruleset = ParseRuleset();
-        if (!ruleset) {
-          return ruleset.error();
+        auto rulesets = ParseRuleset();
+        if (!rulesets) {
+          return rulesets.error();
         }
-        auto ruleset_val = ruleset.value();
-        ruleset_val.media_query = media_query;
-        stylesheet.push_back(ruleset_val);
+        for (auto& ruleset_val : rulesets.value()) {
+          ruleset_val.media_query = media_query;
+          stylesheet.push_back(std::move(ruleset_val));
+        }
       }
 
       ParseWhiteSpaces();
@@ -300,11 +334,13 @@ auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {
       continue;
     }
 
-    auto ruleset = ParseRuleset();
-    if (!ruleset) {
-      return ruleset.error();
+    auto rulesets = ParseRuleset();
+    if (!rulesets) {
+      return rulesets.error();
     }
-    stylesheet.push_back(ruleset.value());
+    for (auto& ruleset_val : rulesets.value()) {
+      stylesheet.push_back(std::move(ruleset_val));
+    }
   }
   return stylesheet;
 }
