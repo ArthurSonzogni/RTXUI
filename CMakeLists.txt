@@ -267,6 +267,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_slots example/slots.cpp)
   target_link_libraries(rtxui_example_slots PRIVATE rtxui)
+
+  add_executable(rtxui_example_spatial_navigation example/spatial_navigation.cpp)
+  target_link_libraries(rtxui_example_spatial_navigation PRIVATE rtxui)
 endif()
 
 option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" ON)

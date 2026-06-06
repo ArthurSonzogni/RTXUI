@@ -13,6 +13,19 @@ const std::string_view button::view = R"html(
         border: tall;
         padding-left: 1;
         padding-right: 1;
+        cursor: pointer;
+        transition: background-color 0.1s linear;
+      }
+      self:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      self:focus {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: #38bdf8;
+        color: #fff;
+      }
+      self:active {
+        background-color: rgba(255, 255, 255, 0.3);
       }
     </style>
   )html";

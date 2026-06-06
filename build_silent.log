@@ -1,0 +1,70 @@
+=== Silent Build started at Wed Jun  3 22:50:28 CEST 2026 ===
+ninja: Entering directory `build'
+[22:50:31] Temperature reached 49°C. Pausing build.
+[22:50:37] Temperature cooled to 42°C. Resuming build.
+[22:50:39] Temperature reached 48°C. Pausing build.
+[22:50:45] Temperature cooled to 42°C. Resuming build.
+[22:50:47] Temperature reached 53°C. Pausing build.
+[22:50:56] Temperature cooled to 42°C. Resuming build.
+[22:50:58] Temperature reached 50°C. Pausing build.
+[22:51:04] Temperature cooled to 42°C. Resuming build.
+[1/40] Building CXX object CMakeFiles/rtxui_lib.dir/src/rtxui/terminal/screen.cpp.o
+[22:51:06] Temperature reached 50°C. Pausing build.
+[22:51:11] Temperature cooled to 42°C. Resuming build.
+[22:51:13] Temperature reached 49°C. Pausing build.
+[22:51:17] Temperature cooled to 42°C. Resuming build.
+[22:51:20] Temperature reached 49°C. Pausing build.
+[22:51:26] Temperature cooled to 42°C. Resuming build.
+[22:51:29] Temperature reached 52°C. Pausing build.
+[22:51:36] Temperature cooled to 42°C. Resuming build.
+[22:51:38] Temperature reached 51°C. Pausing build.
+[22:51:45] Temperature cooled to 42°C. Resuming build.
+[22:51:46] Temperature reached 52°C. Pausing build.
+[22:51:52] Temperature cooled to 42°C. Resuming build.
+[22:51:53] Temperature reached 51°C. Pausing build.
+[22:52:00] Temperature cooled to 42°C. Resuming build.
+[22:52:01] Temperature reached 49°C. Pausing build.
+[22:52:10] Temperature cooled to 42°C. Resuming build.
+[22:52:12] Temperature reached 55°C. Pausing build.
+[22:52:20] Temperature cooled to 42°C. Resuming build.
+[22:52:22] Temperature reached 51°C. Pausing build.
+[22:52:29] Temperature cooled to 42°C. Resuming build.
+[2/40] Building CXX object CMakeFiles/rtxui_lib.dir/src/rtxui/component/component.cpp.o
+[3/40] Building CXX object CMakeFiles/rtxui_lib.dir/src/rtxui/style/apply_style.cpp.o
+[4/40] Building CXX object CMakeFiles/rtxui_lib.dir/src/rtxui/style/style.cpp.o
+[5/40] Linking CXX static library librtxui_lib.a
+[6/40] Building CXX object CMakeFiles/rtxui_test.dir/src/rtxui/style/style_test.cpp.o
+[7/40] Linking CXX executable rtxui_example_demo
+[8/40] Linking CXX executable rtxui_example_counter
+[9/40] Linking CXX executable rtxui_example_layout
+[10/40] Linking CXX executable rtxui_example_borders
+[11/40] Linking CXX executable rtxui_example_nested_scroll
+[12/40] Linking CXX executable rtxui_example_horizontal_scroll
+[13/40] Linking CXX executable rtxui_example_scroll_behavior
+[14/40] Linking CXX executable rtxui_example_helloworld
+[15/40] Linking CXX executable rtxui_example_loop
+[16/40] Linking CXX executable rtxui_example_loop_simple
+[17/40] Linking CXX executable rtxui_example_loop_complex
+[18/40] Linking CXX executable rtxui_example_conditional
+[19/40] Linking CXX executable rtxui_example_colors
+[20/40] Linking CXX executable rtxui_example_cjk
+[21/40] Linking CXX executable rtxui_example_text_align
+[22/40] Linking CXX executable rtxui_example_text_decoration
+[23/40] Linking CXX executable rtxui_example_input
+[24/40] Linking CXX executable rtxui_example_textarea
+[25/40] Linking CXX executable rtxui_example_checkbox
+[26/40] Linking CXX executable rtxui_example_slider
+[27/40] Linking CXX executable rtxui_example_progress
+[28/40] Linking CXX executable rtxui_example_select
+[29/40] Linking CXX executable rtxui_example_hr
+[30/40] Linking CXX executable rtxui_example_pseudo_classes
+[31/40] Linking CXX executable rtxui_example_transitions
+[32/40] Linking CXX executable rtxui_example_animation
+[33/40] Linking CXX executable rtxui_example_positioning
+[34/40] Linking CXX executable rtxui_example_tabindex
+[35/40] Linking CXX executable rtxui_example_media
+[36/40] Linking CXX executable rtxui_example_focus_scroll
+[37/40] Linking CXX executable rtxui_example_markdown
+[38/40] Linking CXX executable rtxui_example_opacity
+[39/40] Linking CXX executable rtxui_test
+[40/40] Linking CXX executable rtxui_terminal_input_parser

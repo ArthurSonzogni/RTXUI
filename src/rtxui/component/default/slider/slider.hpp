@@ -20,10 +20,9 @@ class slider : public Component<slider> {
   int width = 20;
 
   // Render bindings
-  std::string track_left;
+  std::string track_left = "";
   std::string thumb_char = "●";
-  std::string track_right;
-  std::string focus_class = "";
+  std::string track_right = "";
 
   void InitReflection() override;
   std::string_view Setup() override;

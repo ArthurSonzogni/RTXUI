@@ -1913,5 +1913,164 @@ TEST_CASE("Screen.RenderInitialFrameWideCharacterStyle", "[terminal]") {
   REQUIRE(output.find("\x1B[48;2;0;0;0mA") != std::string::npos);
 }
 
+TEST_CASE("Screen.SpatialNavigation", "[terminal][focus][spatial]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class SpatialNavComponent : public Component<SpatialNavComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<SpatialNavComponent>::InitReflection();
+    }
+    std::string_view view = R"(
+      <style>
+        #root { display: flex; flex-direction: column; }
+        .row { display: flex; }
+        .item { width: 10; height: 3; border: tall; }
+      </style>
+      <div id="root">
+        <div class="row">
+          <div id="item1" class="item" focusable="true">Item 1</div>
+          <div id="item2" class="item" focusable="true">Item 2</div>
+        </div>
+        <div class="row">
+          <div id="item3" class="item" focusable="true">Item 3</div>
+          <div id="item4" class="item" focusable="true">Item 4</div>
+        </div>
+      </div>
+    )";
+  };
+
+  auto component = Ref<SpatialNavComponent>::New();
+  Screen screen(component, device);
+
+  auto* item1 = component->Root()->QuerySelector("#item1");
+  auto* item2 = component->Root()->QuerySelector("#item2");
+  auto* item3 = component->Root()->QuerySelector("#item3");
+  auto* item4 = component->Root()->QuerySelector("#item4");
+
+  REQUIRE(item1 != nullptr);
+  REQUIRE(item2 != nullptr);
+  REQUIRE(item3 != nullptr);
+  REQUIRE(item4 != nullptr);
+
+  // Initial focus
+  item1->set_focused(true);
+  screen.Draw();  // Ensure layout is done and focused_element_ is updated
+
+  // 1. ArrowRight -> item2
+  screen.Dispatch(Event::ArrowRight());
+  CHECK(item2->focused());
+  CHECK_FALSE(item1->focused());
+
+  // 2. ArrowDown -> item4
+  screen.Dispatch(Event::ArrowDown());
+  CHECK(item4->focused());
+  CHECK_FALSE(item2->focused());
+
+  // 3. ArrowLeft -> item3
+  screen.Dispatch(Event::ArrowLeft());
+  CHECK(item3->focused());
+  CHECK_FALSE(item4->focused());
+
+  // 4. ArrowUp -> item1
+  screen.Dispatch(Event::ArrowUp());
+  CHECK(item1->focused());
+  CHECK_FALSE(item3->focused());
+
+  // 5. 'l' key (vim right) -> item2
+  screen.Dispatch(Event::l());
+  CHECK(item2->focused());
+
+  // 6. 'j' key (vim down) -> item4
+  screen.Dispatch(Event::j());
+  CHECK(item4->focused());
+
+  // 7. 'h' key (vim left) -> item3
+  screen.Dispatch(Event::h());
+  CHECK(item3->focused());
+
+  // 8. 'k' key (vim up) -> item1
+  screen.Dispatch(Event::k());
+  CHECK(item1->focused());
+}
+
+TEST_CASE("Screen.SpaceEnterActivation", "[terminal][focus][activation]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ActivationComponent : public Component<ActivationComponent> {
+   public:
+    int count = 0;
+    void on_click() { count++; }
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ActivationComponent>::InitReflection();
+    }
+    ActivationComponent() {
+      Import("on_click", [this]() { on_click(); });
+    }
+    std::string_view view = R"(
+      <div id="btn" focusable="true" onclick="on_click">Click Me</div>
+    )";
+  };
+
+  auto component = Ref<ActivationComponent>::New();
+  Screen screen(component, device);
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+  btn->set_focused(true);
+  screen.Draw();
+
+  // Press Space
+  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  CHECK(component->count == 1);
+
+  // Press Return
+  screen.Dispatch(Event::Return());
+  CHECK(component->count == 2);
+}
+
+TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class InputComponent : public Component<InputComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::input>();
+      Import<rtxui::div>();
+      Component<InputComponent>::InitReflection();
+    }
+    std::string_view view = R"(
+      <style>
+        #root { display: flex; }
+        .box { width: 10; height: 3; }
+      </style>
+      <div id="root">
+        <input id="input" class="box" value="hello" />
+        <div id="other" class="box" focusable="true">Other</div>
+      </div>
+    )";
+  };
+
+  auto component = Ref<InputComponent>::New();
+  Screen screen(component, device);
+
+  auto* input = component->Root()->QuerySelector("#input");
+  auto* other = component->Root()->QuerySelector("#other");
+
+  REQUIRE(input != nullptr);
+  REQUIRE(other != nullptr);
+
+  input->set_focused(true);
+  screen.Draw();
+
+  // Press 'l' (vim right). Since it's an input, it should be consumed.
+  screen.Dispatch(Event::l());
+
+  // Focus should NOT have moved to 'other'
+  CHECK(input->focused());
+  CHECK_FALSE(other->focused());
+}
+
 }  // namespace
 }  // namespace rtxui

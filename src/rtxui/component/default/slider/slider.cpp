@@ -19,31 +19,45 @@ void slider::InitReflection() {
   Bind(track_left);
   Bind(thumb_char);
   Bind(track_right);
-  Bind(focus_class);
   Component<slider>::InitReflection();
 }
 
 std::string_view slider::Setup() {
-  return R"html(<span class="{focus_class}"><span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span></span><style>
+  return R"html(
+    <span>
+      <span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span>
+    </span>
+    <style>
       self {
         display: inline-block;
         cursor: pointer;
+        padding-left: 1;
+        padding-right: 1;
+        transition: background-color 0.1s linear;
       }
-      .focused {
-        background-color: #333;
+      self:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      self:focus {
+        background-color: rgba(255, 255, 255, 0.2);
         color: #fff;
       }
       .track-left {
         color: #38bdf8;
       }
       .track-right {
-        color: #555;
+        color: #4b5563;
       }
       .thumb {
         font-weight: bold;
         color: #38bdf8;
       }
-    </style>)html";
+      self:focus .thumb,
+      self:focus .track-left {
+        color: #7dd3fc;
+      }
+    </style>
+  )html";
 }
 
 bool slider::OnEvent(Event event) {
@@ -192,10 +206,6 @@ bool slider::OnEvent(Event event) {
 }
 
 bool slider::Digest() {
-  auto* root = Root();
-  bool is_focused = root ? root->focused() : false;
-  focus_class = is_focused ? "focused" : "";
-
   int track_w = std::max(2, width);
   int range = max - min;
   int pos = 0;

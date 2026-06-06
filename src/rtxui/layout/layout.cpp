@@ -118,6 +118,17 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
     throw std::runtime_error("LayoutInputNode has null LayoutBox.");
   }
 
+  if (box->algorithm == LayoutBox::Algorithm::Text) {
+    auto wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+        LayoutArenaAllocator<LayoutBox>());
+    wrapper_box->is_anonymous = true;
+    wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+    wrapper_box->children.push_back(std::shared_ptr<LayoutBox>(box, [](LayoutBox*) {}));
+    wrapper_box->style = box->style;
+    wrapper_box->style.display_outside = DisplayOutside::Inline;
+    return LayoutInlineFlow({wrapper_box.get()}, constraints, context);
+  }
+
   if (context.viewport_w == 80 && context.viewport_h == 24) {
     context.viewport_w = constraints.width.value;
     context.viewport_h = constraints.height.value;
@@ -192,7 +203,19 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
         child_context.npa_offset_y = 0;
       }
 
-      auto child_frag = RunLayout({child_box.get()}, child_c, child_context);
+      LayoutInputNode child_input = {child_box.get()};
+      std::shared_ptr<LayoutBox> wrapper_box = nullptr;
+      if (child_box->algorithm == LayoutBox::Algorithm::Text) {
+        wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+            LayoutArenaAllocator<LayoutBox>());
+        wrapper_box->is_anonymous = true;
+        wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+        wrapper_box->children.push_back(child_box);
+        wrapper_box->style = child_box->style;
+        wrapper_box->style.display_outside = DisplayOutside::Inline;
+        child_input.box = wrapper_box.get();
+      }
+      auto child_frag = RunLayout(child_input, child_c, child_context);
 
       int x = 0;
       int y = 0;
@@ -355,7 +378,19 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
     LayoutContext child_context =
         CreateChildContext(box, width, 0, cx, cy, context);
-    auto child_frag = RunLayout({child_box.get()}, child_c, child_context);
+    LayoutInputNode child_input = {child_box.get()};
+    std::shared_ptr<LayoutBox> wrapper_box = nullptr;
+    if (child_box->algorithm == LayoutBox::Algorithm::Text) {
+      wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+          LayoutArenaAllocator<LayoutBox>());
+      wrapper_box->is_anonymous = true;
+      wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+      wrapper_box->children.push_back(child_box);
+      wrapper_box->style = child_box->style;
+      wrapper_box->style.display_outside = DisplayOutside::Inline;
+      child_input.box = wrapper_box.get();
+    }
+    auto child_frag = RunLayout(child_input, child_c, child_context);
 
     int rx = cx;
     int shift = 0;
@@ -792,7 +827,19 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
     LayoutContext child_context =
         CreateChildContext(box, width, 0, cx, cy, context);
-    auto child_frag = RunLayout({elem}, child_c, child_context);
+    LayoutInputNode child_input = {elem};
+    std::shared_ptr<LayoutBox> wrapper_box = nullptr;
+    if (elem->algorithm == LayoutBox::Algorithm::Text) {
+      wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+          LayoutArenaAllocator<LayoutBox>());
+      wrapper_box->is_anonymous = true;
+      wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+      wrapper_box->children.push_back(std::shared_ptr<LayoutBox>(elem, [](LayoutBox*) {}));
+      wrapper_box->style = elem->style;
+      wrapper_box->style.display_outside = DisplayOutside::Inline;
+      child_input.box = wrapper_box.get();
+    }
+    auto child_frag = RunLayout(child_input, child_c, child_context);
 
     if (box->style.white_space != WhiteSpace::Nowrap &&
         cursor_x + child_frag->width + child_m_horiz > content_width_limit &&
@@ -1047,7 +1094,20 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                                                      : MeasureMode::Undefined};
     }
 
-    auto frag = RunLayout({child.get()}, child_c, context);
+    LayoutInputNode child_input = {child.get()};
+    std::shared_ptr<LayoutBox> wrapper_box = nullptr;
+    if (child->algorithm == LayoutBox::Algorithm::Text) {
+      wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+          LayoutArenaAllocator<LayoutBox>());
+      wrapper_box->is_anonymous = true;
+      wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+      wrapper_box->children.push_back(child);
+      wrapper_box->style = child->style;
+      wrapper_box->style.display_outside = DisplayOutside::Inline;
+      child_input.box = wrapper_box.get();
+    }
+
+    auto frag = RunLayout(child_input, child_c, context);
     int m_margin =
         is_row ? child->style.margin.Horiz() : child->style.margin.Vert();
     int main_size = (is_row ? frag->width : frag->height) + m_margin;

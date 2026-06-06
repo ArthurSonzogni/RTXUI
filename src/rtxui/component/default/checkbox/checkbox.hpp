@@ -15,7 +15,6 @@ class checkbox : public Component<checkbox> {
  public:
   bool checked = false;
   std::string checked_char = " ";
-  std::string focus_class = "";
 
   void InitReflection() override;
   std::string_view Setup() override;
