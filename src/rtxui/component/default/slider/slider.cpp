@@ -16,6 +16,7 @@ void slider::InitReflection() {
   Bind(max);
   Bind(step);
   Bind(width);
+  Bind(direction);
   Bind(track_left);
   Bind(thumb_char);
   Bind(track_right);
@@ -23,18 +24,26 @@ void slider::InitReflection() {
 }
 
 std::string_view slider::Setup() {
-  return R"html(
-    <span>
-      <span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span>
-    </span>
-    <style>
+  return R"html(<span class="slider-container"><span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span></span><style>
       self {
         display: inline-block;
         cursor: pointer;
-        padding-left: 1;
-        padding-right: 1;
+        padding: 0 1;
         transition: background-color 0.1s linear;
       }
+      .slider-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      self[direction="vertical"] .slider-container {
+        flex-direction: column-reverse;
+        width: 1;
+      }
+      self[direction="horizontal"] .slider-container {
+        flex-direction: row;
+      }
+
       self:hover {
         background-color: rgba(255, 255, 255, 0.1);
       }
@@ -56,8 +65,7 @@ std::string_view slider::Setup() {
       self:focus .track-left {
         color: #7dd3fc;
       }
-    </style>
-  )html";
+    </style>)html";
 }
 
 bool slider::OnEvent(Event event) {
@@ -66,6 +74,7 @@ bool slider::OnEvent(Event event) {
     return false;
   }
 
+  bool is_vertical = (direction == "vertical");
   bool value_changed = false;
   bool is_captured = (GetMouseCapturer() == this);
   bool was_captured = is_captured;
@@ -78,12 +87,12 @@ bool slider::OnEvent(Event event) {
         int click_y = mouse.y - 1;
         int abs_x = root->absolute_x();
         int abs_y = root->absolute_y();
-        // Use the `width` attribute for bounds check: Root() is an inline <span>
-        // whose layout_width_ is 0. The drag code already uses max(2, width).
-        int track_w = std::max(2, width);
+        
+        int track_w = is_vertical ? 1 : std::max(2, width);
+        int track_h = is_vertical ? std::max(2, width) : 1;
 
         if (click_x >= abs_x && click_x < abs_x + track_w &&
-            click_y >= abs_y && click_y <= abs_y) {
+            click_y >= abs_y && click_y < abs_y + track_h) {
           // Focus this element
           if (root->Parent()) {
             Element* root_el = root;
@@ -106,12 +115,20 @@ bool slider::OnEvent(Event event) {
           mouse.motion == Event::Mouse::Motion::Pressed ||
           mouse.motion == Event::Mouse::Motion::Released) {
         int click_x = mouse.x - 1;
+        int click_y = mouse.y - 1;
         int abs_x = root->absolute_x();
-        int track_w = std::max(2, width);
-        int pos = std::clamp(click_x - abs_x, 0, track_w - 1);
+        int abs_y = root->absolute_y();
+        int track_size = std::max(2, width);
+        
+        int pos = 0;
+        if (is_vertical) {
+          pos = std::clamp(abs_y + track_size - 1 - click_y, 0, track_size - 1);
+        } else {
+          pos = std::clamp(click_x - abs_x, 0, track_size - 1);
+        }
 
         // Map pos to [min, max]
-        double pct = static_cast<double>(pos) / (track_w - 1);
+        double pct = static_cast<double>(pos) / (track_size - 1);
         int raw_val = min + static_cast<int>(std::round(pct * (max - min)));
 
         // Snap to nearest step
@@ -142,20 +159,36 @@ bool slider::OnEvent(Event event) {
         kb.motion == Event::Keyboard::Motion::Repeat) {
       if (root->focused()) {
         int delta = 0;
-        if (kb.special == Event::Keyboard::Special::ArrowLeft ||
-            kb.special == Event::Keyboard::Special::ArrowDown) {
-          delta = -step;
-        } else if (kb.special == Event::Keyboard::Special::ArrowRight ||
-                   kb.special == Event::Keyboard::Special::ArrowUp) {
-          delta = step;
+        bool is_primary_axis = false;
+        
+        if (is_vertical) {
+          if (kb.special == Event::Keyboard::Special::ArrowDown) {
+            delta = -step;
+            is_primary_axis = true;
+          } else if (kb.special == Event::Keyboard::Special::ArrowUp) {
+            delta = step;
+            is_primary_axis = true;
+          }
+        } else {
+          if (kb.special == Event::Keyboard::Special::ArrowLeft) {
+            delta = -step;
+            is_primary_axis = true;
+          } else if (kb.special == Event::Keyboard::Special::ArrowRight) {
+            delta = step;
+            is_primary_axis = true;
+          }
         }
 
-        if (delta != 0) {
+        if (is_primary_axis) {
           int new_val = std::clamp(value + delta, min, max);
           if (new_val != value) {
             value = new_val;
             value_changed = true;
+            PropagateBinding("value", std::to_string(value));
+            return true;
           }
+          // If we are at the boundary and pressing in that direction, 
+          // we don't return true, allowing spatial navigation to take over.
         }
       }
     }
@@ -163,38 +196,6 @@ bool slider::OnEvent(Event event) {
 
   if (value_changed) {
     PropagateBinding("value", std::to_string(value));
-
-    // Run onchange callback if present
-    if (root->Attributes().count("onchange")) {
-      std::string onchange_cb = root->Attributes().at("onchange");
-      Element* parent_el = root->Parent();
-      ComponentBase* parent_comp = nullptr;
-      while (parent_el) {
-        if (parent_el->component()) {
-          parent_comp = const_cast<ComponentBase*>(parent_el->component());
-          break;
-        }
-        parent_el = parent_el->Parent();
-      }
-      while (parent_comp) {
-        if (parent_comp->RunCallback(onchange_cb)) {
-          break;
-        }
-        if (parent_comp->Root()) {
-          parent_el = parent_comp->Root()->Parent();
-          parent_comp = nullptr;
-          while (parent_el) {
-            if (parent_el->component()) {
-              parent_comp = const_cast<ComponentBase*>(parent_el->component());
-              break;
-            }
-            parent_el = parent_el->Parent();
-          }
-        } else {
-          break;
-        }
-      }
-    }
     return true;
   }
 
@@ -206,23 +207,30 @@ bool slider::OnEvent(Event event) {
 }
 
 bool slider::Digest() {
-  int track_w = std::max(2, width);
+  int track_size = std::max(2, width);
   int range = max - min;
   int pos = 0;
   if (range > 0) {
     pos = static_cast<int>(
-        std::round(static_cast<double>(value - min) / range * (track_w - 1)));
+        std::round(static_cast<double>(value - min) / range * (track_size - 1)));
   }
-  pos = std::clamp(pos, 0, track_w - 1);
+  pos = std::clamp(pos, 0, track_size - 1);
+
+  bool is_vertical = (direction == "vertical");
+  std::string char_sym = is_vertical ? "│" : "─";
 
   track_left = "";
   for (int i = 0; i < pos; ++i) {
-    track_left += "─";
+    track_left += char_sym;
+    if (is_vertical && i < pos - 1) track_left += "\n";
   }
+  
   thumb_char = "●";
+  
   track_right = "";
-  for (int i = pos + 1; i < track_w; ++i) {
-    track_right += "─";
+  for (int i = pos + 1; i < track_size; ++i) {
+    track_right += char_sym;
+    if (is_vertical && i < track_size - 1) track_right += "\n";
   }
 
   return Component<slider>::Digest();
