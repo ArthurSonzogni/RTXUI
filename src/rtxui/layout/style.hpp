@@ -29,7 +29,7 @@ enum class DisplayInside {
 };
 
 enum class MeasureMode { Exactly, AtMost, Undefined };
-enum class Direction { Row, Column };
+enum class Direction { Row, RowReverse, Column, ColumnReverse };
 enum class Unit { Auto, Cells, Percent };
 
 struct Length {

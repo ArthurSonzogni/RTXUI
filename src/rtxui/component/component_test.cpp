@@ -947,7 +947,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
     Event::Mouse mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Pressed;
-    mouse.x = abs_x + 1;  // 1-based: column 0 in 0-indexed
+    mouse.x = abs_x + 2;  // 1-based: column 1 in 0-indexed (start of track)
     mouse.y = abs_y + 1;
     screen.Dispatch(Event(mouse));
   }
@@ -961,7 +961,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
     Event::Mouse mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Moved;
-    mouse.x = abs_x + (track_w / 2) + 1;  // middle column, 1-based
+    mouse.x = abs_x + (track_w / 2) + 2;  // middle column, 1-based
     mouse.y = abs_y + 50;
     screen.Dispatch(Event(mouse));
   }
@@ -975,7 +975,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
     Event::Mouse mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Released;
-    mouse.x = abs_x + track_w;  // last column, 1-based
+    mouse.x = abs_x + track_w + 1;  // last column, 1-based
     mouse.y = abs_y + 1;
     screen.Dispatch(Event(mouse));
   }
@@ -1863,4 +1863,40 @@ TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)", "[comp
 
   // It should now have the blue background color because of button.active
   REQUIRE(button->style.background_color.value() == Color::RGB(0, 0, 255));
+}
+
+TEST_CASE("Vertical slider layout regression", "[component][slider][layout]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(10, 10);
+
+  class VerticalSliderTest : public rtxui::Component<VerticalSliderTest> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::slider>();
+      rtxui::Component<VerticalSliderTest>::InitReflection();
+    }
+    std::string_view view = R"(
+      <slider direction="vertical" width="5" value="50" min="0" max="100" />
+    )";
+  };
+
+  auto component = rtxui::Ref<VerticalSliderTest>::New();
+  rtxui::Screen screen(component, device);
+  screen.Draw();
+
+  std::string output = device->GetOutput();
+  
+  int rows_with_slider = 0;
+  std::stringstream ss(output);
+  std::string line;
+  while (std::getline(ss, line)) {
+    if (line.find("│") != std::string::npos || line.find("●") != std::string::npos) {
+      rows_with_slider++;
+    }
+  }
+  
+  if (rows_with_slider < 5) {
+    FAIL("Vertical slider should span 5 rows. Output:\n" << output);
+  }
+  CHECK(rows_with_slider >= 5);
 }

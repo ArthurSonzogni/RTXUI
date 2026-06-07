@@ -980,7 +980,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                                              LayoutConstraints constraints,
                                              LayoutContext context) {
   auto* box = node.box;
-  bool is_row = box->style.flex_direction == Direction::Row;
+  bool is_row = box->style.flex_direction == Direction::Row || box->style.flex_direction == Direction::RowReverse;
+  bool is_reverse = box->style.flex_direction == Direction::RowReverse || box->style.flex_direction == Direction::ColumnReverse;
 
   int parent_w = constraints.width.value;
   int parent_h = constraints.height.value;
@@ -1279,6 +1280,18 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     for (size_t i = 0; i < items.size(); ++i) {
       item_positions[i] = cur_pos;
       cur_pos += items[i].main_resolved_size + resolved_gap;
+    }
+  }
+
+  if (is_reverse) {
+    int effective_container_main = main_is_indefinite ? total_main_resolved : container_main;
+    int container_start = is_row ? (box->style.padding.left + box->style.border.left)
+                                 : (box->style.padding.top + box->style.border.top);
+    int container_end = container_start + effective_container_main;
+    for (size_t i = 0; i < items.size(); ++i) {
+      int pos = item_positions[i];
+      int size = items[i].main_resolved_size;
+      item_positions[i] = container_end - (pos - container_start) - size;
     }
   }
 

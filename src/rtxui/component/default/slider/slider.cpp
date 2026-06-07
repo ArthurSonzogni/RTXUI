@@ -100,11 +100,13 @@ bool slider::OnEvent(Event event) {
         int abs_x = root->absolute_x();
         int abs_y = root->absolute_y();
         
+        int track_x = abs_x + 1;
+        int track_y = abs_y;
         int track_w = is_vertical ? 1 : std::max(2, width);
         int track_h = is_vertical ? std::max(2, width) : 1;
 
-        if (click_x >= abs_x && click_x < abs_x + track_w &&
-            click_y >= abs_y && click_y < abs_y + track_h) {
+        if (click_x >= track_x && click_x < track_x + track_w &&
+            click_y >= track_y && click_y < track_y + track_h) {
           // Focus this element
           if (root->Parent()) {
             Element* root_el = root;
@@ -130,13 +132,15 @@ bool slider::OnEvent(Event event) {
         int click_y = mouse.y - 1;
         int abs_x = root->absolute_x();
         int abs_y = root->absolute_y();
+        int track_x = abs_x + 1;
+        int track_y = abs_y;
         int track_size = std::max(2, width);
         
         int pos = 0;
         if (is_vertical) {
-          pos = std::clamp(abs_y + track_size - 1 - click_y, 0, track_size - 1);
+          pos = std::clamp(track_y + track_size - 1 - click_y, 0, track_size - 1);
         } else {
-          pos = std::clamp(click_x - abs_x, 0, track_size - 1);
+          pos = std::clamp(click_x - track_x, 0, track_size - 1);
         }
 
         // Map pos to [min, max]
