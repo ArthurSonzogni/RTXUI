@@ -677,9 +677,16 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.flex_direction = Direction::Row;
       return;
     }
-
+    if (v == "row-reverse") {
+      style.flex_direction = Direction::RowReverse;
+      return;
+    }
     if (v == "column") {
       style.flex_direction = Direction::Column;
+      return;
+    }
+    if (v == "column-reverse") {
+      style.flex_direction = Direction::ColumnReverse;
       return;
     }
   }

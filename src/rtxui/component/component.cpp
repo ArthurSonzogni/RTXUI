@@ -914,7 +914,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
         bool preserve_newlines = false;
         for (Element* curr = slot; curr; curr = curr->Parent()) {
-          if (curr->tag() == "textarea" || curr->tag() == "pre") {
+          if (curr->tag() == "textarea" || curr->tag() == "pre" || curr->tag() == "slider") {
             preserve_newlines = true;
             break;
           }
