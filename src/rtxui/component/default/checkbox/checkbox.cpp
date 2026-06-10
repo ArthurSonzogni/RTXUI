@@ -16,7 +16,7 @@ void checkbox::InitReflection() {
 
 std::string_view checkbox::Setup() {
   return R"html(
-    <span>[<span class="checkmark">{checked_char}</span>] <slot></slot></span>
+    <span><span class="checkmark">{checked_char}</span> <slot></slot></span>
     <style>
       self {
         display: inline-block;
@@ -26,21 +26,15 @@ std::string_view checkbox::Setup() {
         transition: background-color 0.1s linear;
       }
       self:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: lighten(10%);
       }
       self:focus {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: #fff;
+        background-color: lighten(25%);
       }
       self:active {
-        background-color: rgba(255, 255, 255, 0.3);
+        background-color: lighten(35%);
       }
       .checkmark {
-        font-weight: bold;
-        color: #38bdf8;
-      }
-      self:focus .checkmark {
-        color: #7dd3fc;
       }
     </style>
   )html";
@@ -111,7 +105,7 @@ bool checkbox::OnEvent(Event event) {
 }
 
 bool checkbox::Digest() {
-  checked_char = checked ? "v" : " ";
+  checked_char = checked ? "☑" : "☐";
   return Component<checkbox>::Digest();
 }
 

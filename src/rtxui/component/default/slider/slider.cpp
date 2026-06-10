@@ -56,25 +56,19 @@ std::string_view slider::Setup() {
       }
 
       self:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: lighten(10%);
       }
       self:focus {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: #fff;
+        background-color: lighten(25%);
       }
       .track-left {
-        color: #38bdf8;
+        opacity: 1.0;
       }
       .track-right {
-        color: #4b5563;
+        opacity: 0.35;
       }
       .thumb {
-        font-weight: bold;
-        color: #38bdf8;
-      }
-      self:focus .thumb,
-      self:focus .track-left {
-        color: #7dd3fc;
+        opacity: 1.0;
       }
     </style>
   )html";

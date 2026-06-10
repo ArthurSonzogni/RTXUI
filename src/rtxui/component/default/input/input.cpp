@@ -27,18 +27,17 @@ std::string_view input::Setup() {
         overflow-x: scroll;
         scrollbar-width: none;
         white-space: nowrap;
-        background-color: #1e293b;
-        border: solid;
-        border-color: #334155;
-        transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear;
+        background-color: lighten(7%);
+        opacity: 0.8;
+        transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
       }
       self:hover {
-        background-color: #334155;
+        background-color: lighten(14%);
+        opacity: 0.9;
       }
       self:focus {
-        background-color: #0c4a6e;
-        border-color: #38bdf8;
-        color: #fff;
+        background-color: lighten(24%);
+        opacity: 1.0;
       }
       .cursor {
         background-color: transparent;

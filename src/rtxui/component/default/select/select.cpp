@@ -38,30 +38,25 @@ std::string_view select::Setup() {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
-        border: solid;
-        border-color: #334155;
-        background-color: #1e293b;
-        color: #f1f5f9;
+        background-color: lighten(7%);
+        opacity: 0.8;
         padding-left: 1;
         padding-right: 1;
         cursor: pointer;
-        transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear;
+        transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
       }
       self:hover .select-btn {
-        background-color: #334155;
+        background-color: lighten(14%);
+        opacity: 0.9;
       }
       self:focus .select-btn {
-        background-color: #0c4a6e;
-        border-color: #38bdf8;
-        color: #fff;
+        background-color: lighten(24%);
+        opacity: 1.0;
       }
       .dropdown-list {
         display: flex;
         flex-direction: column;
-        border: solid;
-        border-top: none;
-        border-color: #38bdf8;
-        background-color: #0f172a;
+        background-color: lighten(15%);
         position: absolute;
         width: 100%;
         margin-top: 1;

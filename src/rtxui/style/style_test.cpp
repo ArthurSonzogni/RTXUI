@@ -516,3 +516,54 @@ TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle",
     CHECK(style.opacity == 0.0f);
   }
 }
+
+TEST_CASE("Color transformations in ApplyStyle", "[style][color]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("lighten() color transformation") {
+    // Without current background color (fallback to white overlay)
+    rtxui::ApplyStyle(style, {"background-color", "lighten(10%)"});
+    REQUIRE(style.background_color.has_value());
+    CHECK(style.background_color->r == 255);
+    CHECK(style.background_color->g == 255);
+    CHECK(style.background_color->b == 255);
+    CHECK(style.background_color->a == 25);
+
+    // With current background color
+    style.background_color = Color::RGB(100, 150, 200);
+    rtxui::ApplyStyle(style, {"background-color", "lighten(0.1)"});
+    REQUIRE(style.background_color.has_value());
+    CHECK(style.background_color->r == 125); // 100 + 25.5 -> 125
+    CHECK(style.background_color->g == 175);
+    CHECK(style.background_color->b == 225);
+  }
+
+  SECTION("darken() color transformation") {
+    // Without current color (fallback to black overlay)
+    rtxui::ApplyStyle(style, {"color", "darken(20%)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 0);
+    CHECK(style.foreground_color->a == 51);
+
+    // With current color
+    style.foreground_color = Color::RGB(100, 150, 200);
+    rtxui::ApplyStyle(style, {"color", "darken(0.2)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 49); // 100 - 51
+    CHECK(style.foreground_color->g == 99);
+    CHECK(style.foreground_color->b == 149);
+  }
+
+  SECTION("alpha() color transformation") {
+    style.background_color = Color::RGB(100, 150, 200);
+    rtxui::ApplyStyle(style, {"background-color", "alpha(50%)"});
+    REQUIRE(style.background_color.has_value());
+    CHECK(style.background_color->r == 100);
+    CHECK(style.background_color->g == 150);
+    CHECK(style.background_color->b == 200);
+    CHECK(style.background_color->a == 127);
+  }
+}
+
