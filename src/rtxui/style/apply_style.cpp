@@ -1,5 +1,6 @@
 #include "rtxui/style/apply_style.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <charconv>
 #include <cstdlib>
