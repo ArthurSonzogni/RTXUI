@@ -10,7 +10,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
-  auto text_node = dynamic_cast<TextElement*>(dom_node);
+  bool is_text = dom_node->is_text();
 
   auto box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
       LayoutArenaAllocator<LayoutBox>());
@@ -25,7 +25,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
   // Text nodes don't usually run an algorithm themselves;
   // they are consumed by the parent's InlineFlow.
-  if (text_node) {
+  if (is_text) {
+    auto text_node = static_cast<TextElement*>(dom_node);
     box->is_text = true;
     box->text_data = text_node->text();
     box->algorithm = LayoutBox::Algorithm::Text;
