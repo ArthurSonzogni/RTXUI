@@ -190,6 +190,7 @@ void Element::Visit(std::function<void(Element&)> f) {
 }
 
 void Element::SetAttribute(std::string name, std::string value) {
+  ClearResolvedStyles();
   if (name == "id") {
     id = value;
   } else if (name == "class") {
@@ -218,6 +219,7 @@ void Element::SetAttribute(std::string name, std::string value) {
 }
 
 void Element::RemoveAttribute(const std::string& name) {
+  ClearResolvedStyles();
   if (name == "id") {
     id.clear();
   } else if (name == "class") {

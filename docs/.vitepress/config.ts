@@ -64,6 +64,13 @@ export default defineConfig({
         ]
       },
       {
+        text: 'Cookbook & Recipes',
+        collapsed: false,
+        items: [
+          { text: 'Common UI Recipes', link: '/guide/cookbook' }
+        ]
+      },
+      {
         text: 'Reference Manual',
         collapsed: false,
         items: [

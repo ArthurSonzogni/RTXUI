@@ -138,7 +138,8 @@ class ComponentBase : public RefCounted, public Bindings {
                        Element* element,
                        ComponentBase* source,
                        std::shared_ptr<LocalScope> scope,
-                       size_t& child_idx);
+                       size_t& child_idx,
+                       bool preserve_newlines = false);
   std::string template_;
   std::string xml_string_;
   xml::Nodes xml_nodes_;
