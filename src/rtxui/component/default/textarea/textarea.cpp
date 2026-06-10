@@ -29,7 +29,7 @@ std::string_view textarea::Setup() {
         background-color: #1e293b;
         border: solid;
         border-color: #334155;
-        transition: all 0.1s linear;
+        transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear;
       }
       self:hover {
         background-color: #334155;

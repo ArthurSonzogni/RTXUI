@@ -669,6 +669,7 @@ TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   mouse.x = ta_el->absolute_x() + 1;  // 1-based
   mouse.y = ta_el->absolute_y() + 1;
   screen.Dispatch(Event(mouse));
+  screen.Draw();
 
   // Dimensions must not change after click (no resize-on-focus regression).
   CHECK(ta_el->layout_width()  == initial_width);
@@ -1950,4 +1951,54 @@ TEST_CASE("Style caching regression test for multi-component resolution", "[comp
   // Child style (self) should still apply, but parent class style (.test-child) should be gone.
   CHECK(child_el->style.foreground_color.value() == Color::RGB(255, 0, 0));
   CHECK(!child_el->style.background_color.has_value());
+}
+
+TEST_CASE("Input Click Layout Regression Test", "[component][input][regression]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+
+  int initial_width = input_el->layout_width();
+  int initial_height = input_el->layout_height();
+
+  // Click at the input's position
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = input_el->absolute_x() + 1;
+  mouse.y = input_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+  screen.Draw();
+
+  CHECK(input_el->layout_width() == initial_width);
+  CHECK(input_el->layout_height() == initial_height);
+}
+
+TEST_CASE("Textarea Click Layout Regression Test", "[component][textarea][regression]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+
+  int initial_width = ta_el->layout_width();
+  int initial_height = ta_el->layout_height();
+
+  // Click at the textarea's position
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = ta_el->absolute_x() + 1;
+  mouse.y = ta_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+  screen.Draw();
+
+  CHECK(ta_el->layout_width() == initial_width);
+  CHECK(ta_el->layout_height() == initial_height);
 }
