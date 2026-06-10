@@ -46,6 +46,12 @@ std::string_view input::Setup() {
       .cursor-focused {
         background-color: #fff;
         color: #000;
+        text-decoration: blink;
+      }
+      .cursor-focused.cursor-line {
+        background-color: transparent;
+        color: #fff;
+        text-decoration: blink;
       }
     </style>
   )html";

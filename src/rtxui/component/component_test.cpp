@@ -2002,3 +2002,39 @@ TEST_CASE("Textarea Click Layout Regression Test", "[component][textarea][regres
   CHECK(ta_el->layout_width() == initial_width);
   CHECK(ta_el->layout_height() == initial_height);
 }
+
+TEST_CASE("Input Cursor Vertical Line Regression Test", "[component][input][cursor][regression]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+
+  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
+  REQUIRE(input_comp != nullptr);
+
+  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  REQUIRE(input_ptr != nullptr);
+
+  // Set cursor position to the end of the text
+  input_ptr->value = "hello";
+  input_ptr->cursor_pos = 5;
+
+  // Unfocused initially
+  input_el->set_focused(false);
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_char == " ");
+  CHECK(input_ptr->cursor_class == "cursor");
+
+  // Focus the element
+  input_el->set_focused(true);
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_char == "▏");
+  CHECK(input_ptr->cursor_class == "cursor cursor-focused cursor-line");
+
+  // Move cursor to a character inside the text
+  input_ptr->cursor_pos = 1;
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_char == "e");
+  CHECK(input_ptr->cursor_class == "cursor cursor-focused");
+}
