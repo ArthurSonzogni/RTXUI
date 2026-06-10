@@ -511,19 +511,11 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
     cursor_char = is_focused_ ? "▏" : " ";
     right_text = GraphemesToString(graphemes, cursor_pos);
   } else {
-    if (cursor_pos < n) {
-      cursor_char = std::string(graphemes[cursor_pos].text);
-    } else {
-      cursor_char = is_focused_ ? "▏" : " ";
-    }
-    right_text = GraphemesToString(graphemes, cursor_pos + 1);
+    cursor_char = is_focused_ ? "▏" : (cursor_pos < n ? std::string(graphemes[cursor_pos].text) : " ");
+    right_text = (cursor_pos < n) ? GraphemesToString(graphemes, cursor_pos + 1) : "";
   }
   if (is_focused_) {
-    if (cursor_char == "▏") {
-      cursor_class = "cursor cursor-focused cursor-line";
-    } else {
-      cursor_class = "cursor cursor-focused";
-    }
+    cursor_class = "cursor cursor-focused cursor-line";
   } else {
     cursor_class = "cursor";
   }
