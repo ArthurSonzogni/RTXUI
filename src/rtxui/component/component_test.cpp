@@ -579,6 +579,161 @@ TEST_CASE("Input Component Layout Height", "[component]") {
   CHECK(input_el->layout_height() == 1);
 }
 
+TEST_CASE("Input Component Advanced Selection and Editing", "[component][input]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+
+  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
+  REQUIRE(input_comp != nullptr);
+
+  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  REQUIRE(input_ptr != nullptr);
+
+  input_el->set_focused(true);
+
+  SECTION("Shift Selection and Arrow Movement") {
+    input_ptr->value = "hello world";
+    input_ptr->cursor_pos = 0;
+    input_ptr->selection_start = -1;
+    input_ptr->Digest();
+
+    // Shift + ArrowRight
+    Event::Keyboard kb;
+    kb.special = Event::Keyboard::Special::ArrowRight;
+    kb.modifier.shift = true;
+    input_ptr->OnEvent(Event(kb));
+    input_ptr->Digest();
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 1);
+
+    // Shift + ArrowRight again
+    input_ptr->OnEvent(Event(kb));
+    input_ptr->Digest();
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 2);
+
+    // ArrowLeft without shift clears selection and places cursor at min
+    input_ptr->OnEvent(Event::ArrowLeft());
+    input_ptr->Digest();
+    CHECK(input_ptr->selection_start == -1);
+    CHECK(input_ptr->cursor_pos == 0);
+  }
+
+  SECTION("CTRL+A Selection") {
+    input_ptr->value = "hello world";
+    input_ptr->cursor_pos = 2;
+    input_ptr->selection_start = -1;
+    input_ptr->Digest();
+
+    input_ptr->OnEvent(Event::CtrlA());
+    input_ptr->Digest();
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 11);
+
+    // Typing a character replaces selection
+    input_ptr->OnEvent(Event::Keyboard::From('x'));
+    input_ptr->Digest();
+    CHECK(input_ptr->value == "x");
+    CHECK(input_ptr->cursor_pos == 1);
+    CHECK(input_ptr->selection_start == -1);
+  }
+
+  SECTION("Ctrl+Delete word deletion") {
+    input_ptr->value = "hello world";
+    input_ptr->cursor_pos = 0;
+    input_ptr->selection_start = -1;
+    input_ptr->Digest();
+
+    input_ptr->OnEvent(Event::DeleteCtrl());
+    input_ptr->Digest();
+    CHECK(input_ptr->value == " world");
+    CHECK(input_ptr->cursor_pos == 0);
+  }
+
+  SECTION("Double Click Word Selection") {
+    input_ptr->value = "hello world";
+    input_ptr->cursor_pos = 0;
+    input_ptr->selection_start = -1;
+    input_ptr->Digest();
+
+    // Click on index 2 ('l' in "hello") twice
+    int x_pos = input_el->absolute_x() + 1 + 2 + 1; // 1 (border/padding) + 2 (index) + 1 (1-based)
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    mouse.x = x_pos;
+    mouse.y = input_el->absolute_y() + 1;
+
+    // First Click
+    screen.Dispatch(Event(mouse));
+    // Release
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+
+    // Second Click (Double Click)
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+
+    input_ptr->Digest();
+    // Selection should span "hello" -> [0, 5]
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 5);
+
+    // Release mouse
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+    input_ptr->Digest();
+    // Selection should still be active
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 5);
+  }
+
+  SECTION("Double Click + Move Selection") {
+    input_ptr->value = "hello world test";
+    input_ptr->cursor_pos = 0;
+    input_ptr->selection_start = -1;
+    input_ptr->Digest();
+
+    // Double click at index 2 ('l' in "hello")
+    int click_x = input_el->absolute_x() + 1 + 2 + 1;
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    mouse.x = click_x;
+    mouse.y = input_el->absolute_y() + 1;
+
+    screen.Dispatch(Event(mouse));
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    input_ptr->Digest();
+    REQUIRE(input_ptr->selection_start == 0);
+    REQUIRE(input_ptr->cursor_pos == 5);
+
+    // Now move the mouse to index 8 ('o' in "world")
+    mouse.motion = Event::Mouse::Motion::Moved;
+    mouse.x = input_el->absolute_x() + 1 + 8 + 1;
+    screen.Dispatch(Event(mouse));
+    input_ptr->Digest();
+
+    // Selection should span "hello world" -> [0, 11]
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 11);
+
+    // Release mouse
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+  }
+}
+
+
 TEST_CASE("Input Component State Preservation", "[component]") {
   auto container = rtxui::Ref<InputTestComponent>::New();
   container->Mount();

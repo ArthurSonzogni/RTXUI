@@ -205,6 +205,75 @@ int FindLineEnd(const std::vector<Grapheme>& graphemes, int start_pos) {
   return pos;
 }
 
+std::pair<int, int> GetWordBoundaries(const std::vector<Grapheme>& graphemes, int click_pos) {
+  int n = static_cast<int>(graphemes.size());
+  if (n == 0) {
+    return {0, 0};
+  }
+  if (click_pos < 0) click_pos = 0;
+  if (click_pos >= n) click_pos = n - 1;
+
+  std::string_view target = graphemes[click_pos].text;
+  
+  auto is_word_char = [](std::string_view s) {
+    if (s.empty()) return false;
+    char c = s[0];
+    if (std::isalnum(static_cast<unsigned char>(c)) || c == '_') {
+      return true;
+    }
+    if ((static_cast<unsigned char>(c) & 0x80) != 0) {
+      return true;
+    }
+    return false;
+  };
+
+  auto is_space_char = [](std::string_view s) {
+    return s == " " || s == "\t" || s == "\n" || s == "\r\n" || s == "\r";
+  };
+
+  int start = click_pos;
+  int end = click_pos;
+
+  if (is_word_char(target)) {
+    while (start > 0 && is_word_char(graphemes[start - 1].text)) {
+      start--;
+    }
+    while (end < n && is_word_char(graphemes[end].text)) {
+      end++;
+    }
+  } else if (is_space_char(target)) {
+    while (start > 0 && is_space_char(graphemes[start - 1].text)) {
+      start--;
+    }
+    while (end < n && is_space_char(graphemes[end].text)) {
+      end++;
+    }
+  } else {
+    while (start > 0 && !is_word_char(graphemes[start - 1].text) && !is_space_char(graphemes[start - 1].text)) {
+      start--;
+    }
+    while (end < n && !is_word_char(graphemes[end].text) && !is_space_char(graphemes[end].text)) {
+      end++;
+    }
+  }
+  return {start, end};
+}
+
+bool DeleteSelection(std::vector<Grapheme>& graphemes, int& selection_start, int& cursor_pos) {
+  if (selection_start != -1 && selection_start != cursor_pos) {
+    int start = std::min(selection_start, cursor_pos);
+    int end = std::max(selection_start, cursor_pos);
+    if (start >= 0 && end <= static_cast<int>(graphemes.size())) {
+      graphemes.erase(graphemes.begin() + start, graphemes.begin() + end);
+      cursor_pos = start;
+      selection_start = -1;
+      return true;
+    }
+  }
+  selection_start = -1;
+  return false;
+}
+
 }  // namespace
 
 void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
@@ -218,8 +287,8 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
   int cursor_col = pos2d.column;
 
   int cursor_width = (cursor_pos < static_cast<int>(current_graphemes.size()))
-                         ? std::max(1, current_graphemes[cursor_pos].width)
-                         : 1;
+                          ? std::max(1, current_graphemes[cursor_pos].width)
+                          : 1;
 
   int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
 
@@ -266,49 +335,129 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
   auto* root = self->Root();
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left &&
-        mouse.motion == Event::Mouse::Motion::Pressed) {
-      if (!root) {
-        return false;
-      }
-      int click_x = mouse.x - 1;
-      int click_y = mouse.y - 1;
-      int abs_x = root->absolute_x();
-      int abs_y = root->absolute_y();
-      int layout_w = root->layout_width();
-      int layout_h = root->layout_height();
+    bool is_captured = (self->GetMouseCapturer() == self);
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
-          click_y < abs_y + layout_h) {
-        // Unfocus all other elements
-        if (root->Parent()) {
-          Element* root_el = root;
-          while (root_el->Parent()) {
-            root_el = root_el->Parent();
-          }
-          root_el->Visit([](Element& el) { el.set_focused(false); });
+    if (mouse.button == Event::Mouse::Button::Left) {
+      if (mouse.motion == Event::Mouse::Motion::Pressed) {
+        if (!root) {
+          return false;
         }
-        root->set_focused(true);
+        int click_x = mouse.x - 1;
+        int click_y = mouse.y - 1;
+        int abs_x = root->absolute_x();
+        int abs_y = root->absolute_y();
+        int layout_w = root->layout_width();
+        int layout_h = root->layout_height();
+
+        if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+            click_y < abs_y + layout_h) {
+          // Unfocus all other elements
+          if (root->Parent()) {
+            Element* root_el = root;
+            while (root_el->Parent()) {
+              root_el = root_el->Parent();
+            }
+            root_el->Visit([](Element& el) { el.set_focused(false); });
+          }
+          root->set_focused(true);
+          self->CaptureMouse();
+
+          int border_offset =
+              (root->style.border_style != BorderStyle::None) ? 1 : 0;
+          int padding_left = root->style.padding.left;
+          int padding_top = root->style.padding.top;
+          int inner_click_x = click_x - abs_x - border_offset - padding_left;
+          int inner_click_y = click_y - abs_y - border_offset - padding_top;
+
+          int target_col = inner_click_x + root->scroll_x();
+          int target_row = is_multiline ? (inner_click_y + root->scroll_y()) : 0;
+
+          auto graphemes = GetGraphemesList(value);
+          int click_pos = is_multiline
+                           ? GetCursorPosFrom2D(graphemes, target_row, target_col)
+                           : GetCursorPositionFromColumn(graphemes, target_col);
+
+          auto now = std::chrono::steady_clock::now();
+          if (now - last_click_time_ < std::chrono::milliseconds(500) && click_pos == last_click_pos_) {
+            double_clicked_ = true;
+            auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
+            double_click_anchor_start_ = w_start;
+            double_click_anchor_end_ = w_end;
+            selection_start = w_start;
+            cursor_pos = w_end;
+          } else {
+            double_clicked_ = false;
+            selection_start = click_pos;
+            cursor_pos = click_pos;
+          }
+          last_click_time_ = now;
+          last_click_pos_ = click_pos;
+
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
+          ideal_column_ = pos2d.column;
+
+          KeepCursorVisible(root, is_multiline);
+          return true;
+        }
+      } else if (mouse.motion == Event::Mouse::Motion::Moved && is_captured) {
+        if (!root) {
+          return false;
+        }
+        int click_x = mouse.x - 1;
+        int click_y = mouse.y - 1;
+        int abs_x = root->absolute_x();
+        int abs_y = root->absolute_y();
+        int layout_w = root->layout_width();
+        int layout_h = root->layout_height();
 
         int border_offset =
             (root->style.border_style != BorderStyle::None) ? 1 : 0;
         int padding_left = root->style.padding.left;
         int padding_top = root->style.padding.top;
-        int inner_click_x = click_x - abs_x - border_offset - padding_left;
-        int inner_click_y = click_y - abs_y - border_offset - padding_top;
+        int padding_right = root->style.padding.right;
+        int padding_bottom = root->style.padding.bottom;
+
+        int inner_w = layout_w - border_offset * 2 - padding_left - padding_right;
+        int inner_h = layout_h - border_offset * 2 - padding_top - padding_bottom;
+
+        int inner_click_x = std::clamp(click_x - abs_x - border_offset - padding_left, 0, std::max(0, inner_w));
+        int inner_click_y = std::clamp(click_y - abs_y - border_offset - padding_top, 0, std::max(0, inner_h));
 
         int target_col = inner_click_x + root->scroll_x();
         int target_row = is_multiline ? (inner_click_y + root->scroll_y()) : 0;
 
         auto graphemes = GetGraphemesList(value);
-        cursor_pos = is_multiline
+        int click_pos = is_multiline
                          ? GetCursorPosFrom2D(graphemes, target_row, target_col)
                          : GetCursorPositionFromColumn(graphemes, target_col);
+
+        if (double_clicked_) {
+          if (click_pos >= double_click_anchor_end_) {
+            auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
+            selection_start = double_click_anchor_start_;
+            cursor_pos = w_end;
+          } else if (click_pos <= double_click_anchor_start_) {
+            auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
+            selection_start = double_click_anchor_end_;
+            cursor_pos = w_start;
+          } else {
+            selection_start = double_click_anchor_start_;
+            cursor_pos = double_click_anchor_end_;
+          }
+        } else {
+          cursor_pos = click_pos;
+        }
 
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
 
         KeepCursorVisible(root, is_multiline);
+        return true;
+      } else if (mouse.motion == Event::Mouse::Motion::Released && is_captured) {
+        self->ReleaseMouse();
+        if (selection_start == cursor_pos) {
+          selection_start = -1;
+        }
         return true;
       }
     }
@@ -326,11 +475,31 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
       auto graphemes = GetGraphemesList(value);
       int n = static_cast<int>(graphemes.size());
 
+      if (event == Event::CtrlA()) {
+        selection_start = 0;
+        cursor_pos = n;
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        ideal_column_ = pos2d.column;
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
+
       if (kb.special == Event::Keyboard::Special::ArrowLeft) {
-        if (kb.modifier.ctrl || kb.modifier.alt) {
-          cursor_pos = FindWordBoundaryLeft(graphemes, cursor_pos);
+        if (kb.modifier.shift && selection_start == -1) {
+          selection_start = cursor_pos;
+        }
+        if (!kb.modifier.shift && selection_start != -1 && selection_start != cursor_pos && !kb.modifier.ctrl && !kb.modifier.alt) {
+          cursor_pos = std::min(selection_start, cursor_pos);
+          selection_start = -1;
         } else {
-          cursor_pos = std::max(0, cursor_pos - 1);
+          if (!kb.modifier.shift) {
+            selection_start = -1;
+          }
+          if (kb.modifier.ctrl || kb.modifier.alt) {
+            cursor_pos = FindWordBoundaryLeft(graphemes, cursor_pos);
+          } else {
+            cursor_pos = std::max(0, cursor_pos - 1);
+          }
         }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
@@ -338,10 +507,21 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (kb.special == Event::Keyboard::Special::ArrowRight) {
-        if (kb.modifier.ctrl || kb.modifier.alt) {
-          cursor_pos = FindWordBoundaryRight(graphemes, cursor_pos);
+        if (kb.modifier.shift && selection_start == -1) {
+          selection_start = cursor_pos;
+        }
+        if (!kb.modifier.shift && selection_start != -1 && selection_start != cursor_pos && !kb.modifier.ctrl && !kb.modifier.alt) {
+          cursor_pos = std::max(selection_start, cursor_pos);
+          selection_start = -1;
         } else {
-          cursor_pos = std::min(n, cursor_pos + 1);
+          if (!kb.modifier.shift) {
+            selection_start = -1;
+          }
+          if (kb.modifier.ctrl || kb.modifier.alt) {
+            cursor_pos = FindWordBoundaryRight(graphemes, cursor_pos);
+          } else {
+            cursor_pos = std::min(n, cursor_pos + 1);
+          }
         }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
@@ -349,6 +529,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::ArrowUp) {
+        if (kb.modifier.shift && selection_start == -1) {
+          selection_start = cursor_pos;
+        }
+        if (!kb.modifier.shift) {
+          selection_start = -1;
+        }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         cursor_pos =
             GetCursorPosFrom2D(graphemes, pos2d.line - 1, ideal_column_);
@@ -356,6 +542,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::ArrowDown) {
+        if (kb.modifier.shift && selection_start == -1) {
+          selection_start = cursor_pos;
+        }
+        if (!kb.modifier.shift) {
+          selection_start = -1;
+        }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         cursor_pos =
             GetCursorPosFrom2D(graphemes, pos2d.line + 1, ideal_column_);
@@ -363,6 +555,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (kb.special == Event::Keyboard::Special::Home) {
+        if (kb.modifier.shift && selection_start == -1) {
+          selection_start = cursor_pos;
+        }
+        if (!kb.modifier.shift) {
+          selection_start = -1;
+        }
         if (is_multiline) {
           cursor_pos = FindLineStart(graphemes, cursor_pos);
         } else {
@@ -374,6 +572,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (kb.special == Event::Keyboard::Special::End) {
+        if (kb.modifier.shift && selection_start == -1) {
+          selection_start = cursor_pos;
+        }
+        if (!kb.modifier.shift) {
+          selection_start = -1;
+        }
         if (is_multiline) {
           cursor_pos = FindLineEnd(graphemes, cursor_pos);
         } else {
@@ -385,8 +589,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (kb.special == Event::Keyboard::Special::Backspace) {
-        HandleBackspace(graphemes, cursor_pos,
-                        kb.modifier.ctrl || kb.modifier.alt);
+        if (DeleteSelection(graphemes, selection_start, cursor_pos)) {
+          // Selection deleted
+        } else {
+          HandleBackspace(graphemes, cursor_pos,
+                          kb.modifier.ctrl || kb.modifier.alt);
+        }
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
@@ -395,8 +603,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (kb.special == Event::Keyboard::Special::Delete) {
-        HandleDelete(graphemes, cursor_pos,
-                     kb.modifier.ctrl || kb.modifier.alt);
+        if (DeleteSelection(graphemes, selection_start, cursor_pos)) {
+          // Selection deleted
+        } else {
+          HandleDelete(graphemes, cursor_pos,
+                       kb.modifier.ctrl || kb.modifier.alt);
+        }
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
@@ -446,6 +658,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
+        DeleteSelection(graphemes, selection_start, cursor_pos);
+        n = static_cast<int>(graphemes.size());
         std::string character = "\n";
         auto new_graphemes = GetGraphemesList(character);
         if (cursor_pos < 0) {
@@ -468,6 +682,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
       }
       if (kb.special == Event::Keyboard::Special::None && kb.codepoint >= 32 &&
           !kb.modifier.ctrl && !kb.modifier.meta) {
+        DeleteSelection(graphemes, selection_start, cursor_pos);
+        n = static_cast<int>(graphemes.size());
         std::string character = CodePointToString(kb.codepoint);
         auto new_graphemes = GetGraphemesList(character);
         if (cursor_pos < 0) {
@@ -507,25 +723,58 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
   if (cursor_pos > n) {
     cursor_pos = n;
   }
+  if (selection_start < -1) {
+    selection_start = -1;
+  }
+  if (selection_start > n) {
+    selection_start = n;
+  }
 
-  left_text = GraphemesToString(graphemes, 0, cursor_pos);
+  int sel_min = cursor_pos;
+  int sel_max = cursor_pos;
+  if (selection_start != -1 && selection_start != cursor_pos) {
+    sel_min = std::min(selection_start, cursor_pos);
+    sel_max = std::max(selection_start, cursor_pos);
+  }
+
+  left_unselected = GraphemesToString(graphemes, 0, sel_min);
+  left_selected = GraphemesToString(graphemes, sel_min, cursor_pos - sel_min);
+  left_text = left_unselected + left_selected;
+
+  bool cursor_is_newline = false;
   if (cursor_pos < n && (graphemes[cursor_pos].text == "\n" ||
                          graphemes[cursor_pos].text == "\r\n" ||
                          graphemes[cursor_pos].text == "\r")) {
+    cursor_is_newline = true;
+  }
+
+  if (cursor_is_newline) {
     cursor_char = " ";
-    right_text = GraphemesToString(graphemes, cursor_pos);
+    int right_sel_start = cursor_pos;
+    int right_sel_count = std::max(0, sel_max - right_sel_start);
+    right_selected = GraphemesToString(graphemes, right_sel_start, right_sel_count);
+    right_unselected = GraphemesToString(graphemes, right_sel_start + right_sel_count);
   } else {
-    cursor_char =
-        (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
-    right_text = (cursor_pos < n) ? GraphemesToString(graphemes, cursor_pos + 1) : "";
+    cursor_char = (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
+    int right_sel_start = (cursor_pos < n) ? cursor_pos + 1 : n;
+    int right_sel_count = std::max(0, sel_max - right_sel_start);
+    right_selected = GraphemesToString(graphemes, right_sel_start, right_sel_count);
+    right_unselected = GraphemesToString(graphemes, right_sel_start + right_sel_count);
   }
+  right_text = right_selected + right_unselected;
+
+  bool cursor_is_selected = (cursor_pos >= sel_min && cursor_pos < sel_max);
   if (is_focused_) {
-    cursor_class = "cursor cursor-focused";
+    cursor_class = cursor_is_selected ? "cursor cursor-focused selection" : "cursor cursor-focused";
   } else {
-    cursor_class = "cursor";
+    cursor_class = cursor_is_selected ? "cursor selection" : "cursor";
   }
+
+  selection_class_left = left_selected.empty() ? "" : "selection";
+  selection_class_right = right_selected.empty() ? "" : "selection";
 
   return false;
 }
 
 }  // namespace rtxui
+
