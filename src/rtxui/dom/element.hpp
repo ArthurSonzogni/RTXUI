@@ -173,6 +173,12 @@ class Element : public RefCounted {
     }
     return *attributes_;
   }
+  const std::string* GetAttribute(const std::string& name) const {
+    if (!attributes_) return nullptr;
+    auto it = attributes_->find(name);
+    if (it == attributes_->end()) return nullptr;
+    return &it->second;
+  }
 
   // Common properties.
   std::string id;
@@ -181,6 +187,26 @@ class Element : public RefCounted {
   ComputedStyle base_style;
   ComputedStyle target_style;
   ActiveTransitionsMap active_transitions;
+  const ComponentBase* styled_by_1 = nullptr;
+  const ComponentBase* styled_by_2 = nullptr;
+
+  bool IsStyleResolvedFor(const ComponentBase* comp) const {
+    return styled_by_1 == comp || styled_by_2 == comp;
+  }
+  void MarkStyleResolvedFor(const ComponentBase* comp) {
+    if (styled_by_1 == comp || styled_by_2 == comp) {
+      return;
+    }
+    if (!styled_by_1) {
+      styled_by_1 = comp;
+    } else {
+      styled_by_2 = comp;
+    }
+  }
+  void ClearResolvedStyles() {
+    styled_by_1 = nullptr;
+    styled_by_2 = nullptr;
+  }
 
   // Rendering.
   virtual std::string Print(int depth = 0) const;

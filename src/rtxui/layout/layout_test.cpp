@@ -602,9 +602,9 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
   // Row 1: blank row (fixed height, content shorter than 5 rows)
   // Row 2: blank row
   CHECK(layer ==
-        " hello   \n"
-        "         \n"
-        "         \n");
+        "┌────────\n"
+        "│ hello  \n"
+        "│        \n");
 }
 
 TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
@@ -642,10 +642,10 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
   // Row 2: blank row
   // Row 3: blank row
   CHECK(layer ==
-        " foo   \n"
-        " bar   \n"
-        "       \n"
-        "       \n");
+        "┌──────\n"
+        "│ foo  \n"
+        "│ bar  \n"
+        "│      \n");
 }
 
 TEST_CASE("Layout: position absolute and relative", "[layout][position]") {
@@ -880,7 +880,7 @@ TEST_CASE("Layout: Text node in flexbox row regression", "[layout][flex][regress
     CHECK_NOTHROW(RenderComponent(Ref<FlexTextSpanTest>::New(), 20, 1));
   }
 
-  SECTION("Direct text child of flexbox throws layout exception") {
+  SECTION("Direct text child of flexbox does not throw and auto-wraps") {
     struct FlexDirectTextTest : Component<FlexDirectTextTest> {
       std::string_view Setup() {
         Import<div>();
@@ -889,12 +889,12 @@ TEST_CASE("Layout: Text node in flexbox row regression", "[layout][flex][regress
             .row { display: flex; flex-direction: row; }
           </style>
           <div class="row">
-            Invalid direct text
+            Valid direct text
           </div>
         )html";
       }
     };
-    CHECK_THROWS_AS(RenderComponent(Ref<FlexDirectTextTest>::New(), 20, 1), std::runtime_error);
+    CHECK_NOTHROW(RenderComponent(Ref<FlexDirectTextTest>::New(), 20, 1));
   }
 }
 

@@ -400,7 +400,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::Tab) {
+      if (is_multiline && kb.special == Event::Keyboard::Special::Tab) {
         if (kb.modifier.shift) {
           // Unindent: remove a tab or up to 4 spaces at the start of the line
           int line_start = FindLineStart(graphemes, cursor_pos);

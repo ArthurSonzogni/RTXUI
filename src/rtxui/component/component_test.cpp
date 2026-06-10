@@ -2,6 +2,7 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include "rtxui/internal/component.hpp"
+#include "rtxui/paint/color.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -559,13 +560,13 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
 
   // Test Scrolling keeping cursor visible
   input_el->set_layout_width(10);  // total layout width of 10 cells
-  // With no border and 1 cell padding on left and right, inner visible
-  // width is 8.
+  // With 1 cell solid border and 1 cell padding on left and right, inner visible
+  // width is 6.
   input_ptr->value = "1234567890";
   input_ptr->cursor_pos = 9;
   input_ptr->Digest();
-  // cursor_col = 9. scroll_x should adjust to 9 - 8 + 1 = 2.
-  CHECK(input_el->scroll_x() == 2);
+  // cursor_col = 9. scroll_x should adjust to 9 - 6 + 1 = 4.
+  CHECK(input_el->scroll_x() == 4);
 }
 
 TEST_CASE("Input Component Layout Height", "[component]") {
@@ -575,8 +576,8 @@ TEST_CASE("Input Component Layout Height", "[component]") {
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  // The layout height should be 1 cell: no border, content is 1 row of text.
-  CHECK(input_el->layout_height() == 1);
+  // The layout height should be 3 cells: 1 content row + 2 border rows.
+  CHECK(input_el->layout_height() == 3);
 }
 
 TEST_CASE("Input Component State Preservation", "[component]") {
@@ -1899,4 +1900,54 @@ TEST_CASE("Vertical slider layout regression", "[component][slider][layout]") {
     FAIL("Vertical slider should span 5 rows. Output:\n" << output);
   }
   CHECK(rows_with_slider >= 5);
+}
+
+TEST_CASE("Style caching regression test for multi-component resolution", "[component][style]") {
+  struct ChildComp : rtxui::Component<ChildComp> {
+    std::string_view view = R"html(
+        <style>
+          self { color: red; }
+        </style>
+        <slot></slot>
+    )html";
+  };
+
+  struct ParentComp : rtxui::Component<ParentComp> {
+    std::string child_class = "test-child";
+    std::string_view view = R"html(
+        <style>
+          .test-child { background-color: blue; }
+        </style>
+        <div>
+          <child class="{child_class}" id="mychild">Content</child>
+        </div>
+    )html";
+
+    ParentComp() {
+      RegisterState("child_class", &child_class);
+      Import<ChildComp>("child");
+      Import<rtxui::div>();
+    }
+  };
+
+  auto parent = rtxui::Ref<ParentComp>::New();
+  parent->Mount();
+
+  auto* child_el = parent->Root()->QuerySelector("#mychild");
+  REQUIRE(child_el != nullptr);
+
+  // Both parent style (.test-child) and child style (self) should be applied.
+  CHECK(child_el->style.foreground_color.value() == Color::RGB(255, 0, 0));
+  CHECK(child_el->style.background_color.value() == Color::RGB(0, 0, 255));
+
+  // Triggering attribute change to test cache invalidation
+  parent->child_class = "";
+  bool digested = parent->Digest();
+
+  child_el = parent->Root()->QuerySelector("#mychild");
+  REQUIRE(child_el != nullptr);
+
+  // Child style (self) should still apply, but parent class style (.test-child) should be gone.
+  CHECK(child_el->style.foreground_color.value() == Color::RGB(255, 0, 0));
+  CHECK(!child_el->style.background_color.has_value());
 }

@@ -1,31 +1,36 @@
-# RTXUI Design: Reactive Terminal UI
+# Component Reactivity & Change Detection
 
-This document describes the design for RTXUI, a framework for building reactive terminal user interfaces using C++26 reflection.
+RTXUI uses compile-time reflection to bind C++ variables directly into your XML/HTML templates. This provides transparent, type-safe two-way data binding and change detection without the overhead of heavy runtime wrapper libraries.
 
-## 1. Component Model
-In RTXUI, there is only one way to define a component.
- You do not need to choose between a "normal" and a "transparent" component. Every component is "transparent" by default.
+---
+
+## 1. Defining a Reactive Component
+
+Components inherit from `rtxui::Component<YourClass>`. Any standard C++ data member can be registered as reactive state, and `const` member functions serve as computed fields.
 
 ```cpp
-class MyComponent : public rtxui::Component<MyComponent> {
- public:
-  // Standard C++ members are automatically treated as reactive state.
-  int count = 0;
-  std::string label = "Counter";
+#include <rtxui/rtxui.hpp>
 
-  // Standard methods are automatically treated as computed state.
+class CounterComponent : public rtxui::Component<CounterComponent> {
+ public:
+  // State variables
+  int count = 0;
+  std::string label = "Clicks";
+
+  // Computed state
   int double_count() const { return count * 2; }
 
-  // The 'view' field defines the UI structure.
+  // Component layout template
   std::string_view view = R"html(
-    <div class="container">
+    <div class="panel">
       <span>{label}: {count}</span>
-      <span>Double: {double_count}</span>
+      <span>Double count: {double_count}</span>
       <button onclick="count++">Increment</button>
     </div>
   )html";
 
-  MyComponent() {
+  // Register variables and functions for template data-binding
+  CounterComponent() {
     Bind(count);
     Bind(label);
     Bind(double_count);
@@ -33,65 +38,69 @@ class MyComponent : public rtxui::Component<MyComponent> {
 };
 ```
 
-## 2. Why CRTP? (`Component<Derived>`)
-We use the Curiously Recurring Template Pattern (CRTP) for one specific reason: **Reflection access.**
+---
 
-Because `Component` knows the type of the `Derived` class, it can perform compile-time reflection (`std::meta::members_of(^^Derived)`) to discover:
-1.  Which data members exist (`count`, `label`).
-2.  Which methods exist (`double_count`).
-3.  How to bind them to the expressions found in the `view` string.
+## 2. Compile-Time Reflection & Binding
 
-## 3. Implementation: The Snapshot Mechanism
+By inheriting from `rtxui::Component<Derived>` (via the Curiously Recurring Template Pattern), the framework gains type-safe access to your component's fields and methods at compile-time. When you call `Bind(member)`, RTXUI associates the variable with its named expression string inside the template.
 
-To avoid the overhead of "Observables" or "Signals" (which require wrapping every variable), RTXUI uses a **Snapshot** approach:
+---
 
-1.  **Initial Snapshot**: When the component is mounted, the framework takes a bit-for-bit copy of the reactive members and stores them in a internal buffer (e.g., a `std::tuple` or `std::vector<std::any>` generated via reflection).
-2.  **The Digest Cycle**: Whenever an event occurs (a key press, a timer, or a network callback), the framework runs a `Digest()`.
-3.  **Comparison**: The framework reflects over the members again, comparing their current values to the values in the snapshot.
-4.  **Propagation**: 
-    - If `count` has changed, the framework knows exactly which DOM nodes in the `view` depend on `{count}`.
-    - It updates only those specific text nodes or attributes.
-    - It then updates the snapshot to match the new current state.
+## 3. The Change Detection Loop (Snapshot Reactivity)
 
-## 4. Parent-Child Communication: `struct Props`
+To ensure high rendering performance without forcing developers to use custom observable wrappers (like signals or reactive ref types), RTXUI utilizes a highly optimized snapshot-based change detection cycle:
 
-Components can expose reactive input properties (attributes/props) that the parent component can set inside its template view. They are declared in a nested `struct Props` inside the child component class:
+1. **State Snapshot**: When the component is mounted, RTXUI takes a bitwise copy of all bound member fields and stores them in an internal snapshot buffer.
+2. **Digest Cycle**: When an interaction event occurs (such as a keypress, button click, or a thread callback scheduling a task), the main rendering loop runs `Digest()`.
+3. **Optimized Comparison**: The engine performs quick member-by-member comparisons between current runtime state and the snapshot.
+4. **Targeted DOM Updates**: If a state change is detected:
+    * The engine determines precisely which nodes in the DOM tree depend on that specific state variable.
+    * Only those affected text elements or styling attributes are updated and scheduled for repainting.
+    * The snapshot buffer is updated to match the new state.
 
+---
+
+## 4. Parent-Child Communication (Component Properties)
+
+To pass properties (or "props") from a parent component down to a child, declare a public nested structure named `Props` inside the child class.
+
+### Child Definition
 ```cpp
-class MyChild : public rtxui::Component<MyChild> {
+class TodoItem : public rtxui::Component<TodoItem> {
  public:
   struct Props {
-    std::string title;
-    int count = 0;
+    std::string task_text;
+    bool completed = false;
   } props;
 
   std::string_view view = R"html(
-    <div>Title: {props.title}, Count: {props.count}</div>
+    <div class="todo-row">
+      <span class="{props.completed ? 'done' : ''}">{props.task_text}</span>
+    </div>
   )html";
 
-  MyChild() {
-    Bind(props.title);
-    Bind(props.count);
+  TodoItem() {
+    Bind(props.task_text);
+    Bind(props.completed);
   }
 };
 ```
 
-The parent component can pass these attributes in its template view:
+### Parent Usage
+The parent component can pass dynamic expressions directly to the child's properties in its template:
+
 ```html
-<MyChild props.title="{parent_title}" props.count="{parent_count}" />
-<!-- Or using the short name syntax: -->
-<MyChild title="{parent_title}" count="{parent_count}" />
+<TodoItem props.task_text="{item.text}" props.completed="{item.done}" />
+<!-- Shorthand syntax is also supported: -->
+<TodoItem task_text="{item.text}" completed="{item.done}" />
 ```
 
 During parent rendering:
-1. The parent interpolates the attribute values in the parent's context.
-2. The values are mapped to the child component's `props` member variables (using type-safe parsing from string).
-3. The child component is re-rendered to propagate changes.
+1. The parent evaluates the bound expressions in the parent component's context.
+2. The evaluated values are parsed, typed, and mapped directly to the child component's `props` member variables.
+3. The child's change detection detects the updated props and refreshes the child view.
 
-## 5. Benefits of a Single Class
-- **Simplicity**: No need to decide which base class to use.
-- **Zero Boilerplate**: You write a standard C++ class. The framework handles the "magic" of connecting it to the UI.
-- **Performance**: Reflection happens at compile-time. At runtime, the framework only performs a few comparisons to see if anything changed.
+---
 
 <ExampleTabs src="/wasm/rtxui_example_demo.js">
 <template #source>
@@ -100,4 +109,3 @@ During parent rendering:
 
 </template>
 </ExampleTabs>
-
