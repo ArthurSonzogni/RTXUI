@@ -7,16 +7,23 @@ namespace rtxui {
 
 void textarea::InitReflection() {
   Bind(value);
+  Bind(selection_start);
   Bind(left_text);
   Bind(cursor_char);
   Bind(right_text);
   Bind(cursor_class);
+  Bind(left_unselected);
+  Bind(left_selected);
+  Bind(right_selected);
+  Bind(right_unselected);
+  Bind(selection_class_left);
+  Bind(selection_class_right);
   Component<textarea>::InitReflection();
 }
 
 std::string_view textarea::Setup() {
   return R"html(
-    <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
+    <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span>
     <style>
       self {
         display: block;
@@ -43,6 +50,9 @@ std::string_view textarea::Setup() {
       }
       .cursor-focused {
         background-color: transparent;
+      }
+      .selection {
+        background-color: lighten(20%);
       }
     </style>
   )html";
