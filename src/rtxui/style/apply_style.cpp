@@ -227,6 +227,75 @@ std::optional<Color> ParseColor(std::string_view value) {
   return std::nullopt;
 }
 
+std::optional<Color> TransformColor(std::optional<Color> current, std::string_view v) {
+  while (!v.empty() && std::isspace(static_cast<unsigned char>(v.front()))) {
+    v.remove_prefix(1);
+  }
+  while (!v.empty() && std::isspace(static_cast<unsigned char>(v.back()))) {
+    v.remove_suffix(1);
+  }
+
+  if (v.starts_with("lighten(") && v.back() == ')') {
+    std::string_view amount_str = v.substr(8, v.size() - 9);
+    float amount = 0.0f;
+    if (amount_str.ends_with('%')) {
+      amount = StoF(amount_str.substr(0, amount_str.size() - 1)) / 100.0f;
+    } else {
+      amount = StoF(amount_str);
+    }
+    if (current.has_value()) {
+      Color c = *current;
+      uint8_t new_r = std::min(255.0f, c.r + 255.0f * amount);
+      uint8_t new_g = std::min(255.0f, c.g + 255.0f * amount);
+      uint8_t new_b = std::min(255.0f, c.b + 255.0f * amount);
+      return Color::RGBA(new_r, new_g, new_b, c.a);
+    } else {
+      uint8_t alpha = std::clamp(amount * 255.0f, 0.0f, 255.0f);
+      return Color::RGBA(255, 255, 255, alpha);
+    }
+  }
+
+  if (v.starts_with("darken(") && v.back() == ')') {
+    std::string_view amount_str = v.substr(7, v.size() - 8);
+    float amount = 0.0f;
+    if (amount_str.ends_with('%')) {
+      amount = StoF(amount_str.substr(0, amount_str.size() - 1)) / 100.0f;
+    } else {
+      amount = StoF(amount_str);
+    }
+    if (current.has_value()) {
+      Color c = *current;
+      uint8_t new_r = std::max(0.0f, c.r - 255.0f * amount);
+      uint8_t new_g = std::max(0.0f, c.g - 255.0f * amount);
+      uint8_t new_b = std::max(0.0f, c.b - 255.0f * amount);
+      return Color::RGBA(new_r, new_g, new_b, c.a);
+    } else {
+      uint8_t alpha = std::clamp(amount * 255.0f, 0.0f, 255.0f);
+      return Color::RGBA(0, 0, 0, alpha);
+    }
+  }
+
+  if (v.starts_with("alpha(") && v.back() == ')') {
+    std::string_view amount_str = v.substr(6, v.size() - 7);
+    float amount = 0.0f;
+    if (amount_str.ends_with('%')) {
+      amount = StoF(amount_str.substr(0, amount_str.size() - 1)) / 100.0f;
+    } else {
+      amount = StoF(amount_str);
+    }
+    if (current.has_value()) {
+      Color c = *current;
+      uint8_t alpha = std::clamp(amount * 255.0f, 0.0f, 255.0f);
+      return Color::RGBA(c.r, c.g, c.b, alpha);
+    } else {
+      uint8_t alpha = std::clamp(amount * 255.0f, 0.0f, 255.0f);
+      return Color::RGBA(255, 255, 255, alpha);
+    }
+  }
+
+  return ParseColor(v);
+}
+
 Length ParseLength(std::string_view value) {
   if (value.back() == '%') {
     value.remove_suffix(1);
@@ -406,12 +475,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "background-color") {
-    style.background_color = ParseColor(v);
+    style.background_color = TransformColor(style.background_color, v);
     return;
   }
 
   if (p == "color" || p == "foreground-color") {
-    style.foreground_color = ParseColor(v);
+    style.foreground_color = TransformColor(style.foreground_color, v);
     return;
   }
 
@@ -633,31 +702,30 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "border-color") {
-    auto color = ParseColor(v);
-    style.border_color_top = color;
-    style.border_color_right = color;
-    style.border_color_bottom = color;
-    style.border_color_left = color;
+    style.border_color_top = TransformColor(style.border_color_top, v);
+    style.border_color_right = TransformColor(style.border_color_right, v);
+    style.border_color_bottom = TransformColor(style.border_color_bottom, v);
+    style.border_color_left = TransformColor(style.border_color_left, v);
     return;
   }
 
   if (p == "border-color-top") {
-    style.border_color_top = ParseColor(v);
+    style.border_color_top = TransformColor(style.border_color_top, v);
     return;
   }
 
   if (p == "border-color-right") {
-    style.border_color_right = ParseColor(v);
+    style.border_color_right = TransformColor(style.border_color_right, v);
     return;
   }
 
   if (p == "border-color-bottom") {
-    style.border_color_bottom = ParseColor(v);
+    style.border_color_bottom = TransformColor(style.border_color_bottom, v);
     return;
   }
 
   if (p == "border-color-left") {
-    style.border_color_left = ParseColor(v);
+    style.border_color_left = TransformColor(style.border_color_left, v);
     return;
   }
 

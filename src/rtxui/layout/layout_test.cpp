@@ -598,13 +598,13 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
   }
   std::string layer = GetTextLayer(texture);
   INFO("Actual render: [" << layer << "]");
-  // Row 0: content with padding:  " hello  " (padding-left=1, then text, spaces)
+  // Row 0: content with padding:  " hello   " (padding-left=1, then text, spaces)
   // Row 1: blank row (fixed height, content shorter than 5 rows)
   // Row 2: blank row
   CHECK(layer ==
-        "┌────────\n"
-        "│ hello  \n"
-        "│        \n");
+        " hello   \n"
+        "         \n"
+        "         \n");
 }
 
 TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
@@ -642,10 +642,10 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
   // Row 2: blank row
   // Row 3: blank row
   CHECK(layer ==
-        "┌──────\n"
-        "│ foo  \n"
-        "│ bar  \n"
-        "│      \n");
+        " foo   \n"
+        " bar   \n"
+        "       \n"
+        "       \n");
 }
 
 TEST_CASE("Layout: position absolute and relative", "[layout][position]") {

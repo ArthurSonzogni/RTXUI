@@ -560,13 +560,12 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
 
   // Test Scrolling keeping cursor visible
   input_el->set_layout_width(10);  // total layout width of 10 cells
-  // With 1 cell solid border and 1 cell padding on left and right, inner visible
-  // width is 6.
+  // With no border and 1 cell padding on left and right, inner visible width is 8.
   input_ptr->value = "1234567890";
   input_ptr->cursor_pos = 9;
   input_ptr->Digest();
-  // cursor_col = 9. scroll_x should adjust to 9 - 6 + 1 = 4.
-  CHECK(input_el->scroll_x() == 4);
+  // cursor_col = 9. scroll_x should adjust to 9 - 8 + 1 = 2.
+  CHECK(input_el->scroll_x() == 2);
 }
 
 TEST_CASE("Input Component Layout Height", "[component]") {
@@ -576,8 +575,8 @@ TEST_CASE("Input Component Layout Height", "[component]") {
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  // The layout height should be 3 cells: 1 content row + 2 border rows.
-  CHECK(input_el->layout_height() == 3);
+  // The layout height should be 1 cell (no borders).
+  CHECK(input_el->layout_height() == 1);
 }
 
 TEST_CASE("Input Component State Preservation", "[component]") {

@@ -18,15 +18,15 @@ void progress::InitReflection() {
 }
 
 std::string_view progress::Setup() {
-  return R"html(<span class="filled">{filled_track}</span><span class="empty">{empty_track}</span><style>
+  return R"html(<span class="filled">{filled_track}</span><span class="empty">{empty_track}</span>    <style>
       self {
         display: inline-block;
       }
       .filled {
-        color: #38bdf8;
+        opacity: 1.0;
       }
       .empty {
-        color: #444;
+        opacity: 0.35;
       }
     </style>)html";
 }

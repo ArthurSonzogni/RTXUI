@@ -10,22 +10,24 @@ const std::string_view button::view = R"html(
     <style>
       self { 
         display: inline-block; 
-        border: tall;
         padding-left: 1;
         padding-right: 1;
         cursor: pointer;
-        transition: background-color 0.1s linear;
+        background-color: lighten(10%);
+        opacity: 0.8;
+        transition: background-color 0.1s linear, opacity 0.1s linear;
       }
       self:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: lighten(18%);
+        opacity: 0.9;
       }
       self:focus {
-        background-color: rgba(255, 255, 255, 0.2);
-        border-color: #38bdf8;
-        color: #fff;
+        background-color: lighten(28%);
+        opacity: 1.0;
       }
       self:active {
-        background-color: rgba(255, 255, 255, 0.3);
+        background-color: lighten(40%);
+        opacity: 1.0;
       }
     </style>
   )html";

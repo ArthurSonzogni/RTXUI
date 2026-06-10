@@ -20,6 +20,10 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `padding-right` | [`<integer>`](#value-types) | ❌ | Internal horizontal padding at the right. |
 | `width` | [`<length>`](#value-types) |   | Constrains element layout width. |
 | `height` | [`<length>`](#value-types) |   | Constrains element layout height. |
+| `min-width` | [`<length>`](#value-types) | ❌ | Minimum layout width constraint. |
+| `max-width` | [`<length>`](#value-types) | ❌ | Maximum layout width constraint. |
+| `min-height` | [`<length>`](#value-types) | ❌ | Minimum layout height constraint. |
+| `max-height` | [`<length>`](#value-types) | ❌ | Maximum layout height constraint. |
 
 ---
 
@@ -35,10 +39,10 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `border-right` | [`<integer>`](#value-types) | ❌ | Right border frame thickness. |
 | `border-style` | [`<border-style>`](#border-styles) | ❌ | Character set mapping style of the frame. |
 | `border-color` | [`<color>`](#colors) |   | Color of all border frame lines. |
-| `border-top-color` | [`<color>`](#colors) |   | Color of the top border line. |
-| `border-bottom-color` | [`<color>`](#colors) |   | Color of the bottom border line. |
-| `border-left-color` | [`<color>`](#colors) |   | Color of the left border line. |
-| `border-right-color` | [`<color>`](#colors) |   | Color of the right border line. |
+| `border-color-top` | [`<color>`](#colors) |   | Color of the top border line. |
+| `border-color-bottom` | [`<color>`](#colors) |   | Color of the bottom border line. |
+| `border-color-left` | [`<color>`](#colors) |   | Color of the left border line. |
+| `border-color-right` | [`<color>`](#colors) |   | Color of the right border line. |
 
 ---
 
@@ -47,12 +51,16 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | Property | Value Type | Animatable | Description |
 | :--- | :--- | :---: | :--- |
 | `color` | [`<color>`](#colors) |   | Foreground text character color. |
+| `foreground-color` | [`<color>`](#colors) |   | Alias for `color`. |
 | `background-color` | [`<color>`](#colors) |   | Background block container cell color. |
 | `opacity` | [`<number>`](#value-types) |   | Transparency value (`0.0` for transparent to `1.0` for opaque). |
 | `text-align` | `left \| right \| center` | ❌ | Horizontal alignment of inline text flows. |
 | `white-space` | `normal \| nowrap` | ❌ | `nowrap` disables text wrapping. |
 | `font-weight` | `bold \| normal` | ❌ | Applies bold styling to text. |
 | `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
+| `text-overflow` | `clip \| ellipsis` | ❌ | Behavior when text overflows its block container. |
+| `visibility` | `visible \| hidden` | ❌ | Controls element visibility. |
+| `cursor` | `default \| pointer` | ❌ | Determines mouse pointer styling when hovering. |
 
 ---
 
@@ -64,6 +72,9 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `flex-direction` | `row \| column` | ❌ | Main formatting axis direction. |
 | `flex-grow` | [`<number>`](#value-types) |   | Portion of free space item claims along main axis. |
 | `flex-shrink` | [`<number>`](#value-types) |   | Factor determining how much item shrinks. |
+| `align-items` | `stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of items along the cross axis. |
+| `justify-content` | `flex-start \| flex-end \| center \| space-between \| space-around \| space-evenly` | ❌ | Alignment of items along the main axis. |
+| `gap` | [`<length>`](#value-types) | ❌ | Spacing between flex items. |
 
 ---
 
@@ -116,6 +127,10 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 *   **Hex Codes**: `#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA` (e.g., `#f0f`, `#00ff0088`).
 *   **RGB/RGBA**: `rgb(R, G, B)` and `rgba(R, G, B, A)` where color channels range from 0-255, and Alpha ranges 0.0-1.0.
 *   **Keywords**: `black`, `silver`, `gray`, `white`, `maroon`, `red`, `purple`, `fuchsia`, `green`, `lime`, `olive`, `yellow`, `navy`, `blue`, `teal`, `aqua`.
+*   **Transformations**:
+    *   `lighten(<amount>)`: Lightens the current resolved color (e.g., `lighten(10%)` or `lighten(0.1)`). If no color has been resolved for the element, falls back to a transparent white overlay (`rgba(255, 255, 255, amount)`).
+    *   `darken(<amount>)`: Darkens the current resolved color (e.g., `darken(15%)` or `darken(0.15)`). If no color has been resolved, falls back to a transparent black overlay (`rgba(0, 0, 0, amount)`).
+    *   `alpha(<amount>)`: Sets the alpha transparency of the current resolved color to the specified amount (e.g., `alpha(50%)` or `alpha(0.5)`).
 
 ### Border Styles
 *   `none`, `solid`, `dashed`, `dotted`, `heavy`, `double`, `round`, `wide`, `tall`, `ascii`, `blank`, `shadow`, `shade-light` (`░`), `shade-medium` (`▒`), `shade-dark` (`▓`), `squiggle`, `double-horizontal`, `double-vertical`, `hkey`, `vkey`, `inner`, `outer`, `panel`.
