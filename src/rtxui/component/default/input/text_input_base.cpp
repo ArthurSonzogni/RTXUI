@@ -217,6 +217,10 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
   int cursor_line = pos2d.line;
   int cursor_col = pos2d.column;
 
+  int cursor_width = (cursor_pos < static_cast<int>(current_graphemes.size()))
+                         ? std::max(1, current_graphemes[cursor_pos].width)
+                         : 1;
+
   int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
 
   // Horizontal Scroll
@@ -231,8 +235,8 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
     int curr_scroll_x = root->scroll_x();
     if (cursor_col < curr_scroll_x) {
       root->set_scroll_x(cursor_col);
-    } else if (cursor_col >= curr_scroll_x + visible_width) {
-      root->set_scroll_x(cursor_col - visible_width + 1);
+    } else if (cursor_col + cursor_width > curr_scroll_x + visible_width) {
+      root->set_scroll_x(cursor_col + cursor_width - visible_width);
     }
   }
 
