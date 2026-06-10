@@ -623,6 +623,29 @@ bool Element::TickTransitions(double current_time_ms) {
 
       if (t >= 1.0f) {
         to_remove.push_back(prop_name);
+        if (prop_name == "background-color") {
+          style.background_color = target_style.background_color;
+        } else if (prop_name == "color" || prop_name == "foreground-color") {
+          style.foreground_color = target_style.foreground_color;
+        } else if (prop_name == "border-top-color") {
+          style.border_color_top = target_style.border_color_top;
+        } else if (prop_name == "border-right-color") {
+          style.border_color_right = target_style.border_color_right;
+        } else if (prop_name == "border-bottom-color") {
+          style.border_color_bottom = target_style.border_color_bottom;
+        } else if (prop_name == "border-left-color") {
+          style.border_color_left = target_style.border_color_left;
+        } else if (prop_name == "width") {
+          style.width = target_style.width;
+        } else if (prop_name == "height") {
+          style.height = target_style.height;
+        } else if (prop_name == "flex-grow") {
+          style.flex_grow = target_style.flex_grow;
+        } else if (prop_name == "flex-shrink") {
+          style.flex_shrink = target_style.flex_shrink;
+        } else if (prop_name == "opacity") {
+          style.opacity = target_style.opacity;
+        }
       }
     }
 
