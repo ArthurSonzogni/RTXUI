@@ -45,7 +45,7 @@ std::string_view select::Setup() {
         padding-left: 1;
         padding-right: 1;
         cursor: pointer;
-        transition: all 0.1s linear;
+        transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear;
       }
       self:hover .select-btn {
         background-color: #334155;
