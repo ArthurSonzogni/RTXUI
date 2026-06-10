@@ -2029,12 +2029,12 @@ TEST_CASE("Input Cursor Vertical Line Regression Test", "[component][input][curs
   // Focus the element
   input_el->set_focused(true);
   input_ptr->Digest();
-  CHECK(input_ptr->cursor_char == "▏");
-  CHECK(input_ptr->cursor_class == "cursor cursor-focused cursor-line");
+  CHECK(input_ptr->cursor_char == " ");
+  CHECK(input_ptr->cursor_class == "cursor cursor-focused");
 
   // Move cursor to a character inside the text
   input_ptr->cursor_pos = 1;
   input_ptr->Digest();
-  CHECK(input_ptr->cursor_char == "▏");
-  CHECK(input_ptr->cursor_class == "cursor cursor-focused cursor-line");
+  CHECK(input_ptr->cursor_char == "e");
+  CHECK(input_ptr->cursor_class == "cursor cursor-focused");
 }

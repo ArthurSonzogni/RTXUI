@@ -43,14 +43,7 @@ std::string_view textarea::Setup() {
         background-color: transparent;
       }
       .cursor-focused {
-        background-color: #fff;
-        color: #000;
-        text-decoration: blink;
-      }
-      .cursor-focused.cursor-line {
         background-color: transparent;
-        color: #fff;
-        text-decoration: blink;
       }
     </style>
   )html";
