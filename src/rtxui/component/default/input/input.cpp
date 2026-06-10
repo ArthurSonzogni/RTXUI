@@ -19,7 +19,7 @@ std::string_view input::Setup() {
     <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
     <style>
       self {
-        display: inline flex;
+        display: inline-flex;
         flex-direction: row;
         width: 20;
         padding-left: 1;

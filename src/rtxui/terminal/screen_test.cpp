@@ -2072,5 +2072,81 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
   CHECK_FALSE(other->focused());
 }
 
+TEST_CASE("Transitions.NulloptTargetReverts", "[terminal][transitions][regression]") {
+  struct ClockRestorer {
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
+  } restorer;
+
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class TransitionTestComponent : public Component<TransitionTestComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<TransitionTestComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="btn">Click me</div>
+      <style>
+        #btn {
+          background-color: #000000;
+          transition: color 1s linear;
+        }
+        #btn:focus {
+          color: #ffffff;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<TransitionTestComponent>::New();
+  Screen screen(component, device);
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+
+  // 1. Initial style: color is std::nullopt
+  CHECK_FALSE(btn->style.foreground_color.has_value());
+  CHECK(btn->active_transitions.empty());
+
+  // 2. Focus the button
+  btn->set_focused(true);
+  component->ResolveTargetStyles();
+
+  // Active transitions should have color
+  REQUIRE(btn->active_transitions.count("color") == 1);
+
+  // Still nullopt at progress = 0 (t = 1000ms) but is actively transitioning
+  screen.Step();
+  // Wait, start value of transition will be transparent/interpolated, so it has a value during transition
+  CHECK(btn->style.foreground_color.has_value());
+
+  // Advance to 2000ms (100% progress)
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(btn->style.foreground_color == Color::RGB(255, 255, 255));
+  CHECK(btn->active_transitions.empty());
+
+  // 3. Unfocus the button
+  btn->set_focused(false);
+  component->ResolveTargetStyles();
+
+  // Active transitions should have color again
+  REQUIRE(btn->active_transitions.count("color") == 1);
+
+  // Advance to 3000ms (100% progress)
+  mock_now_ms = 3000.0;
+  screen.Step();
+
+  // Transition is complete, active_transitions should be empty
+  CHECK(btn->active_transitions.empty());
+  // The foreground_color MUST have reverted back to std::nullopt
+  CHECK_FALSE(btn->style.foreground_color.has_value());
+}
+
 }  // namespace
 }  // namespace rtxui
