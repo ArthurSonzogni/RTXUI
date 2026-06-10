@@ -925,6 +925,30 @@ void ScreenImpl::Draw() {
 
   device_->Write(new_output);
 
+  Element* cursor_element = nullptr;
+  if (root) {
+    std::function<void(Element*)> FindCursor = [&](Element* el) {
+      if (!el) return;
+      if (std::find(el->classes.begin(), el->classes.end(), "cursor-focused") != el->classes.end()) {
+        cursor_element = el;
+        return;
+      }
+      for (size_t i = 0; i < el->ChildCount(); ++i) {
+        FindCursor(el->ChildAt(i));
+        if (cursor_element) return;
+      }
+    };
+    FindCursor(root);
+  }
+
+  if (cursor_element) {
+    int cx = cursor_element->absolute_x() + 1;
+    int cy = cursor_element->absolute_y() + 1;
+    device_->Write("\x1b[?25h\x1b[5 q\x1b[" + std::to_string(cy) + ";" + std::to_string(cx) + "H");
+  } else {
+    device_->Write("\x1b[?25l");
+  }
+
   if (use_diff) {
     last_height_ = height_ - 1;
   } else {
