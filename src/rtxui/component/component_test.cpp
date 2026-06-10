@@ -2038,3 +2038,196 @@ TEST_CASE("Input Cursor Vertical Line Regression Test", "[component][input][curs
   CHECK(input_ptr->cursor_char == "e");
   CHECK(input_ptr->cursor_class == "cursor cursor-focused");
 }
+
+class SmallInput : public rtxui::Component<SmallInput>, public rtxui::TextInputBase {
+ public:
+  void InitReflection() override {
+    rtxui::Component<SmallInput>::InitReflection();
+  }
+  std::string_view Setup() override {
+    return R"html(
+      <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
+      <style>
+        self {
+          display: inline-flex;
+          flex-direction: row;
+          width: 5;
+          padding-left: 1;
+          padding-right: 1;
+          overflow-x: scroll;
+          scrollbar-width: none;
+          white-space: nowrap;
+          background-color: #1e293b;
+          border: solid;
+          border-color: #334155;
+        }
+        .cursor {
+          background-color: transparent;
+        }
+        .cursor-focused {
+          background-color: transparent;
+        }
+      </style>
+    )html";
+  }
+  bool OnEvent(Event event) override {
+    return OnEventShared(this, event, false);
+  }
+  bool Digest() override {
+    DigestShared(this);
+    return Component<SmallInput>::Digest();
+  }
+};
+
+class SmallInputTestComponent : public rtxui::Component<SmallInputTestComponent> {
+ public:
+  std::string my_text = "";
+  void InitReflection() override {
+    Bind(my_text);
+    Import<SmallInput>();
+    rtxui::Component<SmallInputTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <SmallInput value="{my_text}" />
+  )";
+};
+
+class SmallTextarea : public rtxui::Component<SmallTextarea>, public rtxui::TextInputBase {
+ public:
+  void InitReflection() override {
+    rtxui::Component<SmallTextarea>::InitReflection();
+  }
+  std::string_view Setup() override {
+    return R"html(
+      <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
+      <style>
+        self {
+          display: block;
+          width: 5;
+          height: 3;
+          padding-left: 1;
+          padding-right: 1;
+          overflow-y: scroll;
+          scrollbar-width: none;
+          white-space: pre-wrap;
+          background-color: #1e293b;
+          border: solid;
+          border-color: #334155;
+        }
+        .cursor {
+          background-color: transparent;
+        }
+        .cursor-focused {
+          background-color: transparent;
+        }
+      </style>
+    )html";
+  }
+  bool OnEvent(Event event) override {
+    return OnEventShared(this, event, true);
+  }
+  bool Digest() override {
+    DigestShared(this);
+    return Component<SmallTextarea>::Digest();
+  }
+};
+
+class SmallTextareaTestComponent : public rtxui::Component<SmallTextareaTestComponent> {
+ public:
+  std::string my_text = "";
+  void InitReflection() override {
+    Bind(my_text);
+    Import<SmallTextarea>();
+    rtxui::Component<SmallTextareaTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <SmallTextarea value="{my_text}" />
+  )";
+};
+
+TEST_CASE("Input Scrolling Regression Test", "[component][input][scroll][regression]") {
+  auto container = rtxui::Ref<SmallInputTestComponent>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  rtxui::Screen screen(container, device);
+
+  auto* input_el = container->Root()->QuerySelector("SmallInput");
+  REQUIRE(input_el != nullptr);
+
+  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
+  REQUIRE(input_comp != nullptr);
+
+  auto* input_ptr = dynamic_cast<SmallInput*>(input_comp);
+  REQUIRE(input_ptr != nullptr);
+
+  screen.Draw();
+  CHECK(input_el->layout_width() == 5);
+
+  // Clear value to start empty
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+
+  // Focus to accept keyboard events
+  input_el->set_focused(true);
+
+  // Type characters to overflow
+  screen.Dispatch(Event::Keyboard::From('a'));
+  screen.Dispatch(Event::Keyboard::From('b'));
+  screen.Dispatch(Event::Keyboard::From('c'));
+  screen.Dispatch(Event::Keyboard::From('d'));
+  screen.Draw();
+
+  // Scroll offset should have increased to keep the cursor visible
+  CHECK(input_el->scroll_x() > 0);
+
+  // Press ArrowLeft multiple times to move cursor back to beginning
+  screen.Dispatch(Event::ArrowLeft());
+  screen.Dispatch(Event::ArrowLeft());
+  screen.Dispatch(Event::ArrowLeft());
+  screen.Dispatch(Event::ArrowLeft());
+  screen.Draw();
+
+  // Scroll offset should have reverted to 0
+  CHECK(input_el->scroll_x() == 0);
+}
+
+TEST_CASE("Textarea Scrolling Regression Test", "[component][textarea][scroll][regression]") {
+  auto container = rtxui::Ref<SmallTextareaTestComponent>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  rtxui::Screen screen(container, device);
+
+  auto* ta_el = container->Root()->QuerySelector("SmallTextarea");
+  REQUIRE(ta_el != nullptr);
+
+  auto* ta_comp = const_cast<rtxui::ComponentBase*>(ta_el->component());
+  REQUIRE(ta_comp != nullptr);
+
+  auto* ta_ptr = dynamic_cast<SmallTextarea*>(ta_comp);
+  REQUIRE(ta_ptr != nullptr);
+
+  screen.Draw();
+  CHECK(ta_el->layout_height() == 3);
+
+  // Clear value to start empty
+  ta_ptr->value = "";
+  ta_ptr->cursor_pos = 0;
+
+  // Focus to accept keyboard events
+  ta_el->set_focused(true);
+
+  // Press Return multiple times to create new lines and overflow vertically
+  screen.Dispatch(Event::Return());
+  screen.Dispatch(Event::Return());
+  screen.Dispatch(Event::Return());
+  screen.Draw();
+
+  // Scroll offset should have increased vertically
+  CHECK(ta_el->scroll_y() > 0);
+
+  // Press ArrowUp multiple times to move cursor back to beginning
+  screen.Dispatch(Event::ArrowUp());
+  screen.Dispatch(Event::ArrowUp());
+  screen.Dispatch(Event::ArrowUp());
+  screen.Draw();
+
+  CHECK(ta_el->scroll_y() == 0);
+}
