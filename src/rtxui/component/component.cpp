@@ -313,6 +313,28 @@ void RestoreElementStates(
   }
 }
 
+void RestoreElementFocusHoverActive(
+    Element* el,
+    ElementPath& path,
+    const std::vector<std::pair<ElementPath, ElementState>>& states) {
+  if (!el) {
+    return;
+  }
+  for (const auto& pair : states) {
+    if (pair.first == path) {
+      el->set_focused(pair.second.focused);
+      el->set_hovered(pair.second.hovered);
+      el->set_active(pair.second.active);
+      break;
+    }
+  }
+  for (size_t i = 0; i < el->ChildCount(); ++i) {
+    path.push_back(static_cast<int>(i));
+    RestoreElementFocusHoverActive(el->ChildAt(i), path, states);
+    path.pop_back();
+  }
+}
+
 
 std::string Interpolate(std::string_view text,
                         ComponentBase* source,
@@ -548,7 +570,6 @@ bool MatchPseudos(const Element* element, const std::vector<std::string>& pseudo
 
 void ResolveStylesRecursive(Element* element,
                              const ComponentBase* component,
-                             const std::unique_ptr<css::StyleSheet>& stylesheet,
                              bool check_pseudos) {
   if (!element || !component || !component->categorized_rules()) {
     return;
@@ -665,7 +686,7 @@ recurse:
   }
 
   for (size_t i = 0; i < element->ChildCount(); ++i) {
-    ResolveStylesRecursive(element->ChildAt(i), component, stylesheet,
+    ResolveStylesRecursive(element->ChildAt(i), component,
                            check_pseudos);
   }
 }
@@ -831,7 +852,15 @@ void ComponentBase::Render() {
     children_.insert(comp);
   }
 
-  ResolveStylesRecursive(root_.get(), this, stylesheet_, false);
+  if (root_) {
+    ElementPath path;
+    RestoreElementFocusHoverActive(root_.get(), path, saved_states);
+  }
+
+  ResolveStylesRecursive(root_.get(), this, false);
+  if (root_ && root_->owner_component() && root_->owner_component() != this) {
+    ResolveStylesRecursive(root_.get(), root_->owner_component(), false);
+  }
 
   auto CopyBaseStyles = [&](auto& self, Element* element) -> void {
     if (element) {
@@ -890,20 +919,26 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
   };
   ResetTarget(ResetTarget, root_.get());
 
-  auto ResolveAll = [](auto& self, ComponentBase* comp) -> void {
+  auto ResolveAll = [](auto& self, ComponentBase* comp, ComponentBase* root_comp) -> void {
     if (!comp || !comp->Root()) {
       return;
     }
     // Optimization: Skip resolving target styles if the component stylesheet has no
     // pseudo-classes (hover, active, focus). Yields ~18% speedup in DOM Digest.
     if (comp->categorized_rules() && comp->categorized_rules()->has_pseudo_classes) {
-      ResolveStylesRecursive(comp->Root(), comp, comp->stylesheet_, true);
+      ResolveStylesRecursive(comp->Root(), comp, true);
+    }
+    if (comp == root_comp && comp->Root()->owner_component() && comp->Root()->owner_component() != comp) {
+      const ComponentBase* owner = comp->Root()->owner_component();
+      if (owner->categorized_rules() && owner->categorized_rules()->has_pseudo_classes) {
+        ResolveStylesRecursive(comp->Root(), owner, true);
+      }
     }
     for (auto& child : comp->children_) {
-      self(self, child.get());
+      self(self, child.get(), root_comp);
     }
   };
-  ResolveAll(ResolveAll, this);
+  ResolveAll(ResolveAll, this, this);
 
   auto TriggerAll = [](auto& self, Element* element, double current_time_ms) -> void {
     if (element) {
@@ -972,12 +1007,30 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               text_el->set_text(std::string(child_node.text));
             }
           } else {
-            auto text_el = Ref<TextElement>::New(std::string(child_node.text));
-            text_el->set_owner_component(import_source);
-            if (child_idx < slot->ChildCount()) {
-              slot->ReplaceChild(child_idx, text_el);
+            // Look ahead for a text element
+            size_t match_idx = -1;
+            for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
+              if (slot->ChildAt(i)->is_text()) {
+                match_idx = i;
+                break;
+              }
+            }
+            Ref<Element> text_el;
+            if (match_idx != -1) {
+              slot->MoveChild(match_idx, child_idx);
+              text_el = slot->children()[child_idx];
+              auto* t_el = static_cast<TextElement*>(text_el.get());
+              if (t_el->text() != child_node.text) {
+                t_el->set_text(std::string(child_node.text));
+              }
             } else {
-              slot->AddChild(text_el);
+              text_el = Ref<TextElement>::New(std::string(child_node.text));
+              text_el->set_owner_component(import_source);
+              if (child_idx < slot->ChildCount()) {
+                slot->ReplaceChild(child_idx, text_el);
+              } else {
+                slot->AddChild(text_el);
+              }
             }
           }
           child_idx++;
@@ -1012,12 +1065,30 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             text_el->set_text(text);
           }
         } else {
-          auto text_el = Ref<TextElement>::New(text);
-          text_el->set_owner_component(import_source);
-          if (child_idx < slot->ChildCount()) {
-            slot->ReplaceChild(child_idx, text_el);
+          // Look ahead for a text element
+          size_t match_idx = -1;
+          for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
+            if (slot->ChildAt(i)->is_text()) {
+              match_idx = i;
+              break;
+            }
+          }
+          Ref<Element> text_el;
+          if (match_idx != -1) {
+            slot->MoveChild(match_idx, child_idx);
+            text_el = slot->children()[child_idx];
+            auto* t_el = static_cast<TextElement*>(text_el.get());
+            if (t_el->text() != text) {
+              t_el->set_text(text);
+            }
           } else {
-            slot->AddChild(text_el);
+            text_el = Ref<TextElement>::New(text);
+            text_el->set_owner_component(import_source);
+            if (child_idx < slot->ChildCount()) {
+              slot->ReplaceChild(child_idx, text_el);
+            } else {
+              slot->AddChild(text_el);
+            }
           }
         }
         child_idx++;
@@ -1116,12 +1187,25 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx)->is_slot()) {
             slot_element = slot->children()[child_idx];
           } else {
-            slot_element = Ref<SlotElement>::New();
-            slot_element->set_owner_component(import_source);
-            if (child_idx < slot->ChildCount()) {
-              slot->ReplaceChild(child_idx, slot_element);
+            // Look ahead for a slot element
+            size_t match_idx = -1;
+            for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
+              if (slot->ChildAt(i)->is_slot()) {
+                match_idx = i;
+                break;
+              }
+            }
+            if (match_idx != -1) {
+              slot->MoveChild(match_idx, child_idx);
+              slot_element = slot->children()[child_idx];
             } else {
-              slot->AddChild(slot_element);
+              slot_element = Ref<SlotElement>::New();
+              slot_element->set_owner_component(import_source);
+              if (child_idx < slot->ChildCount()) {
+                slot->ReplaceChild(child_idx, slot_element);
+              } else {
+                slot->AddChild(slot_element);
+              }
             }
           }
           import_source->slots_[slot_name] = slot_element;
@@ -1267,10 +1351,21 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx) == child->Root()) {
             child->Root()->set_parent(slot);
           } else {
-            if (child_idx < slot->ChildCount()) {
-              slot->ReplaceChild(child_idx, child->Root());
+            size_t match_idx = -1;
+            for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
+              if (slot->ChildAt(i) == child->Root()) {
+                match_idx = i;
+                break;
+              }
+            }
+            if (match_idx != -1) {
+              slot->MoveChild(match_idx, child_idx);
             } else {
-              slot->AddChild(child->Root());
+              if (child_idx < slot->ChildCount()) {
+                slot->ReplaceChild(child_idx, child->Root());
+              } else {
+                slot->AddChild(child->Root());
+              }
             }
           }
 
@@ -1326,9 +1421,26 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           child_element = slot->children()[child_idx];
           is_reused = true;
         } else {
-          child_element = Ref<Element>::New();
-          child_element->set_owner_component(import_source);
-          child_element->SetTag(std::string(child_node.tag));
+          // Look ahead for an element with the same tag
+          size_t match_idx = -1;
+          for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
+            if (!slot->ChildAt(i)->is_text() &&
+                !slot->ChildAt(i)->is_slot() &&
+                !slot->ChildAt(i)->component() &&
+                slot->ChildAt(i)->tag() == child_node.tag) {
+              match_idx = i;
+              break;
+            }
+          }
+          if (match_idx != -1) {
+            slot->MoveChild(match_idx, child_idx);
+            child_element = slot->children()[child_idx];
+            is_reused = true;
+          } else {
+            child_element = Ref<Element>::New();
+            child_element->set_owner_component(import_source);
+            child_element->SetTag(std::string(child_node.tag));
+          }
         }
 
         std::vector<std::string> updated_keys;
