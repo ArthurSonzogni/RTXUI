@@ -163,10 +163,8 @@ class AnchorDemo : public Component<AnchorDemo> {
       }
       .section {
         display: block;
-        padding: 1 2;
-        border-bottom: dashed;
-        border-color: rgb(71, 85, 105);
-        height: 10; /* Make each section tall so scrolling is required */
+        margin: 2;
+        padding: 2;
       }
       .section-title {
         font-weight: bold;
