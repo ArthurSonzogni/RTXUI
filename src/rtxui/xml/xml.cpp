@@ -98,6 +98,24 @@ std::string_view TrimWhitespaceWithNewlines(std::string_view sv) {
   return sv;
 }
 
+void AppendUtf8(std::string& out, unsigned int codepoint) {
+  if (codepoint <= 0x7F) {
+    out += static_cast<char>(codepoint);
+  } else if (codepoint <= 0x7FF) {
+    out += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+    out += static_cast<char>(0x80 | (codepoint & 0x3F));
+  } else if (codepoint <= 0xFFFF) {
+    out += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+    out += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+    out += static_cast<char>(0x80 | (codepoint & 0x3F));
+  } else if (codepoint <= 0x10FFFF) {
+    out += static_cast<char>(0xF0 | ((codepoint >> 18) & 0x07));
+    out += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+    out += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+    out += static_cast<char>(0x80 | (codepoint & 0x3F));
+  }
+}
+
 std::string Unescape(std::string_view text) {
   std::string result;
   result.reserve(text.size());
@@ -159,21 +177,7 @@ std::string Unescape(std::string_view text) {
           unsigned int val = 0;
           auto [ptr, ec] = std::from_chars(hex_str.data(), hex_str.data() + hex_str.size(), val, 16);
           if (ec == std::errc()) {
-            if (val <= 0x7F) {
-              result += static_cast<char>(val);
-            } else if (val <= 0x7FF) {
-              result += static_cast<char>(0xC0 | ((val >> 6) & 0x1F));
-              result += static_cast<char>(0x80 | (val & 0x3F));
-            } else if (val <= 0xFFFF) {
-              result += static_cast<char>(0xE0 | ((val >> 12) & 0x0F));
-              result += static_cast<char>(0x80 | ((val >> 6) & 0x3F));
-              result += static_cast<char>(0x80 | (val & 0x3F));
-            } else if (val <= 0x10FFFF) {
-              result += static_cast<char>(0xF0 | ((val >> 18) & 0x07));
-              result += static_cast<char>(0x80 | ((val >> 12) & 0x3F));
-              result += static_cast<char>(0x80 | ((val >> 6) & 0x3F));
-              result += static_cast<char>(0x80 | (val & 0x3F));
-            }
+            AppendUtf8(result, val);
           }
           i = end;
           continue;
@@ -182,21 +186,7 @@ std::string Unescape(std::string_view text) {
           unsigned int val = 0;
           auto [ptr, ec] = std::from_chars(dec_str.data(), dec_str.data() + dec_str.size(), val, 10);
           if (ec == std::errc()) {
-            if (val <= 0x7F) {
-              result += static_cast<char>(val);
-            } else if (val <= 0x7FF) {
-              result += static_cast<char>(0xC0 | ((val >> 6) & 0x1F));
-              result += static_cast<char>(0x80 | (val & 0x3F));
-            } else if (val <= 0xFFFF) {
-              result += static_cast<char>(0xE0 | ((val >> 12) & 0x0F));
-              result += static_cast<char>(0x80 | ((val >> 6) & 0x3F));
-              result += static_cast<char>(0x80 | (val & 0x3F));
-            } else if (val <= 0x10FFFF) {
-              result += static_cast<char>(0xF0 | ((val >> 18) & 0x07));
-              result += static_cast<char>(0x80 | ((val >> 12) & 0x3F));
-              result += static_cast<char>(0x80 | ((val >> 6) & 0x3F));
-              result += static_cast<char>(0x80 | (val & 0x3F));
-            }
+            AppendUtf8(result, val);
           }
           i = end;
           continue;

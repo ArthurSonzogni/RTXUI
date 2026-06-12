@@ -61,6 +61,31 @@ std::vector<std::string_view> SplitWords(std::string_view s) {
   return words;
 }
 
+Spacing ParseSpacingShorthand(std::string_view value) {
+  auto parts = SplitWords(value);
+  Spacing result;
+  if (parts.size() == 1) {
+    int val = StoI(parts[0]);
+    result = {val, val, val, val};
+  } else if (parts.size() == 2) {
+    int v_val = StoI(parts[0]);
+    int h_val = StoI(parts[1]);
+    result = {v_val, h_val, v_val, h_val};
+  } else if (parts.size() == 3) {
+    result.top = StoI(parts[0]);
+    result.right = StoI(parts[1]);
+    result.left = StoI(parts[1]);
+    result.bottom = StoI(parts[2]);
+  } else if (parts.size() >= 4) {
+    result.top = StoI(parts[0]);
+    result.right = StoI(parts[1]);
+    result.bottom = StoI(parts[2]);
+    result.left = StoI(parts[3]);
+  }
+  return result;
+}
+
+
 std::optional<Color> ParseColor(std::string_view value) {
   if (value.empty()) {
     return std::nullopt;
@@ -613,8 +638,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "padding") {
-    int p = StoI(v);
-    style.padding = {p, p, p, p};
+    style.padding = ParseSpacingShorthand(v);
     return;
   }
 
@@ -643,8 +667,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "border-width") {
-    int bw = StoI(v);
-    style.border = {bw, bw, bw, bw};
+    style.border = ParseSpacingShorthand(v);
     return;
   }
 
