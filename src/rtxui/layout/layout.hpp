@@ -22,6 +22,8 @@ struct LayoutContext {
   // Viewport/Screen dimensions (for fixed positioning):
   int viewport_w = 80;
   int viewport_h = 24;
+
+  bool is_measurement = false;
 };
 
 std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
