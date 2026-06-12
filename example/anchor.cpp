@@ -65,6 +65,13 @@ class AnchorDemo : public Component<AnchorDemo> {
         background-color: rgb(15, 23, 42); /* Deep dark slate background */
         color: rgb(241, 245, 249);
       }
+      .container {
+        display: block;
+        max-width: 80;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+      }
       .header {
         display: block;
         margin-bottom: 1;
