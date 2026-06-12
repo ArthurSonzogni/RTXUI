@@ -645,6 +645,87 @@ class SectionMarkdown : public Component<SectionMarkdown> {
  public:
   struct Props {
     std::string markdown_content = "";
+    std::string custom_css = R"css(
+      h1 {
+        color: #3b82f6;
+        border-bottom: solid;
+        border-color: #3b82f6;
+        margin-bottom: 1;
+      }
+
+      h2 {
+        color: #60a5fa;
+        margin-top: 1;
+        border-bottom: solid;
+        border-color: #334155;
+      }
+
+      h3 {
+        color: #93c5fd;
+      }
+
+      strong {
+        color: #facc15;
+      }
+
+      em {
+        color: #a78bfa;
+      }
+
+      code {
+        color: #94a3b8;
+      }
+
+      pre {
+        background-color: #1e293b;
+        border: tall;
+        border-color: #334155;
+        display: block;
+      }
+
+      blockquote {
+        border-left: heavy;
+        border-color: #4b5563;
+        padding-left: 2;
+        font-style: italic;
+        color: #9ca3af;
+      }
+
+      ul, ol {
+        margin-left: 2;
+        color: #d1d5db;
+      }
+
+      li {
+        margin-bottom: 0;
+      }
+
+      a {
+        color: #3b82f6;
+        text-decoration: underline;
+      }
+
+      table {
+        border: solid;
+        border-color: #334155;
+        margin-top: 1;
+        margin-bottom: 1;
+      }
+
+      th {
+        font-weight: bold;
+        color: #60a5fa;
+        border-bottom: solid;
+        border-color: #334155;
+        padding-left: 1;
+        padding-right: 1;
+      }
+
+      td {
+        padding-left: 1;
+        padding-right: 1;
+      }
+    )css";
   } props;
 
   SectionMarkdown() = default;
@@ -652,6 +733,7 @@ class SectionMarkdown : public Component<SectionMarkdown> {
   void InitReflection() override {
     ComponentBase::InitReflection();
     Bind(props.markdown_content);
+    Bind(props.custom_css);
     Import<rtxui::markdown>();
   }
 
@@ -666,7 +748,7 @@ class SectionMarkdown : public Component<SectionMarkdown> {
         <div class="markdown-preview-pane">
           <span class="sub-label">Preview (Rendered)</span>
           <div class="md-preview-container">
-            <markdown content="{props.markdown_content}" />
+            <markdown content="{props.markdown_content}" stylesheet="{props.custom_css}" />
           </div>
         </div>
       </div>
