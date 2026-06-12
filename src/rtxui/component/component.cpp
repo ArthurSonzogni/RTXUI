@@ -693,6 +693,8 @@ void ComponentBase::Mount() {
 }
 
 void ComponentBase::Render() {
+  last_render_terminal_width_ = css::g_terminal_width;
+  last_render_terminal_height_ = css::g_terminal_height;
   // Optimization: Use a flat vector of pairs instead of std::map<ElementPath, ElementState>.
   // Since very few elements actually hold state (scroll, focus, transitions), this avoids
   // the dynamic allocation and key-comparison overhead of a red-black tree map.
@@ -1164,14 +1166,31 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
           children_.insert(child);
 
+          bool id_changed = false;
           if (child_node.attributes.contains("id")) {
-            child->id_ = Interpolate(child_node.attributes.at("id"));
+            std::string new_id = Interpolate(child_node.attributes.at("id"));
+            if (new_id != child->id_) {
+              id_changed = true;
+              child->id_ = std::move(new_id);
+            }
+          } else if (!child->id_.empty()) {
+            id_changed = true;
+            child->id_.clear();
           }
+
+          bool classes_changed = false;
           if (child_node.attributes.contains("class")) {
             std::string interpolated_class =
                 Interpolate(child_node.attributes.at("class"));
             auto class_views = Split(interpolated_class, ' ');
-            child->classes_.assign(class_views.begin(), class_views.end());
+            std::vector<std::string> new_classes(class_views.begin(), class_views.end());
+            if (new_classes != child->classes_) {
+              classes_changed = true;
+              child->classes_ = std::move(new_classes);
+            }
+          } else if (!child->classes_.empty()) {
+            classes_changed = true;
+            child->classes_.clear();
           }
 
           if (is_new) {
@@ -1180,6 +1199,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             child->two_way_bindings_.clear();
           }
 
+          bool attribute_changed = false;
           for (auto& [key_view, value] : child_node.attributes) {
             std::string key(key_view);
             std::string actual_value(value);
@@ -1212,8 +1232,16 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               continue;
             }
             std::string interpolated_value = Interpolate(actual_value);
+
+            const std::string* current_val = child->Root() ? child->Root()->GetAttribute(key) : nullptr;
+            if (!current_val || *current_val != interpolated_value) {
+              attribute_changed = true;
+            }
+
             child->SetProperty(key, interpolated_value);
-            child->Root()->SetAttribute(key, interpolated_value);
+            if (child->Root()) {
+              child->Root()->SetAttribute(key, interpolated_value);
+            }
 
             if (actual_value.starts_with("{") && actual_value.ends_with("}")) {
               std::string parent_prop =
@@ -1223,7 +1251,16 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
           }
 
-          child->Render();
+          bool terminal_size_changed = (child->last_render_terminal_width_ != css::g_terminal_width ||
+                                        child->last_render_terminal_height_ != css::g_terminal_height);
+
+          bool needs_render = is_new || id_changed || classes_changed || attribute_changed || terminal_size_changed;
+
+          if (needs_render) {
+            child->Render();
+          } else {
+            child->Digest();
+          }
           child->Root()->set_owner_component(import_source);
 
           // Now reconcile slot with child->Root()
@@ -1239,9 +1276,40 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
           Ref<Element> default_slot = child->Slot("");
           if (default_slot) {
+            if (!needs_render) {
+              std::vector<Ref<ComponentBase>> slot_components;
+              for (auto& [name, slot_el] : child->slots()) {
+                if (slot_el) {
+                  for (auto& child_el : slot_el->children()) {
+                    child_el->Visit([&](Element& el) {
+                      if (el.component()) {
+                        for (auto& comp : child->children_) {
+                          if (comp.get() == el.component()) {
+                            if (std::find(slot_components.begin(),
+                                          slot_components.end(),
+                                          comp) == slot_components.end()) {
+                              slot_components.push_back(comp);
+                            }
+                          }
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+              child->old_children_ = slot_components;
+              for (auto& comp : slot_components) {
+                child->children_.erase(comp);
+              }
+            }
+
             size_t sub_child_idx = 0;
             child->RenderReconcile(child_node, default_slot.get(), import_source, scope, sub_child_idx, preserve_newlines);
             default_slot->TruncateChildren(sub_child_idx);
+
+            if (!needs_render) {
+              child->old_children_.clear();
+            }
           }
           child_idx++;
           break;
