@@ -173,6 +173,15 @@ void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
   children_[index] = std::move(new_child);
 }
 
+void Element::MoveChild(size_t from, size_t to) {
+  assert(from < children_.size());
+  assert(to < children_.size());
+  if (from == to) return;
+  Ref<Element> child = std::move(children_[from]);
+  children_.erase(children_.begin() + from);
+  children_.insert(children_.begin() + to, std::move(child));
+}
+
 void Element::TruncateChildren(size_t count) {
   if (count < children_.size()) {
     for (size_t i = count; i < children_.size(); ++i) {
