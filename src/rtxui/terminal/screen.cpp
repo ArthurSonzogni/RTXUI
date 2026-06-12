@@ -16,9 +16,10 @@
 #include <fstream>
 #include <iostream>
 
+#include "rtxui/component/component_internal.hpp"
+#include "rtxui/core/task_runner.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
-#include "rtxui/component/component_internal.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/paint.hpp"
@@ -26,8 +27,6 @@
 #include "rtxui/style/style.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
-#include "rtxui/core/task_runner.hpp"
-
 
 namespace rtxui {
 
@@ -123,7 +122,8 @@ void CollectFocusableFragments(
         int min_y = viewport_top + top_val;
         child_abs_y = std::max(child_abs_y, min_y);
 
-        int parent_scrolled_bottom = abs_y + fragment->height - border_b - padding_b - scroll_y_offset;
+        int parent_scrolled_bottom =
+            abs_y + fragment->height - border_b - padding_b - scroll_y_offset;
         int max_y = parent_scrolled_bottom - child.fragment->height;
         child_abs_y = std::min(child_abs_y, max_y);
       }
@@ -134,7 +134,8 @@ void CollectFocusableFragments(
         int min_x = viewport_left + left_val;
         child_abs_x = std::max(child_abs_x, min_x);
 
-        int parent_scrolled_right = abs_x + fragment->width - border_r - padding_r - scroll_x_offset;
+        int parent_scrolled_right =
+            abs_x + fragment->width - border_r - padding_r - scroll_x_offset;
         int max_x = parent_scrolled_right - child.fragment->width;
         child_abs_x = std::min(child_abs_x, max_x);
       }
@@ -202,7 +203,8 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
           padding_t = fragment->dom_node->style.padding.top;
           padding_b = fragment->dom_node->style.padding.bottom;
         }
-        if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+        if (fragment->has_border &&
+            fragment->border_style != BorderStyle::None) {
           border_l = 1;
           border_r = 1;
           border_t = 1;
@@ -215,7 +217,8 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
           int min_rel_y = border_t + padding_t + top_val;
           int sticky_rel_y = std::max(normal_rel_y, min_rel_y);
 
-          int max_rel_y = fragment->height - border_b - padding_b - scroll_y_offset - it->fragment->height;
+          int max_rel_y = fragment->height - border_b - padding_b -
+                          scroll_y_offset - it->fragment->height;
           sticky_rel_y = std::min(sticky_rel_y, max_rel_y);
 
           int sticky_shift_y = sticky_rel_y - normal_rel_y;
@@ -228,7 +231,8 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
           int min_rel_x = border_l + padding_l + left_val;
           int sticky_rel_x = std::max(normal_rel_x, min_rel_x);
 
-          int max_rel_x = fragment->width - border_r - padding_r - scroll_x_offset - it->fragment->width;
+          int max_rel_x = fragment->width - border_r - padding_r -
+                          scroll_x_offset - it->fragment->width;
           sticky_rel_x = std::min(sticky_rel_x, max_rel_x);
 
           int sticky_shift_x = sticky_rel_x - normal_rel_x;
@@ -1041,14 +1045,19 @@ void ScreenImpl::Draw() {
   Element* cursor_element = nullptr;
   if (root) {
     std::function<void(Element*)> FindCursor = [&](Element* el) {
-      if (!el) return;
-      if (std::find(el->classes.begin(), el->classes.end(), "cursor-focused") != el->classes.end()) {
+      if (!el) {
+        return;
+      }
+      if (std::find(el->classes.begin(), el->classes.end(), "cursor-focused") !=
+          el->classes.end()) {
         cursor_element = el;
         return;
       }
       for (size_t i = 0; i < el->ChildCount(); ++i) {
         FindCursor(el->ChildAt(i));
-        if (cursor_element) return;
+        if (cursor_element) {
+          return;
+        }
       }
     };
     FindCursor(root);
@@ -1057,7 +1066,8 @@ void ScreenImpl::Draw() {
   if (cursor_element) {
     int cx = cursor_element->absolute_x() + 1;
     int cy = cursor_element->absolute_y() + 1;
-    device_->Write("\x1b[?25h\x1b[5 q\x1b[" + std::to_string(cy) + ";" + std::to_string(cx) + "H");
+    device_->Write("\x1b[?25h\x1b[5 q\x1b[" + std::to_string(cy) + ";" +
+                   std::to_string(cx) + "H");
   } else {
     device_->Write("\x1b[?25l");
   }
@@ -1213,27 +1223,29 @@ void ScreenImpl::ScrollIntoView(Element* element) {
     target_right -= parent.fragment->scroll_x;
     target_top -= parent.fragment->scroll_y;
     target_bottom -= parent.fragment->scroll_y;
-    }
-    }
+  }
+}
 
-    bool ScreenImpl::SpatialNavigate(Event event) {
-      enum class Direction { Up, Down, Left, Right } dir;
-      if (event == Event::ArrowUp() || event == Event::k())
-        dir = Direction::Up;
-      else if (event == Event::ArrowDown() || event == Event::j())
-        dir = Direction::Down;
-      else if (event == Event::ArrowLeft() || event == Event::h())
-        dir = Direction::Left;
-      else if (event == Event::ArrowRight() || event == Event::l())
-        dir = Direction::Right;
-      else
-        return false;
+bool ScreenImpl::SpatialNavigate(Event event) {
+  enum class Direction { Up, Down, Left, Right } dir;
+  if (event == Event::ArrowUp() || event == Event::k()) {
+    dir = Direction::Up;
+  } else if (event == Event::ArrowDown() || event == Event::j()) {
+    dir = Direction::Down;
+  } else if (event == Event::ArrowLeft() || event == Event::h()) {
+    dir = Direction::Left;
+  } else if (event == Event::ArrowRight() || event == Event::l()) {
+    dir = Direction::Right;
+  } else {
+    return false;
+  }
 
   std::vector<FocusableFragment> focusable_fragments;
   CollectFocusableFragments(root_fragment_, 0, 0, focusable_fragments);
 
-  if (focusable_fragments.empty())
+  if (focusable_fragments.empty()) {
     return false;
+  }
 
   int cur_x = 0, cur_y = 0, cur_w = 0, cur_h = 0;
   bool start_from_element = false;
@@ -1251,7 +1263,8 @@ void ScreenImpl::ScrollIntoView(Element* element) {
   }
 
   if (!start_from_element) {
-    // If no element focused, start from outside the screen depending on direction
+    // If no element focused, start from outside the screen depending on
+    // direction
     switch (dir) {
       case Direction::Down:
         cur_x = 0;
@@ -1287,8 +1300,9 @@ void ScreenImpl::ScrollIntoView(Element* element) {
   long long best_score = -1;
 
   for (auto& cand : focusable_fragments) {
-    if (cand.element == focused_element_)
+    if (cand.element == focused_element_) {
       continue;
+    }
 
     int cand_cx = cand.x + cand.width / 2;
     int cand_cy = cand.y + cand.height / 2;
@@ -1315,10 +1329,12 @@ void ScreenImpl::ScrollIntoView(Element* element) {
         break;
     }
 
-    if (d_primary <= 0)
+    if (d_primary <= 0) {
       continue;
+    }
 
-    // Spatial navigation distance metric: primary distance squared + secondary distance squared * 2
+    // Spatial navigation distance metric: primary distance squared + secondary
+    // distance squared * 2
     long long score = d_primary * d_primary + d_secondary * d_secondary * 2;
     if (best == nullptr || score < best_score) {
       best = &cand;
@@ -1340,29 +1356,49 @@ void ScreenImpl::ScrollIntoView(Element* element) {
 
   return false;
 }
-    void ScreenImpl::SimulateClick(Element* element) {
-    if (!element)
+void ScreenImpl::SimulateClick(Element* element) {
+  if (!element) {
     return;
-    std::vector<std::string> attr_keys = {"onclick", "@click.left", "@click"};
-    Element* curr = element;
-    while (curr) {
+  }
+  std::vector<std::string> attr_keys = {"onclick", "@click.left", "@click"};
+  Element* curr = element;
+  while (curr) {
     const auto& attrs = curr->Attributes();
     for (const auto& key : attr_keys) {
       if (attrs.count(key)) {
         std::string action = attrs.at(key);
-        if (auto* comp = GetAttributeOwnerComponent(curr)) {
-          if (comp->RunCallback(action)) {
-            DigestAndDraw();
+        if (!action.empty()) {
+          std::string callback_name = action;
+          std::string callback_arg = "";
+
+          size_t paren_open = action.find('(');
+          if (paren_open != std::string::npos && action.ends_with(')')) {
+            callback_name = action.substr(0, paren_open);
+            callback_arg =
+                action.substr(paren_open + 1, action.size() - paren_open - 2);
+          }
+
+          ComponentBase* comp = GetAttributeOwnerComponent(curr);
+          bool executed = false;
+          while (comp) {
+            if (comp->RunCallback(callback_name, callback_arg)) {
+              DigestAndDraw();
+              executed = true;
+              break;
+            }
+            comp = GetParentComponent(comp);
+          }
+          if (executed) {
             return;
           }
         }
       }
     }
     curr = curr->Parent();
-    }
-    }
+  }
+}
 
-    // --- RawTerminal RAII Implementation ---
+// --- RawTerminal RAII Implementation ---
 
 ScreenImpl::RawTerminal::RawTerminal(ScreenImpl* screen) : screen_(screen) {
   if (screen_ && screen_->device_) {
