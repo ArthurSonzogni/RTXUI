@@ -49,8 +49,6 @@ class InputDemo : public Component<InputDemo> {
         .styled-input {
           display: inline flex;
           width: 40;
-          border: tall;
-          border-color: rgb(59, 130, 246);
           background-color: rgb(30, 41, 59);
           color: white;
           padding-left: 1;

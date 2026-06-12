@@ -75,7 +75,6 @@ class TextareaDemo : public Component<TextareaDemo> {
           display: block;
           width: 70;
           height: 12;
-          border-color: rgb(59, 130, 246);
           background-color: rgb(30, 41, 59);
           color: white;
           padding-left: 1;
