@@ -258,6 +258,8 @@ struct ElementState {
   int scroll_x = 0;
   int scroll_y = 0;
   bool focused = false;
+  bool hovered = false;
+  bool active = false;
   ComputedStyle style;
   ActiveTransitionsMap active_transitions;
 };
@@ -271,10 +273,12 @@ void CollectElementStates(Element* el,
   bool has_state = el->scroll_x() != 0 ||
                    el->scroll_y() != 0 ||
                    el->focused() ||
+                   el->hovered() ||
+                   el->active() ||
                    !el->active_transitions.empty() ||
                    (el->target_style.transitions && !el->target_style.transitions->empty());
   if (has_state) {
-    states.push_back({path, {el->scroll_x(), el->scroll_y(), el->focused(), el->style, el->active_transitions}});
+    states.push_back({path, {el->scroll_x(), el->scroll_y(), el->focused(), el->hovered(), el->active(), el->style, el->active_transitions}});
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     path.push_back(static_cast<int>(i));
@@ -295,6 +299,8 @@ void RestoreElementStates(
       el->set_scroll_x(pair.second.scroll_x);
       el->set_scroll_y(pair.second.scroll_y);
       el->set_focused(pair.second.focused);
+      el->set_hovered(pair.second.hovered);
+      el->set_active(pair.second.active);
       el->style = pair.second.style;
       el->active_transitions = pair.second.active_transitions;
       break;
