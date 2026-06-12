@@ -119,6 +119,7 @@ class AnchorDemo : public Component<AnchorDemo> {
         border-color: rgb(71, 85, 105);
         overflow-y: scroll;
         scroll-speed: 1;
+        scroll-behavior: smooth;
         flex-grow: 1;
       }
       .section {
