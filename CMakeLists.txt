@@ -244,6 +244,9 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_positioning example/positioning.cpp)
   target_link_libraries(rtxui_example_positioning PRIVATE rtxui)
 
+  add_executable(rtxui_example_sticky example/sticky.cpp)
+  target_link_libraries(rtxui_example_sticky PRIVATE rtxui)
+
   add_executable(rtxui_example_tabindex example/tabindex.cpp)
   target_link_libraries(rtxui_example_tabindex PRIVATE rtxui)
 
