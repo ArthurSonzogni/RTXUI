@@ -206,7 +206,10 @@ struct CategorizedRules {
 };
 
 ComponentBase::ComponentBase() = default;
-ComponentBase::~ComponentBase() = default;
+ComponentBase::~ComponentBase() {
+  ReleaseMouse();
+}
+
 
 namespace {
 
