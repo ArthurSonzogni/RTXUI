@@ -1193,16 +1193,21 @@ void ScreenImpl::ScrollIntoView(Element* element) {
             std::max(1, parent.fragment->height - border_t - padding_t -
                             border_b - padding_b - scrollbar_h);
 
-        // Adjust target coordinates to be relative to the content area
-        int rel_target_top = target_top - border_t - padding_t;
-        int rel_target_bottom = target_bottom - border_t - padding_t;
+        // Adjust target coordinates to be relative to the content area,
+        // and also include the target element's margins.
+        int margin_t = element->style.margin.top;
+        int margin_b = element->style.margin.bottom;
+        int rel_target_top = target_top - border_t - padding_t - margin_t;
+        int rel_target_bottom = target_bottom - border_t - padding_t + margin_b;
+
+        int content_target_top = target_top - border_t - padding_t;
 
         if (rel_target_top < curr_scroll_y) {
           new_scroll_y = rel_target_top;
         } else if (rel_target_bottom > curr_scroll_y + viewport_h) {
           new_scroll_y = rel_target_bottom - viewport_h;
-          if (rel_target_top < new_scroll_y) {
-            new_scroll_y = rel_target_top;
+          if (content_target_top < new_scroll_y) {
+            new_scroll_y = content_target_top;
           }
         }
 
@@ -1242,16 +1247,21 @@ void ScreenImpl::ScrollIntoView(Element* element) {
             std::max(1, parent.fragment->width - border_l - padding_l -
                             border_r - padding_r - scrollbar_w);
 
-        // Adjust target coordinates to be relative to the content area
-        int rel_target_left = target_left - border_l - padding_l;
-        int rel_target_right = target_right - border_l - padding_l;
+        // Adjust target coordinates to be relative to the content area,
+        // and also include the target element's margins.
+        int margin_l = element->style.margin.left;
+        int margin_r = element->style.margin.right;
+        int rel_target_left = target_left - border_l - padding_l - margin_l;
+        int rel_target_right = target_right - border_l - padding_l + margin_r;
+
+        int content_target_left = target_left - border_l - padding_l;
 
         if (rel_target_left < curr_scroll_x) {
           new_scroll_x = rel_target_left;
         } else if (rel_target_right > curr_scroll_x + viewport_w) {
           new_scroll_x = rel_target_right - viewport_w;
-          if (rel_target_left < new_scroll_x) {
-            new_scroll_x = rel_target_left;
+          if (content_target_left < new_scroll_x) {
+            new_scroll_x = content_target_left;
           }
         }
 
