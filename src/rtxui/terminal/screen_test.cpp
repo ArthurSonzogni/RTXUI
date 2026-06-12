@@ -1569,6 +1569,81 @@ TEST_CASE("Screen.ScrollIntoViewWithBorder", "[terminal][focus][scroll]") {
   CHECK(scrollable->scroll_y() == 0);
 }
 
+TEST_CASE("Screen.ScrollIntoViewWithMargin", "[terminal][focus][scroll]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ScrollFocusMarginComponent
+      : public Component<ScrollFocusMarginComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ScrollFocusMarginComponent>::InitReflection();
+    }
+    std::string_view view = R"xml(
+      <div id="scrollable">
+        <div id="item0" class="spacer" tabindex="0">Spacer 1</div>
+        <div id="item1" class="item" tabindex="0">Item 1</div>
+      </div>
+      <style>
+        #scrollable {
+          height: 6;
+          overflow-y: scroll;
+          display: block;
+        }
+        .spacer {
+          height: 3;
+          display: block;
+        }
+        .item {
+          height: 3;
+          margin-top: 2;
+          margin-bottom: 2;
+          display: block;
+        }
+      </style>
+    )xml";
+  };
+
+  auto component = Ref<ScrollFocusMarginComponent>::New();
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scrollable = component->Root()->QuerySelector("#scrollable");
+  auto* item0 = component->Root()->QuerySelector("#item0");
+  auto* item1 = component->Root()->QuerySelector("#item1");
+
+  REQUIRE(scrollable != nullptr);
+  REQUIRE(item0 != nullptr);
+  REQUIRE(item1 != nullptr);
+
+  // Initially: scroll_y should be 0
+  REQUIRE(scrollable->scroll_y() == 0);
+
+  // Tab 1: focuses item0
+  screen.Dispatch(Event::Tab());
+  REQUIRE(item0->focused());
+  CHECK(scrollable->scroll_y() == 0);
+
+  // Tab 2: focuses item1.
+  // Viewport height is 6.
+  // Spacer item0 height is 3.
+  // Item 1 starts at 5 (due to margin-top: 2) and ends at 8 (height 3).
+  // Target top with margins: 5 - 2 = 3.
+  // Target bottom with margins: 8 + 2 = 10.
+  // Since bottom (10) > viewport_h (6), it scrolls down to 10 - 6 = 4.
+  screen.Dispatch(Event::Tab());
+  REQUIRE(item1->focused());
+  CHECK(scrollable->scroll_y() == 4);
+
+  // TabReverse: focuses item0 again.
+  // Target top with margins: 0 - 0 = 0.
+  // Since top (0) < scroll_y (4), it scrolls back to 0.
+  screen.Dispatch(Event::TabReverse());
+  REQUIRE(item0->focused());
+  CHECK(scrollable->scroll_y() == 0);
+}
+
 TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   struct ClockRestorer {
     ~ClockRestorer() { time::SetCustomClock(nullptr); }
