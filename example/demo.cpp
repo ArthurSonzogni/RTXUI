@@ -74,18 +74,23 @@ class Sidebar : public Component<Sidebar> {
       </div>
     </div>
     <style>
-      .sidebar {
+      self {
         position: sticky;
         top: 4;
+        width: 16;
+        flex-shrink: 0;
+        z-index: 10;
+        display: block;
+      }
+      .sidebar {
         display: flex;
         flex-direction: column;
-        width: 16;
+        width: 100%;
+        height: 100%;
         border-right: tall;
         border-color: #334155;
         background-color: #0f172a;
         padding: 1;
-        flex-shrink: 0;
-        z-index: 10;
       }
       .sidebar-title {
         display: block;
