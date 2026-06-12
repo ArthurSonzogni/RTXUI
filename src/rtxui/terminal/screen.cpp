@@ -591,6 +591,30 @@ void ScreenImpl::HandleEvent(const Event& event) {
           Element* curr = clicked_element;
           bool handled = false;
           while (curr) {
+            if (curr->tag() == "a") {
+              const auto& attrs = curr->Attributes();
+              if (attrs.count("href")) {
+                std::string href = attrs.at("href");
+                if (href.starts_with("#") && href.size() > 1) {
+                  std::string target_id = href.substr(1);
+                  Element* target_el = nullptr;
+                  if (component_->Root()) {
+                    component_->Root()->Visit([&](Element& el) {
+                      if (el.id == target_id) {
+                        target_el = &el;
+                      }
+                    });
+                  }
+                  if (target_el) {
+                    ScrollIntoView(target_el);
+                    Draw();
+                    handled = true;
+                    break;
+                  }
+                }
+              }
+            }
+
             std::string action;
             const auto& attrs = curr->Attributes();
             for (const auto& key : attr_keys) {

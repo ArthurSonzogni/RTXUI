@@ -1189,6 +1189,67 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
   REQUIRE(component->scroll_clicks == 0);
 }
 
+TEST_CASE("Screen.AnchorLinkScrolling", "[terminal][mouse][anchor]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class AnchorTestComponent : public Component<AnchorTestComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<AnchorTestComponent>::InitReflection();
+    }
+
+    std::string_view view = R"html(
+      <div id="container">
+        <div id="scroller">
+          <a id="link" href="#target">Link to Target</a>
+          <div id="spacer"></div>
+          <div id="target">Target Element</div>
+        </div>
+      </div>
+      <style>
+        #container {
+          width: 30;
+          height: 10;
+        }
+        #scroller {
+          display: block;
+          width: 30;
+          height: 5;
+          overflow-y: scroll;
+        }
+        #spacer {
+          height: 10;
+        }
+        #target {
+          height: 1;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<AnchorTestComponent>::New();
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scroll_el = component->Root()->QuerySelector("#scroller");
+  REQUIRE(scroll_el != nullptr);
+  REQUIRE(scroll_el->scroll_y() == 0);
+
+  // Click on the link. The link "Link to Target" is at y=0, x=0 inside the scroller.
+  // 1-based mouse coordinates are x=1, y=1.
+  Event::Mouse click_link;
+  click_link.button = Event::Mouse::Button::Left;
+  click_link.motion = Event::Mouse::Motion::Pressed;
+  click_link.x = 1;
+  click_link.y = 1;
+  screen.Dispatch(click_link);
+
+  // Clicking the link should scroll #target into view.
+  CHECK(scroll_el->scroll_y() > 0);
+}
+
 TEST_CASE("Screen.KeyboardFocusTabindexNavigation", "[terminal][focus]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
