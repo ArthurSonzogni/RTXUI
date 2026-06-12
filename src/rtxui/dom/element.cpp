@@ -137,6 +137,127 @@ const TransitionConfig* FindTransitionConfig(const Element* element,
   return nullptr;
 }
 
+struct ScrollAxis {
+  int& scroll;
+  int& max_size;
+  int& target;
+  float& anim;
+  float& start;
+  double& anim_start_time;
+  bool& animating;
+
+  float& visual;
+  float& visual_start;
+  float& visual_target;
+  double& visual_anim_start_time;
+  bool& visual_animating;
+
+  void Set(int value, bool smooth, ScrollBehavior behavior) {
+    if (!smooth || behavior != ScrollBehavior::Smooth) {
+      scroll = value;
+      target = value;
+      anim = static_cast<float>(value);
+      animating = false;
+
+      visual = static_cast<float>(value);
+      visual_target = static_cast<float>(value);
+      visual_animating = false;
+    } else {
+      if (value == target) {
+        return;
+      }
+      start = anim;
+      target = value;
+      anim_start_time = time::GetTimeMs();
+      animating = true;
+
+      visual_target = static_cast<float>(value);
+      visual_animating = false;
+    }
+  }
+
+  void Clamp(int max_scroll) {
+    if (target > max_scroll) {
+      target = max_scroll;
+    }
+    if (scroll > max_scroll) {
+      scroll = max_scroll;
+    }
+    if (anim > max_scroll) {
+      anim = static_cast<float>(max_scroll);
+    }
+    if (start > max_scroll) {
+      start = static_cast<float>(max_scroll);
+    }
+
+    if (visual_target > max_scroll) {
+      visual_target = static_cast<float>(max_scroll);
+    }
+    if (visual > max_scroll) {
+      visual = static_cast<float>(max_scroll);
+    }
+    if (visual_start > max_scroll) {
+      visual_start = static_cast<float>(max_scroll);
+    }
+
+    if (anim == static_cast<float>(target)) {
+      animating = false;
+    }
+    if (visual == visual_target) {
+      visual_animating = false;
+    }
+  }
+
+  bool Tick(double current_time_ms, double duration_ms) {
+    bool updated = false;
+    if (animating) {
+      if (current_time_ms >= anim_start_time) {
+        float t = static_cast<float>((current_time_ms - anim_start_time) / duration_ms);
+        if (t < 0.0f) {
+          t = 0.0f;
+        }
+        if (t >= 1.0f) {
+          scroll = target;
+          anim = static_cast<float>(target);
+          animating = false;
+          visual = static_cast<float>(target);
+          updated = true;
+        } else {
+          float eased_t = ApplyEasing(t, "ease");
+          float next_anim = start + (target - start) * eased_t;
+          int next_scroll = static_cast<int>(std::round(next_anim));
+          if (next_scroll != scroll || next_anim != anim) {
+            scroll = next_scroll;
+            anim = next_anim;
+            visual = next_anim;
+            updated = true;
+          }
+        }
+      }
+    } else if (visual_animating) {
+      if (current_time_ms >= visual_anim_start_time) {
+        float t = static_cast<float>((current_time_ms - visual_anim_start_time) / duration_ms);
+        if (t < 0.0f) {
+          t = 0.0f;
+        }
+        if (t >= 1.0f) {
+          visual = visual_target;
+          visual_animating = false;
+          updated = true;
+        } else {
+          float eased_t = ApplyEasing(t, "ease");
+          float next_anim = visual_start + (visual_target - visual_start) * eased_t;
+          if (next_anim != visual) {
+            visual = next_anim;
+            updated = true;
+          }
+        }
+      }
+    }
+    return updated;
+  }
+};
+
 constexpr double kScrollAnimationDurationMs = 500.0;
 
 }  // namespace
@@ -463,108 +584,20 @@ bool Element::TickTransitions(double current_time_ms) {
 
   bool updated = false;
 
-  if (scroll_y_animating_) {
-    if (current_time_ms >= scroll_y_anim_start_time_) {
-      float t =
-          static_cast<float>((current_time_ms - scroll_y_anim_start_time_) /
-                             kScrollAnimationDurationMs);
-      if (t < 0.0f) {
-        t = 0.0f;
-      }
-      if (t >= 1.0f) {
-        scroll_y_ = target_scroll_y_;
-        anim_scroll_y_ = static_cast<float>(target_scroll_y_);
-        scroll_y_animating_ = false;
-        visual_scroll_y_ = static_cast<float>(target_scroll_y_);
-        updated = true;
-      } else {
-        float eased_t = ApplyEasing(t, "ease");
-        float next_anim =
-            start_scroll_y_ + (target_scroll_y_ - start_scroll_y_) * eased_t;
-        int next_scroll = static_cast<int>(std::round(next_anim));
-        if (next_scroll != scroll_y_ || next_anim != anim_scroll_y_) {
-          scroll_y_ = next_scroll;
-          anim_scroll_y_ = next_anim;
-          visual_scroll_y_ = next_anim;
-          updated = true;
-        }
-      }
-    }
-  } else if (visual_scroll_y_animating_) {
-    if (current_time_ms >= visual_scroll_y_anim_start_time_) {
-      float t = static_cast<float>(
-          (current_time_ms - visual_scroll_y_anim_start_time_) /
-          kScrollAnimationDurationMs);
-      if (t < 0.0f) {
-        t = 0.0f;
-      }
-      if (t >= 1.0f) {
-        visual_scroll_y_ = visual_target_scroll_y_;
-        visual_scroll_y_animating_ = false;
-        updated = true;
-      } else {
-        float eased_t = ApplyEasing(t, "ease");
-        float next_anim =
-            visual_start_scroll_y_ +
-            (visual_target_scroll_y_ - visual_start_scroll_y_) * eased_t;
-        if (next_anim != visual_scroll_y_) {
-          visual_scroll_y_ = next_anim;
-          updated = true;
-        }
-      }
-    }
+  if (scroll_y_animating_ || visual_scroll_y_animating_) {
+    ScrollAxis axis_y{
+      scroll_y_, scroll_height_, target_scroll_y_, anim_scroll_y_, start_scroll_y_, scroll_y_anim_start_time_, scroll_y_animating_,
+      visual_scroll_y_, visual_start_scroll_y_, visual_target_scroll_y_, visual_scroll_y_anim_start_time_, visual_scroll_y_animating_
+    };
+    updated |= axis_y.Tick(current_time_ms, kScrollAnimationDurationMs);
   }
 
-  if (scroll_x_animating_) {
-    if (current_time_ms >= scroll_x_anim_start_time_) {
-      float t =
-          static_cast<float>((current_time_ms - scroll_x_anim_start_time_) /
-                             kScrollAnimationDurationMs);
-      if (t < 0.0f) {
-        t = 0.0f;
-      }
-      if (t >= 1.0f) {
-        scroll_x_ = target_scroll_x_;
-        anim_scroll_x_ = static_cast<float>(target_scroll_x_);
-        scroll_x_animating_ = false;
-        visual_scroll_x_ = static_cast<float>(target_scroll_x_);
-        updated = true;
-      } else {
-        float eased_t = ApplyEasing(t, "ease");
-        float next_anim =
-            start_scroll_x_ + (target_scroll_x_ - start_scroll_x_) * eased_t;
-        int next_scroll = static_cast<int>(std::round(next_anim));
-        if (next_scroll != scroll_x_ || next_anim != anim_scroll_x_) {
-          scroll_x_ = next_scroll;
-          anim_scroll_x_ = next_anim;
-          visual_scroll_x_ = next_anim;
-          updated = true;
-        }
-      }
-    }
-  } else if (visual_scroll_x_animating_) {
-    if (current_time_ms >= visual_scroll_x_anim_start_time_) {
-      float t = static_cast<float>(
-          (current_time_ms - visual_scroll_x_anim_start_time_) /
-          kScrollAnimationDurationMs);
-      if (t < 0.0f) {
-        t = 0.0f;
-      }
-      if (t >= 1.0f) {
-        visual_scroll_x_ = visual_target_scroll_x_;
-        visual_scroll_x_animating_ = false;
-        updated = true;
-      } else {
-        float eased_t = ApplyEasing(t, "ease");
-        float next_anim =
-            visual_start_scroll_x_ +
-            (visual_target_scroll_x_ - visual_start_scroll_x_) * eased_t;
-        if (next_anim != visual_scroll_x_) {
-          visual_scroll_x_ = next_anim;
-          updated = true;
-        }
-      }
-    }
+  if (scroll_x_animating_ || visual_scroll_x_animating_) {
+    ScrollAxis axis_x{
+      scroll_x_, scroll_width_, target_scroll_x_, anim_scroll_x_, start_scroll_x_, scroll_x_anim_start_time_, scroll_x_animating_,
+      visual_scroll_x_, visual_start_scroll_x_, visual_target_scroll_x_, visual_scroll_x_anim_start_time_, visual_scroll_x_animating_
+    };
+    updated |= axis_x.Tick(current_time_ms, kScrollAnimationDurationMs);
   }
 
   if (!active_transitions.empty()) {
@@ -667,115 +700,35 @@ bool Element::TickTransitions(double current_time_ms) {
 }
 
 void Element::set_scroll_y(int y, bool smooth) {
-  if (!smooth || style.scroll_behavior != ScrollBehavior::Smooth) {
-    scroll_y_ = y;
-    target_scroll_y_ = y;
-    anim_scroll_y_ = static_cast<float>(y);
-    scroll_y_animating_ = false;
-
-    visual_scroll_y_ = static_cast<float>(y);
-    visual_target_scroll_y_ = static_cast<float>(y);
-    visual_scroll_y_animating_ = false;
-  } else {
-    if (y == target_scroll_y_) {
-      return;
-    }
-    start_scroll_y_ = anim_scroll_y_;
-    target_scroll_y_ = y;
-    scroll_y_anim_start_time_ = time::GetTimeMs();
-    scroll_y_animating_ = true;
-
-    visual_target_scroll_y_ = static_cast<float>(y);
-    visual_scroll_y_animating_ = false;
-  }
+  ScrollAxis axis_y{
+    scroll_y_, scroll_height_, target_scroll_y_, anim_scroll_y_, start_scroll_y_, scroll_y_anim_start_time_, scroll_y_animating_,
+    visual_scroll_y_, visual_start_scroll_y_, visual_target_scroll_y_, visual_scroll_y_anim_start_time_, visual_scroll_y_animating_
+  };
+  axis_y.Set(y, smooth, style.scroll_behavior);
 }
 
 void Element::set_scroll_x(int x, bool smooth) {
-  if (!smooth || style.scroll_behavior != ScrollBehavior::Smooth) {
-    scroll_x_ = x;
-    target_scroll_x_ = x;
-    anim_scroll_x_ = static_cast<float>(x);
-    scroll_x_animating_ = false;
-
-    visual_scroll_x_ = static_cast<float>(x);
-    visual_target_scroll_x_ = static_cast<float>(x);
-    visual_scroll_x_animating_ = false;
-  } else {
-    if (x == target_scroll_x_) {
-      return;
-    }
-    start_scroll_x_ = anim_scroll_x_;
-    target_scroll_x_ = x;
-    scroll_x_anim_start_time_ = time::GetTimeMs();
-    scroll_x_animating_ = true;
-
-    visual_target_scroll_x_ = static_cast<float>(x);
-    visual_scroll_x_animating_ = false;
-  }
+  ScrollAxis axis_x{
+    scroll_x_, scroll_width_, target_scroll_x_, anim_scroll_x_, start_scroll_x_, scroll_x_anim_start_time_, scroll_x_animating_,
+    visual_scroll_x_, visual_start_scroll_x_, visual_target_scroll_x_, visual_scroll_x_anim_start_time_, visual_scroll_x_animating_
+  };
+  axis_x.Set(x, smooth, style.scroll_behavior);
 }
 
 void Element::ClampScrollY(int max_scroll) {
-  if (target_scroll_y_ > max_scroll) {
-    target_scroll_y_ = max_scroll;
-  }
-  if (scroll_y_ > max_scroll) {
-    scroll_y_ = max_scroll;
-  }
-  if (anim_scroll_y_ > max_scroll) {
-    anim_scroll_y_ = static_cast<float>(max_scroll);
-  }
-  if (start_scroll_y_ > max_scroll) {
-    start_scroll_y_ = static_cast<float>(max_scroll);
-  }
-
-  if (visual_target_scroll_y_ > max_scroll) {
-    visual_target_scroll_y_ = static_cast<float>(max_scroll);
-  }
-  if (visual_scroll_y_ > max_scroll) {
-    visual_scroll_y_ = static_cast<float>(max_scroll);
-  }
-  if (visual_start_scroll_y_ > max_scroll) {
-    visual_start_scroll_y_ = static_cast<float>(max_scroll);
-  }
-
-  if (anim_scroll_y_ == static_cast<float>(target_scroll_y_)) {
-    scroll_y_animating_ = false;
-  }
-  if (visual_scroll_y_ == visual_target_scroll_y_) {
-    visual_scroll_y_animating_ = false;
-  }
+  ScrollAxis axis_y{
+    scroll_y_, scroll_height_, target_scroll_y_, anim_scroll_y_, start_scroll_y_, scroll_y_anim_start_time_, scroll_y_animating_,
+    visual_scroll_y_, visual_start_scroll_y_, visual_target_scroll_y_, visual_scroll_y_anim_start_time_, visual_scroll_y_animating_
+  };
+  axis_y.Clamp(max_scroll);
 }
 
 void Element::ClampScrollX(int max_scroll) {
-  if (target_scroll_x_ > max_scroll) {
-    target_scroll_x_ = max_scroll;
-  }
-  if (scroll_x_ > max_scroll) {
-    scroll_x_ = max_scroll;
-  }
-  if (anim_scroll_x_ > max_scroll) {
-    anim_scroll_x_ = static_cast<float>(max_scroll);
-  }
-  if (start_scroll_x_ > max_scroll) {
-    start_scroll_x_ = static_cast<float>(max_scroll);
-  }
-
-  if (visual_target_scroll_x_ > max_scroll) {
-    visual_target_scroll_x_ = static_cast<float>(max_scroll);
-  }
-  if (visual_scroll_x_ > max_scroll) {
-    visual_scroll_x_ = static_cast<float>(max_scroll);
-  }
-  if (visual_start_scroll_x_ > max_scroll) {
-    visual_start_scroll_x_ = static_cast<float>(max_scroll);
-  }
-
-  if (anim_scroll_x_ == static_cast<float>(target_scroll_x_)) {
-    scroll_x_animating_ = false;
-  }
-  if (visual_scroll_x_ == visual_target_scroll_x_) {
-    visual_scroll_x_animating_ = false;
-  }
+  ScrollAxis axis_x{
+    scroll_x_, scroll_width_, target_scroll_x_, anim_scroll_x_, start_scroll_x_, scroll_x_anim_start_time_, scroll_x_animating_,
+    visual_scroll_x_, visual_start_scroll_x_, visual_target_scroll_x_, visual_scroll_x_anim_start_time_, visual_scroll_x_animating_
+  };
+  axis_x.Clamp(max_scroll);
 }
 
 }  // namespace rtxui

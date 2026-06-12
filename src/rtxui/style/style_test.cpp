@@ -516,6 +516,32 @@ TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle",
     CHECK(style.opacity == 0.0f);
   }
 
+  SECTION("padding and border-width shorthand parsing") {
+    rtxui::ApplyStyle(style, {"padding", "2"});
+    CHECK(style.padding.top == 2);
+    CHECK(style.padding.right == 2);
+    CHECK(style.padding.bottom == 2);
+    CHECK(style.padding.left == 2);
+
+    rtxui::ApplyStyle(style, {"padding", "1 3"});
+    CHECK(style.padding.top == 1);
+    CHECK(style.padding.bottom == 1);
+    CHECK(style.padding.right == 3);
+    CHECK(style.padding.left == 3);
+
+    rtxui::ApplyStyle(style, {"padding", "1 2 3 4"});
+    CHECK(style.padding.top == 1);
+    CHECK(style.padding.right == 2);
+    CHECK(style.padding.bottom == 3);
+    CHECK(style.padding.left == 4);
+
+    rtxui::ApplyStyle(style, {"border-width", "5 6"});
+    CHECK(style.border.top == 5);
+    CHECK(style.border.bottom == 5);
+    CHECK(style.border.right == 6);
+    CHECK(style.border.left == 6);
+  }
+
   SECTION("flex-grow and flex-shrink properties") {
     rtxui::ApplyStyle(style, {"flex-grow", "2.5"});
     CHECK(style.flex_grow == 2.5f);
