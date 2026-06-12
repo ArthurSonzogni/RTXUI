@@ -1237,8 +1237,8 @@ TEST_CASE("Screen.AnchorLinkScrolling", "[terminal][mouse][anchor]") {
   REQUIRE(scroll_el != nullptr);
   REQUIRE(scroll_el->scroll_y() == 0);
 
-  // Click on the link. The link "Link to Target" is at y=0, x=0 inside the scroller.
-  // 1-based mouse coordinates are x=1, y=1.
+  // Click on the link. The link "Link to Target" is at y=0, x=0 inside the
+  // scroller. 1-based mouse coordinates are x=1, y=1.
   Event::Mouse click_link;
   click_link.button = Event::Mouse::Button::Left;
   click_link.motion = Event::Mouse::Motion::Pressed;
@@ -1594,7 +1594,8 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   REQUIRE(scrollable_smooth->scroll_y() == 0);
   REQUIRE(scrollable_smooth->visual_scroll_y() == 0.0f);
 
-  // Trigger smooth scroll programmatically (simulating keyboard focus navigation)
+  // Trigger smooth scroll programmatically (simulating keyboard focus
+  // navigation)
   scrollable_smooth->set_scroll_y(2, true);
 
   // Target is updated immediately
@@ -1661,7 +1662,9 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
           if (i + 1 < data.size() && data[i + 1] == '[') {
             size_t start = i + 2;
             size_t end = start;
-            while (end < data.size() && ((data[end] >= '0' && data[end] <= '9') || data[end] == ';')) {
+            while (
+                end < data.size() &&
+                ((data[end] >= '0' && data[end] <= '9') || data[end] == ';')) {
               end++;
             }
             if (end < data.size()) {
@@ -1686,9 +1689,13 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
         } else {
           size_t len = 1;
           unsigned char first = data[i];
-          if (first >= 0xf0) len = 4;
-          else if (first >= 0xe0) len = 3;
-          else if (first >= 0xc0) len = 2;
+          if (first >= 0xf0) {
+            len = 4;
+          } else if (first >= 0xe0) {
+            len = 3;
+          } else if (first >= 0xc0) {
+            len = 2;
+          }
 
           if (i + len <= data.size()) {
             std::string character = data.substr(i, len);
@@ -1724,12 +1731,19 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
       for (int x = 0; x < new_tex.width(); ++x) {
         const auto& expected = new_tex[x, y];
         const auto& actual = vt.cells[y * new_tex.width() + x];
-        std::string expected_char = expected.is_continuation ? "" : (expected.character.empty() ? " " : expected.character);
-        std::string actual_char = actual.is_continuation ? "" : actual.character;
-        if (expected_char != actual_char || expected.is_continuation != actual.is_continuation) {
-          UNSCOPED_INFO("Mismatch at (" << x << "," << y << "): expected '" 
-               << expected_char << "' (continuation=" << expected.is_continuation 
-               << "), got '" << actual_char << "' (continuation=" << actual.is_continuation << ")");
+        std::string expected_char =
+            expected.is_continuation
+                ? ""
+                : (expected.character.empty() ? " " : expected.character);
+        std::string actual_char =
+            actual.is_continuation ? "" : actual.character;
+        if (expected_char != actual_char ||
+            expected.is_continuation != actual.is_continuation) {
+          UNSCOPED_INFO("Mismatch at ("
+                        << x << "," << y << "): expected '" << expected_char
+                        << "' (continuation=" << expected.is_continuation
+                        << "), got '" << actual_char
+                        << "' (continuation=" << actual.is_continuation << ")");
           return false;
         }
       }
@@ -1788,7 +1802,8 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
     REQUIRE(VerifyDiff(old_tex, new_tex));
   }
 
-  // Test Case 4: Changing a character immediately following a wide character (which stays unchanged)
+  // Test Case 4: Changing a character immediately following a wide character
+  // (which stays unchanged)
   {
     Texture old_tex(10, 1);
     old_tex[0, 0].character = "中";
@@ -1803,7 +1818,8 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
     REQUIRE(VerifyDiff(old_tex, new_tex));
   }
 
-  // Test Case 5: Changing a character immediately preceding a wide character (which stays unchanged)
+  // Test Case 5: Changing a character immediately preceding a wide character
+  // (which stays unchanged)
   {
     Texture old_tex(10, 1);
     old_tex[0, 0].character = "A";
@@ -1821,7 +1837,7 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
 
 TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
-  
+
   class DynamicComponent : public Component<DynamicComponent> {
    public:
     std::string text = "A";
@@ -1829,9 +1845,7 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
       Import<rtxui::div>();
       Component<DynamicComponent>::InitReflection();
     }
-    DynamicComponent() {
-      Bind(text);
-    }
+    DynamicComponent() { Bind(text); }
     std::string_view view = R"(
       <div>{text}</div>
     )";
@@ -1882,7 +1896,9 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
           if (i + 1 < data.size() && data[i + 1] == '[') {
             size_t start = i + 2;
             size_t end = start;
-            while (end < data.size() && ((data[end] >= '0' && data[end] <= '9') || data[end] == ';')) {
+            while (
+                end < data.size() &&
+                ((data[end] >= '0' && data[end] <= '9') || data[end] == ';')) {
               end++;
             }
             if (end < data.size()) {
@@ -1914,9 +1930,13 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
         } else {
           size_t len = 1;
           unsigned char first = data[i];
-          if (first >= 0xf0) len = 4;
-          else if (first >= 0xe0) len = 3;
-          else if (first >= 0xc0) len = 2;
+          if (first >= 0xf0) {
+            len = 4;
+          } else if (first >= 0xe0) {
+            len = 3;
+          } else if (first >= 0xc0) {
+            len = 2;
+          }
 
           if (i + len <= data.size()) {
             std::string character = data.substr(i, len);
@@ -1942,7 +1962,7 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
 
   VirtualTerminal vt(80, 24);
   vt.Write(first_output);
-  
+
   vt.cx = 0;
   vt.cy = 0;
   vt.Write(second_output);
@@ -2091,6 +2111,86 @@ TEST_CASE("Screen.SpaceEnterActivation", "[terminal][focus][activation]") {
   CHECK(component->count == 2);
 }
 
+TEST_CASE("Screen.ParameterizedActivationWithSpaceAndReturn",
+          "[terminal][focus]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ParameterizedActivationComponent
+      : public Component<ParameterizedActivationComponent> {
+   public:
+    std::string last_arg = "";
+    void on_click(std::string arg) { last_arg = arg; }
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ParameterizedActivationComponent>::InitReflection();
+    }
+    ParameterizedActivationComponent() {
+      Import("on_click", [this](std::string arg) { on_click(arg); });
+    }
+    std::string_view view = R"xml(
+      <div id="btn" focusable="true" onclick="on_click(my-arg)">Click Me</div>
+    )xml";
+  };
+
+  auto component = Ref<ParameterizedActivationComponent>::New();
+  Screen screen(component, device);
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+  btn->set_focused(true);
+  screen.Draw();
+
+  // Press Space
+  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  CHECK(component->last_arg == "my-arg");
+
+  component->last_arg = "";
+
+  // Press Return
+  screen.Dispatch(Event::Return());
+  CHECK(component->last_arg == "my-arg");
+}
+
+TEST_CASE("Screen.CheckboxActivationWithSpaceAndReturn", "[terminal][focus]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class CheckboxActivationComponent
+      : public Component<CheckboxActivationComponent> {
+   public:
+    bool checked = false;
+    void InitReflection() override {
+      Import<rtxui::checkbox>();
+      Import<rtxui::div>();
+      Component<CheckboxActivationComponent>::InitReflection();
+    }
+    CheckboxActivationComponent() { Bind(checked); }
+    std::string_view view = R"xml(
+      <checkbox id="chk" checked="{checked}">Check</checkbox>
+    )xml";
+  };
+
+  auto component = Ref<CheckboxActivationComponent>::New();
+  Screen screen(component, device);
+  auto* chk = component->Root()->QuerySelector("#chk");
+  REQUIRE(chk != nullptr);
+  chk->set_focused(true);
+  screen.Draw();
+
+  // Initially unchecked
+  CHECK_FALSE(component->checked);
+
+  // Press Space to check
+  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  CHECK(component->checked);
+
+  // Press Return to uncheck
+  screen.Dispatch(Event::Return());
+  CHECK_FALSE(component->checked);
+
+  // Press Space to check again
+  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  CHECK(component->checked);
+}
+
 TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
@@ -2136,7 +2236,8 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
   CHECK_FALSE(other->focused());
   CHECK_FALSE(left_other->focused());
 
-  // Press ArrowRight when cursor is at the end. It should be consumed and NOT move focus.
+  // Press ArrowRight when cursor is at the end. It should be consumed and NOT
+  // move focus.
   screen.Dispatch(Event::ArrowRight());
   CHECK(input->focused());
   CHECK_FALSE(other->focused());
@@ -2161,7 +2262,8 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
   CHECK_FALSE(left_other->focused());
 }
 
-TEST_CASE("Transitions.NulloptTargetReverts", "[terminal][transitions][regression]") {
+TEST_CASE("Transitions.NulloptTargetReverts",
+          "[terminal][transitions][regression]") {
   struct ClockRestorer {
     ~ClockRestorer() { time::SetCustomClock(nullptr); }
   } restorer;
@@ -2211,7 +2313,8 @@ TEST_CASE("Transitions.NulloptTargetReverts", "[terminal][transitions][regressio
 
   // Still nullopt at progress = 0 (t = 1000ms) but is actively transitioning
   screen.Step();
-  // Wait, start value of transition will be transparent/interpolated, so it has a value during transition
+  // Wait, start value of transition will be transparent/interpolated, so it has
+  // a value during transition
   CHECK(btn->style.foreground_color.has_value());
 
   // Advance to 2000ms (100% progress)

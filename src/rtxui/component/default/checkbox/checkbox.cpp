@@ -3,8 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/checkbox/checkbox.hpp"
 
-#include "rtxui/dom/element.hpp"
 #include "rtxui/component/component_internal.hpp"
+#include "rtxui/dom/element.hpp"
 
 namespace rtxui {
 
@@ -80,8 +80,9 @@ bool checkbox::OnEvent(Event event) {
     if ((kb.motion == Event::Keyboard::Motion::Pressed ||
          kb.motion == Event::Keyboard::Motion::Repeat) &&
         root->focused()) {
-      if (kb.special == Event::Keyboard::Special::None &&
-          kb.codepoint == 32) {  // Space
+      if ((kb.special == Event::Keyboard::Special::None &&
+           kb.codepoint == 32) ||  // Space
+          kb.special == Event::Keyboard::Special::Return) {
         trigger = true;
       }
     }
@@ -95,7 +96,7 @@ bool checkbox::OnEvent(Event event) {
     if (root->Attributes().count("onchange")) {
       std::string onchange_cb = root->Attributes().at("onchange");
       if (auto* comp = GetAttributeOwnerComponent(root)) {
-          comp->RunCallback(onchange_cb);
+        comp->RunCallback(onchange_cb);
       }
     }
     return true;
