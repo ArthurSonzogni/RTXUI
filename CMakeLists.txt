@@ -175,6 +175,9 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_borders example/borders.cpp)
   target_link_libraries(rtxui_example_borders PRIVATE rtxui)
 
+  add_executable(rtxui_example_border_scroll_demo example/border_scroll_demo.cpp)
+  target_link_libraries(rtxui_example_border_scroll_demo PRIVATE rtxui)
+
   add_executable(rtxui_example_nested_scroll example/nested_scroll.cpp)
   target_link_libraries(rtxui_example_nested_scroll PRIVATE rtxui)
 
@@ -325,6 +328,8 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/core/unicode_test.cpp"
     "src/rtxui/layout/layout_test.cpp"
     "src/rtxui/paint/border_style_test.cpp"
+    "src/rtxui/paint/scrollbar_color_test.cpp"
+    "src/rtxui/paint/border_scrollbar_test.cpp"
     "src/rtxui/reflection/reflection_test.cpp"
     "src/rtxui/style/style_test.cpp"
     "src/rtxui/xml/xml_test.cpp"

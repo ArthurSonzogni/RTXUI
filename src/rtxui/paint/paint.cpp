@@ -451,10 +451,14 @@ void PaintImpl(const PhysicalFragment* frag,
     Color left_border_color =
         frag->border_color_left.value_or(current_foreground_color);
 
-    top_border_color.a = static_cast<uint8_t>(top_border_color.a * current_opacity);
-    right_border_color.a = static_cast<uint8_t>(right_border_color.a * current_opacity);
-    bottom_border_color.a = static_cast<uint8_t>(bottom_border_color.a * current_opacity);
-    left_border_color.a = static_cast<uint8_t>(left_border_color.a * current_opacity);
+    top_border_color.a =
+        static_cast<uint8_t>(top_border_color.a * current_opacity);
+    right_border_color.a =
+        static_cast<uint8_t>(right_border_color.a * current_opacity);
+    bottom_border_color.a =
+        static_cast<uint8_t>(bottom_border_color.a * current_opacity);
+    left_border_color.a =
+        static_cast<uint8_t>(left_border_color.a * current_opacity);
 
     auto set_char = [&](int x, int y, const char* c, uint8_t mode,
                         const Color& border_color) {
@@ -585,14 +589,10 @@ void PaintImpl(const PhysicalFragment* frag,
     int track_y_start = abs_y;
     int track_h = h;
     if (frag->has_border && frag->border_style != BorderStyle::None) {
-      if (draw_h_scrollbar) {
-        track_y_start = abs_y + 1;
-        track_h = h - 2;
-      }
+      track_y_start = abs_y + 1;
+      track_h = draw_h_scrollbar ? (h - 3) : (h - 2);
     } else {
-      if (draw_h_scrollbar) {
-        track_h = h - 1;
-      }
+      track_h = draw_h_scrollbar ? (h - 1) : h;
     }
 
     if (track_h > 0 && scrollbar_x >= 0 && scrollbar_x < texture.width()) {
@@ -659,13 +659,15 @@ void PaintImpl(const PhysicalFragment* frag,
             } else if (t_start > 0 && t_end == 8) {
               int thumb_len = 8 - t_start;
               cell.character = lower_blocks[thumb_len];
-              cell.background_color = Blend(track_bg, cell.background_color);
-              cell.foreground_color = Blend(thumb_bg, cell.background_color);
+              const Color original_bg = cell.background_color;
+              cell.background_color = Blend(track_bg, original_bg);
+              cell.foreground_color = Blend(thumb_bg, original_bg);
             } else if (t_start == 0 && t_end < 8) {
               int track_len = 8 - t_end;
               cell.character = lower_blocks[track_len];
-              cell.background_color = Blend(thumb_bg, cell.background_color);
-              cell.foreground_color = Blend(track_bg, cell.background_color);
+              const Color original_bg = cell.background_color;
+              cell.background_color = Blend(thumb_bg, original_bg);
+              cell.foreground_color = Blend(track_bg, original_bg);
             } else {
               cell.character = " ";
               cell.background_color = Blend(thumb_bg, cell.background_color);
@@ -683,14 +685,10 @@ void PaintImpl(const PhysicalFragment* frag,
     int track_x_start = abs_x;
     int track_w = w;
     if (frag->has_border && frag->border_style != BorderStyle::None) {
-      if (draw_v_scrollbar) {
-        track_x_start = abs_x + 1;
-        track_w = w - 2;
-      }
+      track_x_start = abs_x + 1;
+      track_w = draw_v_scrollbar ? (w - 3) : (w - 2);
     } else {
-      if (draw_v_scrollbar) {
-        track_w = w - 1;
-      }
+      track_w = draw_v_scrollbar ? (w - 1) : w;
     }
 
     if (track_w > 0 && scrollbar_y >= 0 && scrollbar_y < texture.height()) {
@@ -756,12 +754,14 @@ void PaintImpl(const PhysicalFragment* frag,
               cell.background_color = Blend(thumb_bg, cell.background_color);
             } else if (t_start > 0 && t_end == 8) {
               cell.character = left_blocks[t_start];
-              cell.background_color = Blend(thumb_bg, cell.background_color);
-              cell.foreground_color = Blend(track_bg, cell.background_color);
+              const Color original_bg = cell.background_color;
+              cell.background_color = Blend(thumb_bg, original_bg);
+              cell.foreground_color = Blend(track_bg, original_bg);
             } else if (t_start == 0 && t_end < 8) {
               cell.character = left_blocks[t_end];
-              cell.background_color = Blend(track_bg, cell.background_color);
-              cell.foreground_color = Blend(thumb_bg, cell.background_color);
+              const Color original_bg = cell.background_color;
+              cell.background_color = Blend(track_bg, original_bg);
+              cell.foreground_color = Blend(thumb_bg, original_bg);
             } else {
               cell.character = " ";
               cell.background_color = Blend(thumb_bg, cell.background_color);
@@ -875,7 +875,8 @@ void PaintImpl(const PhysicalFragment* frag,
           int min_y = viewport_y + top_val;
           child_off_y = std::max(child_off_y, min_y);
 
-          int parent_scrolled_bottom = abs_y + h - border_b - padding_b - scroll_y_offset;
+          int parent_scrolled_bottom =
+              abs_y + h - border_b - padding_b - scroll_y_offset;
           int max_y = parent_scrolled_bottom - child.fragment->height;
           child_off_y = std::min(child_off_y, max_y);
         }
@@ -885,7 +886,8 @@ void PaintImpl(const PhysicalFragment* frag,
           int min_x = viewport_x + left_val;
           child_off_x = std::max(child_off_x, min_x);
 
-          int parent_scrolled_right = abs_x + w - border_r - padding_r - scroll_x_offset;
+          int parent_scrolled_right =
+              abs_x + w - border_r - padding_r - scroll_x_offset;
           int max_x = parent_scrolled_right - child.fragment->width;
           child_off_x = std::min(child_off_x, max_x);
         }
@@ -895,11 +897,10 @@ void PaintImpl(const PhysicalFragment* frag,
     PaintImpl(child.fragment.get(), texture, child_off_x, child_off_y,
               child_accum_scroll_x, child_accum_scroll_y,
               is_fixed ? viewport_x : next_viewport_x,
-              is_fixed ? viewport_y : next_viewport_y,
-              current_foreground_color, current_background_color, current_bold,
-              current_underlined, current_underlined_double,
-              current_strikethrough, current_blink, child_clip_to_pass,
-              current_opacity);
+              is_fixed ? viewport_y : next_viewport_y, current_foreground_color,
+              current_background_color, current_bold, current_underlined,
+              current_underlined_double, current_strikethrough, current_blink,
+              child_clip_to_pass, current_opacity);
   }
 }
 }  // namespace
@@ -908,9 +909,10 @@ void Paint(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
            int off_y) {
-  PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y, Color::RGB(255, 255, 255),
-            Color::RGB(0, 0, 0), false, false, false, false, false,
-            ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
+  PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y,
+            Color::RGB(255, 255, 255), Color::RGB(0, 0, 0), false, false, false,
+            false, false, ClipRect{0, 0, texture.width(), texture.height()},
+            1.0f);
 }
 
 }  // namespace rtxui
