@@ -23,19 +23,23 @@ class AnchorDemo : public Component<AnchorDemo> {
           <div class="nav-title">SECTIONS</div>
           <a class="nav-link" href="#sec-intro">Introduction</a>
           <a class="nav-link" href="#sec-features">Features</a>
+          <a class="nav-link" href="#sec-install">Installation</a>
+          <a class="nav-link" href="#sec-usage">Usage</a>
+          <a class="nav-link" href="#sec-components">Components</a>
           <a class="nav-link" href="#sec-docs">Documentation</a>
+          <a class="nav-link" href="#sec-faq">FAQ</a>
           <a class="nav-link" href="#sec-contact">Contact</a>
         </div>
 
         <!-- Scrollable Content Pane -->
         <div class="scroll-window">
-          <div id="sec-intro" class="section sec-1">
+          <div id="sec-intro" class="section sec-odd">
             <div class="section-title">Introduction</div>
             <p>Welcome to RTXUI. This framework lets you build terminal user interfaces using familiar XML templates and CSS styles.</p>
             <p>Layout features include block, inline, flexbox, grid, fixed, absolute, and sticky positioning.</p>
           </div>
 
-          <div id="sec-features" class="section sec-2">
+          <div id="sec-features" class="section sec-even">
             <div class="section-title">Features</div>
             <p>• Declarative XML markup parsing</p>
             <p>• Complete CSS layout and flexbox model</p>
@@ -43,13 +47,41 @@ class AnchorDemo : public Component<AnchorDemo> {
             <p>• Mouse support: hover, active, focus, and clicks</p>
           </div>
 
-          <div id="sec-docs" class="section sec-3">
+          <div id="sec-install" class="section sec-odd">
+            <div class="section-title">Installation</div>
+            <p>To use RTXUI in your CMake project, add the library using FetchContent:</p>
+            <p>FetchContent_Declare(rtxui GIT_REPOSITORY ...)</p>
+            <p>Then link it with target_link_libraries(your_target rtxui::rtxui).</p>
+          </div>
+
+          <div id="sec-usage" class="section sec-even">
+            <div class="section-title">Usage</div>
+            <p>Initialize a component class, define its view property with HTML/XML markup,</p>
+            <p>implement InitReflection(), and start the main Screen loop.</p>
+            <p>Bind C++ states to reactive template properties for dynamic UI updates.</p>
+          </div>
+
+          <div id="sec-components" class="section sec-odd">
+            <div class="section-title">Components</div>
+            <p>RTXUI supports custom reusable components. Standard built-in components</p>
+            <p>include divs, spans, inputs, buttons, sliders, textareas, and checkboxes.</p>
+            <p>Create nested hierarchies using standard XML slot definitions.</p>
+          </div>
+
+          <div id="sec-docs" class="section sec-even">
             <div class="section-title">Documentation</div>
             <p>Styles are resolved dynamically based on CSS selectors and active classes.</p>
             <p>Use the C++ API to bind state variables and handle interactive events.</p>
           </div>
 
-          <div id="sec-contact" class="section sec-4">
+          <div id="sec-faq" class="section sec-odd">
+            <div class="section-title">FAQ</div>
+            <p>Q: Does it support mouse inputs? Yes, hovering and clicking are fully supported.</p>
+            <p>Q: Can I use CSS grid? Yes, grid-template-columns and grid-gap are available.</p>
+            <p>Q: Does it have animations? Yes, CSS transitions are supported.</p>
+          </div>
+
+          <div id="sec-contact" class="section sec-even">
             <div class="section-title">Contact</div>
             <p>Created by Arthur Sonzogni.</p>
             <p>Licensed under the MIT License.</p>
@@ -121,7 +153,7 @@ class AnchorDemo : public Component<AnchorDemo> {
       }
       .scroll-window {
         display: block;
-        height: 12;
+        height: 18;
         border: tall;
         border-color: rgb(71, 85, 105);
         overflow-y: scroll;
@@ -140,16 +172,18 @@ class AnchorDemo : public Component<AnchorDemo> {
         font-weight: bold;
         margin-bottom: 1;
       }
-      .sec-1 { background-color: rgb(30, 58, 138, 0.1); }
-      .sec-2 { background-color: rgb(6, 78, 59, 0.1); }
-      .sec-3 { background-color: rgb(124, 45, 18, 0.1); }
-      .sec-4 { background-color: rgb(88, 28, 135, 0.1); }
-      .section-title {
-        color: rgb(59, 130, 246);
+      .sec-odd {
+        background-color: rgba(30, 58, 138, 0.15); /* Deep slate royal blue */
       }
-      .sec-2 .section-title { color: rgb(52, 211, 153); }
-      .sec-3 .section-title { color: rgb(251, 146, 60); }
-      .sec-4 .section-title { color: rgb(192, 132, 252); }
+      .sec-even {
+        background-color: rgba(14, 165, 233, 0.15); /* Modern cyan sky blue */
+      }
+      .sec-odd .section-title {
+        color: rgb(96, 165, 250); /* Bright royal blue text */
+      }
+      .sec-even .section-title {
+        color: rgb(56, 189, 248); /* Bright sky blue text */
+      }
     </style>
   )html";
 };
