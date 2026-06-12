@@ -1603,15 +1603,15 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   REQUIRE(scrollable_smooth->scroll_y() == 0);
   REQUIRE(scrollable_smooth->visual_scroll_y() == 0.0f);
 
-  // Advance by 25ms
-  mock_now_ms = 2025.0;
+  // Advance by 250ms (halfway through 500ms duration)
+  mock_now_ms = 2250.0;
   screen.Step();
   // Content scroll is smooth
   REQUIRE(scrollable_smooth->scroll_y() >= 0);
   REQUIRE(scrollable_smooth->scroll_y() <= 2);
 
-  // Complete smooth content transition
-  mock_now_ms = 2050.0;
+  // Complete smooth content transition (500ms duration)
+  mock_now_ms = 2500.0;
   screen.Step();
   REQUIRE(scrollable_smooth->scroll_y() == 2);
   REQUIRE(scrollable_smooth->visual_scroll_y() == 2.0f);

@@ -137,7 +137,7 @@ const TransitionConfig* FindTransitionConfig(const Element* element,
   return nullptr;
 }
 
-constexpr double kScrollAnimationDurationMs = 50.0;
+constexpr double kScrollAnimationDurationMs = 500.0;
 
 }  // namespace
 
