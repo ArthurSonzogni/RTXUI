@@ -2046,7 +2046,8 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
         .box { width: 10; height: 3; }
       </style>
       <div id="root">
-        <input id="input" class="box" value="hello" />
+        <div id="left-other" class="box" focusable="true">Left Other</div>
+        <input id="input" class="box" value="" />
         <div id="other" class="box" focusable="true">Other</div>
       </div>
     )";
@@ -2057,9 +2058,11 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
 
   auto* input = component->Root()->QuerySelector("#input");
   auto* other = component->Root()->QuerySelector("#other");
+  auto* left_other = component->Root()->QuerySelector("#left-other");
 
   REQUIRE(input != nullptr);
   REQUIRE(other != nullptr);
+  REQUIRE(left_other != nullptr);
 
   input->set_focused(true);
   screen.Draw();
@@ -2067,9 +2070,34 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
   // Press 'l' (vim right). Since it's an input, it should be consumed.
   screen.Dispatch(Event::l());
 
-  // Focus should NOT have moved to 'other'
+  // Focus should NOT have moved to 'other' or 'left-other'
   CHECK(input->focused());
   CHECK_FALSE(other->focused());
+  CHECK_FALSE(left_other->focused());
+
+  // Press ArrowRight when cursor is at the end. It should be consumed and NOT move focus.
+  screen.Dispatch(Event::ArrowRight());
+  CHECK(input->focused());
+  CHECK_FALSE(other->focused());
+  CHECK_FALSE(left_other->focused());
+
+  // Press ArrowRight again at the end.
+  screen.Dispatch(Event::ArrowRight());
+  CHECK(input->focused());
+  CHECK_FALSE(other->focused());
+  CHECK_FALSE(left_other->focused());
+
+  // Press ArrowLeft. It should be consumed and NOT move focus.
+  screen.Dispatch(Event::ArrowLeft());
+  CHECK(input->focused());
+  CHECK_FALSE(other->focused());
+  CHECK_FALSE(left_other->focused());
+
+  // Press ArrowLeft again at the beginning.
+  screen.Dispatch(Event::ArrowLeft());
+  CHECK(input->focused());
+  CHECK_FALSE(other->focused());
+  CHECK_FALSE(left_other->focused());
 }
 
 TEST_CASE("Transitions.NulloptTargetReverts", "[terminal][transitions][regression]") {

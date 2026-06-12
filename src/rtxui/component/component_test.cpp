@@ -2462,4 +2462,245 @@ TEST_CASE("Input component is not recreated when attributes change", "[component
   CHECK(new_input_element->component() == input_component);
 }
 
+class TransitionFlickerTestComponent : public rtxui::Component<TransitionFlickerTestComponent> {
+ public:
+  std::string_view view = R"html(
+    <div id="test-node">Test</div>
+    <style>
+      #test-node {
+        opacity: 0.8;
+        transition: opacity 0.1s linear;
+      }
+      #test-node:focus {
+        opacity: 1.0;
+      }
+    </style>
+  )html";
+};
+
+TEST_CASE("Flickering transition is not triggered on re-render when focused", "[component][transition]") {
+  auto container = rtxui::Ref<TransitionFlickerTestComponent>::New();
+  container->Mount();
+
+  auto* node = container->Root()->QuerySelector("#test-node");
+  REQUIRE(node != nullptr);
+
+  // Focus the element
+  node->set_focused(true);
+
+  // Initial render (and resolve target styles to start focus transition)
+  container->Render();
+  
+  double now = rtxui::time::GetTimeMs();
+
+  // Complete the transition by ticking at a later time
+  node->TickTransitions(now + 200.0);
+  CHECK(node->style.opacity == 1.0f);
+  CHECK(node->active_transitions.empty());
+
+  // Call Render again while focused
+  container->Render();
+
+  // No transitions should be started because we remained focused!
+  CHECK(node->active_transitions.empty());
+  CHECK(node->style.opacity == 1.0f);
+}
+
+TEST_CASE("Flickering transition is not triggered on input navigation", "[component][input][transition]") {
+  auto container = rtxui::Ref<InputReuseTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("#test-input");
+  REQUIRE(input_el != nullptr);
+
+  // Focus the input
+  input_el->set_focused(true);
+
+  // Initial render
+  container->Render();
+
+  double now = rtxui::time::GetTimeMs();
+
+  // Complete any focus transition
+  input_el->TickTransitions(now + 200.0);
+  CHECK(input_el->style.opacity == 1.0f);
+  CHECK(input_el->active_transitions.empty());
+
+  // Simulate navigating with ArrowLeft
+  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
+  REQUIRE(input_comp != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  REQUIRE(input_ptr != nullptr);
+  input_ptr->OnEvent(Event::ArrowLeft());
+  input_ptr->Digest();
+
+  // Check that no transition was triggered and it stayed at opacity 1.0
+  CHECK(input_el->active_transitions.empty());
+  CHECK(input_el->style.opacity == 1.0f);
+}
+
+class StyledParentTestComponent : public rtxui::Component<StyledParentTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::input>();
+    rtxui::Component<StyledParentTestComponent>::InitReflection();
+  }
+  std::string value = "initial";
+  std::string_view view = R"html(
+    <div>
+      <input id="test-input" class="custom-input" value="{value}" />
+    </div>
+    <style>
+      .custom-input {
+        background-color: rgb(100, 100, 100);
+      }
+    </style>
+  )html";
+  StyledParentTestComponent() {
+    Bind(value);
+  }
+};
+
+TEST_CASE("Child component style is preserved when parent stylesheet styles it", "[component][style][regression]") {
+  auto container = rtxui::Ref<StyledParentTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("#test-input");
+  REQUIRE(input_el != nullptr);
+
+  // Focus the input
+  input_el->set_focused(true);
+
+  // Initial render
+  container->Render();
+
+  // Verify that the parent's base style is applied
+  CHECK(input_el->base_style.background_color.value() == Color::RGB(100, 100, 100));
+
+  // Simulate navigating with ArrowLeft which triggers input's Digest() and re-render of input
+  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
+  REQUIRE(input_comp != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  REQUIRE(input_ptr != nullptr);
+  input_ptr->OnEvent(Event::ArrowLeft());
+  input_ptr->Digest();
+
+  // The parent style should still be preserved on the child's root base style!
+  CHECK(input_el->base_style.background_color.value() == Color::RGB(100, 100, 100));
+}
+
+class DynamicTagsTestComponent : public rtxui::Component<DynamicTagsTestComponent> {
+ public:
+  bool show_span_first = true;
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    Bind(show_span_first);
+    rtxui::Component<DynamicTagsTestComponent>::InitReflection();
+  }
+  std::string_view view = R"html(
+    <div id="container">
+      <if condition="{show_span_first}">
+        <span id="el-span">Span</span>
+        <div id="el-div">Div</div>
+      </if>
+      <else>
+        <div id="el-div">Div</div>
+        <span id="el-span">Span</span>
+      </else>
+    </div>
+  )html";
+  DynamicTagsTestComponent() {
+    Bind(show_span_first);
+  }
+};
+
+TEST_CASE("Component root elements are reused and reordered during reconciliation", "[component][reconciliation]") {
+  auto container = rtxui::Ref<DynamicTagsTestComponent>::New();
+  container->Mount();
+
+  // Initial render
+  container->Render();
+
+  auto* root_div = container->Root()->QuerySelector("#container");
+  REQUIRE(root_div != nullptr);
+  REQUIRE(root_div->ChildCount() == 1);
+  auto* slot_el = root_div->ChildAt(0);
+  REQUIRE(slot_el != nullptr);
+  REQUIRE(slot_el->ChildCount() == 2);
+
+  auto* span = slot_el->ChildAt(0);
+  auto* div = slot_el->ChildAt(1);
+  REQUIRE(span != nullptr);
+  REQUIRE(div != nullptr);
+  CHECK(span->tag() == "span");
+  CHECK(div->tag() == "div");
+
+  // Toggle order of elements (which will cause a tag mismatch at index 0)
+  container->show_span_first = false;
+  container->Render();
+
+  // The child elements should have been reordered (swapped) in-place without creating/destroying new elements
+  REQUIRE(slot_el->ChildCount() == 2);
+  CHECK(slot_el->ChildAt(0) == div);  // The div component root should now be first
+  CHECK(slot_el->ChildAt(1) == span); // The span component root should now be second
+}
+
+class StandardTagsTestComponent : public rtxui::Component<StandardTagsTestComponent> {
+ public:
+  bool show_section_first = true;
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Bind(show_section_first);
+    rtxui::Component<StandardTagsTestComponent>::InitReflection();
+  }
+  std::string_view view = R"html(
+    <div id="container">
+      <if condition="{show_section_first}">
+        <section>Section</section>
+        <header>Header</header>
+      </if>
+      <else>
+        <header>Header</header>
+        <section>Section</section>
+      </else>
+    </div>
+  )html";
+  StandardTagsTestComponent() {
+    Bind(show_section_first);
+  }
+};
+
+TEST_CASE("Standard elements are reused and reordered during reconciliation", "[component][reconciliation]") {
+  auto container = rtxui::Ref<StandardTagsTestComponent>::New();
+  container->Mount();
+
+  // Initial render
+  container->Render();
+
+  auto* root_div = container->Root()->QuerySelector("#container");
+  REQUIRE(root_div != nullptr);
+  REQUIRE(root_div->ChildCount() == 1);
+  auto* slot_el = root_div->ChildAt(0);
+  REQUIRE(slot_el != nullptr);
+  REQUIRE(slot_el->ChildCount() == 2);
+
+  auto* section = slot_el->ChildAt(0);
+  auto* header = slot_el->ChildAt(1);
+  REQUIRE(section != nullptr);
+  REQUIRE(header != nullptr);
+  CHECK(section->tag() == "section");
+  CHECK(header->tag() == "header");
+
+  // Toggle order of elements (which will cause a tag mismatch at index 0)
+  container->show_section_first = false;
+  container->Render();
+
+  // The child elements should have been reordered (swapped) in-place without creating/destroying new elements
+  REQUIRE(slot_el->ChildCount() == 2);
+  CHECK(slot_el->ChildAt(0) == header);  // The header element should now be first
+  CHECK(slot_el->ChildAt(1) == section); // The section element should now be second
+}
+
+
 
