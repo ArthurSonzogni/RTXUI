@@ -819,6 +819,143 @@ TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
   CHECK(texture[1, 1].character == "F");
 }
 
+TEST_CASE("Layout: position sticky layout and scrolling", "[layout][sticky][scroll]") {
+  struct TestComponent : Component<TestComponent> {
+    std::string_view view = R"html(
+      <div class="scrollable">
+        <div class="container">
+          <div class="sticky-element">S</div>
+          <div class="spacer">.</div>
+        </div>
+        <div class="extra-spacer"></div>
+      </div>
+      <style>
+        .scrollable {
+          display: block;
+          width: 5;
+          height: 5;
+          overflow-y: scroll;
+        }
+        .container {
+          display: block;
+          width: 5;
+          height: 10;
+        }
+        .sticky-element {
+          position: sticky;
+          top: 1;
+          left: 0;
+          width: 1;
+          height: 1;
+          z-index: 1;
+        }
+        .spacer {
+          display: block;
+          width: 5;
+          height: 9;
+        }
+        .extra-spacer {
+          display: block;
+          width: 5;
+          height: 10;
+        }
+      </style>
+    )html";
+  };
+
+  {
+    // 1. scroll_y = 0: normal_y is 0, but min_y is 1 (viewport_top 0 + top 1).
+    // Sticky element should stick to y = 1.
+    auto c = Ref<TestComponent>::New();
+    c->Mount();
+    c->Digest();
+
+    auto* sticky_el = c->Root()->QuerySelector(".sticky-element");
+    REQUIRE(sticky_el != nullptr);
+    INFO("sticky_el position style: " << (int)sticky_el->style.position);
+    CHECK(sticky_el->style.position == PositionType::Sticky);
+
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 5);
+    for (int y = 0; y < 5; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {5, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+    std::string layer = GetTextLayer(texture);
+    INFO("Scroll 0 render:\n" << layer);
+    CHECK(texture[0, 1].character == "S");
+  }
+
+  {
+    // 2. scroll_y = 3: normal_y is -3, min_y is 1 (viewport_top 0 + top 1).
+    // Sticky element should stick to y = 1.
+    auto c = Ref<TestComponent>::New();
+    c->Mount();
+    c->Digest();
+
+    auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+    REQUIRE(scrollable_element != nullptr);
+    scrollable_element->set_scroll_y(3);
+
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 5);
+    for (int y = 0; y < 5; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {5, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+    CHECK(texture[0, 1].character == "S");
+  }
+
+  {
+    // 3. scroll_y = 9: normal_y is -9, min_y is 1.
+    // However, parent container bottom is at 10 - 9 = 1.
+    // The sticky element is height 1, so max_y limit is 1 - 1 = 0.
+    // So std::min(1, 0) = 0. It should be at y = 0.
+    auto c = Ref<TestComponent>::New();
+    c->Mount();
+    c->Digest();
+
+    auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+    REQUIRE(scrollable_element != nullptr);
+    scrollable_element->set_scroll_y(9);
+
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 5);
+    for (int y = 0; y < 5; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {5, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+    std::string layer = GetTextLayer(texture);
+    INFO("Scroll 9 render:\n" << layer);
+    CHECK(texture[0, 0].character == "S");
+  }
+}
+
+
 TEST_CASE("Layout: Flexbox Grow Cumulative Distribution", "[layout][flex][grow]") {
   struct FlexGrowTest : Component<FlexGrowTest> {
     std::string_view Setup() {

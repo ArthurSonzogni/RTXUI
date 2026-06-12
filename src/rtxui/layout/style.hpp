@@ -129,6 +129,7 @@ enum class PositionType {
   Relative,
   Absolute,
   Fixed,
+  Sticky,
 };
 
 enum class JustifyContent {

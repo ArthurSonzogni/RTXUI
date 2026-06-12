@@ -373,6 +373,8 @@ void PaintImpl(const PhysicalFragment* frag,
                int off_y,
                int accum_scroll_x,
                int accum_scroll_y,
+               int viewport_x,
+               int viewport_y,
                Color inherited_foreground_color,
                Color parent_background_color,
                bool inherited_bold,
@@ -774,25 +776,26 @@ void PaintImpl(const PhysicalFragment* frag,
   ClipRect child_clip = clip;
   int scroll_x_offset = 0;
   int scroll_y_offset = 0;
+  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+
+  if (frag->dom_node) {
+    padding_l = frag->dom_node->style.padding.left;
+    padding_r = frag->dom_node->style.padding.right;
+    padding_t = frag->dom_node->style.padding.top;
+    padding_b = frag->dom_node->style.padding.bottom;
+  }
+
+  if (frag->has_border && frag->border_style != BorderStyle::None) {
+    border_l = 1;
+    border_r = 1;
+    border_t = 1;
+    border_b = 1;
+  }
+
   if (frag->clips_descendants) {
     scroll_x_offset = frag->scroll_x;
     scroll_y_offset = frag->scroll_y;
-    int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-    int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
-
-    if (frag->dom_node) {
-      padding_l = frag->dom_node->style.padding.left;
-      padding_r = frag->dom_node->style.padding.right;
-      padding_t = frag->dom_node->style.padding.top;
-      padding_b = frag->dom_node->style.padding.bottom;
-    }
-
-    if (frag->has_border && frag->border_style != BorderStyle::None) {
-      border_l = 1;
-      border_r = 1;
-      border_t = 1;
-      border_b = 1;
-    }
 
     int scrollbar_w = 0;
     if (frag->dom_node &&
@@ -834,6 +837,13 @@ void PaintImpl(const PhysicalFragment* frag,
   int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
   int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
 
+  int next_viewport_x = viewport_x;
+  int next_viewport_y = viewport_y;
+  if (frag->clips_descendants) {
+    next_viewport_x = abs_x + border_l + padding_l;
+    next_viewport_y = abs_y + border_t + padding_t;
+  }
+
   for (auto& child : sorted_children) {
     bool is_fixed =
         (child.fragment && child.fragment->dom_node &&
@@ -845,6 +855,10 @@ void PaintImpl(const PhysicalFragment* frag,
     int child_accum_scroll_y = next_accum_scroll_y;
     ClipRect child_clip_to_pass = child_clip;
 
+    bool is_sticky =
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Sticky);
+
     if (is_fixed) {
       child_off_x += accum_scroll_x;
       child_off_y += accum_scroll_y;
@@ -854,10 +868,34 @@ void PaintImpl(const PhysicalFragment* frag,
     } else {
       child_off_x -= scroll_x_offset;
       child_off_y -= scroll_y_offset;
+
+      if (is_sticky) {
+        if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
+          int top_val = child.fragment->dom_node->style.top.Resolve(0);
+          int min_y = viewport_y + top_val;
+          child_off_y = std::max(child_off_y, min_y);
+
+          int parent_scrolled_bottom = abs_y + h - border_b - padding_b - scroll_y_offset;
+          int max_y = parent_scrolled_bottom - child.fragment->height;
+          child_off_y = std::min(child_off_y, max_y);
+        }
+
+        if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
+          int left_val = child.fragment->dom_node->style.left.Resolve(0);
+          int min_x = viewport_x + left_val;
+          child_off_x = std::max(child_off_x, min_x);
+
+          int parent_scrolled_right = abs_x + w - border_r - padding_r - scroll_x_offset;
+          int max_x = parent_scrolled_right - child.fragment->width;
+          child_off_x = std::min(child_off_x, max_x);
+        }
+      }
     }
 
     PaintImpl(child.fragment.get(), texture, child_off_x, child_off_y,
               child_accum_scroll_x, child_accum_scroll_y,
+              is_fixed ? viewport_x : next_viewport_x,
+              is_fixed ? viewport_y : next_viewport_y,
               current_foreground_color, current_background_color, current_bold,
               current_underlined, current_underlined_double,
               current_strikethrough, current_blink, child_clip_to_pass,
@@ -870,7 +908,7 @@ void Paint(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
            int off_y) {
-  PaintImpl(frag, texture, off_x, off_y, 0, 0, Color::RGB(255, 255, 255),
+  PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y, Color::RGB(255, 255, 255),
             Color::RGB(0, 0, 0), false, false, false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
 }

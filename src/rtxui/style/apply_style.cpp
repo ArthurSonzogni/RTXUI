@@ -777,6 +777,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.position = PositionType::Fixed;
       return;
     }
+    if (v == "sticky") {
+      style.position = PositionType::Sticky;
+      return;
+    }
   }
 
   if (p == "top") {
