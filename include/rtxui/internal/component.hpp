@@ -130,6 +130,8 @@ class ComponentBase : public RefCounted, public Bindings {
   std::unique_ptr<CategorizedRules> categorized_rules_;
   std::vector<std::string> css_strings_;
   std::vector<BindingLink> two_way_bindings_;
+  int last_render_terminal_width_ = -1;
+  int last_render_terminal_height_ = -1;
   void Render(const xml::Node& node,
               Element* element,
               ComponentBase* source,

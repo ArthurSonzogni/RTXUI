@@ -2425,3 +2425,41 @@ TEST_CASE("Hovered and Active states are preserved across Render", "[component]"
   CHECK(new_node->active() == true);
 }
 
+class InputReuseTestComponent : public rtxui::Component<InputReuseTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::input>();
+    rtxui::Component<InputReuseTestComponent>::InitReflection();
+  }
+  std::string value = "initial";
+  std::string_view view = R"(
+    <div>
+      <input id="test-input" value="{value}" />
+    </div>
+  )";
+  InputReuseTestComponent() {
+    Bind(value);
+  }
+};
+
+TEST_CASE("Input component is not recreated when attributes change", "[component][input]") {
+  auto container = rtxui::Ref<InputReuseTestComponent>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+  rtxui::Screen screen(container, device);
+
+  auto* input_element = container->Root()->QuerySelector("#test-input");
+  REQUIRE(input_element != nullptr);
+  auto* input_component = input_element->component();
+  REQUIRE(input_component != nullptr);
+
+  // Now change value
+  container->value = "updated";
+  container->Render();
+
+  auto* new_input_element = container->Root()->QuerySelector("#test-input");
+  REQUIRE(new_input_element != nullptr);
+  CHECK(new_input_element->component() == input_component);
+}
+
+
