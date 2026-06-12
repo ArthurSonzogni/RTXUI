@@ -741,6 +741,11 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "flex-shrink") {
+    style.flex_shrink = StoF(v);
+    return;
+  }
+
   if (p == "flex-direction") {
     if (v == "row") {
       style.flex_direction = Direction::Row;
