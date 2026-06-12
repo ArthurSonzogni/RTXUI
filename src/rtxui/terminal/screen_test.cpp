@@ -2488,5 +2488,246 @@ TEST_CASE("Transitions.NulloptTargetReverts",
   CHECK_FALSE(btn->style.foreground_color.has_value());
 }
 
+TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class AnchorDemoTest : public Component<AnchorDemoTest> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<AnchorDemoTest>::InitReflection();
+    }
+    std::string_view view = R"xml(
+    <div class="container">
+      <div class="header">
+        <h2>Anchor Navigation Demo</h2>
+        <p class="description">
+          Click the links in the sidebar to scroll the corresponding section into view.
+        </p>
+      </div>
+
+      <div class="workspace">
+        <div class="sidebar">
+          <div class="nav-title">SECTIONS</div>
+          <a class="nav-link" href="#sec-intro">Introduction</a>
+          <a class="nav-link" href="#sec-features">Features</a>
+          <a class="nav-link" href="#sec-install">Installation</a>
+          <a class="nav-link" href="#sec-usage">Usage</a>
+          <a class="nav-link" href="#sec-components">Components</a>
+          <a class="nav-link" href="#sec-docs">Documentation</a>
+          <a class="nav-link" href="#sec-faq">FAQ</a>
+          <a id="link-contact" class="nav-link" href="#sec-contact">Contact</a>
+        </div>
+
+        <div id="scroll-window" class="scroll-window">
+          <div id="sec-intro" class="section sec-odd">
+            <div class="section-title">Introduction</div>
+            <p>Welcome to RTXUI. This framework lets you build terminal user interfaces using familiar XML templates and CSS styles.</p>
+            <p>Layout features include block, inline, flexbox, grid, fixed, absolute, and sticky positioning.</p>
+          </div>
+
+          <div id="sec-features" class="section sec-even">
+            <div class="section-title">Features</div>
+            <p>• Declarative XML markup parsing</p>
+            <p>• Complete CSS layout and flexbox model</p>
+            <p>• Rich borders, margins, padding, and z-index</p>
+            <p>• Mouse support: hover, active, focus, and clicks</p>
+          </div>
+
+          <div id="sec-install" class="section sec-odd">
+            <div class="section-title">Installation</div>
+            <p>To use RTXUI in your CMake project, add the library using FetchContent:</p>
+            <p>FetchContent_Declare(rtxui GIT_REPOSITORY ...)</p>
+            <p>Then link it with target_link_libraries(your_target rtxui::rtxui).</p>
+          </div>
+
+          <div id="sec-usage" class="section sec-even">
+            <div class="section-title">Usage</div>
+            <p>Initialize a component class, define its view property with HTML/XML markup,</p>
+            <p>implement InitReflection(), and start the main Screen loop.</p>
+            <p>Bind C++ states to reactive template properties for dynamic UI updates.</p>
+          </div>
+
+          <div id="sec-components" class="section sec-odd">
+            <div class="section-title">Components</div>
+            <p>RTXUI supports custom reusable components. Standard built-in components</p>
+            <p>include divs, spans, inputs, buttons, sliders, textareas, and checkboxes.</p>
+            <p>Create nested hierarchies using standard XML slot definitions.</p>
+          </div>
+
+          <div id="sec-docs" class="section sec-even">
+            <div class="section-title">Documentation</div>
+            <p>Styles are resolved dynamically based on CSS selectors and active classes.</p>
+            <p>Use the C++ API to bind state variables and handle interactive events.</p>
+          </div>
+
+          <div id="sec-faq" class="section sec-odd">
+            <div class="section-title">FAQ</div>
+            <p>Q: Does it support mouse inputs? Yes, hovering and clicking are fully supported.</p>
+            <p>Q: Can I use CSS grid? Yes, grid-template-columns and grid-gap are available.</p>
+            <p>Q: Does it have animations? Yes, CSS transitions are supported.</p>
+          </div>
+
+          <div id="sec-contact" class="section sec-even">
+            <div class="section-title">Contact</div>
+            <p>Created by Arthur Sonzogni.</p>
+            <p>Licensed under the MIT License.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      self {
+        display: block;
+        padding: 1 2;
+        background-color: rgb(15, 23, 42);
+        color: rgb(241, 245, 249);
+      }
+      .container {
+        display: block;
+        max-width: 80;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .header {
+        display: block;
+        margin-bottom: 1;
+      }
+      h2 {
+        color: rgb(59, 130, 246);
+        margin-bottom: 0;
+      }
+      .description {
+        color: rgb(148, 163, 184);
+      }
+      .workspace {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 2;
+        width: 100%;
+      }
+      .sidebar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        width: 18;
+        border: tall;
+        border-color: rgb(71, 85, 105);
+        background-color: rgb(30, 41, 59, 0.4);
+        padding: 1;
+        flex-shrink: 0;
+        z-index: 10;
+      }
+      .nav-title {
+        color: rgb(148, 163, 184);
+        font-weight: bold;
+        margin-bottom: 1;
+      }
+      .nav-link {
+        display: block;
+        color: rgb(56, 189, 248);
+        margin-bottom: 1;
+        padding-left: 1;
+        cursor: pointer;
+      }
+      .scroll-window {
+        display: block;
+        height: 18;
+        border: tall;
+        border-color: rgb(71, 85, 105);
+        overflow-y: scroll;
+        scroll-speed: 1;
+        scroll-behavior: smooth;
+        flex-grow: 1;
+      }
+      .section {
+        display: block;
+        margin: 2;
+        padding: 2;
+      }
+      .section-title {
+        font-weight: bold;
+        margin-bottom: 1;
+      }
+    </style>
+    )xml";
+  };
+
+  auto component = Ref<AnchorDemoTest>::New();
+  device->TriggerResize(80, 40);
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scrollable = component->Root()->QuerySelector("#scroll-window");
+  auto* link_contact = component->Root()->QuerySelector("#link-contact");
+  auto* sec_contact = component->Root()->QuerySelector("#sec-contact");
+
+  REQUIRE(scrollable != nullptr);
+  REQUIRE(link_contact != nullptr);
+  REQUIRE(sec_contact != nullptr);
+
+  // Initial scroll_y should be 0
+  REQUIRE(scrollable->scroll_y() == 0);
+
+  // Find the contact link's screen coordinates by probing click events.
+  int contact_x = -1, contact_y = -1;
+  int width = 0, height = 0;
+  device->GetSize(width, height);
+  for (int y = 1; y <= height; ++y) {
+    for (int x = 1; x <= width; ++x) {
+      Event::Mouse mouse_event;
+      mouse_event.button = Event::Mouse::Button::Left;
+      mouse_event.motion = Event::Mouse::Motion::Pressed;
+      mouse_event.x = x;
+      mouse_event.y = y;
+      screen.Dispatch(mouse_event);
+
+      // Check if the currently focused element is link_contact or its
+      // descendant
+      Element* focused = nullptr;
+      component->Root()->Visit([&](Element& el) {
+        if (el.focused()) {
+          focused = &el;
+        }
+      });
+
+
+      bool is_contact_link = false;
+      Element* curr = focused;
+      while (curr) {
+        if (curr == link_contact) {
+          is_contact_link = true;
+          break;
+        }
+        curr = curr->Parent();
+      }
+
+      if (is_contact_link) {
+        contact_x = x;
+        contact_y = y;
+        break;
+      }
+    }
+    if (contact_x != -1) {
+      break;
+    }
+  }
+
+  // Ensure we actually successfully located and clicked the contact link
+  REQUIRE(contact_x != -1);
+  REQUIRE(contact_y != -1);
+
+  // Confirm scrollbar is scrolled to the absolute bottom (max_scroll_y)
+  auto* scrollable_after = component->Root()->QuerySelector("#scroll-window");
+
+  int max_scroll_y = scrollable_after->scroll_height() - scrollable_after->layout_height();
+  CHECK(scrollable_after->scroll_y() == max_scroll_y);
+}
+
 }  // namespace
 }  // namespace rtxui

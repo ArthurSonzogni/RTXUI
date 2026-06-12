@@ -424,6 +424,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
       }
     }
 
+
     fragment->children.push_back({
         child_frag,
         rx,
@@ -439,6 +440,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   }
 
   cur_y += prev_margin_bottom;
+
   cur_y += box->style.border.bottom + box->style.padding.bottom;
 
   if (is_auto_width && constraints.width.mode == MeasureMode::Undefined) {
@@ -519,19 +521,29 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
       }
     }
 
-    box->dom_node->set_layout_width(fragment->width);
-    box->dom_node->set_layout_height(fragment->height);
-    box->dom_node->set_scroll_height(total_scroll_height);
-    int max_scroll = std::max(0, total_scroll_height - fragment->height);
-    box->dom_node->ClampScrollY(max_scroll);
-    fragment->scroll_y = box->dom_node->scroll_y();
-    fragment->visual_scroll_y = box->dom_node->visual_scroll_y();
+    if (!context.is_measurement) {
+      box->dom_node->set_layout_width(fragment->width);
+      box->dom_node->set_layout_height(fragment->height);
+      box->dom_node->set_scroll_height(total_scroll_height);
+      int max_scroll = std::max(0, total_scroll_height - fragment->height);
+      box->dom_node->ClampScrollY(max_scroll);
+      fragment->scroll_y = box->dom_node->scroll_y();
+      fragment->visual_scroll_y = box->dom_node->visual_scroll_y();
 
-    box->dom_node->set_scroll_width(total_scroll_width);
-    int max_scroll_x = std::max(0, total_scroll_width - fragment->width);
-    box->dom_node->ClampScrollX(max_scroll_x);
-    fragment->scroll_x = box->dom_node->scroll_x();
-    fragment->visual_scroll_x = box->dom_node->visual_scroll_x();
+      box->dom_node->set_scroll_width(total_scroll_width);
+      int max_scroll_x = std::max(0, total_scroll_width - fragment->width);
+      box->dom_node->ClampScrollX(max_scroll_x);
+      fragment->scroll_x = box->dom_node->scroll_x();
+      fragment->visual_scroll_x = box->dom_node->visual_scroll_x();
+    } else {
+      int max_scroll = std::max(0, total_scroll_height - fragment->height);
+      fragment->scroll_y = std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
+      fragment->visual_scroll_y = std::clamp(box->dom_node->visual_scroll_y(), 0.f, static_cast<float>(max_scroll));
+
+      int max_scroll_x = std::max(0, total_scroll_width - fragment->width);
+      fragment->scroll_x = std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
+      fragment->visual_scroll_x = std::clamp(box->dom_node->visual_scroll_x(), 0.f, static_cast<float>(max_scroll_x));
+    }
   }
 
   return fragment;
@@ -941,7 +953,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   LayoutOutOfFlowChildren(box, container_frag, context);
 
-  if (box->dom_node) {
+  if (box->dom_node && !context.is_measurement) {
     box->dom_node->set_layout_width(container_frag->width);
     box->dom_node->set_layout_height(container_frag->height);
   }
@@ -1108,7 +1120,9 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       child_input.box = wrapper_box.get();
     }
 
-    auto frag = RunLayout(child_input, child_c, context);
+    LayoutContext child_context = context;
+    child_context.is_measurement = true;
+    auto frag = RunLayout(child_input, child_c, child_context);
     int m_margin =
         is_row ? child->style.margin.Horiz() : child->style.margin.Vert();
     int main_size = (is_row ? frag->width : frag->height) + m_margin;
@@ -1460,19 +1474,29 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       }
     }
 
-    box->dom_node->set_layout_width(fragment->width);
-    box->dom_node->set_layout_height(fragment->height);
-    box->dom_node->set_scroll_height(total_content_height);
-    int max_scroll = std::max(0, total_content_height - fragment->height);
-    box->dom_node->ClampScrollY(max_scroll);
-    fragment->scroll_y = box->dom_node->scroll_y();
-    fragment->visual_scroll_y = box->dom_node->visual_scroll_y();
+    if (!context.is_measurement) {
+      box->dom_node->set_layout_width(fragment->width);
+      box->dom_node->set_layout_height(fragment->height);
+      box->dom_node->set_scroll_height(total_content_height);
+      int max_scroll = std::max(0, total_content_height - fragment->height);
+      box->dom_node->ClampScrollY(max_scroll);
+      fragment->scroll_y = box->dom_node->scroll_y();
+      fragment->visual_scroll_y = box->dom_node->visual_scroll_y();
 
-    box->dom_node->set_scroll_width(total_content_width);
-    int max_scroll_x = std::max(0, total_content_width - fragment->width);
-    box->dom_node->ClampScrollX(max_scroll_x);
-    fragment->scroll_x = box->dom_node->scroll_x();
-    fragment->visual_scroll_x = box->dom_node->visual_scroll_x();
+      box->dom_node->set_scroll_width(total_content_width);
+      int max_scroll_x = std::max(0, total_content_width - fragment->width);
+      box->dom_node->ClampScrollX(max_scroll_x);
+      fragment->scroll_x = box->dom_node->scroll_x();
+      fragment->visual_scroll_x = box->dom_node->visual_scroll_x();
+    } else {
+      int max_scroll = std::max(0, total_content_height - fragment->height);
+      fragment->scroll_y = std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
+      fragment->visual_scroll_y = std::clamp(box->dom_node->visual_scroll_y(), 0.f, static_cast<float>(max_scroll));
+
+      int max_scroll_x = std::max(0, total_content_width - fragment->width);
+      fragment->scroll_x = std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
+      fragment->visual_scroll_x = std::clamp(box->dom_node->visual_scroll_x(), 0.f, static_cast<float>(max_scroll_x));
+    }
   }
 
   return fragment;
@@ -1570,7 +1594,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
         box->style.border_style != BorderStyle::None) {
       fragment->has_border = true;
     }
-    if (box->dom_node) {
+    if (box->dom_node && !context.is_measurement) {
       box->dom_node->set_layout_width(fragment->width);
       box->dom_node->set_layout_height(fragment->height);
     }
@@ -1593,7 +1617,9 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
           cell_c.width = {content_width_limit, MeasureMode::AtMost};
           cell_c.height = {10000, MeasureMode::AtMost};
           // Measure cell width
-          auto cell_frag = RunLayout({cell}, cell_c, context);
+          LayoutContext cell_context = context;
+          cell_context.is_measurement = true;
+          auto cell_frag = RunLayout({cell}, cell_c, cell_context);
           max_pref = std::max(max_pref, cell_frag->width);
         }
       }
@@ -1696,7 +1722,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       row_frag->has_border = true;
     }
 
-    if (row_box->dom_node) {
+    if (row_box->dom_node && !context.is_measurement) {
       row_box->dom_node->set_layout_width(content_width_limit);
       row_box->dom_node->set_layout_height(row_height);
     }
@@ -1724,7 +1750,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
 
   fragment->height = cur_y + box->style.padding.bottom + box->style.border.bottom;
 
-  if (box->dom_node) {
+  if (box->dom_node && !context.is_measurement) {
     box->dom_node->set_layout_width(fragment->width);
     box->dom_node->set_layout_height(fragment->height);
   }
