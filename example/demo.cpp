@@ -86,7 +86,6 @@ class Sidebar : public Component<Sidebar> {
         display: flex;
         flex-direction: column;
         width: 100%;
-        height: 100%;
         border-right: tall;
         border-color: #334155;
         background-color: #0f172a;
@@ -117,7 +116,7 @@ class Sidebar : public Component<Sidebar> {
         border-color: #0284c7;
       }
       .sidebar-footer {
-        margin-top: auto;
+        margin-top: 2;
         border-top: dashed;
         border-color: #334155;
         padding-top: 1;
@@ -1039,6 +1038,7 @@ int main() {
         .workspace {
           display: flex;
           flex-direction: row;
+          align-items: flex-start;
           flex-grow: 1;
           width: 100%;
         }
