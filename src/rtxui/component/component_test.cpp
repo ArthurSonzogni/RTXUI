@@ -2385,3 +2385,14 @@ TEST_CASE("Textarea Scrolling Regression Test", "[component][textarea][scroll][r
 
   CHECK(ta_el->scroll_y() == 0);
 }
+
+TEST_CASE("Mouse capture is released when component is destroyed", "[component]") {
+  ComponentBase* raw_comp_ptr = nullptr;
+  {
+    auto comp = rtxui::Ref<rtxui::slider>::New();
+    comp->CaptureMouse();
+    raw_comp_ptr = comp.get();
+    CHECK(rtxui::ComponentBase::GetMouseCapturer() == raw_comp_ptr);
+  }
+  CHECK(rtxui::ComponentBase::GetMouseCapturer() == nullptr);
+}
