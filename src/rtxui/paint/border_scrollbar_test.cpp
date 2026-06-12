@@ -421,4 +421,84 @@ TEST_CASE("Paint: HScroll track avoids border columns",
   }
 }
 
+TEST_CASE("Paint: Anchor scrollbar thumb reaches bottom", "[paint][scroll]") {
+  struct ScrollableApp : Component<ScrollableApp> {
+    std::string_view view = R"xml(
+        <div id="scrollable">
+          <div>Line 1</div>
+          <div>Line 2</div>
+          <div>Line 3</div>
+          <div>Line 4</div>
+          <div>Line 5</div>
+          <div>Line 6</div>
+          <div>Line 7</div>
+          <div>Line 8</div>
+          <div>Line 9</div>
+          <div>Line 10</div>
+          <div>Line 11</div>
+          <div>Line 12</div>
+          <div>Line 13</div>
+          <div>Line 14</div>
+          <div>Line 15</div>
+          <div>Line 16</div>
+          <div>Line 17</div>
+          <div>Line 18</div>
+          <div>Line 19</div>
+          <div>Line 20</div>
+        </div>
+        <style>
+          self {
+            display: block;
+          }
+          #scrollable {
+            display: block;
+            height: 10;
+            border: tall;
+            overflow-y: scroll;
+          }
+        </style>
+      )xml";
+
+    ScrollableApp() { Import<div>(); }
+  };
+
+  auto app = Ref<ScrollableApp>::New();
+  app->Mount();
+
+  auto* scroll_element = app->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_element != nullptr);
+
+  // Layout first to resolve scroll height
+  auto layout_box = LayoutTreeBuilder::Build(app->Root());
+  LayoutConstraints constraints;
+  constraints.width = {20, MeasureMode::Exactly};
+  constraints.height = {10, MeasureMode::Exactly};
+  auto fragment = RunLayout({layout_box.get()}, constraints);
+
+  int scroll_height = scroll_element->scroll_height();
+  int h = fragment->height;  // is 10
+  int max_scroll = scroll_height - h;
+
+  // Scroll to the bottom
+  scroll_element->set_scroll_y(max_scroll);
+
+  // Run layout again to update visual scroll
+  fragment = RunLayout({layout_box.get()}, constraints);
+
+  Texture texture(20, 10);
+  Paint(fragment.get(), texture);
+
+  // Print text layer for diagnostics
+  std::cout << "Reaches bottom test:\n" << GetTextLayer(texture) << std::endl;
+
+  // Let's examine the scrollbar track y range:
+  // With border 'tall', the vertical scrollbar is at x = 18.
+  // The top border is at y=0, bottom border at y=9.
+  // Track start: y=1. Height: h - 2 = 8. So track y range is 1..8.
+  // Since we are scrolled to the bottom, the bottom-most cell of the track
+  // (y=8) MUST be part of the thumb, so it must have the thumb background. The
+  // top-most cell of the track (y=1) should have the track background.
+  CHECK(texture[18, 8].background_color != texture[18, 1].background_color);
+}
+
 }  // namespace rtxui

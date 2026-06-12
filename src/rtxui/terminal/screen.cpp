@@ -1171,19 +1171,43 @@ void ScreenImpl::ScrollIntoView(Element* element) {
       if (parent_scrollable_y) {
         int curr_scroll_y = parent.fragment->dom_node->target_scroll_y();
         int new_scroll_y = curr_scroll_y;
-        int viewport_h = parent.fragment->height;
 
-        if (target_top < curr_scroll_y) {
-          new_scroll_y = target_top;
-        } else if (target_bottom > curr_scroll_y + viewport_h) {
-          new_scroll_y = target_bottom - viewport_h;
-          if (target_top < new_scroll_y) {
-            new_scroll_y = target_top;
+        int border_t = 0, border_b = 0, padding_t = 0, padding_b = 0;
+        if (parent.fragment->dom_node) {
+          padding_t = parent.fragment->dom_node->style.padding.top;
+          padding_b = parent.fragment->dom_node->style.padding.bottom;
+        }
+        if (parent.fragment->has_border &&
+            parent.fragment->border_style != BorderStyle::None) {
+          border_t = 1;
+          border_b = 1;
+        }
+        int scrollbar_h = 0;
+        if (parent.fragment->dom_node &&
+            parent.fragment->dom_node->style.overflow_x == Overflow::Scroll &&
+            parent.fragment->dom_node->style.scrollbar_width ==
+                ScrollbarWidth::Auto) {
+          scrollbar_h = 1;
+        }
+        int viewport_h =
+            std::max(1, parent.fragment->height - border_t - padding_t -
+                            border_b - padding_b - scrollbar_h);
+
+        // Adjust target coordinates to be relative to the content area
+        int rel_target_top = target_top - border_t - padding_t;
+        int rel_target_bottom = target_bottom - border_t - padding_t;
+
+        if (rel_target_top < curr_scroll_y) {
+          new_scroll_y = rel_target_top;
+        } else if (rel_target_bottom > curr_scroll_y + viewport_h) {
+          new_scroll_y = rel_target_bottom - viewport_h;
+          if (rel_target_top < new_scroll_y) {
+            new_scroll_y = rel_target_top;
           }
         }
 
         int scroll_h = parent.fragment->dom_node->scroll_height();
-        int max_scroll_y = std::max(0, scroll_h - viewport_h);
+        int max_scroll_y = std::max(0, scroll_h - parent.fragment->height);
         new_scroll_y = std::clamp(new_scroll_y, 0, max_scroll_y);
 
         if (new_scroll_y != curr_scroll_y) {
@@ -1196,19 +1220,43 @@ void ScreenImpl::ScrollIntoView(Element* element) {
       if (parent_scrollable_x) {
         int curr_scroll_x = parent.fragment->dom_node->target_scroll_x();
         int new_scroll_x = curr_scroll_x;
-        int viewport_w = parent.fragment->width;
 
-        if (target_left < curr_scroll_x) {
-          new_scroll_x = target_left;
-        } else if (target_right > curr_scroll_x + viewport_w) {
-          new_scroll_x = target_right - viewport_w;
-          if (target_left < new_scroll_x) {
-            new_scroll_x = target_left;
+        int border_l = 0, border_r = 0, padding_l = 0, padding_r = 0;
+        if (parent.fragment->dom_node) {
+          padding_l = parent.fragment->dom_node->style.padding.left;
+          padding_r = parent.fragment->dom_node->style.padding.right;
+        }
+        if (parent.fragment->has_border &&
+            parent.fragment->border_style != BorderStyle::None) {
+          border_l = 1;
+          border_r = 1;
+        }
+        int scrollbar_w = 0;
+        if (parent.fragment->dom_node &&
+            parent.fragment->dom_node->style.overflow_y == Overflow::Scroll &&
+            parent.fragment->dom_node->style.scrollbar_width ==
+                ScrollbarWidth::Auto) {
+          scrollbar_w = 1;
+        }
+        int viewport_w =
+            std::max(1, parent.fragment->width - border_l - padding_l -
+                            border_r - padding_r - scrollbar_w);
+
+        // Adjust target coordinates to be relative to the content area
+        int rel_target_left = target_left - border_l - padding_l;
+        int rel_target_right = target_right - border_l - padding_l;
+
+        if (rel_target_left < curr_scroll_x) {
+          new_scroll_x = rel_target_left;
+        } else if (rel_target_right > curr_scroll_x + viewport_w) {
+          new_scroll_x = rel_target_right - viewport_w;
+          if (rel_target_left < new_scroll_x) {
+            new_scroll_x = rel_target_left;
           }
         }
 
         int scroll_w = parent.fragment->dom_node->scroll_width();
-        int max_scroll_x = std::max(0, scroll_w - viewport_w);
+        int max_scroll_x = std::max(0, scroll_w - parent.fragment->width);
         new_scroll_x = std::clamp(new_scroll_x, 0, max_scroll_x);
 
         if (new_scroll_x != curr_scroll_x) {
