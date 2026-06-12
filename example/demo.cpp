@@ -77,7 +77,7 @@ class Sidebar : public Component<Sidebar> {
       .sidebar {
         display: flex;
         flex-direction: column;
-        width: 24;
+        width: 16;
         border-right: tall;
         border-color: #334155;
         background-color: #0f172a;
@@ -769,21 +769,22 @@ class SectionMarkdown : public Component<SectionMarkdown> {
       }
       .markdown-layout {
         display: flex;
-        flex-direction: row;
-        gap: 2;
+        flex-direction: column;
+        gap: 1;
         width: 100%;
       }
       .markdown-editor-pane {
         display: flex;
         flex-direction: column;
         flex-grow: 1;
-        width: 0;
+        width: 100%;
       }
       .markdown-preview-pane {
         display: flex;
         flex-direction: column;
         flex-grow: 1;
-        width: 0;
+        width: 100%;
+        margin-top: 1;
       }
       .sub-label {
         color: #64748b;
@@ -857,17 +858,46 @@ class App : public Component<App> {
     {.text = "Expose CSS layout", .appearing = false}
   };
 
-  std::string markdown_content = R"md(
-# Markdown Live Preview
+  std::string markdown_content = R"md(# Heading 1
+## Heading 2
+### Heading 3
 
-You can edit this **Markdown** text and see the results rendered in real-time!
+This is a paragraph demonstrating native **Markdown** support in RTXUI. You can write *italic* or **bold** text, or even ***both***.
 
-- **Bold text** and *italic text*
-- [RTXUI Homepage](https://github.com/ArthurSonzogni/RTXUI)
-- Inline `code` elements
-- Unordered list items
+Here is a [link to the RTXUI repository](https://github.com/ArthurSonzogni/RTXUI).
 
-> "Real-time rendering brings documents to life."
+### Lists & Blockquotes
+
+- Unordered list item 1
+- Unordered list item 2
+  - Nested list item
+
+1. Ordered list item 1
+2. Ordered list item 2
+
+> "Blockquotes are styled with a heavy left border and italicized gray text, giving them a premium quote look."
+
+### Code Blocks
+
+You can write inline `code` or write complete fenced code blocks:
+
+```cpp
+#include <rtxui/rtxui.hpp>
+
+int main() {
+  auto app = Ref<App>::New();
+  Screen screen(app);
+  screen.Loop();
+  return 0;
+}
+```
+
+### Tables
+
+| Metric | Baseline | Optimized | Difference |
+| --- | --- | --- | --- |
+| DOM Digest | 11.70 ms | 0.53 ms | -95.4% |
+| Layout & Paint | 3.85 ms | 0.52 ms | -86.5% |
 )md";
 
   // --- Handlers ---
@@ -979,7 +1009,7 @@ You can edit this **Markdown** text and see the results rendered in real-time!
       <style>
         .container {
           display: block;
-          max-width: 80;
+          max-width: 120;
           width: 100%;
           margin-left: auto;
           margin-right: auto;
