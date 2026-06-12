@@ -803,9 +803,8 @@ class SectionMarkdown : public Component<SectionMarkdown> {
         border-color: #475569;
         padding: 1;
         background-color: #0f172a;
-        height: 10;
         width: 100%;
-        overflow-y: scroll;
+        display: block;
       }
     </style>
   )html";
