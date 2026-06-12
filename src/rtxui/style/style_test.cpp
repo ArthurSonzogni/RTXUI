@@ -515,6 +515,14 @@ TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle",
     rtxui::ApplyStyle(style, {"opacity", "-0.5"});
     CHECK(style.opacity == 0.0f);
   }
+
+  SECTION("flex-grow and flex-shrink properties") {
+    rtxui::ApplyStyle(style, {"flex-grow", "2.5"});
+    CHECK(style.flex_grow == 2.5f);
+
+    rtxui::ApplyStyle(style, {"flex-shrink", "0.0"});
+    CHECK(style.flex_shrink == 0.0f);
+  }
 }
 
 TEST_CASE("Color transformations in ApplyStyle", "[style][color]") {
