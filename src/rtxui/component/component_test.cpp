@@ -2396,3 +2396,32 @@ TEST_CASE("Mouse capture is released when component is destroyed", "[component]"
   }
   CHECK(rtxui::ComponentBase::GetMouseCapturer() == nullptr);
 }
+
+class HoverActiveTestComponent : public rtxui::Component<HoverActiveTestComponent> {
+ public:
+  std::string_view view = R"(
+    <div id="test-node">Test</div>
+  )";
+};
+
+TEST_CASE("Hovered and Active states are preserved across Render", "[component]") {
+  auto container = rtxui::Ref<HoverActiveTestComponent>::New();
+  container->Mount();
+
+  auto* node = container->Root()->QuerySelector("#test-node");
+  REQUIRE(node != nullptr);
+
+  node->set_hovered(true);
+  node->set_active(true);
+
+  // Re-render
+  container->Render();
+
+  // Query node again
+  auto* new_node = container->Root()->QuerySelector("#test-node");
+  REQUIRE(new_node != nullptr);
+
+  CHECK(new_node->hovered() == true);
+  CHECK(new_node->active() == true);
+}
+
