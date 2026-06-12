@@ -57,8 +57,6 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
             margin-bottom: 1;
           }
         input {
-          border: tall;
-          border-color: rgb(71, 85, 105);
           background-color: rgb(30, 41, 59);
           color: white;
           width: 20;

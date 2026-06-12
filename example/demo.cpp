@@ -313,8 +313,6 @@ class SectionInputs : public Component<SectionInputs> {
         margin-bottom: 1;
       }
       input {
-        border: tall;
-        border-color: #475569;
         padding-left: 1;
         padding-right: 1;
         background-color: #0f172a;
@@ -325,8 +323,6 @@ class SectionInputs : public Component<SectionInputs> {
         margin-bottom: 1;
       }
       textarea {
-        border: tall;
-        border-color: #475569;
         padding-left: 1;
         padding-right: 1;
         background-color: #0f172a;
@@ -713,8 +709,6 @@ class SectionMarkdown : public Component<SectionMarkdown> {
         margin-bottom: 1;
       }
       .md-editor-textarea {
-        border: tall;
-        border-color: #475569;
         padding: 1;
         background-color: #0f172a;
         color: white;
