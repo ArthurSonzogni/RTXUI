@@ -94,9 +94,51 @@ void CollectFocusableFragments(
     bool is_fixed =
         (child.fragment && child.fragment->dom_node &&
          child.fragment->dom_node->style.position == PositionType::Fixed);
+    bool is_sticky =
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Sticky);
 
     int child_abs_x = is_fixed ? child.x : abs_x + child.x - scroll_x_offset;
     int child_abs_y = is_fixed ? child.y : abs_y + child.y - scroll_y_offset;
+
+    if (is_sticky) {
+      int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+      int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+      if (fragment->dom_node) {
+        padding_l = fragment->dom_node->style.padding.left;
+        padding_r = fragment->dom_node->style.padding.right;
+        padding_t = fragment->dom_node->style.padding.top;
+        padding_b = fragment->dom_node->style.padding.bottom;
+      }
+      if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+        border_l = 1;
+        border_r = 1;
+        border_t = 1;
+        border_b = 1;
+      }
+
+      if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
+        int top_val = child.fragment->dom_node->style.top.Resolve(0);
+        int viewport_top = abs_y + border_t + padding_t;
+        int min_y = viewport_top + top_val;
+        child_abs_y = std::max(child_abs_y, min_y);
+
+        int parent_scrolled_bottom = abs_y + fragment->height - border_b - padding_b - scroll_y_offset;
+        int max_y = parent_scrolled_bottom - child.fragment->height;
+        child_abs_y = std::min(child_abs_y, max_y);
+      }
+
+      if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
+        int left_val = child.fragment->dom_node->style.left.Resolve(0);
+        int viewport_left = abs_x + border_l + padding_l;
+        int min_x = viewport_left + left_val;
+        child_abs_x = std::max(child_abs_x, min_x);
+
+        int parent_scrolled_right = abs_x + fragment->width - border_r - padding_r - scroll_x_offset;
+        int max_x = parent_scrolled_right - child.fragment->width;
+        child_abs_x = std::min(child_abs_x, max_x);
+      }
+    }
 
     CollectFocusableFragments(child.fragment, child_abs_x, child_abs_y,
                               focusable_fragments);
@@ -138,6 +180,10 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
     int child_accum_scroll_x = next_accum_scroll_x;
     int child_accum_scroll_y = next_accum_scroll_y;
 
+    bool is_sticky =
+        (it->fragment && it->fragment->dom_node &&
+         it->fragment->dom_node->style.position == PositionType::Sticky);
+
     if (is_fixed) {
       rel_x -= accum_scroll_x;
       rel_y -= accum_scroll_y;
@@ -146,6 +192,49 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
     } else {
       rel_x += scroll_x_offset;
       rel_y += scroll_y_offset;
+
+      if (is_sticky) {
+        int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+        int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+        if (fragment->dom_node) {
+          padding_l = fragment->dom_node->style.padding.left;
+          padding_r = fragment->dom_node->style.padding.right;
+          padding_t = fragment->dom_node->style.padding.top;
+          padding_b = fragment->dom_node->style.padding.bottom;
+        }
+        if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+          border_l = 1;
+          border_r = 1;
+          border_t = 1;
+          border_b = 1;
+        }
+
+        if (it->fragment->dom_node->style.top.unit != Unit::Auto) {
+          int top_val = it->fragment->dom_node->style.top.Resolve(0);
+          int normal_rel_y = it->y - scroll_y_offset;
+          int min_rel_y = border_t + padding_t + top_val;
+          int sticky_rel_y = std::max(normal_rel_y, min_rel_y);
+
+          int max_rel_y = fragment->height - border_b - padding_b - scroll_y_offset - it->fragment->height;
+          sticky_rel_y = std::min(sticky_rel_y, max_rel_y);
+
+          int sticky_shift_y = sticky_rel_y - normal_rel_y;
+          rel_y -= sticky_shift_y;
+        }
+
+        if (it->fragment->dom_node->style.left.unit != Unit::Auto) {
+          int left_val = it->fragment->dom_node->style.left.Resolve(0);
+          int normal_rel_x = it->x - scroll_x_offset;
+          int min_rel_x = border_l + padding_l + left_val;
+          int sticky_rel_x = std::max(normal_rel_x, min_rel_x);
+
+          int max_rel_x = fragment->width - border_r - padding_r - scroll_x_offset - it->fragment->width;
+          sticky_rel_x = std::min(sticky_rel_x, max_rel_x);
+
+          int sticky_shift_x = sticky_rel_x - normal_rel_x;
+          rel_x -= sticky_shift_x;
+        }
+      }
     }
 
     if (auto* found =
