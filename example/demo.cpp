@@ -1029,6 +1029,7 @@ int main() {
           color: #e2e8f0;
           background-color: #0f172a;
           overflow-y: scroll;
+          scroll-behavior: smooth;
         }
         .root {
           display: flex;
