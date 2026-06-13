@@ -1,14 +1,14 @@
 #ifndef RTXUI_LAYOUT_STYLE_HPP
 #define RTXUI_LAYOUT_STYLE_HPP
 
+#include <cstddef>
+#include <cstring>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
-#include <cstring>
-#include <cstddef>
 
 #include "rtxui/paint/color.hpp"
-#include <memory>
 
 namespace rtxui {
 enum class DisplayOutside {
@@ -119,6 +119,12 @@ enum class TextAlign {
   Center,
 };
 
+enum class FlexWrap {
+  NoWrap,
+  Wrap,
+  WrapReverse,
+};
+
 enum class WhiteSpace {
   Normal,
   Nowrap,
@@ -198,6 +204,7 @@ struct ComputedStyle {
       false;  // true when display: none — element takes no space
 
   Direction flex_direction = Direction::Row;
+  FlexWrap flex_wrap = FlexWrap::NoWrap;
 
   Length width = Length::Auto();
   Length height = Length::Auto();
@@ -210,7 +217,8 @@ struct ComputedStyle {
 
   float flex_grow = 0.0f;
   float flex_shrink = 1.0f;
-  Length gap = Length::Cells(0.0f);
+  Length row_gap = Length::Cells(0.0f);
+  Length column_gap = Length::Cells(0.0f);
   JustifyContent justify_content = JustifyContent::FlexStart;
   AlignItems align_items = AlignItems::Stretch;
 
@@ -255,27 +263,35 @@ struct ComputedStyle {
 
   ComputedStyle(const ComputedStyle& other) {
     if (other.transitions) {
-      transitions = std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
+      transitions =
+          std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
     }
-    char* dst = reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
-    const char* src = reinterpret_cast<const char*>(&other) + offsetof(ComputedStyle, position);
+    char* dst =
+        reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
+    const char* src = reinterpret_cast<const char*>(&other) +
+                      offsetof(ComputedStyle, position);
     size_t size = sizeof(ComputedStyle) - offsetof(ComputedStyle, position);
     std::memcpy(dst, src, size);
   }
 
   ComputedStyle& operator=(const ComputedStyle& other) {
-    if (this == &other) return *this;
+    if (this == &other) {
+      return *this;
+    }
     if (other.transitions) {
       if (transitions) {
         *transitions = *other.transitions;
       } else {
-        transitions = std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
+        transitions =
+            std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
       }
     } else {
       transitions.reset();
     }
-    char* dst = reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
-    const char* src = reinterpret_cast<const char*>(&other) + offsetof(ComputedStyle, position);
+    char* dst =
+        reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
+    const char* src = reinterpret_cast<const char*>(&other) +
+                      offsetof(ComputedStyle, position);
     size_t size = sizeof(ComputedStyle) - offsetof(ComputedStyle, position);
     std::memcpy(dst, src, size);
     return *this;

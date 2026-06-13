@@ -70,11 +70,14 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | :--- | :--- | :---: | :--- |
 | `display` | `none \| block \| inline \| flex` | ❌ | Enables the flex layout engine or hides elements. |
 | `flex-direction` | `row \| column` | ❌ | Main formatting axis direction. |
+| `flex-wrap` | `nowrap \| wrap \| wrap-reverse` | ❌ | Controls wrapping behavior of flex items. |
 | `flex-grow` | [`<number>`](#value-types) |   | Portion of free space item claims along main axis. |
 | `flex-shrink` | [`<number>`](#value-types) |   | Factor determining how much item shrinks. |
 | `align-items` | `stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of items along the cross axis. |
 | `justify-content` | `flex-start \| flex-end \| center \| space-between \| space-around \| space-evenly` | ❌ | Alignment of items along the main axis. |
 | `gap` | [`<length>`](#value-types) | ❌ | Spacing between flex items. |
+| `row-gap` | [`<length>`](#value-types) | ❌ | Spacing between flex rows/lines. |
+| `column-gap` | [`<length>`](#value-types) | ❌ | Spacing between flex columns/items. |
 
 ---
 
@@ -86,6 +89,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `overflow-x` | [`<overflow>`](#overflow-modes) | ❌ | Horizontal layout overflow (`visible`, `hidden`, `scroll`). |
 | `overflow-y` | [`<overflow>`](#overflow-modes) | ❌ | Vertical layout overflow (`visible`, `hidden`, `scroll`). |
 | `scrollbar-width` | `auto \| none` | ❌ | `none` hides visual scrollbars while keeping list scrollable. |
+| `scrollbar-color` | [`<color>`](#colors) [`<color>`](#colors) |   | Foreground (thumb) and background (track) colors of scrollbars. |
 | `scroll-speed` | [`<integer>`](#value-types) | ❌ | Shorthand scroll step speed multiplier. |
 | `scroll-speed-x` | [`<integer>`](#value-types) | ❌ | Horizontal scroll step distance. |
 | `scroll-speed-y` | [`<integer>`](#value-types) | ❌ | Vertical scroll step distance. |

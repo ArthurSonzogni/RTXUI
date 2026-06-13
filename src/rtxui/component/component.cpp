@@ -16,6 +16,8 @@
 #include <string_view>
 #include <vector>
 
+#include "rtxui/component/component_internal.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/core/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/slot_element.hpp"
@@ -24,9 +26,6 @@
 #include "rtxui/style/apply_style.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/xml/xml.hpp"
-#include "rtxui/component/default_components_internal.hpp"
-
-#include "rtxui/component/component_internal.hpp"
 
 namespace rtxui {
 
@@ -71,7 +70,6 @@ void RefCounted::Release() const {
     delete this;
   }
 }
-
 
 std::string_view ComponentBase::Setup() {
   return "";
@@ -200,7 +198,8 @@ ComponentFactory GetGlobalComponentFactory(std::string_view name) {
 struct CategorizedRules {
   std::vector<const css::Ruleset*> universal;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_id;
-  std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_class;
+  std::unordered_map<std::string_view, std::vector<const css::Ruleset*>>
+      by_class;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_tag;
   bool has_pseudo_classes = false;
 };
@@ -209,7 +208,6 @@ ComponentBase::ComponentBase() = default;
 ComponentBase::~ComponentBase() {
   ReleaseMouse();
 }
-
 
 namespace {
 
@@ -268,27 +266,26 @@ struct ElementState {
   ActiveTransitionsMap active_transitions;
 };
 
-void CollectElementStates(Element* el,
-                          ElementPath& path,
-                          std::vector<std::pair<ElementPath, ElementState>>& states) {
+void CollectElementStates(
+    Element* el,
+    ElementPath& path,
+    std::vector<std::pair<ElementPath, ElementState>>& states) {
   if (!el) {
     return;
   }
-  bool has_state = el->scroll_x() != 0 ||
-                   el->scroll_y() != 0 ||
-                   el->focused() ||
-                   el->hovered() ||
-                   el->active() ||
-                   el->scrollbar_hovered() ||
-                   el->scrollbar_active() ||
-                   el->scrollbar_thumb_hovered() ||
-                   el->scrollbar_thumb_active() ||
-                   !el->active_transitions.empty() ||
-                   (el->target_style.transitions && !el->target_style.transitions->empty());
+  bool has_state =
+      el->scroll_x() != 0 || el->scroll_y() != 0 || el->focused() ||
+      el->hovered() || el->active() || el->scrollbar_hovered() ||
+      el->scrollbar_active() || el->scrollbar_thumb_hovered() ||
+      el->scrollbar_thumb_active() || !el->active_transitions.empty() ||
+      (el->target_style.transitions && !el->target_style.transitions->empty());
   if (has_state) {
-    states.push_back({path, {el->scroll_x(), el->scroll_y(), el->focused(), el->hovered(), el->active(),
-                             el->scrollbar_hovered(), el->scrollbar_active(), el->scrollbar_thumb_hovered(), el->scrollbar_thumb_active(),
-                             el->style, el->active_transitions}});
+    states.push_back(
+        {path,
+         {el->scroll_x(), el->scroll_y(), el->focused(), el->hovered(),
+          el->active(), el->scrollbar_hovered(), el->scrollbar_active(),
+          el->scrollbar_thumb_hovered(), el->scrollbar_thumb_active(),
+          el->style, el->active_transitions}});
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     path.push_back(static_cast<int>(i));
@@ -301,7 +298,8 @@ Element* FindElementByPath(Element* root, const ElementPath& path) {
   Element* el = root;
   for (size_t i = 0; i < path.depth; ++i) {
     int child_idx = path.indices[i];
-    if (!el || child_idx < 0 || static_cast<size_t>(child_idx) >= el->ChildCount()) {
+    if (!el || child_idx < 0 ||
+        static_cast<size_t>(child_idx) >= el->ChildCount()) {
       return nullptr;
     }
     el = el->ChildAt(child_idx);
@@ -347,7 +345,6 @@ void RestoreElementFocusHoverActive(
   }
 }
 
-
 std::string Interpolate(std::string_view text,
                         ComponentBase* source,
                         const LocalScope* scope) {
@@ -369,14 +366,19 @@ std::string Interpolate(std::string_view text,
       break;
     }
 
-    std::string_view expression = text.substr(open_idx + 1, close_idx - open_idx - 1);
+    std::string_view expression =
+        text.substr(open_idx + 1, close_idx - open_idx - 1);
 
     std::string_view trimmed = expression;
-    if (!trimmed.empty() && (std::isspace(static_cast<unsigned char>(trimmed.front())) || std::isspace(static_cast<unsigned char>(trimmed.back())))) {
-      while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.front()))) {
+    if (!trimmed.empty() &&
+        (std::isspace(static_cast<unsigned char>(trimmed.front())) ||
+         std::isspace(static_cast<unsigned char>(trimmed.back())))) {
+      while (!trimmed.empty() &&
+             std::isspace(static_cast<unsigned char>(trimmed.front()))) {
         trimmed.remove_prefix(1);
       }
-      while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
+      while (!trimmed.empty() &&
+             std::isspace(static_cast<unsigned char>(trimmed.back()))) {
         trimmed.remove_suffix(1);
       }
     }
@@ -404,7 +406,9 @@ std::string Interpolate(std::string_view text,
     bool resolved = false;
     if (scope) {
       auto dot_pos = trimmed.find('.');
-      std::string_view var_name = (dot_pos == std::string_view::npos) ? trimmed : trimmed.substr(0, dot_pos);
+      std::string_view var_name = (dot_pos == std::string_view::npos)
+                                      ? trimmed
+                                      : trimmed.substr(0, dot_pos);
       auto val_opt = scope->Get(var_name);
       if (val_opt) {
         resolved = true;
@@ -414,7 +418,8 @@ std::string Interpolate(std::string_view text,
           }
         } else {
           std::string_view field_name = trimmed.substr(dot_pos + 1);
-          if (std::holds_alternative<std::shared_ptr<StructVisitor>>(*val_opt)) {
+          if (std::holds_alternative<std::shared_ptr<StructVisitor>>(
+                  *val_opt)) {
             auto visitor = std::get<std::shared_ptr<StructVisitor>>(*val_opt);
             if (visitor) {
               result.append(visitor->GetFieldValue(field_name));
@@ -533,10 +538,12 @@ bool MatchSelector(const Element* element,
       if (pseudo == "scrollbar-active" && !element->scrollbar_active()) {
         return false;
       }
-      if (pseudo == "scrollbar-thumb-hover" && !element->scrollbar_thumb_hovered()) {
+      if (pseudo == "scrollbar-thumb-hover" &&
+          !element->scrollbar_thumb_hovered()) {
         return false;
       }
-      if (pseudo == "scrollbar-thumb-active" && !element->scrollbar_thumb_active()) {
+      if (pseudo == "scrollbar-thumb-active" &&
+          !element->scrollbar_thumb_active()) {
         return false;
       }
     }
@@ -559,7 +566,8 @@ bool IsStyledByComponent(const Element* element,
   return false;
 }
 
-bool MatchPseudos(const Element* element, const std::vector<std::string>& pseudo_classes) {
+bool MatchPseudos(const Element* element,
+                  const std::vector<std::string>& pseudo_classes) {
   for (const auto& pseudo : pseudo_classes) {
     if (pseudo == "hover" && !element->hovered()) {
       return false;
@@ -576,10 +584,12 @@ bool MatchPseudos(const Element* element, const std::vector<std::string>& pseudo
     if (pseudo == "scrollbar-active" && !element->scrollbar_active()) {
       return false;
     }
-    if (pseudo == "scrollbar-thumb-hover" && !element->scrollbar_thumb_hovered()) {
+    if (pseudo == "scrollbar-thumb-hover" &&
+        !element->scrollbar_thumb_hovered()) {
       return false;
     }
-    if (pseudo == "scrollbar-thumb-active" && !element->scrollbar_thumb_active()) {
+    if (pseudo == "scrollbar-thumb-active" &&
+        !element->scrollbar_thumb_active()) {
       return false;
     }
   }
@@ -587,8 +597,8 @@ bool MatchPseudos(const Element* element, const std::vector<std::string>& pseudo
 }
 
 void ResolveStylesRecursive(Element* element,
-                             const ComponentBase* component,
-                             bool check_pseudos) {
+                            const ComponentBase* component,
+                            bool check_pseudos) {
   if (!element || !component || !component->categorized_rules()) {
     return;
   }
@@ -605,13 +615,15 @@ void ResolveStylesRecursive(Element* element,
 
     const auto* categorized = component->categorized_rules();
 
-    auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets, bool is_universal) {
+    auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets,
+                               bool is_universal) {
       for (const auto* ruleset : rulesets) {
         if (!css::EvaluateMediaQuery(ruleset->media_query)) {
           continue;
         }
         const auto& parsed = ruleset->parsed_selector;
-        if (is_universal && parsed.base == "self" && element != component->Root()) {
+        if (is_universal && parsed.base == "self" &&
+            element != component->Root()) {
           continue;
         }
 
@@ -629,7 +641,9 @@ void ResolveStylesRecursive(Element* element,
             break;
           }
         }
-        if (!classes_match) continue;
+        if (!classes_match) {
+          continue;
+        }
 
         bool attributes_match = true;
         for (const auto& attr : parsed.attributes) {
@@ -645,10 +659,13 @@ void ResolveStylesRecursive(Element* element,
             }
           }
         }
-        if (!attributes_match) continue;
+        if (!attributes_match) {
+          continue;
+        }
 
         if (check_pseudos) {
-          if (!parsed.pseudo_classes.empty() && MatchPseudos(element, parsed.pseudo_classes)) {
+          if (!parsed.pseudo_classes.empty() &&
+              MatchPseudos(element, parsed.pseudo_classes)) {
             for (const auto& declaration : ruleset->declarations) {
               ApplyStyle(element->target_style, declaration);
             }
@@ -684,6 +701,23 @@ void ResolveStylesRecursive(Element* element,
       }
     }
 
+    // Inline style attribute parsing
+    const std::string* inline_style = element->GetAttribute("style");
+    if (inline_style && !inline_style->empty()) {
+      std::string css_rule = "dummy { " + *inline_style + " }";
+      auto maybe_stylesheet = css::Parse(css_rule);
+      if (maybe_stylesheet && !maybe_stylesheet.value().empty()) {
+        for (const auto& declaration :
+             maybe_stylesheet.value()[0].declarations) {
+          if (check_pseudos) {
+            ApplyStyle(element->target_style, declaration);
+          } else {
+            ApplyStyle(element->base_style, declaration);
+          }
+        }
+      }
+    }
+
     if (!check_pseudos) {
       element->MarkStyleResolvedFor(component);
     }
@@ -704,8 +738,7 @@ recurse:
   }
 
   for (size_t i = 0; i < element->ChildCount(); ++i) {
-    ResolveStylesRecursive(element->ChildAt(i), component,
-                           check_pseudos);
+    ResolveStylesRecursive(element->ChildAt(i), component, check_pseudos);
   }
 }
 
@@ -734,9 +767,10 @@ void ComponentBase::Mount() {
 void ComponentBase::Render() {
   last_render_terminal_width_ = css::g_terminal_width;
   last_render_terminal_height_ = css::g_terminal_height;
-  // Optimization: Use a flat vector of pairs instead of std::map<ElementPath, ElementState>.
-  // Since very few elements actually hold state (scroll, focus, transitions), this avoids
-  // the dynamic allocation and key-comparison overhead of a red-black tree map.
+  // Optimization: Use a flat vector of pairs instead of std::map<ElementPath,
+  // ElementState>. Since very few elements actually hold state (scroll, focus,
+  // transitions), this avoids the dynamic allocation and key-comparison
+  // overhead of a red-black tree map.
   std::vector<std::pair<ElementPath, ElementState>> saved_states;
   Element* saved_parent = nullptr;
   if (root_) {
@@ -804,9 +838,7 @@ void ComponentBase::Render() {
   bool css_changed = (new_css_strings != css_strings_);
   if (css_changed) {
     if (root_) {
-      root_->Visit([](Element& el) {
-        el.ClearResolvedStyles();
-      });
+      root_->Visit([](Element& el) { el.ClearResolvedStyles(); });
     }
     css_strings_ = std::move(new_css_strings);
     stylesheet_ = nullptr;
@@ -827,7 +859,8 @@ void ComponentBase::Render() {
           } else if (selector.starts_with("#")) {
             categorized_rules_->by_id[selector.substr(1)].push_back(&ruleset);
           } else if (selector.starts_with(".")) {
-            categorized_rules_->by_class[selector.substr(1)].push_back(&ruleset);
+            categorized_rules_->by_class[selector.substr(1)].push_back(
+                &ruleset);
           } else if (selector.empty()) {
             categorized_rules_->universal.push_back(&ruleset);
           } else {
@@ -866,7 +899,8 @@ void ComponentBase::Render() {
   }
 
   for (auto& comp : saved_slot_components) {
-    if (std::find(children_.begin(), children_.end(), comp) == children_.end()) {
+    if (std::find(children_.begin(), children_.end(), comp) ==
+        children_.end()) {
       children_.push_back(comp);
     }
   }
@@ -916,10 +950,17 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
 
   if (!HasAnyPseudoClasses()) {
     auto HasActive = [](auto& self, Element* element) -> bool {
-      if (!element) return false;
-      if (!element->active_transitions.empty() || element->IsAnimatingScroll()) return true;
+      if (!element) {
+        return false;
+      }
+      if (!element->active_transitions.empty() ||
+          element->IsAnimatingScroll()) {
+        return true;
+      }
       for (size_t i = 0; i < element->ChildCount(); ++i) {
-        if (self(self, element->ChildAt(i))) return true;
+        if (self(self, element->ChildAt(i))) {
+          return true;
+        }
       }
       return false;
     };
@@ -938,18 +979,23 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
   };
   ResetTarget(ResetTarget, root_.get());
 
-  auto ResolveAll = [](auto& self, ComponentBase* comp, ComponentBase* root_comp) -> void {
+  auto ResolveAll = [](auto& self, ComponentBase* comp,
+                       ComponentBase* root_comp) -> void {
     if (!comp || !comp->Root()) {
       return;
     }
-    // Optimization: Skip resolving target styles if the component stylesheet has no
-    // pseudo-classes (hover, active, focus). Yields ~18% speedup in DOM Digest.
-    if (comp->categorized_rules() && comp->categorized_rules()->has_pseudo_classes) {
+    // Optimization: Skip resolving target styles if the component stylesheet
+    // has no pseudo-classes (hover, active, focus). Yields ~18% speedup in DOM
+    // Digest.
+    if (comp->categorized_rules() &&
+        comp->categorized_rules()->has_pseudo_classes) {
       ResolveStylesRecursive(comp->Root(), comp, true);
     }
-    if (comp == root_comp && comp->Root()->owner_component() && comp->Root()->owner_component() != comp) {
+    if (comp == root_comp && comp->Root()->owner_component() &&
+        comp->Root()->owner_component() != comp) {
       const ComponentBase* owner = comp->Root()->owner_component();
-      if (owner->categorized_rules() && owner->categorized_rules()->has_pseudo_classes) {
+      if (owner->categorized_rules() &&
+          owner->categorized_rules()->has_pseudo_classes) {
         ResolveStylesRecursive(comp->Root(), owner, true);
       }
     }
@@ -959,7 +1005,8 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
   };
   ResolveAll(ResolveAll, this, this);
 
-  auto TriggerAll = [](auto& self, Element* element, double current_time_ms) -> void {
+  auto TriggerAll = [](auto& self, Element* element,
+                       double current_time_ms) -> void {
     if (element) {
       element->TriggerTransitions(current_time_ms);
       for (size_t i = 0; i < element->ChildCount(); ++i) {
@@ -988,7 +1035,7 @@ const std::string& GetIndexString(size_t index) {
   fallback = std::to_string(index);
   return fallback;
 }
-} // namespace
+}  // namespace
 
 void ComponentBase::Render(const xml::Node& node,
                            Element* slot,
@@ -997,7 +1044,8 @@ void ComponentBase::Render(const xml::Node& node,
   size_t child_idx = 0;
   bool preserve = false;
   for (Element* curr = slot; curr; curr = curr->Parent()) {
-    if (curr->tag() == "textarea" || curr->tag() == "pre" || curr->tag() == "slider") {
+    if (curr->tag() == "textarea" || curr->tag() == "pre" ||
+        curr->tag() == "slider") {
       preserve = true;
       break;
     }
@@ -1025,8 +1073,12 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         break;
 
       case xml::Node::Type::kText: {
-        bool has_placeholder = (child_node.text.find('{') != std::string_view::npos);
-        bool has_newline = !preserve_newlines && (child_node.text.find('\n') != std::string_view::npos || child_node.text.find('\r') != std::string_view::npos);
+        bool has_placeholder =
+            (child_node.text.find('{') != std::string_view::npos);
+        bool has_newline =
+            !preserve_newlines &&
+            (child_node.text.find('\n') != std::string_view::npos ||
+             child_node.text.find('\r') != std::string_view::npos);
 
         if (!preserve_newlines) {
           bool is_whitespace = true;
@@ -1037,7 +1089,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
           }
           if (is_whitespace && has_newline) {
-            break; // Skip formatting whitespace entirely!
+            break;  // Skip formatting whitespace entirely!
           }
         }
 
@@ -1053,7 +1105,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             last_condition_chain_met = true;
           }
 
-          if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx)->is_text()) {
+          if (child_idx < slot->ChildCount() &&
+              slot->ChildAt(child_idx)->is_text()) {
             auto* text_el = static_cast<TextElement*>(slot->ChildAt(child_idx));
             if (text_el->text() != child_node.text) {
               text_el->set_text(std::string(child_node.text));
@@ -1110,7 +1163,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         std::string processed_text;
-        if (!preserve_newlines && (text.find('\n') != std::string_view::npos || text.find('\r') != std::string_view::npos)) {
+        if (!preserve_newlines && (text.find('\n') != std::string_view::npos ||
+                                   text.find('\r') != std::string_view::npos)) {
           processed_text = std::string(text);
           for (char& c : processed_text) {
             if (c == '\n' || c == '\r') {
@@ -1121,7 +1175,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         // Reconcile/reuse or replace TextElement
-        if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx)->is_text()) {
+        if (child_idx < slot->ChildCount() &&
+            slot->ChildAt(child_idx)->is_text()) {
           auto* text_el = static_cast<TextElement*>(slot->ChildAt(child_idx));
           if (text_el->text() != text) {
             text_el->set_text(std::string(text));
@@ -1172,7 +1227,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
           last_condition_chain_met = (cond == "true" || cond == "1");
           if (last_condition_chain_met) {
-            RenderReconcile(child_node, slot, import_source, scope, child_idx, preserve_newlines);
+            RenderReconcile(child_node, slot, import_source, scope, child_idx,
+                            preserve_newlines);
           }
           break;
         }
@@ -1188,7 +1244,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
             if (cond == "true" || cond == "1") {
               last_condition_chain_met = true;
-              RenderReconcile(child_node, slot, import_source, scope, child_idx, preserve_newlines);
+              RenderReconcile(child_node, slot, import_source, scope, child_idx,
+                              preserve_newlines);
             }
           }
           break;
@@ -1196,7 +1253,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
         if (child_node.tag == "else") {
           if (!last_condition_chain_met) {
-            RenderReconcile(child_node, slot, import_source, scope, child_idx, preserve_newlines);
+            RenderReconcile(child_node, slot, import_source, scope, child_idx,
+                            preserve_newlines);
           }
           last_condition_chain_met = true;
           break;
@@ -1252,11 +1310,14 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               auto visitor = range->GetItemVisitor(i);
               if (visitor) {
                 item_scope.value = visitor;
-                RenderReconcile(child_node, slot, import_source, &item_scope, child_idx, preserve_newlines);
+                RenderReconcile(child_node, slot, import_source, &item_scope,
+                                child_idx, preserve_newlines);
               } else {
                 std::string fallback_storage;
-                item_scope.value = range->GetItemStringView(i, fallback_storage);
-                RenderReconcile(child_node, slot, import_source, &item_scope, child_idx, preserve_newlines);
+                item_scope.value =
+                    range->GetItemStringView(i, fallback_storage);
+                RenderReconcile(child_node, slot, import_source, &item_scope,
+                                child_idx, preserve_newlines);
               }
             }
           }
@@ -1269,7 +1330,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                                       : std::string(child_node.tag.substr(5));
 
           Ref<Element> slot_element;
-          if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx)->is_slot()) {
+          if (child_idx < slot->ChildCount() &&
+              slot->ChildAt(child_idx)->is_slot()) {
             slot_element = slot->children()[child_idx];
           } else {
             // Look ahead for a slot element
@@ -1303,7 +1365,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           Ref<Element> target_slot = Slot(template_name);
           if (target_slot) {
             size_t sub_child_idx = 0;
-            RenderReconcile(child_node, target_slot.get(), import_source, scope, sub_child_idx, preserve_newlines);
+            RenderReconcile(child_node, target_slot.get(), import_source, scope,
+                            sub_child_idx, preserve_newlines);
             target_slot->TruncateChildren(sub_child_idx);
           }
           break;
@@ -1333,7 +1396,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             child = factory();
             is_new = true;
           }
-          if (std::find(children_.begin(), children_.end(), child) == children_.end()) {
+          if (std::find(children_.begin(), children_.end(), child) ==
+              children_.end()) {
             children_.push_back(child);
           }
 
@@ -1448,14 +1512,17 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               interpolated_value = value;
             }
 
-            const std::string* current_val = child->Root() ? child->Root()->GetAttribute(std::string(key)) : nullptr;
+            const std::string* current_val =
+                child->Root() ? child->Root()->GetAttribute(std::string(key))
+                              : nullptr;
             if (!current_val || *current_val != interpolated_value) {
               attribute_changed = true;
             }
 
             child->SetProperty(key, interpolated_value);
             if (child->Root()) {
-              child->Root()->SetAttribute(std::string(key), std::string(interpolated_value));
+              child->Root()->SetAttribute(std::string(key),
+                                          std::string(interpolated_value));
             }
 
             if (dynamic || (value.starts_with("{") && value.ends_with("}"))) {
@@ -1468,10 +1535,12 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
           }
 
-          bool terminal_size_changed = (child->last_render_terminal_width_ != css::g_terminal_width ||
-                                        child->last_render_terminal_height_ != css::g_terminal_height);
+          bool terminal_size_changed =
+              (child->last_render_terminal_width_ != css::g_terminal_width ||
+               child->last_render_terminal_height_ != css::g_terminal_height);
 
-          bool needs_render = is_new || id_changed || classes_changed || attribute_changed || terminal_size_changed;
+          bool needs_render = is_new || id_changed || classes_changed ||
+                              attribute_changed || terminal_size_changed;
 
           if (needs_render) {
             child->Render();
@@ -1481,7 +1550,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           child->Root()->set_owner_component(import_source);
 
           // Now reconcile slot with child->Root()
-          if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx) == child->Root()) {
+          if (child_idx < slot->ChildCount() &&
+              slot->ChildAt(child_idx) == child->Root()) {
             child->Root()->set_parent(slot);
           } else {
             size_t match_idx = -1;
@@ -1527,7 +1597,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
               child->old_children_ = slot_components;
               for (auto& comp : slot_components) {
-                auto it = std::find(child->children_.begin(), child->children_.end(), comp);
+                auto it = std::find(child->children_.begin(),
+                                    child->children_.end(), comp);
                 if (it != child->children_.end()) {
                   child->children_.erase(it);
                 }
@@ -1535,7 +1606,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
 
             size_t sub_child_idx = 0;
-            child->RenderReconcile(child_node, default_slot.get(), import_source, scope, sub_child_idx, preserve_newlines);
+            child->RenderReconcile(child_node, default_slot.get(),
+                                   import_source, scope, sub_child_idx,
+                                   preserve_newlines);
             default_slot->TruncateChildren(sub_child_idx);
 
             if (!needs_render) {
@@ -1560,8 +1633,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // Look ahead for an element with the same tag
           size_t match_idx = -1;
           for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
-            if (!slot->ChildAt(i)->is_text() &&
-                !slot->ChildAt(i)->is_slot() &&
+            if (!slot->ChildAt(i)->is_text() && !slot->ChildAt(i)->is_slot() &&
                 !slot->ChildAt(i)->component() &&
                 slot->ChildAt(i)->tag() == child_node.tag) {
               match_idx = i;
@@ -1610,21 +1682,26 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               actual_value = value;
             }
             std::string new_val = Interpolate(actual_value);
-            const std::string* current_val = child_element->GetAttribute(std::string(key));
+            const std::string* current_val =
+                child_element->GetAttribute(std::string(key));
             if (!current_val || *current_val != new_val) {
               child_element->SetAttribute(std::string(key), std::move(new_val));
             }
           } else {
             if (value.find('{') == std::string::npos) {
-              const std::string* current_val = child_element->GetAttribute(std::string(key));
+              const std::string* current_val =
+                  child_element->GetAttribute(std::string(key));
               if (!current_val || *current_val != value) {
-                child_element->SetAttribute(std::string(key), std::string(value));
+                child_element->SetAttribute(std::string(key),
+                                            std::string(value));
               }
             } else {
               std::string new_val = Interpolate(value);
-              const std::string* current_val = child_element->GetAttribute(std::string(key));
+              const std::string* current_val =
+                  child_element->GetAttribute(std::string(key));
               if (!current_val || *current_val != new_val) {
-                child_element->SetAttribute(std::string(key), std::move(new_val));
+                child_element->SetAttribute(std::string(key),
+                                            std::move(new_val));
               }
             }
           }
@@ -1635,7 +1712,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // Remove obsolete attributes
           std::vector<std::string> keys_to_remove;
           for (const auto& [key, val] : child_element->Attributes()) {
-            if (std::find(updated_keys.begin(), updated_keys.end(), key) == updated_keys.end()) {
+            if (std::find(updated_keys.begin(), updated_keys.end(), key) ==
+                updated_keys.end()) {
               keys_to_remove.push_back(key);
             }
           }
@@ -1653,9 +1731,12 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         size_t sub_child_idx = 0;
-        RenderReconcile(child_node, child_element.get(), import_source, scope, sub_child_idx,
-                        preserve_newlines || child_element->tag() == "textarea" ||
-                            child_element->tag() == "pre" || child_element->tag() == "slider");
+        RenderReconcile(child_node, child_element.get(), import_source, scope,
+                        sub_child_idx,
+                        preserve_newlines ||
+                            child_element->tag() == "textarea" ||
+                            child_element->tag() == "pre" ||
+                            child_element->tag() == "slider");
         child_element->TruncateChildren(sub_child_idx);
 
         child_idx++;

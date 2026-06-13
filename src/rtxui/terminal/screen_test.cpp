@@ -2696,7 +2696,6 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
         }
       });
 
-
       bool is_contact_link = false;
       Element* curr = focused;
       while (curr) {
@@ -2725,7 +2724,8 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
   // Confirm scrollbar is scrolled to the absolute bottom (max_scroll_y)
   auto* scrollable_after = component->Root()->QuerySelector("#scroll-window");
 
-  int max_scroll_y = scrollable_after->scroll_height() - scrollable_after->layout_height();
+  int max_scroll_y =
+      scrollable_after->scroll_height() - scrollable_after->layout_height();
   CHECK(scrollable_after->scroll_y() == max_scroll_y);
 }
 
@@ -2897,9 +2897,10 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
   CHECK(scroll_el->target_scroll_y() == 10);
 }
 
-TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise", "[terminal][scroll][scrollbar]") {
+TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
+          "[terminal][scroll][scrollbar]") {
   auto device = std::make_shared<MockTerminalDevice>();
-  device->SetMockCellPixelSize(10, 20); // Cell width = 10px, height = 20px
+  device->SetMockCellPixelSize(10, 20);  // Cell width = 10px, height = 20px
 
   class ThumbDragPixelComponent : public Component<ThumbDragPixelComponent> {
    public:
@@ -2956,28 +2957,28 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise", "[terminal][scroll][scrollbar
   // Under pixel mode:
   // The scrollbar column is at x = 19 * 10 + 1 = 191 pixels (1-based).
   // The top of the track (first cell) is at y = 0 * 20 + 1 = 1 pixel.
-  
+
   // 1. Dispatch press at y = 1 (pixel coordinate, which falls in cell y = 1)
   Event::Mouse press;
   press.button = Event::Mouse::Button::Left;
   press.motion = Event::Mouse::Motion::Pressed;
-  press.x = 191; // 19 * 10 + 1
-  press.y = 1;   // Top-most pixel
+  press.x = 191;  // 19 * 10 + 1
+  press.y = 1;    // Top-most pixel
   screen.Dispatch(press);
 
   // 2. Drag down by 5 cells.
-  // Since cell height is 20 pixels, dragging down by 5 cells means moving the mouse down by 5 * 20 = 100 pixels.
-  // So target y is 1 + 100 = 101 pixels.
+  // Since cell height is 20 pixels, dragging down by 5 cells means moving the
+  // mouse down by 5 * 20 = 100 pixels. So target y is 1 + 100 = 101 pixels.
   Event::Mouse move;
   move.button = Event::Mouse::Button::Left;
   move.motion = Event::Mouse::Motion::Moved;
   move.x = 191;
-  move.y = 101; // Moved 100 pixels down
+  move.y = 101;  // Moved 100 pixels down
   screen.Dispatch(move);
 
-  // The thumb covers half the track (5 cells). The scrollable range is 10 cells.
-  // Moving 5 cells down (100 pixels) on a 10-cell viewport (200 pixels height)
-  // should move the scroll position to max (10).
+  // The thumb covers half the track (5 cells). The scrollable range is 10
+  // cells. Moving 5 cells down (100 pixels) on a 10-cell viewport (200 pixels
+  // height) should move the scroll position to max (10).
   CHECK(scroll_el->target_scroll_y() == 10);
 
   // 3. Move back up by 2 cells (40 pixels).
@@ -3066,6 +3067,57 @@ TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
   // Hover state should be cleared.
   CHECK_FALSE(scroll_el->scrollbar_hovered());
   CHECK_FALSE(scroll_el->scrollbar_thumb_hovered());
+}
+
+TEST_CASE("Screen.LayoutFlexDemoClickTest", "[terminal][flex]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class LayoutFlexDemo : public Component<LayoutFlexDemo> {
+   public:
+    std::string direction = "row";
+    void CycleDirection() {
+      if (direction == "row") {
+        direction = "row-reverse";
+      } else {
+        direction = "row";
+      }
+    }
+    LayoutFlexDemo() {
+      Bind(direction);
+      Bind(CycleDirection);
+    }
+    std::string_view view = R"xml(
+      <div id="container">
+        <button id="btn" onclick="CycleDirection">direction: {direction}</button>
+        <div id="flex-container"></div>
+      </div>
+      <style>
+        #flex-container { flex-direction: {direction}; }
+      </style>
+    )xml";
+  };
+
+  auto component = Ref<LayoutFlexDemo>::New();
+
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* flex_container = component->Root()->QuerySelector("#flex-container");
+  REQUIRE(flex_container != nullptr);
+  CHECK(flex_container->style.flex_direction == Direction::Row);
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+  btn->set_focused(true);
+  screen.Draw();
+
+  // Press Space to click
+  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  CHECK(component->direction == "row-reverse");
+
+  // Re-draw so that updates are processed
+  screen.Draw();
+  CHECK(flex_container->style.flex_direction == Direction::RowReverse);
 }
 
 }  // namespace

@@ -4,10 +4,10 @@
 #include <cctype>
 #include <charconv>
 #include <cstdlib>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <memory>
 
 #include "rtxui/paint/color.hpp"
 
@@ -84,7 +84,6 @@ Spacing ParseSpacingShorthand(std::string_view value) {
   }
   return result;
 }
-
 
 std::optional<Color> ParseColor(std::string_view value) {
   if (value.empty()) {
@@ -196,8 +195,8 @@ std::optional<Color> ParseColor(std::string_view value) {
       int r = StoI(r_str);
       int g = StoI(g_str);
       int b = StoI(b_str);
-       float a = StoF(a_str);
-       return Color::RGBA(r, g, b, a * 255.f);
+      float a = StoF(a_str);
+      return Color::RGBA(r, g, b, a * 255.f);
     } catch (const std::invalid_argument&) {
       return std::nullopt;
     } catch (const std::out_of_range&) {
@@ -253,7 +252,8 @@ std::optional<Color> ParseColor(std::string_view value) {
   return std::nullopt;
 }
 
-std::optional<Color> TransformColor(std::optional<Color> current, std::string_view v) {
+std::optional<Color> TransformColor(std::optional<Color> current,
+                                    std::string_view v) {
   while (!v.empty() && std::isspace(static_cast<unsigned char>(v.front()))) {
     v.remove_prefix(1);
   }
@@ -323,6 +323,9 @@ std::optional<Color> TransformColor(std::optional<Color> current, std::string_vi
 }
 
 Length ParseLength(std::string_view value) {
+  if (value == "auto") {
+    return Length::Auto();
+  }
   if (value.back() == '%') {
     value.remove_suffix(1);
     return Length::Pct(StoF(value));
@@ -429,11 +432,14 @@ std::optional<ScrollbarWidth> ParseScrollbarWidth(std::string_view v) {
   return std::nullopt;
 }
 
-std::pair<std::string_view, std::string_view> SplitScrollbarColors(std::string_view v) {
+std::pair<std::string_view, std::string_view> SplitScrollbarColors(
+    std::string_view v) {
   while (!v.empty() && std::isspace(static_cast<unsigned char>(v.front()))) {
     v.remove_prefix(1);
   }
-  if (v.empty()) return {{}, {}};
+  if (v.empty()) {
+    return {{}, {}};
+  }
 
   size_t idx = 0;
   if (v.starts_with("rgb(") || v.starts_with("rgba(") ||
@@ -442,12 +448,16 @@ std::pair<std::string_view, std::string_view> SplitScrollbarColors(std::string_v
     size_t parens = 1;
     idx = open_paren + 1;
     while (idx < v.size() && parens > 0) {
-      if (v[idx] == '(') parens++;
-      else if (v[idx] == ')') parens--;
+      if (v[idx] == '(') {
+        parens++;
+      } else if (v[idx] == ')') {
+        parens--;
+      }
       idx++;
     }
   } else {
-    while (idx < v.size() && !std::isspace(static_cast<unsigned char>(v[idx]))) {
+    while (idx < v.size() &&
+           !std::isspace(static_cast<unsigned char>(v[idx]))) {
       idx++;
     }
   }
@@ -455,7 +465,8 @@ std::pair<std::string_view, std::string_view> SplitScrollbarColors(std::string_v
   std::string_view first = v.substr(0, idx);
   std::string_view rest = v.substr(idx);
 
-  while (!rest.empty() && std::isspace(static_cast<unsigned char>(rest.front()))) {
+  while (!rest.empty() &&
+         std::isspace(static_cast<unsigned char>(rest.front()))) {
     rest.remove_prefix(1);
   }
 
@@ -519,7 +530,8 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
                          : remaining2.substr(0, space3);
           }
           if (!style.transitions) {
-            style.transitions = std::make_unique<std::vector<TransitionConfig>>();
+            style.transitions =
+                std::make_unique<std::vector<TransitionConfig>>();
           }
           style.transitions->push_back(
               {std::string(prop_name), dur, 0.0f, std::string(timing)});
@@ -821,6 +833,21 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "flex-wrap") {
+    if (v == "nowrap") {
+      style.flex_wrap = FlexWrap::NoWrap;
+      return;
+    }
+    if (v == "wrap") {
+      style.flex_wrap = FlexWrap::Wrap;
+      return;
+    }
+    if (v == "wrap-reverse") {
+      style.flex_wrap = FlexWrap::WrapReverse;
+      return;
+    }
+  }
+
   if (p == "position") {
     if (v == "static") {
       style.position = PositionType::Static;
@@ -901,7 +928,25 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "gap") {
-    style.gap = ParseLength(v);
+    auto parts = SplitWords(v);
+    if (parts.size() == 1) {
+      Length len = ParseLength(parts[0]);
+      style.row_gap = len;
+      style.column_gap = len;
+    } else if (parts.size() >= 2) {
+      style.row_gap = ParseLength(parts[0]);
+      style.column_gap = ParseLength(parts[1]);
+    }
+    return;
+  }
+
+  if (p == "row-gap") {
+    style.row_gap = ParseLength(v);
+    return;
+  }
+
+  if (p == "column-gap") {
+    style.column_gap = ParseLength(v);
     return;
   }
 
@@ -1122,9 +1167,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
     auto [first, second] = SplitScrollbarColors(v);
     if (!first.empty()) {
-      std::optional<Color> current = style.has_scrollbar_color_thumb
-                                         ? std::optional<Color>(style.scrollbar_color_thumb)
-                                         : std::nullopt;
+      std::optional<Color> current =
+          style.has_scrollbar_color_thumb
+              ? std::optional<Color>(style.scrollbar_color_thumb)
+              : std::nullopt;
       auto resolved = TransformColor(current, first);
       if (resolved) {
         style.has_scrollbar_color_thumb = true;
@@ -1132,9 +1178,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       }
     }
     if (!second.empty()) {
-      std::optional<Color> current = style.has_scrollbar_color_track
-                                         ? std::optional<Color>(style.scrollbar_color_track)
-                                         : std::nullopt;
+      std::optional<Color> current =
+          style.has_scrollbar_color_track
+              ? std::optional<Color>(style.scrollbar_color_track)
+              : std::nullopt;
       auto resolved = TransformColor(current, second);
       if (resolved) {
         style.has_scrollbar_color_track = true;
