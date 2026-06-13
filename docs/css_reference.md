@@ -73,7 +73,11 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `flex-wrap` | `nowrap \| wrap \| wrap-reverse` | ❌ | Controls wrapping behavior of flex items. |
 | `flex-grow` | [`<number>`](#value-types) |   | Portion of free space item claims along main axis. |
 | `flex-shrink` | [`<number>`](#value-types) |   | Factor determining how much item shrinks. |
+| `flex-basis` | [`<length>`](#value-types) | ❌ | Initial size of flex item before free space is distributed. |
+| `flex` | shorthand | ❌ | Shorthand for flex-grow, flex-shrink, and flex-basis. |
 | `align-items` | `stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of items along the cross axis. |
+| `align-self` | `auto \| stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of individual flex item along the cross axis. |
+| `align-content` | `stretch \| flex-start \| flex-end \| center \| space-between \| space-around \| space-evenly` | ❌ | Alignment of flex lines in multi-line flex container. |
 | `justify-content` | `flex-start \| flex-end \| center \| space-between \| space-around \| space-evenly` | ❌ | Alignment of items along the main axis. |
 | `gap` | [`<length>`](#value-types) | ❌ | Spacing between flex items. |
 | `row-gap` | [`<length>`](#value-types) | ❌ | Spacing between flex rows/lines. |

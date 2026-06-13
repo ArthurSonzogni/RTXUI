@@ -1097,8 +1097,14 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         child->style.position == PositionType::Fixed) {
       continue;
     }
-    int basis = is_row ? ResolveSize(child->style.width, content_w)
-                       : ResolveSize(child->style.height, content_h);
+    int basis = -1;
+    if (child->style.flex_basis.unit != Unit::Auto) {
+      basis =
+          ResolveSize(child->style.flex_basis, is_row ? content_w : content_h);
+    } else {
+      basis = is_row ? ResolveSize(child->style.width, content_w)
+                     : ResolveSize(child->style.height, content_h);
+    }
 
     LayoutConstraints child_c;
     if (is_row) {
@@ -1398,7 +1404,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   int container_cross_final = is_row ? final_content_h : final_content_w;
 
   bool cross_is_definite = is_row ? !auto_height : !auto_width;
-  if (cross_is_definite && !lines.empty()) {
+  if (cross_is_definite && !lines.empty() &&
+      box->style.align_content == AlignContent::Stretch) {
     int remaining_cross = container_cross_final - total_cross_lines;
     if (remaining_cross > 0) {
       int extra_per_line = remaining_cross / lines.size();
@@ -1438,10 +1445,71 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   // Determine line cross offsets
   std::vector<int> line_cross_offsets(lines.size(), 0);
-  int cur_line_offset = 0;
-  for (size_t l = 0; l < lines.size(); ++l) {
-    line_cross_offsets[l] = cur_line_offset;
-    cur_line_offset += lines[l].cross_size + resolved_cross_gap;
+  if (cross_is_definite && !lines.empty() &&
+      box->style.align_content != AlignContent::Stretch) {
+    int total_lines_cross = 0;
+    for (const auto& line : lines) {
+      total_lines_cross += line.cross_size;
+    }
+    int remaining = container_cross_final - total_lines_cross;
+
+    if (box->style.align_content == AlignContent::FlexStart) {
+      int cur_line_offset = 0;
+      for (size_t l = 0; l < lines.size(); ++l) {
+        line_cross_offsets[l] = cur_line_offset;
+        cur_line_offset += lines[l].cross_size + resolved_cross_gap;
+      }
+    } else if (box->style.align_content == AlignContent::FlexEnd) {
+      int total_occupied =
+          total_lines_cross + (lines.size() - 1) * resolved_cross_gap;
+      int start_offset = std::max(0, container_cross_final - total_occupied);
+      int cur_line_offset = start_offset;
+      for (size_t l = 0; l < lines.size(); ++l) {
+        line_cross_offsets[l] = cur_line_offset;
+        cur_line_offset += lines[l].cross_size + resolved_cross_gap;
+      }
+    } else if (box->style.align_content == AlignContent::Center) {
+      int total_occupied =
+          total_lines_cross + (lines.size() - 1) * resolved_cross_gap;
+      int start_offset =
+          std::max(0, (container_cross_final - total_occupied) / 2);
+      int cur_line_offset = start_offset;
+      for (size_t l = 0; l < lines.size(); ++l) {
+        line_cross_offsets[l] = cur_line_offset;
+        cur_line_offset += lines[l].cross_size + resolved_cross_gap;
+      }
+    } else if (box->style.align_content == AlignContent::SpaceBetween) {
+      if (lines.size() == 1) {
+        line_cross_offsets[0] = 0;
+      } else {
+        float gap = static_cast<float>(remaining) / (lines.size() - 1);
+        float current = 0.0f;
+        for (size_t l = 0; l < lines.size(); ++l) {
+          line_cross_offsets[l] = static_cast<int>(current + 0.5f);
+          current += lines[l].cross_size + gap;
+        }
+      }
+    } else if (box->style.align_content == AlignContent::SpaceAround) {
+      float gap = static_cast<float>(remaining) / lines.size();
+      float current = gap / 2.0f;
+      for (size_t l = 0; l < lines.size(); ++l) {
+        line_cross_offsets[l] = static_cast<int>(current + 0.5f);
+        current += lines[l].cross_size + gap;
+      }
+    } else if (box->style.align_content == AlignContent::SpaceEvenly) {
+      float gap = static_cast<float>(remaining) / (lines.size() + 1);
+      float current = gap;
+      for (size_t l = 0; l < lines.size(); ++l) {
+        line_cross_offsets[l] = static_cast<int>(current + 0.5f);
+        current += lines[l].cross_size + gap;
+      }
+    }
+  } else {
+    int cur_line_offset = 0;
+    for (size_t l = 0; l < lines.size(); ++l) {
+      line_cross_offsets[l] = cur_line_offset;
+      cur_line_offset += lines[l].cross_size + resolved_cross_gap;
+    }
   }
 
   // Position items on each line
@@ -1541,10 +1609,33 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       int m_horiz = item.child_ptr->style.margin.Horiz();
       int m_vert = item.child_ptr->style.margin.Vert();
 
+      AlignItems effective_align = box->style.align_items;
+      if (item.child_ptr->style.align_self != AlignSelf::Auto) {
+        switch (item.child_ptr->style.align_self) {
+          case AlignSelf::Stretch:
+            effective_align = AlignItems::Stretch;
+            break;
+          case AlignSelf::FlexStart:
+            effective_align = AlignItems::FlexStart;
+            break;
+          case AlignSelf::FlexEnd:
+            effective_align = AlignItems::FlexEnd;
+            break;
+          case AlignSelf::Center:
+            effective_align = AlignItems::Center;
+            break;
+          case AlignSelf::Baseline:
+            effective_align = AlignItems::Baseline;
+            break;
+          default:
+            break;
+        }
+      }
+
       if (is_row) {
         final_c.width = {item.main_resolved_size - m_horiz,
                          MeasureMode::Exactly};
-        if (box->style.align_items == AlignItems::Stretch &&
+        if (effective_align == AlignItems::Stretch &&
             item.child_ptr->style.height.unit == Unit::Auto) {
           final_c.height = {line.cross_size - m_vert, MeasureMode::Exactly};
         } else if (auto_height &&
@@ -1557,7 +1648,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
           final_c.height = {max_h, MeasureMode::AtMost};
         }
       } else {
-        if (box->style.align_items == AlignItems::Stretch &&
+        if (effective_align == AlignItems::Stretch &&
             item.child_ptr->style.width.unit == Unit::Auto) {
           final_c.width = {line.cross_size - m_horiz, MeasureMode::Exactly};
         } else if (auto_width &&
@@ -1574,12 +1665,12 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       }
 
       int item_cross_pos = line_cross_pos;
-      if (box->style.align_items != AlignItems::Stretch) {
+      if (effective_align != AlignItems::Stretch) {
         int cross_free_space = line.cross_size - item.cross_size;
         if (cross_free_space > 0) {
-          if (box->style.align_items == AlignItems::FlexEnd) {
+          if (effective_align == AlignItems::FlexEnd) {
             item_cross_pos += cross_free_space;
-          } else if (box->style.align_items == AlignItems::Center) {
+          } else if (effective_align == AlignItems::Center) {
             item_cross_pos += cross_free_space / 2;
           }
         }

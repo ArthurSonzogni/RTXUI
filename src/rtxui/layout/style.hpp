@@ -155,6 +155,25 @@ enum class AlignItems {
   Baseline,
 };
 
+enum class AlignSelf {
+  Auto,
+  Stretch,
+  FlexStart,
+  FlexEnd,
+  Center,
+  Baseline,
+};
+
+enum class AlignContent {
+  Stretch,
+  FlexStart,
+  FlexEnd,
+  Center,
+  SpaceBetween,
+  SpaceAround,
+  SpaceEvenly,
+};
+
 enum class Cursor {
   Auto,
   Default,
@@ -217,10 +236,13 @@ struct ComputedStyle {
 
   float flex_grow = 0.0f;
   float flex_shrink = 1.0f;
+  Length flex_basis = Length::Auto();
   Length row_gap = Length::Cells(0.0f);
   Length column_gap = Length::Cells(0.0f);
   JustifyContent justify_content = JustifyContent::FlexStart;
   AlignItems align_items = AlignItems::Stretch;
+  AlignSelf align_self = AlignSelf::Auto;
+  AlignContent align_content = AlignContent::Stretch;
 
   Spacing margin;
   Spacing padding;
