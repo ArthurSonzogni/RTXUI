@@ -54,26 +54,25 @@ class TypeErasedRange {
   virtual ~TypeErasedRange() = default;
   virtual size_t Size() const = 0;
   virtual std::string GetItemString(size_t index) const = 0;
+  virtual std::string_view GetItemStringView(size_t index, std::string& fallback_storage) const = 0;
   virtual std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const = 0;
   virtual bool CheckAndUpdate() = 0;
 };
 
 struct LocalScope {
-  std::shared_ptr<LocalScope> parent;
-  std::unordered_map<std::string,
-                     std::variant<std::string, std::shared_ptr<StructVisitor>>>
-      variables;
+  const LocalScope* parent = nullptr;
+  std::string_view name;
+  std::variant<std::string_view, std::shared_ptr<StructVisitor>> value;
 
-  std::optional<std::variant<std::string, std::shared_ptr<StructVisitor>>> Get(
-      std::string_view name) const {
-    auto it = variables.find(std::string(name));
-    if (it != variables.end()) {
-      return it->second;
+  const std::variant<std::string_view, std::shared_ptr<StructVisitor>>* Get(
+      std::string_view var_name) const {
+    if (name == var_name) {
+      return &value;
     }
     if (parent) {
-      return parent->Get(name);
+      return parent->Get(var_name);
     }
-    return std::nullopt;
+    return nullptr;
   }
 };
 
@@ -135,11 +134,11 @@ class ComponentBase : public RefCounted, public Bindings {
   void Render(const xml::Node& node,
               Element* element,
               ComponentBase* source,
-              std::shared_ptr<LocalScope> scope = nullptr);
+              const LocalScope* scope = nullptr);
   void RenderReconcile(const xml::Node& node,
                        Element* element,
                        ComponentBase* source,
-                       std::shared_ptr<LocalScope> scope,
+                       const LocalScope* scope,
                        size_t& child_idx,
                        bool preserve_newlines = false);
   std::string template_;
@@ -147,7 +146,7 @@ class ComponentBase : public RefCounted, public Bindings {
   xml::Nodes xml_nodes_;
   Ref<Element> root_;
   std::map<std::string, Ref<Element>> slots_;
-  std::set<Ref<ComponentBase>> children_;
+  std::vector<Ref<ComponentBase>> children_;
   std::vector<Ref<ComponentBase>> old_children_;
   std::string id_;
   std::vector<std::string> classes_;
@@ -281,6 +280,18 @@ class TypeErasedRangeImpl : public TypeErasedRange {
     return reflection::to_string(*it);
   }
 
+  std::string_view GetItemStringView(size_t index, std::string& fallback_storage) const override {
+    auto it = std::ranges::begin(*container_ptr_);
+    std::advance(it, index);
+    using ItemType = std::ranges::range_value_t<Container>;
+    if constexpr (std::is_convertible_v<ItemType, std::string_view>) {
+      return *it;
+    } else {
+      fallback_storage = reflection::to_string(*it);
+      return fallback_storage;
+    }
+  }
+
   std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const override {
     using ItemType = std::ranges::range_value_t<Container>;
     auto it = std::ranges::begin(*container_ptr_);
@@ -302,7 +313,19 @@ class TypeErasedRangeImpl : public TypeErasedRange {
   bool CheckAndUpdate() override {
     if constexpr (requires { *container_ptr_ != snapshot_; }) {
       if (*container_ptr_ != snapshot_) {
-        snapshot_ = *container_ptr_;
+        if constexpr (requires { snapshot_.size(); snapshot_[0] = (*container_ptr_)[0]; }) {
+          if (snapshot_.size() != container_ptr_->size()) {
+            snapshot_ = *container_ptr_;
+          } else {
+            for (size_t i = 0; i < container_ptr_->size(); ++i) {
+              if (snapshot_[i] != (*container_ptr_)[i]) {
+                snapshot_[i] = (*container_ptr_)[i];
+              }
+            }
+          }
+        } else {
+          snapshot_ = *container_ptr_;
+        }
         return true;
       }
     } else {
