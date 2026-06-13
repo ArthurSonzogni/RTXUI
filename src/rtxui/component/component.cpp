@@ -297,15 +297,24 @@ void CollectElementStates(Element* el,
   }
 }
 
-void RestoreElementStates(
-    Element* el,
-    ElementPath& path,
-    const std::vector<std::pair<ElementPath, ElementState>>& states) {
-  if (!el) {
-    return;
+Element* FindElementByPath(Element* root, const ElementPath& path) {
+  Element* el = root;
+  for (size_t i = 0; i < path.depth; ++i) {
+    int child_idx = path.indices[i];
+    if (!el || child_idx < 0 || static_cast<size_t>(child_idx) >= el->ChildCount()) {
+      return nullptr;
+    }
+    el = el->ChildAt(child_idx);
   }
+  return el;
+}
+
+void RestoreElementStates(
+    Element* root,
+    const std::vector<std::pair<ElementPath, ElementState>>& states) {
   for (const auto& pair : states) {
-    if (pair.first == path) {
+    Element* el = FindElementByPath(root, pair.first);
+    if (el) {
       el->set_scroll_x(pair.second.scroll_x);
       el->set_scroll_y(pair.second.scroll_y);
       el->set_focused(pair.second.focused);
@@ -317,25 +326,16 @@ void RestoreElementStates(
       el->set_scrollbar_thumb_active(pair.second.scrollbar_thumb_active);
       el->style = pair.second.style;
       el->active_transitions = pair.second.active_transitions;
-      break;
     }
-  }
-  for (size_t i = 0; i < el->ChildCount(); ++i) {
-    path.push_back(static_cast<int>(i));
-    RestoreElementStates(el->ChildAt(i), path, states);
-    path.pop_back();
   }
 }
 
 void RestoreElementFocusHoverActive(
-    Element* el,
-    ElementPath& path,
+    Element* root,
     const std::vector<std::pair<ElementPath, ElementState>>& states) {
-  if (!el) {
-    return;
-  }
   for (const auto& pair : states) {
-    if (pair.first == path) {
+    Element* el = FindElementByPath(root, pair.first);
+    if (el) {
       el->set_focused(pair.second.focused);
       el->set_hovered(pair.second.hovered);
       el->set_active(pair.second.active);
@@ -343,117 +343,93 @@ void RestoreElementFocusHoverActive(
       el->set_scrollbar_active(pair.second.scrollbar_active);
       el->set_scrollbar_thumb_hovered(pair.second.scrollbar_thumb_hovered);
       el->set_scrollbar_thumb_active(pair.second.scrollbar_thumb_active);
-      break;
     }
-  }
-  for (size_t i = 0; i < el->ChildCount(); ++i) {
-    path.push_back(static_cast<int>(i));
-    RestoreElementFocusHoverActive(el->ChildAt(i), path, states);
-    path.pop_back();
   }
 }
 
 
 std::string Interpolate(std::string_view text,
                         ComponentBase* source,
-                        std::shared_ptr<LocalScope> scope) {
+                        const LocalScope* scope) {
   if (text.find('{') == std::string_view::npos) {
     return std::string(text);
   }
-  struct Placeholder {
-    size_t open_idx;
-    size_t close_idx;
-    std::string trimmed_expr;
-  };
-  std::vector<Placeholder> placeholders;
-  std::vector<size_t> stack;
-
-  for (size_t i = 0; i < text.size(); ++i) {
-    if (text[i] == '{') {
-      stack.push_back(i);
-    } else if (text[i] == '}') {
-      if (!stack.empty()) {
-        size_t open_idx = stack.back();
-        stack.pop_back();
-        size_t close_idx = i;
-        std::string_view expression =
-            text.substr(open_idx + 1, close_idx - open_idx - 1);
-
-        // Trim spaces to find a clean identifier
-        std::string_view trimmed = expression;
-        while (!trimmed.empty() &&
-               std::isspace(static_cast<unsigned char>(trimmed.front()))) {
-          trimmed.remove_prefix(1);
-        }
-        while (!trimmed.empty() &&
-               std::isspace(static_cast<unsigned char>(trimmed.back()))) {
-          trimmed.remove_suffix(1);
-        }
-
-        bool is_ident = !trimmed.empty();
-        for (char c : trimmed) {
-          if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' &&
-              c != '.' && c != '-' && c != '$' && c != ' ' && c != '=' &&
-              c != '!' && c != '>' && c != '<' && c != '&' && c != '|') {
-            is_ident = false;
-            break;
-          }
-        }
-
-        if (is_ident) {
-          placeholders.push_back({open_idx, close_idx, std::string(trimmed)});
-        }
-      }
-    }
-  }
-
-  // Sort placeholders in ascending order of open_idx (left-to-right)
-  std::sort(placeholders.begin(), placeholders.end(),
-            [](const Placeholder& a, const Placeholder& b) {
-              return a.open_idx < b.open_idx;
-            });
 
   std::string result;
-  result.reserve(text.size() + placeholders.size() * 16);
+  result.reserve(text.size() + 32);
   size_t last_pos = 0;
-  for (const auto& ph : placeholders) {
-    if (ph.open_idx > last_pos) {
-      result.append(text.substr(last_pos, ph.open_idx - last_pos));
+
+  while (true) {
+    size_t open_idx = text.find('{', last_pos);
+    if (open_idx == std::string_view::npos) {
+      break;
     }
-    std::string val;
+    size_t close_idx = text.find('}', open_idx);
+    if (close_idx == std::string_view::npos) {
+      break;
+    }
+
+    std::string_view expression = text.substr(open_idx + 1, close_idx - open_idx - 1);
+
+    std::string_view trimmed = expression;
+    if (!trimmed.empty() && (std::isspace(static_cast<unsigned char>(trimmed.front())) || std::isspace(static_cast<unsigned char>(trimmed.back())))) {
+      while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.front()))) {
+        trimmed.remove_prefix(1);
+      }
+      while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
+        trimmed.remove_suffix(1);
+      }
+    }
+
+    bool is_ident = !trimmed.empty();
+    for (char c : trimmed) {
+      if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' &&
+          c != '.' && c != '-' && c != '$' && c != ' ' && c != '=' &&
+          c != '!' && c != '>' && c != '<' && c != '&' && c != '|') {
+        is_ident = false;
+        break;
+      }
+    }
+
+    if (!is_ident) {
+      result.append(text.substr(last_pos, open_idx - last_pos + 1));
+      last_pos = open_idx + 1;
+      continue;
+    }
+
+    if (open_idx > last_pos) {
+      result.append(text.substr(last_pos, open_idx - last_pos));
+    }
+
     bool resolved = false;
     if (scope) {
-      auto dot_pos = ph.trimmed_expr.find('.');
-      std::string var_name =
-          (dot_pos == std::string_view::npos)
-              ? ph.trimmed_expr
-              : std::string(ph.trimmed_expr.substr(0, dot_pos));
+      auto dot_pos = trimmed.find('.');
+      std::string_view var_name = (dot_pos == std::string_view::npos) ? trimmed : trimmed.substr(0, dot_pos);
       auto val_opt = scope->Get(var_name);
       if (val_opt) {
         resolved = true;
         if (dot_pos == std::string_view::npos) {
-          if (std::holds_alternative<std::string>(*val_opt)) {
-            val = std::get<std::string>(*val_opt);
+          if (std::holds_alternative<std::string_view>(*val_opt)) {
+            result.append(std::get<std::string_view>(*val_opt));
           }
         } else {
-          std::string_view expr_view = ph.trimmed_expr;
-          std::string_view field_name = expr_view.substr(dot_pos + 1);
-          if (std::holds_alternative<std::shared_ptr<StructVisitor>>(
-                  *val_opt)) {
+          std::string_view field_name = trimmed.substr(dot_pos + 1);
+          if (std::holds_alternative<std::shared_ptr<StructVisitor>>(*val_opt)) {
             auto visitor = std::get<std::shared_ptr<StructVisitor>>(*val_opt);
             if (visitor) {
-              val = visitor->GetFieldValue(field_name);
+              result.append(visitor->GetFieldValue(field_name));
             }
           }
         }
       }
     }
+
     if (!resolved) {
-      val = source->GetInterpolatedValue(ph.trimmed_expr);
+      result.append(source->GetInterpolatedValue(trimmed));
     }
-    result.append(val);
-    last_pos = ph.close_idx + 1;
+    last_pos = close_idx + 1;
   }
+
   if (last_pos < text.size()) {
     result.append(text.substr(last_pos));
   }
@@ -795,8 +771,7 @@ void ComponentBase::Render() {
     }
   }
 
-  old_children_ =
-      std::vector<Ref<ComponentBase>>(children_.begin(), children_.end());
+  old_children_ = std::move(children_);
   children_.clear();
   slots_.clear();
 
@@ -891,12 +866,13 @@ void ComponentBase::Render() {
   }
 
   for (auto& comp : saved_slot_components) {
-    children_.insert(comp);
+    if (std::find(children_.begin(), children_.end(), comp) == children_.end()) {
+      children_.push_back(comp);
+    }
   }
 
-  if (root_) {
-    ElementPath path;
-    RestoreElementFocusHoverActive(root_.get(), path, saved_states);
+  if (root_ && !saved_states.empty()) {
+    RestoreElementFocusHoverActive(root_.get(), saved_states);
   }
 
   ResolveStylesRecursive(root_.get(), this, false);
@@ -918,8 +894,9 @@ void ComponentBase::Render() {
   CopyBaseStyles(CopyBaseStyles, root_.get());
 
   if (root_) {
-    ElementPath path;
-    RestoreElementStates(root_.get(), path, saved_states);
+    if (!saved_states.empty()) {
+      RestoreElementStates(root_.get(), saved_states);
+    }
     if (saved_parent) {
       root_->set_parent(saved_parent);
     }
@@ -993,10 +970,30 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
   TriggerAll(TriggerAll, root_.get(), current_time_ms);
 }
 
+namespace {
+const std::string& GetIndexString(size_t index) {
+  static const size_t kMaxCached = 1000;
+  static const auto& cache = *[]() {
+    auto* v = new std::vector<std::string>();
+    v->reserve(kMaxCached);
+    for (size_t i = 0; i < kMaxCached; ++i) {
+      v->push_back(std::to_string(i));
+    }
+    return v;
+  }();
+  if (index < kMaxCached) {
+    return cache[index];
+  }
+  static thread_local std::string fallback;
+  fallback = std::to_string(index);
+  return fallback;
+}
+} // namespace
+
 void ComponentBase::Render(const xml::Node& node,
                            Element* slot,
                            ComponentBase* import_source,
-                           std::shared_ptr<LocalScope> scope) {
+                           const LocalScope* scope) {
   size_t child_idx = 0;
   bool preserve = false;
   for (Element* curr = slot; curr; curr = curr->Parent()) {
@@ -1012,7 +1009,7 @@ void ComponentBase::Render(const xml::Node& node,
 void ComponentBase::RenderReconcile(const xml::Node& node,
                                     Element* slot,
                                     ComponentBase* import_source,
-                                    std::shared_ptr<LocalScope> scope,
+                                    const LocalScope* scope,
                                     size_t& child_idx,
                                     bool preserve_newlines) {
   Ref<Element> slot_keep_alive(slot);
@@ -1030,6 +1027,19 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
       case xml::Node::Type::kText: {
         bool has_placeholder = (child_node.text.find('{') != std::string_view::npos);
         bool has_newline = !preserve_newlines && (child_node.text.find('\n') != std::string_view::npos || child_node.text.find('\r') != std::string_view::npos);
+
+        if (!preserve_newlines) {
+          bool is_whitespace = true;
+          for (char c : child_node.text) {
+            if (!std::isspace(static_cast<unsigned char>(c))) {
+              is_whitespace = false;
+              break;
+            }
+          }
+          if (is_whitespace && has_newline) {
+            break; // Skip formatting whitespace entirely!
+          }
+        }
 
         if (!has_placeholder && !has_newline) {
           bool is_whitespace = true;
@@ -1079,7 +1089,14 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           break;
         }
 
-        std::string text = Interpolate(child_node.text);
+        std::string text_storage;
+        std::string_view text;
+        if (has_placeholder) {
+          text_storage = Interpolate(child_node.text);
+          text = text_storage;
+        } else {
+          text = child_node.text;
+        }
 
         bool is_whitespace = true;
         for (char c : text) {
@@ -1092,19 +1109,22 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           last_condition_chain_met = true;
         }
 
-        if (!preserve_newlines) {
-          for (char& c : text) {
+        std::string processed_text;
+        if (!preserve_newlines && (text.find('\n') != std::string_view::npos || text.find('\r') != std::string_view::npos)) {
+          processed_text = std::string(text);
+          for (char& c : processed_text) {
             if (c == '\n' || c == '\r') {
               c = ' ';
             }
           }
+          text = processed_text;
         }
 
         // Reconcile/reuse or replace TextElement
         if (child_idx < slot->ChildCount() && slot->ChildAt(child_idx)->is_text()) {
           auto* text_el = static_cast<TextElement*>(slot->ChildAt(child_idx));
           if (text_el->text() != text) {
-            text_el->set_text(text);
+            text_el->set_text(std::string(text));
           }
         } else {
           // Look ahead for a text element
@@ -1121,10 +1141,10 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             text_el = slot->children()[child_idx];
             auto* t_el = static_cast<TextElement*>(text_el.get());
             if (t_el->text() != text) {
-              t_el->set_text(text);
+              t_el->set_text(std::string(text));
             }
           } else {
-            text_el = Ref<TextElement>::New(text);
+            text_el = Ref<TextElement>::New(std::string(text));
             text_el->set_owner_component(import_source);
             if (child_idx < slot->ChildCount()) {
               slot->ReplaceChild(child_idx, text_el);
@@ -1143,7 +1163,13 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         if (child_node.tag == "if") {
-          std::string cond = Interpolate(child_node.attributes.at("condition"));
+          const auto& cond_attr = child_node.attributes.at("condition");
+          std::string cond;
+          if (cond_attr.find('{') == std::string::npos) {
+            cond = cond_attr;
+          } else {
+            cond = Interpolate(cond_attr);
+          }
           last_condition_chain_met = (cond == "true" || cond == "1");
           if (last_condition_chain_met) {
             RenderReconcile(child_node, slot, import_source, scope, child_idx, preserve_newlines);
@@ -1153,8 +1179,13 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
         if (child_node.tag == "elif") {
           if (!last_condition_chain_met) {
-            std::string cond =
-                Interpolate(child_node.attributes.at("condition"));
+            const auto& cond_attr = child_node.attributes.at("condition");
+            std::string cond;
+            if (cond_attr.find('{') == std::string::npos) {
+              cond = cond_attr;
+            } else {
+              cond = Interpolate(cond_attr);
+            }
             if (cond == "true" || cond == "1") {
               last_condition_chain_met = true;
               RenderReconcile(child_node, slot, import_source, scope, child_idx, preserve_newlines);
@@ -1174,23 +1205,29 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         last_condition_chain_met = true;
 
         if (child_node.attributes.contains("if")) {
-          std::string cond = Interpolate(child_node.attributes.at("if"));
+          const auto& cond_attr = child_node.attributes.at("if");
+          std::string cond;
+          if (cond_attr.find('{') == std::string::npos) {
+            cond = cond_attr;
+          } else {
+            cond = Interpolate(cond_attr);
+          }
           if (!(cond == "true" || cond == "1")) {
             break;
           }
         }
 
         if (child_node.tag == "for") {
-          std::string each_attr = std::string(child_node.attributes.at("each"));
+          const auto& each_attr = child_node.attributes.at("each");
           // Strip {} if present
-          std::string range_name = each_attr;
+          std::string_view range_name = each_attr;
           if (range_name.starts_with("{") && range_name.ends_with("}")) {
             range_name = range_name.substr(1, range_name.size() - 2);
           }
 
-          std::string as_attr = "item";
+          std::string_view as_attr = "item";
           if (child_node.attributes.contains("as")) {
-            as_attr = std::string(child_node.attributes.at("as"));
+            as_attr = child_node.attributes.at("as");
           }
 
           std::shared_ptr<TypeErasedRange> range;
@@ -1203,18 +1240,24 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
           if (range) {
             for (size_t i = 0; i < range->Size(); ++i) {
-              auto new_scope = std::make_shared<LocalScope>();
-              new_scope->parent = scope;
+              LocalScope index_scope;
+              index_scope.parent = scope;
+              index_scope.name = "$index";
+              index_scope.value = std::string_view(GetIndexString(i));
+
+              LocalScope item_scope;
+              item_scope.parent = &index_scope;
+              item_scope.name = as_attr;
 
               auto visitor = range->GetItemVisitor(i);
               if (visitor) {
-                new_scope->variables[as_attr] = visitor;
+                item_scope.value = visitor;
+                RenderReconcile(child_node, slot, import_source, &item_scope, child_idx, preserve_newlines);
               } else {
-                new_scope->variables[as_attr] = range->GetItemString(i);
+                std::string fallback_storage;
+                item_scope.value = range->GetItemStringView(i, fallback_storage);
+                RenderReconcile(child_node, slot, import_source, &item_scope, child_idx, preserve_newlines);
               }
-              new_scope->variables["$index"] = std::to_string(i);
-
-              RenderReconcile(child_node, slot, import_source, new_scope, child_idx, preserve_newlines);
             }
           }
           break;
@@ -1267,7 +1310,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         ComponentFactory factory = nullptr;
-        auto it = import_source->imports_.find(std::string(child_node.tag));
+        auto it = import_source->imports_.find(child_node.tag);
         if (it != import_source->imports_.end()) {
           factory = it->second;
         } else {
@@ -1290,14 +1333,24 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             child = factory();
             is_new = true;
           }
-          children_.insert(child);
+          if (std::find(children_.begin(), children_.end(), child) == children_.end()) {
+            children_.push_back(child);
+          }
 
           bool id_changed = false;
           if (child_node.attributes.contains("id")) {
-            std::string new_id = Interpolate(child_node.attributes.at("id"));
-            if (new_id != child->id_) {
-              id_changed = true;
-              child->id_ = std::move(new_id);
+            const auto& id_attr = child_node.attributes.at("id");
+            if (id_attr.find('{') == std::string::npos) {
+              if (id_attr != child->id_) {
+                id_changed = true;
+                child->id_ = id_attr;
+              }
+            } else {
+              std::string new_id = Interpolate(id_attr);
+              if (new_id != child->id_) {
+                id_changed = true;
+                child->id_ = std::move(new_id);
+              }
             }
           } else if (!child->id_.empty()) {
             id_changed = true;
@@ -1306,13 +1359,38 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
           bool classes_changed = false;
           if (child_node.attributes.contains("class")) {
-            std::string interpolated_class =
-                Interpolate(child_node.attributes.at("class"));
-            auto class_views = Split(interpolated_class, ' ');
-            std::vector<std::string> new_classes(class_views.begin(), class_views.end());
-            if (new_classes != child->classes_) {
-              classes_changed = true;
-              child->classes_ = std::move(new_classes);
+            const auto& class_attr = child_node.attributes.at("class");
+            if (class_attr.find('{') == std::string::npos) {
+              auto class_views = Split(class_attr, ' ');
+              bool matches = (class_views.size() == child->classes_.size());
+              if (matches) {
+                for (size_t i = 0; i < class_views.size(); ++i) {
+                  if (class_views[i] != child->classes_[i]) {
+                    matches = false;
+                    break;
+                  }
+                }
+              }
+              if (!matches) {
+                classes_changed = true;
+                child->classes_.assign(class_views.begin(), class_views.end());
+              }
+            } else {
+              std::string interpolated_class = Interpolate(class_attr);
+              auto class_views = Split(interpolated_class, ' ');
+              bool matches = (class_views.size() == child->classes_.size());
+              if (matches) {
+                for (size_t i = 0; i < class_views.size(); ++i) {
+                  if (class_views[i] != child->classes_[i]) {
+                    matches = false;
+                    break;
+                  }
+                }
+              }
+              if (!matches) {
+                classes_changed = true;
+                child->classes_.assign(class_views.begin(), class_views.end());
+              }
             }
           } else if (!child->classes_.empty()) {
             classes_changed = true;
@@ -1326,54 +1404,67 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
 
           bool attribute_changed = false;
+          std::vector<std::string> child_custom_keys;
           for (auto& [key_view, value] : child_node.attributes) {
-            std::string key(key_view);
-            std::string actual_value(value);
-
-            // Handle Vue-style dynamic attribute prefix ':'
+            std::string_view key = key_view;
+            bool dynamic = false;
             if (key.starts_with(':')) {
-              key = key.substr(1);
-              if (!actual_value.starts_with('{')) {
-                actual_value = "{" + actual_value + "}";
-              }
+              key.remove_prefix(1);
+              dynamic = true;
             }
 
-            // Handle Vue-style event prefix '@'
             if (key.starts_with('@')) {
-              if (key == "@click") {
-                key = "onclick";
-              } else if (key == "@click.left") {
+              if (key == "@click" || key == "@click.left") {
                 key = "onclick";
               } else if (key == "@click.right") {
                 key = "oncontextmenu";
               } else if (key == "@change") {
                 key = "onchange";
               } else {
-                // Generic mapping: @event -> onevent
-                key = "on" + key.substr(1);
+                child_custom_keys.push_back("on" + std::string(key.substr(1)));
+                key = child_custom_keys.back();
               }
             }
 
             if (key == "id" || key == "class") {
               continue;
             }
-            std::string interpolated_value = Interpolate(actual_value);
 
-            const std::string* current_val = child->Root() ? child->Root()->GetAttribute(key) : nullptr;
+            std::string interpolated_storage;
+            std::string_view interpolated_value;
+            if (dynamic) {
+              std::string actual_value;
+              if (!value.starts_with('{')) {
+                actual_value = "{" + value + "}";
+              } else {
+                actual_value = value;
+              }
+              interpolated_storage = Interpolate(actual_value);
+              interpolated_value = interpolated_storage;
+            } else if (value.find('{') != std::string::npos) {
+              interpolated_storage = Interpolate(value);
+              interpolated_value = interpolated_storage;
+            } else {
+              interpolated_value = value;
+            }
+
+            const std::string* current_val = child->Root() ? child->Root()->GetAttribute(std::string(key)) : nullptr;
             if (!current_val || *current_val != interpolated_value) {
               attribute_changed = true;
             }
 
             child->SetProperty(key, interpolated_value);
             if (child->Root()) {
-              child->Root()->SetAttribute(key, interpolated_value);
+              child->Root()->SetAttribute(std::string(key), std::string(interpolated_value));
             }
 
-            if (actual_value.starts_with("{") && actual_value.ends_with("}")) {
-              std::string parent_prop =
-                  std::string(actual_value.substr(1, actual_value.size() - 2));
+            if (dynamic || (value.starts_with("{") && value.ends_with("}"))) {
+              std::string_view expr = value;
+              if (expr.starts_with("{") && expr.ends_with("}")) {
+                expr = expr.substr(1, expr.size() - 2);
+              }
               child->two_way_bindings_.push_back(
-                  {key, import_source, parent_prop});
+                  {std::string(key), import_source, std::string(expr)});
             }
           }
 
@@ -1436,7 +1527,10 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
               child->old_children_ = slot_components;
               for (auto& comp : slot_components) {
-                child->children_.erase(comp);
+                auto it = std::find(child->children_.begin(), child->children_.end(), comp);
+                if (it != child->children_.end()) {
+                  child->children_.erase(it);
+                }
               }
             }
 
@@ -1485,54 +1579,56 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
         }
 
-        std::vector<std::string> updated_keys;
+        std::vector<std::string_view> updated_keys;
+        std::vector<std::string> custom_event_keys;
         for (auto& [key_view, value] : child_node.attributes) {
-          std::string key(key_view);
+          std::string_view key = key_view;
           bool dynamic = false;
           if (key.starts_with(':')) {
-            key = key.substr(1);
+            key.remove_prefix(1);
             dynamic = true;
           }
 
           if (key.starts_with('@')) {
-            if (key == "@click") {
-              key = "onclick";
-            } else if (key == "@click.left") {
+            if (key == "@click" || key == "@click.left") {
               key = "onclick";
             } else if (key == "@click.right") {
               key = "oncontextmenu";
             } else if (key == "@change") {
               key = "onchange";
             } else {
-              key = "on" + key.substr(1);
+              custom_event_keys.push_back("on" + std::string(key.substr(1)));
+              key = custom_event_keys.back();
             }
           }
 
           if (dynamic) {
-            std::string actual_value(value);
-            if (!actual_value.starts_with('{')) {
-              actual_value = "{" + actual_value + "}";
+            std::string actual_value;
+            if (!value.starts_with('{')) {
+              actual_value = "{" + value + "}";
+            } else {
+              actual_value = value;
             }
             std::string new_val = Interpolate(actual_value);
-            const std::string* current_val = child_element->GetAttribute(key);
+            const std::string* current_val = child_element->GetAttribute(std::string(key));
             if (!current_val || *current_val != new_val) {
-              child_element->SetAttribute(key, std::move(new_val));
+              child_element->SetAttribute(std::string(key), std::move(new_val));
             }
           } else {
-            if (value.find('{') == std::string_view::npos) {
-              const std::string* current_val = child_element->GetAttribute(key);
+            if (value.find('{') == std::string::npos) {
+              const std::string* current_val = child_element->GetAttribute(std::string(key));
               if (!current_val || *current_val != value) {
-                child_element->SetAttribute(key, std::string(value));
+                child_element->SetAttribute(std::string(key), std::string(value));
               }
             } else {
               std::string new_val = Interpolate(value);
-              const std::string* current_val = child_element->GetAttribute(key);
+              const std::string* current_val = child_element->GetAttribute(std::string(key));
               if (!current_val || *current_val != new_val) {
-                child_element->SetAttribute(key, std::move(new_val));
+                child_element->SetAttribute(std::string(key), std::move(new_val));
               }
             }
           }
-          updated_keys.push_back(std::move(key));
+          updated_keys.push_back(key);
         }
 
         if (is_reused) {
