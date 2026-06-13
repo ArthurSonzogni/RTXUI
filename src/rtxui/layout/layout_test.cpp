@@ -598,9 +598,9 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
   }
   std::string layer = GetTextLayer(texture);
   INFO("Actual render: [" << layer << "]");
-  // Row 0: content with padding:  " hello   " (padding-left=1, then text, spaces)
-  // Row 1: blank row (fixed height, content shorter than 5 rows)
-  // Row 2: blank row
+  // Row 0: content with padding:  " hello   " (padding-left=1, then text,
+  // spaces) Row 1: blank row (fixed height, content shorter than 5 rows) Row 2:
+  // blank row
   CHECK(layer ==
         " hello   \n"
         "         \n"
@@ -819,7 +819,8 @@ TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
   CHECK(texture[1, 1].character == "F");
 }
 
-TEST_CASE("Layout: position sticky layout and scrolling", "[layout][sticky][scroll]") {
+TEST_CASE("Layout: position sticky layout and scrolling",
+          "[layout][sticky][scroll]") {
   struct TestComponent : Component<TestComponent> {
     std::string_view view = R"html(
       <div class="scrollable">
@@ -955,8 +956,8 @@ TEST_CASE("Layout: position sticky layout and scrolling", "[layout][sticky][scro
   }
 }
 
-
-TEST_CASE("Layout: Flexbox Grow Cumulative Distribution", "[layout][flex][grow]") {
+TEST_CASE("Layout: Flexbox Grow Cumulative Distribution",
+          "[layout][flex][grow]") {
   struct FlexGrowTest : Component<FlexGrowTest> {
     std::string_view Setup() {
       Import<div>();
@@ -989,16 +990,21 @@ TEST_CASE("Layout: Flexbox Grow Cumulative Distribution", "[layout][flex][grow]"
   int count_g = 0;
   int count_b = 0;
   for (char c : color_layer) {
-    if (c == 'R') count_r++;
-    else if (c == 'G') count_g++;
-    else if (c == 'B') count_b++;
+    if (c == 'R') {
+      count_r++;
+    } else if (c == 'G') {
+      count_g++;
+    } else if (c == 'B') {
+      count_b++;
+    }
   }
 
   // Under cumulative allocation, the total width must be exactly 40.
   CHECK(count_r + count_g + count_b == 40);
 }
 
-TEST_CASE("Layout: Text node in flexbox row regression", "[layout][flex][regression]") {
+TEST_CASE("Layout: Text node in flexbox row regression",
+          "[layout][flex][regression]") {
   SECTION("Wrapped text inside span does not throw") {
     struct FlexTextSpanTest : Component<FlexTextSpanTest> {
       std::string_view Setup() {
@@ -1035,7 +1041,8 @@ TEST_CASE("Layout: Text node in flexbox row regression", "[layout][flex][regress
   }
 }
 
-TEST_CASE("Layout: Flexbox Shrink Cumulative Distribution", "[layout][flex][shrink]") {
+TEST_CASE("Layout: Flexbox Shrink Cumulative Distribution",
+          "[layout][flex][shrink]") {
   struct FlexShrinkTest : Component<FlexShrinkTest> {
     std::string_view Setup() {
       Import<div>();
@@ -1068,16 +1075,22 @@ TEST_CASE("Layout: Flexbox Shrink Cumulative Distribution", "[layout][flex][shri
   int count_g = 0;
   int count_b = 0;
   for (char c : color_layer) {
-    if (c == 'R') count_r++;
-    else if (c == 'G') count_g++;
-    else if (c == 'B') count_b++;
+    if (c == 'R') {
+      count_r++;
+    } else if (c == 'G') {
+      count_g++;
+    } else if (c == 'B') {
+      count_b++;
+    }
   }
 
-  // Under cumulative allocation, total width of flex row must shrink from 60 (20+20+20) to exactly 40.
+  // Under cumulative allocation, total width of flex row must shrink from 60
+  // (20+20+20) to exactly 40.
   CHECK(count_r + count_g + count_b == 40);
 }
 
-TEST_CASE("Layout: Flexbox grow/shrink remainder allocated to final child", "[layout][flex][remainder]") {
+TEST_CASE("Layout: Flexbox grow/shrink remainder allocated to final child",
+          "[layout][flex][remainder]") {
   SECTION("Grow remainder allocation") {
     struct FlexRemainderGrowTest : Component<FlexRemainderGrowTest> {
       std::string_view Setup() {
@@ -1108,7 +1121,8 @@ TEST_CASE("Layout: Flexbox grow/shrink remainder allocated to final child", "[la
     REQUIRE(item3 != nullptr);
 
     // 10 free space cannot be divided evenly by 3 grow values (3.33 each).
-    // The final child must receive the remainder, making the sizes exactly 3, 3, 4.
+    // The final child must receive the remainder, making the sizes exactly 3,
+    // 3, 4.
     CHECK(item1->layout_width() == 3);
     CHECK(item2->layout_width() == 3);
     CHECK(item3->layout_width() == 4);
@@ -1273,5 +1287,406 @@ TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
   CHECK(found_fixed_after_scroll);
 }
 
-}  // namespace rtxui
+TEST_CASE("Layout: Flexbox Row wrapping", "[layout][flex][wrap]") {
+  struct FlexRowWrapTest : Component<FlexRowWrapTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: row; flex-wrap: wrap; width: 10; height: 3; }
+          .item { width: 4; height: 1; }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+          .b { background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="container">
+          <div class="item r">1</div>
+          <div class="item g">2</div>
+          <div class="item b">3</div>
+        </div>
+      )html";
+    }
+  };
 
+  auto texture = RenderComponent(Ref<FlexRowWrapTest>::New(), 10, 3);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRGGGG..",
+                                                    "..........",
+                                                    "BBBB......",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Row wrap-reverse", "[layout][flex][wrap]") {
+  struct FlexRowWrapReverseTest : Component<FlexRowWrapReverseTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: row; flex-wrap: wrap-reverse; width: 10; height: 3; }
+          .item { width: 4; height: 1; }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+          .b { background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="container">
+          <div class="item r">1</div>
+          <div class="item g">2</div>
+          <div class="item b">3</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexRowWrapReverseTest>::New(), 10, 3);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "BBBB......",
+                                                    "RRRRGGGG..",
+                                                    "..........",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Column wrapping", "[layout][flex][wrap]") {
+  struct FlexColWrapTest : Component<FlexColWrapTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: column; flex-wrap: wrap; width: 6; height: 4; }
+          .item { width: 2; height: 2; }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+          .b { background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="container">
+          <div class="item r">1</div>
+          <div class="item g">2</div>
+          <div class="item b">3</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexColWrapTest>::New(), 6, 4);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RR.BB.",
+                                                    "RR.BB.",
+                                                    "GG....",
+                                                    "GG....",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Column wrap-reverse", "[layout][flex][wrap]") {
+  struct FlexColWrapReverseTest : Component<FlexColWrapReverseTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: column; flex-wrap: wrap-reverse; width: 6; height: 4; }
+          .item { width: 2; height: 2; }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+          .b { background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="container">
+          <div class="item r">1</div>
+          <div class="item g">2</div>
+          <div class="item b">3</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexColWrapReverseTest>::New(), 6, 4);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "BB.RR.",
+                                                    "BB.RR.",
+                                                    "...GG.",
+                                                    "...GG.",
+                                                }));
+}
+
+TEST_CASE("Layout: Block children in Flex wrap container",
+          "[layout][flex][block]") {
+  struct BlockInFlexTest : Component<BlockInFlexTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: row; flex-wrap: wrap; width: 8; height: 2; }
+          .block-item { display: block; width: 5; height: 1; background-color: rgb(255, 0, 0); }
+          .block-item2 { display: block; width: 4; height: 1; background-color: rgb(0, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="block-item"></div>
+          <div class="block-item2"></div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<BlockInFlexTest>::New(), 8, 2);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRR...",
+                                                    "GGGG....",
+                                                }));
+}
+
+TEST_CASE("Layout: Flex wrap container inside Block container",
+          "[layout][flex][block]") {
+  struct FlexInBlockTest : Component<FlexInBlockTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .outer { display: block; width: 10; height: 4; }
+          .container { display: flex; flex-direction: row; flex-wrap: wrap; width: 6; height: 2; margin-left: 2; }
+          .item { width: 3; height: 1; }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+          .b { background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="outer">
+          <div class="container">
+            <div class="item r"></div>
+            <div class="item g"></div>
+            <div class="item b"></div>
+          </div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexInBlockTest>::New(), 10, 4);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "..RRRGGG..",
+                                                    "..BBB.....",
+                                                    "..........",
+                                                    "..........",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Row Align Items Stretch", "[layout][flex][align]") {
+  struct FlexRowStretchTest : Component<FlexRowStretchTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: row; align-items: stretch; width: 6; height: 4; }
+          .item1 { width: 2; height: 2; background-color: rgb(255, 0, 0); }
+          .item2 { width: 2; background-color: rgb(0, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="item1"></div>
+          <div class="item2">X</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexRowStretchTest>::New(), 6, 4);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRGG..",
+                                                    "RRGG..",
+                                                    "..GG..",
+                                                    "..GG..",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Column Align Items Stretch",
+          "[layout][flex][align]") {
+  struct FlexColStretchTest : Component<FlexColStretchTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: column; align-items: stretch; width: 4; height: 6; }
+          .item1 { height: 2; width: 2; background-color: rgb(255, 0, 0); }
+          .item2 { height: 2; background-color: rgb(0, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="item1"></div>
+          <div class="item2">Y</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexColStretchTest>::New(), 4, 6);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RR..",
+                                                    "RR..",
+                                                    "GGGG",
+                                                    "GGGG",
+                                                    "....",
+                                                    "....",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Row Align Items Stretch With Wrap",
+          "[layout][flex][align][wrap]") {
+  struct FlexRowStretchWrapTest : Component<FlexRowStretchWrapTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch; width: 6; height: 6; }
+          .item1 { width: 3; height: 2; background-color: rgb(255, 0, 0); }
+          .item2 { width: 3; background-color: rgb(0, 255, 0); }
+          .item3 { width: 3; background-color: rgb(0, 0, 255); }
+          .item4 { width: 3; height: 1; background-color: rgb(255, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="item1"></div>
+          <div class="item2">X</div>
+          <div class="item3">Y</div>
+          <div class="item4"></div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexRowStretchWrapTest>::New(), 6, 6);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+      {Color::RGB(255, 255, 0), 'Y'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRGGG",
+                                                    "RRRGGG",
+                                                    "...GGG",
+                                                    "...GGG",
+                                                    "BBBYYY",
+                                                    "BBB...",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Row and Column Gap X and Y Only",
+          "[layout][flex][gap]") {
+  SECTION("Row layout with X-gap only") {
+    struct FlexRowGapXTest : Component<FlexRowGapXTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 0 2; width: 8; height: 4; }
+            .item1 { width: 3; height: 2; background-color: rgb(255, 0, 0); }
+            .item2 { width: 3; height: 2; background-color: rgb(0, 255, 0); }
+            .item3 { width: 3; height: 2; background-color: rgb(0, 0, 255); }
+            .item4 { width: 3; height: 2; background-color: rgb(255, 255, 0); }
+          </style>
+          <div class="container">
+            <div class="item1"></div>
+            <div class="item2"></div>
+            <div class="item3"></div>
+            <div class="item4"></div>
+          </div>
+        )html";
+      }
+    };
+
+    auto texture = RenderComponent(Ref<FlexRowGapXTest>::New(), 8, 4);
+    std::map<Color, char> colors = {
+        {Color::RGB(255, 0, 0), 'R'},
+        {Color::RGB(0, 255, 0), 'G'},
+        {Color::RGB(0, 0, 255), 'B'},
+        {Color::RGB(255, 255, 0), 'Y'},
+    };
+
+    CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                      "RRR..GGG",
+                                                      "RRR..GGG",
+                                                      "BBB..YYY",
+                                                      "BBB..YYY",
+                                                  }));
+  }
+
+  SECTION("Row layout with Y-gap only") {
+    struct FlexRowGapYTest : Component<FlexRowGapYTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 2 0; width: 6; height: 6; }
+            .item1 { width: 3; height: 2; background-color: rgb(255, 0, 0); }
+            .item2 { width: 3; height: 2; background-color: rgb(0, 255, 0); }
+            .item3 { width: 3; height: 2; background-color: rgb(0, 0, 255); }
+            .item4 { width: 3; height: 2; background-color: rgb(255, 255, 0); }
+          </style>
+          <div class="container">
+            <div class="item1"></div>
+            <div class="item2"></div>
+            <div class="item3"></div>
+            <div class="item4"></div>
+          </div>
+        )html";
+      }
+    };
+
+    auto texture = RenderComponent(Ref<FlexRowGapYTest>::New(), 6, 6);
+    std::map<Color, char> colors = {
+        {Color::RGB(255, 0, 0), 'R'},
+        {Color::RGB(0, 255, 0), 'G'},
+        {Color::RGB(0, 0, 255), 'B'},
+        {Color::RGB(255, 255, 0), 'Y'},
+    };
+
+    CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                      "RRRGGG",
+                                                      "RRRGGG",
+                                                      "......",
+                                                      "......",
+                                                      "BBBYYY",
+                                                      "BBBYYY",
+                                                  }));
+  }
+}
+
+}  // namespace rtxui

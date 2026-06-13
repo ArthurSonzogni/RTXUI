@@ -2,7 +2,6 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include "rtxui/internal/component.hpp"
-#include "rtxui/paint/color.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -14,6 +13,7 @@
 #include "rtxui/internal/screen.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
+#include "rtxui/paint/color.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
@@ -153,19 +153,21 @@ TEST_CASE("Slider squashed layout regression", "[component][slider][layout]") {
   screen.Draw();
 
   std::string output = device->GetOutput();
-  
+
   // Count track characters '─'. We expect 19 (10 + 9).
   int track_count = 0;
   size_t pos = 0;
   while ((pos = output.find("─", pos)) != std::string::npos) {
     track_count++;
-    pos += 3; // '─' is 3 bytes in UTF-8
+    pos += 3;  // '─' is 3 bytes in UTF-8
   }
-  
-  if (track_count < 15) { // Allow some slack but ensure it's not squashed to ~3
-    FAIL("Slider squashed. Track count=" << track_count << "\nOutput:\n" << output);
+
+  if (track_count <
+      15) {  // Allow some slack but ensure it's not squashed to ~3
+    FAIL("Slider squashed. Track count=" << track_count << "\nOutput:\n"
+                                         << output);
   }
-  
+
   CHECK(track_count >= 15);
   CHECK(output.find("●") != std::string::npos);
 }
@@ -560,7 +562,8 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
 
   // Test Scrolling keeping cursor visible
   input_el->set_layout_width(10);  // total layout width of 10 cells
-  // With no border and 1 cell padding on left and right, inner visible width is 8.
+  // With no border and 1 cell padding on left and right, inner visible width
+  // is 8.
   input_ptr->value = "1234567890";
   input_ptr->cursor_pos = 9;
   input_ptr->Digest();
@@ -579,7 +582,8 @@ TEST_CASE("Input Component Layout Height", "[component]") {
   CHECK(input_el->layout_height() == 1);
 }
 
-TEST_CASE("Input Component Advanced Selection and Editing", "[component][input]") {
+TEST_CASE("Input Component Advanced Selection and Editing",
+          "[component][input]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
   rtxui::Screen screen(container, device);
@@ -662,7 +666,8 @@ TEST_CASE("Input Component Advanced Selection and Editing", "[component][input]"
     input_ptr->Digest();
 
     // Click on index 2 ('l' in "hello") twice
-    int x_pos = input_el->absolute_x() + 1 + 2 + 1; // 1 (border/padding) + 2 (index) + 1 (1-based)
+    int x_pos = input_el->absolute_x() + 1 + 2 +
+                1;  // 1 (border/padding) + 2 (index) + 1 (1-based)
     Event::Mouse mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Pressed;
@@ -733,7 +738,6 @@ TEST_CASE("Input Component Advanced Selection and Editing", "[component][input]"
   }
 }
 
-
 TEST_CASE("Input Component State Preservation", "[component]") {
   auto container = rtxui::Ref<InputTestComponent>::New();
   container->Mount();
@@ -769,7 +773,7 @@ TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
 
-  int initial_width  = input_el->layout_width();
+  int initial_width = input_el->layout_width();
   int initial_height = input_el->layout_height();
   // The input should have a proper fixed size (width: 20 default).
   REQUIRE(initial_width > 0);
@@ -784,7 +788,7 @@ TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   screen.Dispatch(Event(mouse));
 
   // Dimensions must not change after click (no resize-on-focus regression).
-  CHECK(input_el->layout_width()  == initial_width);
+  CHECK(input_el->layout_width() == initial_width);
   CHECK(input_el->layout_height() == initial_height);
 }
 
@@ -810,9 +814,10 @@ TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   auto* ta_el = container->Root()->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
 
-  int initial_width  = ta_el->layout_width();
+  int initial_width = ta_el->layout_width();
   int initial_height = ta_el->layout_height();
-  // The textarea should have a proper fixed size (width: 40, height: 5 default).
+  // The textarea should have a proper fixed size (width: 40, height: 5
+  // default).
   REQUIRE(initial_width > 0);
   REQUIRE(initial_height > 0);
 
@@ -826,14 +831,13 @@ TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   screen.Draw();
 
   // Dimensions must not change after click (no resize-on-focus regression).
-  CHECK(ta_el->layout_width()  == initial_width);
+  CHECK(ta_el->layout_width() == initial_width);
   CHECK(ta_el->layout_height() == initial_height);
 }
 
 TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
   container->Mount();
-
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
@@ -1096,7 +1100,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
   // layout_width_ is 0; use the width attribute directly for coordinates.
   int abs_x = slider_ptr->Root()->absolute_x();  // 0 in mock terminal
   int abs_y = slider_ptr->Root()->absolute_y();  // 0 in mock terminal
-  int track_w = std::max(2, slider_ptr->width);   // 11
+  int track_w = std::max(2, slider_ptr->width);  // 11
 
   // Press at the leftmost column of the track (1-based mouse coords)
   {
@@ -1112,7 +1116,8 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
   CHECK(slider_ptr->value == 0);
   CHECK(rtxui::ComponentBase::GetMouseCapturer() == slider_ptr);
 
-  // Move to the centre of the track — y deliberately far off (capture ignores it)
+  // Move to the centre of the track — y deliberately far off (capture ignores
+  // it)
   {
     Event::Mouse mouse;
     mouse.button = Event::Mouse::Button::Left;
@@ -1685,7 +1690,8 @@ TEST_CASE("Markdown Component rendering", "[component][markdown]") {
   CHECK(h1_el->style.foreground_color.has_value());
 }
 
-class MarkdownListTestContainer : public rtxui::Component<MarkdownListTestContainer> {
+class MarkdownListTestContainer
+    : public rtxui::Component<MarkdownListTestContainer> {
  public:
   void InitReflection() override {
     Import<rtxui::markdown>();
@@ -1798,7 +1804,7 @@ TEST_CASE("Component props and two-way propagation", "[component][props]") {
 
   // Simulate child1 modifying its prop (e.g. from user input)
   child1->SetProperty("props.value", "42");
-  
+
   // Running Digest to propagate reactive updates
   parent->Digest();
 
@@ -1868,31 +1874,39 @@ TEST_CASE("List Rendering - ul, ol, li, and CSS", "[component][list]") {
   auto* ul_disc = root->QuerySelector("#ul_disc");
   REQUIRE(ul_disc != nullptr);
   auto print_disc = ul_disc->Print();
-  CHECK(RemoveWhitespace(print_disc) == "<ulid=\"ul_disc\"><li><span>•</span>item1</li><li><span>•</span>item2</li></ul>");
+  CHECK(RemoveWhitespace(print_disc) ==
+        "<ulid=\"ul_disc\"><li><span>•</span>item1</li><li><span>•</"
+        "span>item2</li></ul>");
 
   // 2. Nested unordered list (outer disc -> "• ", inner circle -> "○ ")
   auto* ul_nested = root->QuerySelector("#ul_nested");
   REQUIRE(ul_nested != nullptr);
   auto print_nested = ul_nested->Print();
-  CHECK(RemoveWhitespace(print_nested) == "<ulid=\"ul_nested\"><li><span>•</span>outer1<ul><li><span>○</span>inner1</li><li><span>○</span>inner2</li></ul></li></ul>");
+  CHECK(RemoveWhitespace(print_nested) ==
+        "<ulid=\"ul_nested\"><li><span>•</span>outer1<ul><li><span>○</"
+        "span>inner1</li><li><span>○</span>inner2</li></ul></li></ul>");
 
   // 3. Ordered list with decimal numbering ("1. ", "2. ")
   auto* ol_decimal = root->QuerySelector("#ol_decimal");
   REQUIRE(ol_decimal != nullptr);
   auto print_decimal = ol_decimal->Print();
-  CHECK(RemoveWhitespace(print_decimal) == "<olid=\"ol_decimal\"><li><span>1.</span>first</li><li><span>2.</span>second</li></ol>");
+  CHECK(RemoveWhitespace(print_decimal) ==
+        "<olid=\"ol_decimal\"><li><span>1.</span>first</li><li><span>2.</"
+        "span>second</li></ol>");
 
   // 4. Custom list-style-type: square ("■ ")
   auto* ul_custom_square = root->QuerySelector("#ul_custom_square");
   REQUIRE(ul_custom_square != nullptr);
   auto print_square = ul_custom_square->Print();
-  CHECK(RemoveWhitespace(print_square) == "<ulid=\"ul_custom_square\"><li><span>■</span>squareitem</li></ul>");
+  CHECK(RemoveWhitespace(print_square) ==
+        "<ulid=\"ul_custom_square\"><li><span>■</span>squareitem</li></ul>");
 
   // 5. Custom list-style-type: none ("")
   auto* ul_custom_none = root->QuerySelector("#ul_custom_none");
   REQUIRE(ul_custom_none != nullptr);
   auto print_none = ul_custom_none->Print();
-  CHECK(RemoveWhitespace(print_none) == "<ulid=\"ul_custom_none\"><li><span></span>noneitem</li></ul>");
+  CHECK(RemoveWhitespace(print_none) ==
+        "<ulid=\"ul_custom_none\"><li><span></span>noneitem</li></ul>");
 }
 
 TEST_CASE("Heading Tags Rendering h1-h6", "[component]") {
@@ -1975,7 +1989,6 @@ TEST_CASE("Add Todo Regression Test", "[demo]") {
   screen.Draw();
 }
 
-
 class ConditionalTabTestApp : public Component<ConditionalTabTestApp> {
  public:
   bool is_active = false;
@@ -1997,7 +2010,8 @@ class ConditionalTabTestApp : public Component<ConditionalTabTestApp> {
   }
 };
 
-TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)", "[component][css]") {
+TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)",
+          "[component][css]") {
   auto app = Ref<ConditionalTabTestApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
@@ -2005,7 +2019,7 @@ TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)", "[comp
 
   auto* button = app->Root()->QuerySelector("button");
   REQUIRE(button != nullptr);
-  
+
   // Initially is_active is false, so it doesn't have the active class
   // It should have the red background color
   REQUIRE(button->style.background_color.value() == Color::RGB(255, 0, 0));
@@ -2013,7 +2027,7 @@ TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)", "[comp
   // Now activate it
   app->is_active = true;
   app->Render();
-  
+
   // Resolve styles at a later time to finish any potential transition
   app->ResolveTargetStyles(rtxui::time::GetTimeMs() + 200.0);
 
@@ -2041,23 +2055,25 @@ TEST_CASE("Vertical slider layout regression", "[component][slider][layout]") {
   screen.Draw();
 
   std::string output = device->GetOutput();
-  
+
   int rows_with_slider = 0;
   std::stringstream ss(output);
   std::string line;
   while (std::getline(ss, line)) {
-    if (line.find("│") != std::string::npos || line.find("●") != std::string::npos) {
+    if (line.find("│") != std::string::npos ||
+        line.find("●") != std::string::npos) {
       rows_with_slider++;
     }
   }
-  
+
   if (rows_with_slider < 5) {
     FAIL("Vertical slider should span 5 rows. Output:\n" << output);
   }
   CHECK(rows_with_slider >= 5);
 }
 
-TEST_CASE("Style caching regression test for multi-component resolution", "[component][style]") {
+TEST_CASE("Style caching regression test for multi-component resolution",
+          "[component][style]") {
   struct ChildComp : rtxui::Component<ChildComp> {
     std::string_view view = R"html(
         <style>
@@ -2102,12 +2118,14 @@ TEST_CASE("Style caching regression test for multi-component resolution", "[comp
   child_el = parent->Root()->QuerySelector("#mychild");
   REQUIRE(child_el != nullptr);
 
-  // Child style (self) should still apply, but parent class style (.test-child) should be gone.
+  // Child style (self) should still apply, but parent class style (.test-child)
+  // should be gone.
   CHECK(child_el->style.foreground_color.value() == Color::RGB(255, 0, 0));
   CHECK(!child_el->style.background_color.has_value());
 }
 
-TEST_CASE("Input Click Layout Regression Test", "[component][input][regression]") {
+TEST_CASE("Input Click Layout Regression Test",
+          "[component][input][regression]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
   rtxui::Screen screen(container, device);
@@ -2132,7 +2150,8 @@ TEST_CASE("Input Click Layout Regression Test", "[component][input][regression]"
   CHECK(input_el->layout_height() == initial_height);
 }
 
-TEST_CASE("Textarea Click Layout Regression Test", "[component][textarea][regression]") {
+TEST_CASE("Textarea Click Layout Regression Test",
+          "[component][textarea][regression]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<TextareaTestComponent>::New();
   rtxui::Screen screen(container, device);
@@ -2157,7 +2176,8 @@ TEST_CASE("Textarea Click Layout Regression Test", "[component][textarea][regres
   CHECK(ta_el->layout_height() == initial_height);
 }
 
-TEST_CASE("Input Cursor Vertical Line Regression Test", "[component][input][cursor][regression]") {
+TEST_CASE("Input Cursor Vertical Line Regression Test",
+          "[component][input][cursor][regression]") {
   auto container = rtxui::Ref<InputTestComponent>::New();
   container->Mount();
 
@@ -2193,7 +2213,8 @@ TEST_CASE("Input Cursor Vertical Line Regression Test", "[component][input][curs
   CHECK(input_ptr->cursor_class == "cursor cursor-focused");
 }
 
-class SmallInput : public rtxui::Component<SmallInput>, public rtxui::TextInputBase {
+class SmallInput : public rtxui::Component<SmallInput>,
+                   public rtxui::TextInputBase {
  public:
   void InitReflection() override {
     rtxui::Component<SmallInput>::InitReflection();
@@ -2233,7 +2254,8 @@ class SmallInput : public rtxui::Component<SmallInput>, public rtxui::TextInputB
   }
 };
 
-class SmallInputTestComponent : public rtxui::Component<SmallInputTestComponent> {
+class SmallInputTestComponent
+    : public rtxui::Component<SmallInputTestComponent> {
  public:
   std::string my_text = "";
   void InitReflection() override {
@@ -2246,7 +2268,8 @@ class SmallInputTestComponent : public rtxui::Component<SmallInputTestComponent>
   )";
 };
 
-class SmallTextarea : public rtxui::Component<SmallTextarea>, public rtxui::TextInputBase {
+class SmallTextarea : public rtxui::Component<SmallTextarea>,
+                      public rtxui::TextInputBase {
  public:
   void InitReflection() override {
     rtxui::Component<SmallTextarea>::InitReflection();
@@ -2286,7 +2309,8 @@ class SmallTextarea : public rtxui::Component<SmallTextarea>, public rtxui::Text
   }
 };
 
-class SmallTextareaTestComponent : public rtxui::Component<SmallTextareaTestComponent> {
+class SmallTextareaTestComponent
+    : public rtxui::Component<SmallTextareaTestComponent> {
  public:
   std::string my_text = "";
   void InitReflection() override {
@@ -2299,7 +2323,8 @@ class SmallTextareaTestComponent : public rtxui::Component<SmallTextareaTestComp
   )";
 };
 
-TEST_CASE("Input Scrolling Regression Test", "[component][input][scroll][regression]") {
+TEST_CASE("Input Scrolling Regression Test",
+          "[component][input][scroll][regression]") {
   auto container = rtxui::Ref<SmallInputTestComponent>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   rtxui::Screen screen(container, device);
@@ -2344,7 +2369,8 @@ TEST_CASE("Input Scrolling Regression Test", "[component][input][scroll][regress
   CHECK(input_el->scroll_x() == 0);
 }
 
-TEST_CASE("Textarea Scrolling Regression Test", "[component][textarea][scroll][regression]") {
+TEST_CASE("Textarea Scrolling Regression Test",
+          "[component][textarea][scroll][regression]") {
   auto container = rtxui::Ref<SmallTextareaTestComponent>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   rtxui::Screen screen(container, device);
@@ -2386,7 +2412,8 @@ TEST_CASE("Textarea Scrolling Regression Test", "[component][textarea][scroll][r
   CHECK(ta_el->scroll_y() == 0);
 }
 
-TEST_CASE("Mouse capture is released when component is destroyed", "[component]") {
+TEST_CASE("Mouse capture is released when component is destroyed",
+          "[component]") {
   ComponentBase* raw_comp_ptr = nullptr;
   {
     auto comp = rtxui::Ref<rtxui::slider>::New();
@@ -2397,14 +2424,16 @@ TEST_CASE("Mouse capture is released when component is destroyed", "[component]"
   CHECK(rtxui::ComponentBase::GetMouseCapturer() == nullptr);
 }
 
-class HoverActiveTestComponent : public rtxui::Component<HoverActiveTestComponent> {
+class HoverActiveTestComponent
+    : public rtxui::Component<HoverActiveTestComponent> {
  public:
   std::string_view view = R"(
     <div id="test-node">Test</div>
   )";
 };
 
-TEST_CASE("Hovered and Active states are preserved across Render", "[component]") {
+TEST_CASE("Hovered and Active states are preserved across Render",
+          "[component]") {
   auto container = rtxui::Ref<HoverActiveTestComponent>::New();
   container->Mount();
 
@@ -2425,7 +2454,8 @@ TEST_CASE("Hovered and Active states are preserved across Render", "[component]"
   CHECK(new_node->active() == true);
 }
 
-class InputReuseTestComponent : public rtxui::Component<InputReuseTestComponent> {
+class InputReuseTestComponent
+    : public rtxui::Component<InputReuseTestComponent> {
  public:
   void InitReflection() override {
     Import<rtxui::input>();
@@ -2437,12 +2467,11 @@ class InputReuseTestComponent : public rtxui::Component<InputReuseTestComponent>
       <input id="test-input" value="{value}" />
     </div>
   )";
-  InputReuseTestComponent() {
-    Bind(value);
-  }
+  InputReuseTestComponent() { Bind(value); }
 };
 
-TEST_CASE("Input component is not recreated when attributes change", "[component][input]") {
+TEST_CASE("Input component is not recreated when attributes change",
+          "[component][input]") {
   auto container = rtxui::Ref<InputReuseTestComponent>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
@@ -2462,7 +2491,8 @@ TEST_CASE("Input component is not recreated when attributes change", "[component
   CHECK(new_input_element->component() == input_component);
 }
 
-class TransitionFlickerTestComponent : public rtxui::Component<TransitionFlickerTestComponent> {
+class TransitionFlickerTestComponent
+    : public rtxui::Component<TransitionFlickerTestComponent> {
  public:
   std::string_view view = R"html(
     <div id="test-node">Test</div>
@@ -2478,7 +2508,8 @@ class TransitionFlickerTestComponent : public rtxui::Component<TransitionFlicker
   )html";
 };
 
-TEST_CASE("Flickering transition is not triggered on re-render when focused", "[component][transition]") {
+TEST_CASE("Flickering transition is not triggered on re-render when focused",
+          "[component][transition]") {
   auto container = rtxui::Ref<TransitionFlickerTestComponent>::New();
   container->Mount();
 
@@ -2490,7 +2521,7 @@ TEST_CASE("Flickering transition is not triggered on re-render when focused", "[
 
   // Initial render (and resolve target styles to start focus transition)
   container->Render();
-  
+
   double now = rtxui::time::GetTimeMs();
 
   // Complete the transition by ticking at a later time
@@ -2506,7 +2537,8 @@ TEST_CASE("Flickering transition is not triggered on re-render when focused", "[
   CHECK(node->style.opacity == 1.0f);
 }
 
-TEST_CASE("Flickering transition is not triggered on input navigation", "[component][input][transition]") {
+TEST_CASE("Flickering transition is not triggered on input navigation",
+          "[component][input][transition]") {
   auto container = rtxui::Ref<InputReuseTestComponent>::New();
   container->Mount();
 
@@ -2539,7 +2571,8 @@ TEST_CASE("Flickering transition is not triggered on input navigation", "[compon
   CHECK(input_el->style.opacity == 1.0f);
 }
 
-class StyledParentTestComponent : public rtxui::Component<StyledParentTestComponent> {
+class StyledParentTestComponent
+    : public rtxui::Component<StyledParentTestComponent> {
  public:
   void InitReflection() override {
     Import<rtxui::input>();
@@ -2556,12 +2589,11 @@ class StyledParentTestComponent : public rtxui::Component<StyledParentTestCompon
       }
     </style>
   )html";
-  StyledParentTestComponent() {
-    Bind(value);
-  }
+  StyledParentTestComponent() { Bind(value); }
 };
 
-TEST_CASE("Child component style is preserved when parent stylesheet styles it", "[component][style][regression]") {
+TEST_CASE("Child component style is preserved when parent stylesheet styles it",
+          "[component][style][regression]") {
   auto container = rtxui::Ref<StyledParentTestComponent>::New();
   container->Mount();
 
@@ -2575,9 +2607,11 @@ TEST_CASE("Child component style is preserved when parent stylesheet styles it",
   container->Render();
 
   // Verify that the parent's base style is applied
-  CHECK(input_el->base_style.background_color.value() == Color::RGB(100, 100, 100));
+  CHECK(input_el->base_style.background_color.value() ==
+        Color::RGB(100, 100, 100));
 
-  // Simulate navigating with ArrowLeft which triggers input's Digest() and re-render of input
+  // Simulate navigating with ArrowLeft which triggers input's Digest() and
+  // re-render of input
   auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
   REQUIRE(input_comp != nullptr);
   auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
@@ -2586,10 +2620,12 @@ TEST_CASE("Child component style is preserved when parent stylesheet styles it",
   input_ptr->Digest();
 
   // The parent style should still be preserved on the child's root base style!
-  CHECK(input_el->base_style.background_color.value() == Color::RGB(100, 100, 100));
+  CHECK(input_el->base_style.background_color.value() ==
+        Color::RGB(100, 100, 100));
 }
 
-class DynamicTagsTestComponent : public rtxui::Component<DynamicTagsTestComponent> {
+class DynamicTagsTestComponent
+    : public rtxui::Component<DynamicTagsTestComponent> {
  public:
   bool show_span_first = true;
   void InitReflection() override {
@@ -2610,12 +2646,12 @@ class DynamicTagsTestComponent : public rtxui::Component<DynamicTagsTestComponen
       </else>
     </div>
   )html";
-  DynamicTagsTestComponent() {
-    Bind(show_span_first);
-  }
+  DynamicTagsTestComponent() { Bind(show_span_first); }
 };
 
-TEST_CASE("Component root elements are reused and reordered during reconciliation", "[component][reconciliation]") {
+TEST_CASE(
+    "Component root elements are reused and reordered during reconciliation",
+    "[component][reconciliation]") {
   auto container = rtxui::Ref<DynamicTagsTestComponent>::New();
   container->Mount();
 
@@ -2640,13 +2676,17 @@ TEST_CASE("Component root elements are reused and reordered during reconciliatio
   container->show_span_first = false;
   container->Render();
 
-  // The child elements should have been reordered (swapped) in-place without creating/destroying new elements
+  // The child elements should have been reordered (swapped) in-place without
+  // creating/destroying new elements
   REQUIRE(slot_el->ChildCount() == 2);
-  CHECK(slot_el->ChildAt(0) == div);  // The div component root should now be first
-  CHECK(slot_el->ChildAt(1) == span); // The span component root should now be second
+  CHECK(slot_el->ChildAt(0) ==
+        div);  // The div component root should now be first
+  CHECK(slot_el->ChildAt(1) ==
+        span);  // The span component root should now be second
 }
 
-class StandardTagsTestComponent : public rtxui::Component<StandardTagsTestComponent> {
+class StandardTagsTestComponent
+    : public rtxui::Component<StandardTagsTestComponent> {
  public:
   bool show_section_first = true;
   void InitReflection() override {
@@ -2666,12 +2706,11 @@ class StandardTagsTestComponent : public rtxui::Component<StandardTagsTestCompon
       </else>
     </div>
   )html";
-  StandardTagsTestComponent() {
-    Bind(show_section_first);
-  }
+  StandardTagsTestComponent() { Bind(show_section_first); }
 };
 
-TEST_CASE("Standard elements are reused and reordered during reconciliation", "[component][reconciliation]") {
+TEST_CASE("Standard elements are reused and reordered during reconciliation",
+          "[component][reconciliation]") {
   auto container = rtxui::Ref<StandardTagsTestComponent>::New();
   container->Mount();
 
@@ -2696,11 +2735,34 @@ TEST_CASE("Standard elements are reused and reordered during reconciliation", "[
   container->show_section_first = false;
   container->Render();
 
-  // The child elements should have been reordered (swapped) in-place without creating/destroying new elements
+  // The child elements should have been reordered (swapped) in-place without
+  // creating/destroying new elements
   REQUIRE(slot_el->ChildCount() == 2);
-  CHECK(slot_el->ChildAt(0) == header);  // The header element should now be first
-  CHECK(slot_el->ChildAt(1) == section); // The section element should now be second
+  CHECK(slot_el->ChildAt(0) ==
+        header);  // The header element should now be first
+  CHECK(slot_el->ChildAt(1) ==
+        section);  // The section element should now be second
 }
 
+TEST_CASE("Component.InlineStyleParsingRegression", "[component][style]") {
+  class InlineStyleComp : public rtxui::Component<InlineStyleComp> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      rtxui::Component<InlineStyleComp>::InitReflection();
+    }
+    std::string_view view = R"xml(
+      <div id="target" style="display: flex; width: 15; height: 10; background-color: rgb(255, 0, 0);"></div>
+    )xml";
+  };
 
+  auto component = rtxui::Ref<InlineStyleComp>::New();
+  component->Mount();
 
+  auto* target = component->Root()->QuerySelector("#target");
+  REQUIRE(target != nullptr);
+  CHECK(target->style.display_inside == DisplayInside::Flex);
+  CHECK(target->style.width.value == 15);
+  CHECK(target->style.height.value == 10);
+  CHECK(target->style.background_color.value() == Color::RGB(255, 0, 0));
+}

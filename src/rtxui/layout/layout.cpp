@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -9,11 +10,10 @@
 #include <vector>
 
 #include "rtxui/core/string.hpp"
+#include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/style.hpp"
-#include "rtxui/layout/layout_arena.hpp"
-#include <cstddef>
 
 namespace rtxui {
 
@@ -27,30 +27,38 @@ void ResetLayoutArena() {
 // so that both the control block and the object reside in the arena.
 template <typename... Args>
 std::shared_ptr<PhysicalFragment> MakeArenaFragment(Args&&... args) {
-  return std::allocate_shared<PhysicalFragment, LayoutArenaAllocator<PhysicalFragment>>(
+  return std::allocate_shared<PhysicalFragment,
+                              LayoutArenaAllocator<PhysicalFragment>>(
       LayoutArenaAllocator<PhysicalFragment>(), std::forward<Args>(args)...);
 }
 
 std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
   if (limit <= 3) {
-    if (limit <= 0) return "";
-    if (limit == 1) return ".";
-    if (limit == 2) return "..";
+    if (limit <= 0) {
+      return "";
+    }
+    if (limit == 1) {
+      return ".";
+    }
+    if (limit == 2) {
+      return "..";
+    }
     return "...";
   }
-  
+
   int target_width = limit - 3;
   int current_width = 0;
   size_t truncate_byte_index = 0;
-  
+
   for (const Grapheme& g : Graphemes(text)) {
     if (current_width + g.width > target_width) {
       break;
     }
     current_width += g.width;
-    truncate_byte_index = static_cast<size_t>(g.text.data() + g.text.size() - text.data());
+    truncate_byte_index =
+        static_cast<size_t>(g.text.data() + g.text.size() - text.data());
   }
-  
+
   size_t result_size = truncate_byte_index + 3;
   void* ptr = g_layout_arena.Allocate(result_size, 1);
   char* dst = static_cast<char*>(ptr);
@@ -58,7 +66,6 @@ std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
   std::memcpy(dst + truncate_byte_index, "...", 3);
   return std::string_view(dst, result_size);
 }
-
 
 // --- Forward Declarations ---
 std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
@@ -119,11 +126,13 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
   }
 
   if (box->algorithm == LayoutBox::Algorithm::Text) {
-    auto wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-        LayoutArenaAllocator<LayoutBox>());
+    auto wrapper_box =
+        std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+            LayoutArenaAllocator<LayoutBox>());
     wrapper_box->is_anonymous = true;
     wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-    wrapper_box->children.push_back(std::shared_ptr<LayoutBox>(box, [](LayoutBox*) {}));
+    wrapper_box->children.push_back(
+        std::shared_ptr<LayoutBox>(box, [](LayoutBox*) {}));
     wrapper_box->style = box->style;
     wrapper_box->style.display_outside = DisplayOutside::Inline;
     return LayoutInlineFlow({wrapper_box.get()}, constraints, context);
@@ -206,8 +215,9 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
       LayoutInputNode child_input = {child_box.get()};
       std::shared_ptr<LayoutBox> wrapper_box = nullptr;
       if (child_box->algorithm == LayoutBox::Algorithm::Text) {
-        wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-            LayoutArenaAllocator<LayoutBox>());
+        wrapper_box =
+            std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+                LayoutArenaAllocator<LayoutBox>());
         wrapper_box->is_anonymous = true;
         wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
         wrapper_box->children.push_back(child_box);
@@ -381,8 +391,9 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     LayoutInputNode child_input = {child_box.get()};
     std::shared_ptr<LayoutBox> wrapper_box = nullptr;
     if (child_box->algorithm == LayoutBox::Algorithm::Text) {
-      wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-          LayoutArenaAllocator<LayoutBox>());
+      wrapper_box =
+          std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+              LayoutArenaAllocator<LayoutBox>());
       wrapper_box->is_anonymous = true;
       wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
       wrapper_box->children.push_back(child_box);
@@ -423,7 +434,6 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
         ry -= child_box->style.bottom.Resolve(0);
       }
     }
-
 
     fragment->children.push_back({
         child_frag,
@@ -538,11 +548,16 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     } else {
       int max_scroll = std::max(0, total_scroll_height - fragment->height);
       fragment->scroll_y = std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
-      fragment->visual_scroll_y = std::clamp(box->dom_node->visual_scroll_y(), 0.f, static_cast<float>(max_scroll));
+      fragment->visual_scroll_y =
+          std::clamp(box->dom_node->visual_scroll_y(), 0.f,
+                     static_cast<float>(max_scroll));
 
       int max_scroll_x = std::max(0, total_scroll_width - fragment->width);
-      fragment->scroll_x = std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
-      fragment->visual_scroll_x = std::clamp(box->dom_node->visual_scroll_x(), 0.f, static_cast<float>(max_scroll_x));
+      fragment->scroll_x =
+          std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
+      fragment->visual_scroll_x =
+          std::clamp(box->dom_node->visual_scroll_x(), 0.f,
+                     static_cast<float>(max_scroll_x));
     }
   }
 
@@ -583,7 +598,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   auto container_frag = MakeArenaFragment(width, 0);
   // Optimization: Estimate and pre-reserve the children vector capacity of the
   // physical fragment. Combined with LayoutArenaAllocator, this completely
-  // eliminates heap allocations/copies during layout. Yields ~7% speedup in Layout/Paint.
+  // eliminates heap allocations/copies during layout. Yields ~7% speedup in
+  // Layout/Paint.
   size_t estimated_children = 0;
   for (const auto& child : box->children) {
     if (child->is_text) {
@@ -842,11 +858,13 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutInputNode child_input = {elem};
     std::shared_ptr<LayoutBox> wrapper_box = nullptr;
     if (elem->algorithm == LayoutBox::Algorithm::Text) {
-      wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-          LayoutArenaAllocator<LayoutBox>());
+      wrapper_box =
+          std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+              LayoutArenaAllocator<LayoutBox>());
       wrapper_box->is_anonymous = true;
       wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-      wrapper_box->children.push_back(std::shared_ptr<LayoutBox>(elem, [](LayoutBox*) {}));
+      wrapper_box->children.push_back(
+          std::shared_ptr<LayoutBox>(elem, [](LayoutBox*) {}));
       wrapper_box->style = elem->style;
       wrapper_box->style.display_outside = DisplayOutside::Inline;
       child_input.box = wrapper_box.get();
@@ -891,12 +909,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     if (child->is_text) {
       process_text_in_flow(
           child->text_data, child->dom_node,
-          {child->style.background_color,
-           child->style.foreground_color,
-           child->style.bold,
-           child->style.underlined,
-           child->style.underlined_double,
-           child->style.strikethrough,
+          {child->style.background_color, child->style.foreground_color,
+           child->style.bold, child->style.underlined,
+           child->style.underlined_double, child->style.strikethrough,
            child->style.blink});
     } else if (child->style.display_outside == DisplayOutside::Inline &&
                child->style.display_inside == DisplayInside::Flow &&
@@ -911,12 +926,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         if (grandchild->is_text) {
           process_text_in_flow(
               grandchild->text_data, child->dom_node,
-              {child->style.background_color,
-               child->style.foreground_color,
-               child->style.bold,
-               child->style.underlined,
-               child->style.underlined_double,
-               child->style.strikethrough,
+              {child->style.background_color, child->style.foreground_color,
+               child->style.bold, child->style.underlined,
+               child->style.underlined_double, child->style.strikethrough,
                child->style.blink});
         } else {
           place_opaque_box(grandchild.get());
@@ -992,8 +1004,10 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                                              LayoutConstraints constraints,
                                              LayoutContext context) {
   auto* box = node.box;
-  bool is_row = box->style.flex_direction == Direction::Row || box->style.flex_direction == Direction::RowReverse;
-  bool is_reverse = box->style.flex_direction == Direction::RowReverse || box->style.flex_direction == Direction::ColumnReverse;
+  bool is_row = box->style.flex_direction == Direction::Row ||
+                box->style.flex_direction == Direction::RowReverse;
+  bool is_reverse = box->style.flex_direction == Direction::RowReverse ||
+                    box->style.flex_direction == Direction::ColumnReverse;
 
   int parent_w = constraints.width.value;
   int parent_h = constraints.height.value;
@@ -1054,31 +1068,35 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                       box->style.padding.Vert() - scrollbar_spacing_y);
 
   struct FlexItem {
-    LayoutBox* box;
+    std::shared_ptr<LayoutBox> child_ptr;
     std::shared_ptr<PhysicalFragment> fragment;
     int main_base_size;
     int main_resolved_size;
     float grow;
     float shrink;
+    int cross_size;
+  };
+
+  struct FlexLine {
+    std::vector<FlexItem> items;
+    int total_main_base = 0;
+    int total_main_resolved = 0;
+    float total_grow = 0.0f;
+    float total_shrink_scaled = 0.0f;
+    int cross_size = 0;
   };
 
   std::vector<FlexItem> items;
-  int total_main_base = 0;
-  float total_grow = 0;
-  float total_shrink_scaled = 0;
 
   // Pass 1: Determine Flex Base Sizes
-  int resolved_gap = ResolveSize(box->style.gap, is_row ? content_w : content_h);
-  bool is_first = true;
+  int resolved_gap =
+      ResolveSize(is_row ? box->style.column_gap : box->style.row_gap,
+                  is_row ? content_w : content_h);
   for (auto& child : box->children) {
     if (child->style.position == PositionType::Absolute ||
         child->style.position == PositionType::Fixed) {
       continue;
     }
-    if (!is_first) {
-      total_main_base += resolved_gap;
-    }
-    is_first = false;
     int basis = is_row ? ResolveSize(child->style.width, content_w)
                        : ResolveSize(child->style.height, content_h);
 
@@ -1110,8 +1128,9 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     LayoutInputNode child_input = {child.get()};
     std::shared_ptr<LayoutBox> wrapper_box = nullptr;
     if (child->algorithm == LayoutBox::Algorithm::Text) {
-      wrapper_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-          LayoutArenaAllocator<LayoutBox>());
+      wrapper_box =
+          std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+              LayoutArenaAllocator<LayoutBox>());
       wrapper_box->is_anonymous = true;
       wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
       wrapper_box->children.push_back(child);
@@ -1126,84 +1145,272 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     int m_margin =
         is_row ? child->style.margin.Horiz() : child->style.margin.Vert();
     int main_size = (is_row ? frag->width : frag->height) + m_margin;
+    int cross_size = is_row ? (frag->height + child->style.margin.Vert())
+                            : (frag->width + child->style.margin.Horiz());
 
-    items.push_back({child.get(), frag, main_size, main_size,
-                     child->style.flex_grow, child->style.flex_shrink});
-
-    total_main_base += main_size;
-    total_grow += child->style.flex_grow;
-    total_shrink_scaled += (main_size * child->style.flex_shrink);
+    items.push_back({child, frag, main_size, main_size, child->style.flex_grow,
+                     child->style.flex_shrink, cross_size});
   }
 
-  // Pass 2: Resolve Flexible Lengths
-  int container_main = is_row ? content_w : content_h;
+  // Pass 2: Group items into Flex Lines and resolve flexible lengths
+  std::vector<FlexLine> lines;
   bool main_is_indefinite =
-      is_row ? (constraints.width.mode == MeasureMode::Undefined)
-             : (constraints.height.mode == MeasureMode::Undefined);
-  int free_space = main_is_indefinite ? 0 : (container_main - total_main_base);
+      is_row
+          ? (constraints.width.mode == MeasureMode::Undefined && auto_width)
+          : (constraints.height.mode == MeasureMode::Undefined && auto_height);
+  bool is_wrap = box->style.flex_wrap == FlexWrap::Wrap ||
+                 box->style.flex_wrap == FlexWrap::WrapReverse;
+  int container_main = is_row ? content_w : content_h;
 
-  if (free_space > 0 && total_grow > 0) {
-    int total_allocated = 0;
-    float current_grow_sum = 0.0f;
-    int items_to_grow = 0;
+  if (!is_wrap || main_is_indefinite || items.empty()) {
+    FlexLine line;
+    line.items = std::move(items);
+    lines.push_back(std::move(line));
+  } else {
+    FlexLine current_line;
     for (auto& item : items) {
-      if (item.grow > 0) {
-        items_to_grow++;
+      int item_needed = item.main_base_size;
+      if (!current_line.items.empty()) {
+        item_needed += resolved_gap;
       }
+      if (!current_line.items.empty() &&
+          current_line.total_main_base + item_needed > container_main) {
+        lines.push_back(std::move(current_line));
+        current_line = FlexLine();
+      }
+      if (current_line.items.empty()) {
+        current_line.total_main_base = item.main_base_size;
+      } else {
+        current_line.total_main_base += resolved_gap + item.main_base_size;
+      }
+      current_line.items.push_back(std::move(item));
     }
-    int grown_count = 0;
-    for (auto& item : items) {
-      if (item.grow > 0) {
-        grown_count++;
-        int next_cumulative = 0;
-        if (grown_count == items_to_grow) {
-          next_cumulative = free_space;
-        } else {
-          current_grow_sum += item.grow;
-          next_cumulative =
-              static_cast<int>((free_space * current_grow_sum) / total_grow);
-        }
-        int extra = next_cumulative - total_allocated;
-        total_allocated = next_cumulative;
-        item.main_resolved_size += extra;
-      }
+    if (!current_line.items.empty()) {
+      lines.push_back(std::move(current_line));
     }
-  } else if (free_space < 0 && total_shrink_scaled > 0) {
-    bool allow_overflow =
-        (is_row && box->style.overflow_x == Overflow::Scroll) ||
-        (!is_row && box->style.overflow_y == Overflow::Scroll);
-    if (!allow_overflow) {
-      int total_shrunk = 0;
-      float current_shrink_scaled_sum = 0.0f;
-      int items_to_shrink = 0;
-      for (auto& item : items) {
-        if (item.shrink > 0) {
-          items_to_shrink++;
+  }
+
+  // Resolve flexible lengths for each line independently
+  for (auto& line : lines) {
+    line.total_main_base = 0;
+    line.total_grow = 0.0f;
+    line.total_shrink_scaled = 0.0f;
+    bool is_first = true;
+    for (const auto& item : line.items) {
+      if (!is_first) {
+        line.total_main_base += resolved_gap;
+      }
+      is_first = false;
+      line.total_main_base += item.main_base_size;
+      line.total_grow += item.grow;
+      line.total_shrink_scaled += (item.main_base_size * item.shrink);
+    }
+
+    int free_space =
+        main_is_indefinite ? 0 : (container_main - line.total_main_base);
+
+    if (free_space > 0 && line.total_grow > 0) {
+      int total_allocated = 0;
+      float current_grow_sum = 0.0f;
+      int items_to_grow = 0;
+      for (const auto& item : line.items) {
+        if (item.grow > 0) {
+          items_to_grow++;
         }
       }
-      int shrunk_count = 0;
-      for (auto& item : items) {
-        if (item.shrink > 0) {
-          shrunk_count++;
+      int grown_count = 0;
+      for (auto& item : line.items) {
+        if (item.grow > 0) {
+          grown_count++;
           int next_cumulative = 0;
-          if (shrunk_count == items_to_shrink) {
+          if (grown_count == items_to_grow) {
             next_cumulative = free_space;
           } else {
-            current_shrink_scaled_sum += (item.main_base_size * item.shrink);
-            next_cumulative = static_cast<int>(
-                (free_space * current_shrink_scaled_sum) / total_shrink_scaled);
+            current_grow_sum += item.grow;
+            next_cumulative = static_cast<int>((free_space * current_grow_sum) /
+                                               line.total_grow);
           }
-          int shrink_amount = next_cumulative - total_shrunk;
-          total_shrunk = next_cumulative;
-          item.main_resolved_size += shrink_amount;
+          int extra = next_cumulative - total_allocated;
+          total_allocated = next_cumulative;
+          item.main_resolved_size += extra;
         }
+      }
+    } else if (free_space < 0 && line.total_shrink_scaled > 0) {
+      bool allow_overflow =
+          (is_row && box->style.overflow_x == Overflow::Scroll) ||
+          (!is_row && box->style.overflow_y == Overflow::Scroll);
+      if (!allow_overflow) {
+        int total_shrunk = 0;
+        float current_shrink_scaled_sum = 0.0f;
+        int items_to_shrink = 0;
+        for (const auto& item : line.items) {
+          if (item.shrink > 0) {
+            items_to_shrink++;
+          }
+        }
+        int shrunk_count = 0;
+        for (auto& item : line.items) {
+          if (item.shrink > 0) {
+            shrunk_count++;
+            int next_cumulative = 0;
+            if (shrunk_count == items_to_shrink) {
+              next_cumulative = free_space;
+            } else {
+              current_shrink_scaled_sum += (item.main_base_size * item.shrink);
+              next_cumulative =
+                  static_cast<int>((free_space * current_shrink_scaled_sum) /
+                                   line.total_shrink_scaled);
+            }
+            int shrink_amount = next_cumulative - total_shrunk;
+            total_shrunk = next_cumulative;
+            item.main_resolved_size += shrink_amount;
+          }
+        }
+      }
+    }
+
+    // Measure each item using its main resolved size to get final cross size
+    line.cross_size = 0;
+    for (auto& item : line.items) {
+      LayoutConstraints final_c;
+      int m_horiz = item.child_ptr->style.margin.Horiz();
+      int m_vert = item.child_ptr->style.margin.Vert();
+
+      if (is_row) {
+        final_c.width = {item.main_resolved_size - m_horiz,
+                         MeasureMode::Exactly};
+        if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
+          final_c.height = {content_h, MeasureMode::Undefined};
+        } else {
+          int max_h =
+              (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
+          final_c.height = {max_h, MeasureMode::AtMost};
+        }
+      } else {
+        if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
+          final_c.width = {content_w, MeasureMode::Undefined};
+        } else {
+          int max_w =
+              (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
+          final_c.width = {max_w, MeasureMode::AtMost};
+        }
+        final_c.height = {item.main_resolved_size - m_vert,
+                          MeasureMode::Exactly};
+      }
+
+      LayoutContext child_context = context;
+      child_context.is_measurement = true;
+      LayoutInputNode child_input = {item.child_ptr.get()};
+      std::shared_ptr<LayoutBox> wrapper_box = nullptr;
+      if (item.child_ptr->algorithm == LayoutBox::Algorithm::Text) {
+        wrapper_box =
+            std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+                LayoutArenaAllocator<LayoutBox>());
+        wrapper_box->is_anonymous = true;
+        wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+        wrapper_box->children.push_back(item.child_ptr);
+        wrapper_box->style = item.child_ptr->style;
+        wrapper_box->style.display_outside = DisplayOutside::Inline;
+        child_input.box = wrapper_box.get();
+      }
+
+      item.fragment = RunLayout(child_input, final_c, child_context);
+      item.cross_size = is_row ? (item.fragment->height + m_vert)
+                               : (item.fragment->width + m_horiz);
+      line.cross_size = std::max(line.cross_size, item.cross_size);
+    }
+
+    // Recompute total main resolved for the line
+    line.total_main_resolved = 0;
+    is_first = true;
+    for (const auto& item : line.items) {
+      if (!is_first) {
+        line.total_main_resolved += resolved_gap;
+      }
+      is_first = false;
+      line.total_main_resolved += item.main_resolved_size;
+    }
+  }
+
+  // Compute total cross lines and max line main resolved size
+  int total_cross_lines = 0;
+  int resolved_cross_gap =
+      ResolveSize(is_row ? box->style.row_gap : box->style.column_gap,
+                  is_row ? content_h : content_w);
+  {
+    bool is_first = true;
+    for (const auto& line : lines) {
+      if (!is_first) {
+        total_cross_lines += resolved_cross_gap;
+      }
+      is_first = false;
+      total_cross_lines += line.cross_size;
+    }
+  }
+
+  int max_line_main_resolved = 0;
+  for (const auto& line : lines) {
+    max_line_main_resolved =
+        std::max(max_line_main_resolved, line.total_main_resolved);
+  }
+
+  // Resolve final container width and height
+  int resolved_width = my_width;
+  int resolved_height = my_height;
+  if (auto_width) {
+    int needed_w = is_row ? max_line_main_resolved : total_cross_lines;
+    resolved_width = needed_w + box->style.border.Horiz() +
+                     box->style.padding.Horiz() + scrollbar_spacing_x;
+  }
+  if (auto_height) {
+    int needed_h = is_row ? total_cross_lines : max_line_main_resolved;
+    resolved_height = needed_h + box->style.border.Vert() +
+                      box->style.padding.Vert() + scrollbar_spacing_y;
+  }
+
+  // Apply min/max constraints to the container size
+  {
+    int max_w = ResolveSize(box->style.max_width, parent_w);
+    if (max_w != -1 && resolved_width > max_w) {
+      resolved_width = max_w;
+    }
+    int min_w = ResolveSize(box->style.min_width, parent_w);
+    if (min_w != -1 && resolved_width < min_w) {
+      resolved_width = min_w;
+    }
+    int max_h = ResolveSize(box->style.max_height, parent_h);
+    if (max_h != -1 && resolved_height > max_h) {
+      resolved_height = max_h;
+    }
+    int min_h = ResolveSize(box->style.min_height, parent_h);
+    if (min_h != -1 && resolved_height < min_h) {
+      resolved_height = min_h;
+    }
+  }
+
+  int final_content_w =
+      std::max(0, resolved_width - box->style.border.Horiz() -
+                      box->style.padding.Horiz() - scrollbar_spacing_x);
+  int final_content_h =
+      std::max(0, resolved_height - box->style.border.Vert() -
+                      box->style.padding.Vert() - scrollbar_spacing_y);
+  int container_main_final = is_row ? final_content_w : final_content_h;
+  int container_cross_final = is_row ? final_content_h : final_content_w;
+
+  bool cross_is_definite = is_row ? !auto_height : !auto_width;
+  if (cross_is_definite && !lines.empty()) {
+    int remaining_cross = container_cross_final - total_cross_lines;
+    if (remaining_cross > 0) {
+      int extra_per_line = remaining_cross / lines.size();
+      int remainder = remaining_cross % lines.size();
+      for (size_t l = 0; l < lines.size(); ++l) {
+        lines[l].cross_size += extra_per_line + (l < remainder ? 1 : 0);
       }
     }
   }
 
   // Pass 3: Final Measurement & Positioning
-  auto fragment = MakeArenaFragment(my_width, my_height);
-  fragment->children.reserve(items.size());
+  auto fragment = MakeArenaFragment(resolved_width, resolved_height);
   fragment->dom_node = box->dom_node;
   fragment->visibility = box->style.visibility;
   fragment->background_color = box->style.background_color;
@@ -1223,226 +1430,218 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       box->style.border_style != BorderStyle::None) {
     fragment->has_border = true;
   }
-  int main_pos = is_row ? (box->style.padding.left + box->style.border.left)
-                        : (box->style.padding.top + box->style.border.top);
+
+  int main_start = is_row ? (box->style.padding.left + box->style.border.left)
+                          : (box->style.padding.top + box->style.border.top);
   int cross_start = is_row ? (box->style.padding.top + box->style.border.top)
                            : (box->style.padding.left + box->style.border.left);
 
-  // Compute final main resolved size to determine actual remaining space
-  int total_main_resolved = 0;
-  is_first = true;
-  for (const auto& item : items) {
-    if (!is_first) {
-      total_main_resolved += resolved_gap;
-    }
-    is_first = false;
-    total_main_resolved += item.main_resolved_size;
+  // Determine line cross offsets
+  std::vector<int> line_cross_offsets(lines.size(), 0);
+  int cur_line_offset = 0;
+  for (size_t l = 0; l < lines.size(); ++l) {
+    line_cross_offsets[l] = cur_line_offset;
+    cur_line_offset += lines[l].cross_size + resolved_cross_gap;
   }
-  int justify_free_space = main_is_indefinite ? 0 : (container_main - total_main_resolved);
 
-  std::vector<int> item_positions(items.size(), 0);
-  int cur_pos = main_pos;
-  if (justify_free_space > 0) {
-    if (box->style.justify_content == JustifyContent::FlexEnd) {
-      cur_pos += justify_free_space;
-      for (size_t i = 0; i < items.size(); ++i) {
-        item_positions[i] = cur_pos;
-        cur_pos += items[i].main_resolved_size + resolved_gap;
-      }
-    } else if (box->style.justify_content == JustifyContent::Center) {
-      cur_pos += justify_free_space / 2;
-      for (size_t i = 0; i < items.size(); ++i) {
-        item_positions[i] = cur_pos;
-        cur_pos += items[i].main_resolved_size + resolved_gap;
-      }
-    } else if (box->style.justify_content == JustifyContent::SpaceBetween) {
-      if (items.size() > 1) {
-        int extra_gap = justify_free_space / (items.size() - 1);
-        int remainder = justify_free_space % (items.size() - 1);
-        for (size_t i = 0; i < items.size(); ++i) {
+  // Position items on each line
+  for (size_t l = 0; l < lines.size(); ++l) {
+    auto& line = lines[l];
+    int line_offset = line_cross_offsets[l];
+
+    int line_cross_pos =
+        cross_start +
+        (box->style.flex_wrap == FlexWrap::WrapReverse
+             ? (container_cross_final - line_offset - line.cross_size)
+             : line_offset);
+
+    int justify_free_space =
+        main_is_indefinite ? 0
+                           : (container_main_final - line.total_main_resolved);
+
+    std::vector<int> item_positions(line.items.size(), 0);
+    int cur_pos = main_start;
+    if (justify_free_space > 0) {
+      if (box->style.justify_content == JustifyContent::FlexEnd) {
+        cur_pos += justify_free_space;
+        for (size_t i = 0; i < line.items.size(); ++i) {
           item_positions[i] = cur_pos;
-          cur_pos += items[i].main_resolved_size + resolved_gap + extra_gap + (i < remainder ? 1 : 0);
+          cur_pos += line.items[i].main_resolved_size + resolved_gap;
+        }
+      } else if (box->style.justify_content == JustifyContent::Center) {
+        cur_pos += justify_free_space / 2;
+        for (size_t i = 0; i < line.items.size(); ++i) {
+          item_positions[i] = cur_pos;
+          cur_pos += line.items[i].main_resolved_size + resolved_gap;
+        }
+      } else if (box->style.justify_content == JustifyContent::SpaceBetween) {
+        if (line.items.size() > 1) {
+          int extra_gap = justify_free_space / (line.items.size() - 1);
+          int remainder = justify_free_space % (line.items.size() - 1);
+          for (size_t i = 0; i < line.items.size(); ++i) {
+            item_positions[i] = cur_pos;
+            cur_pos += line.items[i].main_resolved_size + resolved_gap +
+                       extra_gap + (i < remainder ? 1 : 0);
+          }
+        } else {
+          item_positions[0] = cur_pos;
+        }
+      } else if (box->style.justify_content == JustifyContent::SpaceAround) {
+        int spacing = justify_free_space / line.items.size();
+        int remainder = justify_free_space % line.items.size();
+        cur_pos += spacing / 2;
+        for (size_t i = 0; i < line.items.size(); ++i) {
+          item_positions[i] = cur_pos;
+          cur_pos += line.items[i].main_resolved_size + resolved_gap + spacing +
+                     (i < remainder ? 1 : 0);
+        }
+      } else if (box->style.justify_content == JustifyContent::SpaceEvenly) {
+        int spacing = justify_free_space / (line.items.size() + 1);
+        int remainder = justify_free_space % (line.items.size() + 1);
+        cur_pos += spacing + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) {
+          remainder--;
+        }
+        for (size_t i = 0; i < line.items.size(); ++i) {
+          item_positions[i] = cur_pos;
+          cur_pos += line.items[i].main_resolved_size + resolved_gap + spacing +
+                     (i < remainder ? 1 : 0);
         }
       } else {
-        item_positions[0] = cur_pos;
-      }
-    } else if (box->style.justify_content == JustifyContent::SpaceAround) {
-      int spacing = justify_free_space / items.size();
-      int remainder = justify_free_space % items.size();
-      cur_pos += spacing / 2;
-      for (size_t i = 0; i < items.size(); ++i) {
-        item_positions[i] = cur_pos;
-        cur_pos += items[i].main_resolved_size + resolved_gap + spacing + (i < remainder ? 1 : 0);
-      }
-    } else if (box->style.justify_content == JustifyContent::SpaceEvenly) {
-      int spacing = justify_free_space / (items.size() + 1);
-      int remainder = justify_free_space % (items.size() + 1);
-      cur_pos += spacing + (remainder > 0 ? 1 : 0);
-      if (remainder > 0) remainder--;
-      for (size_t i = 0; i < items.size(); ++i) {
-        item_positions[i] = cur_pos;
-        cur_pos += items[i].main_resolved_size + resolved_gap + spacing + (i < remainder ? 1 : 0);
-      }
-    } else {
-      // FlexStart
-      for (size_t i = 0; i < items.size(); ++i) {
-        item_positions[i] = cur_pos;
-        cur_pos += items[i].main_resolved_size + resolved_gap;
-      }
-    }
-  } else {
-    for (size_t i = 0; i < items.size(); ++i) {
-      item_positions[i] = cur_pos;
-      cur_pos += items[i].main_resolved_size + resolved_gap;
-    }
-  }
-
-  if (is_reverse) {
-    int effective_container_main = main_is_indefinite ? total_main_resolved : container_main;
-    int container_start = is_row ? (box->style.padding.left + box->style.border.left)
-                                 : (box->style.padding.top + box->style.border.top);
-    int container_end = container_start + effective_container_main;
-    for (size_t i = 0; i < items.size(); ++i) {
-      int pos = item_positions[i];
-      int size = items[i].main_resolved_size;
-      item_positions[i] = container_end - (pos - container_start) - size;
-    }
-  }
-
-  main_pos += total_main_resolved;
-
-  int max_cross_used = 0;
-  for (size_t i = 0; i < items.size(); ++i) {
-    auto& item = items[i];
-    LayoutConstraints final_c;
-    int m_horiz = item.box->style.margin.Horiz();
-    int m_vert = item.box->style.margin.Vert();
-
-    if (is_row) {
-      final_c.width = {item.main_resolved_size - m_horiz, MeasureMode::Exactly};
-      if (box->style.align_items == AlignItems::Stretch && item.box->style.height.unit == Unit::Auto && !auto_height) {
-        final_c.height = {content_h - m_vert, MeasureMode::Exactly};
-      } else if (auto_height && constraints.height.mode == MeasureMode::Undefined) {
-        final_c.height = {content_h, MeasureMode::Undefined};
-      } else {
-        int max_h =
-            (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
-        final_c.height = {max_h, MeasureMode::AtMost};
-      }
-    } else {
-      if (box->style.align_items == AlignItems::Stretch && item.box->style.width.unit == Unit::Auto && !auto_width) {
-        final_c.width = {content_w - m_horiz, MeasureMode::Exactly};
-      } else if (auto_width && constraints.width.mode == MeasureMode::Undefined) {
-        final_c.width = {content_w, MeasureMode::Undefined};
-      } else {
-        int max_w =
-            (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
-        final_c.width = {max_w, MeasureMode::AtMost};
-      }
-      final_c.height = {item.main_resolved_size - m_vert, MeasureMode::Exactly};
-    }
-
-    int cross_pos = cross_start;
-    if (box->style.align_items != AlignItems::Stretch) {
-      int item_cross_size = is_row ? (item.fragment->height + m_vert) : (item.fragment->width + m_horiz);
-      int cross_free_space = (is_row ? content_h : content_w) - item_cross_size;
-      if (cross_free_space > 0) {
-        if (box->style.align_items == AlignItems::FlexEnd) {
-          cross_pos += cross_free_space;
-        } else if (box->style.align_items == AlignItems::Center) {
-          cross_pos += cross_free_space / 2;
+        // FlexStart
+        for (size_t i = 0; i < line.items.size(); ++i) {
+          item_positions[i] = cur_pos;
+          cur_pos += line.items[i].main_resolved_size + resolved_gap;
         }
       }
-    }
-
-    int x = is_row ? item_positions[i] + item.box->style.margin.left
-                   : cross_pos + item.box->style.margin.left;
-    int y = is_row ? cross_pos + item.box->style.margin.top
-                   : item_positions[i] + item.box->style.margin.top;
-
-    LayoutContext child_context =
-        CreateChildContext(box, my_width, my_height, x, y, context);
-    item.fragment = RunLayout({item.box}, final_c, child_context);
-
-    int rx = x;
-    int ry = y;
-
-    if (item.box->style.position == PositionType::Relative) {
-      if (item.box->style.left.unit != Unit::Auto) {
-        rx += item.box->style.left.Resolve(my_width);
-      } else if (item.box->style.right.unit != Unit::Auto) {
-        rx -= item.box->style.right.Resolve(my_width);
-      }
-      if (item.box->style.top.unit != Unit::Auto) {
-        ry += item.box->style.top.Resolve(my_height);
-      } else if (item.box->style.bottom.unit != Unit::Auto) {
-        ry -= item.box->style.bottom.Resolve(my_height);
+    } else {
+      for (size_t i = 0; i < line.items.size(); ++i) {
+        item_positions[i] = cur_pos;
+        cur_pos += line.items[i].main_resolved_size + resolved_gap;
       }
     }
 
-    fragment->children.push_back({item.fragment, rx, ry});
-
-    max_cross_used =
-        std::max(max_cross_used, (is_row ? item.fragment->height + m_vert
-                                         : item.fragment->width + m_horiz));
-  }
-
-  if (auto_width) {
-    fragment->width =
-        is_row ? (main_pos + box->style.padding.right + box->style.border.right)
-               : (max_cross_used + box->style.padding.Horiz() +
-                  box->style.border.Horiz());
-  }
-  if (auto_height) {
-    fragment->height =
-        is_row
-            ? (max_cross_used + box->style.padding.Vert() +
-               box->style.border.Vert())
-            : (main_pos + box->style.padding.bottom + box->style.border.bottom);
-  }
-
-  // Cap width by max-width if needed
-  {
-    int max_w = ResolveSize(box->style.max_width, parent_w);
-    if (max_w != -1 && fragment->width > max_w) {
-      fragment->width = max_w;
+    if (is_reverse) {
+      int effective_container_main =
+          main_is_indefinite ? line.total_main_resolved : container_main_final;
+      int container_start =
+          is_row ? (box->style.padding.left + box->style.border.left)
+                 : (box->style.padding.top + box->style.border.top);
+      int container_end = container_start + effective_container_main;
+      for (size_t i = 0; i < line.items.size(); ++i) {
+        int pos = item_positions[i];
+        int size = line.items[i].main_resolved_size;
+        item_positions[i] = container_end - (pos - container_start) - size;
+      }
     }
-  }
 
-  // Apply min-width constraint
-  {
-    int min_w = ResolveSize(box->style.min_width, parent_w);
-    if (min_w != -1 && fragment->width < min_w) {
-      fragment->width = min_w;
-    }
-  }
+    for (size_t i = 0; i < line.items.size(); ++i) {
+      auto& item = line.items[i];
+      LayoutConstraints final_c;
+      int m_horiz = item.child_ptr->style.margin.Horiz();
+      int m_vert = item.child_ptr->style.margin.Vert();
 
-  // Cap height by max-height if needed
-  {
-    int max_h = ResolveSize(box->style.max_height, parent_h);
-    if (max_h != -1 && fragment->height > max_h) {
-      fragment->height = max_h;
-    }
-  }
+      if (is_row) {
+        final_c.width = {item.main_resolved_size - m_horiz,
+                         MeasureMode::Exactly};
+        if (box->style.align_items == AlignItems::Stretch &&
+            item.child_ptr->style.height.unit == Unit::Auto) {
+          final_c.height = {line.cross_size - m_vert, MeasureMode::Exactly};
+        } else if (auto_height &&
+                   constraints.height.mode == MeasureMode::Undefined) {
+          final_c.height = {item.cross_size - m_vert, MeasureMode::Exactly};
+        } else {
+          int max_h = (box->style.overflow_y == Overflow::Scroll)
+                          ? 10000
+                          : final_content_h;
+          final_c.height = {max_h, MeasureMode::AtMost};
+        }
+      } else {
+        if (box->style.align_items == AlignItems::Stretch &&
+            item.child_ptr->style.width.unit == Unit::Auto) {
+          final_c.width = {line.cross_size - m_horiz, MeasureMode::Exactly};
+        } else if (auto_width &&
+                   constraints.width.mode == MeasureMode::Undefined) {
+          final_c.width = {item.cross_size - m_horiz, MeasureMode::Exactly};
+        } else {
+          int max_w = (box->style.overflow_x == Overflow::Scroll)
+                          ? 10000
+                          : final_content_w;
+          final_c.width = {max_w, MeasureMode::AtMost};
+        }
+        final_c.height = {item.main_resolved_size - m_vert,
+                          MeasureMode::Exactly};
+      }
 
-  // Apply min-height constraint
-  {
-    int min_h = ResolveSize(box->style.min_height, parent_h);
-    if (min_h != -1 && fragment->height < min_h) {
-      fragment->height = min_h;
+      int item_cross_pos = line_cross_pos;
+      if (box->style.align_items != AlignItems::Stretch) {
+        int cross_free_space = line.cross_size - item.cross_size;
+        if (cross_free_space > 0) {
+          if (box->style.align_items == AlignItems::FlexEnd) {
+            item_cross_pos += cross_free_space;
+          } else if (box->style.align_items == AlignItems::Center) {
+            item_cross_pos += cross_free_space / 2;
+          }
+        }
+      }
+
+      int x = is_row ? item_positions[i] + item.child_ptr->style.margin.left
+                     : item_cross_pos + item.child_ptr->style.margin.left;
+      int y = is_row ? item_cross_pos + item.child_ptr->style.margin.top
+                     : item_positions[i] + item.child_ptr->style.margin.top;
+
+      LayoutContext child_context = CreateChildContext(
+          box, resolved_width, resolved_height, x, y, context);
+      LayoutInputNode child_input = {item.child_ptr.get()};
+      std::shared_ptr<LayoutBox> wrapper_box = nullptr;
+      if (item.child_ptr->algorithm == LayoutBox::Algorithm::Text) {
+        wrapper_box =
+            std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+                LayoutArenaAllocator<LayoutBox>());
+        wrapper_box->is_anonymous = true;
+        wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
+        wrapper_box->children.push_back(item.child_ptr);
+        wrapper_box->style = item.child_ptr->style;
+        wrapper_box->style.display_outside = DisplayOutside::Inline;
+        child_input.box = wrapper_box.get();
+      }
+
+      item.fragment = RunLayout(child_input, final_c, child_context);
+
+      int rx = x;
+      int ry = y;
+
+      if (item.child_ptr->style.position == PositionType::Relative) {
+        if (item.child_ptr->style.left.unit != Unit::Auto) {
+          rx += item.child_ptr->style.left.Resolve(resolved_width);
+        } else if (item.child_ptr->style.right.unit != Unit::Auto) {
+          rx -= item.child_ptr->style.right.Resolve(resolved_width);
+        }
+        if (item.child_ptr->style.top.unit != Unit::Auto) {
+          ry += item.child_ptr->style.top.Resolve(resolved_height);
+        } else if (item.child_ptr->style.bottom.unit != Unit::Auto) {
+          ry -= item.child_ptr->style.bottom.Resolve(resolved_height);
+        }
+      }
+
+      fragment->children.push_back({item.fragment, rx, ry});
     }
   }
 
   LayoutOutOfFlowChildren(box, fragment, context);
 
+  int max_cross_used = total_cross_lines;
+  int main_pos = max_line_main_resolved;
+
   int total_content_height =
-      is_row
-          ? (max_cross_used + box->style.padding.Vert() +
-             box->style.border.Vert())
-          : (main_pos + box->style.padding.bottom + box->style.border.bottom);
+      is_row ? (total_cross_lines + box->style.padding.Vert() +
+                box->style.border.Vert())
+             : (max_line_main_resolved + box->style.padding.Vert() +
+                box->style.border.Vert());
   int total_content_width =
-      is_row ? (main_pos + box->style.padding.right + box->style.border.right)
-             : (max_cross_used + box->style.padding.Horiz() +
+      is_row ? (max_line_main_resolved + box->style.padding.Horiz() +
+                box->style.border.Horiz())
+             : (total_cross_lines + box->style.padding.Horiz() +
                 box->style.border.Horiz());
 
   if (box->style.overflow_y != Overflow::Visible ||
@@ -1491,11 +1690,16 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     } else {
       int max_scroll = std::max(0, total_content_height - fragment->height);
       fragment->scroll_y = std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
-      fragment->visual_scroll_y = std::clamp(box->dom_node->visual_scroll_y(), 0.f, static_cast<float>(max_scroll));
+      fragment->visual_scroll_y =
+          std::clamp(box->dom_node->visual_scroll_y(), 0.f,
+                     static_cast<float>(max_scroll));
 
       int max_scroll_x = std::max(0, total_content_width - fragment->width);
-      fragment->scroll_x = std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
-      fragment->visual_scroll_x = std::clamp(box->dom_node->visual_scroll_x(), 0.f, static_cast<float>(max_scroll_x));
+      fragment->scroll_x =
+          std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
+      fragment->visual_scroll_x =
+          std::clamp(box->dom_node->visual_scroll_x(), 0.f,
+                     static_cast<float>(max_scroll_x));
     }
   }
 
@@ -1535,21 +1739,23 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     is_auto_width = false;
   }
 
-  int content_width_limit =
-      std::max(0, width - box->style.padding.Horiz() - box->style.border.Horiz());
+  int content_width_limit = std::max(
+      0, width - box->style.padding.Horiz() - box->style.border.Horiz());
 
   // Helper to recursively find rows
-  auto FindRows = [](auto& self, LayoutBox* curr, std::vector<LayoutBox*>& rows) -> void {
-    if (!curr) return;
+  auto FindRows = [](auto& self, LayoutBox* curr,
+                     std::vector<LayoutBox*>& rows) -> void {
+    if (!curr) {
+      return;
+    }
     if (curr->dom_node && curr->dom_node->tag() == "tr") {
       rows.push_back(curr);
       return;
     }
-    if (curr->dom_node && (curr->dom_node->tag() == "table" ||
-                           curr->dom_node->tag() == "tbody" ||
-                           curr->dom_node->tag() == "thead" ||
-                           curr->dom_node->tag() == "tfoot" ||
-                           curr->is_anonymous)) {
+    if (curr->dom_node &&
+        (curr->dom_node->tag() == "table" || curr->dom_node->tag() == "tbody" ||
+         curr->dom_node->tag() == "thead" || curr->dom_node->tag() == "tfoot" ||
+         curr->is_anonymous)) {
       for (auto& child : curr->children) {
         self(self, child.get(), rows);
       }
@@ -1557,9 +1763,13 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   };
 
   // Helper to recursively find cells
-  auto FindCells = [](auto& self, LayoutBox* curr, std::vector<LayoutBox*>& cells) -> void {
-    if (!curr) return;
-    if (curr->dom_node && (curr->dom_node->tag() == "td" || curr->dom_node->tag() == "th")) {
+  auto FindCells = [](auto& self, LayoutBox* curr,
+                      std::vector<LayoutBox*>& cells) -> void {
+    if (!curr) {
+      return;
+    }
+    if (curr->dom_node &&
+        (curr->dom_node->tag() == "td" || curr->dom_node->tag() == "th")) {
       cells.push_back(curr);
       return;
     }
@@ -1637,7 +1847,8 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   // Distribute width
   if (is_auto_width && constraints.width.mode == MeasureMode::Undefined) {
     content_width_limit = total_preferred_width;
-    width = content_width_limit + box->style.padding.Horiz() + box->style.border.Horiz();
+    width = content_width_limit + box->style.padding.Horiz() +
+            box->style.border.Horiz();
   } else {
     if (total_preferred_width <= content_width_limit) {
       // If table is fixed-width or exactly constrained, stretch columns
@@ -1645,10 +1856,13 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
         int remaining = content_width_limit - total_preferred_width;
         if (remaining > 0 && total_preferred_width > 0) {
           for (size_t col = 0; col < num_cols; ++col) {
-            col_widths[col] += (remaining * col_preferred_width[col]) / total_preferred_width;
+            col_widths[col] +=
+                (remaining * col_preferred_width[col]) / total_preferred_width;
           }
           int new_total = 0;
-          for (int w : col_widths) new_total += w;
+          for (int w : col_widths) {
+            new_total += w;
+          }
           int remainder = content_width_limit - new_total;
           if (remainder > 0 && !col_widths.empty()) {
             col_widths.back() += remainder;
@@ -1657,16 +1871,21 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       } else {
         // Auto-width fits preferred width
         content_width_limit = total_preferred_width;
-        width = content_width_limit + box->style.padding.Horiz() + box->style.border.Horiz();
+        width = content_width_limit + box->style.padding.Horiz() +
+                box->style.border.Horiz();
       }
     } else {
       // Shrink columns to fit content_width_limit
       if (total_preferred_width > 0) {
         for (size_t col = 0; col < num_cols; ++col) {
-          col_widths[col] = std::max(1, (col_preferred_width[col] * content_width_limit) / total_preferred_width);
+          col_widths[col] =
+              std::max(1, (col_preferred_width[col] * content_width_limit) /
+                              total_preferred_width);
         }
         int new_total = 0;
-        for (int w : col_widths) new_total += w;
+        for (int w : col_widths) {
+          new_total += w;
+        }
         int remainder = content_width_limit - new_total;
         if (remainder > 0 && !col_widths.empty()) {
           col_widths.back() += remainder;
@@ -1717,7 +1936,8 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     row_frag->foreground_color = row_box->style.foreground_color;
     row_frag->opacity = row_box->style.opacity;
     row_frag->border_style = row_box->style.border_style;
-    if ((row_box->style.border.Horiz() > 0 || row_box->style.border.Vert() > 0) &&
+    if ((row_box->style.border.Horiz() > 0 ||
+         row_box->style.border.Vert() > 0) &&
         row_box->style.border_style != BorderStyle::None) {
       row_frag->has_border = true;
     }
@@ -1736,7 +1956,8 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       final_c.height = {row_height, MeasureMode::Exactly};
 
       // Coordinate relative to parent (which is the row)
-      LayoutContext child_context = CreateChildContext(row_box, content_width_limit, row_height, cur_x, 0, context);
+      LayoutContext child_context = CreateChildContext(
+          row_box, content_width_limit, row_height, cur_x, 0, context);
       auto final_cell_frag = RunLayout({cell}, final_c, child_context);
 
       row_frag->children.push_back({final_cell_frag, cur_x, 0});
@@ -1748,7 +1969,8 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     cur_y += row_height;
   }
 
-  fragment->height = cur_y + box->style.padding.bottom + box->style.border.bottom;
+  fragment->height =
+      cur_y + box->style.padding.bottom + box->style.border.bottom;
 
   if (box->dom_node && !context.is_measurement) {
     box->dom_node->set_layout_width(fragment->width);

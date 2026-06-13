@@ -172,6 +172,9 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_layout example/layout.cpp)
   target_link_libraries(rtxui_example_layout PRIVATE rtxui)
 
+  add_executable(rtxui_example_layout_flex example/layout_flex.cpp)
+  target_link_libraries(rtxui_example_layout_flex PRIVATE rtxui)
+
   add_executable(rtxui_example_borders example/borders.cpp)
   target_link_libraries(rtxui_example_borders PRIVATE rtxui)
 

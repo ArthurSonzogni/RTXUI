@@ -159,7 +159,7 @@ TEST_CASE("CSS attribute selectors", "[css]") {
   auto stylesheet = css::Parse(input);
   REQUIRE(stylesheet);
   REQUIRE(stylesheet.value().size() == 2);
-  
+
   CHECK(stylesheet.value()[0].parsed_selector.base == "div");
   REQUIRE(stylesheet.value()[0].parsed_selector.attributes.size() == 1);
   CHECK(stylesheet.value()[0].parsed_selector.attributes[0].name == "attr");
@@ -168,7 +168,8 @@ TEST_CASE("CSS attribute selectors", "[css]") {
 
   CHECK(stylesheet.value()[1].parsed_selector.base == "span");
   REQUIRE(stylesheet.value()[1].parsed_selector.attributes.size() == 1);
-  CHECK(stylesheet.value()[1].parsed_selector.attributes[0].name == "data-test");
+  CHECK(stylesheet.value()[1].parsed_selector.attributes[0].name ==
+        "data-test");
   CHECK(stylesheet.value()[1].parsed_selector.attributes[0].has_value == false);
 }
 
@@ -567,7 +568,7 @@ TEST_CASE("Color transformations in ApplyStyle", "[style][color]") {
     style.background_color = Color::RGB(100, 150, 200);
     rtxui::ApplyStyle(style, {"background-color", "lighten(0.1)"});
     REQUIRE(style.background_color.has_value());
-    CHECK(style.background_color->r == 125); // 100 + 25.5 -> 125
+    CHECK(style.background_color->r == 125);  // 100 + 25.5 -> 125
     CHECK(style.background_color->g == 175);
     CHECK(style.background_color->b == 225);
   }
@@ -585,7 +586,7 @@ TEST_CASE("Color transformations in ApplyStyle", "[style][color]") {
     style.foreground_color = Color::RGB(100, 150, 200);
     rtxui::ApplyStyle(style, {"color", "darken(0.2)"});
     REQUIRE(style.foreground_color.has_value());
-    CHECK(style.foreground_color->r == 49); // 100 - 51
+    CHECK(style.foreground_color->r == 49);  // 100 - 51
     CHECK(style.foreground_color->g == 99);
     CHECK(style.foreground_color->b == 149);
   }
@@ -601,3 +602,40 @@ TEST_CASE("Color transformations in ApplyStyle", "[style][color]") {
   }
 }
 
+TEST_CASE("Length auto parsing in ApplyStyle", "[style][length][auto]") {
+  rtxui::ComputedStyle style;
+
+  rtxui::ApplyStyle(style, {"width", "auto"});
+  CHECK(style.width.unit == rtxui::Unit::Auto);
+
+  rtxui::ApplyStyle(style, {"height", "auto"});
+  CHECK(style.height.unit == rtxui::Unit::Auto);
+}
+
+TEST_CASE("Gap parsing in ApplyStyle", "[style][gap]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("row-gap only") {
+    rtxui::ApplyStyle(style, {"row-gap", "5"});
+    CHECK(style.row_gap == rtxui::Length::Cells(5.0f));
+    CHECK(style.column_gap == rtxui::Length::Cells(0.0f));
+  }
+
+  SECTION("column-gap only") {
+    rtxui::ApplyStyle(style, {"column-gap", "8%"});
+    CHECK(style.row_gap == rtxui::Length::Cells(0.0f));
+    CHECK(style.column_gap == rtxui::Length::Pct(8.0f));
+  }
+
+  SECTION("gap shorthand single value") {
+    rtxui::ApplyStyle(style, {"gap", "4"});
+    CHECK(style.row_gap == rtxui::Length::Cells(4.0f));
+    CHECK(style.column_gap == rtxui::Length::Cells(4.0f));
+  }
+
+  SECTION("gap shorthand two values") {
+    rtxui::ApplyStyle(style, {"gap", "3 6"});
+    CHECK(style.row_gap == rtxui::Length::Cells(3.0f));
+    CHECK(style.column_gap == rtxui::Length::Cells(6.0f));
+  }
+}
