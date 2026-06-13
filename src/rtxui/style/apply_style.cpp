@@ -814,6 +814,56 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "flex-basis") {
+    style.flex_basis = ParseLength(v);
+    return;
+  }
+
+  if (p == "flex") {
+    if (v == "none") {
+      style.flex_grow = 0.0f;
+      style.flex_shrink = 0.0f;
+      style.flex_basis = Length::Auto();
+      return;
+    }
+    if (v == "auto") {
+      style.flex_grow = 1.0f;
+      style.flex_shrink = 1.0f;
+      style.flex_basis = Length::Auto();
+      return;
+    }
+    auto parts = SplitWords(v);
+    if (parts.size() == 1) {
+      if (parts[0] == "auto") {
+        style.flex_basis = Length::Auto();
+      } else if (parts[0].back() == '%' ||
+                 std::isdigit(static_cast<unsigned char>(parts[0].back())) ==
+                     0) {
+        style.flex_basis = ParseLength(parts[0]);
+      } else {
+        float val = StoF(parts[0]);
+        style.flex_grow = val;
+        style.flex_shrink = 1.0f;
+        style.flex_basis = Length::Cells(0.0f);
+      }
+    } else if (parts.size() == 2) {
+      if (parts[1] == "auto" || parts[1].back() == '%') {
+        style.flex_grow = StoF(parts[0]);
+        style.flex_shrink = 1.0f;
+        style.flex_basis = ParseLength(parts[1]);
+      } else {
+        style.flex_grow = StoF(parts[0]);
+        style.flex_shrink = StoF(parts[1]);
+        style.flex_basis = Length::Cells(0.0f);
+      }
+    } else if (parts.size() >= 3) {
+      style.flex_grow = StoF(parts[0]);
+      style.flex_shrink = StoF(parts[1]);
+      style.flex_basis = ParseLength(parts[2]);
+    }
+    return;
+  }
+
   if (p == "flex-direction") {
     if (v == "row") {
       style.flex_direction = Direction::Row;
@@ -978,6 +1028,42 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.align_items = AlignItems::Center;
     } else if (v == "baseline") {
       style.align_items = AlignItems::Baseline;
+    }
+    return;
+  }
+
+  if (p == "align-self") {
+    if (v == "auto") {
+      style.align_self = AlignSelf::Auto;
+    } else if (v == "stretch") {
+      style.align_self = AlignSelf::Stretch;
+    } else if (v == "flex-start") {
+      style.align_self = AlignSelf::FlexStart;
+    } else if (v == "flex-end") {
+      style.align_self = AlignSelf::FlexEnd;
+    } else if (v == "center") {
+      style.align_self = AlignSelf::Center;
+    } else if (v == "baseline") {
+      style.align_self = AlignSelf::Baseline;
+    }
+    return;
+  }
+
+  if (p == "align-content") {
+    if (v == "stretch") {
+      style.align_content = AlignContent::Stretch;
+    } else if (v == "flex-start") {
+      style.align_content = AlignContent::FlexStart;
+    } else if (v == "flex-end") {
+      style.align_content = AlignContent::FlexEnd;
+    } else if (v == "center") {
+      style.align_content = AlignContent::Center;
+    } else if (v == "space-between") {
+      style.align_content = AlignContent::SpaceBetween;
+    } else if (v == "space-around") {
+      style.align_content = AlignContent::SpaceAround;
+    } else if (v == "space-evenly") {
+      style.align_content = AlignContent::SpaceEvenly;
     }
     return;
   }

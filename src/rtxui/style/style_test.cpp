@@ -639,3 +639,80 @@ TEST_CASE("Gap parsing in ApplyStyle", "[style][gap]") {
     CHECK(style.column_gap == rtxui::Length::Cells(6.0f));
   }
 }
+
+TEST_CASE("Flex basis and shorthand parsing in ApplyStyle", "[style][flex]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("flex-basis only") {
+    rtxui::ApplyStyle(style, {"flex-basis", "15"});
+    CHECK(style.flex_basis == rtxui::Length::Cells(15.0f));
+
+    rtxui::ApplyStyle(style, {"flex-basis", "auto"});
+    CHECK(style.flex_basis.unit == rtxui::Unit::Auto);
+  }
+
+  SECTION("flex shorthand grow only") {
+    rtxui::ApplyStyle(style, {"flex", "2"});
+    CHECK(style.flex_grow == 2.0f);
+    CHECK(style.flex_shrink == 1.0f);
+    CHECK(style.flex_basis == rtxui::Length::Cells(0.0f));
+  }
+
+  SECTION("flex shorthand grow and shrink") {
+    rtxui::ApplyStyle(style, {"flex", "2 3"});
+    CHECK(style.flex_grow == 2.0f);
+    CHECK(style.flex_shrink == 3.0f);
+    CHECK(style.flex_basis == rtxui::Length::Cells(0.0f));
+  }
+
+  SECTION("flex shorthand grow and basis") {
+    rtxui::ApplyStyle(style, {"flex", "2 auto"});
+    CHECK(style.flex_grow == 2.0f);
+    CHECK(style.flex_shrink == 1.0f);
+    CHECK(style.flex_basis.unit == rtxui::Unit::Auto);
+  }
+
+  SECTION("flex shorthand grow, shrink and basis") {
+    rtxui::ApplyStyle(style, {"flex", "3 4 50%"});
+    CHECK(style.flex_grow == 3.0f);
+    CHECK(style.flex_shrink == 4.0f);
+    CHECK(style.flex_basis == rtxui::Length::Pct(50.0f));
+  }
+
+  SECTION("flex shorthand none") {
+    rtxui::ApplyStyle(style, {"flex", "none"});
+    CHECK(style.flex_grow == 0.0f);
+    CHECK(style.flex_shrink == 0.0f);
+    CHECK(style.flex_basis.unit == rtxui::Unit::Auto);
+  }
+
+  SECTION("flex shorthand auto") {
+    rtxui::ApplyStyle(style, {"flex", "auto"});
+    CHECK(style.flex_grow == 1.0f);
+    CHECK(style.flex_shrink == 1.0f);
+    CHECK(style.flex_basis.unit == rtxui::Unit::Auto);
+  }
+}
+
+TEST_CASE("Align self and content parsing in ApplyStyle", "[style][align]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("align-self") {
+    rtxui::ApplyStyle(style, {"align-self", "flex-end"});
+    CHECK(style.align_self == rtxui::AlignSelf::FlexEnd);
+
+    rtxui::ApplyStyle(style, {"align-self", "center"});
+    CHECK(style.align_self == rtxui::AlignSelf::Center);
+
+    rtxui::ApplyStyle(style, {"align-self", "auto"});
+    CHECK(style.align_self == rtxui::AlignSelf::Auto);
+  }
+
+  SECTION("align-content") {
+    rtxui::ApplyStyle(style, {"align-content", "space-around"});
+    CHECK(style.align_content == rtxui::AlignContent::SpaceAround);
+
+    rtxui::ApplyStyle(style, {"align-content", "center"});
+    CHECK(style.align_content == rtxui::AlignContent::Center);
+  }
+}

@@ -1689,4 +1689,99 @@ TEST_CASE("Layout: Flexbox Row and Column Gap X and Y Only",
   }
 }
 
+TEST_CASE("Layout: Flexbox Flex Basis and Overrides", "[layout][flex][basis]") {
+  SECTION("flex-basis sets initial size") {
+    struct FlexBasisTest : Component<FlexBasisTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .container { display: flex; flex-direction: row; width: 10; height: 1; }
+            .item1 { flex-basis: 4; height: 1; background-color: rgb(255, 0, 0); }
+            .item2 { flex-basis: 6; height: 1; background-color: rgb(0, 255, 0); }
+          </style>
+          <div class="container">
+            <div class="item1"></div>
+            <div class="item2"></div>
+          </div>
+        )html";
+      }
+    };
+
+    auto texture = RenderComponent(Ref<FlexBasisTest>::New(), 10, 1);
+    std::map<Color, char> colors = {
+        {Color::RGB(255, 0, 0), 'R'},
+        {Color::RGB(0, 255, 0), 'G'},
+    };
+    CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                      "RRRRGGGGGG",
+                                                  }));
+  }
+}
+
+TEST_CASE("Layout: Flexbox Align Self override", "[layout][flex][align-self]") {
+  struct FlexAlignSelfTest : Component<FlexAlignSelfTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: row; align-items: flex-start; width: 6; height: 4; }
+          .item1 { width: 3; height: 2; background-color: rgb(255, 0, 0); }
+          .item2 { width: 3; height: 2; align-self: flex-end; background-color: rgb(0, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="item1"></div>
+          <div class="item2"></div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexAlignSelfTest>::New(), 6, 4);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRR...",
+                                                    "RRR...",
+                                                    "...GGG",
+                                                    "...GGG",
+                                                }));
+}
+
+TEST_CASE("Layout: Flexbox Align Content center",
+          "[layout][flex][align-content]") {
+  struct FlexAlignContentTest : Component<FlexAlignContentTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container { display: flex; flex-direction: row; flex-wrap: wrap; align-content: center; width: 3; height: 6; }
+          .item1 { width: 3; height: 2; background-color: rgb(255, 0, 0); }
+          .item2 { width: 3; height: 2; background-color: rgb(0, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="item1"></div>
+          <div class="item2"></div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexAlignContentTest>::New(), 3, 6);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "...",
+                                                    "RRR",
+                                                    "RRR",
+                                                    "GGG",
+                                                    "GGG",
+                                                    "...",
+                                                }));
+}
+
 }  // namespace rtxui
