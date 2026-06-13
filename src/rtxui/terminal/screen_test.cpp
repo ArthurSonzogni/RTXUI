@@ -2729,5 +2729,248 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
   CHECK(scrollable_after->scroll_y() == max_scroll_y);
 }
 
+TEST_CASE("Screen.ScrollbarTrackClick", "[terminal][scroll][scrollbar]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class TrackClickComponent : public Component<TrackClickComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<TrackClickComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div>Line 1</div>
+        <div>Line 2</div>
+        <div>Line 3</div>
+        <div>Line 4</div>
+        <div>Line 5</div>
+        <div>Line 6</div>
+        <div>Line 7</div>
+        <div>Line 8</div>
+        <div>Line 9</div>
+        <div>Line 10</div>
+        <div>Line 11</div>
+        <div>Line 12</div>
+        <div>Line 13</div>
+        <div>Line 14</div>
+        <div>Line 15</div>
+        <div>Line 16</div>
+        <div>Line 17</div>
+        <div>Line 18</div>
+        <div>Line 19</div>
+        <div>Line 20</div>
+      </div>
+      <style>
+        #scrollable {
+          display: block;
+          width: 20;
+          height: 10;
+          overflow-y: scroll;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<TrackClickComponent>::New();
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_el != nullptr);
+  REQUIRE(scroll_el->scroll_y() == 0);
+  // Content = 20 lines, viewport = 10, max_scroll = 10.
+  // Scrollbar is at x = 19 (0-based), which is x=20 in 1-based mouse coords.
+
+  // Click below the thumb on the track to page down.
+  // Initially the thumb is at the top, so clicking at the bottom of the track
+  // should scroll down by one viewport height (10).
+  Event::Mouse track_click;
+  track_click.button = Event::Mouse::Button::Left;
+  track_click.motion = Event::Mouse::Motion::Pressed;
+  track_click.x = 20;  // Scrollbar column (1-based)
+  track_click.y = 9;   // Bottom area of the track (1-based)
+  screen.Dispatch(track_click);
+
+  // After clicking below the thumb, scroll should increase by viewport height.
+  CHECK(scroll_el->target_scroll_y() == 10);
+
+  // Now scroll is at max. Click above the thumb (at the top) to page up.
+  Event::Mouse track_click_up;
+  track_click_up.button = Event::Mouse::Button::Left;
+  track_click_up.motion = Event::Mouse::Motion::Pressed;
+  track_click_up.x = 20;
+  track_click_up.y = 1;  // Top of the track (1-based)
+  screen.Dispatch(track_click_up);
+
+  // Should have scrolled back up by viewport height.
+  CHECK(scroll_el->target_scroll_y() == 0);
+}
+
+TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ThumbDragComponent : public Component<ThumbDragComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ThumbDragComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div>Line 1</div>
+        <div>Line 2</div>
+        <div>Line 3</div>
+        <div>Line 4</div>
+        <div>Line 5</div>
+        <div>Line 6</div>
+        <div>Line 7</div>
+        <div>Line 8</div>
+        <div>Line 9</div>
+        <div>Line 10</div>
+        <div>Line 11</div>
+        <div>Line 12</div>
+        <div>Line 13</div>
+        <div>Line 14</div>
+        <div>Line 15</div>
+        <div>Line 16</div>
+        <div>Line 17</div>
+        <div>Line 18</div>
+        <div>Line 19</div>
+        <div>Line 20</div>
+      </div>
+      <style>
+        #scrollable {
+          display: block;
+          width: 20;
+          height: 10;
+          overflow-y: scroll;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ThumbDragComponent>::New();
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_el != nullptr);
+  REQUIRE(scroll_el->scroll_y() == 0);
+
+  // With 20 lines, 10 visible, the thumb covers half the track (5 cells).
+  // The scrollbar is at x=19 (0-based) = x=20 (1-based).
+  // Click on the thumb at y=1 (1-based, top of track where thumb starts).
+  Event::Mouse press;
+  press.button = Event::Mouse::Button::Left;
+  press.motion = Event::Mouse::Motion::Pressed;
+  press.x = 20;
+  press.y = 1;
+  screen.Dispatch(press);
+
+  // Scroll should still be 0 after pressing (just starts drag).
+  CHECK(scroll_el->target_scroll_y() == 0);
+
+  // Drag down by 5 cells (move thumb from top to bottom).
+  Event::Mouse move;
+  move.button = Event::Mouse::Button::Left;
+  move.motion = Event::Mouse::Motion::Moved;
+  move.x = 20;
+  move.y = 6;  // Moved 5 cells down
+  screen.Dispatch(move);
+
+  // After dragging down by 5 cells with a 10-cell track and 5-cell thumb,
+  // the thumb should be at the bottom, scroll should be at max (10).
+  CHECK(scroll_el->target_scroll_y() == 10);
+
+  // Release the mouse.
+  Event::Mouse release;
+  release.button = Event::Mouse::Button::Left;
+  release.motion = Event::Mouse::Motion::Released;
+  release.x = 20;
+  release.y = 6;
+  screen.Dispatch(release);
+
+  // Scroll should remain at the dragged position.
+  CHECK(scroll_el->target_scroll_y() == 10);
+}
+
+TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class PseudoClassComponent : public Component<PseudoClassComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<PseudoClassComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div>Line 1</div>
+        <div>Line 2</div>
+        <div>Line 3</div>
+        <div>Line 4</div>
+        <div>Line 5</div>
+        <div>Line 6</div>
+        <div>Line 7</div>
+        <div>Line 8</div>
+        <div>Line 9</div>
+        <div>Line 10</div>
+      </div>
+      <style>
+        #scrollable {
+          display: block;
+          width: 20;
+          height: 5;
+          overflow-y: scroll;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<PseudoClassComponent>::New();
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_el != nullptr);
+
+  // Initial state: no scrollbar hover/active.
+  CHECK_FALSE(scroll_el->scrollbar_hovered());
+  CHECK_FALSE(scroll_el->scrollbar_thumb_hovered());
+  CHECK_FALSE(scroll_el->scrollbar_active());
+  CHECK_FALSE(scroll_el->scrollbar_thumb_active());
+
+  // Move mouse over the scrollbar column.
+  // Scrollbar is at x=19 (0-based) = x=20 (1-based).
+  Event::Mouse hover;
+  hover.button = Event::Mouse::Button::None;
+  hover.motion = Event::Mouse::Motion::Moved;
+  hover.x = 20;
+  hover.y = 1;  // On the thumb (top of track)
+  screen.Dispatch(hover);
+
+  // Scrollbar and thumb should be hovered.
+  CHECK(scroll_el->scrollbar_hovered());
+  CHECK(scroll_el->scrollbar_thumb_hovered());
+  CHECK_FALSE(scroll_el->scrollbar_active());
+  CHECK_FALSE(scroll_el->scrollbar_thumb_active());
+
+  // Move mouse away from scrollbar.
+  Event::Mouse move_away;
+  move_away.button = Event::Mouse::Button::None;
+  move_away.motion = Event::Mouse::Motion::Moved;
+  move_away.x = 5;
+  move_away.y = 1;
+  screen.Dispatch(move_away);
+
+  // Hover state should be cleared.
+  CHECK_FALSE(scroll_el->scrollbar_hovered());
+  CHECK_FALSE(scroll_el->scrollbar_thumb_hovered());
+}
+
 }  // namespace
 }  // namespace rtxui
