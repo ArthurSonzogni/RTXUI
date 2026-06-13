@@ -133,6 +133,10 @@ const TransitionConfig* FindTransitionConfig(const Element* element,
         property.ends_with("-color")) {
       return &config;
     }
+    if (config.property == "scrollbar-color" &&
+        (property == "scrollbar-color-thumb" || property == "scrollbar-color-track")) {
+      return &config;
+    }
   }
   return nullptr;
 }
@@ -449,6 +453,10 @@ void Element::TriggerTransitions(double current_time_ms) {
   style.flex_grow = old_style.flex_grow;
   style.flex_shrink = old_style.flex_shrink;
   style.opacity = old_style.opacity;
+  style.has_scrollbar_color_thumb = old_style.has_scrollbar_color_thumb;
+  style.scrollbar_color_thumb = old_style.scrollbar_color_thumb;
+  style.has_scrollbar_color_track = old_style.has_scrollbar_color_track;
+  style.scrollbar_color_track = old_style.scrollbar_color_track;
 
   auto HandleColorProperty = [&](std::string_view prop_name,
                                  std::optional<Color>& current_val,
@@ -573,6 +581,26 @@ void Element::TriggerTransitions(double current_time_ms) {
   HandleFloatProperty("flex-shrink", style.flex_shrink,
                       target_style.flex_shrink);
   HandleFloatProperty("opacity", style.opacity, target_style.opacity);
+
+  std::optional<Color> current_thumb = style.has_scrollbar_color_thumb ? std::optional<Color>(style.scrollbar_color_thumb) : std::nullopt;
+  std::optional<Color> target_thumb = target_style.has_scrollbar_color_thumb ? std::optional<Color>(target_style.scrollbar_color_thumb) : std::nullopt;
+  HandleColorProperty("scrollbar-color-thumb", current_thumb, target_thumb);
+  if (current_thumb) {
+    style.has_scrollbar_color_thumb = true;
+    style.scrollbar_color_thumb = *current_thumb;
+  } else {
+    style.has_scrollbar_color_thumb = false;
+  }
+
+  std::optional<Color> current_track = style.has_scrollbar_color_track ? std::optional<Color>(style.scrollbar_color_track) : std::nullopt;
+  std::optional<Color> target_track = target_style.has_scrollbar_color_track ? std::optional<Color>(target_style.scrollbar_color_track) : std::nullopt;
+  HandleColorProperty("scrollbar-color-track", current_track, target_track);
+  if (current_track) {
+    style.has_scrollbar_color_track = true;
+    style.scrollbar_color_track = *current_track;
+  } else {
+    style.has_scrollbar_color_track = false;
+  }
 }
 
 bool Element::TickTransitions(double current_time_ms) {
@@ -639,6 +667,20 @@ bool Element::TickTransitions(double current_time_ms) {
           style.border_color_bottom = val;
         } else if (prop_name == "border-left-color") {
           style.border_color_left = val;
+        } else if (prop_name == "scrollbar-color-thumb") {
+          if (val) {
+            style.has_scrollbar_color_thumb = true;
+            style.scrollbar_color_thumb = *val;
+          } else {
+            style.has_scrollbar_color_thumb = false;
+          }
+        } else if (prop_name == "scrollbar-color-track") {
+          if (val) {
+            style.has_scrollbar_color_track = true;
+            style.scrollbar_color_track = *val;
+          } else {
+            style.has_scrollbar_color_track = false;
+          }
         }
         updated = true;
       } else if (trans.type == ActiveTransition::Type::Float) {
@@ -687,6 +729,20 @@ bool Element::TickTransitions(double current_time_ms) {
           style.flex_shrink = target_style.flex_shrink;
         } else if (prop_name == "opacity") {
           style.opacity = target_style.opacity;
+        } else if (prop_name == "scrollbar-color-thumb") {
+          if (target_style.has_scrollbar_color_thumb) {
+            style.has_scrollbar_color_thumb = true;
+            style.scrollbar_color_thumb = target_style.scrollbar_color_thumb;
+          } else {
+            style.has_scrollbar_color_thumb = false;
+          }
+        } else if (prop_name == "scrollbar-color-track") {
+          if (target_style.has_scrollbar_color_track) {
+            style.has_scrollbar_color_track = true;
+            style.scrollbar_color_track = target_style.scrollbar_color_track;
+          } else {
+            style.has_scrollbar_color_track = false;
+          }
         }
       }
     }

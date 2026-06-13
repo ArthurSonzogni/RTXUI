@@ -72,6 +72,14 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     std::vector<std::shared_ptr<LayoutBox>> refined_children;
     std::shared_ptr<LayoutBox> anonymous_box = nullptr;
     for (const auto& child_box : raw_children) {
+      // Out-of-flow elements (fixed/absolute) must remain direct children
+      // of their containing block so LayoutOutOfFlowChildren can find them.
+      // They should not be wrapped in anonymous inline boxes.
+      if (child_box->style.position == PositionType::Absolute ||
+          child_box->style.position == PositionType::Fixed) {
+        refined_children.push_back(child_box);
+        continue;
+      }
       if (child_box->style.display_outside == DisplayOutside::Inline) {
         if (!anonymous_box) {
           anonymous_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(

@@ -236,6 +236,10 @@ struct ComputedStyle {
   Overflow overflow_x = Overflow::Visible;
   Overflow overflow_y = Overflow::Visible;
   ScrollbarWidth scrollbar_width = ScrollbarWidth::Auto;
+  bool has_scrollbar_color_thumb = true;
+  bool has_scrollbar_color_track = true;
+  Color scrollbar_color_thumb = Color::RGBA(200, 200, 200, 200);
+  Color scrollbar_color_track = Color::RGBA(80, 80, 80, 120);
   std::optional<TextAlign> text_align;
   std::optional<WhiteSpace> white_space;
   std::optional<ListStyleType> list_style_type;
