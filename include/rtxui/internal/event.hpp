@@ -86,6 +86,9 @@ struct Event {
     Motion motion = Motion::Pressed;
     Modifier modifier;
     int x = 0, y = 0;
+    float sub_cell_x = 0.0f, sub_cell_y = 0.0f;
+    int pixel_x = 0, pixel_y = 0;
+    bool is_pixel_precise = false;
     std::strong_ordering operator<=>(const Mouse&) const = default;
     std::string Print() const;
   };
@@ -119,7 +122,7 @@ struct Event {
                                                      Resized,
                                                      CursorShape,
                                                      CursorPosition>,
-                                        T>>>
+                                         T>>>
   Event(T&& value) : data_(std::forward<T>(value)) {}
 
   // --- Singleton Events ---
@@ -211,6 +214,10 @@ struct Event {
   }
   template <typename T>
   T* get_if() {
+    return std::get_if<T>(&data_);
+  }
+  template <typename T>
+  const T* get_if() const {
     return std::get_if<T>(&data_);
   }
 

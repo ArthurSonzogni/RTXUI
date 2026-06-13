@@ -573,7 +573,7 @@ class ScreenImpl {
 
   void UpdateSize();
   void DigestAndDraw();
-  void HandleEvent(const Event& event);
+  void HandleEvent(Event event);
   bool HasActiveTransitions();
   bool TickTransitions(double current_time_ms);
   void ScrollIntoView(Element* element);
@@ -603,6 +603,7 @@ class ScreenImpl {
   Element* drag_element_ = nullptr;
   bool drag_vertical_ = false;
   int drag_start_mouse_ = 0;
+  int drag_start_mouse_pixel_ = 0;
   int drag_start_thumb_pos_ = 0;
   task::TaskRunner task_runner_;
 
@@ -745,9 +746,28 @@ void ScreenImpl::Dispatch(Event event) {
   HandleEvent(event);
 }
 
-void ScreenImpl::HandleEvent(const Event& event) {
+void ScreenImpl::HandleEvent(Event event) {
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
+
+  if (auto* mouse_ptr = event.get_if<Event::Mouse>()) {
+    int cell_w = 0, cell_h = 0;
+    if (device_->GetCellPixelSize(cell_w, cell_h) && cell_w > 0 && cell_h > 0) {
+      mouse_ptr->is_pixel_precise = true;
+      mouse_ptr->pixel_x = mouse_ptr->x;
+      mouse_ptr->pixel_y = mouse_ptr->y;
+
+      int raw_x = mouse_ptr->x;
+      int raw_y = mouse_ptr->y;
+
+      mouse_ptr->x = ((raw_x - 1) / cell_w) + 1;
+      mouse_ptr->y = ((raw_y - 1) / cell_h) + 1;
+
+      mouse_ptr->sub_cell_x = static_cast<float>((raw_x - 1) % cell_w) / cell_w;
+      mouse_ptr->sub_cell_y = static_cast<float>((raw_y - 1) % cell_h) / cell_h;
+    }
+  }
+
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
 
@@ -782,6 +802,15 @@ void ScreenImpl::HandleEvent(const Event& event) {
           int current_mouse = drag_vertical_ ? mouse.y : mouse.x;
           int delta = current_mouse - drag_start_mouse_;
 
+          int delta_eighths = 0;
+          int cell_w = 0, cell_h = 0;
+          if (mouse.is_pixel_precise && device_->GetCellPixelSize(cell_w, cell_h) && cell_w > 0 && cell_h > 0) {
+            int delta_pixels = drag_vertical_ ? (mouse.pixel_y - drag_start_mouse_pixel_) : (mouse.pixel_x - drag_start_mouse_pixel_);
+            delta_eighths = (delta_pixels * 8) / (drag_vertical_ ? cell_h : cell_w);
+          } else {
+            delta_eighths = delta * 8;
+          }
+
           auto frag_opt = FindFragmentForElementWithPos(root_fragment_, drag_element_);
           if (frag_opt) {
             auto frag = frag_opt->fragment;
@@ -807,7 +836,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
               int max_scroll = scroll_height - h;
               if (max_scroll > 0 && ((track_h * 8) - thumb_h_eighths) > 0) {
-                int new_thumb_y_eighths = drag_start_thumb_pos_ + delta * 8;
+                int new_thumb_y_eighths = drag_start_thumb_pos_ + delta_eighths;
                 new_thumb_y_eighths = std::clamp(new_thumb_y_eighths, 0, (track_h * 8) - thumb_h_eighths);
                 int new_scroll_y = std::round(static_cast<double>(new_thumb_y_eighths) * max_scroll / ((track_h * 8) - thumb_h_eighths));
                 if (new_scroll_y != drag_element_->target_scroll_y()) {
@@ -835,7 +864,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
               int max_scroll = scroll_width - w;
               if (max_scroll > 0 && ((track_w * 8) - thumb_w_eighths) > 0) {
-                int new_thumb_x_eighths = drag_start_thumb_pos_ + delta * 8;
+                int new_thumb_x_eighths = drag_start_thumb_pos_ + delta_eighths;
                 new_thumb_x_eighths = std::clamp(new_thumb_x_eighths, 0, (track_w * 8) - thumb_w_eighths);
                 int new_scroll_x = std::round(static_cast<double>(new_thumb_x_eighths) * max_scroll / ((track_w * 8) - thumb_w_eighths));
                 if (new_scroll_x != drag_element_->target_scroll_x()) {
@@ -966,6 +995,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
               drag_element_ = scrollbar_element;
               drag_vertical_ = is_vertical;
               drag_start_mouse_ = is_vertical ? mouse.y : mouse.x;
+              drag_start_mouse_pixel_ = is_vertical ? mouse.pixel_y : mouse.pixel_x;
 
               auto frag_opt = FindFragmentForElementWithPos(root_fragment_, scrollbar_element);
               if (frag_opt) {

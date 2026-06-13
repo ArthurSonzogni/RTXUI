@@ -2897,6 +2897,102 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
   CHECK(scroll_el->target_scroll_y() == 10);
 }
 
+TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise", "[terminal][scroll][scrollbar]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->SetMockCellPixelSize(10, 20); // Cell width = 10px, height = 20px
+
+  class ThumbDragPixelComponent : public Component<ThumbDragPixelComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ThumbDragPixelComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div>Line 1</div>
+        <div>Line 2</div>
+        <div>Line 3</div>
+        <div>Line 4</div>
+        <div>Line 5</div>
+        <div>Line 6</div>
+        <div>Line 7</div>
+        <div>Line 8</div>
+        <div>Line 9</div>
+        <div>Line 10</div>
+        <div>Line 11</div>
+        <div>Line 12</div>
+        <div>Line 13</div>
+        <div>Line 14</div>
+        <div>Line 15</div>
+        <div>Line 16</div>
+        <div>Line 17</div>
+        <div>Line 18</div>
+        <div>Line 19</div>
+        <div>Line 20</div>
+      </div>
+      <style>
+        #scrollable {
+          display: block;
+          width: 20;
+          height: 10;
+          overflow-y: scroll;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ThumbDragPixelComponent>::New();
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_el != nullptr);
+  REQUIRE(scroll_el->scroll_y() == 0);
+
+  // Initial scroll position is 0.
+  // With cell size 10x20:
+  // Scrollbar is at column index 19 (0-based) = x=20 (1-based cell coordinate).
+  // Under pixel mode:
+  // The scrollbar column is at x = 19 * 10 + 1 = 191 pixels (1-based).
+  // The top of the track (first cell) is at y = 0 * 20 + 1 = 1 pixel.
+  
+  // 1. Dispatch press at y = 1 (pixel coordinate, which falls in cell y = 1)
+  Event::Mouse press;
+  press.button = Event::Mouse::Button::Left;
+  press.motion = Event::Mouse::Motion::Pressed;
+  press.x = 191; // 19 * 10 + 1
+  press.y = 1;   // Top-most pixel
+  screen.Dispatch(press);
+
+  // 2. Drag down by 5 cells.
+  // Since cell height is 20 pixels, dragging down by 5 cells means moving the mouse down by 5 * 20 = 100 pixels.
+  // So target y is 1 + 100 = 101 pixels.
+  Event::Mouse move;
+  move.button = Event::Mouse::Button::Left;
+  move.motion = Event::Mouse::Motion::Moved;
+  move.x = 191;
+  move.y = 101; // Moved 100 pixels down
+  screen.Dispatch(move);
+
+  // The thumb covers half the track (5 cells). The scrollable range is 10 cells.
+  // Moving 5 cells down (100 pixels) on a 10-cell viewport (200 pixels height)
+  // should move the scroll position to max (10).
+  CHECK(scroll_el->target_scroll_y() == 10);
+
+  // 3. Move back up by 2 cells (40 pixels).
+  // Target y is 101 - 40 = 61 pixels.
+  Event::Mouse move_up;
+  move_up.button = Event::Mouse::Button::Left;
+  move_up.motion = Event::Mouse::Motion::Moved;
+  move_up.x = 191;
+  move_up.y = 61;
+  screen.Dispatch(move_up);
+
+  // Scroll should be at 6.
+  CHECK(scroll_el->target_scroll_y() == 6);
+}
+
 TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
