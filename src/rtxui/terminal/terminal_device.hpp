@@ -55,6 +55,9 @@ class TerminalDevice {
   virtual int Read(char* buf, int len) = 0;
   virtual void Write(std::string_view data) = 0;
   virtual bool GetSize(int& width, int& height) = 0;
+  virtual bool GetCellPixelSize(int& cell_width, int& cell_height) {
+    return false;
+  }
 
   virtual void EnterRawMode(void (*sigwinch_handler)(int)) = 0;
   virtual void ExitRawMode() = 0;
@@ -116,6 +119,21 @@ class SystemTerminalDevice : public TerminalDevice {
 #endif
   }
 
+  bool GetCellPixelSize(int& cell_width, int& cell_height) override {
+#ifdef __EMSCRIPTEN__
+    return false;
+#else
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0 &&
+        w.ws_row > 0 && w.ws_xpixel > 0 && w.ws_ypixel > 0) {
+      cell_width = w.ws_xpixel / w.ws_col;
+      cell_height = w.ws_ypixel / w.ws_row;
+      return cell_width > 0 && cell_height > 0;
+    }
+    return false;
+#endif
+  }
+
   void EnterRawMode(void (*sigwinch_handler)(int)) override {
 #ifdef __EMSCRIPTEN__
     Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
@@ -149,7 +167,12 @@ class SystemTerminalDevice : public TerminalDevice {
     sa.sa_flags = 0;
     sigaction(SIGWINCH, &sa, &previous_sigaction_);
 
-    Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+    int cell_w = 0, cell_h = 0;
+    if (GetCellPixelSize(cell_w, cell_h)) {
+      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+    } else {
+      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+    }
 #endif
   }
 
@@ -157,7 +180,7 @@ class SystemTerminalDevice : public TerminalDevice {
 #ifdef __EMSCRIPTEN__
     Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
 #else
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h\x1b[?1049l");
     sigaction(SIGWINCH, &previous_sigaction_, nullptr);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &previous_termios_);
 #endif
@@ -194,12 +217,35 @@ class MockTerminalDevice : public TerminalDevice {
     return true;
   }
 
+  bool GetCellPixelSize(int& cell_width, int& cell_height) override {
+    if (mock_cell_width_ > 0 && mock_cell_height_ > 0) {
+      cell_width = mock_cell_width_;
+      cell_height = mock_cell_height_;
+      return true;
+    }
+    return false;
+  }
+
+  void SetMockCellPixelSize(int width, int height) {
+    mock_cell_width_ = width;
+    mock_cell_height_ = height;
+  }
+
   void EnterRawMode(void (*sigwinch_handler)(int)) override {
     is_raw_ = true;
     sigwinch_handler_ = sigwinch_handler;
+    int cell_w = 0, cell_h = 0;
+    if (GetCellPixelSize(cell_w, cell_h)) {
+      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+    } else {
+      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+    }
   }
 
-  void ExitRawMode() override { is_raw_ = false; }
+  void ExitRawMode() override {
+    is_raw_ = false;
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h\x1b[?1049l");
+  }
 
   void PushInput(std::string_view data) { input_buffer_ += data; }
 
@@ -220,6 +266,8 @@ class MockTerminalDevice : public TerminalDevice {
   std::string output_buffer_;
   int mock_width_ = 80;
   int mock_height_ = 24;
+  int mock_cell_width_ = 0;
+  int mock_cell_height_ = 0;
   bool is_raw_ = false;
   void (*sigwinch_handler_)(int) = nullptr;
 };

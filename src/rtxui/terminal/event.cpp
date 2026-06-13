@@ -130,6 +130,9 @@ std::string Event::Mouse::Print() const {
          std::string(
              ((std::map<Mouse::Motion, const char*>&)motion_string)[motion]);
   out += ", x=" + std::to_string(x) + ", y=" + std::to_string(y);
+  if (is_pixel_precise) {
+    out += ", px=" + std::to_string(pixel_x) + ", py=" + std::to_string(pixel_y);
+  }
   std::string mod = modifier.Print();
   if (!mod.empty()) {
     out += ", " + mod;
