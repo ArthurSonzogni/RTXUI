@@ -15,7 +15,8 @@ export default defineConfig({
         items: [
           { text: 'Getting Started', link: '/' },
           { text: 'Hello World', link: '/guide/hello-world' },
-          { text: 'Reactive Model', link: '/reactivity' }
+          { text: 'Reactive Model', link: '/reactivity' },
+          { text: 'All Examples & Demos', link: '/guide/examples' }
         ]
       },
       {

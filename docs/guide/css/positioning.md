@@ -6,18 +6,19 @@ By default, RTXUI components arrange elements within the standard flexbox layout
 
 ## 1. Positioning Modes (`position`)
 
-RTXUI supports four different element positioning contexts:
+RTXUI supports element positioning contexts:
 
 1.  **`static`** (Default): The element renders in order within the normal flex layout flow.
 2.  **`relative`**: The element remains in the normal flow but establishes a reference origin point for any descendant child elements set to `position: absolute`.
 3.  **`absolute`**: The element is removed from the normal flow. It is positioned relative to its closest parent ancestor that has `position: relative` (or the root screen boundary if no ancestor is relative).
 4.  **`fixed`**: The element is removed from the normal flow and positioned relative to the outermost terminal screen viewport.
+5.  **`sticky`**: The element is positioned based on the user's scroll position. It behaves like `relative` until the viewport scrolls past a given offset (such as `top: 0`), at which point it "sticks" to that position, similar to `fixed`.
 
 ---
 
 ## 2. Offset Coordinates
 
-For elements configured with `position: absolute` or `position: fixed`, use these properties to set the spacing offsets from the container margins (measured in character cells):
+For elements configured with `position: absolute`, `position: fixed`, or `position: sticky`, use these properties to set the spacing offsets from the container margins (measured in character cells):
 
 *   `left`: Spacing from the container's left edge.
 *   `right`: Spacing from the container's right edge.
@@ -74,6 +75,20 @@ Below is the interactive tab view for layout layering:
 <template #source>
 
 <<< @/../example/positioning.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
+## Sticky Positioning Demo
+
+The interactive demo below showcases `position: sticky` inside a scrollable container. Notice how category headers stay pinned at the top until they are pushed out of the way by the next category.
+
+<ExampleTabs src="/wasm/rtxui_example_sticky.js">
+<template #source>
+
+<<< @/../example/sticky.cpp
 
 </template>
 </ExampleTabs>

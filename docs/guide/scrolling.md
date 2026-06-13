@@ -77,3 +77,16 @@ RTXUI automatically scrolls containers to keep focused elements visible when use
 
 </template>
 </ExampleTabs>
+
+### Anchor Navigation
+
+RTXUI supports anchor navigation using `<a>` tags. When an `<a>` tag with a target hash (e.g. `href="#sec-intro"`) is clicked, RTXUI automatically scrolls the element with the corresponding `id` (e.g. `id="sec-intro"`) into view. Combined with `position: sticky` and `scroll-behavior: smooth`, this allows building robust sidebar navigation layouts.
+
+<ExampleTabs src="/wasm/rtxui_example_anchor.js">
+<template #source>
+
+<<< @/../example/anchor.cpp
+
+</template>
+</ExampleTabs>
+
