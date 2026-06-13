@@ -44,3 +44,16 @@ Sizing attributes `width` and `height` accept two types of length units:
 
 </template>
 </ExampleTabs>
+
+## Live Demo - Borders & Scrollbars Interaction
+
+To see how all the different border styles behave interactively and how they coordinate with scrollbars when content overflows, check out the following interactive demo.
+
+<ExampleTabs src="/wasm/rtxui_example_border_scroll_demo.js">
+<template #source>
+
+<<< @/../example/border_scroll_demo.cpp
+
+</template>
+</ExampleTabs>
+

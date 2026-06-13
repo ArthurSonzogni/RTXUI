@@ -36,3 +36,18 @@ Focusable items automatically capture keyboard events (`ArrowLeft`, `Enter`, etc
 
 </template>
 </ExampleTabs>
+
+## Spatial Navigation
+
+In addition to sequential tab navigation (using Tab/Shift-Tab), RTXUI supports **Spatial Navigation**. By pressing the **Arrow keys** (or **hjkl** keys), RTXUI performs a geometric search in 2D screen space to find the closest focusable element in that direction and moves focus there. This provides a natural, game-like, or TV-like focus navigation experience for complex layouts.
+
+### Live Demo - Spatial Navigation
+
+<ExampleTabs src="/wasm/rtxui_example_spatial_navigation.js">
+<template #source>
+
+<<< @/../example/spatial_navigation.cpp
+
+</template>
+</ExampleTabs>
+

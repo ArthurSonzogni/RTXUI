@@ -93,3 +93,18 @@ class MyDoc : public Component<MyDoc> {
   )html";
 };
 ```
+
+---
+
+### Complete Example Code
+
+Below is the complete standalone example code for rendering and dynamically updating the Markdown component.
+
+<ExampleTabs src="/wasm/rtxui_example_markdown.js">
+<template #source>
+
+<<< @/../example/markdown.cpp
+
+</template>
+</ExampleTabs>
+
