@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/internal/screen.hpp"
 
+#include <cmath>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #ifndef __EMSCRIPTEN__
@@ -327,6 +328,236 @@ std::shared_ptr<PhysicalFragment> FindFirstScrollableFragment(
   return nullptr;
 }
 
+struct FragmentWithPos {
+  std::shared_ptr<PhysicalFragment> fragment;
+  int abs_x = 0;
+  int abs_y = 0;
+};
+
+std::optional<FragmentWithPos> FindFragmentForElementWithPos(
+    const std::shared_ptr<PhysicalFragment>& fragment,
+    Element* element,
+    int abs_x = 0,
+    int abs_y = 0,
+    int accum_scroll_x = 0,
+    int accum_scroll_y = 0) {
+  if (!fragment) {
+    return std::nullopt;
+  }
+  if (fragment->dom_node == element) {
+    return FragmentWithPos{fragment, abs_x, abs_y};
+  }
+
+  int scroll_x_offset = 0;
+  int scroll_y_offset = 0;
+  if (fragment->clips_descendants) {
+    scroll_x_offset = fragment->scroll_x;
+    scroll_y_offset = fragment->scroll_y;
+  }
+
+  int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
+  int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
+
+  for (const auto& child : fragment->children) {
+    bool is_fixed =
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Fixed);
+
+    int child_abs_x = abs_x + child.x;
+    int child_abs_y = abs_y + child.y;
+    int child_accum_scroll_x = next_accum_scroll_x;
+    int child_accum_scroll_y = next_accum_scroll_y;
+
+    bool is_sticky =
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Sticky);
+
+    if (is_fixed) {
+      child_abs_x -= accum_scroll_x;
+      child_abs_y -= accum_scroll_y;
+      child_accum_scroll_x = 0;
+      child_accum_scroll_y = 0;
+    } else {
+      child_abs_x -= scroll_x_offset;
+      child_abs_y -= scroll_y_offset;
+
+      if (is_sticky) {
+        int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+        int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+        if (fragment->dom_node) {
+          padding_l = fragment->dom_node->style.padding.left;
+          padding_r = fragment->dom_node->style.padding.right;
+          padding_t = fragment->dom_node->style.padding.top;
+          padding_b = fragment->dom_node->style.padding.bottom;
+        }
+        if (fragment->has_border &&
+            fragment->border_style != BorderStyle::None) {
+          border_l = 1;
+          border_r = 1;
+          border_t = 1;
+          border_b = 1;
+        }
+
+        if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
+          int top_val = child.fragment->dom_node->style.top.Resolve(0);
+          int normal_rel_y = child.y - scroll_y_offset;
+          int min_rel_y = border_t + padding_t + top_val;
+          int sticky_rel_y = std::max(normal_rel_y, min_rel_y);
+
+          int max_rel_y = fragment->height - border_b - padding_b -
+                          scroll_y_offset - child.fragment->height;
+          sticky_rel_y = std::min(sticky_rel_y, max_rel_y);
+
+          int sticky_shift_y = sticky_rel_y - normal_rel_y;
+          child_abs_y += sticky_shift_y;
+        }
+
+        if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
+          int left_val = child.fragment->dom_node->style.left.Resolve(0);
+          int normal_rel_x = child.x - scroll_x_offset;
+          int min_rel_x = border_l + padding_l + left_val;
+          int sticky_rel_x = std::max(normal_rel_x, min_rel_x);
+
+          int max_rel_x = fragment->width - border_r - padding_r -
+                          scroll_x_offset - child.fragment->width;
+          sticky_rel_x = std::min(sticky_rel_x, max_rel_x);
+
+          int sticky_shift_x = sticky_rel_x - normal_rel_x;
+          child_abs_x += sticky_shift_x;
+        }
+      }
+    }
+
+    if (auto found = FindFragmentForElementWithPos(
+            child.fragment, element, child_abs_x, child_abs_y,
+            child_accum_scroll_x, child_accum_scroll_y)) {
+      return found;
+    }
+  }
+
+  return std::nullopt;
+}
+
+bool IsCellOnVerticalScrollbar(const PhysicalFragment* frag, int abs_x, int abs_y, int mx, int my, bool* out_on_thumb) {
+  if (!frag || !frag->dom_node) return false;
+  if (frag->dom_node->style.overflow_y != Overflow::Scroll ||
+      frag->dom_node->style.scrollbar_width != ScrollbarWidth::Auto) {
+    return false;
+  }
+
+  int w = frag->width;
+  int h = frag->height;
+  bool draw_h_scrollbar = (frag->dom_node->style.overflow_x == Overflow::Scroll &&
+                           frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto);
+
+  int border_right = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+  int scrollbar_x = abs_x + w - border_right - 1;
+
+  if (mx != scrollbar_x) {
+    return false;
+  }
+
+  int track_y_start = abs_y;
+  int track_h = h;
+  if (frag->has_border && frag->border_style != BorderStyle::None) {
+    track_y_start = abs_y + 1;
+    track_h = draw_h_scrollbar ? (h - 3) : (h - 2);
+  } else {
+    track_h = draw_h_scrollbar ? (h - 1) : h;
+  }
+
+  if (my < track_y_start || my >= track_y_start + track_h) {
+    return false;
+  }
+
+  // Determine if it's on the thumb
+  int scroll_height = frag->dom_node->scroll_height();
+  int padding_vert = frag->dom_node->style.padding.Vert();
+  int border_vert = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+  int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
+
+  int thumb_h_eighths = (viewport_h * track_h * 8) / std::max(1, scroll_height);
+  thumb_h_eighths = std::max(8, thumb_h_eighths);
+  thumb_h_eighths = std::min(track_h * 8, thumb_h_eighths);
+
+  int max_scroll = scroll_height - h;
+  int thumb_y_eighths = (max_scroll > 0)
+      ? static_cast<int>(std::round(frag->visual_scroll_y * ((track_h * 8) - thumb_h_eighths) / max_scroll))
+      : 0;
+
+  int i = my - track_y_start;
+  int cell_start = i * 8;
+  int cell_end = (i + 1) * 8;
+
+  int start_eighth = std::max(cell_start, thumb_y_eighths);
+  int end_eighth = std::min(cell_end, thumb_y_eighths + thumb_h_eighths);
+
+  if (out_on_thumb) {
+    *out_on_thumb = (start_eighth < end_eighth);
+  }
+  return true;
+}
+
+bool IsCellOnHorizontalScrollbar(const PhysicalFragment* frag, int abs_x, int abs_y, int mx, int my, bool* out_on_thumb) {
+  if (!frag || !frag->dom_node) return false;
+  if (frag->dom_node->style.overflow_x != Overflow::Scroll ||
+      frag->dom_node->style.scrollbar_width != ScrollbarWidth::Auto) {
+    return false;
+  }
+
+  int w = frag->width;
+  int h = frag->height;
+  bool draw_v_scrollbar = (frag->dom_node->style.overflow_y == Overflow::Scroll &&
+                           frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto);
+
+  int border_bottom = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+  int scrollbar_y = abs_y + h - border_bottom - 1;
+
+  if (my != scrollbar_y) {
+    return false;
+  }
+
+  int track_x_start = abs_x;
+  int track_w = w;
+  if (frag->has_border && frag->border_style != BorderStyle::None) {
+    track_x_start = abs_x + 1;
+    track_w = draw_v_scrollbar ? (w - 3) : (w - 2);
+  } else {
+    track_w = draw_v_scrollbar ? (w - 1) : w;
+  }
+
+  if (mx < track_x_start || mx >= track_x_start + track_w) {
+    return false;
+  }
+
+  // Determine if it's on the thumb
+  int scroll_width = frag->dom_node->scroll_width();
+  int padding_horiz = frag->dom_node->style.padding.Horiz();
+  int border_horiz = (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
+  int viewport_w = std::max(1, w - border_horiz - padding_horiz);
+
+  int thumb_w_eighths = (viewport_w * track_w * 8) / std::max(1, scroll_width);
+  thumb_w_eighths = std::max(8, thumb_w_eighths);
+  thumb_w_eighths = std::min(track_w * 8, thumb_w_eighths);
+
+  int max_scroll = scroll_width - w;
+  int thumb_x_eighths = (max_scroll > 0)
+      ? static_cast<int>(std::round(frag->visual_scroll_x * ((track_w * 8) - thumb_w_eighths) / max_scroll))
+      : 0;
+
+  int i = mx - track_x_start;
+  int cell_start = i * 8;
+  int cell_end = (i + 1) * 8;
+
+  int start_eighth = std::max(cell_start, thumb_x_eighths);
+  int end_eighth = std::min(cell_end, thumb_x_eighths + thumb_w_eighths);
+
+  if (out_on_thumb) {
+    *out_on_thumb = (start_eighth < end_eighth);
+  }
+  return true;
+}
+
 }  // namespace
 
 class ScreenImpl {
@@ -368,6 +599,11 @@ class ScreenImpl {
   std::unique_ptr<TerminalInputParser> parser_;
   Element* focused_element_ = nullptr;
   bool smooth_scroll_enabled_ = true;
+  bool drag_active_ = false;
+  Element* drag_element_ = nullptr;
+  bool drag_vertical_ = false;
+  int drag_start_mouse_ = 0;
+  int drag_start_thumb_pos_ = 0;
   task::TaskRunner task_runner_;
 
   struct RawTerminal {
@@ -517,6 +753,7 @@ void ScreenImpl::HandleEvent(const Event& event) {
 
     bool state_changed = false;
     if (root_fragment_) {
+
       int tx = mouse.x - 1;
       int ty = mouse.y - 1;
       Element* target_el = nullptr;
@@ -535,6 +772,81 @@ void ScreenImpl::HandleEvent(const Event& event) {
         }
         return false;
       };
+
+      if (drag_active_) {
+        if (mouse.motion == Event::Mouse::Motion::Released) {
+          drag_active_ = false;
+          drag_element_ = nullptr;
+          state_changed = true;
+        } else if (mouse.motion == Event::Mouse::Motion::Moved || mouse.motion == Event::Mouse::Motion::Pressed) {
+          int current_mouse = drag_vertical_ ? mouse.y : mouse.x;
+          int delta = current_mouse - drag_start_mouse_;
+
+          auto frag_opt = FindFragmentForElementWithPos(root_fragment_, drag_element_);
+          if (frag_opt) {
+            auto frag = frag_opt->fragment;
+            int w = frag->width;
+            int h = frag->height;
+            if (drag_vertical_) {
+              int scroll_height = drag_element_->scroll_height();
+              int padding_vert = drag_element_->style.padding.Vert();
+              int border_vert = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+              int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
+              int track_h = h;
+              bool draw_h_scrollbar = (drag_element_->style.overflow_x == Overflow::Scroll &&
+                                       drag_element_->style.scrollbar_width == ScrollbarWidth::Auto);
+              if (frag->has_border && frag->border_style != BorderStyle::None) {
+                track_h = draw_h_scrollbar ? (h - 3) : (h - 2);
+              } else {
+                track_h = draw_h_scrollbar ? (h - 1) : h;
+              }
+
+              int thumb_h_eighths = (viewport_h * track_h * 8) / std::max(1, scroll_height);
+              thumb_h_eighths = std::max(8, thumb_h_eighths);
+              thumb_h_eighths = std::min(track_h * 8, thumb_h_eighths);
+
+              int max_scroll = scroll_height - h;
+              if (max_scroll > 0 && ((track_h * 8) - thumb_h_eighths) > 0) {
+                int new_thumb_y_eighths = drag_start_thumb_pos_ + delta * 8;
+                new_thumb_y_eighths = std::clamp(new_thumb_y_eighths, 0, (track_h * 8) - thumb_h_eighths);
+                int new_scroll_y = std::round(static_cast<double>(new_thumb_y_eighths) * max_scroll / ((track_h * 8) - thumb_h_eighths));
+                if (new_scroll_y != drag_element_->target_scroll_y()) {
+                  drag_element_->set_scroll_y(new_scroll_y, false);
+                  state_changed = true;
+                }
+              }
+            } else {
+              int scroll_width = drag_element_->scroll_width();
+              int padding_horiz = drag_element_->style.padding.Horiz();
+              int border_horiz = (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
+              int viewport_w = std::max(1, w - border_horiz - padding_horiz);
+              int track_w = w;
+              bool draw_v_scrollbar = (drag_element_->style.overflow_y == Overflow::Scroll &&
+                                       drag_element_->style.scrollbar_width == ScrollbarWidth::Auto);
+              if (frag->has_border && frag->border_style != BorderStyle::None) {
+                track_w = draw_v_scrollbar ? (w - 3) : (w - 2);
+              } else {
+                track_w = draw_v_scrollbar ? (w - 1) : w;
+              }
+
+              int thumb_w_eighths = (viewport_w * track_w * 8) / std::max(1, scroll_width);
+              thumb_w_eighths = std::max(8, thumb_w_eighths);
+              thumb_w_eighths = std::min(track_w * 8, thumb_w_eighths);
+
+              int max_scroll = scroll_width - w;
+              if (max_scroll > 0 && ((track_w * 8) - thumb_w_eighths) > 0) {
+                int new_thumb_x_eighths = drag_start_thumb_pos_ + delta * 8;
+                new_thumb_x_eighths = std::clamp(new_thumb_x_eighths, 0, (track_w * 8) - thumb_w_eighths);
+                int new_scroll_x = std::round(static_cast<double>(new_thumb_x_eighths) * max_scroll / ((track_w * 8) - thumb_w_eighths));
+                if (new_scroll_x != drag_element_->target_scroll_x()) {
+                  drag_element_->set_scroll_x(new_scroll_x, false);
+                  state_changed = true;
+                }
+              }
+            }
+          }
+        }
+      }
 
       if (component_->Root()) {
         component_->Root()->Visit([&](Element& el) {
@@ -556,6 +868,50 @@ void ScreenImpl::HandleEvent(const Event& event) {
             el.set_hovered(should_be_hovered);
             state_changed = true;
           }
+
+          bool scrollbar_hovered = false;
+          bool scrollbar_thumb_hovered = false;
+          bool scrollbar_active = false;
+          bool scrollbar_thumb_active = false;
+
+          if (drag_active_ && drag_element_ == &el) {
+            scrollbar_hovered = true;
+            scrollbar_thumb_hovered = true;
+            scrollbar_active = true;
+            scrollbar_thumb_active = true;
+          } else if (!drag_active_) {
+            auto frag_opt = FindFragmentForElementWithPos(root_fragment_, &el);
+            if (frag_opt) {
+              bool on_v_thumb = false;
+              bool on_h_thumb = false;
+              bool on_v_scrollbar = IsCellOnVerticalScrollbar(frag_opt->fragment.get(), frag_opt->abs_x, frag_opt->abs_y, tx, ty, &on_v_thumb);
+              bool on_h_scrollbar = IsCellOnHorizontalScrollbar(frag_opt->fragment.get(), frag_opt->abs_x, frag_opt->abs_y, tx, ty, &on_h_thumb);
+
+              if (on_v_scrollbar || on_h_scrollbar) {
+                scrollbar_hovered = true;
+              }
+              if ((on_v_scrollbar && on_v_thumb) || (on_h_scrollbar && on_h_thumb)) {
+                scrollbar_thumb_hovered = true;
+              }
+            }
+          }
+
+          if (el.scrollbar_hovered() != scrollbar_hovered) {
+            el.set_scrollbar_hovered(scrollbar_hovered);
+            state_changed = true;
+          }
+          if (el.scrollbar_thumb_hovered() != scrollbar_thumb_hovered) {
+            el.set_scrollbar_thumb_hovered(scrollbar_thumb_hovered);
+            state_changed = true;
+          }
+          if (el.scrollbar_active() != scrollbar_active) {
+            el.set_scrollbar_active(scrollbar_active);
+            state_changed = true;
+          }
+          if (el.scrollbar_thumb_active() != scrollbar_thumb_active) {
+            el.set_scrollbar_thumb_active(scrollbar_thumb_active);
+            state_changed = true;
+          }
         });
       }
     }
@@ -573,6 +929,186 @@ void ScreenImpl::HandleEvent(const Event& event) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
         if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
+          // Check scrollbar click first
+          Element* curr = clicked_element;
+          Element* scrollbar_element = nullptr;
+          bool is_vertical = false;
+          bool is_on_thumb = false;
+          while (curr) {
+            auto frag_opt = FindFragmentForElementWithPos(root_fragment_, curr);
+            if (frag_opt) {
+              bool on_thumb = false;
+              if (IsCellOnVerticalScrollbar(frag_opt->fragment.get(), frag_opt->abs_x, frag_opt->abs_y, tx, ty, &on_thumb)) {
+                scrollbar_element = curr;
+                is_vertical = true;
+                is_on_thumb = on_thumb;
+                break;
+              }
+              if (IsCellOnHorizontalScrollbar(frag_opt->fragment.get(), frag_opt->abs_x, frag_opt->abs_y, tx, ty, &on_thumb)) {
+                scrollbar_element = curr;
+                is_vertical = false;
+                is_on_thumb = on_thumb;
+                break;
+              }
+            }
+            curr = curr->Parent();
+          }
+          if (scrollbar_element) {
+
+          }
+
+          bool handled = false;
+          if (scrollbar_element) {
+            handled = true;
+            if (is_on_thumb && mouse.button == Event::Mouse::Button::Left) {
+              // Start drag!
+              drag_active_ = true;
+              drag_element_ = scrollbar_element;
+              drag_vertical_ = is_vertical;
+              drag_start_mouse_ = is_vertical ? mouse.y : mouse.x;
+
+              auto frag_opt = FindFragmentForElementWithPos(root_fragment_, scrollbar_element);
+              if (frag_opt) {
+                auto frag = frag_opt->fragment;
+                int w = frag->width;
+                int h = frag->height;
+                if (is_vertical) {
+                  int scroll_height = scrollbar_element->scroll_height();
+                  int padding_vert = scrollbar_element->style.padding.Vert();
+                  int border_vert = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+                  int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
+                  int track_h = h;
+                  bool draw_h_scrollbar = (scrollbar_element->style.overflow_x == Overflow::Scroll &&
+                                           scrollbar_element->style.scrollbar_width == ScrollbarWidth::Auto);
+                  if (frag->has_border && frag->border_style != BorderStyle::None) {
+                    track_h = draw_h_scrollbar ? (h - 3) : (h - 2);
+                  } else {
+                    track_h = draw_h_scrollbar ? (h - 1) : h;
+                  }
+
+                  int thumb_h_eighths = (viewport_h * track_h * 8) / std::max(1, scroll_height);
+                  thumb_h_eighths = std::max(8, thumb_h_eighths);
+                  thumb_h_eighths = std::min(track_h * 8, thumb_h_eighths);
+
+                  int max_scroll = scroll_height - h;
+                  int thumb_y_eighths = (max_scroll > 0)
+                      ? static_cast<int>(std::round(frag->visual_scroll_y * ((track_h * 8) - thumb_h_eighths) / max_scroll))
+                      : 0;
+
+                  drag_start_thumb_pos_ = thumb_y_eighths;
+                } else {
+                  int scroll_width = scrollbar_element->scroll_width();
+                  int padding_horiz = scrollbar_element->style.padding.Horiz();
+                  int border_horiz = (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
+                  int viewport_w = std::max(1, w - border_horiz - padding_horiz);
+                  int track_w = w;
+                  bool draw_v_scrollbar = (scrollbar_element->style.overflow_y == Overflow::Scroll &&
+                                           scrollbar_element->style.scrollbar_width == ScrollbarWidth::Auto);
+                  if (frag->has_border && frag->border_style != BorderStyle::None) {
+                    track_w = draw_v_scrollbar ? (w - 3) : (w - 2);
+                  } else {
+                    track_w = draw_v_scrollbar ? (w - 1) : w;
+                  }
+
+                  int thumb_w_eighths = (viewport_w * track_w * 8) / std::max(1, scroll_width);
+                  thumb_w_eighths = std::max(8, thumb_w_eighths);
+                  thumb_w_eighths = std::min(track_w * 8, thumb_w_eighths);
+
+                  int max_scroll = scroll_width - w;
+                  int thumb_x_eighths = (max_scroll > 0)
+                      ? static_cast<int>(std::round(frag->visual_scroll_x * ((track_w * 8) - thumb_w_eighths) / max_scroll))
+                      : 0;
+
+                  drag_start_thumb_pos_ = thumb_x_eighths;
+                }
+              }
+
+              // Update the styles and redraw since active states changed
+              component_->ResolveTargetStyles();
+              Draw();
+            } else if (!is_on_thumb && mouse.button == Event::Mouse::Button::Left) {
+              // Track click: Page Up/Down or Page Left/Right
+              auto frag_opt = FindFragmentForElementWithPos(root_fragment_, scrollbar_element);
+              if (frag_opt) {
+                auto frag = frag_opt->fragment;
+                int w = frag->width;
+                int h = frag->height;
+                if (is_vertical) {
+                  int scroll_height = scrollbar_element->scroll_height();
+                  int padding_vert = scrollbar_element->style.padding.Vert();
+                  int border_vert = (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
+                  int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
+                  int track_y_start = frag_opt->abs_y;
+                  int track_h = h;
+                  bool draw_h_scrollbar = (scrollbar_element->style.overflow_x == Overflow::Scroll &&
+                                           scrollbar_element->style.scrollbar_width == ScrollbarWidth::Auto);
+                  if (frag->has_border && frag->border_style != BorderStyle::None) {
+                    track_y_start = frag_opt->abs_y + 1;
+                    track_h = draw_h_scrollbar ? (h - 3) : (h - 2);
+                  } else {
+                    track_h = draw_h_scrollbar ? (h - 1) : h;
+                  }
+
+                  int thumb_h_eighths = (viewport_h * track_h * 8) / std::max(1, scroll_height);
+                  thumb_h_eighths = std::max(8, thumb_h_eighths);
+                  thumb_h_eighths = std::min(track_h * 8, thumb_h_eighths);
+
+                  int max_scroll = scroll_height - h;
+                  int thumb_y_eighths = (max_scroll > 0)
+                      ? static_cast<int>(std::round(frag->visual_scroll_y * ((track_h * 8) - thumb_h_eighths) / max_scroll))
+                      : 0;
+
+                  int click_y_eighths = (ty - track_y_start) * 8;
+                  int current_scroll = scrollbar_element->target_scroll_y();
+                  int speed = viewport_h;
+                  if (click_y_eighths < thumb_y_eighths) {
+                    scrollbar_element->set_scroll_y(std::max(0, current_scroll - speed), false);
+                  } else {
+                    scrollbar_element->set_scroll_y(std::min(max_scroll, current_scroll + speed), false);
+                  }
+                } else {
+                  int scroll_width = scrollbar_element->scroll_width();
+                  int padding_horiz = scrollbar_element->style.padding.Horiz();
+                  int border_horiz = (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
+                  int viewport_w = std::max(1, w - border_horiz - padding_horiz);
+                  int track_x_start = frag_opt->abs_x;
+                  int track_w = w;
+                  bool draw_v_scrollbar = (scrollbar_element->style.overflow_y == Overflow::Scroll &&
+                                           scrollbar_element->style.scrollbar_width == ScrollbarWidth::Auto);
+                  if (frag->has_border && frag->border_style != BorderStyle::None) {
+                    track_x_start = frag_opt->abs_x + 1;
+                    track_w = draw_v_scrollbar ? (w - 3) : (w - 2);
+                  } else {
+                    track_w = draw_v_scrollbar ? (w - 1) : w;
+                  }
+
+                  int thumb_w_eighths = (viewport_w * track_w * 8) / std::max(1, scroll_width);
+                  thumb_w_eighths = std::max(8, thumb_w_eighths);
+                  thumb_w_eighths = std::min(track_w * 8, thumb_w_eighths);
+
+                  int max_scroll = scroll_width - w;
+                  int thumb_x_eighths = (max_scroll > 0)
+                      ? static_cast<int>(std::round(frag->visual_scroll_x * ((track_w * 8) - thumb_w_eighths) / max_scroll))
+                      : 0;
+
+                  int click_x_eighths = (tx - track_x_start) * 8;
+                  int current_scroll = scrollbar_element->target_scroll_x();
+                  int speed = viewport_w;
+                  if (click_x_eighths < thumb_x_eighths) {
+                    scrollbar_element->set_scroll_x(std::max(0, current_scroll - speed), false);
+                  } else {
+                    scrollbar_element->set_scroll_x(std::min(max_scroll, current_scroll + speed), false);
+                  }
+                }
+                Draw();
+              }
+            }
+          }
+
+          if (handled) {
+            return;
+          }
+
           bool focus_changed = (focused_element_ != clicked_element);
           if (component_->Root()) {
             component_->Root()->Visit(
@@ -592,8 +1128,8 @@ void ScreenImpl::HandleEvent(const Event& event) {
             attr_keys = {"oncontextmenu", "@click.right"};
           }
 
-          Element* curr = clicked_element;
-          bool handled = false;
+          curr = clicked_element;
+          handled = false;
           while (curr) {
             if (curr->tag() == "a") {
               const auto& attrs = curr->Attributes();

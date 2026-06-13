@@ -196,8 +196,8 @@ std::optional<Color> ParseColor(std::string_view value) {
       int r = StoI(r_str);
       int g = StoI(g_str);
       int b = StoI(b_str);
-      float a = StoF(a_str);
-      return Color::RGBA(r, g, b, a * 255.f);
+       float a = StoF(a_str);
+       return Color::RGBA(r, g, b, a * 255.f);
     } catch (const std::invalid_argument&) {
       return std::nullopt;
     } catch (const std::out_of_range&) {
@@ -427,6 +427,39 @@ std::optional<ScrollbarWidth> ParseScrollbarWidth(std::string_view v) {
     return ScrollbarWidth::None;
   }
   return std::nullopt;
+}
+
+std::pair<std::string_view, std::string_view> SplitScrollbarColors(std::string_view v) {
+  while (!v.empty() && std::isspace(static_cast<unsigned char>(v.front()))) {
+    v.remove_prefix(1);
+  }
+  if (v.empty()) return {{}, {}};
+
+  size_t idx = 0;
+  if (v.starts_with("rgb(") || v.starts_with("rgba(") ||
+      v.starts_with("lighten(") || v.starts_with("darken(")) {
+    size_t open_paren = v.find('(');
+    size_t parens = 1;
+    idx = open_paren + 1;
+    while (idx < v.size() && parens > 0) {
+      if (v[idx] == '(') parens++;
+      else if (v[idx] == ')') parens--;
+      idx++;
+    }
+  } else {
+    while (idx < v.size() && !std::isspace(static_cast<unsigned char>(v[idx]))) {
+      idx++;
+    }
+  }
+
+  std::string_view first = v.substr(0, idx);
+  std::string_view rest = v.substr(idx);
+
+  while (!rest.empty() && std::isspace(static_cast<unsigned char>(rest.front()))) {
+    rest.remove_prefix(1);
+  }
+
+  return {first, rest};
 }
 
 }  // namespace
@@ -1077,6 +1110,36 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   if (p == "scrollbar-width") {
     if (auto sw = ParseScrollbarWidth(v)) {
       style.scrollbar_width = *sw;
+    }
+    return;
+  }
+
+  if (p == "scrollbar-color") {
+    if (v == "auto") {
+      style.has_scrollbar_color_thumb = false;
+      style.has_scrollbar_color_track = false;
+      return;
+    }
+    auto [first, second] = SplitScrollbarColors(v);
+    if (!first.empty()) {
+      std::optional<Color> current = style.has_scrollbar_color_thumb
+                                         ? std::optional<Color>(style.scrollbar_color_thumb)
+                                         : std::nullopt;
+      auto resolved = TransformColor(current, first);
+      if (resolved) {
+        style.has_scrollbar_color_thumb = true;
+        style.scrollbar_color_thumb = *resolved;
+      }
+    }
+    if (!second.empty()) {
+      std::optional<Color> current = style.has_scrollbar_color_track
+                                         ? std::optional<Color>(style.scrollbar_color_track)
+                                         : std::nullopt;
+      auto resolved = TransformColor(current, second);
+      if (resolved) {
+        style.has_scrollbar_color_track = true;
+        style.scrollbar_color_track = *resolved;
+      }
     }
     return;
   }

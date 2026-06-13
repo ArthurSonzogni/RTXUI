@@ -615,8 +615,12 @@ void PaintImpl(const PhysicalFragment* frag,
                                             max_scroll))
               : 0;
 
-      Color thumb_bg = kDefaultScrollbarThumbColor;
-      Color track_bg = kDefaultScrollbarTrackColor;
+      Color thumb_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_thumb)
+                           ? frag->dom_node->style.scrollbar_color_thumb
+                           : kDefaultScrollbarThumbColor;
+      Color track_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_track)
+                           ? frag->dom_node->style.scrollbar_color_track
+                           : kDefaultScrollbarTrackColor;
 
       thumb_bg.a = static_cast<uint8_t>(thumb_bg.a * current_opacity);
       track_bg.a = static_cast<uint8_t>(track_bg.a * current_opacity);
@@ -711,8 +715,12 @@ void PaintImpl(const PhysicalFragment* frag,
                                             max_scroll))
               : 0;
 
-      Color thumb_bg = kDefaultScrollbarThumbColor;
-      Color track_bg = kDefaultScrollbarTrackColor;
+      Color thumb_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_thumb)
+                           ? frag->dom_node->style.scrollbar_color_thumb
+                           : kDefaultScrollbarThumbColor;
+      Color track_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_track)
+                           ? frag->dom_node->style.scrollbar_color_track
+                           : kDefaultScrollbarTrackColor;
 
       thumb_bg.a = static_cast<uint8_t>(thumb_bg.a * current_opacity);
       track_bg.a = static_cast<uint8_t>(track_bg.a * current_opacity);

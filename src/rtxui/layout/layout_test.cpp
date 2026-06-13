@@ -1148,5 +1148,130 @@ TEST_CASE("Layout: Table Grid Rendering", "[layout][table]") {
   CHECK(layout_text.find("val2") != std::string::npos);
 }
 
+// Regression test: position:fixed elements must not be wrapped in anonymous
+// inline boxes during layout tree building. Previously, if a fixed element
+// appeared adjacent to an inline sibling, both were wrapped in an anonymous
+// InlineFlow box. LayoutOutOfFlowChildren couldn't find the fixed element at
+// the correct parent level, causing wrong viewport offset calculations and
+// broken hit-testing after scrolling.
+TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
+          "[layout]") {
+  struct FixedNotWrappedTest : Component<FixedNotWrappedTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          #container {
+            display: block;
+            width: 20;
+            height: 10;
+            overflow-y: scroll;
+          }
+          #spacer {
+            height: 8;
+          }
+          #inline_item {
+            height: 1;
+          }
+          #fixed_item {
+            position: fixed;
+            left: 5;
+            top: 2;
+            width: 10;
+            height: 1;
+          }
+        </style>
+        <div id="container">
+          <div id="spacer"></div>
+          <div id="inline_item">Inline</div>
+          <div id="fixed_item">Fixed</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto app = Ref<FixedNotWrappedTest>::New();
+  app->Mount();
+
+  auto layout_box = LayoutTreeBuilder::Build(app->Root());
+  REQUIRE(layout_box != nullptr);
+
+  LayoutConstraints constraints;
+  constraints.width = {20, MeasureMode::Exactly};
+  constraints.height = {10, MeasureMode::Exactly};
+  auto fragment = RunLayout({layout_box.get()}, constraints);
+  REQUIRE(fragment != nullptr);
+
+  // The fixed item should be a direct child of the container fragment,
+  // not nested inside an anonymous inline wrapper.
+  // Find the container fragment (it has clips_descendants due to overflow).
+  std::shared_ptr<PhysicalFragment> container_frag;
+  std::function<void(const std::shared_ptr<PhysicalFragment>&)> find_container;
+  find_container = [&](const std::shared_ptr<PhysicalFragment>& frag) {
+    if (frag->dom_node && frag->dom_node->id == "container") {
+      container_frag = frag;
+      return;
+    }
+    for (const auto& child : frag->children) {
+      find_container(child.fragment);
+    }
+  };
+  find_container(fragment);
+  REQUIRE(container_frag != nullptr);
+
+  // Check that the fixed_item is a direct child of container, not nested
+  // inside an anonymous wrapper.
+  bool found_fixed_direct = false;
+  for (const auto& child : container_frag->children) {
+    if (child.fragment && child.fragment->dom_node &&
+        child.fragment->dom_node->id == "fixed_item") {
+      found_fixed_direct = true;
+      // The fixed element should be positioned at top=2, left=5.
+      CHECK(child.x == 5);
+      CHECK(child.y == 2);
+      break;
+    }
+  }
+  CHECK(found_fixed_direct);
+
+  // Verify position stays correct after scrolling and re-layout.
+  auto* container_el = app->Root()->QuerySelector("#container");
+  REQUIRE(container_el != nullptr);
+  container_el->set_scroll_y(3);
+
+  // Re-build layout tree and re-run layout.
+  auto layout_box2 = LayoutTreeBuilder::Build(app->Root());
+  auto fragment2 = RunLayout({layout_box2.get()}, constraints);
+  REQUIRE(fragment2 != nullptr);
+
+  std::shared_ptr<PhysicalFragment> container_frag2;
+  std::function<void(const std::shared_ptr<PhysicalFragment>&)> find_container2;
+  find_container2 = [&](const std::shared_ptr<PhysicalFragment>& frag) {
+    if (frag->dom_node && frag->dom_node->id == "container") {
+      container_frag2 = frag;
+      return;
+    }
+    for (const auto& child : frag->children) {
+      find_container2(child.fragment);
+    }
+  };
+  find_container2(fragment2);
+  REQUIRE(container_frag2 != nullptr);
+
+  // After scrolling, the fixed element should still be a direct child
+  // with the same position.
+  bool found_fixed_after_scroll = false;
+  for (const auto& child : container_frag2->children) {
+    if (child.fragment && child.fragment->dom_node &&
+        child.fragment->dom_node->id == "fixed_item") {
+      found_fixed_after_scroll = true;
+      CHECK(child.x == 5);
+      CHECK(child.y == 2);
+      break;
+    }
+  }
+  CHECK(found_fixed_after_scroll);
+}
+
 }  // namespace rtxui
 

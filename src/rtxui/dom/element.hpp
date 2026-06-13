@@ -262,6 +262,18 @@ class Element : public RefCounted {
   bool active() const { return active_; }
   void set_active(bool a) { active_ = a; }
 
+  bool scrollbar_hovered() const { return scrollbar_hovered_; }
+  void set_scrollbar_hovered(bool h) { scrollbar_hovered_ = h; }
+
+  bool scrollbar_active() const { return scrollbar_active_; }
+  void set_scrollbar_active(bool a) { scrollbar_active_ = a; }
+
+  bool scrollbar_thumb_hovered() const { return scrollbar_thumb_hovered_; }
+  void set_scrollbar_thumb_hovered(bool h) { scrollbar_thumb_hovered_ = h; }
+
+  bool scrollbar_thumb_active() const { return scrollbar_thumb_active_; }
+  void set_scrollbar_thumb_active(bool a) { scrollbar_thumb_active_ = a; }
+
   void TriggerTransitions(double current_time_ms);
   bool TickTransitions(double current_time_ms);
 
@@ -284,6 +296,10 @@ class Element : public RefCounted {
   bool focused_ = false;
   bool hovered_ = false;
   bool active_ = false;
+  bool scrollbar_hovered_ = false;
+  bool scrollbar_active_ = false;
+  bool scrollbar_thumb_hovered_ = false;
+  bool scrollbar_thumb_active_ = false;
   int absolute_x_ = 0;
   int absolute_y_ = 0;
 
