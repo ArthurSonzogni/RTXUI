@@ -580,6 +580,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutConstraints constraints,
     LayoutContext context) {
   auto* box = node.box;
+
   int avail_width = (constraints.width.mode == MeasureMode::Undefined)
                         ? 10000
                         : constraints.width.value;
@@ -871,6 +872,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     }
     auto child_frag = RunLayout(child_input, child_c, child_context);
 
+
+
     if (box->style.white_space != WhiteSpace::Nowrap &&
         cursor_x + child_frag->width + child_m_horiz > content_width_limit &&
         cursor_x > 0) {
@@ -902,6 +905,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   };
 
   for (auto& child : box->children) {
+
     if (child->style.position == PositionType::Absolute ||
         child->style.position == PositionType::Fixed) {
       continue;
@@ -940,8 +944,12 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   }
 
   commit_line();
-  container_frag->height =
-      cursor_y + box->style.padding.bottom + box->style.border.bottom;
+  if (constraints.height.mode == MeasureMode::Exactly) {
+    container_frag->height = constraints.height.value;
+  } else {
+    container_frag->height =
+        cursor_y + box->style.padding.bottom + box->style.border.bottom;
+  }
   if (!is_fixed_width) {
     container_frag->width =
         max_line_width + box->style.padding.Horiz() + box->style.border.Horiz();
@@ -992,6 +1000,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       }
     }
   }
+
+
 
   return container_frag;
 }
@@ -1872,15 +1882,65 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   std::vector<LayoutBox*> rows;
   FindRows(FindRows, box, rows);
 
-  std::vector<std::vector<LayoutBox*>> grid;
+  struct GridCell {
+    LayoutBox* box = nullptr;
+    int colspan = 1;
+    int rowspan = 1;
+    bool is_top_left = false;
+  };
+
+  std::vector<std::vector<GridCell>> grid;
   size_t num_cols = 0;
-  for (auto* row : rows) {
-    std::vector<LayoutBox*> cells;
-    for (auto& child : row->children) {
-      FindCells(FindCells, child.get(), cells);
+
+  std::vector<std::vector<LayoutBox*>> row_cells(rows.size());
+  for (size_t r = 0; r < rows.size(); ++r) {
+    FindCells(FindCells, rows[r], row_cells[r]);
+  }
+
+  grid.resize(rows.size());
+  for (size_t r = 0; r < rows.size(); ++r) {
+    size_t c = 0;
+    for (LayoutBox* cell : row_cells[r]) {
+      while (c < grid[r].size() && grid[r][c].box != nullptr) {
+        c++;
+      }
+      
+      int colspan = 1;
+      int rowspan = 1;
+      if (cell->dom_node) {
+        if (auto* cs = cell->dom_node->GetAttribute("colspan")) {
+          try { colspan = std::max(1, std::stoi(*cs)); } catch (...) {}
+        }
+        if (auto* rs = cell->dom_node->GetAttribute("rowspan")) {
+          try { rowspan = std::max(1, std::stoi(*rs)); } catch (...) {}
+        }
+      }
+
+      if (c + colspan > grid[r].size()) {
+        grid[r].resize(c + colspan);
+      }
+
+      for (int i = 0; i < rowspan; ++i) {
+        if (r + i >= grid.size()) {
+          grid.resize(r + i + 1);
+        }
+        for (int j = 0; j < colspan; ++j) {
+          if (c + j >= grid[r + i].size()) {
+            grid[r + i].resize(c + j + 1);
+          }
+          grid[r + i][c + j].box = cell;
+          grid[r + i][c + j].colspan = colspan;
+          grid[r + i][c + j].rowspan = rowspan;
+          grid[r + i][c + j].is_top_left = (i == 0 && j == 0);
+        }
+      }
+      c += colspan;
     }
-    num_cols = std::max(num_cols, cells.size());
-    grid.push_back(std::move(cells));
+    num_cols = std::max(num_cols, grid[r].size());
+  }
+
+  for (auto& row_grid : grid) {
+    row_grid.resize(num_cols);
   }
 
   // If table is empty, return empty fragment
@@ -1902,30 +1962,34 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     return fragment;
   }
 
-  std::vector<int> col_preferred_width(num_cols, 0);
+  std::vector<int> col_preferred_width(num_cols, 1);
 
   // Pass 1: Measure cell preferred widths
-  for (size_t col = 0; col < num_cols; ++col) {
-    int max_pref = 0;
-    for (size_t row = 0; row < grid.size(); ++row) {
-      if (col < grid[row].size()) {
-        auto* cell = grid[row][col];
+  for (size_t row = 0; row < grid.size(); ++row) {
+    for (size_t col = 0; col < num_cols; ++col) {
+      if (grid[row][col].is_top_left && grid[row][col].box) {
+        auto* cell = grid[row][col].box;
         int cell_w = ResolveSize(cell->style.width, content_width_limit);
+        int measured_width = 0;
         if (cell_w != -1) {
-          max_pref = std::max(max_pref, cell_w);
+          measured_width = cell_w;
         } else {
           LayoutConstraints cell_c;
           cell_c.width = {content_width_limit, MeasureMode::AtMost};
           cell_c.height = {10000, MeasureMode::AtMost};
-          // Measure cell width
           LayoutContext cell_context = context;
           cell_context.is_measurement = true;
           auto cell_frag = RunLayout({cell}, cell_c, cell_context);
-          max_pref = std::max(max_pref, cell_frag->width);
+          measured_width = cell_frag->width;
+        }
+        
+        int colspan = grid[row][col].colspan;
+        int pref_per_col = (measured_width + colspan - 1) / colspan;
+        for (int c = 0; c < colspan; ++c) {
+          col_preferred_width[col + c] = std::max(col_preferred_width[col + c], pref_per_col);
         }
       }
     }
-    col_preferred_width[col] = std::max(1, max_pref);
   }
 
   int total_preferred_width = 0;
@@ -2005,60 +2069,110 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   int cur_y = box->style.border.top + box->style.padding.top;
   int start_x = box->style.border.left + box->style.padding.left;
 
-  // Pass 2: Layout rows and cells
+  std::vector<int> col_x(num_cols + 1, 0);
+  for (size_t col = 0; col < num_cols; ++col) {
+    col_x[col + 1] = col_x[col] + col_widths[col];
+  }
+
+  std::vector<int> row_heights(grid.size(), 1);
   for (size_t row = 0; row < grid.size(); ++row) {
-    // 1. Measure the natural height of the row with the resolved column widths
-    int row_height = 0;
-    for (size_t col = 0; col < grid[row].size(); ++col) {
-      auto* cell = grid[row][col];
-      LayoutConstraints cell_c;
-      cell_c.width = {col_widths[col], MeasureMode::Exactly};
-      cell_c.height = {10000, MeasureMode::AtMost};
-      auto cell_frag = RunLayout({cell}, cell_c, context);
-      row_height = std::max(row_height, cell_frag->height);
+    for (size_t col = 0; col < num_cols; ++col) {
+      if (grid[row][col].is_top_left && grid[row][col].box) {
+        auto* cell = grid[row][col].box;
+        int colspan = grid[row][col].colspan;
+        int rowspan = grid[row][col].rowspan;
+        
+        int cell_avail_width = 0;
+        for (int c = 0; c < colspan; ++c) {
+          cell_avail_width += col_widths[col + c];
+        }
+
+        LayoutConstraints cell_c;
+        cell_c.width = {cell_avail_width, MeasureMode::Exactly};
+        cell_c.height = {10000, MeasureMode::AtMost};
+        LayoutContext cell_context = context;
+        cell_context.is_measurement = true;
+        auto cell_frag = RunLayout({cell}, cell_c, cell_context);
+        
+
+
+        int height_per_row = (cell_frag->height + rowspan - 1) / rowspan;
+        for (int r = 0; r < rowspan; ++r) {
+           if (row + r < row_heights.size()) {
+             row_heights[row + r] = std::max(row_heights[row + r], height_per_row);
+           }
+        }
+      }
     }
-    row_height = std::max(1, row_height);
+  }
 
-    // 2. Create row fragment
-    auto row_box = rows[row];
-    auto row_frag = MakeArenaFragment(content_width_limit, row_height);
-    row_frag->dom_node = row_box->dom_node;
-    row_frag->background_color = row_box->style.background_color;
-    row_frag->foreground_color = row_box->style.foreground_color;
-    row_frag->opacity = row_box->style.opacity;
-    row_frag->border_style = row_box->style.border_style;
-    if ((row_box->style.border.Horiz() > 0 ||
-         row_box->style.border.Vert() > 0) &&
-        row_box->style.border_style != BorderStyle::None) {
-      row_frag->has_border = true;
+  std::vector<PhysicalFragment::ChildLink> row_bg_links;
+  std::vector<PhysicalFragment::ChildLink> row_cells_links;
+
+  for (size_t row = 0; row < grid.size(); ++row) {
+    int row_height = row_heights[row];
+    LayoutBox* row_box = (row < rows.size()) ? rows[row] : nullptr;
+
+    auto row_bg_frag = MakeArenaFragment(content_width_limit, row_height);
+    auto row_cells_frag = MakeArenaFragment(content_width_limit, row_height);
+
+    if (row_box) {
+      row_bg_frag->dom_node = row_box->dom_node;
+      row_bg_frag->background_color = row_box->style.background_color;
+      row_bg_frag->foreground_color = row_box->style.foreground_color;
+      row_bg_frag->opacity = row_box->style.opacity;
+      row_bg_frag->border_style = row_box->style.border_style;
+      row_bg_frag->border_color_top = row_box->style.border_color_top;
+      row_bg_frag->border_color_right = row_box->style.border_color_right;
+      row_bg_frag->border_color_bottom = row_box->style.border_color_bottom;
+      row_bg_frag->border_color_left = row_box->style.border_color_left;
+      if ((row_box->style.border.Horiz() > 0 ||
+           row_box->style.border.Vert() > 0) &&
+          row_box->style.border_style != BorderStyle::None) {
+        row_bg_frag->has_border = true;
+      }
+      if (row_box->dom_node && !context.is_measurement) {
+        row_box->dom_node->set_layout_width(content_width_limit);
+        row_box->dom_node->set_layout_height(row_height);
+      }
+
+      row_cells_frag->dom_node = row_box->dom_node;
+      row_cells_frag->opacity = row_box->style.opacity;
     }
 
-    if (row_box->dom_node && !context.is_measurement) {
-      row_box->dom_node->set_layout_width(content_width_limit);
-      row_box->dom_node->set_layout_height(row_height);
+    for (size_t col = 0; col < num_cols; ++col) {
+      auto& gcell = grid[row][col];
+      if (gcell.is_top_left && gcell.box) {
+        auto* cell = gcell.box;
+        int cell_width = 0;
+        for (int c = 0; c < gcell.colspan; ++c) cell_width += col_widths[col + c];
+        
+        int cell_height = 0;
+        for (int r = 0; r < gcell.rowspan; ++r) {
+           if (row + r < row_heights.size()) {
+             cell_height += row_heights[row + r];
+           }
+        }
+
+        LayoutConstraints final_c;
+        final_c.width = {cell_width, MeasureMode::Exactly};
+        final_c.height = {cell_height, MeasureMode::Exactly};
+
+        LayoutContext child_context = CreateChildContext(
+            row_box, content_width_limit, row_height, col_x[col], 0, context);
+        auto final_cell_frag = RunLayout({cell}, final_c, child_context);
+
+        row_cells_frag->children.push_back({final_cell_frag, col_x[col], 0});
+      }
     }
 
-    // 3. Layout cells and add to row_frag
-    int cur_x = 0;
-    for (size_t col = 0; col < grid[row].size(); ++col) {
-      auto* cell = grid[row][col];
-      LayoutConstraints final_c;
-      final_c.width = {col_widths[col], MeasureMode::Exactly};
-      final_c.height = {row_height, MeasureMode::Exactly};
-
-      // Coordinate relative to parent (which is the row)
-      LayoutContext child_context = CreateChildContext(
-          row_box, content_width_limit, row_height, cur_x, 0, context);
-      auto final_cell_frag = RunLayout({cell}, final_c, child_context);
-
-      row_frag->children.push_back({final_cell_frag, cur_x, 0});
-      cur_x += col_widths[col];
-    }
-
-    // 4. Add row_frag to table fragment at (start_x, cur_y)
-    fragment->children.push_back({row_frag, start_x, cur_y});
+    row_bg_links.push_back({row_bg_frag, start_x, cur_y});
+    row_cells_links.push_back({row_cells_frag, start_x, cur_y});
     cur_y += row_height;
   }
+
+  for (auto& link : row_bg_links) fragment->children.push_back(link);
+  for (auto& link : row_cells_links) fragment->children.push_back(link);
 
   fragment->height =
       cur_y + box->style.padding.bottom + box->style.border.bottom;

@@ -2766,3 +2766,69 @@ TEST_CASE("Component.InlineStyleParsingRegression", "[component][style]") {
   CHECK(target->style.height.value == 10);
   CHECK(target->style.background_color.value() == Color::RGB(255, 0, 0));
 }
+
+#include "rtxui/component/default/code/code.hpp"
+#include "rtxui/component/default/s/s.hpp"
+#include "rtxui/component/default/u/u.hpp"
+
+struct FormattingTestComponent
+    : public rtxui::Component<FormattingTestComponent> {
+  void InitReflection() override {
+    Import<rtxui::u>();
+    Import<rtxui::s>();
+    Import<rtxui::code>();
+    rtxui::Component<FormattingTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <u>Underlined</u>
+      <s>Strikethrough</s>
+      <strike>Strike</strike>
+      <del>Del</del>
+      <code>inline code</code>
+    </div>
+  )";
+};
+
+TEST_CASE("Underline, Strikethrough, and Code Components",
+          "[component][u][s][code]") {
+  auto container = rtxui::Ref<FormattingTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* u_el = container->Root()->QuerySelector("u");
+  REQUIRE(u_el != nullptr);
+  auto* u_comp = const_cast<rtxui::ComponentBase*>(u_el->component());
+  REQUIRE(u_comp != nullptr);
+  auto* u_ptr = dynamic_cast<rtxui::u*>(u_comp);
+  REQUIRE(u_ptr != nullptr);
+
+  auto* s_el = container->Root()->QuerySelector("s");
+  REQUIRE(s_el != nullptr);
+  auto* s_comp = const_cast<rtxui::ComponentBase*>(s_el->component());
+  REQUIRE(s_comp != nullptr);
+  auto* s_ptr = dynamic_cast<rtxui::s*>(s_comp);
+  REQUIRE(s_ptr != nullptr);
+
+  auto* strike_el = container->Root()->QuerySelector("strike");
+  REQUIRE(strike_el != nullptr);
+  auto* strike_comp = const_cast<rtxui::ComponentBase*>(strike_el->component());
+  REQUIRE(strike_comp != nullptr);
+  auto* strike_ptr = dynamic_cast<rtxui::strike*>(strike_comp);
+  REQUIRE(strike_ptr != nullptr);
+
+  auto* del_el = container->Root()->QuerySelector("del");
+  REQUIRE(del_el != nullptr);
+  auto* del_comp = const_cast<rtxui::ComponentBase*>(del_el->component());
+  REQUIRE(del_comp != nullptr);
+  auto* del_ptr = dynamic_cast<rtxui::del*>(del_comp);
+  REQUIRE(del_ptr != nullptr);
+
+  auto* code_el = container->Root()->QuerySelector("code");
+  REQUIRE(code_el != nullptr);
+  auto* code_comp = const_cast<rtxui::ComponentBase*>(code_el->component());
+  REQUIRE(code_comp != nullptr);
+  auto* code_ptr = dynamic_cast<rtxui::code*>(code_comp);
+  REQUIRE(code_ptr != nullptr);
+}
+

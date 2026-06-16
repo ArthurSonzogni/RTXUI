@@ -24,5 +24,8 @@
 #include "rtxui/component/default/strong/strong.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/component/default/ul/ul.hpp"
+#include "rtxui/component/default/u/u.hpp"
+#include "rtxui/component/default/s/s.hpp"
+#include "rtxui/component/default/code/code.hpp"
 
 #endif  // RTXUI_DEFAULT_COMPONENTS_INTERNAL_HPP_

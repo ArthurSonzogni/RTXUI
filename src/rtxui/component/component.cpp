@@ -179,6 +179,11 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
     (*reg)["strong"] = []() { return Ref<strong>::New(); };
     (*reg)["textarea"] = []() { return Ref<textarea>::New(); };
     (*reg)["ul"] = []() { return Ref<ul>::New(); };
+    (*reg)["u"] = []() { return Ref<u>::New(); };
+    (*reg)["s"] = []() { return Ref<s>::New(); };
+    (*reg)["strike"] = []() { return Ref<strike>::New(); };
+    (*reg)["del"] = []() { return Ref<del>::New(); };
+    (*reg)["code"] = []() { return Ref<code>::New(); };
     return reg;
   }();
   return *registry;
@@ -599,7 +604,7 @@ bool MatchPseudos(const Element* element,
 void ResolveStylesRecursive(Element* element,
                             const ComponentBase* component,
                             bool check_pseudos) {
-  if (!element || !component || !component->categorized_rules()) {
+  if (!element || !component) {
     return;
   }
 
@@ -614,90 +619,93 @@ void ResolveStylesRecursive(Element* element,
     }
 
     const auto* categorized = component->categorized_rules();
+    if (categorized) {
+      auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets,
+                                 bool is_universal) {
+        for (const auto* ruleset : rulesets) {
+          if (!css::EvaluateMediaQuery(ruleset->media_query)) {
+            continue;
+          }
+          const auto& parsed = ruleset->parsed_selector;
+          if (is_universal && parsed.base == "self" &&
+              element != component->Root()) {
+            continue;
+          }
 
-    auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets,
-                               bool is_universal) {
-      for (const auto* ruleset : rulesets) {
-        if (!css::EvaluateMediaQuery(ruleset->media_query)) {
-          continue;
-        }
-        const auto& parsed = ruleset->parsed_selector;
-        if (is_universal && parsed.base == "self" &&
-            element != component->Root()) {
-          continue;
-        }
-
-        bool classes_match = true;
-        for (const auto& required_class : parsed.classes) {
-          bool found = false;
-          for (const auto& el_class : element->classes) {
-            if (el_class == required_class) {
-              found = true;
+          bool classes_match = true;
+          for (const auto& required_class : parsed.classes) {
+            bool found = false;
+            for (const auto& el_class : element->classes) {
+              if (el_class == required_class) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              classes_match = false;
               break;
             }
           }
-          if (!found) {
-            classes_match = false;
-            break;
-          }
-        }
-        if (!classes_match) {
-          continue;
-        }
 
-        bool attributes_match = true;
-        for (const auto& attr : parsed.attributes) {
-          const std::string* el_attr = element->GetAttribute(attr.name);
-          if (!el_attr) {
-            attributes_match = false;
-            break;
+
+          if (!classes_match) {
+            continue;
           }
-          if (attr.has_value) {
-            if (*el_attr != attr.value) {
+
+          bool attributes_match = true;
+          for (const auto& attr : parsed.attributes) {
+            const std::string* el_attr = element->GetAttribute(attr.name);
+            if (!el_attr) {
               attributes_match = false;
               break;
             }
-          }
-        }
-        if (!attributes_match) {
-          continue;
-        }
-
-        if (check_pseudos) {
-          if (!parsed.pseudo_classes.empty() &&
-              MatchPseudos(element, parsed.pseudo_classes)) {
-            for (const auto& declaration : ruleset->declarations) {
-              ApplyStyle(element->target_style, declaration);
+            if (attr.has_value) {
+              if (*el_attr != attr.value) {
+                attributes_match = false;
+                break;
+              }
             }
           }
-        } else {
-          if (parsed.pseudo_classes.empty()) {
-            for (const auto& declaration : ruleset->declarations) {
-              ApplyStyle(element->base_style, declaration);
+          if (!attributes_match) {
+            continue;
+          }
+
+          if (check_pseudos) {
+            if (!parsed.pseudo_classes.empty() &&
+                MatchPseudos(element, parsed.pseudo_classes)) {
+              for (const auto& declaration : ruleset->declarations) {
+                ApplyStyle(element->target_style, declaration);
+              }
+            }
+          } else {
+            if (parsed.pseudo_classes.empty()) {
+              for (const auto& declaration : ruleset->declarations) {
+                ApplyStyle(element->base_style, declaration);
+              }
             }
           }
         }
+      };
+
+      match_and_apply(categorized->universal, true);
+
+      auto it_tag = categorized->by_tag.find(element->tag());
+      if (it_tag != categorized->by_tag.end()) {
+        match_and_apply(it_tag->second, false);
       }
-    };
 
-    match_and_apply(categorized->universal, true);
-
-    auto it_tag = categorized->by_tag.find(element->tag());
-    if (it_tag != categorized->by_tag.end()) {
-      match_and_apply(it_tag->second, false);
-    }
-
-    if (!element->id.empty()) {
-      auto it_id = categorized->by_id.find(element->id);
-      if (it_id != categorized->by_id.end()) {
-        match_and_apply(it_id->second, false);
+      if (!element->id.empty()) {
+        auto it_id = categorized->by_id.find(element->id);
+        if (it_id != categorized->by_id.end()) {
+          match_and_apply(it_id->second, false);
+        }
       }
-    }
 
-    for (const auto& cls : element->classes) {
-      auto it_class = categorized->by_class.find(cls);
-      if (it_class != categorized->by_class.end()) {
-        match_and_apply(it_class->second, false);
+      for (const auto& cls : element->classes) {
+        auto it_class = categorized->by_class.find(cls);
+        if (it_class != categorized->by_class.end()) {
+          match_and_apply(it_class->second, false);
+        }
       }
     }
 

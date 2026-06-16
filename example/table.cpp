@@ -12,11 +12,11 @@ class TableDemo : public Component<TableDemo> {
   std::string_view view = R"html(
       <div class="content">
         <h1>RTXUI Table Layout Demo</h1>
-        <p>This demo showcases standard table elements (&lt;table&gt;, &lt;tr&gt;, &lt;th&gt;, &lt;td&gt;) with dynamic layout and styling.</p>
+        <p>This demo showcases standard table elements (&lt;table&gt;, &lt;tr&gt;, &lt;th&gt;, &lt;td&gt;) with dynamic layout and styling. Scroll down to see the sticky header!</p>
 
         <table>
           <thead>
-            <tr>
+            <tr class="header-row">
               <th>ID</th>
               <th>Name</th>
               <th>Category</th>
@@ -27,141 +27,143 @@ class TableDemo : public Component<TableDemo> {
           <tbody>
             <tr>
               <td>#101</td>
-              <td>Widget A</td>
-              <td>Electronics</td>
-              <td>$19.99</td>
+              <td>Gadget A</td>
+              <td>$10.00</td>
               <td class="status active">Active</td>
             </tr>
             <tr class="alt-row">
+              <td>#117</td>
+              <td>Widget Z</td>
+              <td>$15.00</td>
+              <td class="status active">Active</td>
+            </tr>
+
+            <tr>
               <td>#102</td>
               <td>Gadget B</td>
               <td>Appliances</td>
               <td>$49.50</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
+            <tr class="alt-row">
               <td>#103</td>
               <td>Tool C</td>
               <td>Hardware</td>
               <td>$5.99</td>
               <td class="status disabled">Inactive</td>
             </tr>
-            <tr class="alt-row">
+            <tr>
               <td>#104</td>
               <td>Widget D</td>
-              <td>Electronics</td>
+              <td style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 15;">Consumer Electronics</td>
               <td>$129.00</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
+            <tr class="alt-row">
               <td>#105</td>
               <td>Smartwatch E</td>
               <td>Wearables</td>
               <td>$199.99</td>
               <td class="status active">Active</td>
             </tr>
-            <tr class="alt-row">
-              <td>#106</td>
-              <td>Laptop F</td>
+            <tr>
+              <td colspan="2" class="border">colspan=2</td>
               <td>Computers</td>
               <td>$899.00</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
+            <tr class="alt-row">
               <td>#107</td>
               <td>Keyboard G</td>
               <td>Accessories</td>
               <td>$45.00</td>
               <td class="status disabled">Inactive</td>
             </tr>
-            <tr class="alt-row">
-              <td>#108</td>
+            <tr>
+              <td rowspan="7" class="border">rowspan=4</td>
               <td>Mouse H</td>
               <td>Accessories</td>
               <td>$25.50</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
-              <td>#109</td>
+            <tr class="alt-row">
               <td>Monitor I</td>
               <td>Computers</td>
               <td>$249.99</td>
               <td class="status active">Active</td>
             </tr>
-            <tr class="alt-row">
-              <td>#110</td>
+            <tr>
               <td>Desk Lamp J</td>
               <td>Furniture</td>
               <td>$35.00</td>
               <td class="status disabled">Inactive</td>
             </tr>
-            <tr>
-              <td>#111</td>
+            <tr class="alt-row">
               <td>Chair K</td>
               <td>Furniture</td>
               <td>$150.00</td>
               <td class="status active">Active</td>
             </tr>
-            <tr class="alt-row">
+            <tr>
               <td>#112</td>
               <td>Headphones L</td>
               <td>Audio</td>
               <td>$79.99</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
+            <tr class="alt-row">
               <td>#113</td>
               <td>Speaker M</td>
               <td>Audio</td>
               <td>$120.00</td>
               <td class="status disabled">Inactive</td>
             </tr>
-            <tr class="alt-row">
+            <tr>
               <td>#114</td>
               <td>Cable N</td>
               <td>Accessories</td>
               <td>$9.99</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
+            <tr class="alt-row">
               <td>#115</td>
               <td>Adapter O</td>
               <td>Accessories</td>
               <td>$15.00</td>
               <td class="status active">Active</td>
             </tr>
-            <tr class="alt-row">
+            <tr>
               <td>#116</td>
               <td>Camera P</td>
               <td>Photography</td>
               <td>$450.00</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
+            <tr class="alt-row">
               <td>#117</td>
               <td>Lens Q</td>
               <td>Photography</td>
               <td>$300.00</td>
               <td class="status disabled">Inactive</td>
             </tr>
-            <tr class="alt-row">
+            <tr>
               <td>#118</td>
               <td>Tripod R</td>
               <td>Photography</td>
               <td>$60.00</td>
               <td class="status active">Active</td>
             </tr>
-            <tr>
+            <tr class="alt-row">
               <td>#119</td>
               <td>Bag S</td>
               <td>Accessories</td>
               <td>$40.00</td>
               <td class="status active">Active</td>
             </tr>
-            <tr class="alt-row">
+            <tr>
               <td>#120</td>
               <td>Phone T</td>
-              <td>Electronics</td>
+              <td style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 15;">Consumer Electronics</td>
               <td>$699.99</td>
               <td class="status active">Active</td>
             </tr>
@@ -201,9 +203,7 @@ class TableDemo : public Component<TableDemo> {
         }
         tr {
           display: block;
-        }
-        .alt-row {
-          background-color: rgb(30, 41, 59);
+          background-color: rgb(15, 23, 42); 
         }
         th {
           font-weight: bold;
@@ -223,6 +223,21 @@ class TableDemo : public Component<TableDemo> {
         }
         .status.disabled {
           color: rgb(248, 113, 113);
+        }
+        .border {
+          border: tall;
+          border-color: rgb(74, 222, 128);
+          background-color: rgb(15, 23, 42);
+          padding: 0;
+        }
+        tr.alt-row {
+          background-color: rgb(30, 41, 59); 
+        }
+        .header-row {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background-color: rgb(15, 23, 42);
         }
       </style>
     )html";

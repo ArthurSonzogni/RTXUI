@@ -1,3 +1,4 @@
+
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 
@@ -30,6 +31,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     box->is_text = true;
     box->text_data = text_node->text();
     box->algorithm = LayoutBox::Algorithm::Text;
+
     return box;
   }
 
@@ -58,12 +60,14 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     box->children = raw_children;
     box->algorithm = LayoutBox::Algorithm::Table;
     box->style.display_outside = DisplayOutside::Block;
+
     return box;
   }
 
   if (box->style.display_inside == DisplayInside::Flex) {
     box->children = raw_children;
     box->algorithm = LayoutBox::Algorithm::Flex;
+
     return box;
   }
 
@@ -101,6 +105,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     box->algorithm = LayoutBox::Algorithm::InlineFlow;
     box->children = raw_children;
   }
+
 
   return box;
 }
