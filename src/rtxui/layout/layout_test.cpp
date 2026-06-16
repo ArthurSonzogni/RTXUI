@@ -1784,4 +1784,48 @@ TEST_CASE("Layout: Flexbox Align Content center",
                                                 }));
 }
 
+
+
+TEST_CASE("Layout: Rowspan painting order", "[layout][table]") {
+  struct RowspanPaintTest : Component<RowspanPaintTest> {
+    std::string_view Setup() override {
+      return R"html(
+        <table>
+          <tr>
+            <td rowspan="2" style="background-color: rgb(0, 255, 0)">S</td>
+            <td>A</td>
+          </tr>
+          <tr style="background-color: rgb(255, 0, 0)">
+            <td>B</td>
+          </tr>
+        </table>
+      )html";
+    }
+  };
+
+  auto app = Ref<RowspanPaintTest>::New();
+  auto texture = RenderComponent(app, 4, 2);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+  std::string bg_grid = GetColorLayer(texture, true, colors);
+  std::string text_grid = GetTextLayer(texture);
+  
+  INFO("BG Grid:\n" << bg_grid);
+  INFO("Text Grid:\n" << text_grid);
+
+  // Row 1
+  CHECK(texture[0, 0].character == "S");
+  CHECK(texture[0, 0].background_color == Color::RGB(0, 255, 0));
+  
+  // Row 2
+  // Character is not repeated for multi-row cell, but background should span.
+  CHECK(texture[0, 1].background_color == Color::RGB(0, 255, 0));
+  
+  CHECK(texture[1, 1].character == "B");
+  CHECK(texture[1, 1].background_color == Color::RGB(255, 0, 0));
+}
+
 }  // namespace rtxui
