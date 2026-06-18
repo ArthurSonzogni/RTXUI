@@ -680,8 +680,15 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       text_frag->dom_node = dom_node;
       text_frag->is_text = true;
       text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
-      auto* dst = reinterpret_cast<TextStyle*>(&text_frag->background_color);
-      *dst = style;
+
+      text_frag->background_color = style.background_color;
+      text_frag->foreground_color = style.foreground_color;
+      text_frag->bold = style.bold;
+      text_frag->underlined = style.underlined;
+      text_frag->underlined_double = style.underlined_double;
+      text_frag->strikethrough = style.strikethrough;
+      text_frag->blink = style.blink;
+
       container_frag->children.push_back(
           {text_frag,
            box->style.padding.left + box->style.border.left + cursor_x,
@@ -930,10 +937,11 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         if (grandchild->is_text) {
           process_text_in_flow(
               grandchild->text_data, child->dom_node,
-              {child->style.background_color, child->style.foreground_color,
-               child->style.bold, child->style.underlined,
-               child->style.underlined_double, child->style.strikethrough,
-               child->style.blink});
+              {grandchild->style.background_color,
+               grandchild->style.foreground_color, grandchild->style.bold,
+               grandchild->style.underlined,
+               grandchild->style.underlined_double,
+               grandchild->style.strikethrough, grandchild->style.blink});
         } else {
           place_opaque_box(grandchild.get());
         }

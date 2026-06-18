@@ -35,7 +35,6 @@ class LayoutBox {
   // Flags for the algorithm selection.
   bool is_anonymous = false;
   bool is_text = false;
-  bool is_anonymous_ = false;
   std::string text_data;
 
   LayoutBox();
