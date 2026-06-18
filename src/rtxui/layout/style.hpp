@@ -288,12 +288,7 @@ struct ComputedStyle {
       transitions =
           std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
     }
-    char* dst =
-        reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
-    const char* src = reinterpret_cast<const char*>(&other) +
-                      offsetof(ComputedStyle, position);
-    size_t size = sizeof(ComputedStyle) - offsetof(ComputedStyle, position);
-    std::memcpy(dst, src, size);
+    CopyPOD(other);
   }
 
   ComputedStyle& operator=(const ComputedStyle& other) {
@@ -310,12 +305,7 @@ struct ComputedStyle {
     } else {
       transitions.reset();
     }
-    char* dst =
-        reinterpret_cast<char*>(this) + offsetof(ComputedStyle, position);
-    const char* src = reinterpret_cast<const char*>(&other) +
-                      offsetof(ComputedStyle, position);
-    size_t size = sizeof(ComputedStyle) - offsetof(ComputedStyle, position);
-    std::memcpy(dst, src, size);
+    CopyPOD(other);
     return *this;
   }
 
@@ -325,6 +315,70 @@ struct ComputedStyle {
   bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }
   bool IsInlineLevel() const {
     return display_outside == DisplayOutside::Inline;
+  }
+
+ private:
+  void CopyPOD(const ComputedStyle& other) {
+    position = other.position;
+    top = other.top;
+    right = other.right;
+    bottom = other.bottom;
+    left = other.left;
+    z_index = other.z_index;
+    display_outside = other.display_outside;
+    display_inside = other.display_inside;
+    display_none = other.display_none;
+    flex_direction = other.flex_direction;
+    flex_wrap = other.flex_wrap;
+    width = other.width;
+    height = other.height;
+    min_width = other.min_width;
+    min_height = other.min_height;
+    max_width = other.max_width;
+    max_height = other.max_height;
+    margin_left_auto = other.margin_left_auto;
+    margin_right_auto = other.margin_right_auto;
+    flex_grow = other.flex_grow;
+    flex_shrink = other.flex_shrink;
+    flex_basis = other.flex_basis;
+    row_gap = other.row_gap;
+    column_gap = other.column_gap;
+    justify_content = other.justify_content;
+    align_items = other.align_items;
+    align_self = other.align_self;
+    align_content = other.align_content;
+    margin = other.margin;
+    padding = other.padding;
+    border = other.border;
+    border_style = other.border_style;
+    border_color_top = other.border_color_top;
+    border_color_right = other.border_color_right;
+    border_color_bottom = other.border_color_bottom;
+    border_color_left = other.border_color_left;
+    background_color = other.background_color;
+    foreground_color = other.foreground_color;
+    opacity = other.opacity;
+    bold = other.bold;
+    underlined = other.underlined;
+    underlined_double = other.underlined_double;
+    strikethrough = other.strikethrough;
+    blink = other.blink;
+    overflow_x = other.overflow_x;
+    overflow_y = other.overflow_y;
+    scrollbar_width = other.scrollbar_width;
+    has_scrollbar_color_thumb = other.has_scrollbar_color_thumb;
+    has_scrollbar_color_track = other.has_scrollbar_color_track;
+    scrollbar_color_thumb = other.scrollbar_color_thumb;
+    scrollbar_color_track = other.scrollbar_color_track;
+    text_align = other.text_align;
+    white_space = other.white_space;
+    list_style_type = other.list_style_type;
+    scroll_speed_x = other.scroll_speed_x;
+    scroll_speed_y = other.scroll_speed_y;
+    scroll_behavior = other.scroll_behavior;
+    cursor = other.cursor;
+    visibility = other.visibility;
+    text_overflow = other.text_overflow;
   }
 };
 }  // namespace rtxui
