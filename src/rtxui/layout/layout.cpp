@@ -2236,20 +2236,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   }
   int C = cols_template.size();
 
-  // 2. Determine number of rows needed.
-  int num_children = 0;
-  for (const auto& child : box->children) {
-    if (child->style.position != PositionType::Absolute &&
-        child->style.position != PositionType::Fixed) {
-      num_children++;
-    }
-  }
-  int R = (num_children + C - 1) / C;
-  if (R == 0) R = 1;
-  // If template has more rows, use that
-  R = std::max(R, static_cast<int>(box->style.grid_template_rows.size()));
-
-  // 3. Resolve Column Widths
+  // 2. Resolve Column Widths
   int col_gap_val = box->style.column_gap.Resolve(avail_width);
   int total_col_gaps = std::max(0, C - 1) * col_gap_val;
   int remaining_width = std::max(0, avail_width - total_col_gaps);
@@ -2290,7 +2277,121 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     }
   }
 
-  // 4. Resolve Row Heights.
+  // Count the number of non-absolute/non-fixed children
+  int num_children = 0;
+  for (const auto& child : box->children) {
+    if (child->style.position != PositionType::Absolute &&
+        child->style.position != PositionType::Fixed) {
+      num_children++;
+    }
+  }
+
+  // 3. Auto-placement using Sparse Algorithm with Occupancy Grid
+  struct OccupancyGrid {
+    int C;
+    std::vector<std::vector<bool>> grid;
+
+    OccupancyGrid(int cols) : C(cols) {}
+
+    bool IsOccupied(int r, int c) const {
+      if (r >= static_cast<int>(grid.size())) return false;
+      if (c >= C) return true;
+      return grid[r][c];
+    }
+
+    void SetOccupied(int r, int c, int r_span, int c_span) {
+      int max_r = r + r_span - 1;
+      if (max_r >= static_cast<int>(grid.size())) {
+        grid.resize(max_r + 1, std::vector<bool>(C, false));
+      }
+      for (int i = r; i < r + r_span; ++i) {
+        for (int j = c; j < c + c_span; ++j) {
+          grid[i][j] = true;
+        }
+      }
+    }
+
+    bool CanFit(int r, int c, int r_span, int c_span) const {
+      if (c + c_span > C) return false;
+      for (int i = r; i < r + r_span; ++i) {
+        for (int j = c; j < c + c_span; ++j) {
+          if (IsOccupied(i, j)) return false;
+        }
+      }
+      return true;
+    }
+  };
+
+  struct PlacedChild {
+    LayoutBox* box;
+    std::shared_ptr<PhysicalFragment> fragment;
+    int row = 0;
+    int col = 0;
+    int r_span = 1;
+    int c_span = 1;
+  };
+  std::vector<PlacedChild> placed_children;
+  placed_children.reserve(num_children);
+
+  OccupancyGrid occupancy(C);
+  int cursor_r = 0;
+  int cursor_c = 0;
+
+  for (auto& child : box->children) {
+    if (child->style.position == PositionType::Absolute ||
+        child->style.position == PositionType::Fixed) {
+      continue;
+    }
+
+    int r_span = std::max(1, child->style.grid_row_span);
+    int c_span = std::max(1, child->style.grid_column_span);
+    c_span = std::min(c_span, C);
+
+    int placed_r = -1;
+    int placed_c = -1;
+
+    int r = cursor_r;
+    int c = cursor_c;
+    while (true) {
+      if (occupancy.CanFit(r, c, r_span, c_span)) {
+        placed_r = r;
+        placed_c = c;
+        break;
+      }
+      c++;
+      if (c + c_span > C) {
+        c = 0;
+        r++;
+      }
+    }
+
+    occupancy.SetOccupied(placed_r, placed_c, r_span, c_span);
+
+    // Update cursor for sparse algorithm
+    cursor_r = placed_r;
+    cursor_c = placed_c + c_span;
+    if (cursor_c >= C) {
+      cursor_c = 0;
+      cursor_r++;
+    }
+
+    PlacedChild pc;
+    pc.box = child.get();
+    pc.row = placed_r;
+    pc.col = placed_c;
+    pc.r_span = r_span;
+    pc.c_span = c_span;
+    placed_children.push_back(pc);
+  }
+
+  // 4. Resolve total rows needed
+  int R = 1;
+  for (const auto& pc : placed_children) {
+    R = std::max(R, pc.row + pc.r_span);
+  }
+  R = std::max(R, static_cast<int>(box->style.grid_template_rows.size()));
+
+  // 5. Resolve Row Heights
   int row_gap_val = box->style.row_gap.Resolve(avail_height);
   int total_row_gaps = std::max(0, R - 1) * row_gap_val;
   int remaining_height = std::max(0, avail_height - total_row_gaps);
@@ -2298,7 +2399,6 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   std::vector<int> row_heights(R, 0);
   std::vector<bool> is_row_fr(R, false);
   float total_row_fr = 0.0f;
-  int non_fr_row_height = 0;
 
   const auto& rows_template = box->style.grid_template_rows;
   for (int r = 0; r < R; ++r) {
@@ -2308,42 +2408,36 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
         total_row_fr += rows_template[r].value;
       } else {
         row_heights[r] = rows_template[r].Resolve(remaining_height);
-        non_fr_row_height += row_heights[r];
       }
-    } else {
-      row_heights[r] = 0;
     }
   }
 
-  // Measure child items.
-  struct PlacedChild {
-    LayoutBox* box;
-    std::shared_ptr<PhysicalFragment> fragment;
-    int row;
-    int col;
-  };
-  std::vector<PlacedChild> placed_children;
-  placed_children.reserve(num_children);
-
-
-
-  int current_child_idx = 0;
-  for (auto& child : box->children) {
-    if (child->style.position == PositionType::Absolute ||
-        child->style.position == PositionType::Fixed) {
-      continue;
-    }
-    int r = current_child_idx / C;
-    int c = current_child_idx % C;
-    current_child_idx++;
-
+  // Measure children with exact widths and calculated/undefined heights
+  for (auto& pc : placed_children) {
     LayoutConstraints child_c;
-    child_c.width = {col_widths[c], MeasureMode::Exactly};
 
-    int row_h_limit = 0;
-    if (r < static_cast<int>(rows_template.size()) && !is_row_fr[r] && rows_template[r].unit != Unit::Auto) {
-      row_h_limit = row_heights[r];
-      child_c.height = {row_h_limit, MeasureMode::Exactly};
+    int child_width = 0;
+    for (int i = 0; i < pc.c_span; ++i) {
+      child_width += col_widths[pc.col + i];
+    }
+    child_width += (pc.c_span - 1) * col_gap_val;
+    child_c.width = {child_width, MeasureMode::Exactly};
+
+    bool all_fixed = true;
+    int fixed_height_sum = 0;
+    for (int i = 0; i < pc.r_span; ++i) {
+      int idx = pc.row + i;
+      if (idx >= static_cast<int>(rows_template.size()) || is_row_fr[idx] || rows_template[idx].unit == Unit::Auto) {
+        all_fixed = false;
+        break;
+      } else {
+        fixed_height_sum += row_heights[idx];
+      }
+    }
+
+    if (all_fixed) {
+      fixed_height_sum += (pc.r_span - 1) * row_gap_val;
+      child_c.height = {fixed_height_sum, MeasureMode::Exactly};
     } else {
       child_c.height = {0, MeasureMode::Undefined};
     }
@@ -2351,16 +2445,58 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     LayoutContext child_context = CreateChildContext(box, parent_width, parent_height, 0, 0, context);
     child_context.is_measurement = true;
 
-    auto child_frag = RunLayout({child.get()}, child_c, child_context);
-    placed_children.push_back({child.get(), child_frag, r, c});
+    pc.fragment = RunLayout({pc.box}, child_c, child_context);
+  }
 
-    if (r >= static_cast<int>(rows_template.size()) || is_row_fr[r] || rows_template[r].unit == Unit::Auto) {
-      row_heights[r] = std::max(row_heights[r], child_frag->height);
+  // Distribute measured heights among rows
+  // Sort children by row span to size smaller spans first
+  std::vector<size_t> indices(placed_children.size());
+  std::iota(indices.begin(), indices.end(), 0);
+  std::sort(indices.begin(), indices.end(), [&](size_t a, size_t b) {
+    return placed_children[a].r_span < placed_children[b].r_span;
+  });
+
+  for (size_t idx : indices) {
+    auto& pc = placed_children[idx];
+    int current_sum = 0;
+    for (int i = 0; i < pc.r_span; ++i) {
+      current_sum += row_heights[pc.row + i];
+    }
+
+    int target_sum = pc.fragment->height - (pc.r_span - 1) * row_gap_val;
+    int extra = target_sum - current_sum;
+    if (extra > 0) {
+      int growable_count = 0;
+      for (int i = 0; i < pc.r_span; ++i) {
+        int r_idx = pc.row + i;
+        if (r_idx >= static_cast<int>(rows_template.size()) || is_row_fr[r_idx] || rows_template[r_idx].unit == Unit::Auto) {
+          growable_count++;
+        }
+      }
+
+      if (growable_count > 0) {
+        int extra_per_row = extra / growable_count;
+        int remainder = extra % growable_count;
+        for (int i = 0; i < pc.r_span; ++i) {
+          int r_idx = pc.row + i;
+          if (r_idx >= static_cast<int>(rows_template.size()) || is_row_fr[r_idx] || rows_template[r_idx].unit == Unit::Auto) {
+            int amount = extra_per_row + (remainder > 0 ? 1 : 0);
+            if (remainder > 0) remainder--;
+            row_heights[r_idx] += amount;
+          }
+        }
+      }
     }
   }
 
-  // If we have flexible rows and a fixed container height, distribute the remaining height.
+  // Distribute flexible rows if we have a fixed container height
   if (total_row_fr > 0.0f && (constraints.height.mode != MeasureMode::Undefined || parent_height > 0)) {
+    int non_fr_row_height = 0;
+    for (int r = 0; r < R; ++r) {
+      if (!is_row_fr[r]) {
+        non_fr_row_height += row_heights[r];
+      }
+    }
     int free_row_height = std::max(0, remaining_height - non_fr_row_height);
     for (int r = 0; r < R; ++r) {
       if (is_row_fr[r]) {
@@ -2369,7 +2505,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     }
   }
 
-  // Layout final pass
+  // 6. Final Layout Pass
   auto container_frag = MakeArenaFragment(parent_width, 0);
   container_frag->dom_node = box->dom_node;
   container_frag->background_color = box->style.background_color;
@@ -2393,9 +2529,21 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     int r = pc.row;
     int c = pc.col;
 
+    int final_w = 0;
+    for (int i = 0; i < pc.c_span; ++i) {
+      final_w += col_widths[c + i];
+    }
+    final_w += (pc.c_span - 1) * col_gap_val;
+
+    int final_h = 0;
+    for (int i = 0; i < pc.r_span; ++i) {
+      final_h += row_heights[r + i];
+    }
+    final_h += (pc.r_span - 1) * row_gap_val;
+
     LayoutConstraints final_c;
-    final_c.width = {col_widths[c], MeasureMode::Exactly};
-    final_c.height = {row_heights[r], MeasureMode::Exactly};
+    final_c.width = {final_w, MeasureMode::Exactly};
+    final_c.height = {final_h, MeasureMode::Exactly};
 
     int cx = col_offsets[c];
     int cy = row_offsets[r];
