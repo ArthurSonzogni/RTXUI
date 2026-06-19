@@ -128,6 +128,7 @@ enum class FlexWrap {
 enum class WhiteSpace {
   Normal,
   Nowrap,
+  Pre,
 };
 
 enum class PositionType {
