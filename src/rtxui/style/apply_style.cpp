@@ -1128,6 +1128,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.white_space = WhiteSpace::Nowrap;
       return;
     }
+    if (v == "pre") {
+      style.white_space = WhiteSpace::Pre;
+      return;
+    }
   }
 
   if (p == "list-style" || p == "list-style-type") {

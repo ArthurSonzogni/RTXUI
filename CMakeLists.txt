@@ -62,6 +62,7 @@ add_library(rtxui_lib STATIC
   "src/rtxui/component/default/u/u.cpp"
   "src/rtxui/component/default/s/s.cpp"
   "src/rtxui/component/default/code/code.cpp"
+  "src/rtxui/component/default/pre/pre.cpp"
   "include/rtxui/internal/import.hpp"
   "src/rtxui/core/expected.hpp"
   "src/rtxui/core/likely.hpp"

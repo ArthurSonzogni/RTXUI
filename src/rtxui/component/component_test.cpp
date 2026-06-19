@@ -2832,3 +2832,43 @@ TEST_CASE("Underline, Strikethrough, and Code Components",
   REQUIRE(code_ptr != nullptr);
 }
 
+#include "rtxui/component/default/pre/pre.hpp"
+
+struct PreTestComponent : public rtxui::Component<PreTestComponent> {
+  void InitReflection() override {
+    Import<rtxui::pre>();
+    rtxui::Component<PreTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <pre>Line 1
+  Line 2 with spaces
+Line 3</pre>
+    </div>
+  )";
+};
+
+TEST_CASE("Pre component whitespace preservation", "[component][pre]") {
+  auto container = rtxui::Ref<PreTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string rendered = texture.Render();
+  CHECK(rendered.find("Line 1") != std::string::npos);
+  CHECK(rendered.find("  Line 2 with spaces") != std::string::npos);
+  CHECK(rendered.find("Line 3") != std::string::npos);
+}
+
+

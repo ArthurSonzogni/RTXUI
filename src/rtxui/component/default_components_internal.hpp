@@ -27,5 +27,6 @@
 #include "rtxui/component/default/u/u.hpp"
 #include "rtxui/component/default/s/s.hpp"
 #include "rtxui/component/default/code/code.hpp"
+#include "rtxui/component/default/pre/pre.hpp"
 
 #endif  // RTXUI_DEFAULT_COMPONENTS_INTERNAL_HPP_

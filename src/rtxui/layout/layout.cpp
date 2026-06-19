@@ -656,7 +656,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   auto process_text_in_flow = [&](std::string_view text, Element* dom_node,
                                   const TextStyle& style) {
     if (box->style.text_overflow == TextOverflow::Ellipsis &&
-        box->style.white_space == WhiteSpace::Nowrap) {
+        (box->style.white_space == WhiteSpace::Nowrap || box->style.white_space == WhiteSpace::Pre)) {
       int avail = content_width_limit - cursor_x;
       int text_w = 0;
       for (const Grapheme& g : Graphemes(text)) {
@@ -738,7 +738,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           have_last_space = true;
         }
 
-        if (box->style.white_space == WhiteSpace::Nowrap) {
+        if (box->style.white_space == WhiteSpace::Nowrap || box->style.white_space == WhiteSpace::Pre) {
           cur_col += g_width;
         } else if (cursor_x + (cur_col - col_start) + g_width >
                    content_width_limit) {
@@ -796,7 +796,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         have_last_space = true;
       }
 
-      if (box->style.white_space == WhiteSpace::Nowrap) {
+      if (box->style.white_space == WhiteSpace::Nowrap || box->style.white_space == WhiteSpace::Pre) {
         cur_col += g.width;
       } else if (cursor_x + (cur_col - col_start) + g.width >
                  content_width_limit) {
@@ -881,7 +881,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
 
 
-    if (box->style.white_space != WhiteSpace::Nowrap &&
+    if (box->style.white_space == WhiteSpace::Normal &&
         cursor_x + child_frag->width + child_m_horiz > content_width_limit &&
         cursor_x > 0) {
       commit_line();
