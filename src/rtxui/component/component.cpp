@@ -733,6 +733,8 @@ void ResolveStylesRecursive(Element* element,
 
 recurse:
   if (element->component() && element->component() != component) {
+    ResolveStylesRecursive(element, element->component(), check_pseudos);
+
     bool has_slot_children = false;
     for (const auto& [name, slot_el] : element->component()->slots()) {
       if (slot_el && slot_el->ChildCount() > 0) {
