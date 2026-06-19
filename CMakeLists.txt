@@ -278,6 +278,9 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_table example/table.cpp)
   target_link_libraries(rtxui_example_table PRIVATE rtxui)
 
+  add_executable(rtxui_example_grid example/grid.cpp)
+  target_link_libraries(rtxui_example_grid PRIVATE rtxui)
+
   add_executable(rtxui_example_lists example/lists.cpp)
   target_link_libraries(rtxui_example_lists PRIVATE rtxui)
 
