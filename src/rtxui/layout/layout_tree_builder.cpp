@@ -7,7 +7,13 @@ namespace rtxui {
 // Static Build method implementation
 std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
                                                     TextAlign parent_align,
-                                                    WhiteSpace parent_ws) {
+                                                    WhiteSpace parent_ws,
+                                                    std::optional<Color> parent_fg,
+                                                    std::optional<bool> parent_bold,
+                                                    std::optional<bool> parent_underlined,
+                                                    std::optional<bool> parent_underlined_double,
+                                                    std::optional<bool> parent_strikethrough,
+                                                    std::optional<bool> parent_blink) {
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
@@ -24,6 +30,24 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   WhiteSpace resolved_ws = dom_node->style.white_space.value_or(parent_ws);
   box->style.white_space = resolved_ws;
 
+  std::optional<Color> resolved_fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent_fg;
+  box->style.foreground_color = resolved_fg;
+
+  std::optional<bool> resolved_bold = dom_node->style.bold.has_value() ? dom_node->style.bold : parent_bold;
+  box->style.bold = resolved_bold;
+
+  std::optional<bool> resolved_underlined = dom_node->style.underlined.has_value() ? dom_node->style.underlined : parent_underlined;
+  box->style.underlined = resolved_underlined;
+
+  std::optional<bool> resolved_underlined_double = dom_node->style.underlined_double.has_value() ? dom_node->style.underlined_double : parent_underlined_double;
+  box->style.underlined_double = resolved_underlined_double;
+
+  std::optional<bool> resolved_strikethrough = dom_node->style.strikethrough.has_value() ? dom_node->style.strikethrough : parent_strikethrough;
+  box->style.strikethrough = resolved_strikethrough;
+
+  std::optional<bool> resolved_blink = dom_node->style.blink.has_value() ? dom_node->style.blink : parent_blink;
+  box->style.blink = resolved_blink;
+
   // Text nodes don't usually run an algorithm themselves;
   // they are consumed by the parent's InlineFlow.
   if (is_text) {
@@ -39,9 +63,19 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   for (auto& child_dom : dom_node->children()) {
     if (child_dom.get()->is_slot()) {
       // Skip elements with no tag (e.g., SlotElement)
+      auto slot_style = child_dom.get()->style;
+      TextAlign slot_align = slot_style.text_align.value_or(resolved_align);
+      WhiteSpace slot_ws = slot_style.white_space.value_or(resolved_ws);
+      std::optional<Color> slot_fg = slot_style.foreground_color.has_value() ? slot_style.foreground_color : resolved_fg;
+      std::optional<bool> slot_bold = slot_style.bold.has_value() ? slot_style.bold : resolved_bold;
+      std::optional<bool> slot_underlined = slot_style.underlined.has_value() ? slot_style.underlined : resolved_underlined;
+      std::optional<bool> slot_underlined_double = slot_style.underlined_double.has_value() ? slot_style.underlined_double : resolved_underlined_double;
+      std::optional<bool> slot_strikethrough = slot_style.strikethrough.has_value() ? slot_style.strikethrough : resolved_strikethrough;
+      std::optional<bool> slot_blink = slot_style.blink.has_value() ? slot_style.blink : resolved_blink;
+
       for (auto& grandchild_dom : child_dom.get()->children()) {
         auto grandchild_box =
-            Build(grandchild_dom.get(), resolved_align, resolved_ws);
+            Build(grandchild_dom.get(), slot_align, slot_ws, slot_fg, slot_bold, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -49,7 +83,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws);
+    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_fg, resolved_bold, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink);
     if (child_box) {
       raw_children.push_back(child_box);
     }
