@@ -6,6 +6,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
+#include <fstream>
 
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/core/string.hpp"
@@ -2124,6 +2125,38 @@ TEST_CASE("Style caching regression test for multi-component resolution",
   CHECK(!child_el->style.background_color.has_value());
 }
 
+TEST_CASE("Slider click on real demo layout squash regression", "[demo][regression]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(120, 40);
+
+  auto app = rtxui::Ref<App>::New();
+  rtxui::Screen screen(app, device);
+  screen.Draw();
+
+  auto* slider_el = app->Root()->QuerySelector("slider");
+  REQUIRE(slider_el != nullptr);
+  auto* sidebar_el = app->Root()->QuerySelector("Sidebar");
+  REQUIRE(sidebar_el != nullptr);
+
+  int initial_sidebar_width = sidebar_el->layout_width();
+
+  // Click/Drag the slider
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = slider_el->absolute_x() + 5;
+  mouse.y = slider_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+
+  mouse.motion = Event::Mouse::Motion::Released;
+  screen.Dispatch(Event(mouse));
+
+  screen.Draw();
+
+  int final_sidebar_width = sidebar_el->layout_width();
+  CHECK(final_sidebar_width == initial_sidebar_width);
+}
+
 TEST_CASE("Input Click Layout Regression Test",
           "[component][input][regression]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
@@ -2870,5 +2903,126 @@ TEST_CASE("Pre component whitespace preservation", "[component][pre]") {
   CHECK(rendered.find("  Line 2 with spaces") != std::string::npos);
   CHECK(rendered.find("Line 3") != std::string::npos);
 }
+
+class SliderDemoSquashTestComponent : public rtxui::Component<SliderDemoSquashTestComponent> {
+ public:
+  int slider_val = 50;
+
+  void InitReflection() override {
+    ComponentBase::InitReflection();
+    Bind(slider_val);
+    Import<rtxui::slider>();
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+  }
+
+  std::string_view view = R"html(
+    <div class="container">
+      <div class="root">
+        <div class="workspace">
+          <div class="sidebar">Sidebar</div>
+          <div class="main-scroll">
+            <div class="card">
+              <div class="row">
+                <span>Slider:</span>
+                <slider id="slider" value="{slider_val}" min="0" max="100" step="5" width="18" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <style>
+      self {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .container {
+        display: block;
+        max-width: 120;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .root {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+      .workspace {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+      }
+      .sidebar {
+        display: block;
+        width: 16;
+      }
+      .main-scroll {
+        flex-grow: 1;
+        width: 0;
+        display: block;
+      }
+      .card {
+        display: block;
+      }
+      .row {
+        display: flex;
+        flex-direction: row;
+      }
+    </style>
+  )html";
+};
+
+TEST_CASE("Slider interaction layout squashing regression", "[component][slider][layout][regression]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(150, 20);
+
+  auto container = rtxui::Ref<SliderDemoSquashTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  std::string initial_output = device->GetOutput();
+
+  auto* slider_el = container->Root()->QuerySelector("#slider");
+  REQUIRE(slider_el != nullptr);
+  auto* scroll_el = container->Root()->QuerySelector(".main-scroll");
+  REQUIRE(scroll_el != nullptr);
+  auto* container_el = container->Root()->QuerySelector(".container");
+  REQUIRE(container_el != nullptr);
+
+  int initial_container_width = container_el->layout_width();
+  int initial_scroll_width = scroll_el->layout_width();
+
+  // Click/Drag the slider
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = slider_el->absolute_x() + 5;
+  mouse.y = slider_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+
+  // Let's release the mouse too
+  mouse.motion = Event::Mouse::Motion::Released;
+  screen.Dispatch(Event(mouse));
+
+  // Draw again to render final frame
+  screen.Draw();
+
+  std::string final_output = device->GetOutput();
+
+  // Write outputs to a file
+  std::ofstream out("/home/arthursonzogni/programmation/real/RTXUI/slider_output.txt");
+  out << "INITIAL OUTPUT:\n" << initial_output << "\n===================================\nFINAL OUTPUT:\n" << final_output << "\n";
+  out.close();
+
+  int final_container_width = container_el->layout_width();
+  int final_scroll_width = scroll_el->layout_width();
+
+  CHECK(final_container_width == initial_container_width);
+  CHECK(final_scroll_width == initial_scroll_width);
+}
+
 
 
