@@ -282,6 +282,8 @@ struct ComputedStyle {
 
   std::vector<Length> grid_template_columns;
   std::vector<Length> grid_template_rows;
+  int grid_column_span = 1;
+  int grid_row_span = 1;
 
   Cursor cursor = Cursor::Auto;
   Visibility visibility = Visibility::Visible;
@@ -387,6 +389,8 @@ struct ComputedStyle {
     text_overflow = other.text_overflow;
     grid_template_columns = other.grid_template_columns;
     grid_template_rows = other.grid_template_rows;
+    grid_column_span = other.grid_column_span;
+    grid_row_span = other.grid_row_span;
   }
 };
 }  // namespace rtxui

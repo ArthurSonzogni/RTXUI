@@ -1914,4 +1914,51 @@ TEST_CASE("Layout: CSS Grid Layout with fr units", "[layout][grid][fr]") {
                                                 }));
 }
 
+TEST_CASE("Layout: CSS Grid Layout with spans", "[layout][grid][span]") {
+  struct GridSpanTest : Component<GridSpanTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container {
+            display: grid;
+            grid-template-columns: 2 2 2;
+            grid-template-rows: 1 1;
+            gap: 1;
+            width: 8;
+            height: 3;
+          }
+          .item {
+            display: block;
+          }
+          .r { background-color: rgb(255, 0, 0); grid-column: span 2; }
+          .g { background-color: rgb(0, 255, 0); }
+          .b { background-color: rgb(0, 0, 255); grid-row: span 2; }
+          .y { background-color: rgb(255, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="item r">1</div>
+          <div class="item g">2</div>
+          <div class="item b">3</div>
+          <div class="item y">4</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridSpanTest>::New(), 8, 3);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+      {Color::RGB(255, 255, 0), 'Y'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRR.GG",
+                                                    "........",
+                                                    "BB.YY...",
+                                                }));
+}
+
 }  // namespace rtxui

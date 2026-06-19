@@ -1025,6 +1025,40 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "grid-column" || p == "grid-column-end") {
+    int span = 1;
+    if (v.find("span") != std::string_view::npos) {
+      auto parts = SplitWords(v);
+      for (size_t i = 0; i < parts.size(); ++i) {
+        if (parts[i] == "span" && i + 1 < parts.size()) {
+          try { span = std::stoi(std::string(parts[i + 1])); } catch (...) {}
+          break;
+        }
+      }
+    } else {
+      try { span = std::stoi(std::string(v)); } catch (...) {}
+    }
+    style.grid_column_span = std::max(1, span);
+    return;
+  }
+
+  if (p == "grid-row" || p == "grid-row-end") {
+    int span = 1;
+    if (v.find("span") != std::string_view::npos) {
+      auto parts = SplitWords(v);
+      for (size_t i = 0; i < parts.size(); ++i) {
+        if (parts[i] == "span" && i + 1 < parts.size()) {
+          try { span = std::stoi(std::string(parts[i + 1])); } catch (...) {}
+          break;
+        }
+      }
+    } else {
+      try { span = std::stoi(std::string(v)); } catch (...) {}
+    }
+    style.grid_row_span = std::max(1, span);
+    return;
+  }
+
   if (p == "justify-content") {
     if (v == "flex-start") {
       style.justify_content = JustifyContent::FlexStart;
