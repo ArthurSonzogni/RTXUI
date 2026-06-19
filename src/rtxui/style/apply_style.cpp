@@ -330,7 +330,21 @@ Length ParseLength(std::string_view value) {
     value.remove_suffix(1);
     return Length::Pct(StoF(value));
   }
+  if (value.size() >= 2 && value.substr(value.size() - 2) == "fr") {
+    value.remove_suffix(2);
+    return Length::Fr(StoF(value));
+  }
   return Length::Cells(StoF(value));
+}
+
+std::vector<Length> ParseGridTemplate(std::string_view v) {
+  std::vector<Length> tracks;
+  auto parts = SplitWords(v);
+  for (const auto& part : parts) {
+    if (part == "none") continue;
+    tracks.push_back(ParseLength(part));
+  }
+  return tracks;
 }
 
 std::optional<BorderStyle> ParseBorderStyle(std::string_view v) {
@@ -1001,6 +1015,16 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "grid-template-columns") {
+    style.grid_template_columns = ParseGridTemplate(v);
+    return;
+  }
+
+  if (p == "grid-template-rows") {
+    style.grid_template_rows = ParseGridTemplate(v);
+    return;
+  }
+
   if (p == "justify-content") {
     if (v == "flex-start") {
       style.justify_content = JustifyContent::FlexStart;
@@ -1187,6 +1211,11 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         style.display_inside = DisplayInside::Flex;
         return;
       }
+      if (s_value == "grid") {
+        style.display_outside = DisplayOutside::Block;
+        style.display_inside = DisplayInside::Grid;
+        return;
+      }
       if (s_value == "inline-block") {
         style.display_outside = DisplayOutside::Inline;
         style.display_inside = DisplayInside::Flow;
@@ -1195,6 +1224,11 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       if (s_value == "inline-flex") {
         style.display_outside = DisplayOutside::Inline;
         style.display_inside = DisplayInside::Flex;
+        return;
+      }
+      if (s_value == "grid" || s_value == "inline-grid") {
+        style.display_outside = DisplayOutside::Inline;
+        style.display_inside = DisplayInside::Grid;
         return;
       }
 
@@ -1216,6 +1250,9 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
       if (inside == "flex") {
         style.display_inside = DisplayInside::Flex;
+      }
+      if (inside == "grid") {
+        style.display_inside = DisplayInside::Grid;
       }
       return;
     }

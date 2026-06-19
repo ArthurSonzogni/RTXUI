@@ -26,11 +26,12 @@ enum class DisplayInside {
   FlowRoot,
   Flow,
   Flex,
+  Grid,
 };
 
 enum class MeasureMode { Exactly, AtMost, Undefined };
 enum class Direction { Row, RowReverse, Column, ColumnReverse };
-enum class Unit { Auto, Cells, Percent };
+enum class Unit { Auto, Cells, Percent, Fr };
 
 struct Length {
   float value = 0;
@@ -41,6 +42,7 @@ struct Length {
   static Length Auto() { return {0, Unit::Auto}; }
   static Length Cells(float v) { return {v, Unit::Cells}; }
   static Length Pct(float v) { return {v, Unit::Percent}; }
+  static Length Fr(float v) { return {v, Unit::Fr}; }
 
   int Resolve(int basis) const {
     if (unit == Unit::Cells) {
@@ -278,6 +280,9 @@ struct ComputedStyle {
   int scroll_speed_y = 1;
   ScrollBehavior scroll_behavior = ScrollBehavior::Auto;
 
+  std::vector<Length> grid_template_columns;
+  std::vector<Length> grid_template_rows;
+
   Cursor cursor = Cursor::Auto;
   Visibility visibility = Visibility::Visible;
   TextOverflow text_overflow = TextOverflow::Clip;
@@ -380,6 +385,8 @@ struct ComputedStyle {
     cursor = other.cursor;
     visibility = other.visibility;
     text_overflow = other.text_overflow;
+    grid_template_columns = other.grid_template_columns;
+    grid_template_rows = other.grid_template_rows;
   }
 };
 }  // namespace rtxui

@@ -1828,4 +1828,90 @@ TEST_CASE("Layout: Rowspan painting order", "[layout][table]") {
   CHECK(texture[1, 1].background_color == Color::RGB(255, 0, 0));
 }
 
+TEST_CASE("Layout: CSS Grid Layout basic positioning", "[layout][grid]") {
+  struct GridBasicTest : Component<GridBasicTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container {
+            display: grid;
+            grid-template-columns: 2 4;
+            grid-template-rows: 1 2;
+            gap: 1;
+            width: 7;
+            height: 4;
+          }
+          .item {
+            display: block;
+          }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+          .b { background-color: rgb(0, 0, 255); }
+        </style>
+        <div class="container">
+          <div class="item r">1</div>
+          <div class="item g">2</div>
+          <div class="item b">3</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridBasicTest>::New(), 7, 4);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RR.GGGG",
+                                                    ".......",
+                                                    "BB.....",
+                                                    "BB.....",
+                                                }));
+}
+
+TEST_CASE("Layout: CSS Grid Layout with fr units", "[layout][grid][fr]") {
+  struct GridFrTest : Component<GridFrTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            grid-template-rows: 1fr;
+            width: 9;
+            height: 2;
+          }
+          .item {
+            display: block;
+          }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+        </style>
+        <div class="container">
+          <div class="item r"></div>
+          <div class="item g"></div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridFrTest>::New(), 9, 2);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+
+  // 1fr + 2fr = 3fr. Total width = 9.
+  // Col 0 = 3 wide. Col 1 = 6 wide.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRGGGGGG",
+                                                    "RRRGGGGGG",
+                                                }));
+}
+
 }  // namespace rtxui

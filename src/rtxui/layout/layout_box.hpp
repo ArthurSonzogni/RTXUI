@@ -25,6 +25,7 @@ class LayoutBox {
     Flex,
     Text,
     Table,
+    Grid,
   };
   Algorithm algorithm;
 

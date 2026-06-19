@@ -81,6 +81,9 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
                                               LayoutConstraints constraints,
                                               LayoutContext context);
+std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
+                                             LayoutConstraints constraints,
+                                             LayoutContext context);
 
 /**
  * Resolves a StyleLength against a parent dimension.
@@ -152,6 +155,8 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
       return LayoutFlex(node, constraints, context);
     case LayoutBox::Algorithm::Table:
       return LayoutTable(node, constraints, context);
+    case LayoutBox::Algorithm::Grid:
+      return LayoutGrid(node, constraints, context);
     case LayoutBox::Algorithm::Text:
       throw std::runtime_error(
           "Text nodes should not be laid out directly. Use InlineFlow.");
@@ -2193,4 +2198,243 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   return fragment;
 }
 
+std::shared_ptr<PhysicalFragment> LayoutGrid(
+    LayoutInputNode node,
+    LayoutConstraints constraints,
+    LayoutContext context) {
+  auto* box = node.box;
+
+  int border_h = box->style.border.Horiz();
+  int border_v = box->style.border.Vert();
+  int padding_h = box->style.padding.Horiz();
+  int padding_v = box->style.padding.Vert();
+
+  int parent_width = constraints.width.value;
+  if (constraints.width.mode == MeasureMode::Undefined) {
+    int resolved = ResolveSize(box->style.width, constraints.width.value);
+    if (resolved != -1) {
+      parent_width = resolved;
+    }
+  }
+  int avail_width = parent_width - border_h - padding_h;
+
+  int parent_height = 0;
+  if (constraints.height.mode != MeasureMode::Undefined) {
+    parent_height = constraints.height.value;
+  } else {
+    int resolved = ResolveSize(box->style.height, constraints.height.value);
+    if (resolved != -1) {
+      parent_height = resolved;
+    }
+  }
+  int avail_height = std::max(0, parent_height - border_v - padding_v);
+
+  // 1. Determine columns template. If empty, default to one 1fr column.
+  std::vector<Length> cols_template = box->style.grid_template_columns;
+  if (cols_template.empty()) {
+    cols_template.push_back(Length::Fr(1.0f));
+  }
+  int C = cols_template.size();
+
+  // 2. Determine number of rows needed.
+  int num_children = 0;
+  for (const auto& child : box->children) {
+    if (child->style.position != PositionType::Absolute &&
+        child->style.position != PositionType::Fixed) {
+      num_children++;
+    }
+  }
+  int R = (num_children + C - 1) / C;
+  if (R == 0) R = 1;
+  // If template has more rows, use that
+  R = std::max(R, static_cast<int>(box->style.grid_template_rows.size()));
+
+  // 3. Resolve Column Widths
+  int col_gap_val = box->style.column_gap.Resolve(avail_width);
+  int total_col_gaps = std::max(0, C - 1) * col_gap_val;
+  int remaining_width = std::max(0, avail_width - total_col_gaps);
+
+  std::vector<int> col_widths(C, 0);
+  float total_col_fr = 0.0f;
+  int non_fr_col_width = 0;
+  for (int c = 0; c < C; ++c) {
+    if (cols_template[c].unit == Unit::Fr) {
+      total_col_fr += cols_template[c].value;
+    } else {
+      col_widths[c] = cols_template[c].Resolve(remaining_width);
+      non_fr_col_width += col_widths[c];
+    }
+  }
+  int free_col_width = std::max(0, remaining_width - non_fr_col_width);
+  if (total_col_fr > 0.0f) {
+    for (int c = 0; c < C; ++c) {
+      if (cols_template[c].unit == Unit::Fr) {
+        col_widths[c] = static_cast<int>(free_col_width * (cols_template[c].value / total_col_fr));
+      }
+    }
+  } else {
+    // If all tracks are Auto, distribute equally
+    int num_auto = 0;
+    for (int c = 0; c < C; ++c) {
+      if (cols_template[c].unit == Unit::Auto) {
+        num_auto++;
+      }
+    }
+    if (num_auto > 0) {
+      int auto_width = free_col_width / num_auto;
+      for (int c = 0; c < C; ++c) {
+        if (cols_template[c].unit == Unit::Auto) {
+          col_widths[c] = auto_width;
+        }
+      }
+    }
+  }
+
+  // 4. Resolve Row Heights.
+  int row_gap_val = box->style.row_gap.Resolve(avail_height);
+  int total_row_gaps = std::max(0, R - 1) * row_gap_val;
+  int remaining_height = std::max(0, avail_height - total_row_gaps);
+
+  std::vector<int> row_heights(R, 0);
+  std::vector<bool> is_row_fr(R, false);
+  float total_row_fr = 0.0f;
+  int non_fr_row_height = 0;
+
+  const auto& rows_template = box->style.grid_template_rows;
+  for (int r = 0; r < R; ++r) {
+    if (r < static_cast<int>(rows_template.size())) {
+      if (rows_template[r].unit == Unit::Fr) {
+        is_row_fr[r] = true;
+        total_row_fr += rows_template[r].value;
+      } else {
+        row_heights[r] = rows_template[r].Resolve(remaining_height);
+        non_fr_row_height += row_heights[r];
+      }
+    } else {
+      row_heights[r] = 0;
+    }
+  }
+
+  // Measure child items.
+  struct PlacedChild {
+    LayoutBox* box;
+    std::shared_ptr<PhysicalFragment> fragment;
+    int row;
+    int col;
+  };
+  std::vector<PlacedChild> placed_children;
+  placed_children.reserve(num_children);
+
+
+
+  int current_child_idx = 0;
+  for (auto& child : box->children) {
+    if (child->style.position == PositionType::Absolute ||
+        child->style.position == PositionType::Fixed) {
+      continue;
+    }
+    int r = current_child_idx / C;
+    int c = current_child_idx % C;
+    current_child_idx++;
+
+    LayoutConstraints child_c;
+    child_c.width = {col_widths[c], MeasureMode::Exactly};
+
+    int row_h_limit = 0;
+    if (r < static_cast<int>(rows_template.size()) && !is_row_fr[r] && rows_template[r].unit != Unit::Auto) {
+      row_h_limit = row_heights[r];
+      child_c.height = {row_h_limit, MeasureMode::Exactly};
+    } else {
+      child_c.height = {0, MeasureMode::Undefined};
+    }
+
+    LayoutContext child_context = CreateChildContext(box, parent_width, parent_height, 0, 0, context);
+    child_context.is_measurement = true;
+
+    auto child_frag = RunLayout({child.get()}, child_c, child_context);
+    placed_children.push_back({child.get(), child_frag, r, c});
+
+    if (r >= static_cast<int>(rows_template.size()) || is_row_fr[r] || rows_template[r].unit == Unit::Auto) {
+      row_heights[r] = std::max(row_heights[r], child_frag->height);
+    }
+  }
+
+  // If we have flexible rows and a fixed container height, distribute the remaining height.
+  if (total_row_fr > 0.0f && (constraints.height.mode != MeasureMode::Undefined || parent_height > 0)) {
+    int free_row_height = std::max(0, remaining_height - non_fr_row_height);
+    for (int r = 0; r < R; ++r) {
+      if (is_row_fr[r]) {
+        row_heights[r] = static_cast<int>(free_row_height * (rows_template[r].value / total_row_fr));
+      }
+    }
+  }
+
+  // Layout final pass
+  auto container_frag = MakeArenaFragment(parent_width, 0);
+  container_frag->dom_node = box->dom_node;
+  container_frag->background_color = box->style.background_color;
+  container_frag->foreground_color = box->style.foreground_color;
+
+  std::vector<int> col_offsets(C, 0);
+  int cur_x = box->style.padding.left + box->style.border.left;
+  for (int c = 0; c < C; ++c) {
+    col_offsets[c] = cur_x;
+    cur_x += col_widths[c] + col_gap_val;
+  }
+
+  std::vector<int> row_offsets(R, 0);
+  int cur_y = box->style.padding.top + box->style.border.top;
+  for (int r = 0; r < R; ++r) {
+    row_offsets[r] = cur_y;
+    cur_y += row_heights[r] + row_gap_val;
+  }
+
+  for (auto& pc : placed_children) {
+    int r = pc.row;
+    int c = pc.col;
+
+    LayoutConstraints final_c;
+    final_c.width = {col_widths[c], MeasureMode::Exactly};
+    final_c.height = {row_heights[r], MeasureMode::Exactly};
+
+    int cx = col_offsets[c];
+    int cy = row_offsets[r];
+
+    LayoutContext final_context = CreateChildContext(box, parent_width, parent_height, cx, cy, context);
+    final_context.is_measurement = context.is_measurement;
+
+    auto final_frag = RunLayout({pc.box}, final_c, final_context);
+    container_frag->children.push_back({final_frag, cx, cy});
+  }
+
+  int content_w = 0;
+  if (!col_offsets.empty()) {
+    content_w = col_offsets.back() + col_widths.back() - (box->style.padding.left + box->style.border.left);
+  }
+  int content_h = 0;
+  if (!row_offsets.empty()) {
+    content_h = row_offsets.back() + row_heights.back() - (box->style.padding.top + box->style.border.top);
+  }
+
+  container_frag->width = content_w + border_h + padding_h;
+  if (constraints.width.mode == MeasureMode::Exactly) {
+    container_frag->width = constraints.width.value;
+  }
+
+  container_frag->height = content_h + border_v + padding_v;
+  if (constraints.height.mode == MeasureMode::Exactly) {
+    container_frag->height = constraints.height.value;
+  }
+
+  if (box->dom_node && !context.is_measurement) {
+    box->dom_node->set_layout_width(container_frag->width);
+    box->dom_node->set_layout_height(container_frag->height);
+  }
+
+  LayoutOutOfFlowChildren(box, container_frag, context);
+
+  return container_frag;
+}
+
 }  // namespace rtxui
+
