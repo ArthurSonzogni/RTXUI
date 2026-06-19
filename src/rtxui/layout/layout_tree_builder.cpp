@@ -105,6 +105,13 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     return box;
   }
 
+  if (box->style.display_inside == DisplayInside::Grid) {
+    box->children = raw_children;
+    box->algorithm = LayoutBox::Algorithm::Grid;
+
+    return box;
+  }
+
   if (box->style.display_outside == DisplayOutside::Block || dom_node->is_slot()) {
     box->algorithm = LayoutBox::Algorithm::BlockFlow;
     std::vector<std::shared_ptr<LayoutBox>> refined_children;
