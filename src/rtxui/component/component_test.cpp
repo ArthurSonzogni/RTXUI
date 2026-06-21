@@ -3289,6 +3289,32 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   auto* tab2_header = headers_slot->ChildAt(1);
   CHECK(tab1_header->classes[1] == "active-tab");
 
+  // Find pane elements initially
+  Element* pane1_el = nullptr;
+  Element* pane2_el = nullptr;
+  auto find_panes = [&]() {
+    pane1_el = nullptr;
+    pane2_el = nullptr;
+    container->Root()->Visit([&](Element& el) {
+      if (el.tag() == "tab-pane" || el.tag() == "tab_pane") {
+        if (el.Attributes().count("name")) {
+          auto name = el.Attributes().at("name");
+          if (name == "tab1") pane1_el = &el;
+          if (name == "tab2") pane2_el = &el;
+        }
+      }
+    });
+  };
+  find_panes();
+  REQUIRE(pane1_el != nullptr);
+  REQUIRE(pane2_el != nullptr);
+
+  // Verify initial classes and display styles (tab1 active, tab2 inactive)
+  CHECK(pane1_el->classes[0] == "active");
+  CHECK(pane1_el->style.display_none == false);
+  CHECK(pane2_el->classes[0] == "inactive");
+  CHECK(pane2_el->style.display_none == true);
+
   // Select tab2 via index
   tabs_ptr->SelectTab("1");
   container->Digest();
@@ -3297,23 +3323,16 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   CHECK(tabs_ptr->value == "tab2");
   CHECK(container->active_tab == "tab2");
 
-  // TabPane active/inactive classes
-  Element* pane1_el = nullptr;
-  Element* pane2_el = nullptr;
-  container->Root()->Visit([&](Element& el) {
-    if (el.tag() == "tab-pane" || el.tag() == "tab_pane") {
-      if (el.Attributes().count("name")) {
-        auto name = el.Attributes().at("name");
-        if (name == "tab1") pane1_el = &el;
-        if (name == "tab2") pane2_el = &el;
-      }
-    }
-  });
-
+  // Re-find pane elements after re-render/Digest
+  find_panes();
   REQUIRE(pane1_el != nullptr);
   REQUIRE(pane2_el != nullptr);
+
+  // Verify switched classes and display styles (tab1 inactive, tab2 active)
   CHECK(pane1_el->classes[0] == "inactive");
+  CHECK(pane1_el->style.display_none == true);
   CHECK(pane2_el->classes[0] == "active");
+  CHECK(pane2_el->style.display_none == false);
 }
 
 // --- Dialog ---

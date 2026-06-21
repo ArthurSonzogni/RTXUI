@@ -152,8 +152,10 @@ bool tabs::Digest() {
     pane_el->classes.clear();
     if (panes[i].name == value) {
       pane_el->classes.push_back("active");
+      pane_el->SetAttribute("style", "display: block;");
     } else {
       pane_el->classes.push_back("inactive");
+      pane_el->SetAttribute("style", "display: none;");
     }
   }
 
