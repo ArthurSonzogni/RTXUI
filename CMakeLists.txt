@@ -43,6 +43,12 @@ add_library(rtxui_lib STATIC
   "src/rtxui/component/default/checkbox/checkbox.cpp"
   "src/rtxui/component/default/details/details.cpp"
   "src/rtxui/component/default/summary/summary.cpp"
+  "src/rtxui/component/default/dialog/dialog.cpp"
+  "src/rtxui/component/default/fieldset/fieldset.cpp"
+  "src/rtxui/component/default/legend/legend.cpp"
+  "src/rtxui/component/default/radio/radio.cpp"
+  "src/rtxui/component/default/tabs/tabs.cpp"
+  "src/rtxui/component/default/tab_pane/tab_pane.cpp"
   "src/rtxui/component/default/div/div.cpp"
   "src/rtxui/component/default/h1/h1.cpp"
   "src/rtxui/component/default/hr/hr.cpp"
@@ -240,6 +246,18 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_details example/details.cpp)
   target_link_libraries(rtxui_example_details PRIVATE rtxui)
+
+  add_executable(rtxui_example_fieldset example/fieldset.cpp)
+  target_link_libraries(rtxui_example_fieldset PRIVATE rtxui)
+
+  add_executable(rtxui_example_radio example/radio.cpp)
+  target_link_libraries(rtxui_example_radio PRIVATE rtxui)
+
+  add_executable(rtxui_example_tabs example/tabs.cpp)
+  target_link_libraries(rtxui_example_tabs PRIVATE rtxui)
+
+  add_executable(rtxui_example_dialog example/dialog.cpp)
+  target_link_libraries(rtxui_example_dialog PRIVATE rtxui)
 
   add_executable(rtxui_example_select example/select.cpp)
   target_link_libraries(rtxui_example_select PRIVATE rtxui)

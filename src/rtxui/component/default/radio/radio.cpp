@@ -1,0 +1,147 @@
+// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+#include "rtxui/component/default/radio/radio.hpp"
+
+#include "rtxui/component/component_internal.hpp"
+#include "rtxui/dom/element.hpp"
+
+namespace rtxui {
+
+void radio::InitReflection() {
+  Bind(checked);
+  Bind(radio_char);
+  Component<radio>::InitReflection();
+}
+
+std::string_view radio::Setup() {
+  return R"html(
+    <span><span class="radio-mark">{radio_char}</span> <slot></slot></span>
+    <style>
+      self {
+        display: inline-block;
+        cursor: pointer;
+        padding-left: 1;
+        padding-right: 1;
+        transition: background-color 0.1s linear;
+      }
+      self:hover {
+        background-color: lighten(10%);
+      }
+      self:focus {
+        background-color: lighten(25%);
+      }
+      self:active {
+        background-color: lighten(35%);
+      }
+    </style>
+  )html";
+}
+
+bool radio::OnEvent(Event event) {
+  auto* root = Root();
+  if (!root) {
+    return false;
+  }
+
+  bool trigger = false;
+
+  if (event.is<Event::Mouse>()) {
+    auto mouse = event.get<Event::Mouse>();
+    if (mouse.button == Event::Mouse::Button::Left &&
+        mouse.motion == Event::Mouse::Motion::Pressed) {
+      int click_x = mouse.x - 1;
+      int click_y = mouse.y - 1;
+      int abs_x = root->absolute_x();
+      int abs_y = root->absolute_y();
+      int layout_w = root->layout_width();
+      int layout_h = root->layout_height();
+
+      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+          click_y < abs_y + layout_h) {
+        // Focus this element
+        if (root->Parent()) {
+          Element* root_el = root;
+          while (root_el->Parent()) {
+            root_el = root_el->Parent();
+          }
+          root_el->Visit([](Element& el) { el.set_focused(false); });
+        }
+        root->set_focused(true);
+        trigger = true;
+      }
+    }
+  }
+
+  if (event.is<Event::Keyboard>()) {
+    auto kb = event.get<Event::Keyboard>();
+    if ((kb.motion == Event::Keyboard::Motion::Pressed ||
+         kb.motion == Event::Keyboard::Motion::Repeat) &&
+        root->focused()) {
+      if ((kb.special == Event::Keyboard::Special::None &&
+           kb.codepoint == 32) ||  // Space
+          kb.special == Event::Keyboard::Special::Return) {
+        trigger = true;
+      }
+    }
+  }
+
+  if (trigger) {
+    if (!checked) {
+      checked = true;
+      PropagateBinding("checked", "true");
+
+      // Find other radio components with the same name and uncheck them
+      std::string name_attr = "";
+      if (root->Attributes().count("name")) {
+        name_attr = root->Attributes().at("name");
+      }
+
+      if (!name_attr.empty()) {
+        Element* owner_root = root;
+        while (owner_root->Parent()) {
+          owner_root = owner_root->Parent();
+        }
+
+        owner_root->Visit([&](Element& el) {
+          if (&el != root && el.tag() == "radio") {
+            if (el.Attributes().count("name") && el.Attributes().at("name") == name_attr) {
+              if (auto* comp = const_cast<ComponentBase*>(el.component())) {
+                if (auto* other_radio = dynamic_cast<radio*>(comp)) {
+                  if (other_radio->checked) {
+                    other_radio->checked = false;
+                    other_radio->PropagateBinding("checked", "false");
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Run onchange callback if present
+      if (root->Attributes().count("onchange")) {
+        std::string onchange_cb = root->Attributes().at("onchange");
+        if (auto* comp = GetAttributeOwnerComponent(root)) {
+          comp->RunCallback(onchange_cb);
+        }
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool radio::Digest() {
+  radio_char = checked ? "◉" : "○";
+  return Component<radio>::Digest();
+}
+
+namespace {
+int RegisterThis = []() {
+  RegisterGlobalComponent("radio", []() { return Ref<radio>::New(); });
+  return 0;
+}();
+}  // namespace
+}  // namespace rtxui

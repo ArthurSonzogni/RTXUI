@@ -31,6 +31,12 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<th>` | Container | `display: block;` | None | Table header cell element. Fits slot content. |
 | `<details>` | Interactive | `display: block;` | `open` | Collapsible section widget. |
 | `<summary>` | Interactive | `display: inline;` | None | Clickable summary header for `<details>`. |
+| `<fieldset>` | Container | `display: block;` | None | Grouping wrapper with border and optional legend. |
+| `<legend>` | Container | `display: inline;` | None | Group label nested inside `<fieldset>` top border. |
+| `<radio>` | Interactive | `display: inline-block;` | `checked`, `name`, `onchange` | Multi-choice radio button toggle. |
+| `<tabs>` | Container | `display: flex;` | `value`, `onchange` | Tabbed section switcher. |
+| `<tab-pane>` | Container | `display: block;` | `label`, `name` | Individual tabbed panel item. |
+| `<dialog>` | Container | `display: block;` | `open`, `title` | Floating modal overlay dialog window. |
 | `<if>` | Control Flow | N/A | `condition` | Dynamic conditional branch renderer. |
 | `<elif>` | Control Flow | N/A | `condition` | Alternative branch. Must follow `<if>` or `<elif>`. |
 | `<else>` | Control Flow | N/A | None | Fallback branch. Must follow `<if>` or `<elif>`. |
@@ -212,5 +218,65 @@ Example:
   </div>
 </details>
 ```
+
+---
+
+## 8. Grouping & Layout (`<fieldset>`, `<legend>`)
+
+The `<fieldset>` element is used to group several controls and labels within a web form. The `<legend>` element defines a caption for the `<fieldset>` and is nested inside its top border.
+
+Example:
+```xml
+<fieldset>
+  <legend>User Credentials</legend>
+  <input value="{username}" placeholder="Username" />
+  <input value="{password}" placeholder="Password" />
+</fieldset>
+```
+
+---
+
+## 9. Radio Buttons (`<radio>`)
+
+The `<radio>` element represents a radio button, allowing a single selection among multiple options sharing the same `name` attribute value.
+
+Example:
+```xml
+<radio name="gender" checked="{is_male}">Male</radio>
+<radio name="gender" checked="{is_female}">Female</radio>
+```
+
+---
+
+## 10. Tabbed Interfaces (`<tabs>`, `<tab-pane>`)
+
+The `<tabs>` and `<tab-pane>` elements build tabbed panels that allow switching between different views.
+
+Example:
+```xml
+<tabs value="{active_section}">
+  <tab-pane label="Profile" name="profile">
+    <p>User profile information...</p>
+  </tab-pane>
+  <tab-pane label="Billing" name="billing">
+    <p>User billing plans...</p>
+  </tab-pane>
+</tabs>
+```
+
+---
+
+## 11. Overlays & Dialogs (`<dialog>`)
+
+The `<dialog>` element represents a dialog box or other interactive component, such as a dismissible alert or subwindow overlay. When `open="true"`, it renders centered on top of all other elements using a translucent dark backdrop.
+
+Example:
+```xml
+<dialog open="{is_dialog_open}" title="Exit Application">
+  <p>Are you sure you want to exit?</p>
+  <button onclick="ConfirmExit">Exit</button>
+</dialog>
+```
+
 
 
