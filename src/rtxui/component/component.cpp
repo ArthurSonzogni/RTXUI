@@ -1827,6 +1827,10 @@ int ParseInt(std::string_view str) {
 }
 }  // namespace reflection
 
+void ComponentBase::EnableHotReload(std::string_view view_var_name, std::source_location location) {
+  HotReloadManager::Register(this, view_var_name, location.file_name());
+}
+
 void ComponentBase::EnableHotReload(std::string_view view_var_name, std::string_view filepath) {
   HotReloadManager::Register(this, view_var_name, filepath);
 }

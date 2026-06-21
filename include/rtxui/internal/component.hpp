@@ -18,6 +18,7 @@
 #include <variant>
 #include <vector>
 #include <filesystem>
+#include <source_location>
 #if defined(RTXUI_HAS_REFLECTION)
 #include <meta>
 #endif
@@ -90,6 +91,8 @@ class ComponentBase : public RefCounted, public Bindings {
   virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
   std::string_view Template();
+  void EnableHotReload(std::string_view view_var_name = "view",
+                       std::source_location location = std::source_location::current());
   void EnableHotReload(std::string_view view_var_name, std::string_view filepath);
   void HotReload(std::string_view new_template);
 
