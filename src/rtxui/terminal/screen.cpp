@@ -662,6 +662,11 @@ void ScreenImpl::Step() {
       tv.tv_sec = 0;
       tv.tv_usec = 16667;  // ~60 FPS
       timeout = &tv;
+    } else {
+      // In development/hot-reload mode, we check for file changes every 100ms
+      tv.tv_sec = 0;
+      tv.tv_usec = 100000; // 100ms
+      timeout = &tv;
     }
 
     int retval = select(STDIN_FILENO + 1, &fds, nullptr, nullptr, timeout);
@@ -699,6 +704,10 @@ void ScreenImpl::Step() {
   task_runner_.RunUntilNextDelayedTask();
 
   if (TickTransitions(time::GetTimeMs())) {
+    Draw();
+  }
+
+  if (HotReloadManager::PollChanges()) {
     Draw();
   }
 }
