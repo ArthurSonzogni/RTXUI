@@ -34,7 +34,7 @@ class FocusScrollDemo : public Component<FocusScrollDemo> {
       self {
         display: block;
         padding: 1 2;
-        background-color: rgb(15, 23, 42); /* Deep dark slate background */
+        background-color: rgb(18, 18, 18); /* Deep dark slate background */
         color: rgb(241, 245, 249);
       }
       h2 {

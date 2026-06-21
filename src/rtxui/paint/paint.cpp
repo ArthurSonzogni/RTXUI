@@ -918,7 +918,7 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y,
-            Color::RGB(255, 255, 255), Color::RGB(0, 0, 0), false, false, false,
+            Color::RGB(255, 255, 255), Color(), false, false, false,
             false, false, ClipRect{0, 0, texture.width(), texture.height()},
             1.0f);
 }

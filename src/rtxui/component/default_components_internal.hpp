@@ -8,6 +8,8 @@
 #include "rtxui/component/default/b/b.hpp"
 #include "rtxui/component/default/button/button.hpp"
 #include "rtxui/component/default/checkbox/checkbox.hpp"
+#include "rtxui/component/default/details/details.hpp"
+#include "rtxui/component/default/summary/summary.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/component/default/h1/h1.hpp"
 #include "rtxui/component/default/hr/hr.hpp"

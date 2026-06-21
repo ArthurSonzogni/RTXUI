@@ -45,19 +45,27 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
   }
 
   if (UNLIKELY(next->foreground_color != prev->foreground_color)) {
-    ss << "\x1B[38;2";
-    ss << ";" << static_cast<int>(next->foreground_color.r);
-    ss << ";" << static_cast<int>(next->foreground_color.g);
-    ss << ";" << static_cast<int>(next->foreground_color.b);
-    ss << "m";
+    if (next->foreground_color.a == 0) {
+      ss << "\x1B[39m";
+    } else {
+      ss << "\x1B[38;2";
+      ss << ";" << static_cast<int>(next->foreground_color.r);
+      ss << ";" << static_cast<int>(next->foreground_color.g);
+      ss << ";" << static_cast<int>(next->foreground_color.b);
+      ss << "m";
+    }
   }
 
   if (UNLIKELY(next->background_color != prev->background_color)) {
-    ss << "\x1B[48;2";
-    ss << ";" << static_cast<int>(next->background_color.r);
-    ss << ";" << static_cast<int>(next->background_color.g);
-    ss << ";" << static_cast<int>(next->background_color.b);
-    ss << "m";
+    if (next->background_color.a == 0) {
+      ss << "\x1B[49m";
+    } else {
+      ss << "\x1B[48;2";
+      ss << ";" << static_cast<int>(next->background_color.r);
+      ss << ";" << static_cast<int>(next->background_color.g);
+      ss << ";" << static_cast<int>(next->background_color.b);
+      ss << "m";
+    }
   }
 }
 }  // namespace

@@ -1961,4 +1961,100 @@ TEST_CASE("Layout: CSS Grid Layout with spans", "[layout][grid][span]") {
                                                 }));
 }
 
+TEST_CASE("Layout: CSS Grid Layout text containment", "[layout][grid][bug]") {
+  struct GridTextTest : Component<GridTextTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container {
+            display: grid;
+            grid-template-columns: 8;
+            grid-template-rows: 1fr;
+            width: 8;
+            height: 3;
+          }
+          .item {
+            display: block;
+            border: solid;
+            padding: 1;
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="container">
+          <div class="item">AB</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridTextTest>::New(), 8, 5);
+  std::string text_layer = GetTextLayer(texture);
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+  std::string bg_layer = GetColorLayer(texture, true, colors);
+
+  INFO("Text layer:\n" << text_layer);
+  INFO("BG layer:\n" << bg_layer);
+
+  // We check if the text 'AB' is drawn inside the padded area (inside the borders)
+  // Grid item border takes x=0, x=7, y=0, y=4.
+  // Padding takes x=1, x=6, y=1, y=3.
+  // So text 'AB' should be at y=2, starting at x=2.
+  CHECK(text_layer == CheckGrid({
+                                    "┌──────┐",
+                                    "│      │",
+                                    "│ AB   │",
+                                    "│      │",
+                                    "└──────┘",
+                                }));
+}
+
+TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
+  struct GridTallTest : Component<GridTallTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .container {
+            display: grid;
+            grid-template-columns: 8;
+            grid-template-rows: 3;
+            width: 8;
+            height: 3;
+          }
+          .item {
+            display: block;
+            border: tall;
+            border-color: rgb(255, 0, 0);
+            background-color: rgb(0, 255, 0);
+          }
+        </style>
+        <div class="container">
+          <div class="item"></div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridTallTest>::New(), 8, 3);
+  
+  const auto& left_cell = texture[0, 0];
+  INFO("left_cell fg: r=" << (int)left_cell.foreground_color.r 
+                         << " g=" << (int)left_cell.foreground_color.g 
+                         << " b=" << (int)left_cell.foreground_color.b 
+                         << " a=" << (int)left_cell.foreground_color.a);
+  CHECK(left_cell.character == "▊");
+  CHECK(left_cell.foreground_color.a == 0);
+  
+  const auto& right_cell = texture[7, 0];
+  INFO("right_cell bg: r=" << (int)right_cell.background_color.r 
+                          << " g=" << (int)right_cell.background_color.g 
+                          << " b=" << (int)right_cell.background_color.b 
+                          << " a=" << (int)right_cell.background_color.a);
+  CHECK(right_cell.character == "▎");
+  CHECK(right_cell.background_color.a == 0);
+}
+
 }  // namespace rtxui

@@ -15,7 +15,7 @@ class HelloWorldApp : public Component<HelloWorldApp> {
         self {
           display: block;
           padding: 1;
-          background-color: rgb(15, 23, 42);
+          background-color: rgb(18, 18, 18);
         }
         .card {
           border: tall;

@@ -24,6 +24,7 @@ class Card : public Component<Card> {
     </div>
     <style>
       self {
+          background-color: rgb(18, 18, 18);
         display: block;
         margin: 1;
       }
@@ -85,7 +86,7 @@ class SlotsDemo : public Component<SlotsDemo> {
       self {
         display: block;
         padding: 1;
-        background-color: #020617;
+        background-color: rgb(18, 18, 18);
         color: white;
         width: 100%;
         height: 100%;

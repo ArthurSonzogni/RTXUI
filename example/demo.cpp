@@ -29,7 +29,7 @@ class Header : public Component<Header> {
         left: 0;
         right: 0;
         padding: 1;
-        background-color: rgba(30, 59, 138, 0.75);
+        background-color: rgb(18, 18, 18);
         color: #f8fafc;            /* Light gray text */
         border-bottom: hkey;
         border-color: #00c8ff;     /* Very bright blue bottom border */
@@ -75,6 +75,7 @@ class Sidebar : public Component<Sidebar> {
     </div>
     <style>
       self {
+          background-color: rgb(18, 18, 18);
         position: sticky;
         top: 4;
         width: 16;
@@ -159,6 +160,10 @@ class SectionTransitions : public Component<SectionTransitions> {
       </div>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -242,6 +247,10 @@ class SectionBoxModel : public Component<SectionBoxModel> {
       </div>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -300,6 +309,10 @@ class SectionInputs : public Component<SectionInputs> {
       </div>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -391,6 +404,10 @@ class SectionColors : public Component<SectionColors> {
       </div>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -503,6 +520,10 @@ class SectionBorders : public Component<SectionBorders> {
       </div>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -572,6 +593,10 @@ class SectionAlign : public Component<SectionAlign> {
       </div>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -616,6 +641,10 @@ class SectionLoop : public Component<SectionLoop> {
       <slot></slot>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -761,6 +790,10 @@ class SectionMarkdown : public Component<SectionMarkdown> {
       </div>
     </div>
     <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
       .card {
         display: block;
         border: tall;
@@ -832,7 +865,7 @@ class Footer : public Component<Footer> {
         left: 0;
         right: 0;
         padding: 1;
-        background-color: rgba(30, 59, 138, 0.75);
+        background-color: rgb(18, 18, 18);
         color: #94a3b8;            /* Grayish blue text */
         border-top: hkey;
         border-color: #00c8ff;     /* Very bright blue top border */
@@ -1027,7 +1060,7 @@ int main() {
           width: 100%;
           height: 100%;
           color: #e2e8f0;
-          background-color: #0f172a;
+          background-color: rgb(18, 18, 18);
           overflow-y: scroll;
           scroll-behavior: smooth;
         }

@@ -41,6 +41,8 @@ add_library(rtxui_lib STATIC
   "include/rtxui/internal/component.hpp"
   "src/rtxui/component/default/button/button.cpp"
   "src/rtxui/component/default/checkbox/checkbox.cpp"
+  "src/rtxui/component/default/details/details.cpp"
+  "src/rtxui/component/default/summary/summary.cpp"
   "src/rtxui/component/default/div/div.cpp"
   "src/rtxui/component/default/h1/h1.cpp"
   "src/rtxui/component/default/hr/hr.cpp"
@@ -235,6 +237,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_progress example/progress.cpp)
   target_link_libraries(rtxui_example_progress PRIVATE rtxui)
+
+  add_executable(rtxui_example_details example/details.cpp)
+  target_link_libraries(rtxui_example_details PRIVATE rtxui)
 
   add_executable(rtxui_example_select example/select.cpp)
   target_link_libraries(rtxui_example_select PRIVATE rtxui)

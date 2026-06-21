@@ -2139,7 +2139,7 @@ TEST_CASE("Screen.RenderInitialFrameWideCharacterStyle", "[terminal]") {
 
   std::string output = texture.Render();
   REQUIRE(output.find("A") != std::string::npos);
-  REQUIRE(output.find("\x1B[48;2;0;0;0mA") != std::string::npos);
+  REQUIRE(output.find("\x1B[49mA") != std::string::npos);
 }
 
 TEST_CASE("Screen.SpatialNavigation", "[terminal][focus][spatial]") {

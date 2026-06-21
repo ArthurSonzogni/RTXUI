@@ -2500,7 +2500,8 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     int free_row_height = std::max(0, remaining_height - non_fr_row_height);
     for (int r = 0; r < R; ++r) {
       if (is_row_fr[r]) {
-        row_heights[r] = static_cast<int>(free_row_height * (rows_template[r].value / total_row_fr));
+        int fr_height = static_cast<int>(free_row_height * (rows_template[r].value / total_row_fr));
+        row_heights[r] = std::max(row_heights[r], fr_height);
       }
     }
   }
@@ -2508,8 +2509,24 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   // 6. Final Layout Pass
   auto container_frag = MakeArenaFragment(parent_width, 0);
   container_frag->dom_node = box->dom_node;
+  container_frag->visibility = box->style.visibility;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
+  container_frag->opacity = box->style.opacity;
+  container_frag->bold = box->style.bold;
+  container_frag->underlined = box->style.underlined;
+  container_frag->underlined_double = box->style.underlined_double;
+  container_frag->strikethrough = box->style.strikethrough;
+  container_frag->blink = box->style.blink;
+  container_frag->border_style = box->style.border_style;
+  container_frag->border_color_top = box->style.border_color_top;
+  container_frag->border_color_right = box->style.border_color_right;
+  container_frag->border_color_bottom = box->style.border_color_bottom;
+  container_frag->border_color_left = box->style.border_color_left;
+  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
+      box->style.border_style != BorderStyle::None) {
+    container_frag->has_border = true;
+  }
 
   std::vector<int> col_offsets(C, 0);
   int cur_x = box->style.padding.left + box->style.border.left;

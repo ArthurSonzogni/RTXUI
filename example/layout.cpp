@@ -20,6 +20,7 @@ class Box : public Component<Box> {
 
       <style>
         self {
+          background-color: rgb(18, 18, 18);
           display: block;
           flex-grow: 1;
         }
@@ -57,7 +58,7 @@ class LayoutDemo : public Component<LayoutDemo> {
         self {
           display: block;
           padding: 1;
-          background-color: rgb(15, 23, 42);
+          background-color: rgb(18, 18, 18);
           color: white;
         }
         h1 {
