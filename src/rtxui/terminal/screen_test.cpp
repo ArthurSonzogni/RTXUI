@@ -534,6 +534,75 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
   CHECK_FALSE(input2->focused());
 }
 
+TEST_CASE("Screen.RadioFocusCyclingAndNavigation", "[terminal][focus][radio]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class RadioFocusComponent : public Component<RadioFocusComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Import<rtxui::radio>();
+      Component<RadioFocusComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <style>
+        #root { display: flex; flex-direction: column; }
+        .item { width: 10; height: 3; }
+      </style>
+      <div id="root">
+        <radio id="radio1" class="item">Radio 1</radio>
+        <radio id="radio2" class="item">Radio 2</radio>
+      </div>
+    )html";
+  };
+
+  auto component = Ref<RadioFocusComponent>::New();
+  Screen screen(component, device);
+
+  auto* radio1 = component->Root()->QuerySelector("#radio1");
+  auto* radio2 = component->Root()->QuerySelector("#radio2");
+
+  REQUIRE(radio1 != nullptr);
+  REQUIRE(radio2 != nullptr);
+
+  // Initial State: no element focused
+  CHECK_FALSE(radio1->focused());
+  CHECK_FALSE(radio2->focused());
+
+  // 1. Tab key: Focuses first radio button
+  screen.Dispatch(Event::Tab());
+  CHECK(radio1->focused());
+  CHECK_FALSE(radio2->focused());
+
+  // 2. Tab key: Focuses second radio button
+  screen.Dispatch(Event::Tab());
+  CHECK_FALSE(radio1->focused());
+  CHECK(radio2->focused());
+
+  // 3. Tab key: Wrap around to the start
+  screen.Dispatch(Event::Tab());
+  CHECK(radio1->focused());
+  CHECK_FALSE(radio2->focused());
+
+  // 4. Shift+Tab (TabReverse): Wrap to the end
+  screen.Dispatch(Event::TabReverse());
+  CHECK_FALSE(radio1->focused());
+  CHECK(radio2->focused());
+
+  // 5. Arrow keys (Spatial Navigation): ArrowUp/ArrowDown to move between radio buttons
+  radio2->set_focused(false);
+  radio1->set_focused(true);
+  screen.Draw();
+
+  screen.Dispatch(Event::ArrowDown());
+  CHECK_FALSE(radio1->focused());
+  CHECK(radio2->focused());
+
+  screen.Dispatch(Event::ArrowUp());
+  CHECK(radio1->focused());
+  CHECK_FALSE(radio2->focused());
+}
+
 TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
   // Reset clock to normal when test finishes
   struct ClockRestorer {
