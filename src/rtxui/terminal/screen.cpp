@@ -55,7 +55,8 @@ std::optional<int> GetEffectiveTabIndex(Element* el) {
   }
   std::string_view tag = el->tag();
   if (tag == "input" || tag == "textarea" || tag == "checkbox" ||
-      tag == "slider" || tag == "button" || tag == "select") {
+      tag == "radio" || tag == "slider" || tag == "button" ||
+      tag == "select") {
     return 0;
   }
   return std::nullopt;
