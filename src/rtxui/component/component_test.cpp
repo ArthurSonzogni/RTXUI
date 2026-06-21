@@ -3375,6 +3375,72 @@ TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
   CHECK(dialog_ptr->overlay_class == "open");
 }
 
+// --- Hot Reload ---
+class HotReloadTestComponent : public rtxui::Component<HotReloadTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<HotReloadTestComponent>::InitReflection();
+  }
+  std::string_view view = R"html(
+    <div id="target">Initial Content</div>
+  )html";
+};
+
+TEST_CASE("Component Template Hot Reloading", "[component][hotreload]") {
+  std::string temp_file = "build/temp_hot_reload_test.cpp";
+  
+  // 1. Write initial template to temp file
+  {
+    std::ofstream out(temp_file);
+    out << "std::string_view view = R\"html(\n"
+        << "  <div id=\"target\">Initial Content</div>\n"
+        << ")html\";\n";
+  }
+  
+  // Make sure it is registered and points to the temp file
+  auto container = rtxui::Ref<HotReloadTestComponent>::New();
+  container->EnableHotReload("view", temp_file);
+  
+  rtxui::Screen screen(container);
+  screen.Draw();
+  
+  // Initial check
+  auto* target_el = container->Root()->QuerySelector("#target");
+  REQUIRE(target_el != nullptr);
+  CHECK(target_el->Print().find("Initial Content") != std::string::npos);
+
+  // 2. Modify template in temp file
+  {
+    std::ofstream out(temp_file);
+    out << "std::string_view view = R\"html(\n"
+        << "  <div id=\"target\">Updated Content</div>\n"
+        << ")html\";\n";
+  }
+  
+  // Force file modification time forward to simulate a save
+  try {
+    auto current_time = std::filesystem::last_write_time(temp_file);
+    std::filesystem::last_write_time(temp_file, current_time + std::chrono::seconds(2));
+  } catch (...) {
+    // fallback if system lacks write time support
+  }
+  
+  // Poll changes and verify it detects and reloads
+  bool reloaded = rtxui::HotReloadManager::PollChanges();
+  CHECK(reloaded == true);
+  
+  // Re-draw screen to update layout and check the node contents
+  screen.Draw();
+  
+  auto* updated_el = container->Root()->QuerySelector("#target");
+  REQUIRE(updated_el != nullptr);
+  CHECK(updated_el->Print().find("Updated Content") != std::string::npos);
+  
+  // Clean up
+  std::filesystem::remove(temp_file);
+}
+
 
 
 

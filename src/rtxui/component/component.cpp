@@ -212,6 +212,7 @@ struct CategorizedRules {
 ComponentBase::ComponentBase() = default;
 ComponentBase::~ComponentBase() {
   ReleaseMouse();
+  HotReloadManager::Unregister(this);
 }
 
 namespace {
@@ -1825,5 +1826,119 @@ int ParseInt(std::string_view str) {
   return 0;
 }
 }  // namespace reflection
+
+void ComponentBase::EnableHotReload(std::string_view view_var_name, std::string_view filepath) {
+  HotReloadManager::Register(this, view_var_name, filepath);
+}
+
+void ComponentBase::HotReload(std::string_view new_template) {
+  template_ = StripIndent(std::string(new_template));
+  xml_string_ = StripIndent(template_);
+
+  Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
+  if (!nodes) {
+    std::cerr << "XML parse error during hot reload: " << nodes.error().message << std::endl;
+    return;
+  }
+  xml_nodes_ = std::move(nodes.value());
+  Render();
+}
+
+namespace {
+std::vector<HotReloadInfo>& GetRegisteredHotReloads() {
+  static std::vector<HotReloadInfo> registered;
+  return registered;
+}
+
+std::string ExtractHotReloadTemplate(const std::string& filepath, const std::string& var_name) {
+  std::ifstream file(filepath);
+  if (!file.is_open()) return "";
+  
+  std::string content((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+
+  size_t search_start = 0;
+  if (!var_name.empty()) {
+    size_t var_pos = content.find(var_name);
+    if (var_pos != std::string::npos) {
+      search_start = var_pos;
+    }
+  }
+
+  // Look for R"html(
+  size_t start_pos = content.find("R\"html(", search_start);
+  std::string end_delim = ")html\"";
+  size_t content_start = 0;
+  
+  if (start_pos != std::string::npos) {
+    content_start = start_pos + 7;
+  } else {
+    // Try R"(
+    start_pos = content.find("R\"(", search_start);
+    if (start_pos != std::string::npos) {
+      content_start = start_pos + 3;
+      end_delim = ")\"";
+    } else {
+      return "";
+    }
+  }
+
+  size_t end_pos = content.find(end_delim, content_start);
+  if (end_pos == std::string::npos) return "";
+
+  return content.substr(content_start, end_pos - content_start);
+}
+} // namespace
+
+void HotReloadManager::Register(ComponentBase* component, std::string_view view_var_name, std::string_view filepath) {
+  std::string path_str(filepath);
+  if (!std::filesystem::exists(path_str)) {
+    return;
+  }
+  
+  auto& list = GetRegisteredHotReloads();
+  list.erase(std::remove_if(list.begin(), list.end(), 
+    [component](const HotReloadInfo& info) { return info.component == component; }), 
+    list.end());
+    
+  try {
+    auto mod_time = std::filesystem::last_write_time(path_str);
+    list.push_back({component, std::string(view_var_name), path_str, mod_time});
+  } catch (...) {
+    // ignore
+  }
+}
+
+void HotReloadManager::Unregister(ComponentBase* component) {
+  auto& list = GetRegisteredHotReloads();
+  list.erase(std::remove_if(list.begin(), list.end(), 
+    [component](const HotReloadInfo& info) { return info.component == component; }), 
+    list.end());
+}
+
+bool HotReloadManager::PollChanges() {
+  bool reloaded = false;
+  auto& list = GetRegisteredHotReloads();
+  for (auto& info : list) {
+    try {
+      if (!std::filesystem::exists(info.filepath)) {
+        continue;
+      }
+      auto current_time = std::filesystem::last_write_time(info.filepath);
+      if (current_time != info.last_modified) {
+        info.last_modified = current_time;
+        
+        std::string new_template = ExtractHotReloadTemplate(info.filepath, info.view_var_name);
+        if (!new_template.empty()) {
+          info.component->HotReload(new_template);
+          reloaded = true;
+        }
+      }
+    } catch (...) {
+      // ignore
+    }
+  }
+  return reloaded;
+}
 
 }  // namespace rtxui

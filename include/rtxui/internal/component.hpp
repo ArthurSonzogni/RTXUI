@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <filesystem>
 #if defined(RTXUI_HAS_REFLECTION)
 #include <meta>
 #endif
@@ -89,6 +90,8 @@ class ComponentBase : public RefCounted, public Bindings {
   virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
   std::string_view Template();
+  void EnableHotReload(std::string_view view_var_name, std::string_view filepath);
+  void HotReload(std::string_view new_template);
 
   void Mount();
   void Render();
@@ -544,6 +547,20 @@ class Component : public ComponentBase {
 
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory);
 ComponentFactory GetGlobalComponentFactory(std::string_view name);
+
+struct HotReloadInfo {
+  ComponentBase* component;
+  std::string view_var_name;
+  std::string filepath;
+  std::filesystem::file_time_type last_modified;
+};
+
+class HotReloadManager {
+ public:
+  static void Register(ComponentBase* component, std::string_view view_var_name, std::string_view filepath);
+  static void Unregister(ComponentBase* component);
+  static bool PollChanges();
+};
 
 }  // namespace rtxui
 
