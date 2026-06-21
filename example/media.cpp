@@ -36,7 +36,7 @@ class MediaQueriesDemo : public Component<MediaQueriesDemo> {
       self {
         display: block;
         padding: 1 2;
-        background-color: rgb(15, 23, 42); /* Slate 900 */
+        background-color: rgb(18, 18, 18); /* Slate 900 */
         color: rgb(241, 245, 249);
       }
       .title {

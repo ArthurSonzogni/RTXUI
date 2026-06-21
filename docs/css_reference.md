@@ -68,7 +68,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 
 | Property | Value Type | Animatable | Description |
 | :--- | :--- | :---: | :--- |
-| `display` | `none \| block \| inline \| flex` | ❌ | Enables the flex layout engine or hides elements. |
+| `display` | `none \| block \| inline \| flex \| grid` | ❌ | Enables the flex/grid layout engine or hides elements. |
 | `flex-direction` | `row \| column` | ❌ | Main formatting axis direction. |
 | `flex-wrap` | `nowrap \| wrap \| wrap-reverse` | ❌ | Controls wrapping behavior of flex items. |
 | `flex-grow` | [`<number>`](#value-types) |   | Portion of free space item claims along main axis. |
@@ -85,7 +85,24 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 
 ---
 
-## 5. Scrolling & Overflow
+## 5. Grid Layout
+
+| Property | Value Type | Animatable | Description |
+| :--- | :--- | :---: | :--- |
+| `grid-template-columns` | list of [`<length>`](#value-types) | ❌ | Defines the column tracks of the grid. Supports `repeat(count, track_size)`. |
+| `grid-template-rows` | list of [`<length>`](#value-types) | ❌ | Defines the row tracks of the grid. Supports `repeat(count, track_size)`. |
+| `grid-template` | shorthand | ❌ | Shorthand for grid-template-rows and grid-template-columns (separated by `/`). |
+| `grid-column` | `span <integer> \| <integer>` | ❌ | Sets the column span of the grid item. |
+| `grid-column-end` | `span <integer> \| <integer>` | ❌ | Alias for `grid-column`. |
+| `grid-row` | `span <integer> \| <integer>` | ❌ | Sets the row span of the grid item. |
+| `grid-row-end` | `span <integer> \| <integer>` | ❌ | Alias for `grid-row`. |
+| `grid-gap` | [`<length>`](#value-types) | ❌ | Alias for `gap`. |
+| `grid-row-gap` | [`<length>`](#value-types) | ❌ | Alias for `row-gap`. |
+| `grid-column-gap` | [`<length>`](#value-types) | ❌ | Alias for `column-gap`. |
+
+---
+
+## 6. Scrolling & Overflow
 
 | Property | Value Type | Animatable | Description |
 | :--- | :--- | :---: | :--- |
@@ -101,7 +118,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 
 ---
 
-## 6. Transitions and Positioning
+## 7. Transitions and Positioning
 
 | Property | Value Type | Animatable | Description |
 | :--- | :--- | :---: | :--- |
@@ -115,7 +132,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 
 ---
 
-## 7. List Styles
+## 8. List Styles
 
 | Property | Value Type | Animatable | Description |
 | :--- | :--- | :---: | :--- |

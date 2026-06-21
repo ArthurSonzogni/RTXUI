@@ -31,7 +31,7 @@ class Counter : public Component<Counter> {
         self {
           display: block;
           padding: 1;
-          background-color: rgb(15, 23, 42);
+          background-color: rgb(18, 18, 18);
           color: white;
         }
         .counter-container {

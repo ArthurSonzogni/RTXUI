@@ -178,7 +178,7 @@ You can style the generated HTML tags using the `stylesheet` property.
         flex-direction: row;
         width: 100%;
         height: 100%;
-        background-color: #0f172a;
+        background-color: rgb(18, 18, 18);
         color: #f1f5f9;
         overflow-y: scroll;
       }

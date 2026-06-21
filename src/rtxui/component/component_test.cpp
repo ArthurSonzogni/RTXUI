@@ -3024,5 +3024,126 @@ TEST_CASE("Slider interaction layout squashing regression", "[component][slider]
   CHECK(final_scroll_width == initial_scroll_width);
 }
 
+class DetailsTestComponent : public rtxui::Component<DetailsTestComponent> {
+ public:
+  bool open = false;
+
+  void InitReflection() override {
+    Bind(open);
+    Import<rtxui::details>();
+    Import<rtxui::summary>();
+    Import<rtxui::p>();
+    rtxui::Component<DetailsTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <details open="{open}">
+      <summary>My Title</summary>
+      <p>Secret content</p>
+    </details>
+  )";
+};
+
+class DetailsDefaultTestComponent : public rtxui::Component<DetailsDefaultTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::details>();
+    Import<rtxui::p>();
+    rtxui::Component<DetailsDefaultTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <details>
+      <p>Secret content</p>
+    </details>
+  )";
+};
+
+TEST_CASE("Details and Summary Components", "[component][details]") {
+  auto container = rtxui::Ref<DetailsTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* details_el = container->Root()->QuerySelector("details");
+  REQUIRE(details_el != nullptr);
+  auto* details_comp = const_cast<rtxui::ComponentBase*>(details_el->component());
+  REQUIRE(details_comp != nullptr);
+  auto* details_ptr = dynamic_cast<rtxui::details*>(details_comp);
+  REQUIRE(details_ptr != nullptr);
+
+  // 1. Initial State (open is false)
+  CHECK(details_ptr->open == false);
+  CHECK(details_ptr->arrow_char == "▶");
+  CHECK(details_ptr->content_class == "closed");
+
+  // 2. Toggle via program API
+  details_ptr->Toggle();
+  container->Digest();
+  screen.Draw();
+
+  CHECK(details_ptr->open == true);
+  CHECK(details_ptr->arrow_char == "▼");
+  CHECK(details_ptr->content_class == "open");
+  CHECK(container->open == true);
+
+  // 3. Toggle back via program API
+  details_ptr->Toggle();
+  container->Digest();
+  screen.Draw();
+
+  CHECK(details_ptr->open == false);
+  CHECK(container->open == false);
+
+  // 4. Toggle via Keyboard Event on focused summary-line
+  auto* summary_line_el = details_ptr->Root()->QuerySelector(".summary-line");
+  REQUIRE(summary_line_el != nullptr);
+
+  // Reset focus
+  details_ptr->Root()->Visit([](rtxui::Element& el) { el.set_focused(false); });
+  summary_line_el->set_focused(true);
+
+  // Dispatch return key event
+  Event return_event = Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::Return,
+  });
+  CHECK(details_ptr->OnEvent(return_event) == true);
+  container->Digest();
+  screen.Draw();
+
+  CHECK(details_ptr->open == true);
+  CHECK(container->open == true);
+
+  // Dispatch space key event
+  Event space_event = Event::Keyboard::From(' ');
+  CHECK(details_ptr->OnEvent(space_event) == true);
+  container->Digest();
+  screen.Draw();
+
+  CHECK(details_ptr->open == false);
+  CHECK(container->open == false);
+}
+
+TEST_CASE("Details Component Default Summary", "[component][details]") {
+  auto container = rtxui::Ref<DetailsDefaultTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* details_el = container->Root()->QuerySelector("details");
+  REQUIRE(details_el != nullptr);
+  auto* details_comp = const_cast<rtxui::ComponentBase*>(details_el->component());
+  REQUIRE(details_comp != nullptr);
+  auto* details_ptr = dynamic_cast<rtxui::details*>(details_comp);
+  REQUIRE(details_ptr != nullptr);
+
+  // The summary slot should dynamically contain a TextElement with text "Details"
+  auto summary_slot = details_ptr->Slot("summary");
+  REQUIRE(summary_slot != nullptr);
+  REQUIRE(summary_slot->ChildCount() > 0);
+
+  auto* text_el = dynamic_cast<rtxui::TextElement*>(summary_slot->ChildAt(0));
+  REQUIRE(text_el != nullptr);
+  CHECK(text_el->text() == "Details");
+}
+
+
 
 

@@ -339,10 +339,65 @@ Length ParseLength(std::string_view value) {
 
 std::vector<Length> ParseGridTemplate(std::string_view v) {
   std::vector<Length> tracks;
-  auto parts = SplitWords(v);
-  for (const auto& part : parts) {
-    if (part == "none") continue;
-    tracks.push_back(ParseLength(part));
+  std::vector<std::string_view> tokens;
+  size_t start = 0;
+  size_t i = 0;
+  int paren_depth = 0;
+  while (i < v.size()) {
+    if (v[i] == '(') {
+      paren_depth++;
+      i++;
+    } else if (v[i] == ')') {
+      paren_depth--;
+      i++;
+    } else if (std::isspace(static_cast<unsigned char>(v[i]))) {
+      if (paren_depth == 0) {
+        if (i > start) {
+          tokens.push_back(v.substr(start, i - start));
+        }
+        while (i < v.size() && std::isspace(static_cast<unsigned char>(v[i]))) {
+          i++;
+        }
+        start = i;
+      } else {
+        i++;
+      }
+    } else {
+      i++;
+    }
+  }
+  if (i > start) {
+    tokens.push_back(v.substr(start, i - start));
+  }
+
+  for (std::string_view token : tokens) {
+    if (token.empty() || token == "none") continue;
+    if (token.starts_with("repeat(") && token.back() == ')') {
+      std::string_view inner = token.substr(7, token.size() - 8);
+      size_t comma = inner.find(',');
+      if (comma != std::string_view::npos) {
+        std::string_view count_str = inner.substr(0, comma);
+        std::string_view pattern_str = inner.substr(comma + 1);
+        while (!count_str.empty() && std::isspace(static_cast<unsigned char>(count_str.front()))) count_str.remove_prefix(1);
+        while (!count_str.empty() && std::isspace(static_cast<unsigned char>(count_str.back()))) count_str.remove_suffix(1);
+        while (!pattern_str.empty() && std::isspace(static_cast<unsigned char>(pattern_str.front()))) pattern_str.remove_prefix(1);
+        while (!pattern_str.empty() && std::isspace(static_cast<unsigned char>(pattern_str.back()))) pattern_str.remove_suffix(1);
+
+        int count = 0;
+        try {
+          count = std::stoi(std::string(count_str));
+        } catch (...) {
+          continue;
+        }
+
+        std::vector<Length> sub_tracks = ParseGridTemplate(pattern_str);
+        for (int c = 0; c < count; ++c) {
+          tracks.insert(tracks.end(), sub_tracks.begin(), sub_tracks.end());
+        }
+      }
+    } else {
+      tracks.push_back(ParseLength(token));
+    }
   }
   return tracks;
 }
@@ -992,7 +1047,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
-  if (p == "gap") {
+  if (p == "gap" || p == "grid-gap") {
     auto parts = SplitWords(v);
     if (parts.size() == 1) {
       Length len = ParseLength(parts[0]);
@@ -1005,12 +1060,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
-  if (p == "row-gap") {
+  if (p == "row-gap" || p == "grid-row-gap") {
     style.row_gap = ParseLength(v);
     return;
   }
 
-  if (p == "column-gap") {
+  if (p == "column-gap" || p == "grid-column-gap") {
     style.column_gap = ParseLength(v);
     return;
   }
@@ -1022,6 +1077,27 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "grid-template-rows") {
     style.grid_template_rows = ParseGridTemplate(v);
+    return;
+  }
+
+  if (p == "grid-template") {
+    std::string_view val = v;
+    while (!val.empty() && std::isspace(static_cast<unsigned char>(val.front()))) {
+      val.remove_prefix(1);
+    }
+    while (!val.empty() && std::isspace(static_cast<unsigned char>(val.back()))) {
+      val.remove_suffix(1);
+    }
+    if (val == "none") {
+      style.grid_template_rows.clear();
+      style.grid_template_columns.clear();
+      return;
+    }
+    size_t slash = val.find('/');
+    if (slash != std::string_view::npos) {
+      style.grid_template_rows = ParseGridTemplate(val.substr(0, slash));
+      style.grid_template_columns = ParseGridTemplate(val.substr(slash + 1));
+    }
     return;
   }
 

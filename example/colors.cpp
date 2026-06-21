@@ -20,6 +20,7 @@ class ColorBox : public Component<ColorBox> {
 
       <style>
         self {
+          background-color: rgb(18, 18, 18);
           display: block;
           flex-grow: 1;
         }
@@ -121,7 +122,7 @@ class ColorDemo : public Component<ColorDemo> {
         self {
           display: block;
           padding: 2;
-          background-color: #0f172a;
+          background-color: rgb(18, 18, 18);
           color: #eee;
           height: 22;
           overflow-y: scroll;

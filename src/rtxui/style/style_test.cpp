@@ -716,3 +716,88 @@ TEST_CASE("Align self and content parsing in ApplyStyle", "[style][align]") {
     CHECK(style.align_content == rtxui::AlignContent::Center);
   }
 }
+
+TEST_CASE("Grid templates and placement parsing in ApplyStyle", "[style][grid]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("grid-template-columns only") {
+    rtxui::ApplyStyle(style, {"grid-template-columns", "1fr 2fr 50px"});
+    REQUIRE(style.grid_template_columns.size() == 3);
+    CHECK(style.grid_template_columns[0] == rtxui::Length::Fr(1.0f));
+    CHECK(style.grid_template_columns[1] == rtxui::Length::Fr(2.0f));
+    CHECK(style.grid_template_columns[2] == rtxui::Length::Cells(50.0f));
+  }
+
+  SECTION("grid-template-rows only") {
+    rtxui::ApplyStyle(style, {"grid-template-rows", "auto 10%"});
+    REQUIRE(style.grid_template_rows.size() == 2);
+    CHECK(style.grid_template_rows[0].unit == rtxui::Unit::Auto);
+    CHECK(style.grid_template_rows[1] == rtxui::Length::Pct(10.0f));
+  }
+
+  SECTION("grid-template shorthand") {
+    rtxui::ApplyStyle(style, {"grid-template", "1fr 2fr / 100px 50px"});
+    REQUIRE(style.grid_template_rows.size() == 2);
+    CHECK(style.grid_template_rows[0] == rtxui::Length::Fr(1.0f));
+    CHECK(style.grid_template_rows[1] == rtxui::Length::Fr(2.0f));
+
+    REQUIRE(style.grid_template_columns.size() == 2);
+    CHECK(style.grid_template_columns[0] == rtxui::Length::Cells(100.0f));
+    CHECK(style.grid_template_columns[1] == rtxui::Length::Cells(50.0f));
+  }
+
+  SECTION("grid-template shorthand none") {
+    style.grid_template_rows = {rtxui::Length::Fr(1.0f)};
+    style.grid_template_columns = {rtxui::Length::Fr(2.0f)};
+    rtxui::ApplyStyle(style, {"grid-template", "none"});
+    CHECK(style.grid_template_rows.empty());
+    CHECK(style.grid_template_columns.empty());
+  }
+
+  SECTION("grid-column and grid-column-end") {
+    rtxui::ApplyStyle(style, {"grid-column", "span 3"});
+    CHECK(style.grid_column_span == 3);
+
+    rtxui::ApplyStyle(style, {"grid-column-end", "5"});
+    CHECK(style.grid_column_span == 5);
+  }
+
+  SECTION("grid-row and grid-row-end") {
+    rtxui::ApplyStyle(style, {"grid-row", "span 2"});
+    CHECK(style.grid_row_span == 2);
+
+    rtxui::ApplyStyle(style, {"grid-row-end", "4"});
+    CHECK(style.grid_row_span == 4);
+  }
+
+  SECTION("grid-template with repeat()") {
+    rtxui::ApplyStyle(style, {"grid-template-columns", "1fr repeat(3, 100px) 2fr"});
+    REQUIRE(style.grid_template_columns.size() == 5);
+    CHECK(style.grid_template_columns[0] == rtxui::Length::Fr(1.0f));
+    CHECK(style.grid_template_columns[1] == rtxui::Length::Cells(100.0f));
+    CHECK(style.grid_template_columns[2] == rtxui::Length::Cells(100.0f));
+    CHECK(style.grid_template_columns[3] == rtxui::Length::Cells(100.0f));
+    CHECK(style.grid_template_columns[4] == rtxui::Length::Fr(2.0f));
+  }
+
+  SECTION("grid-template with nested repeat() and spaces") {
+    rtxui::ApplyStyle(style, {"grid-template-rows", "repeat(2, 1fr 2fr)"});
+    REQUIRE(style.grid_template_rows.size() == 4);
+    CHECK(style.grid_template_rows[0] == rtxui::Length::Fr(1.0f));
+    CHECK(style.grid_template_rows[1] == rtxui::Length::Fr(2.0f));
+    CHECK(style.grid_template_rows[2] == rtxui::Length::Fr(1.0f));
+    CHECK(style.grid_template_rows[3] == rtxui::Length::Fr(2.0f));
+  }
+
+  SECTION("grid gap aliases") {
+    rtxui::ApplyStyle(style, {"grid-gap", "5px 10px"});
+    CHECK(style.row_gap == rtxui::Length::Cells(5.0f));
+    CHECK(style.column_gap == rtxui::Length::Cells(10.0f));
+
+    rtxui::ApplyStyle(style, {"grid-row-gap", "8%"});
+    CHECK(style.row_gap == rtxui::Length::Pct(8.0f));
+
+    rtxui::ApplyStyle(style, {"grid-column-gap", "2fr"});
+    CHECK(style.column_gap == rtxui::Length::Fr(2.0f));
+  }
+}

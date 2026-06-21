@@ -33,7 +33,7 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
         flex-direction: column;
         padding: 1;
         gap: 1;
-        background-color: #0f172a;
+        background-color: rgb(18, 18, 18);
         color: #f1f5f9;
       }
       h1 {

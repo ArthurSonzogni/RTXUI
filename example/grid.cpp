@@ -12,7 +12,7 @@ class GridDemo : public Component<GridDemo> {
   std::string_view view = R"html(
       <div class="content">
         <h1>RTXUI CSS Grid Layout Demo</h1>
-        <p>This demo showcases the new CSS Grid layout support in RTXUI. The container uses display: grid, grid-template-columns: 1fr 2fr 1fr, and gaps. Spanning is also demonstrated (item 1 spans 2 columns, item 5 spans 2 rows).</p>
+        <p>This demo showcases the CSS Grid layout support in RTXUI. The container uses display: grid, the new shorthand grid-template: 1fr 1fr 1fr 1fr / 1fr 2fr 1fr, and gaps. Spanning is also demonstrated (item 1 spans 2 columns, item 5 spans 2 rows).</p>
 
         <div class="grid-container">
           <div class="grid-item item-1">1 (span 2 cols)</div>
@@ -27,6 +27,10 @@ class GridDemo : public Component<GridDemo> {
       </div>
       
       <style>
+        self {
+          background-color: rgb(18, 18, 18);
+        }
+
         .content {
           display: block;
           padding: 1;
@@ -43,8 +47,8 @@ class GridDemo : public Component<GridDemo> {
         }
         .grid-container {
           display: grid;
-          grid-template-columns: 1fr 2fr 1fr;
-          gap: 1 2;
+          grid-template: 1fr 1fr 1fr 1fr / 1fr 2fr 1fr;
+          gap: 1 1;
           width: 90%;
           height: 18;
           border: solid;

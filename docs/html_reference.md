@@ -29,6 +29,8 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<tr>` | Container | `display: block;` | None | Table row element. Groups cell elements. |
 | `<td>` | Container | `display: block;` | None | Table data cell element. Fits slot content. |
 | `<th>` | Container | `display: block;` | None | Table header cell element. Fits slot content. |
+| `<details>` | Interactive | `display: block;` | `open` | Collapsible section widget. |
+| `<summary>` | Interactive | `display: inline;` | None | Clickable summary header for `<details>`. |
 | `<if>` | Control Flow | N/A | `condition` | Dynamic conditional branch renderer. |
 | `<elif>` | Control Flow | N/A | `condition` | Alternative branch. Must follow `<if>` or `<elif>`. |
 | `<else>` | Control Flow | N/A | None | Fallback branch. Must follow `<if>` or `<elif>`. |
@@ -182,4 +184,33 @@ Below is the interactive live demo showcasing table borders, alternating row bac
 
 </template>
 </ExampleTabs>
+
+---
+
+## 7. Collapsible Details (`<details>`)
+
+The `<details>` element represents a disclosure widget in which information is visible only when the widget is toggled into an "open" state. A `<summary>` element is used to provide the visible label or header for the widget.
+
+### Elements
+* `<details>`: The collapsible wrapper container.
+* `<summary>`: The label or header that toggles details when clicked or activated via keyboard.
+
+### Attributes
+* `open`: A boolean attribute (`"true"` or `"false"`) indicating whether the details content is expanded.
+
+### Behavior
+* **Toggle Interaction**: Clicking the summary element or focusing it and pressing `Enter`/`Space` toggles the details visibility.
+* **Default Summary**: If no `<summary>` element is provided inside `<details>`, it automatically renders a default summary header labeled `"Details"`.
+
+Example:
+```xml
+<details open="{is_expanded}">
+  <summary>Click to see advanced options</summary>
+  <div class="options">
+    <checkbox checked="{enable_logs}">Enable Logs</checkbox>
+    <checkbox checked="{verbose}">Verbose Output</checkbox>
+  </div>
+</details>
+```
+
 

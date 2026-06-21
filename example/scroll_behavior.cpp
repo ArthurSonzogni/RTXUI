@@ -63,7 +63,7 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         display: block;
         width: 80;
         margin: 0 auto;
-        background-color: rgb(15, 23, 42);
+        background-color: rgb(18, 18, 18);
         color: rgb(241, 245, 249);
       }
       .container {

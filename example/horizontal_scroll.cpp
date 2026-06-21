@@ -66,7 +66,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           height: 100%;
           overflow-x: scroll;
           scroll-speed-x: 2;
-          background-color: rgb(15, 23, 42);
+          background-color: rgb(18, 18, 18);
           color: rgb(241, 245, 249);
           padding: 1;
         }

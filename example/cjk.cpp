@@ -53,7 +53,7 @@ class CJKDemo : public Component<CJKDemo> {
         self {
           display: block;
           padding: 2;
-          background-color: #0f172a;
+          background-color: rgb(18, 18, 18);
           color: #eee;
           overflow-y: scroll;
         }
