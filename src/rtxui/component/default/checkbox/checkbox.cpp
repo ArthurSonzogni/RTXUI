@@ -16,10 +16,13 @@ void checkbox::InitReflection() {
 
 std::string_view checkbox::Setup() {
   return R"html(
-    <span><span class="checkmark">{checked_char}</span> <slot></slot></span>
+    <span class="checkmark">{checked_char}</span>
+    <slot></slot>
     <style>
       self {
-        display: inline-block;
+        display: inline-flex;
+        flex-direction: row;
+        white-space: nowrap;
         cursor: pointer;
         padding-left: 1;
         padding-right: 1;
@@ -35,6 +38,7 @@ std::string_view checkbox::Setup() {
         background-color: lighten(35%);
       }
       .checkmark {
+        margin-right: 1;
       }
     </style>
   )html";

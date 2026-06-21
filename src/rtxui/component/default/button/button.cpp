@@ -14,19 +14,22 @@ const std::string_view button::view = R"html(
         padding-right: 1;
         cursor: pointer;
         background-color: lighten(10%);
-        opacity: 0.8;
-        transition: background-color 0.1s linear, opacity 0.1s linear;
+        opacity: 0.85;
+        transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
       }
       self:hover {
-        background-color: lighten(18%);
-        opacity: 0.9;
+        background-color: rgb(59, 130, 246);
+        color: white;
+        opacity: 0.95;
       }
       self:focus {
-        background-color: lighten(28%);
+        background-color: rgb(37, 99, 235);
+        color: white;
         opacity: 1.0;
       }
       self:active {
-        background-color: lighten(40%);
+        background-color: rgb(29, 78, 216);
+        color: white;
         opacity: 1.0;
       }
     </style>

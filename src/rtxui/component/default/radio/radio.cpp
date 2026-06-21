@@ -16,10 +16,13 @@ void radio::InitReflection() {
 
 std::string_view radio::Setup() {
   return R"html(
-    <span><span class="radio-mark">{radio_char}</span> <slot></slot></span>
+    <span class="radio-mark">{radio_char}</span>
+    <slot></slot>
     <style>
       self {
-        display: inline-block;
+        display: inline-flex;
+        flex-direction: row;
+        white-space: nowrap;
         cursor: pointer;
         padding-left: 1;
         padding-right: 1;
@@ -33,6 +36,9 @@ std::string_view radio::Setup() {
       }
       self:active {
         background-color: lighten(35%);
+      }
+      .radio-mark {
+        margin-right: 1;
       }
     </style>
   )html";
