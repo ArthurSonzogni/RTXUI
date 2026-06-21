@@ -59,7 +59,10 @@ class CheckboxDemo : public Component<CheckboxDemo> {
       </style>
     )html";
 
-  CheckboxDemo() { Bind(checked); }
+  CheckboxDemo() {
+    Bind(checked);
+    EnableHotReload("view", __FILE__);
+  }
 };
 
 int main() {
