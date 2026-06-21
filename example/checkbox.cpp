@@ -13,7 +13,10 @@ class CheckboxDemo : public Component<CheckboxDemo> {
   std::string_view view = R"html(
       <div class="container">
         <p class="title">Interactive Checkbox Element</p>
-        <p class="desc">A binary toggle component. Click on the checkbox or focus it and press Space to toggle the state.</p>
+        <p class="desc">A binary toggle component. Click on the checkbox or focus it and press Space to toggle the state.
+
+        Coucou les gens!
+        </p>
         
         <checkbox checked="{checked}">Enable Notifications</checkbox>
         
@@ -61,7 +64,7 @@ class CheckboxDemo : public Component<CheckboxDemo> {
 
   CheckboxDemo() {
     Bind(checked);
-    EnableHotReload("view", __FILE__);
+    EnableHotReload();
   }
 };
 
