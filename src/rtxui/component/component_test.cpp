@@ -3144,6 +3144,219 @@ TEST_CASE("Details Component Default Summary", "[component][details]") {
   CHECK(text_el->text() == "Details");
 }
 
+// --- Fieldset & Legend ---
+class FieldsetTestComponent : public rtxui::Component<FieldsetTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::fieldset>();
+    Import<rtxui::legend>();
+    Import<rtxui::p>();
+    rtxui::Component<FieldsetTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <fieldset>
+      <legend>User Profile</legend>
+      <p>Fieldset content</p>
+    </fieldset>
+  )";
+};
+
+TEST_CASE("Fieldset and Legend Components", "[component][fieldset]") {
+  auto container = rtxui::Ref<FieldsetTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* fieldset_el = container->Root()->QuerySelector("fieldset");
+  REQUIRE(fieldset_el != nullptr);
+  auto* fieldset_comp = const_cast<rtxui::ComponentBase*>(fieldset_el->component());
+  REQUIRE(fieldset_comp != nullptr);
+  auto* fieldset_ptr = dynamic_cast<rtxui::fieldset*>(fieldset_comp);
+  REQUIRE(fieldset_ptr != nullptr);
+
+  // The legend slot should contain a legend component
+  auto legend_slot = fieldset_ptr->Slot("legend");
+  REQUIRE(legend_slot != nullptr);
+  REQUIRE(legend_slot->ChildCount() > 0);
+
+  auto* legend_el = legend_slot->ChildAt(0);
+  CHECK(legend_el->tag() == "legend");
+  CHECK(fieldset_ptr->legend_class == "has-legend");
+}
+
+// --- Radio ---
+class RadioTestComponent : public rtxui::Component<RadioTestComponent> {
+ public:
+  bool opt_a = false;
+  bool opt_b = false;
+
+  void InitReflection() override {
+    Bind(opt_a);
+    Bind(opt_b);
+    Import<rtxui::radio>();
+    rtxui::Component<RadioTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <radio id="radioA" name="my_group" checked="{opt_a}">Option A</radio>
+      <radio id="radioB" name="my_group" checked="{opt_b}">Option B</radio>
+    </div>
+  )";
+};
+
+TEST_CASE("Radio Component Grouping", "[component][radio]") {
+  auto container = rtxui::Ref<RadioTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* radioA_el = container->Root()->QuerySelector("#radioA");
+  auto* radioB_el = container->Root()->QuerySelector("#radioB");
+  REQUIRE(radioA_el != nullptr);
+  REQUIRE(radioB_el != nullptr);
+
+  auto* radioA_ptr = dynamic_cast<rtxui::radio*>(const_cast<rtxui::ComponentBase*>(radioA_el->component()));
+  auto* radioB_ptr = dynamic_cast<rtxui::radio*>(const_cast<rtxui::ComponentBase*>(radioB_el->component()));
+  REQUIRE(radioA_ptr != nullptr);
+  REQUIRE(radioB_ptr != nullptr);
+
+  // Initial State: neither is checked
+  CHECK(radioA_ptr->checked == false);
+  CHECK(radioB_ptr->checked == false);
+
+  // Click on Radio A
+  Event clickA = Event::Keyboard::From(' ');
+  radioA_el->set_focused(true);
+  CHECK(radioA_ptr->OnEvent(clickA) == true);
+  container->Digest();
+  screen.Draw();
+
+  CHECK(radioA_ptr->checked == true);
+  CHECK(radioB_ptr->checked == false);
+  CHECK(container->opt_a == true);
+  CHECK(container->opt_b == false);
+
+  // Click on Radio B: A should automatically uncheck!
+  radioA_el->set_focused(false);
+  radioB_el->set_focused(true);
+  Event clickB = Event::Keyboard::From(' ');
+  CHECK(radioB_ptr->OnEvent(clickB) == true);
+  container->Digest();
+  screen.Draw();
+
+  CHECK(radioA_ptr->checked == false);
+  CHECK(radioB_ptr->checked == true);
+  CHECK(container->opt_a == false);
+  CHECK(container->opt_b == true);
+}
+
+// --- Tabs ---
+class TabsTestComponent : public rtxui::Component<TabsTestComponent> {
+ public:
+  std::string active_tab = "tab1";
+
+  void InitReflection() override {
+    Bind(active_tab);
+    Import<rtxui::tabs>();
+    Import<rtxui::tab_pane>();
+    rtxui::Component<TabsTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <tabs value="{active_tab}">
+      <tab-pane label="Tab One" name="tab1">Content One</tab-pane>
+      <tab-pane label="Tab Two" name="tab2">Content Two</tab-pane>
+    </tabs>
+  )";
+};
+
+TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
+  auto container = rtxui::Ref<TabsTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  REQUIRE(tabs_el != nullptr);
+  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  REQUIRE(tabs_ptr != nullptr);
+
+  // Initial tab: tab1
+  CHECK(tabs_ptr->value == "tab1");
+
+  // Verify headers slot
+  auto headers_slot = tabs_ptr->Slot("headers");
+  REQUIRE(headers_slot != nullptr);
+  REQUIRE(headers_slot->ChildCount() == 2);
+
+  auto* tab1_header = headers_slot->ChildAt(0);
+  auto* tab2_header = headers_slot->ChildAt(1);
+  CHECK(tab1_header->classes[1] == "active-tab");
+
+  // Select tab2 via index
+  tabs_ptr->SelectTab("1");
+  container->Digest();
+  screen.Draw();
+
+  CHECK(tabs_ptr->value == "tab2");
+  CHECK(container->active_tab == "tab2");
+
+  // TabPane active/inactive classes
+  Element* pane1_el = nullptr;
+  Element* pane2_el = nullptr;
+  container->Root()->Visit([&](Element& el) {
+    if (el.tag() == "tab-pane" || el.tag() == "tab_pane") {
+      if (el.Attributes().count("name")) {
+        auto name = el.Attributes().at("name");
+        if (name == "tab1") pane1_el = &el;
+        if (name == "tab2") pane2_el = &el;
+      }
+    }
+  });
+
+  REQUIRE(pane1_el != nullptr);
+  REQUIRE(pane2_el != nullptr);
+  CHECK(pane1_el->classes[0] == "inactive");
+  CHECK(pane2_el->classes[0] == "active");
+}
+
+// --- Dialog ---
+class DialogTestComponent : public rtxui::Component<DialogTestComponent> {
+ public:
+  bool dialog_open = false;
+
+  void InitReflection() override {
+    Bind(dialog_open);
+    Import<rtxui::dialog>();
+    rtxui::Component<DialogTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <dialog open="{dialog_open}" title="Confirm Dialog">
+      Body Content
+    </dialog>
+  )";
+};
+
+TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
+  auto container = rtxui::Ref<DialogTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* dialog_el = container->Root()->QuerySelector("dialog");
+  REQUIRE(dialog_el != nullptr);
+  auto* dialog_ptr = dynamic_cast<rtxui::dialog*>(const_cast<rtxui::ComponentBase*>(dialog_el->component()));
+  REQUIRE(dialog_ptr != nullptr);
+
+  // Initial State: closed
+  CHECK(dialog_ptr->open == false);
+  CHECK(dialog_ptr->overlay_class == "closed");
+
+  // Open dialog
+  container->dialog_open = true;
+  container->Digest();
+  screen.Draw();
+
+  CHECK(dialog_ptr->open == true);
+  CHECK(dialog_ptr->overlay_class == "open");
+}
+
+
 
 
 
