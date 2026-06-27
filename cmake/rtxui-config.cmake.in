@@ -1,0 +1,3 @@
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/rtxui-targets.cmake")
+check_required_components(rtxui)

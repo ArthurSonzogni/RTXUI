@@ -41,6 +41,8 @@ add_library(rtxui_lib STATIC
   "include/rtxui/internal/component.hpp"
   "src/rtxui/component/default/button/button.cpp"
   "src/rtxui/component/default/checkbox/checkbox.cpp"
+  "src/rtxui/component/default/label/label.cpp"
+  "src/rtxui/component/default/tooltip/tooltip.cpp"
   "src/rtxui/component/default/details/details.cpp"
   "src/rtxui/component/default/summary/summary.cpp"
   "src/rtxui/component/default/dialog/dialog.cpp"
@@ -72,17 +74,17 @@ add_library(rtxui_lib STATIC
   "src/rtxui/component/default/code/code.cpp"
   "src/rtxui/component/default/pre/pre.cpp"
   "include/rtxui/internal/import.hpp"
-  "src/rtxui/core/expected.hpp"
-  "src/rtxui/core/likely.hpp"
+  "src/rtxui/base/expected.hpp"
+  "src/rtxui/base/likely.hpp"
   "include/rtxui/internal/refcounted.hpp"
-  "src/rtxui/core/string.cpp"
-  "src/rtxui/core/string.hpp"
-  "src/rtxui/core/task.cpp"
-  "src/rtxui/core/task.hpp"
-  "src/rtxui/core/task_queue.cpp"
-  "src/rtxui/core/task_queue.hpp"
-  "src/rtxui/core/task_runner.cpp"
-  "src/rtxui/core/task_runner.hpp"
+  "src/rtxui/base/string.cpp"
+  "src/rtxui/base/string.hpp"
+  "src/rtxui/base/task.cpp"
+  "src/rtxui/base/task.hpp"
+  "src/rtxui/base/task_queue.cpp"
+  "src/rtxui/base/task_queue.hpp"
+  "src/rtxui/base/task_runner.cpp"
+  "src/rtxui/base/task_runner.hpp"
   "src/rtxui/dom/computed_style.hpp"
   "src/rtxui/dom/element.cpp"
   "src/rtxui/dom/element.hpp"
@@ -238,6 +240,12 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_checkbox example/checkbox.cpp)
   target_link_libraries(rtxui_example_checkbox PRIVATE rtxui)
 
+  add_executable(rtxui_example_label example/label.cpp)
+  target_link_libraries(rtxui_example_label PRIVATE rtxui)
+
+  add_executable(rtxui_example_tooltip example/tooltip.cpp)
+  target_link_libraries(rtxui_example_tooltip PRIVATE rtxui)
+
   add_executable(rtxui_example_slider example/slider.cpp)
   target_link_libraries(rtxui_example_slider PRIVATE rtxui)
 
@@ -314,6 +322,44 @@ if(RTXUI_BUILD_EXAMPLES)
   target_link_libraries(rtxui_example_spatial_navigation PRIVATE rtxui)
 endif()
 
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+install(TARGETS rtxui rtxui_lib
+  EXPORT rtxui-targets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<CONFIG>
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<CONFIG>
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(DIRECTORY include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(EXPORT rtxui-targets
+  FILE rtxui-targets.cmake
+  NAMESPACE rtxui::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rtxui
+)
+
+configure_package_config_file(
+  cmake/rtxui-config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/rtxui-config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rtxui
+)
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/rtxui-config-version.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/rtxui-config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/rtxui-config-version.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rtxui
+)
+
 option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" ON)
 if(RTXUI_BUILD_BENCHMARKS)
   add_executable(rtxui_benchmark benchmarks/rtxui_benchmark.cpp)
@@ -356,9 +402,10 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/terminal/screen_test.cpp"
     "src/rtxui/component/component_test.cpp"
     "src/rtxui/component/interpolation_test.cpp"
-    "src/rtxui/core/refcounted_test.cpp"
-    "src/rtxui/core/task_test.cpp"
-    "src/rtxui/core/unicode_test.cpp"
+    "src/rtxui/base/expected_test.cpp"
+    "src/rtxui/base/refcounted_test.cpp"
+    "src/rtxui/base/task_test.cpp"
+    "src/rtxui/base/unicode_test.cpp"
     "src/rtxui/layout/layout_test.cpp"
     "src/rtxui/layout/rowspan_paint_test.cpp"
     "src/rtxui/paint/border_style_test.cpp"

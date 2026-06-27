@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build & Install Debug
+        run: |
+          cmake --build build --config Debug
+          cmake --install build --config Debug --prefix install
+
+      - name: Build & Install Release
+        run: |
+          cmake --build build --config Release
+          cmake --install build --config Release --prefix install
+
+      - name: Package
+        run: 7z a rtxui-windows-x64.zip ./install/*
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtxui-windows-x64
+          path: rtxui-windows-x64.zip
+
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build & Install Debug
+        run: |
+          cmake -B build_debug -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build_debug
+          cmake --install build_debug --prefix install
+
+      - name: Build & Install Release
+        run: |
+          cmake -B build_release -DCMAKE_BUILD_TYPE=Release
+          cmake --build build_release
+          cmake --install build_release --prefix install
+
+      - name: Package
+        run: tar -czf rtxui-linux-x64.tar.gz -C install .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtxui-linux-x64
+          path: rtxui-linux-x64.tar.gz
+
+  macos:
+    name: macOS (universal)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build & Install Debug
+        run: |
+          cmake -B build_debug \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake --build build_debug
+          cmake --install build_debug --prefix install
+
+      - name: Build & Install Release
+        run: |
+          cmake -B build_release \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake --build build_release
+          cmake --install build_release --prefix install
+
+      - name: Package
+        run: tar -czf rtxui-macos-universal.tar.gz -C install .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtxui-macos-universal
+          path: rtxui-macos-universal.tar.gz
+
+  publish:
+    name: Publish release
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            rtxui-windows-x64.zip
+            rtxui-linux-x64.tar.gz
+            rtxui-macos-universal.tar.gz
