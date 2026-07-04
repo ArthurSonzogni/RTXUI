@@ -269,6 +269,9 @@ struct ComputedStyle {
   JustifyContent justify_content = JustifyContent::FlexStart;
   AlignItems align_items = AlignItems::Stretch;
   AlignSelf align_self = AlignSelf::Auto;
+  // Inline-axis alignment inside grid cells (justify-items / justify-self).
+  AlignItems justify_items = AlignItems::Stretch;
+  AlignSelf justify_self = AlignSelf::Auto;
   AlignContent align_content = AlignContent::Stretch;
 
   Spacing margin;
@@ -383,6 +386,8 @@ struct ComputedStyle {
     justify_content = other.justify_content;
     align_items = other.align_items;
     align_self = other.align_self;
+    justify_items = other.justify_items;
+    justify_self = other.justify_self;
     align_content = other.align_content;
     margin = other.margin;
     padding = other.padding;

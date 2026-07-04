@@ -2412,6 +2412,44 @@ TEST_CASE("Layout: calc() width", "[layout][calc]") {
                                                 }));
 }
 
+TEST_CASE("Layout: grid justify-items and align-self", "[layout][grid][justify]") {
+  struct GridJustifyTest : Component<GridJustifyTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .grid {
+            display: grid;
+            grid-template-columns: 6 6;
+            justify-items: center;
+          }
+          .item { display: block; width: 2; background-color: rgb(255, 0, 0); }
+          .end { justify-self: end; }
+        </style>
+        <div class="grid">
+          <div class="item">A</div>
+          <div class="item end">B</div>
+        </div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridJustifyTest>::New(), 12, 1);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // Column 1 (cells 0-5): 2-wide item centered -> offset 2.
+  // Column 2 (cells 6-11): justify-self end -> offset 4 within the column.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "..RR......RR",
+                                                }));
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "  A       B ",
+                                 }));
+}
+
 TEST_CASE("Layout: white-space pre-line collapses runs", "[layout][white-space]") {
   struct PreLineTest : Component<PreLineTest> {
     std::string_view Setup() {
