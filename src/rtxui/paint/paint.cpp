@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/paint/texture.hpp"
@@ -833,13 +833,23 @@ void PaintImpl(const PhysicalFragment* frag,
       sorted_children.begin(), sorted_children.end(),
       [](const PhysicalFragment::ChildLink& a,
          const PhysicalFragment::ChildLink& b) {
+        bool a_pos = (a.fragment && a.fragment->dom_node &&
+                      a.fragment->dom_node->style.position != PositionType::Static);
+        bool b_pos = (b.fragment && b.fragment->dom_node &&
+                      b.fragment->dom_node->style.position != PositionType::Static);
         int az = (a.fragment && a.fragment->dom_node)
                      ? a.fragment->dom_node->style.z_index.value_or(0)
                      : 0;
         int bz = (b.fragment && b.fragment->dom_node)
                      ? b.fragment->dom_node->style.z_index.value_or(0)
                      : 0;
-        return az < bz;
+        if (az != bz) {
+          return az < bz;
+        }
+        if (a_pos != b_pos) {
+          return !a_pos && b_pos;
+        }
+        return false;
       });
 
   int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
@@ -880,24 +890,30 @@ void PaintImpl(const PhysicalFragment* frag,
       if (is_sticky) {
         if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
           int top_val = child.fragment->dom_node->style.top.Resolve(0);
-          int min_y = viewport_y + top_val;
+          int active_viewport_y = frag->clips_descendants ? next_viewport_y : viewport_y;
+          int min_y = active_viewport_y + top_val;
           child_off_y = std::max(child_off_y, min_y);
 
-          int parent_scrolled_bottom =
-              abs_y + h - border_b - padding_b - scroll_y_offset;
-          int max_y = parent_scrolled_bottom - child.fragment->height;
-          child_off_y = std::min(child_off_y, max_y);
+          if (!frag->clips_descendants) {
+            int parent_scrolled_bottom =
+                abs_y + h - border_b - padding_b;
+            int max_y = parent_scrolled_bottom - child.fragment->height;
+            child_off_y = std::min(child_off_y, max_y);
+          }
         }
 
         if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
           int left_val = child.fragment->dom_node->style.left.Resolve(0);
-          int min_x = viewport_x + left_val;
+          int active_viewport_x = frag->clips_descendants ? next_viewport_x : viewport_x;
+          int min_x = active_viewport_x + left_val;
           child_off_x = std::max(child_off_x, min_x);
 
-          int parent_scrolled_right =
-              abs_x + w - border_r - padding_r - scroll_x_offset;
-          int max_x = parent_scrolled_right - child.fragment->width;
-          child_off_x = std::min(child_off_x, max_x);
+          if (!frag->clips_descendants) {
+            int parent_scrolled_right =
+                abs_x + w - border_r - padding_r;
+            int max_x = parent_scrolled_right - child.fragment->width;
+            child_off_x = std::min(child_off_x, max_x);
+          }
         }
       }
     }

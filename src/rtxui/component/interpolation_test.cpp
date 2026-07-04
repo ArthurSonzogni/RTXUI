@@ -2,9 +2,10 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include <catch2/catch_test_macros.hpp>
+#include <cmath>
 
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
 
@@ -126,7 +127,7 @@ class StructLoopInterpolation
   void InitReflection() override {
     BindCollection("items", &items, [](const SubItem& s) {
       return std::make_shared<rtxui::ManualStructVisitor>(
-          std::unordered_map<std::string, std::string>{{"val", s.val}});
+          std::map<std::string, std::string, std::less<>>{{"val", s.val}});
     });
     Import<rtxui::div>();
     Import<rtxui::span>();
@@ -257,5 +258,67 @@ TEST_CASE("Conditional Rendering", "[component][interpolation]") {
   CHECK(output.find("Two") == std::string::npos);
   CHECK(output.find("Other") != std::string::npos);
 }
-
 }  // namespace
+
+namespace rtxui {
+float ApplyEasing(float t, std::string_view timing);
+
+TEST_CASE("Transition Easing Functions", "[dom][easing]") {
+  auto IsClose = [](float a, float b) {
+    return std::abs(a - b) < 1e-5f;
+  };
+
+  // Test boundary values
+  CHECK(ApplyEasing(0.0f, "linear") == 0.0f);
+  CHECK(ApplyEasing(-0.5f, "linear") == 0.0f);
+  CHECK(ApplyEasing(1.0f, "linear") == 1.0f);
+  CHECK(ApplyEasing(1.5f, "linear") == 1.0f);
+
+  // Test linear
+  CHECK(ApplyEasing(0.5f, "linear") == 0.5f);
+
+  // Test standard curves
+  CHECK(ApplyEasing(0.5f, "ease") > 0.0f);
+  CHECK(ApplyEasing(0.5f, "ease-in") > 0.0f);
+  CHECK(ApplyEasing(0.5f, "ease-out") > 0.0f);
+  CHECK(ApplyEasing(0.5f, "ease-in-out") > 0.0f);
+
+  // Test new standard easing curves
+  // Sine
+  CHECK(ApplyEasing(0.0f, "ease-in-sine") == 0.0f);
+  CHECK(ApplyEasing(1.0f, "ease-in-sine") == 1.0f);
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-sine"), 1.0f - std::cos(0.5f * 3.1415926535f / 2.0f)));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-sine"), std::sin(0.5f * 3.1415926535f / 2.0f)));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-out-sine"), 0.5f));
+
+  // Quad
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-quad"), 0.25f));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-quad"), 0.75f));
+  CHECK(IsClose(ApplyEasing(0.25f, "ease-in-out-quad"), 0.125f));
+  CHECK(IsClose(ApplyEasing(0.75f, "ease-in-out-quad"), 0.875f));
+
+  // Cubic
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-cubic"), 0.125f));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-cubic"), 0.875f));
+
+  // Quart
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-quart"), 0.0625f));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-quart"), 0.9375f));
+
+  // Quint
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-quint"), 0.03125f));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-quint"), 0.96875f));
+
+  // Expo
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-expo"), std::pow(2.0f, -5.0f)));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-expo"), 1.0f - std::pow(2.0f, -5.0f)));
+
+  // Circ
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-circ"), 1.0f - std::sqrt(0.75f)));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-circ"), std::sqrt(0.75f)));
+
+  // Back
+  CHECK(ApplyEasing(0.5f, "ease-in-back") < 0.5f);
+  CHECK(ApplyEasing(0.5f, "ease-out-back") > 0.5f);
+}
+} // namespace rtxui

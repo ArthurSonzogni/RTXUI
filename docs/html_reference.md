@@ -20,6 +20,8 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<input>` | Interactive | `display: inline flex; flex-direction: row; border: solid; border-color: #555; padding-left: 1; padding-right: 1; overflow-x: scroll; scrollbar-width: none; white-space: nowrap;` | `value` | Interactive single-line text entry field. |
 | `<textarea>` | Interactive | `display: block; border: solid; border-color: #555; padding-left: 1; padding-right: 1; overflow-y: scroll;` | `value` | Interactive multi-line scrollable text field. |
 | `<checkbox>` | Interactive | `display: inline-block; cursor: pointer;` | `checked`, `onchange` | Interactive boolean check toggle. |
+| `<label>` | Interactive | `display: inline-flex; cursor: pointer;` | `for` | Click delegation and target-focus association. |
+| `<tooltip>` | Interactive | `display: inline-block;` | `content`, `placement` | Context popup helper displayed on trigger hover. |
 | `<slider>` | Interactive | `display: inline-block; cursor: pointer;` | `value`, `min`, `max`, `step`, `width`, `onchange` | Interactive range slider control. |
 | `<progress>` | Display | `display: inline-block;` | `value`, `max`, `width` | Non-interactive progress bar tracker. |
 | `<select>` | Interactive | `display: inline flex; flex-direction: column;` | `value`, `onchange` | Dropdown picker list menu. |
@@ -277,6 +279,74 @@ Example:
   <button onclick="ConfirmExit">Exit</button>
 </dialog>
 ```
+
+---
+
+## 12. Click & Focus Association (`<label>`)
+
+The `<label>` element represents a caption for an item in a user interface. Clicking on a `<label>` delegates the click event and transfers input focus to its associated element (such as a `<checkbox>`, `<radio>`, `<input>`, or `<button>`).
+
+Association can be achieved in two ways:
+
+### 1. Explicit Association (via `for` attribute)
+Specify the target element's `id` in the label's `for` attribute.
+
+```xml
+<label for="username-field">Enter Username</label>
+<input id="username-field" value="{username}" />
+```
+
+### 2. Implicit Association (via Nesting)
+Nest the target focusable element directly inside the `<label>` tags.
+
+```xml
+<label>
+  Accept Terms and Conditions
+  <checkbox checked="{accepted}">Accept</checkbox>
+</label>
+```
+
+### Live Demo
+
+Below is the interactive live demo showcasing label interactions via explicit `for` bindings and implicit nested associations:
+
+<ExampleTabs src="/wasm/rtxui_example_label.js">
+<template #source>
+
+<<< @/../example/label.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
+## 13. Context Tooltips (`<tooltip>`)
+
+The `<tooltip>` element represents a popup helper widget. When a user hovers their mouse cursor over any element inside the `<tooltip>`, it triggers a floating overlay displaying the specified content.
+
+### Attributes
+* `content`: The text content to display inside the tooltip popup box. Can be reactive.
+* `placement`: The direction to position the tooltip popup relative to the wrapped element. Supported values: `top` (default), `bottom`, `left`, `right`.
+
+Example:
+```xml
+<tooltip content="Allows you to check settings" placement="top">
+  <button>Hover Me</button>
+</tooltip>
+```
+
+### Live Demo
+
+Below is the interactive live demo showcasing tooltips placed in all directions (top, bottom, left, right) and with dynamic text content:
+
+<ExampleTabs src="/wasm/rtxui_example_tooltip.js">
+<template #source>
+
+<<< @/../example/tooltip.cpp
+
+</template>
+</ExampleTabs>
+
 
 
 

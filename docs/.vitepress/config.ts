@@ -1,83 +1,85 @@
-import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid({
   title: 'RTXUI',
   description: 'C++ Reactive Terminal Rendering Engine',
   themeConfig: {
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Guide', link: '/guide/hello-world' },
-      { text: 'Reference', link: '/cpp_api' }
+      { text: 'Guide', link: '/guide/hello-world', activeMatch: '/guide/' },
+      { text: 'API Reference', link: '/cpp_api', activeMatch: '/(cpp_api|html_reference|css_reference)' },
+      { text: 'Interactive Demos', link: '/guide/examples' },
+      { text: 'Hot Reloading', link: '/guide/hot-reload' }
     ],
     sidebar: [
       {
-        text: 'Introduction',
+        text: '🚀 Essentials',
         items: [
-          { text: 'Getting Started', link: '/' },
+          { text: 'Introduction', link: '/' },
+          { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Hello World', link: '/guide/hello-world' },
-          { text: 'Reactive Model', link: '/reactivity' },
-          { text: 'All Examples & Demos', link: '/guide/examples' }
+          { text: 'How Reactivity Works', link: '/reactivity' }
         ]
       },
       {
-        text: 'Core Concepts (HTML & Logic)',
+        text: '🛠️ Templates & Logic (HTML)',
         collapsed: false,
         items: [
           { text: 'Value Interpolation', link: '/guide/interpolation' },
-          { text: 'Event Handlers & Inputs', link: '/guide/bindings' },
+          { text: 'Event Handlers & Bindings', link: '/guide/bindings' },
           { text: 'Conditional Rendering', link: '/guide/conditionals' },
           { text: 'Loops & Lists', link: '/guide/loops' },
           { text: 'Focus & Tab Navigation', link: '/guide/html/focus' },
-          { text: 'Form Elements', link: '/guide/forms' }
+          { text: 'Form & Input Controls', link: '/guide/forms' }
         ]
       },
       {
-        text: 'C++ Integration Guide',
+        text: '🎨 Styling & Layout (CSS)',
         collapsed: true,
         items: [
-          { text: 'Creating Components', link: '/guide/cpp/components' },
-          { text: 'Component Slots & Composition', link: '/guide/cpp/slots' },
-          { text: 'State & Collections Reflection', link: '/guide/cpp/bindings' },
-          { text: 'Navigating the DOM', link: '/guide/cpp/dom' },
+          { text: 'Styling Basics & Selectors', link: '/guide/css/basics' },
+          { text: 'Typography & Text Styling', link: '/guide/typography' },
+          { text: 'Box Model & Spacing', link: '/guide/css/box-model' },
+          { text: 'Flexbox Layouts', link: '/guide/css/flexbox' },
+          { text: 'Positioning & Layers', link: '/guide/css/positioning' },
+          { text: 'Scrolling Containers', link: '/guide/scrolling' },
+          { text: 'Transitions & Animations', link: '/guide/css/animations' },
+          { text: 'Responsive Media Queries', link: '/guide/css/media-queries' }
+        ]
+      },
+      {
+        text: '💻 C++ Integration Guide',
+        collapsed: true,
+        items: [
+          { text: 'Creating Custom Components', link: '/guide/cpp/components' },
+          { text: 'Slots & Component Composition', link: '/guide/cpp/slots' },
+          { text: 'State & Reflection Binding', link: '/guide/cpp/bindings' },
+          { text: 'Navigating the DOM Tree', link: '/guide/cpp/dom' },
           { text: 'Screen Loop & Lifecycle', link: '/guide/cpp/lifecycle' }
         ]
       },
       {
-        text: 'CSS & Layout Guide',
-        collapsed: true,
-        items: [
-          { text: 'Typography & Text Styling', link: '/guide/typography' },
-          { text: 'Styling Basics & Selectors', link: '/guide/css/basics' },
-          { text: 'Box Model & Spacing', link: '/guide/css/box-model' },
-          { text: 'Flexbox Layouts', link: '/guide/css/flexbox' },
-          { text: 'Positioning & Layers', link: '/guide/css/positioning' },
-          { text: 'Responsive Media Queries', link: '/guide/css/media-queries' },
-          { text: 'Transitions & Animations', link: '/guide/css/animations' }
-        ]
-      },
-      {
-        text: 'Specialized Features',
-        collapsed: true,
-        items: [
-          { text: 'Scrolling Containers', link: '/guide/scrolling' },
-          { text: 'Unicode & CJK', link: '/guide/unicode' },
-          { text: 'Markdown rendering', link: '/guide/markdown' }
-        ]
-      },
-      {
-        text: 'Cookbook & Recipes',
+        text: '⚡ Developer Tooling & Workflow',
         collapsed: false,
+        items: [
+          { text: 'Hot Reloading / Live Preview', link: '/guide/hot-reload' },
+          { text: 'Unicode & CJK Support', link: '/guide/unicode' },
+          { text: 'Markdown Rendering', link: '/guide/markdown' }
+        ]
+      },
+      {
+        text: '📚 Cookbook & Recipes',
+        collapsed: true,
         items: [
           { text: 'Common UI Recipes', link: '/guide/cookbook' }
         ]
       },
       {
-        text: 'Reference Manual',
+        text: '📖 Reference Manuals',
         collapsed: false,
         items: [
-          { text: 'C++ API Reference', link: '/cpp_api' },
           { text: 'HTML Element Reference', link: '/html_reference' },
-          { text: 'CSS Attribute Reference', link: '/css_reference' }
+          { text: 'CSS Property Reference', link: '/css_reference' },
+          { text: 'C++ API Reference', link: '/cpp_api' }
         ]
       }
     ],

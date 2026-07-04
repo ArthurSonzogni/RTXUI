@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-#include "rtxui/core/expected.hpp"
+#include "rtxui/base/expected.hpp"
 
 namespace css {
 
@@ -24,11 +24,21 @@ struct AttributeSelector {
   bool has_value = false;
 };
 
+struct SelectorPart {
+  std::string base;
+  std::string id;
+  std::vector<std::string> classes;
+  std::vector<AttributeSelector> attributes;
+  char combinator = ' '; // ' ' or '>'
+};
+
 struct ParsedSelector {
   std::string base;
+  std::string id;
   std::vector<std::string> classes;
   std::vector<std::string> pseudo_classes;
   std::vector<AttributeSelector> attributes;
+  std::vector<SelectorPart> parents; // Ancestors in right-to-left order
 };
 
 /// A CSS ruleset (selector { declarations }).

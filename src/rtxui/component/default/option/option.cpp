@@ -18,15 +18,25 @@ std::string_view option::Setup() {
     self {
       display: block;
       cursor: pointer;
-      opacity: 0.65;
-      transition: background-color 0.1s linear, opacity 0.1s linear;
+      opacity: 0.85;
+      padding-left: 1;
+      padding-right: 1;
+      transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
+    }
+    self:hover {
+      background-color: rgb(59, 130, 246);
+      color: white;
+      opacity: 1.0;
     }
     .selected {
       opacity: 1.0;
-      background-color: lighten(10%);
+      background-color: rgb(51, 65, 85);
+      color: rgb(254, 240, 138);
+      font-weight: bold;
     }
     .hovered {
-      background-color: lighten(20%);
+      background-color: rgb(59, 130, 246);
+      color: white;
       opacity: 1.0;
     }
   </style>)html";

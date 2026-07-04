@@ -1,7 +1,7 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/core/task_runner.hpp"
+#include "rtxui/base/task_runner.hpp"
 
 #include <cassert>
 #include <thread>
@@ -28,12 +28,33 @@ TaskRunner::~TaskRunner() {
 
 auto TaskRunner::PostTask(Task task) -> void {
   queue_.PostTask(PendingTask{std::move(task)});
+  WakeupCallback wakeup;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    wakeup = wakeup_callback_;
+  }
+  if (wakeup) {
+    wakeup();
+  }
 }
 
 auto TaskRunner::PostDelayedTask(Task task,
                                  std::chrono::steady_clock::duration duration)
     -> void {
   queue_.PostTask(PendingTask{std::move(task), duration});
+  WakeupCallback wakeup;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    wakeup = wakeup_callback_;
+  }
+  if (wakeup) {
+    wakeup();
+  }
+}
+
+auto TaskRunner::SetWakeupCallback(WakeupCallback callback) -> void {
+  std::lock_guard<std::mutex> lock(mutex_);
+  wakeup_callback_ = std::move(callback);
 }
 
 /// Runs the tasks in the queue.

@@ -20,12 +20,17 @@ class CounterComponent : public rtxui::Component<CounterComponent> {
   // Computed state
   int double_count() const { return count * 2; }
 
+  // Callback action
+  void Increment() {
+    count++;
+  }
+
   // Component layout template
   std::string_view view = R"html(
     <div class="panel">
       <span>{label}: {count}</span>
       <span>Double count: {double_count}</span>
-      <button onclick="count++">Increment</button>
+      <button onclick="Increment">Increment</button>
     </div>
   )html";
 
@@ -34,6 +39,7 @@ class CounterComponent : public rtxui::Component<CounterComponent> {
     Bind(count);
     Bind(label);
     Bind(double_count);
+    Bind(Increment);
   }
 };
 ```
@@ -44,11 +50,49 @@ class CounterComponent : public rtxui::Component<CounterComponent> {
 
 By inheriting from `rtxui::Component<Derived>` (via the Curiously Recurring Template Pattern), the framework gains type-safe access to your component's fields and methods at compile-time. When you call `Bind(member)`, RTXUI associates the variable with its named expression string inside the template.
 
+### 🔮 The Future: Zero-Boilerplate Auto-Binding via C++26 Reflection
+
+Currently, developers call `Bind(member)` in the constructor to register fields. This is a temporary necessity because modern compilers are still implementing the standard C++26 reflection proposal.
+
+RTXUI is designed natively for **C++26 reflection** (utilizing the `<meta>` header). If your compiler supports standard C++26 reflection (and defines `RTXUI_HAS_REFLECTION`), the framework automatically inspects your component structure at compile-time:
+* **Automatic State Discovery**: Automatically discovers and registers all non-static member variables as state.
+* **Automatic Callbacks**: Binds member functions and computed properties directly.
+
+Once C++26 toolchains are fully mature, **manually calling `Bind()` will no longer be necessary**. Your components will require zero boilerplate:
+
+```cpp
+class FutureCounter : public rtxui::Component<FutureCounter> {
+ public:
+  int count = 0; // Automatically bound!
+  
+  void Increment() { count++; } // Automatically bound!
+
+  std::string_view view = R"html(
+    <button onclick="Increment">Clicks: {count}</button>
+  )html";
+
+  // No constructor or Bind() calls needed!
+};
+```
+
 ---
 
 ## 3. The Change Detection Loop (Snapshot Reactivity)
 
 To ensure high rendering performance without forcing developers to use custom observable wrappers (like signals or reactive ref types), RTXUI utilizes a highly optimized snapshot-based change detection cycle:
+
+```mermaid
+graph TD
+    A["User Action / Async Task"] --> B["Trigger Event Handler"]
+    B --> C["Execute C++ Callback / Mutate State"]
+    C --> D["Run Digest Cycle"]
+    D --> E{"State matches Snapshot?"}
+    E -- "No" --> F["Identify affected DOM Nodes"]
+    F --> G["Re-evaluate bound expressions"]
+    G --> H["Repaint terminal viewport"]
+    H --> I["Update Snapshot buffer"]
+    E -- "Yes" --> J["Skip Render/Repaint"]
+```
 
 1. **State Snapshot**: When the component is mounted, RTXUI takes a bitwise copy of all bound member fields and stores them in an internal snapshot buffer.
 2. **Digest Cycle**: When an interaction event occurs (such as a keypress, button click, or a thread callback scheduling a task), the main rendering loop runs `Digest()`.
@@ -73,15 +117,20 @@ class TodoItem : public rtxui::Component<TodoItem> {
     bool completed = false;
   } props;
 
+  std::string completion_class() const {
+    return props.completed ? "done" : "";
+  }
+
   std::string_view view = R"html(
     <div class="todo-row">
-      <span class="{props.completed ? 'done' : ''}">{props.task_text}</span>
+      <span class="{completion_class}">{props.task_text}</span>
     </div>
   )html";
 
   TodoItem() {
     Bind(props.task_text);
     Bind(props.completed);
+    Bind(completion_class);
   }
 };
 ```

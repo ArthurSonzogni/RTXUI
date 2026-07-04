@@ -6,7 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <string>
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 
 TEST_CASE("XML parser works correctly", "[xml]") {
   const std::string input = R"(

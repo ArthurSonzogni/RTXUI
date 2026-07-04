@@ -81,8 +81,8 @@ class LoopApp : public Component<LoopApp> {
     BindCollection("simple_items", &simple_items);
     BindCollection("complex_items", &complex_items, [](const Item& item) {
       return std::make_shared<ManualStructVisitor>(
-          std::unordered_map<std::string, std::string>{{"name", item.name},
-                                                       {"color", item.color}});
+          std::map<std::string, std::string, std::less<>>{{"name", item.name},
+                                                         {"color", item.color}});
     });
 
     Import("AddFruit", [this]() {

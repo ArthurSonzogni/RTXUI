@@ -7,7 +7,9 @@
 #include <queue>
 #include <variant>
 
-#include "rtxui/core/task.hpp"
+#include <mutex>
+
+#include "rtxui/base/task.hpp"
 
 namespace task {
 
@@ -26,6 +28,7 @@ struct TaskQueue {
   auto Get() -> MaybeTask;
 
  private:
+  mutable std::mutex mutex_;
   std::queue<PendingTask> immediate_tasks_;
   std::priority_queue<PendingTask> delayed_tasks_;
 };

@@ -6,9 +6,9 @@
 #define RTXUI_COMPONENT_IMPORT_HPP_
 
 #include <functional>
+#include <map>
 #include <print>
 #include <string>
-#include <unordered_map>
 
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/refcounted.hpp"
@@ -18,13 +18,13 @@ namespace rtxui {
 class ComponentBase;
 
 using ComponentFactory = std::function<Ref<ComponentBase>()>;
-using ComponentImportMap = std::unordered_map<std::string, ComponentFactory>;
+using ComponentImportMap = std::map<std::string, ComponentFactory, std::less<>>;
 
 using Callback = std::function<void()>;
 using ParameterizedCallback = std::function<void(std::string)>;
-using CallbackImportMap = std::unordered_map<std::string, Callback>;
+using CallbackImportMap = std::map<std::string, Callback, std::less<>>;
 using ParameterizedCallbackImportMap =
-    std::unordered_map<std::string, ParameterizedCallback>;
+    std::map<std::string, ParameterizedCallback, std::less<>>;
 
 /// Bindings is a structure that allows you to import components and callbacks
 /// into a component.
@@ -81,7 +81,7 @@ class Bindings {
   template <typename T>
     requires std::derived_from<T, ComponentBase>
   void Import(std::string_view alias) {
-    if (imports_.count(std::string(alias))) {
+    if (imports_.count(alias)) {
       std::println(
           "Error: Can't import '{}' as '{}`, since it is already imported.",
           ClassName<T>(), alias);

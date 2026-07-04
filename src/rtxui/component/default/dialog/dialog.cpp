@@ -53,6 +53,24 @@ std::string_view dialog::Setup() {
         min-width: 30;
         max-width: 60;
       }
+      .dialog-box button {
+        background-color: rgb(75, 85, 99);
+        color: white;
+        border: solid;
+        border-color: rgb(156, 163, 175);
+      }
+      .dialog-box button:hover {
+        background-color: rgb(59, 130, 246);
+        border-color: rgb(96, 165, 250);
+      }
+      .dialog-box button:focus {
+        background-color: rgb(37, 99, 235);
+        border-color: rgb(147, 197, 253);
+      }
+      .dialog-box button:active {
+        background-color: rgb(29, 78, 216);
+        border-color: rgb(96, 165, 250);
+      }
       .dialog-header {
         display: block;
         border-bottom: solid;

@@ -4,6 +4,7 @@
 #ifndef RTXUI_COMPONENT_HPP_
 #define RTXUI_COMPONENT_HPP_
 
+#include <charconv>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -112,7 +113,7 @@ class ComponentBase : public RefCounted, public Bindings {
 
   Element* Root() const;
   Ref<Element> Slot(std::string_view name);
-  const std::map<std::string, Ref<Element>>& slots() const { return slots_; }
+  const std::map<std::string, Ref<Element>, std::less<>>& slots() const { return slots_; }
   void SetProperty(std::string_view name, std::string_view value);
   void PropagateBinding(std::string_view child_prop, std::string_view value);
 
@@ -151,7 +152,7 @@ class ComponentBase : public RefCounted, public Bindings {
   std::string xml_string_;
   xml::Nodes xml_nodes_;
   Ref<Element> root_;
-  std::map<std::string, Ref<Element>> slots_;
+  std::map<std::string, Ref<Element>, std::less<>> slots_;
   std::vector<Ref<ComponentBase>> children_;
   std::vector<Ref<ComponentBase>> old_children_;
   std::string id_;
@@ -172,6 +173,13 @@ int ParseInt(std::string_view str);
 
 template <typename T>
 std::string to_string(const T& value) {
+  if constexpr (std::is_floating_point_v<T>) {
+    char buf[64];
+    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
+    if (ec == std::errc()) {
+      return std::string(buf, ptr - buf);
+    }
+  }
   if constexpr (std::is_convertible_v<T, std::string>) {
     return static_cast<std::string>(value);
   } else if constexpr (requires { std::to_string(value); }) {
@@ -193,6 +201,22 @@ void from_string(std::string_view str, T& value) {
     value = ParseInt(str);
   } else if constexpr (std::is_same_v<T, bool>) {
     value = (str == "true" || str == "1");
+  } else if constexpr (std::is_floating_point_v<T>) {
+    std::string_view s = str;
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+      s.remove_prefix(1);
+    }
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+      s.remove_suffix(1);
+    }
+    if (!s.empty()) {
+      auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+      if (ec != std::errc()) {
+        value = 0.0f;
+      }
+    } else {
+      value = 0.0f;
+    }
   } else {
     std::stringstream ss;
     ss << str;
@@ -249,14 +273,14 @@ class ReflectedStructVisitor : public StructVisitor {
 #endif
 
 class ManualStructVisitor : public StructVisitor {
-  std::unordered_map<std::string, std::string> fields_;
+  std::map<std::string, std::string, std::less<>> fields_;
 
  public:
-  ManualStructVisitor(std::unordered_map<std::string, std::string> fields)
+  ManualStructVisitor(std::map<std::string, std::string, std::less<>> fields)
       : fields_(std::move(fields)) {}
 
   std::string GetFieldValue(std::string_view field_name) const override {
-    auto it = fields_.find(std::string(field_name));
+    auto it = fields_.find(field_name);
     return (it != fields_.end()) ? it->second : "";
   }
 };

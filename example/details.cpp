@@ -16,10 +16,15 @@ class DetailsDemo : public rtxui::Component<DetailsDemo> {
   bool open2 = true;
   bool checkbox_state = false;
 
+  std::string status_text() const {
+    return checkbox_state ? "DEBUG ENABLED" : "DEBUG DISABLED";
+  }
+
   void InitReflection() override {
     Bind(open1);
     Bind(open2);
     Bind(checkbox_state);
+    Bind(status_text);
     Import<rtxui::details>();
     Import<rtxui::summary>();
     Import<rtxui::checkbox>();
@@ -49,7 +54,7 @@ class DetailsDemo : public rtxui::Component<DetailsDemo> {
               <summary>Preferences &amp; Settings</summary>
               <div class="settings-box">
                 <checkbox checked="{checkbox_state}">Enable debug mode</checkbox>
-                <p>Status: {checkbox_state ? "DEBUG ENABLED" : "DEBUG DISABLED"}</p>
+                <p>Status: {status_text}</p>
               </div>
             </details>
           </div>

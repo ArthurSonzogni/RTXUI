@@ -56,6 +56,10 @@ float SolveCubicBezier(float x1, float y1, float x2, float y2, float t) {
          3.0f * (1.0f - u) * u * u * y2 + u * u * u;
 }
 
+}  // namespace
+
+const float kPi = 3.1415926535f;
+
 float ApplyEasing(float t, std::string_view timing) {
   if (t <= 0.0f) {
     return 0.0f;
@@ -66,24 +70,125 @@ float ApplyEasing(float t, std::string_view timing) {
 
   if (timing == "linear") {
     return t;
-  } else if (timing == "ease-in") {
+  }
+
+  // Sine
+  if (timing == "ease-in-sine") {
+    return 1.0f - std::cos((t * kPi) / 2.0f);
+  }
+  if (timing == "ease-out-sine") {
+    return std::sin((t * kPi) / 2.0f);
+  }
+  if (timing == "ease-in-out-sine") {
+    return -(std::cos(kPi * t) - 1.0f) / 2.0f;
+  }
+
+  // Quad
+  if (timing == "ease-in-quad") {
+    return t * t;
+  }
+  if (timing == "ease-out-quad") {
+    return 1.0f - (1.0f - t) * (1.0f - t);
+  }
+  if (timing == "ease-in-out-quad") {
+    return t < 0.5f ? 2.0f * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 2.0f) / 2.0f;
+  }
+
+  // Cubic
+  if (timing == "ease-in-cubic") {
+    return t * t * t;
+  }
+  if (timing == "ease-out-cubic") {
+    return 1.0f - std::pow(1.0f - t, 3.0f);
+  }
+  if (timing == "ease-in-out-cubic") {
+    return t < 0.5f ? 4.0f * t * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 3.0f) / 2.0f;
+  }
+
+  // Quart
+  if (timing == "ease-in-quart") {
+    return t * t * t * t;
+  }
+  if (timing == "ease-out-quart") {
+    return 1.0f - std::pow(1.0f - t, 4.0f);
+  }
+  if (timing == "ease-in-out-quart") {
+    return t < 0.5f ? 8.0f * t * t * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 4.0f) / 2.0f;
+  }
+
+  // Quint
+  if (timing == "ease-in-quint") {
+    return t * t * t * t * t;
+  }
+  if (timing == "ease-out-quint") {
+    return 1.0f - std::pow(1.0f - t, 5.0f);
+  }
+  if (timing == "ease-in-out-quint") {
+    return t < 0.5f ? 16.0f * t * t * t * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 5.0f) / 2.0f;
+  }
+
+  // Expo
+  if (timing == "ease-in-expo") {
+    return std::pow(2.0f, 10.0f * t - 10.0f);
+  }
+  if (timing == "ease-out-expo") {
+    return 1.0f - std::pow(2.0f, -10.0f * t);
+  }
+  if (timing == "ease-in-out-expo") {
+    return t < 0.5f ? std::pow(2.0f, 20.0f * t - 10.0f) / 2.0f : (2.0f - std::pow(2.0f, -20.0f * t + 10.0f)) / 2.0f;
+  }
+
+  // Circ
+  if (timing == "ease-in-circ") {
+    return 1.0f - std::sqrt(1.0f - t * t);
+  }
+  if (timing == "ease-out-circ") {
+    return std::sqrt(1.0f - (t - 1.0f) * (t - 1.0f));
+  }
+  if (timing == "ease-in-out-circ") {
+    return t < 0.5f ? (1.0f - std::sqrt(1.0f - 4.0f * t * t)) / 2.0f : (std::sqrt(1.0f - std::pow(-2.0f * t + 2.0f, 2.0f)) + 1.0f) / 2.0f;
+  }
+
+  // Back
+  const float c1 = 1.70158f;
+  const float c3 = c1 + 1.0f;
+  if (timing == "ease-in-back") {
+    return c3 * t * t * t - c1 * t * t;
+  }
+  if (timing == "ease-out-back") {
+    return 1.0f + c3 * std::pow(t - 1.0f, 3.0f) + c1 * std::pow(t - 1.0f, 2.0f);
+  }
+  if (timing == "ease-in-out-back") {
+    const float c2 = c1 * 1.525f;
+    return t < 0.5f
+        ? (std::pow(2.0f * t, 2.0f) * ((c2 + 1.0f) * 2.0f * t - c2)) / 2.0f
+        : (std::pow(2.0f * t - 2.0f, 2.0f) * ((c2 + 1.0f) * (t * 2.0f - 2.0f) + c2) + 2.0f) / 2.0f;
+  }
+
+  if (timing == "ease-in") {
     return SolveCubicBezier(0.42f, 0.0f, 1.0f, 1.0f, t);
-  } else if (timing == "ease-out") {
+  }
+  if (timing == "ease-out") {
     return SolveCubicBezier(0.0f, 0.0f, 0.58f, 1.0f, t);
-  } else if (timing == "ease-in-out") {
+  }
+  if (timing == "ease-in-out") {
     return SolveCubicBezier(0.42f, 0.0f, 0.58f, 1.0f, t);
-  } else if (timing.starts_with("cubic-bezier(") && timing.ends_with(")")) {
+  }
+
+  if (timing.starts_with("cubic-bezier(") && timing.ends_with(")")) {
     std::string_view params = timing.substr(13, timing.size() - 14);
     float x1 = 0.0f, y1 = 0.0f, x2 = 0.0f, y2 = 0.0f;
     std::string params_str(params);
-    if (std::sscanf(params_str.c_str(), "%f,%f,%f,%f", &x1, &y1, &x2, &y2) ==
-        4) {
+    if (std::sscanf(params_str.c_str(), "%f,%f,%f,%f", &x1, &y1, &x2, &y2) == 4) {
       return SolveCubicBezier(x1, y1, x2, y2, t);
     }
   }
+
   // Default is "ease"
   return SolveCubicBezier(0.25f, 0.1f, 0.25f, 1.0f, t);
 }
+
+namespace {
 
 Color InterpolateColor(Color start, Color target, float progress) {
   return Color::RGBA(

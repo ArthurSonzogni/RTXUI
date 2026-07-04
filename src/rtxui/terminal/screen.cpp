@@ -8,6 +8,7 @@
 #include <unistd.h>
 #ifndef __EMSCRIPTEN__
 #include <sys/select.h>
+#include <fcntl.h>
 #else
 #include <emscripten.h>
 #endif
@@ -18,7 +19,7 @@
 #include <iostream>
 
 #include "rtxui/component/component_internal.hpp"
-#include "rtxui/core/task_runner.hpp"
+#include "rtxui/base/task_runner.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
@@ -41,10 +42,19 @@ std::optional<int> GetEffectiveTabIndex(Element* el) {
   }
   const auto& attrs = el->Attributes();
   if (attrs.count("tabindex")) {
-    try {
-      return std::stoi(attrs.at("tabindex"));
-    } catch (...) {
-      // ignore invalid values
+    std::string_view s = attrs.at("tabindex");
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+      s.remove_prefix(1);
+    }
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+      s.remove_suffix(1);
+    }
+    if (!s.empty()) {
+      int val = 0;
+      auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+      if (ec == std::errc() && ptr == s.data() + s.size()) {
+        return val;
+      }
     }
   }
   if (attrs.count("focusable")) {
@@ -71,6 +81,8 @@ void CollectFocusableFragments(
     const std::shared_ptr<PhysicalFragment>& fragment,
     int abs_x,
     int abs_y,
+    int viewport_x,
+    int viewport_y,
     std::vector<FocusableFragment>& focusable_fragments) {
   if (!fragment) {
     return;
@@ -86,9 +98,28 @@ void CollectFocusableFragments(
 
   int scroll_x_offset = 0;
   int scroll_y_offset = 0;
+  int next_viewport_x = viewport_x;
+  int next_viewport_y = viewport_y;
+  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  if (fragment->dom_node) {
+    padding_l = fragment->dom_node->style.padding.left;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_t = fragment->dom_node->style.padding.top;
+    padding_b = fragment->dom_node->style.padding.bottom;
+  }
+  if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+    border_l = 1;
+    border_r = 1;
+    border_t = 1;
+    border_b = 1;
+  }
+
   if (fragment->clips_descendants) {
     scroll_x_offset = fragment->scroll_x;
     scroll_y_offset = fragment->scroll_y;
+    next_viewport_x = abs_x + border_l + padding_l;
+    next_viewport_y = abs_y + border_t + padding_t;
   }
 
   for (const auto& child : fragment->children) {
@@ -103,47 +134,52 @@ void CollectFocusableFragments(
     int child_abs_y = is_fixed ? child.y : abs_y + child.y - scroll_y_offset;
 
     if (is_sticky) {
-      int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-      int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+      int c_border_l = 0, c_border_r = 0, c_border_t = 0, c_border_b = 0;
+      int c_padding_l = 0, c_padding_r = 0, c_padding_t = 0, c_padding_b = 0;
       if (fragment->dom_node) {
-        padding_l = fragment->dom_node->style.padding.left;
-        padding_r = fragment->dom_node->style.padding.right;
-        padding_t = fragment->dom_node->style.padding.top;
-        padding_b = fragment->dom_node->style.padding.bottom;
+        c_padding_l = fragment->dom_node->style.padding.left;
+        c_padding_r = fragment->dom_node->style.padding.right;
+        c_padding_t = fragment->dom_node->style.padding.top;
+        c_padding_b = fragment->dom_node->style.padding.bottom;
       }
       if (fragment->has_border && fragment->border_style != BorderStyle::None) {
-        border_l = 1;
-        border_r = 1;
-        border_t = 1;
-        border_b = 1;
+        c_border_l = 1;
+        c_border_r = 1;
+        c_border_t = 1;
+        c_border_b = 1;
       }
 
       if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
         int top_val = child.fragment->dom_node->style.top.Resolve(0);
-        int viewport_top = abs_y + border_t + padding_t;
-        int min_y = viewport_top + top_val;
+        int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
+        int min_y = active_viewport_y + top_val;
         child_abs_y = std::max(child_abs_y, min_y);
 
-        int parent_scrolled_bottom =
-            abs_y + fragment->height - border_b - padding_b - scroll_y_offset;
-        int max_y = parent_scrolled_bottom - child.fragment->height;
-        child_abs_y = std::min(child_abs_y, max_y);
+        if (!fragment->clips_descendants) {
+          int parent_scrolled_bottom =
+              abs_y + fragment->height - c_border_b - c_padding_b;
+          int max_y = parent_scrolled_bottom - child.fragment->height;
+          child_abs_y = std::min(child_abs_y, max_y);
+        }
       }
 
       if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
         int left_val = child.fragment->dom_node->style.left.Resolve(0);
-        int viewport_left = abs_x + border_l + padding_l;
-        int min_x = viewport_left + left_val;
+        int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
+        int min_x = active_viewport_x + left_val;
         child_abs_x = std::max(child_abs_x, min_x);
 
-        int parent_scrolled_right =
-            abs_x + fragment->width - border_r - padding_r - scroll_x_offset;
-        int max_x = parent_scrolled_right - child.fragment->width;
-        child_abs_x = std::min(child_abs_x, max_x);
+        if (!fragment->clips_descendants) {
+          int parent_scrolled_right =
+              abs_x + fragment->width - c_border_r - c_padding_r;
+          int max_x = parent_scrolled_right - child.fragment->width;
+          child_abs_x = std::min(child_abs_x, max_x);
+        }
       }
     }
 
     CollectFocusableFragments(child.fragment, child_abs_x, child_abs_y,
+                              next_viewport_x, next_viewport_y,
                               focusable_fragments);
   }
 }
@@ -151,101 +187,144 @@ void CollectFocusableFragments(
 Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
                            int target_x,
                            int target_y,
-                           int accum_scroll_x,
-                           int accum_scroll_y) {
+                           int abs_x = 0,
+                           int abs_y = 0,
+                           int accum_scroll_x = 0,
+                           int accum_scroll_y = 0,
+                           int viewport_x = 0,
+                           int viewport_y = 0) {
   if (!fragment) {
     return nullptr;
   }
-  if (target_x < 0 || target_y < 0 || target_x >= fragment->width ||
-      target_y >= fragment->height) {
+  if (target_x < abs_x || target_y < abs_y || target_x >= abs_x + fragment->width ||
+      target_y >= abs_y + fragment->height) {
     return nullptr;
   }
 
   int scroll_x_offset = 0;
   int scroll_y_offset = 0;
+  int next_viewport_x = viewport_x;
+  int next_viewport_y = viewport_y;
+  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  if (fragment->dom_node) {
+    padding_l = fragment->dom_node->style.padding.left;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_t = fragment->dom_node->style.padding.top;
+    padding_b = fragment->dom_node->style.padding.bottom;
+  }
+  if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+    border_l = 1;
+    border_r = 1;
+    border_t = 1;
+    border_b = 1;
+  }
+
   if (fragment->clips_descendants) {
     scroll_x_offset = fragment->scroll_x;
     scroll_y_offset = fragment->scroll_y;
+    next_viewport_x = abs_x + border_l + padding_l;
+    next_viewport_y = abs_y + border_t + padding_t;
   }
 
   int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
   int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
 
-  // Traverse children in reverse order (top-most elements first)
-  for (auto it = fragment->children.rbegin(); it != fragment->children.rend();
+  auto sorted_children = fragment->children;
+  std::stable_sort(
+      sorted_children.begin(), sorted_children.end(),
+      [](const PhysicalFragment::ChildLink& a,
+         const PhysicalFragment::ChildLink& b) {
+        bool a_pos = (a.fragment && a.fragment->dom_node &&
+                      a.fragment->dom_node->style.position != PositionType::Static);
+        bool b_pos = (b.fragment && b.fragment->dom_node &&
+                      b.fragment->dom_node->style.position != PositionType::Static);
+        int az = (a.fragment && a.fragment->dom_node)
+                     ? a.fragment->dom_node->style.z_index.value_or(0)
+                     : 0;
+        int bz = (b.fragment && b.fragment->dom_node)
+                     ? b.fragment->dom_node->style.z_index.value_or(0)
+                     : 0;
+        if (az != bz) {
+          return az < bz;
+        }
+        if (a_pos != b_pos) {
+          return !a_pos && b_pos;
+        }
+        return false;
+      });
+
+  for (auto it = sorted_children.rbegin(); it != sorted_children.rend();
        ++it) {
     bool is_fixed =
         (it->fragment && it->fragment->dom_node &&
          it->fragment->dom_node->style.position == PositionType::Fixed);
-
-    int rel_x = target_x - it->x;
-    int rel_y = target_y - it->y;
-    int child_accum_scroll_x = next_accum_scroll_x;
-    int child_accum_scroll_y = next_accum_scroll_y;
-
     bool is_sticky =
         (it->fragment && it->fragment->dom_node &&
          it->fragment->dom_node->style.position == PositionType::Sticky);
 
+    int child_abs_x = is_fixed ? it->x : abs_x + it->x - scroll_x_offset;
+    int child_abs_y = is_fixed ? it->y : abs_y + it->y - scroll_y_offset;
+    int child_accum_scroll_x = next_accum_scroll_x;
+    int child_accum_scroll_y = next_accum_scroll_y;
+
     if (is_fixed) {
-      rel_x -= accum_scroll_x;
-      rel_y -= accum_scroll_y;
       child_accum_scroll_x = 0;
       child_accum_scroll_y = 0;
     } else {
-      rel_x += scroll_x_offset;
-      rel_y += scroll_y_offset;
-
       if (is_sticky) {
-        int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-        int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+        int c_border_l = 0, c_border_r = 0, c_border_t = 0, c_border_b = 0;
+        int c_padding_l = 0, c_padding_r = 0, c_padding_t = 0, c_padding_b = 0;
         if (fragment->dom_node) {
-          padding_l = fragment->dom_node->style.padding.left;
-          padding_r = fragment->dom_node->style.padding.right;
-          padding_t = fragment->dom_node->style.padding.top;
-          padding_b = fragment->dom_node->style.padding.bottom;
+          c_padding_l = fragment->dom_node->style.padding.left;
+          c_padding_r = fragment->dom_node->style.padding.right;
+          c_padding_t = fragment->dom_node->style.padding.top;
+          c_padding_b = fragment->dom_node->style.padding.bottom;
         }
         if (fragment->has_border &&
             fragment->border_style != BorderStyle::None) {
-          border_l = 1;
-          border_r = 1;
-          border_t = 1;
-          border_b = 1;
+          c_border_l = 1;
+          c_border_r = 1;
+          c_border_t = 1;
+          c_border_b = 1;
         }
 
         if (it->fragment->dom_node->style.top.unit != Unit::Auto) {
           int top_val = it->fragment->dom_node->style.top.Resolve(0);
-          int normal_rel_y = it->y - scroll_y_offset;
-          int min_rel_y = border_t + padding_t + top_val;
-          int sticky_rel_y = std::max(normal_rel_y, min_rel_y);
+          int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
+          int min_y = active_viewport_y + top_val;
+          child_abs_y = std::max(child_abs_y, min_y);
 
-          int max_rel_y = fragment->height - border_b - padding_b -
-                          scroll_y_offset - it->fragment->height;
-          sticky_rel_y = std::min(sticky_rel_y, max_rel_y);
-
-          int sticky_shift_y = sticky_rel_y - normal_rel_y;
-          rel_y -= sticky_shift_y;
+          if (!fragment->clips_descendants) {
+            int parent_scrolled_bottom =
+                abs_y + fragment->height - c_border_b - c_padding_b;
+            int max_y = parent_scrolled_bottom - it->fragment->height;
+            child_abs_y = std::min(child_abs_y, max_y);
+          }
         }
 
         if (it->fragment->dom_node->style.left.unit != Unit::Auto) {
           int left_val = it->fragment->dom_node->style.left.Resolve(0);
-          int normal_rel_x = it->x - scroll_x_offset;
-          int min_rel_x = border_l + padding_l + left_val;
-          int sticky_rel_x = std::max(normal_rel_x, min_rel_x);
+          int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
+          int min_x = active_viewport_x + left_val;
+          child_abs_x = std::max(child_abs_x, min_x);
 
-          int max_rel_x = fragment->width - border_r - padding_r -
-                          scroll_x_offset - it->fragment->width;
-          sticky_rel_x = std::min(sticky_rel_x, max_rel_x);
-
-          int sticky_shift_x = sticky_rel_x - normal_rel_x;
-          rel_x -= sticky_shift_x;
+          if (!fragment->clips_descendants) {
+            int parent_scrolled_right =
+                abs_x + fragment->width - c_border_r - c_padding_r;
+            int max_x = parent_scrolled_right - it->fragment->width;
+            child_abs_x = std::min(child_abs_x, max_x);
+          }
         }
       }
     }
 
+
     if (auto* found =
-            FindElementAtImpl(it->fragment, rel_x, rel_y, child_accum_scroll_x,
-                              child_accum_scroll_y)) {
+            FindElementAtImpl(it->fragment, target_x, target_y,
+                              child_abs_x, child_abs_y,
+                              child_accum_scroll_x, child_accum_scroll_y,
+                              next_viewport_x, next_viewport_y)) {
       return found;
     }
   }
@@ -259,39 +338,152 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
 Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
                        int target_x,
                        int target_y) {
-  return FindElementAtImpl(fragment, target_x, target_y, 0, 0);
+  return FindElementAtImpl(fragment, target_x, target_y, 0, 0, 0, 0, 0, 0);
 }
 
-std::shared_ptr<PhysicalFragment> FindScrollableFragmentAt(
+std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
     const std::shared_ptr<PhysicalFragment>& fragment,
     int target_x,
-    int target_y) {
+    int target_y,
+    int abs_x = 0,
+    int abs_y = 0,
+    int viewport_x = 0,
+    int viewport_y = 0) {
   if (!fragment) {
     return nullptr;
   }
-  if (target_x < 0 || target_y < 0 || target_x >= fragment->width ||
-      target_y >= fragment->height) {
+  if (target_x < abs_x || target_y < abs_y || target_x >= abs_x + fragment->width ||
+      target_y >= abs_y + fragment->height) {
     return nullptr;
   }
-  // Traverse children in reverse order (top-most elements first)
-  for (auto it = fragment->children.rbegin(); it != fragment->children.rend();
+
+  int scroll_x_offset = 0;
+  int scroll_y_offset = 0;
+  int next_viewport_x = viewport_x;
+  int next_viewport_y = viewport_y;
+  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  if (fragment->dom_node) {
+    padding_l = fragment->dom_node->style.padding.left;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_t = fragment->dom_node->style.padding.top;
+    padding_b = fragment->dom_node->style.padding.bottom;
+  }
+  if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+    border_l = 1;
+    border_r = 1;
+    border_t = 1;
+    border_b = 1;
+  }
+
+  if (fragment->clips_descendants) {
+    scroll_x_offset = fragment->scroll_x;
+    scroll_y_offset = fragment->scroll_y;
+    next_viewport_x = abs_x + border_l + padding_l;
+    next_viewport_y = abs_y + border_t + padding_t;
+  }
+
+  auto sorted_children = fragment->children;
+  std::stable_sort(
+      sorted_children.begin(), sorted_children.end(),
+      [](const PhysicalFragment::ChildLink& a,
+         const PhysicalFragment::ChildLink& b) {
+        bool a_pos = (a.fragment && a.fragment->dom_node &&
+                      a.fragment->dom_node->style.position != PositionType::Static);
+        bool b_pos = (b.fragment && b.fragment->dom_node &&
+                      b.fragment->dom_node->style.position != PositionType::Static);
+        int az = (a.fragment && a.fragment->dom_node)
+                     ? a.fragment->dom_node->style.z_index.value_or(0)
+                     : 0;
+        int bz = (b.fragment && b.fragment->dom_node)
+                     ? b.fragment->dom_node->style.z_index.value_or(0)
+                     : 0;
+        if (az != bz) {
+          return az < bz;
+        }
+        if (a_pos != b_pos) {
+          return !a_pos && b_pos;
+        }
+        return false;
+      });
+
+  for (auto it = sorted_children.rbegin(); it != sorted_children.rend();
        ++it) {
-    int rel_x = target_x - it->x;
-    int rel_y = target_y - it->y;
-    if (fragment->clips_descendants) {
-      rel_x += fragment->scroll_x;
-      rel_y += fragment->scroll_y;
+    bool is_fixed =
+        (it->fragment && it->fragment->dom_node &&
+         it->fragment->dom_node->style.position == PositionType::Fixed);
+    bool is_sticky =
+        (it->fragment && it->fragment->dom_node &&
+         it->fragment->dom_node->style.position == PositionType::Sticky);
+
+    int child_abs_x = is_fixed ? it->x : abs_x + it->x - scroll_x_offset;
+    int child_abs_y = is_fixed ? it->y : abs_y + it->y - scroll_y_offset;
+
+    if (is_sticky) {
+      int c_border_l = 0, c_border_r = 0, c_border_t = 0, c_border_b = 0;
+      int c_padding_l = 0, c_padding_r = 0, c_padding_t = 0, c_padding_b = 0;
+      if (fragment->dom_node) {
+        c_padding_l = fragment->dom_node->style.padding.left;
+        c_padding_r = fragment->dom_node->style.padding.right;
+        c_padding_t = fragment->dom_node->style.padding.top;
+        c_padding_b = fragment->dom_node->style.padding.bottom;
+      }
+      if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+        c_border_l = 1;
+        c_border_r = 1;
+        c_border_t = 1;
+        c_border_b = 1;
+      }
+
+      if (it->fragment->dom_node->style.top.unit != Unit::Auto) {
+        int top_val = it->fragment->dom_node->style.top.Resolve(0);
+        int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
+        int min_y = active_viewport_y + top_val;
+        child_abs_y = std::max(child_abs_y, min_y);
+
+        if (!fragment->clips_descendants) {
+          int parent_scrolled_bottom =
+              abs_y + fragment->height - c_border_b - c_padding_b;
+          int max_y = parent_scrolled_bottom - it->fragment->height;
+          child_abs_y = std::min(child_abs_y, max_y);
+        }
+      }
+
+      if (it->fragment->dom_node->style.left.unit != Unit::Auto) {
+        int left_val = it->fragment->dom_node->style.left.Resolve(0);
+        int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
+        int min_x = active_viewport_x + left_val;
+        child_abs_x = std::max(child_abs_x, min_x);
+
+        if (!fragment->clips_descendants) {
+          int parent_scrolled_right =
+              abs_x + fragment->width - c_border_r - c_padding_r;
+          int max_x = parent_scrolled_right - it->fragment->width;
+          child_abs_x = std::min(child_abs_x, max_x);
+        }
+      }
     }
-    if (auto found = FindScrollableFragmentAt(it->fragment, rel_x, rel_y)) {
+
+    if (auto found = FindScrollableFragmentAtImpl(it->fragment, target_x, target_y,
+                                                  child_abs_x, child_abs_y,
+                                                  next_viewport_x, next_viewport_y)) {
       return found;
     }
   }
+
   if (fragment->dom_node &&
       (fragment->dom_node->style.overflow_y == Overflow::Scroll ||
        fragment->dom_node->style.overflow_x == Overflow::Scroll)) {
     return fragment;
   }
   return nullptr;
+}
+
+std::shared_ptr<PhysicalFragment> FindScrollableFragmentAt(
+    const std::shared_ptr<PhysicalFragment>& fragment,
+    int target_x,
+    int target_y) {
+  return FindScrollableFragmentAtImpl(fragment, target_x, target_y, 0, 0, 0, 0);
 }
 
 std::shared_ptr<PhysicalFragment> FindFragmentForElement(
@@ -341,7 +533,9 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
     int abs_x = 0,
     int abs_y = 0,
     int accum_scroll_x = 0,
-    int accum_scroll_y = 0) {
+    int accum_scroll_y = 0,
+    int viewport_x = 0,
+    int viewport_y = 0) {
   if (!fragment) {
     return std::nullopt;
   }
@@ -351,9 +545,28 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
 
   int scroll_x_offset = 0;
   int scroll_y_offset = 0;
+  int next_viewport_x = viewport_x;
+  int next_viewport_y = viewport_y;
+  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
+  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  if (fragment->dom_node) {
+    padding_l = fragment->dom_node->style.padding.left;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_t = fragment->dom_node->style.padding.top;
+    padding_b = fragment->dom_node->style.padding.bottom;
+  }
+  if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+    border_l = 1;
+    border_r = 1;
+    border_t = 1;
+    border_b = 1;
+  }
+
   if (fragment->clips_descendants) {
     scroll_x_offset = fragment->scroll_x;
     scroll_y_offset = fragment->scroll_y;
+    next_viewport_x = abs_x + border_l + padding_l;
+    next_viewport_y = abs_y + border_t + padding_t;
   }
 
   int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
@@ -363,75 +576,69 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
     bool is_fixed =
         (child.fragment && child.fragment->dom_node &&
          child.fragment->dom_node->style.position == PositionType::Fixed);
-
-    int child_abs_x = abs_x + child.x;
-    int child_abs_y = abs_y + child.y;
-    int child_accum_scroll_x = next_accum_scroll_x;
-    int child_accum_scroll_y = next_accum_scroll_y;
-
     bool is_sticky =
         (child.fragment && child.fragment->dom_node &&
          child.fragment->dom_node->style.position == PositionType::Sticky);
 
+    int child_abs_x = is_fixed ? child.x : abs_x + child.x - scroll_x_offset;
+    int child_abs_y = is_fixed ? child.y : abs_y + child.y - scroll_y_offset;
+    int child_accum_scroll_x = next_accum_scroll_x;
+    int child_accum_scroll_y = next_accum_scroll_y;
+
     if (is_fixed) {
-      child_abs_x -= accum_scroll_x;
-      child_abs_y -= accum_scroll_y;
       child_accum_scroll_x = 0;
       child_accum_scroll_y = 0;
     } else {
-      child_abs_x -= scroll_x_offset;
-      child_abs_y -= scroll_y_offset;
-
       if (is_sticky) {
-        int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-        int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+        int c_border_l = 0, c_border_r = 0, c_border_t = 0, c_border_b = 0;
+        int c_padding_l = 0, c_padding_r = 0, c_padding_t = 0, c_padding_b = 0;
         if (fragment->dom_node) {
-          padding_l = fragment->dom_node->style.padding.left;
-          padding_r = fragment->dom_node->style.padding.right;
-          padding_t = fragment->dom_node->style.padding.top;
-          padding_b = fragment->dom_node->style.padding.bottom;
+          c_padding_l = fragment->dom_node->style.padding.left;
+          c_padding_r = fragment->dom_node->style.padding.right;
+          c_padding_t = fragment->dom_node->style.padding.top;
+          c_padding_b = fragment->dom_node->style.padding.bottom;
         }
-        if (fragment->has_border &&
-            fragment->border_style != BorderStyle::None) {
-          border_l = 1;
-          border_r = 1;
-          border_t = 1;
-          border_b = 1;
+        if (fragment->has_border && fragment->border_style != BorderStyle::None) {
+          c_border_l = 1;
+          c_border_r = 1;
+          c_border_t = 1;
+          c_border_b = 1;
         }
 
         if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
           int top_val = child.fragment->dom_node->style.top.Resolve(0);
-          int normal_rel_y = child.y - scroll_y_offset;
-          int min_rel_y = border_t + padding_t + top_val;
-          int sticky_rel_y = std::max(normal_rel_y, min_rel_y);
+          int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
+          int min_y = active_viewport_y + top_val;
+          child_abs_y = std::max(child_abs_y, min_y);
 
-          int max_rel_y = fragment->height - border_b - padding_b -
-                          scroll_y_offset - child.fragment->height;
-          sticky_rel_y = std::min(sticky_rel_y, max_rel_y);
-
-          int sticky_shift_y = sticky_rel_y - normal_rel_y;
-          child_abs_y += sticky_shift_y;
+          if (!fragment->clips_descendants) {
+            int parent_scrolled_bottom =
+                abs_y + fragment->height - c_border_b - c_padding_b;
+            int max_y = parent_scrolled_bottom - child.fragment->height;
+            child_abs_y = std::min(child_abs_y, max_y);
+          }
         }
 
         if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
           int left_val = child.fragment->dom_node->style.left.Resolve(0);
-          int normal_rel_x = child.x - scroll_x_offset;
-          int min_rel_x = border_l + padding_l + left_val;
-          int sticky_rel_x = std::max(normal_rel_x, min_rel_x);
+          int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
+          int min_x = active_viewport_x + left_val;
+          child_abs_x = std::max(child_abs_x, min_x);
 
-          int max_rel_x = fragment->width - border_r - padding_r -
-                          scroll_x_offset - child.fragment->width;
-          sticky_rel_x = std::min(sticky_rel_x, max_rel_x);
-
-          int sticky_shift_x = sticky_rel_x - normal_rel_x;
-          child_abs_x += sticky_shift_x;
+          if (!fragment->clips_descendants) {
+            int parent_scrolled_right =
+                abs_x + fragment->width - c_border_r - c_padding_r;
+            int max_x = parent_scrolled_right - child.fragment->width;
+            child_abs_x = std::min(child_abs_x, max_x);
+          }
         }
       }
     }
 
     if (auto found = FindFragmentForElementWithPos(
             child.fragment, element, child_abs_x, child_abs_y,
-            child_accum_scroll_x, child_accum_scroll_y)) {
+            child_accum_scroll_x, child_accum_scroll_y,
+            next_viewport_x, next_viewport_y)) {
       return found;
     }
   }
@@ -607,6 +814,7 @@ class ScreenImpl {
   int drag_start_mouse_pixel_ = 0;
   int drag_start_thumb_pos_ = 0;
   task::TaskRunner task_runner_;
+  int wakeup_pipe_[2] = {-1, -1};
 
   struct RawTerminal {
     ScreenImpl* screen_ = nullptr;
@@ -620,6 +828,26 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
     : component_(std::move(component)),
       device_(std::move(device)),
       parser_(std::make_unique<TerminalInputParser>()) {
+#ifndef __EMSCRIPTEN__
+  if (pipe(wakeup_pipe_) == 0) {
+    fcntl(wakeup_pipe_[0], F_SETFL, O_NONBLOCK);
+    fcntl(wakeup_pipe_[1], F_SETFL, O_NONBLOCK);
+  } else {
+    wakeup_pipe_[0] = -1;
+    wakeup_pipe_[1] = -1;
+  }
+#endif
+
+  task_runner_.SetWakeupCallback([this]() {
+#ifndef __EMSCRIPTEN__
+    if (wakeup_pipe_[1] != -1) {
+      char val = 'w';
+      ssize_t bytes_written = write(wakeup_pipe_[1], &val, 1);
+      (void)bytes_written;
+    }
+#endif
+  });
+
   if (!device_) {
     device_ = std::make_shared<SystemTerminalDevice>();
   }
@@ -631,7 +859,16 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
   Draw();
 }
 
-ScreenImpl::~ScreenImpl() {}
+ScreenImpl::~ScreenImpl() {
+#ifndef __EMSCRIPTEN__
+  if (wakeup_pipe_[0] != -1) {
+    close(wakeup_pipe_[0]);
+  }
+  if (wakeup_pipe_[1] != -1) {
+    close(wakeup_pipe_[1]);
+  }
+#endif
+}
 
 void ScreenImpl::Loop() {
   RawTerminal raw_terminal(this);
@@ -655,6 +892,11 @@ void ScreenImpl::Step() {
     fd_set fds;
     FD_ZERO(&fds);
     FD_SET(STDIN_FILENO, &fds);
+    int max_fd = STDIN_FILENO;
+    if (wakeup_pipe_[0] != -1) {
+      FD_SET(wakeup_pipe_[0], &fds);
+      max_fd = std::max(max_fd, wakeup_pipe_[0]);
+    }
 
     struct timeval tv;
     struct timeval* timeout = nullptr;
@@ -669,7 +911,7 @@ void ScreenImpl::Step() {
       timeout = &tv;
     }
 
-    int retval = select(STDIN_FILENO + 1, &fds, nullptr, nullptr, timeout);
+    int retval = select(max_fd + 1, &fds, nullptr, nullptr, timeout);
     if (retval == 0) {
       input_available = false;
     } else if (retval < 0) {
@@ -678,6 +920,10 @@ void ScreenImpl::Step() {
       }
       input_available = false;
     } else {
+      if (wakeup_pipe_[0] != -1 && FD_ISSET(wakeup_pipe_[0], &fds)) {
+        char dummy[128];
+        while (read(wakeup_pipe_[0], dummy, sizeof(dummy)) > 0) {}
+      }
       input_available = FD_ISSET(STDIN_FILENO, &fds);
     }
   }
@@ -956,6 +1202,7 @@ void ScreenImpl::HandleEvent(Event event) {
     }
 
     if (state_changed) {
+      component_->Digest();
       component_->ResolveTargetStyles();
       Draw();
     }
@@ -968,6 +1215,7 @@ void ScreenImpl::HandleEvent(Event event) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
         if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
+
           // Check scrollbar click first
           Element* curr = clicked_element;
           Element* scrollbar_element = nullptr;
@@ -1342,7 +1590,7 @@ void ScreenImpl::HandleEvent(Event event) {
   if (event == Event::Tab() || event == Event::TabReverse()) {
     std::vector<Element*> document_order;
     std::function<void(Element*)> CollectAll = [&](Element* el) {
-      if (!el) {
+      if (!el || el->style.display_none) {
         return;
       }
       document_order.push_back(el);
@@ -1875,7 +2123,7 @@ bool ScreenImpl::SpatialNavigate(Event event) {
   }
 
   std::vector<FocusableFragment> focusable_fragments;
-  CollectFocusableFragments(root_fragment_, 0, 0, focusable_fragments);
+  CollectFocusableFragments(root_fragment_, 0, 0, 0, 0, focusable_fragments);
 
   if (focusable_fragments.empty()) {
     return false;

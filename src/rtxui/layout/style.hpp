@@ -236,6 +236,8 @@ struct ComputedStyle {
   Length max_height = Length::Auto();
   bool margin_left_auto = false;
   bool margin_right_auto = false;
+  bool margin_top_auto = false;
+  bool margin_bottom_auto = false;
 
   float flex_grow = 0.0f;
   float flex_shrink = 1.0f;
@@ -346,6 +348,8 @@ struct ComputedStyle {
     max_height = other.max_height;
     margin_left_auto = other.margin_left_auto;
     margin_right_auto = other.margin_right_auto;
+    margin_top_auto = other.margin_top_auto;
+    margin_bottom_auto = other.margin_bottom_auto;
     flex_grow = other.flex_grow;
     flex_shrink = other.flex_shrink;
     flex_basis = other.flex_basis;

@@ -63,6 +63,14 @@ transition: background-color 0.2s ease-in-out, width 0.3s ease-out;
 *   `ease-in`
 *   `ease-out`
 *   `ease-in-out`
+*   **Sine curves**: `ease-in-sine`, `ease-out-sine`, `ease-in-out-sine`
+*   **Quad curves**: `ease-in-quad`, `ease-out-quad`, `ease-in-out-quad`
+*   **Cubic curves**: `ease-in-cubic`, `ease-out-cubic`, `ease-in-out-cubic`
+*   **Quart curves**: `ease-in-quart`, `ease-out-quart`, `ease-in-out-quart`
+*   **Quint curves**: `ease-in-quint`, `ease-out-quint`, `ease-in-out-quint`
+*   **Expo curves**: `ease-in-expo`, `ease-out-expo`, `ease-in-out-expo`
+*   **Circ curves**: `ease-in-circ`, `ease-out-circ`, `ease-in-out-circ`
+*   **Back curves**: `ease-in-back`, `ease-out-back`, `ease-in-out-back`
 *   `cubic-bezier(x1, y1, x2, y2)` (Defines a custom cubic Bézier easing curve)
 
 ### Minimal Transition Demo

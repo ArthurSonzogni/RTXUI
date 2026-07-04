@@ -12,7 +12,21 @@
 namespace rtxui {
 
 void tabs::SelectTab(std::string index_str) {
-  size_t idx = std::stoull(index_str);
+  std::string_view s = index_str;
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+    s.remove_prefix(1);
+  }
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+    s.remove_suffix(1);
+  }
+  if (s.empty()) {
+    return;
+  }
+  size_t idx = 0;
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), idx);
+  if (ec != std::errc() || ptr != s.data() + s.size()) {
+    return;
+  }
   auto panes = GetTabPanes();
   if (idx < panes.size()) {
     value = panes[idx].name;
