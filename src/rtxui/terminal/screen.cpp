@@ -1687,6 +1687,7 @@ void ScreenImpl::HandleEvent(Event event) {
 
   if (event == Event::ArrowUp() || event == Event::ArrowDown() ||
       event == Event::PageUp() || event == Event::PageDown() ||
+      event == Event::Home() || event == Event::End() ||
       event == Event::ArrowLeft() || event == Event::ArrowRight()) {
     bool is_horiz =
         (event == Event::ArrowLeft() || event == Event::ArrowRight());
@@ -1733,7 +1734,14 @@ void ScreenImpl::HandleEvent(Event event) {
               }
               scroll_frag.reset();  // Release before Draw().
 
-              int new_y = std::clamp(curr_y + delta, 0, max_scroll);
+              int new_y;
+              if (event == Event::Home()) {
+                new_y = 0;
+              } else if (event == Event::End()) {
+                new_y = max_scroll;
+              } else {
+                new_y = std::clamp(curr_y + delta, 0, max_scroll);
+              }
               if (new_y != curr_y) {
                 curr->set_scroll_y(new_y, false);
                 Draw();
@@ -1784,7 +1792,14 @@ void ScreenImpl::HandleEvent(Event event) {
           Element* el = scroll_frag->dom_node;
           scroll_frag.reset();  // Release before Draw().
 
-          int new_y = std::clamp(curr_y + delta, 0, max_scroll);
+          int new_y;
+          if (event == Event::Home()) {
+            new_y = 0;
+          } else if (event == Event::End()) {
+            new_y = max_scroll;
+          } else {
+            new_y = std::clamp(curr_y + delta, 0, max_scroll);
+          }
           if (new_y != curr_y) {
             el->set_scroll_y(new_y, false);
             Draw();

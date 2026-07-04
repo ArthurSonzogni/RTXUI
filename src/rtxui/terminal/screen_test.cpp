@@ -238,6 +238,14 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   // 8. Keyboard PageUp (Scroll by viewport height = 4)
   screen.Dispatch(Event::PageUp());
   REQUIRE(scroll_element->scroll_y() == 0);
+
+  // 9. Keyboard End jumps to the maximum scroll offset.
+  screen.Dispatch(Event::End());
+  REQUIRE(scroll_element->scroll_y() == 6);
+
+  // 10. Keyboard Home jumps back to the top.
+  screen.Dispatch(Event::Home());
+  REQUIRE(scroll_element->scroll_y() == 0);
 }
 
 TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
