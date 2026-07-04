@@ -60,6 +60,22 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `font-style` | `italic \| oblique \| normal` | ❌ | Applies italic styling to text (rendered with the terminal's italic attribute). |
 | `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
 | `text-transform` | `uppercase \| lowercase \| capitalize \| none` | ❌ | Case transformation of text (ASCII letters; other characters pass through). Inherited. |
+
+### Custom properties (`--*` / `var()`)
+
+Declarations whose property name starts with `--` define **custom properties**. They inherit through the element tree and can be referenced in any declaration value with `var(--name)` or `var(--name, fallback)`:
+
+```css
+self {
+  --accent: rgb(59, 130, 246);
+}
+.card {
+  border-color: var(--accent);
+  color: var(--undefined-color, white); /* fallback used */
+}
+```
+
+A declaration referencing an undefined variable without a fallback is ignored. Fallbacks may nest further `var()` references. Custom properties declared inside pseudo-class rules (e.g. `:hover`) are not currently supported.
 | `text-overflow` | `clip \| ellipsis` | ❌ | Behavior when text overflows its block container. |
 | `visibility` | `visible \| hidden` | ❌ | Controls element visibility. |
 | `cursor` | `default \| pointer` | ❌ | Determines mouse pointer styling when hovering. |

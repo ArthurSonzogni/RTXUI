@@ -187,6 +187,13 @@ class Element : public RefCounted {
   ComputedStyle style;
   ComputedStyle base_style;
   ComputedStyle target_style;
+  // CSS custom properties resolved for this element: inherited from the DOM
+  // parent, overlaid with this element's own --* declarations. Rebuilt on
+  // each base style resolution pass (parents are resolved before children).
+  std::map<std::string, std::string, std::less<>> custom_properties;
+  // The --* declarations matching this element itself, accumulated across
+  // the components styling it in the current frame.
+  std::map<std::string, std::string, std::less<>> own_custom_properties;
   ActiveTransitionsMap active_transitions;
   const ComponentBase* styled_by_1 = nullptr;
   const ComponentBase* styled_by_2 = nullptr;

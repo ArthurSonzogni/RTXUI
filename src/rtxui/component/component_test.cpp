@@ -1643,6 +1643,84 @@ TEST_CASE("Italic and Em Components cell.italic rendering",
   CHECK(rendered.find("\x1B[23m") != std::string::npos);
 }
 
+class VarTestComponent : public rtxui::Component<VarTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<VarTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div class="theme">
+      <div id="direct">Direct</div>
+      <div><span id="nested">Nested</span></div>
+      <div id="fallback">Fallback</div>
+      <div id="undef">Undefined</div>
+      <div id="inline-var" style="--local: rgb(1, 2, 3); color: var(--local);">Inline</div>
+      <div id="override">Override</div>
+    </div>
+    <style>
+      .theme {
+        --accent: rgb(10, 20, 30);
+        --pad: 2;
+      }
+      #direct {
+        color: var(--accent);
+        padding-left: var(--pad);
+      }
+      #nested { color: var(--accent); }
+      #fallback { color: var(--missing, rgb(40, 50, 60)); }
+      #undef { color: var(--missing); }
+      #override {
+        --accent: rgb(70, 80, 90);
+        color: var(--accent);
+      }
+    </style>
+  )";
+};
+
+TEST_CASE("CSS custom properties resolve through the DOM tree",
+          "[component][css][var]") {
+  auto container = rtxui::Ref<VarTestComponent>::New();
+  container->Mount();
+
+  auto* root = container->Root();
+
+  auto* direct = root->QuerySelector("#direct");
+  REQUIRE(direct != nullptr);
+  CHECK(direct->base_style.foreground_color.value_or(Color()) ==
+        Color::RGB(10, 20, 30));
+  CHECK(direct->base_style.padding.left == 2);
+
+  // Variables inherit through intermediate elements.
+  auto* nested = root->QuerySelector("#nested");
+  REQUIRE(nested != nullptr);
+  CHECK(nested->base_style.foreground_color.value_or(Color()) ==
+        Color::RGB(10, 20, 30));
+
+  auto* fallback = root->QuerySelector("#fallback");
+  REQUIRE(fallback != nullptr);
+  CHECK(fallback->base_style.foreground_color.value_or(Color()) ==
+        Color::RGB(40, 50, 60));
+
+  // Undefined variable without fallback: the declaration is ignored.
+  auto* undef = root->QuerySelector("#undef");
+  REQUIRE(undef != nullptr);
+  CHECK_FALSE(undef->base_style.foreground_color.has_value());
+
+  // Custom properties from the inline style attribute.
+  auto* inline_var = root->QuerySelector("#inline-var");
+  REQUIRE(inline_var != nullptr);
+  CHECK(inline_var->base_style.foreground_color.value_or(Color()) ==
+        Color::RGB(1, 2, 3));
+
+  // An element may override an inherited variable for itself.
+  auto* override_el = root->QuerySelector("#override");
+  REQUIRE(override_el != nullptr);
+  CHECK(override_el->base_style.foreground_color.value_or(Color()) ==
+        Color::RGB(70, 80, 90));
+}
+
 class DimTestComponent : public rtxui::Component<DimTestComponent> {
  public:
   void InitReflection() override {
