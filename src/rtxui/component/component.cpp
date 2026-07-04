@@ -770,6 +770,22 @@ void ResolveStylesRecursive(Element* element,
   if (!element || !component) {
     return;
   }
+
+  // Custom properties inherit through every element in the tree — including
+  // slot and other unstyled elements — so rebuild the resolved map from the
+  // DOM parent up front (parents are visited before children). The element's
+  // own --* declarations are overlaid again after collection below.
+  if (!check_pseudos) {
+    const Element* parent = element->Parent();
+    if (parent) {
+      element->custom_properties = parent->custom_properties;
+    } else {
+      element->custom_properties.clear();
+    }
+    for (const auto& [name, val] : element->own_custom_properties) {
+      element->custom_properties[name] = val;
+    }
+  }
   // Resolve nested component internal styles first, so that parent styles (template/classes)
   // take precedence and override the child's internal styles.
   if (element->component() && element->component() != component) {
@@ -783,9 +799,14 @@ void ResolveStylesRecursive(Element* element,
       }
       if (!element->styled_by_1 && !element->styled_by_2) {
         element->base_style = ComputedStyle();
+        element->own_custom_properties.clear();
       }
     }
 
+    {
+    // Matching rulesets are collected first (in bucket order), so that all
+    // --* declarations are known before var() substitution happens.
+    std::vector<const css::Ruleset*> matched;
     const auto* categorized = component->categorized_rules();
     if (categorized) {
       auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets,
@@ -856,15 +877,11 @@ void ResolveStylesRecursive(Element* element,
           if (check_pseudos) {
             if (!parsed.pseudo_classes.empty() &&
                 MatchPseudos(element, parsed.pseudo_classes)) {
-              for (const auto& declaration : ruleset->declarations) {
-                ApplyStyle(element->target_style, declaration);
-              }
+              matched.push_back(ruleset);
             }
           } else {
             if (parsed.pseudo_classes.empty()) {
-              for (const auto& declaration : ruleset->declarations) {
-                ApplyStyle(element->base_style, declaration);
-              }
+              matched.push_back(ruleset);
             }
           }
         }
@@ -892,22 +909,79 @@ void ResolveStylesRecursive(Element* element,
       }
     }
 
-    // Inline style attribute parsing
+    // Inline style attribute parsing. The declarations are string_views into
+    // css_rule, which must stay alive until they are applied below.
+    std::string css_rule;
+    std::vector<css::Declaration> inline_declarations;
     const std::string* inline_style = element->GetAttribute("style");
     if (inline_style && !inline_style->empty()) {
-      std::string css_rule = "dummy { " + *inline_style + " }";
+      css_rule = "dummy { " + *inline_style + " }";
       auto maybe_stylesheet = css::Parse(css_rule);
       if (maybe_stylesheet && !maybe_stylesheet.value().empty()) {
-        for (const auto& declaration :
-             maybe_stylesheet.value()[0].declarations) {
-          if (check_pseudos) {
-            ApplyStyle(element->target_style, declaration);
-          } else {
-            ApplyStyle(element->base_style, declaration);
-          }
-        }
+        inline_declarations = std::move(maybe_stylesheet.value()[0].declarations);
       }
     }
+
+    // Phase 1 (base pass only): accumulate this element's own --*
+    // declarations, then rebuild the resolved map as the DOM parent's
+    // resolved properties overlaid with the own ones. Rebuilding on every
+    // pass matters: an element hosting a nested component is styled by the
+    // nested component first, before the outer component has applied the
+    // parent's --* declarations.
+    if (!check_pseudos) {
+      auto collect_custom_properties = [&](const css::Declaration& declaration) {
+        if (declaration.property.starts_with("--")) {
+          element->own_custom_properties[std::string(declaration.property)] =
+              std::string(declaration.value);
+        }
+      };
+      for (const auto* ruleset : matched) {
+        for (const auto& declaration : ruleset->declarations) {
+          collect_custom_properties(declaration);
+        }
+      }
+      for (const auto& declaration : inline_declarations) {
+        collect_custom_properties(declaration);
+      }
+
+      const Element* parent = element->Parent();
+      if (parent) {
+        element->custom_properties = parent->custom_properties;
+      } else {
+        element->custom_properties.clear();
+      }
+      for (const auto& [name, val] : element->own_custom_properties) {
+        element->custom_properties[name] = val;
+      }
+    }
+
+    // Phase 2: apply regular declarations, expanding var() references.
+    ComputedStyle& style_out =
+        check_pseudos ? element->target_style : element->base_style;
+    auto apply_with_vars = [&](const css::Declaration& declaration) {
+      if (declaration.property.starts_with("--")) {
+        return;
+      }
+      if (declaration.value.find("var(") != std::string_view::npos) {
+        auto expanded =
+            css::SubstituteVars(declaration.value, element->custom_properties);
+        if (!expanded) {
+          return;  // Undefined variable without fallback: ignore.
+        }
+        ApplyStyle(style_out, {declaration.property, *expanded});
+        return;
+      }
+      ApplyStyle(style_out, declaration);
+    };
+    for (const auto* ruleset : matched) {
+      for (const auto& declaration : ruleset->declarations) {
+        apply_with_vars(declaration);
+      }
+    }
+    for (const auto& declaration : inline_declarations) {
+      apply_with_vars(declaration);
+    }
+    }  // matched/inline declarations scope (bypassed by the goto above).
 
     if (!check_pseudos) {
       element->MarkStyleResolvedFor(component);

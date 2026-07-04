@@ -4,6 +4,8 @@
 #ifndef CSS_HPP_
 #define CSS_HPP_
 
+#include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -84,6 +86,16 @@ auto ParseDeclarations(std::string_view css) -> Expected<std::vector<Declaration
 
 /// Print the stylesheet (useful for debugging).
 auto Print(const StyleSheet& stylesheet) -> std::string;
+
+/// Resolved CSS custom properties ("--name" -> value), e.g. per element.
+using CustomProperties = std::map<std::string, std::string, std::less<>>;
+
+/// Expand every `var(--name)` / `var(--name, fallback)` occurrence in the
+/// given declaration value. Returns std::nullopt when a referenced variable
+/// is undefined and has no fallback (the declaration is then invalid and
+/// should be ignored), or when substitution does not terminate (cycles).
+auto SubstituteVars(std::string_view value, const CustomProperties& properties)
+    -> std::optional<std::string>;
 
 }  // namespace css
 

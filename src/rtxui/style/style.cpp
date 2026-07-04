@@ -688,4 +688,70 @@ auto Print(const StyleSheet& stylesheet) -> std::string {
   return result;
 }
 
+auto SubstituteVars(std::string_view value, const CustomProperties& properties)
+    -> std::optional<std::string> {
+  auto trim = [](std::string_view s) {
+    while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) {
+      s.remove_prefix(1);
+    }
+    while (!s.empty() && (s.back() == ' ' || s.back() == '\t')) {
+      s.remove_suffix(1);
+    }
+    return s;
+  };
+
+  std::string result(value);
+  // Each substitution may itself introduce new var() references (from a
+  // property value or a fallback); bound the total number of expansions so
+  // self-referential variables cannot loop forever.
+  for (int budget = 0; budget < 16; ++budget) {
+    size_t pos = result.find("var(");
+    if (pos == std::string::npos) {
+      return result;
+    }
+
+    // Find the matching closing parenthesis (fallbacks may nest var()).
+    size_t end = pos + 4;
+    int nesting = 1;
+    while (end < result.size() && nesting > 0) {
+      if (result[end] == '(') {
+        ++nesting;
+      } else if (result[end] == ')') {
+        --nesting;
+      }
+      ++end;
+    }
+    if (nesting != 0) {
+      return std::nullopt;  // Unbalanced parentheses.
+    }
+
+    std::string_view inner =
+        std::string_view(result).substr(pos + 4, end - 1 - (pos + 4));
+    std::string_view name = inner;
+    std::string_view fallback;
+    bool has_fallback = false;
+    size_t comma = inner.find(',');
+    if (comma != std::string_view::npos) {
+      name = inner.substr(0, comma);
+      fallback = inner.substr(comma + 1);
+      has_fallback = true;
+    }
+    name = trim(name);
+    fallback = trim(fallback);
+
+    std::string replacement;
+    auto it = properties.find(name);
+    if (it != properties.end()) {
+      replacement = it->second;
+    } else if (has_fallback) {
+      replacement = std::string(fallback);
+    } else {
+      return std::nullopt;  // Undefined variable without fallback.
+    }
+
+    result = result.substr(0, pos) + replacement + result.substr(end);
+  }
+  return std::nullopt;  // Expansion did not terminate.
+}
+
 }  // namespace css

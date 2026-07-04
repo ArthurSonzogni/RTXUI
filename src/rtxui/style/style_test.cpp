@@ -495,6 +495,30 @@ TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
   }
 }
 
+TEST_CASE("CSS var() substitution", "[css][var]") {
+  css::CustomProperties props;
+  props["--a"] = "red";
+  props["--b"] = "var(--a)";
+
+  CHECK(css::SubstituteVars("var(--a)", props).value() == "red");
+  CHECK(css::SubstituteVars("1 var(--a) solid", props).value() ==
+        "1 red solid");
+  CHECK(css::SubstituteVars("var( --a )", props).value() == "red");
+  CHECK(css::SubstituteVars("var(--missing, blue)", props).value() == "blue");
+  CHECK(css::SubstituteVars("var(--missing, var(--a))", props).value() ==
+        "red");
+  CHECK(css::SubstituteVars("var(--b)", props).value() == "red");
+  CHECK(css::SubstituteVars("plain", props).value() == "plain");
+
+  CHECK_FALSE(css::SubstituteVars("var(--missing)", props).has_value());
+  CHECK_FALSE(css::SubstituteVars("var(--a", props).has_value());
+
+  css::CustomProperties cyclic;
+  cyclic["--x"] = "var(--y)";
+  cyclic["--y"] = "var(--x)";
+  CHECK_FALSE(css::SubstituteVars("var(--x)", cyclic).has_value());
+}
+
 TEST_CASE("Font weight parsing in ApplyStyle", "[style][font-weight]") {
   rtxui::ComputedStyle style;
 
