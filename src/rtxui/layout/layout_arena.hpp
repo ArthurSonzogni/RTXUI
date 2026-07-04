@@ -85,7 +85,14 @@ class LayoutArena {
   size_t used_ = 0;
 };
 
-extern thread_local LayoutArena g_layout_arena;
+// Layout arenas are double-buffered: ResetLayoutArena() flips to the other
+// arena and resets it before the new layout tree is built. Memory backing the
+// previous frame's tree is therefore never reused during the current frame,
+// so shared_ptr copies of fragments/boxes that accidentally survive one
+// Draw() (e.g. locals held across Draw() in event handlers) release into
+// intact memory instead of corrupting the new tree's control blocks. Such
+// copies must still not outlive two frames.
+LayoutArena& ActiveLayoutArena();
 
 template <typename T>
 struct LayoutArenaAllocator {
@@ -95,7 +102,7 @@ struct LayoutArenaAllocator {
   constexpr LayoutArenaAllocator(const LayoutArenaAllocator<U>&) noexcept {}
 
   T* allocate(std::size_t n) {
-    void* ptr = g_layout_arena.Allocate(n * sizeof(T), alignof(T));
+    void* ptr = ActiveLayoutArena().Allocate(n * sizeof(T), alignof(T));
     if (!ptr) {
       std::cerr << "Fatal: Out of memory in LayoutArena allocator\n";
       std::abort();

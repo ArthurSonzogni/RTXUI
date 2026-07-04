@@ -1310,6 +1310,7 @@ void ScreenImpl::HandleEvent(Event event) {
                   drag_start_thumb_pos_ = thumb_x_eighths;
                 }
               }
+              frag_opt.reset();  // Release before Draw().
 
               // Update the styles and redraw since active states changed
               component_->ResolveTargetStyles();
@@ -1388,6 +1389,8 @@ void ScreenImpl::HandleEvent(Event event) {
                     scrollbar_element->set_scroll_x(std::min(max_scroll, current_scroll + speed), false);
                   }
                 }
+                frag.reset();      // Release before Draw().
+                frag_opt.reset();  // Release before Draw().
                 Draw();
               }
             }

@@ -9,6 +9,12 @@ project(rtxui
 option(RTXUI_BUILD_TESTS "Build tests" OFF)
 option(RTXUI_BUILD_EXAMPLES "Build examples" OFF)
 option(RTXUI_BUILD_FUZZERS "Build fuzzers" OFF)
+option(RTXUI_SANITIZE "Build with Address and UndefinedBehavior sanitizers" OFF)
+
+if(RTXUI_SANITIZE)
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=address,undefined)
+endif()
 
 include(FetchContent)
 
@@ -86,7 +92,6 @@ add_library(rtxui_lib STATIC
   "src/rtxui/base/task_queue.hpp"
   "src/rtxui/base/task_runner.cpp"
   "src/rtxui/base/task_runner.hpp"
-  "src/rtxui/dom/computed_style.hpp"
   "src/rtxui/dom/element.cpp"
   "src/rtxui/dom/element.hpp"
   "src/rtxui/dom/slot_element.cpp"

@@ -99,10 +99,12 @@ bool details::Digest() {
       if ((*it)->tag() == "summary") {
         auto summary_el = *it;
         it = default_children.erase(it);
+        // Manually detached from the default slot above; clear the stale
+        // parent before re-attaching (AddChild requires an orphan).
+        summary_el->set_parent(nullptr);
 
         summary_slot->RemoveChildren();
         summary_slot->AddChild(summary_el);
-        summary_el->set_parent(summary_slot.get());
       } else {
         ++it;
       }
@@ -111,7 +113,6 @@ bool details::Digest() {
     if (summary_slot->ChildCount() == 0) {
       auto default_text = Ref<TextElement>::New("Details");
       summary_slot->AddChild(default_text);
-      default_text->set_parent(summary_slot.get());
     }
   }
 

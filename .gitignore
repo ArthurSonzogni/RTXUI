@@ -36,6 +36,8 @@ bazel-*
 
 # cmake & local build
 /build/
+/build_asan/
+/dump*.txt
 /build_wasm/
 /build_fuzz/
 /gcc-local/
