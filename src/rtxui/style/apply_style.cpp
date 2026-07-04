@@ -660,6 +660,11 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "font-style") {
+    style.italic = (v == "italic" || v == "oblique");
+    return;
+  }
+
   if (p == "text-decoration") {
     if (v == "none") {
       style.underlined = false;

@@ -54,6 +54,7 @@ add_library(rtxui_lib STATIC
   "src/rtxui/component/default/div/div.cpp"
   "src/rtxui/component/default/h1/h1.cpp"
   "src/rtxui/component/default/hr/hr.cpp"
+  "src/rtxui/component/default/i/i.cpp"
   "src/rtxui/component/default/input/input.cpp"
   "src/rtxui/component/default/input/text_input_base.cpp"
   "src/rtxui/component/default/li/li.cpp"

@@ -13,6 +13,8 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<h1>` | Typography | `display: block; font-weight: bold; text-decoration: underlined; margin-bottom: 1;` | None | Major section heading with bottom spacing. |
 | `<p>` | Typography | `display: block; margin-top: 1; margin-bottom: 1;` | None | Paragraph layout text block. |
 | `<strong>` | Typography | `display: inline; font-weight: bold;` | None | Highlights inline text in bold. |
+| `<i>` | Typography | `display: inline; font-style: italic;` | None | Renders inline text in italics. |
+| `<em>` | Typography | `display: inline; font-style: italic;` | None | Emphasizes inline text in italics. |
 | `<ul>` | List | `display: block; padding-left: 2;` | None | Unordered list block. |
 | `<ol>` | List | `display: block; padding-left: 3;` | None | Ordered list block. |
 | `<li>` | List | `display: block;` | None | Individual list item. |

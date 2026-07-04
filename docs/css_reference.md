@@ -57,6 +57,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `text-align` | `left \| right \| center` | ❌ | Horizontal alignment of inline text flows. |
 | `white-space` | `normal \| nowrap` | ❌ | `nowrap` disables text wrapping. |
 | `font-weight` | `bold \| normal` | ❌ | Applies bold styling to text. |
+| `font-style` | `italic \| oblique \| normal` | ❌ | Applies italic styling to text (rendered with the terminal's italic attribute). |
 | `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
 | `text-overflow` | `clip \| ellipsis` | ❌ | Behavior when text overflows its block container. |
 | `visibility` | `visible \| hidden` | ❌ | Controls element visibility. |

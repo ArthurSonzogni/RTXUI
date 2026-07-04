@@ -17,6 +17,7 @@ class LayoutTreeBuilder {
       WhiteSpace parent_ws = WhiteSpace::Normal,
       std::optional<Color> parent_fg = std::nullopt,
       std::optional<bool> parent_bold = std::nullopt,
+      std::optional<bool> parent_italic = std::nullopt,
       std::optional<bool> parent_underlined = std::nullopt,
       std::optional<bool> parent_underlined_double = std::nullopt,
       std::optional<bool> parent_strikethrough = std::nullopt,

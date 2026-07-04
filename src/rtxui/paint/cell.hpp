@@ -21,6 +21,7 @@ struct Cell {
   bool blink : 1 = false;
   bool bold : 1 = false;
   bool dim : 1 = false;
+  bool italic : 1 = false;
   bool inverted : 1 = false;
   bool underlined : 1 = false;
   bool underlined_double : 1 = false;
@@ -41,6 +42,7 @@ inline bool operator==(const Cell& lhs, const Cell& rhs) noexcept {
          lhs.blink == rhs.blink &&
          lhs.bold == rhs.bold &&
          lhs.dim == rhs.dim &&
+         lhs.italic == rhs.italic &&
          lhs.inverted == rhs.inverted &&
          lhs.underlined == rhs.underlined &&
          lhs.underlined_double == rhs.underlined_double &&

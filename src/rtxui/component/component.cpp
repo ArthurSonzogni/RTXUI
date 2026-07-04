@@ -166,6 +166,8 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
     (*reg)["h5"] = []() { return Ref<h5>::New(); };
     (*reg)["h6"] = []() { return Ref<h6>::New(); };
     (*reg)["hr"] = []() { return Ref<hr>::New(); };
+    (*reg)["i"] = []() { return Ref<i>::New(); };
+    (*reg)["em"] = []() { return Ref<em>::New(); };
     (*reg)["input"] = []() { return Ref<input>::New(); };
     (*reg)["li"] = []() { return Ref<li>::New(); };
     (*reg)["markdown"] = []() { return Ref<markdown>::New(); };
