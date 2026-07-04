@@ -495,6 +495,57 @@ TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
   }
 }
 
+TEST_CASE("CSS calc() parsing and resolution", "[style][calc]") {
+  auto width_of = [](std::string_view css_value) {
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"width", css_value});
+    return style.width;
+  };
+
+  SECTION("percent minus cells") {
+    rtxui::Length w = width_of("calc(100% - 4)");
+    CHECK(w.unit == rtxui::Unit::Calc);
+    CHECK(w.Resolve(80) == 76);
+    CHECK(w.Resolve(10) == 6);
+  }
+
+  SECTION("percent plus cells") {
+    CHECK(width_of("calc(50% + 2)").Resolve(20) == 12);
+  }
+
+  SECTION("pure cells folds to Cells") {
+    rtxui::Length w = width_of("calc(2 * 10 + 5)");
+    CHECK(w.unit == rtxui::Unit::Cells);
+    CHECK(w.Resolve(0) == 25);
+  }
+
+  SECTION("pure percent folds to Percent") {
+    rtxui::Length w = width_of("calc(100% / 4)");
+    CHECK(w.unit == rtxui::Unit::Percent);
+    CHECK(w.Resolve(80) == 20);
+  }
+
+  SECTION("parenthesized expression") {
+    CHECK(width_of("calc((100% - 10) / 2)").Resolve(80) == 35);
+  }
+
+  SECTION("scalar times percent") {
+    CHECK(width_of("calc(0.5 * 100%)").Resolve(50) == 25);
+  }
+
+  SECTION("nested calc") {
+    CHECK(width_of("calc(100% - calc(2 + 3))").Resolve(100) == 95);
+  }
+
+  SECTION("invalid expressions resolve to auto") {
+    CHECK(width_of("calc(10% * 20%)").unit == rtxui::Unit::Auto);
+    CHECK(width_of("calc(10 / 0)").unit == rtxui::Unit::Auto);
+    CHECK(width_of("calc(10 +)").unit == rtxui::Unit::Auto);
+    CHECK(width_of("calc(abc)").unit == rtxui::Unit::Auto);
+    CHECK(width_of("calc(10").unit == rtxui::Unit::Auto);
+  }
+}
+
 TEST_CASE("CSS !important parsing", "[css][important]") {
   auto stylesheet = css::Parse(R"(
     div {

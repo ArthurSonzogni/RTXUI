@@ -31,11 +31,15 @@ enum class DisplayInside {
 
 enum class MeasureMode { Exactly, AtMost, Undefined };
 enum class Direction { Row, RowReverse, Column, ColumnReverse };
-enum class Unit { Auto, Cells, Percent, Fr };
+enum class Unit { Auto, Cells, Percent, Fr, Calc };
 
 struct Length {
   float value = 0;
   Unit unit = Unit::Auto;
+  // Percent component for Unit::Calc. calc() expressions are folded at parse
+  // time into the linear form `value + calc_percent% of basis`, which keeps
+  // Length trivially copyable.
+  float calc_percent = 0;
 
   bool operator==(const Length&) const = default;
 
@@ -43,6 +47,9 @@ struct Length {
   static Length Cells(float v) { return {v, Unit::Cells}; }
   static Length Pct(float v) { return {v, Unit::Percent}; }
   static Length Fr(float v) { return {v, Unit::Fr}; }
+  static Length MakeCalc(float cells, float percent) {
+    return {cells, Unit::Calc, percent};
+  }
 
   int Resolve(int basis) const {
     if (unit == Unit::Cells) {
@@ -50,6 +57,9 @@ struct Length {
     }
     if (unit == Unit::Percent) {
       return static_cast<int>(basis * (value / 100.0f));
+    }
+    if (unit == Unit::Calc) {
+      return static_cast<int>(value + basis * (calc_percent / 100.0f));
     }
     return 0;  // Auto resolves to 0 or handled by logic
   }

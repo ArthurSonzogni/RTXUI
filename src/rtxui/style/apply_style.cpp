@@ -55,9 +55,18 @@ std::vector<std::string_view> SplitWords(std::string_view s) {
     if (s.empty()) {
       break;
     }
+    // A word runs to the next whitespace, but whitespace inside balanced
+    // parentheses (e.g. "calc(100% - 4)") does not split.
     size_t end = 0;
+    int paren_depth = 0;
     while (end < s.size() &&
-           !std::isspace(static_cast<unsigned char>(s[end]))) {
+           (paren_depth > 0 ||
+            !std::isspace(static_cast<unsigned char>(s[end])))) {
+      if (s[end] == '(') {
+        ++paren_depth;
+      } else if (s[end] == ')' && paren_depth > 0) {
+        --paren_depth;
+      }
       ++end;
     }
     words.push_back(s.substr(0, end));
@@ -354,9 +363,161 @@ std::optional<Color> TransformColor(std::optional<Color> current,
   return ParseColor(v);
 }
 
-Length ParseLength(std::string_view value) {
-  if (value == "auto") {
+// calc() expressions are folded at parse time into the linear form
+// `cells + percent% of basis`. Multiplication and division require one
+// side to be a plain number (no percent component), matching CSS.
+struct CalcLinear {
+  float cells = 0;
+  float percent = 0;
+};
+
+class CalcParser {
+ public:
+  explicit CalcParser(std::string_view s) : s_(s) {}
+
+  std::optional<CalcLinear> Parse() {
+    auto result = ParseExpr();
+    SkipWhiteSpace();
+    if (result && pos_ != s_.size()) {
+      return std::nullopt;  // Trailing garbage.
+    }
+    return result;
+  }
+
+ private:
+  void SkipWhiteSpace() {
+    while (pos_ < s_.size() && (s_[pos_] == ' ' || s_[pos_] == '\t')) {
+      ++pos_;
+    }
+  }
+
+  char Peek() { return pos_ < s_.size() ? s_[pos_] : '\0'; }
+
+  std::optional<CalcLinear> ParseExpr() {
+    auto lhs = ParseTerm();
+    if (!lhs) {
+      return std::nullopt;
+    }
+    while (true) {
+      SkipWhiteSpace();
+      char op = Peek();
+      if (op != '+' && op != '-') {
+        return lhs;
+      }
+      ++pos_;
+      auto rhs = ParseTerm();
+      if (!rhs) {
+        return std::nullopt;
+      }
+      float sign = (op == '+') ? 1.0f : -1.0f;
+      lhs->cells += sign * rhs->cells;
+      lhs->percent += sign * rhs->percent;
+    }
+  }
+
+  std::optional<CalcLinear> ParseTerm() {
+    auto lhs = ParseFactor();
+    if (!lhs) {
+      return std::nullopt;
+    }
+    while (true) {
+      SkipWhiteSpace();
+      char op = Peek();
+      if (op != '*' && op != '/') {
+        return lhs;
+      }
+      ++pos_;
+      auto rhs = ParseFactor();
+      if (!rhs) {
+        return std::nullopt;
+      }
+      if (op == '*') {
+        // At most one side may carry a percent component.
+        if (lhs->percent != 0 && rhs->percent != 0) {
+          return std::nullopt;
+        }
+        lhs = CalcLinear{lhs->cells * rhs->cells,
+                         lhs->percent * rhs->cells + rhs->percent * lhs->cells};
+      } else {
+        // The divisor must be a plain non-zero number.
+        if (rhs->percent != 0 || rhs->cells == 0) {
+          return std::nullopt;
+        }
+        lhs->cells /= rhs->cells;
+        lhs->percent /= rhs->cells;
+      }
+    }
+  }
+
+  std::optional<CalcLinear> ParseFactor() {
+    SkipWhiteSpace();
+    if (Peek() == '(') {
+      ++pos_;
+      auto inner = ParseExpr();
+      SkipWhiteSpace();
+      if (!inner || Peek() != ')') {
+        return std::nullopt;
+      }
+      ++pos_;
+      return inner;
+    }
+    if (s_.substr(pos_).starts_with("calc(")) {
+      pos_ += 4;  // Nested calc( behaves like a parenthesis.
+      return ParseFactor();
+    }
+
+    size_t start = pos_;
+    if (Peek() == '+' || Peek() == '-') {
+      ++pos_;
+    }
+    bool has_digits = false;
+    while (pos_ < s_.size() &&
+           ((s_[pos_] >= '0' && s_[pos_] <= '9') || s_[pos_] == '.')) {
+      has_digits = true;
+      ++pos_;
+    }
+    if (!has_digits) {
+      return std::nullopt;
+    }
+    float number = StoF(s_.substr(start, pos_ - start));
+    if (Peek() == '%') {
+      ++pos_;
+      return CalcLinear{0, number};
+    }
+    return CalcLinear{number, 0};
+  }
+
+  std::string_view s_;
+  size_t pos_ = 0;
+};
+
+Length ParseCalc(std::string_view value) {
+  // `value` is the full "calc(...)" token; parse the inner expression.
+  value.remove_prefix(5);
+  if (value.empty() || value.back() != ')') {
     return Length::Auto();
+  }
+  value.remove_suffix(1);
+
+  auto linear = CalcParser(value).Parse();
+  if (!linear) {
+    return Length::Auto();  // Invalid expression: treated as unset.
+  }
+  if (linear->percent == 0) {
+    return Length::Cells(linear->cells);
+  }
+  if (linear->cells == 0) {
+    return Length::Pct(linear->percent);
+  }
+  return Length::MakeCalc(linear->cells, linear->percent);
+}
+
+Length ParseLength(std::string_view value) {
+  if (value == "auto" || value.empty()) {
+    return Length::Auto();
+  }
+  if (value.starts_with("calc(")) {
+    return ParseCalc(value);
   }
   if (value.back() == '%') {
     value.remove_suffix(1);

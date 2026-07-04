@@ -105,6 +105,14 @@ int ResolveSize(const Length& length, int parent_size) {
   if (length.unit == Unit::Cells) {
     return length.value;
   }
+  if (length.unit == Unit::Calc) {
+    if (parent_size >= 0) {
+      return length.value + (length.calc_percent * parent_size) / 100;
+    }
+    if (length.calc_percent == 0) {
+      return length.value;  // Pure-cell calc() needs no basis.
+    }
+  }
   return -1;  // Represents 'Auto'
 }
 
