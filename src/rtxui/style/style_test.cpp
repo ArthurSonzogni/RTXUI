@@ -495,6 +495,27 @@ TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
   }
 }
 
+TEST_CASE("CSS !important parsing", "[css][important]") {
+  auto stylesheet = css::Parse(R"(
+    div {
+      color: red !important;
+      background-color: blue;
+    }
+  )");
+  REQUIRE(stylesheet.has_value());
+  REQUIRE(stylesheet.value().size() == 1);
+  const auto& decls = stylesheet.value()[0].declarations;
+  REQUIRE(decls.size() == 2);
+  CHECK(decls[0].property == "color");
+  CHECK(decls[0].value == "red");
+  CHECK(decls[0].important == true);
+  CHECK(decls[1].value == "blue");
+  CHECK(decls[1].important == false);
+
+  CHECK(css::Print(stylesheet.value()).find("color: red !important;") !=
+        std::string::npos);
+}
+
 TEST_CASE("CSS var() substitution", "[css][var]") {
   css::CustomProperties props;
   props["--a"] = "red";

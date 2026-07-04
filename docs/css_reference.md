@@ -61,6 +61,14 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
 | `text-transform` | `uppercase \| lowercase \| capitalize \| none` | ❌ | Case transformation of text (ASCII letters; other characters pass through). Inherited. |
 
+### `!important`
+
+Appending `!important` to a declaration value makes it win over normal declarations from later rules and over normal inline styles:
+
+```css
+.warning { color: red !important; }
+```
+
 ### Custom properties (`--*` / `var()`)
 
 Declarations whose property name starts with `--` define **custom properties**. They inherit through the element tree and can be referenced in any declaration value with `var(--name)` or `var(--name, fallback)`:

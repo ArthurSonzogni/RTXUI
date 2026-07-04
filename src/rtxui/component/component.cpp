@@ -973,14 +973,24 @@ void ResolveStylesRecursive(Element* element,
       }
       ApplyStyle(style_out, declaration);
     };
-    for (const auto* ruleset : matched) {
-      for (const auto& declaration : ruleset->declarations) {
-        apply_with_vars(declaration);
+    // Normal declarations first, then !important ones, so important wins
+    // regardless of rule order (rules before inline within each round).
+    auto apply_round = [&](bool important) {
+      for (const auto* ruleset : matched) {
+        for (const auto& declaration : ruleset->declarations) {
+          if (declaration.important == important) {
+            apply_with_vars(declaration);
+          }
+        }
       }
-    }
-    for (const auto& declaration : inline_declarations) {
-      apply_with_vars(declaration);
-    }
+      for (const auto& declaration : inline_declarations) {
+        if (declaration.important == important) {
+          apply_with_vars(declaration);
+        }
+      }
+    };
+    apply_round(false);
+    apply_round(true);
     }  // matched/inline declarations scope (bypassed by the goto above).
 
     if (!check_pseudos) {
