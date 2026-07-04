@@ -2412,6 +2412,34 @@ TEST_CASE("Layout: calc() width", "[layout][calc]") {
                                                 }));
 }
 
+TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
+  struct MinWidthTest : Component<MinWidthTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          div { display: block; }
+          .sized {
+            width: min(100%, 6);
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="sized">X</div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<MinWidthTest>::New(), 10, 1);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRR....",
+                                                }));
+}
+
 TEST_CASE("Layout: grid justify-items and align-self", "[layout][grid][justify]") {
   struct GridJustifyTest : Component<GridJustifyTest> {
     std::string_view Setup() {

@@ -70,7 +70,16 @@ Length values (`width`, `height`, `top`/`right`/`bottom`/`left`, `min-`/`max-` s
 .half { height: calc((100% - 1) / 2); }
 ```
 
-Multiplication requires at least one plain-number operand and division a plain non-zero number divisor (as in CSS). Invalid expressions are treated as `auto`. `min()`, `max()`, and `clamp()` are not supported yet.
+Multiplication requires at least one plain-number operand and division a plain non-zero number divisor (as in CSS). Invalid expressions are treated as `auto`.
+
+`min(a, b)`, `max(a, b)`, and `clamp(min, preferred, max)` are also supported; each argument is a calc-style expression (which may itself contain `calc()`):
+
+```css
+.content { width: min(100%, 60); }
+.panel { height: clamp(5, 50%, 20); }
+```
+
+`min()`/`max()` take exactly two arguments, and `min()`/`max()` cannot be nested inside each other or inside `calc()`.
 
 ### `!important`
 

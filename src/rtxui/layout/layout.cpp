@@ -113,6 +113,12 @@ int ResolveSize(const Length& length, int parent_size) {
       return length.value;  // Pure-cell calc() needs no basis.
     }
   }
+  if (length.unit == Unit::MinMax) {
+    MinMaxExpr expr = GetMinMaxExpr(static_cast<int>(length.value));
+    if (parent_size >= 0 || !expr.DependsOnBasis()) {
+      return expr.Evaluate(std::max(parent_size, 0));
+    }
+  }
   return -1;  // Represents 'Auto'
 }
 

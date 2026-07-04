@@ -111,6 +111,7 @@ add_library(rtxui_lib STATIC
   "src/rtxui/layout/layout_box.cpp"
   "src/rtxui/layout/layout_box.hpp"
   "src/rtxui/layout/layout_tree_builder.cpp"
+  "src/rtxui/layout/length_expr.cpp"
   "src/rtxui/layout/layout_tree_builder.hpp"
   "src/rtxui/layout/physical_fragment.hpp"
   "src/rtxui/layout/style.hpp"
