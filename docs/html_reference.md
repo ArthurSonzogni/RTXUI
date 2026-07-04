@@ -48,7 +48,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<radio>` | Interactive | `display: inline-block;` | `checked`, `name`, `onchange` | Multi-choice radio button toggle. |
 | `<tabs>` | Container | `display: flex;` | `value`, `onchange` | Tabbed section switcher. |
 | `<tab-pane>` | Container | `display: block;` | `label`, `name` | Individual tabbed panel item. |
-| `<dialog>` | Container | `display: block;` | `open`, `title` | Floating modal overlay dialog window. |
+| `<dialog>` | Container | `display: block;` | `open`, `title` | Floating modal overlay dialog window. Pressing `Escape` closes an open dialog. |
 | `<if>` | Control Flow | N/A | `condition` | Dynamic conditional branch renderer. |
 | `<elif>` | Control Flow | N/A | `condition` | Alternative branch. Must follow `<if>` or `<elif>`. |
 | `<else>` | Control Flow | N/A | None | Fallback branch. Must follow `<if>` or `<elif>`. |

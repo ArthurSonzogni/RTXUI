@@ -20,6 +20,7 @@ class dialog : public Component<dialog> {
   void InitReflection() override;
   std::string_view Setup() override;
   bool Digest() override;
+  bool OnEvent(Event event) override;
 };
 
 }  // namespace rtxui

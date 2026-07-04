@@ -3879,6 +3879,12 @@ TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
   auto* btn_el = dialog_el->QuerySelector("#dlg-btn");
   REQUIRE(btn_el != nullptr);
   CHECK(btn_el->tag() == "button");
+
+  // Escape cancels the open dialog (and must not fall through to the
+  // screen's Escape-to-quit handling).
+  screen.Dispatch(Event::Escape());
+  CHECK(dialog_ptr->open == false);
+  CHECK(dialog_ptr->overlay_class == "closed");
 }
 
 TEST_CASE("Dialog Component Layout Centering", "[component][dialog][layout]") {
