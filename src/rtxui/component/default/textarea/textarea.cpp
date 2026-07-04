@@ -29,6 +29,7 @@ std::string_view textarea::Setup() {
         display: block;
         width: 40;
         height: 5;
+        white-space: pre-wrap;
         padding-left: 1;
         padding-right: 1;
         overflow-y: scroll;

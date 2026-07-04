@@ -995,7 +995,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
 
 
-    if (box->style.white_space == WhiteSpace::Normal &&
+    if (box->style.white_space != WhiteSpace::Nowrap &&
+        box->style.white_space != WhiteSpace::Pre &&
         cursor_x + child_frag->width + child_m_horiz > content_width_limit &&
         cursor_x > 0) {
       commit_line();

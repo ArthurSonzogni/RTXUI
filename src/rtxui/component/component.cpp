@@ -1438,17 +1438,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           last_condition_chain_met = true;
         }
 
-        std::string processed_text;
-        if (!preserve_newlines && (text.find('\n') != std::string_view::npos ||
-                                   text.find('\r') != std::string_view::npos)) {
-          processed_text = std::string(text);
-          for (char& c : processed_text) {
-            if (c == '\n' || c == '\r') {
-              c = ' ';
-            }
-          }
-          text = processed_text;
-        }
+        // Newlines in content text are kept in the DOM; the layout tree
+        // builder converts or preserves them based on the element's resolved
+        // white-space style.
 
         // Reconcile/reuse or replace TextElement
         if (child_idx < slot->ChildCount() &&

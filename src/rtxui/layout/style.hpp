@@ -141,6 +141,11 @@ enum class WhiteSpace {
   Normal,
   Nowrap,
   Pre,
+  // Like Normal (this engine already preserves interior whitespace and
+  // honors newlines), kept distinct for CSS fidelity.
+  PreWrap,
+  // Collapses runs of spaces/tabs to a single space, honors newlines, wraps.
+  PreLine,
 };
 
 enum class TextTransform {

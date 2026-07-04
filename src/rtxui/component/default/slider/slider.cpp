@@ -36,7 +36,7 @@ std::string_view slider::Setup() {
         cursor: pointer;
         padding: 0 1;
         transition: background-color 0.1s linear;
-        white-space: nowrap;
+        white-space: pre;
         flex-shrink: 0;
       }
       .slider-container {

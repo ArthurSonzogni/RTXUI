@@ -2412,4 +2412,38 @@ TEST_CASE("Layout: calc() width", "[layout][calc]") {
                                                 }));
 }
 
+TEST_CASE("Layout: white-space pre-line collapses runs", "[layout][white-space]") {
+  struct PreLineTest : Component<PreLineTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return "<style>div { display: block; white-space: pre-line; }</style>"
+             "<div>a   b  \n   c</div>";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<PreLineTest>::New(), 10, 2);
+
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "a b       ",
+                                     "c         ",
+                                 }));
+}
+
+TEST_CASE("Layout: white-space pre-wrap wraps long lines", "[layout][white-space]") {
+  struct PreWrapTest : Component<PreWrapTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return "<style>div { display: block; white-space: pre-wrap; }</style>"
+             "<div>word1 word2</div>";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<PreWrapTest>::New(), 6, 2);
+
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "word1 ",
+                                     "word2 ",
+                                 }));
+}
+
 }  // namespace rtxui
