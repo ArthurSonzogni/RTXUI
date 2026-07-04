@@ -63,10 +63,12 @@ bool fieldset::Digest() {
       if ((*it)->tag() == "legend") {
         auto legend_el = *it;
         it = default_children.erase(it);
+        // Manually detached from the default slot above; clear the stale
+        // parent before re-attaching (AddChild requires an orphan).
+        legend_el->set_parent(nullptr);
 
         legend_slot->RemoveChildren();
         legend_slot->AddChild(legend_el);
-        legend_el->set_parent(legend_slot.get());
       } else {
         ++it;
       }

@@ -18,10 +18,18 @@
 
 namespace rtxui {
 
-thread_local LayoutArena g_layout_arena;
+namespace {
+thread_local LayoutArena g_layout_arenas[2];
+thread_local int g_active_layout_arena = 0;
+}  // namespace
+
+LayoutArena& ActiveLayoutArena() {
+  return g_layout_arenas[g_active_layout_arena];
+}
 
 void ResetLayoutArena() {
-  g_layout_arena.Reset();
+  g_active_layout_arena ^= 1;
+  g_layout_arenas[g_active_layout_arena].Reset();
 }
 
 // Helper: allocate a PhysicalFragment in the arena using std::allocate_shared
@@ -61,7 +69,7 @@ std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
   }
 
   size_t result_size = truncate_byte_index + 3;
-  void* ptr = g_layout_arena.Allocate(result_size, 1);
+  void* ptr = ActiveLayoutArena().Allocate(result_size, 1);
   char* dst = static_cast<char*>(ptr);
   std::memcpy(dst, text.data(), truncate_byte_index);
   std::memcpy(dst + truncate_byte_index, "...", 3);

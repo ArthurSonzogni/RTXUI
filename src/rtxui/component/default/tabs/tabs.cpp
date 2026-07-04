@@ -190,10 +190,7 @@ bool tabs::Digest() {
       auto text_el = Ref<TextElement>::New(panes[i].label);
       text_el->set_owner_component(this);
       btn->AddChild(text_el);
-      text_el->set_parent(btn.get());
-
       headers_slot->AddChild(btn);
-      btn->set_parent(headers_slot.get());
     }
   }
 
