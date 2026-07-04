@@ -656,7 +656,27 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "font-weight") {
-    style.bold = (v == "bold");
+    if (v == "bold" || v == "bolder") {
+      style.bold = true;
+      style.dim = false;
+      return;
+    }
+    if (v == "lighter") {
+      style.bold = false;
+      style.dim = true;
+      return;
+    }
+    // Numeric weights: 100-300 render dim, >=600 render bold.
+    int weight = 0;
+    auto [ptr, ec] = std::from_chars(v.data(), v.data() + v.size(), weight);
+    if (ec == std::errc() && ptr == v.data() + v.size()) {
+      style.bold = (weight >= 600);
+      style.dim = (weight <= 300);
+      return;
+    }
+    // "normal" and anything unrecognized.
+    style.bold = false;
+    style.dim = false;
     return;
   }
 

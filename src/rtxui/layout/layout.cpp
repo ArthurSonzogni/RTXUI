@@ -417,6 +417,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   fragment->foreground_color = box->style.foreground_color;
   fragment->opacity = box->style.opacity;
   fragment->bold = box->style.bold;
+  fragment->dim = box->style.dim;
   fragment->italic = box->style.italic;
   fragment->underlined = box->style.underlined;
   fragment->underlined_double = box->style.underlined_double;
@@ -668,6 +669,7 @@ struct TextStyle {
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
   std::optional<bool> bold;
+  std::optional<bool> dim;
   std::optional<bool> italic;
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;
@@ -716,6 +718,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   container_frag->foreground_color = box->style.foreground_color;
   container_frag->opacity = box->style.opacity;
   container_frag->bold = box->style.bold;
+  container_frag->dim = box->style.dim;
   container_frag->italic = box->style.italic;
   container_frag->underlined = box->style.underlined;
   container_frag->underlined_double = box->style.underlined_double;
@@ -785,6 +788,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       text_frag->background_color = style.background_color;
       text_frag->foreground_color = style.foreground_color;
       text_frag->bold = style.bold;
+      text_frag->dim = style.dim;
       text_frag->italic = style.italic;
       text_frag->underlined = style.underlined;
       text_frag->underlined_double = style.underlined_double;
@@ -1023,9 +1027,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       process_text_in_flow(
           child->text_data, child->dom_node,
           {child->style.background_color, child->style.foreground_color,
-           child->style.bold, child->style.italic, child->style.underlined,
-           child->style.underlined_double, child->style.strikethrough,
-           child->style.blink});
+           child->style.bold, child->style.dim, child->style.italic,
+           child->style.underlined, child->style.underlined_double,
+           child->style.strikethrough, child->style.blink});
     } else if (child->style.display_outside == DisplayOutside::Inline &&
                child->style.display_inside == DisplayInside::Flow &&
                child->algorithm != LayoutBox::Algorithm::Table &&
@@ -1041,7 +1045,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
               grandchild->text_data, child->dom_node,
               {grandchild->style.background_color,
                grandchild->style.foreground_color, grandchild->style.bold,
-               grandchild->style.italic, grandchild->style.underlined,
+               grandchild->style.dim, grandchild->style.italic,
+               grandchild->style.underlined,
                grandchild->style.underlined_double,
                grandchild->style.strikethrough, grandchild->style.blink});
         } else {
@@ -1557,6 +1562,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   fragment->foreground_color = box->style.foreground_color;
   fragment->opacity = box->style.opacity;
   fragment->bold = box->style.bold;
+  fragment->dim = box->style.dim;
   fragment->italic = box->style.italic;
   fragment->underlined = box->style.underlined;
   fragment->underlined_double = box->style.underlined_double;
@@ -2651,6 +2657,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   container_frag->foreground_color = box->style.foreground_color;
   container_frag->opacity = box->style.opacity;
   container_frag->bold = box->style.bold;
+  container_frag->dim = box->style.dim;
   container_frag->italic = box->style.italic;
   container_frag->underlined = box->style.underlined;
   container_frag->underlined_double = box->style.underlined_double;

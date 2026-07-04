@@ -35,6 +35,7 @@ struct PhysicalFragment {
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
   std::optional<bool> bold;
+  std::optional<bool> dim;
   std::optional<bool> italic;
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;

@@ -18,6 +18,7 @@ class LayoutTreeBuilder {
       TextTransform parent_text_transform = TextTransform::None,
       std::optional<Color> parent_fg = std::nullopt,
       std::optional<bool> parent_bold = std::nullopt,
+      std::optional<bool> parent_dim = std::nullopt,
       std::optional<bool> parent_italic = std::nullopt,
       std::optional<bool> parent_underlined = std::nullopt,
       std::optional<bool> parent_underlined_double = std::nullopt,

@@ -495,6 +495,45 @@ TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
   }
 }
 
+TEST_CASE("Font weight parsing in ApplyStyle", "[style][font-weight]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("bold / bolder") {
+    rtxui::ApplyStyle(style, {"font-weight", "bold"});
+    CHECK(style.bold.value_or(false) == true);
+    CHECK(style.dim.value_or(true) == false);
+
+    rtxui::ApplyStyle(style, {"font-weight", "bolder"});
+    CHECK(style.bold.value_or(false) == true);
+  }
+
+  SECTION("lighter renders dim") {
+    rtxui::ApplyStyle(style, {"font-weight", "lighter"});
+    CHECK(style.bold.value_or(true) == false);
+    CHECK(style.dim.value_or(false) == true);
+  }
+
+  SECTION("numeric weights") {
+    rtxui::ApplyStyle(style, {"font-weight", "700"});
+    CHECK(style.bold.value_or(false) == true);
+    CHECK(style.dim.value_or(true) == false);
+
+    rtxui::ApplyStyle(style, {"font-weight", "200"});
+    CHECK(style.bold.value_or(true) == false);
+    CHECK(style.dim.value_or(false) == true);
+
+    rtxui::ApplyStyle(style, {"font-weight", "400"});
+    CHECK(style.bold.value_or(true) == false);
+    CHECK(style.dim.value_or(true) == false);
+  }
+
+  SECTION("normal") {
+    rtxui::ApplyStyle(style, {"font-weight", "normal"});
+    CHECK(style.bold.value_or(true) == false);
+    CHECK(style.dim.value_or(true) == false);
+  }
+}
+
 TEST_CASE("Font style parsing in ApplyStyle", "[style][font-style]") {
   rtxui::ComputedStyle style;
 
