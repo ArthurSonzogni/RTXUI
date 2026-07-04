@@ -378,6 +378,7 @@ void PaintImpl(const PhysicalFragment* frag,
                Color inherited_foreground_color,
                Color parent_background_color,
                bool inherited_bold,
+               bool inherited_dim,
                bool inherited_italic,
                bool inherited_underlined,
                bool inherited_underlined_double,
@@ -413,6 +414,7 @@ void PaintImpl(const PhysicalFragment* frag,
           ? Blend(*frag->background_color, parent_background_color)
           : parent_background_color;
   bool current_bold = frag->bold.value_or(inherited_bold);
+  bool current_dim = frag->dim.value_or(inherited_dim);
   bool current_italic = frag->italic.value_or(inherited_italic);
   bool current_underlined = frag->underlined.value_or(inherited_underlined);
   bool current_underlined_double =
@@ -553,6 +555,7 @@ void PaintImpl(const PhysicalFragment* frag,
         Color bg = cell.background_color;
         cell.foreground_color = Blend(fg, bg);
         cell.bold = current_bold;
+        cell.dim = current_dim;
         cell.italic = current_italic;
         cell.underlined = current_underlined;
         cell.underlined_double = current_underlined_double;
@@ -925,8 +928,8 @@ void PaintImpl(const PhysicalFragment* frag,
               child_accum_scroll_x, child_accum_scroll_y,
               is_fixed ? viewport_x : next_viewport_x,
               is_fixed ? viewport_y : next_viewport_y, current_foreground_color,
-              current_background_color, current_bold, current_italic,
-              current_underlined, current_underlined_double,
+              current_background_color, current_bold, current_dim,
+              current_italic, current_underlined, current_underlined_double,
               current_strikethrough, current_blink,
               child_clip_to_pass, current_opacity);
   }
@@ -939,8 +942,8 @@ void Paint(const PhysicalFragment* frag,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y,
             Color::RGB(255, 255, 255), Color(), false, false, false, false,
-            false, false, ClipRect{0, 0, texture.width(), texture.height()},
-            1.0f);
+            false, false, false,
+            ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
 }
 
 }  // namespace rtxui

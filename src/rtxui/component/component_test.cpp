@@ -1643,6 +1643,64 @@ TEST_CASE("Italic and Em Components cell.italic rendering",
   CHECK(rendered.find("\x1B[23m") != std::string::npos);
 }
 
+class DimTestComponent : public rtxui::Component<DimTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<DimTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div class="light">Dim text</div>
+    </div>
+    <style>
+      .light { font-weight: lighter; }
+    </style>
+  )";
+};
+
+TEST_CASE("Dim text rendering via font-weight lighter",
+          "[component][font-weight][paint]") {
+  auto container = rtxui::Ref<DimTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  bool found = false;
+  const std::string expected = "Dim text";
+  for (int y = 0; y < texture.height() && !found; ++y) {
+    for (int x = 0; x < texture.width() && !found; ++x) {
+      std::string text = "";
+      bool all_dim = true;
+      for (size_t c = 0; c < expected.size(); ++c) {
+        text += texture[x + static_cast<int>(c), y].character;
+        if (!texture[x + static_cast<int>(c), y].dim) {
+          all_dim = false;
+        }
+      }
+      if (text == expected) {
+        CHECK(all_dim);
+        found = true;
+      }
+    }
+  }
+  CHECK(found);
+
+  std::string rendered = texture.Render();
+  CHECK(rendered.find("\x1B[2m") != std::string::npos);
+}
+
 class TextTransformTestComponent
     : public rtxui::Component<TextTransformTestComponent> {
  public:

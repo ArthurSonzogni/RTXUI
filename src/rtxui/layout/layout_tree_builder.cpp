@@ -49,6 +49,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
                                                     TextTransform parent_text_transform,
                                                     std::optional<Color> parent_fg,
                                                     std::optional<bool> parent_bold,
+                                                    std::optional<bool> parent_dim,
                                                     std::optional<bool> parent_italic,
                                                     std::optional<bool> parent_underlined,
                                                     std::optional<bool> parent_underlined_double,
@@ -79,6 +80,9 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
   std::optional<bool> resolved_bold = dom_node->style.bold.has_value() ? dom_node->style.bold : parent_bold;
   box->style.bold = resolved_bold;
+
+  std::optional<bool> resolved_dim = dom_node->style.dim.has_value() ? dom_node->style.dim : parent_dim;
+  box->style.dim = resolved_dim;
 
   std::optional<bool> resolved_italic = dom_node->style.italic.has_value() ? dom_node->style.italic : parent_italic;
   box->style.italic = resolved_italic;
@@ -118,6 +122,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           slot_style.text_transform.value_or(resolved_text_transform);
       std::optional<Color> slot_fg = slot_style.foreground_color.has_value() ? slot_style.foreground_color : resolved_fg;
       std::optional<bool> slot_bold = slot_style.bold.has_value() ? slot_style.bold : resolved_bold;
+      std::optional<bool> slot_dim = slot_style.dim.has_value() ? slot_style.dim : resolved_dim;
       std::optional<bool> slot_italic = slot_style.italic.has_value() ? slot_style.italic : resolved_italic;
       std::optional<bool> slot_underlined = slot_style.underlined.has_value() ? slot_style.underlined : resolved_underlined;
       std::optional<bool> slot_underlined_double = slot_style.underlined_double.has_value() ? slot_style.underlined_double : resolved_underlined_double;
@@ -126,7 +131,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
       for (auto& grandchild_dom : child_dom.get()->children()) {
         auto grandchild_box =
-            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink);
+            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_dim, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -134,7 +139,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink);
+    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_dim, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink);
     if (child_box) {
       raw_children.push_back(child_box);
     }

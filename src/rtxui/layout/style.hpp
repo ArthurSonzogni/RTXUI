@@ -270,6 +270,7 @@ struct ComputedStyle {
   std::optional<Color> foreground_color;
   float opacity = 1.0f;
   std::optional<bool> bold;
+  std::optional<bool> dim;
   std::optional<bool> italic;
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;
@@ -380,6 +381,7 @@ struct ComputedStyle {
     foreground_color = other.foreground_color;
     opacity = other.opacity;
     bold = other.bold;
+    dim = other.dim;
     italic = other.italic;
     underlined = other.underlined;
     underlined_double = other.underlined_double;

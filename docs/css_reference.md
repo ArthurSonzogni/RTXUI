@@ -56,7 +56,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `opacity` | [`<number>`](#value-types) |   | Transparency value (`0.0` for transparent to `1.0` for opaque). |
 | `text-align` | `left \| right \| center` | ❌ | Horizontal alignment of inline text flows. |
 | `white-space` | `normal \| nowrap` | ❌ | `nowrap` disables text wrapping. |
-| `font-weight` | `bold \| normal` | ❌ | Applies bold styling to text. |
+| `font-weight` | `bold \| bolder \| lighter \| normal \| <number>` | ❌ | Text weight. `bold`/`bolder`/`>=600` render bold; `lighter`/`<=300` render with the terminal's dim attribute. |
 | `font-style` | `italic \| oblique \| normal` | ❌ | Applies italic styling to text (rendered with the terminal's italic attribute). |
 | `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
 | `text-transform` | `uppercase \| lowercase \| capitalize \| none` | ❌ | Case transformation of text (ASCII letters; other characters pass through). Inherited. |
