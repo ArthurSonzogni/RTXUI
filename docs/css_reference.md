@@ -61,6 +61,17 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 | `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
 | `text-transform` | `uppercase \| lowercase \| capitalize \| none` | ❌ | Case transformation of text (ASCII letters; other characters pass through). Inherited. |
 
+### `calc()`
+
+Length values (`width`, `height`, `top`/`right`/`bottom`/`left`, `min-`/`max-` sizes, `flex-basis`, grid tracks) accept `calc()` expressions mixing cell counts and percentages with `+`, `-`, `*`, `/` and parentheses:
+
+```css
+.sidebar { width: calc(100% - 20); }
+.half { height: calc((100% - 1) / 2); }
+```
+
+Multiplication requires at least one plain-number operand and division a plain non-zero number divisor (as in CSS). Invalid expressions are treated as `auto`. `min()`, `max()`, and `clamp()` are not supported yet.
+
 ### `!important`
 
 Appending `!important` to a declaration value makes it win over normal declarations from later rules and over normal inline styles:

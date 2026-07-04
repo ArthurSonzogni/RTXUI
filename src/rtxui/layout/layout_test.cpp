@@ -2383,4 +2383,33 @@ TEST_CASE("Layout: Absolute position centering via margin auto", "[layout][absol
   CHECK(child_el->layout_height() == 4);
 }
 
+TEST_CASE("Layout: calc() width", "[layout][calc]") {
+  struct CalcWidthTest : Component<CalcWidthTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          div { display: block; }
+          .sized {
+            width: calc(100% - 4);
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="sized">X</div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<CalcWidthTest>::New(), 10, 1);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // 100% of 10 minus 4 = 6 cells wide.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRR....",
+                                                }));
+}
+
 }  // namespace rtxui
