@@ -1621,6 +1621,14 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.white_space = WhiteSpace::Pre;
       return;
     }
+    if (v == "pre-wrap" || v == "break-spaces") {
+      style.white_space = WhiteSpace::PreWrap;
+      return;
+    }
+    if (v == "pre-line") {
+      style.white_space = WhiteSpace::PreLine;
+      return;
+    }
   }
 
   if (p == "list-style" || p == "list-style-type") {

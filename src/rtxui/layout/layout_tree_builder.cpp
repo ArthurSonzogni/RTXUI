@@ -40,6 +40,55 @@ void ApplyTextTransform(std::string& text, TextTransform transform) {
     }
   }
 }
+
+// white-space: normal | nowrap render newlines as plain spaces. (Template
+// text keeps its newlines in the DOM; the conversion is style-driven here.)
+void ReplaceNewlinesWithSpaces(std::string& text) {
+  if (text.find('\n') == std::string::npos &&
+      text.find('\r') == std::string::npos) {
+    return;
+  }
+  std::string result;
+  result.reserve(text.size());
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '\r' && i + 1 < text.size() && text[i + 1] == '\n') {
+      continue;  // CRLF collapses to a single space via the '\n'.
+    }
+    result += (c == '\n' || c == '\r') ? ' ' : c;
+  }
+  text = std::move(result);
+}
+
+// white-space: pre-line collapses runs of spaces/tabs to a single space and
+// drops spaces adjacent to newlines, while newlines themselves are preserved
+// (the inline flow honors them as hard breaks).
+void CollapseWhitespacePreLine(std::string& text) {
+  std::string result;
+  result.reserve(text.size());
+  bool pending_space = false;
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == ' ' || c == '\t') {
+      pending_space = !result.empty() && result.back() != '\n';
+      continue;
+    }
+    if (c == '\r' || c == '\n') {
+      if (c == '\r' && i + 1 < text.size() && text[i + 1] == '\n') {
+        ++i;  // CRLF is one newline.
+      }
+      pending_space = false;
+      result += '\n';
+      continue;
+    }
+    if (pending_space) {
+      result += ' ';
+      pending_space = false;
+    }
+    result += c;
+  }
+  text = std::move(result);
+}
 }  // namespace
 
 // Static Build method implementation
@@ -106,6 +155,18 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     box->is_text = true;
     box->text_data = text_node->text();
     ApplyTextTransform(box->text_data, resolved_text_transform);
+    switch (resolved_ws) {
+      case WhiteSpace::Normal:
+      case WhiteSpace::Nowrap:
+        ReplaceNewlinesWithSpaces(box->text_data);
+        break;
+      case WhiteSpace::PreLine:
+        CollapseWhitespacePreLine(box->text_data);
+        break;
+      case WhiteSpace::Pre:
+      case WhiteSpace::PreWrap:
+        break;  // Newlines are preserved and honored as hard breaks.
+    }
     box->algorithm = LayoutBox::Algorithm::Text;
 
     return box;
