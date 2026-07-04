@@ -1579,6 +1579,70 @@ TEST_CASE("Bold and Strong Components cell.bold rendering",
   CHECK(rendered.find("\x1B[22m") != std::string::npos);
 }
 
+class ItalicTestComponent : public rtxui::Component<ItalicTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::i>();
+    Import<rtxui::em>();
+    rtxui::Component<ItalicTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <i>Italic text</i>
+      <em>Em text</em>
+    </div>
+  )";
+};
+
+TEST_CASE("Italic and Em Components cell.italic rendering",
+          "[component][i][em][paint]") {
+  auto container = rtxui::Ref<ItalicTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto find_italic_run = [&](const std::string& expected) {
+    for (int y = 0; y < texture.height(); ++y) {
+      for (int x = 0; x < texture.width(); ++x) {
+        if (texture[x, y].character != expected.substr(0, 1)) {
+          continue;
+        }
+        std::string text = "";
+        bool all_italic = true;
+        for (size_t c = 0; c < expected.size(); ++c) {
+          text += texture[x + static_cast<int>(c), y].character;
+          if (!texture[x + static_cast<int>(c), y].italic) {
+            all_italic = false;
+          }
+        }
+        if (text == expected) {
+          CHECK(all_italic);
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  CHECK(find_italic_run("Italic text"));
+  CHECK(find_italic_run("Em text"));
+
+  std::string rendered = texture.Render();
+  CHECK(rendered.find("\x1B[3m") != std::string::npos);
+  CHECK(rendered.find("\x1B[23m") != std::string::npos);
+}
+
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
   void InitReflection() override {

@@ -18,6 +18,12 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
     ss << (next->dim ? "\x1B[2m" : "");   // DIM_SET
   }
 
+  // Italic
+  if (UNLIKELY(next->italic != prev->italic)) {
+    ss << (next->italic ? "\x1B[3m"     // ITALIC_SET
+                        : "\x1B[23m");  // ITALIC_RESET
+  }
+
   // Underline
   if (UNLIKELY(next->underlined != prev->underlined ||
                next->underlined_double != prev->underlined_double)) {

@@ -463,6 +463,32 @@ TEST_CASE("Text decoration parsing in ApplyStyle", "[style][text-decoration]") {
   }
 }
 
+TEST_CASE("Font style parsing in ApplyStyle", "[style][font-style]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("italic") {
+    rtxui::ApplyStyle(style, {"font-style", "italic"});
+    CHECK(style.italic.has_value());
+    CHECK(style.italic.value() == true);
+  }
+
+  SECTION("oblique") {
+    rtxui::ApplyStyle(style, {"font-style", "oblique"});
+    CHECK(style.italic.has_value());
+    CHECK(style.italic.value() == true);
+  }
+
+  SECTION("normal") {
+    rtxui::ApplyStyle(style, {"font-style", "normal"});
+    CHECK(style.italic.has_value());
+    CHECK(style.italic.value() == false);
+  }
+
+  SECTION("unset by default") {
+    CHECK_FALSE(style.italic.has_value());
+  }
+}
+
 TEST_CASE("Max-width, max-height and margin auto parsing in ApplyStyle",
           "[style][max-width][max-height][margin]") {
   rtxui::ComputedStyle style;

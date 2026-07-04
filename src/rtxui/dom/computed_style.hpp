@@ -77,6 +77,7 @@ struct ComputedStyle {
   std::optional<Color> background_color;  // Background color of the element
   std::optional<Color> foreground_color;  // Text color of the element
   std::optional<bool> bold;
+  std::optional<bool> italic;
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;
   std::optional<bool> strikethrough;

@@ -19,6 +19,7 @@
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/component/default/h1/h1.hpp"
 #include "rtxui/component/default/hr/hr.hpp"
+#include "rtxui/component/default/i/i.hpp"
 #include "rtxui/component/default/input/input.hpp"
 #include "rtxui/component/default/li/li.hpp"
 #include "rtxui/component/default/markdown/markdown.hpp"
