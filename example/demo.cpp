@@ -4,7 +4,7 @@
 #include <rtxui/component/default_components_internal.hpp>
 #include <string>
 #include <vector>
-#include "rtxui/core/task_runner.hpp"
+#include "rtxui/base/task_runner.hpp"
 
 using namespace rtxui;
 
@@ -974,7 +974,7 @@ int main() {
     Bind(textarea_input);
     BindCollection("todos", &todos, [](const Todo& item) {
       return std::make_shared<ManualStructVisitor>(
-          std::unordered_map<std::string, std::string>{
+          std::map<std::string, std::string, std::less<>>{
               {"text", item.text},
               {"appearing_class", item.appearing ? "appearing" : ""}});
     });

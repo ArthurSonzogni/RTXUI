@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-#include "rtxui/core/expected.hpp"
+#include "rtxui/base/expected.hpp"
 
 namespace css {
 
@@ -167,17 +167,9 @@ auto Parser::ParseDeclaration() -> Expected<Declaration, Error> {
   return Declaration{property, value.value()};
 }
 
-auto ParseSelectorString(std::string_view current) -> ParsedSelector {
-  while (!current.empty() && IsWhiteSpace(current.front())) {
-    current.remove_prefix(1);
-  }
-  while (!current.empty() && IsWhiteSpace(current.back())) {
-    current.remove_suffix(1);
-  }
-
-  ParsedSelector parsed;
-  
-  // Handle attribute selectors first to simplify splitting
+namespace {
+SelectorPart ParseSinglePart(std::string_view current) {
+  SelectorPart part;
   std::string working(current);
   size_t attr_start;
   while ((attr_start = working.find('[')) != std::string::npos) {
@@ -191,7 +183,6 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
       attr.name = attr_content.substr(0, eq);
       attr.value = attr_content.substr(eq + 1);
       attr.has_value = true;
-      // Trim quotes from value if present
       if (!attr.value.empty() && (attr.value.front() == '"' || attr.value.front() == '\'')) {
         attr.value = attr.value.substr(1);
       }
@@ -202,52 +193,34 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
       attr.name = attr_content;
       attr.has_value = false;
     }
-    parsed.attributes.push_back(std::move(attr));
+    part.attributes.push_back(std::move(attr));
     working.erase(attr_start, attr_end - attr_start + 1);
   }
 
   std::string_view remaining(working);
-  size_t colon = remaining.find(':');
-  std::string_view base_and_classes;
-  if (colon == std::string_view::npos) {
-    base_and_classes = remaining;
-  } else {
-    base_and_classes = remaining.substr(0, colon);
-  }
+  while (!remaining.empty() && IsWhiteSpace(remaining.front())) remaining.remove_prefix(1);
+  while (!remaining.empty() && IsWhiteSpace(remaining.back())) remaining.remove_suffix(1);
 
-  while (!base_and_classes.empty() && IsWhiteSpace(base_and_classes.back())) {
-    base_and_classes.remove_suffix(1);
-  }
-
-  // Find the last component of the selector (e.g., "div" in "self .container div")
-  size_t last_space = base_and_classes.find_last_of(" \n\r\t");
-  std::string_view last_part = (last_space == std::string_view::npos)
-                                   ? base_and_classes
-                                   : base_and_classes.substr(last_space + 1);
-
-  size_t dot = last_part.find('.');
-  size_t hash = last_part.find('#');
+  size_t dot = remaining.find('.');
+  size_t hash = remaining.find('#');
   size_t split_pos = std::min(dot, hash);
 
   if (split_pos == std::string_view::npos) {
-    parsed.base = std::string(last_part);
+    part.base = std::string(remaining);
   } else {
-    parsed.base = std::string(last_part.substr(0, split_pos));
-    std::string_view rest_part = last_part.substr(split_pos);
+    part.base = std::string(remaining.substr(0, split_pos));
+    std::string_view rest_part = remaining.substr(split_pos);
     while (!rest_part.empty()) {
       if (rest_part.front() == '.') {
         rest_part.remove_prefix(1);
         size_t next = rest_part.find_first_of(".#");
-        parsed.classes.push_back(std::string(rest_part.substr(0, next)));
+        part.classes.push_back(std::string(rest_part.substr(0, next)));
         if (next == std::string_view::npos) break;
         rest_part = rest_part.substr(next);
       } else if (rest_part.front() == '#') {
         rest_part.remove_prefix(1);
         size_t next = rest_part.find_first_of(".#");
-        // We only support one ID in simplified parser, but let's be robust
-        if (parsed.base.empty()) {
-           parsed.base = "#" + std::string(rest_part.substr(0, next));
-        }
+        part.id = std::string(rest_part.substr(0, next));
         if (next == std::string_view::npos) break;
         rest_part = rest_part.substr(next);
       } else {
@@ -255,26 +228,97 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
       }
     }
   }
+  return part;
+}
+} // namespace
 
-  if (colon == std::string_view::npos) return parsed;
+auto ParseSelectorString(std::string_view current) -> ParsedSelector {
+  while (!current.empty() && IsWhiteSpace(current.front())) {
+    current.remove_prefix(1);
+  }
+  while (!current.empty() && IsWhiteSpace(current.back())) {
+    current.remove_suffix(1);
+  }
 
-  std::string_view rest = remaining.substr(colon);
-  while (!rest.empty() && rest.front() == ':') {
-    rest.remove_prefix(1);
-    size_t next_colon = rest.find(':');
-    std::string_view pseudo = rest.substr(0, next_colon);
-    while (!pseudo.empty() && IsWhiteSpace(pseudo.front())) {
-      pseudo.remove_prefix(1);
+  std::vector<std::string_view> parts;
+  std::vector<char> combinators;
+  
+  std::string_view rest = current;
+  while (!rest.empty()) {
+    while (!rest.empty() && IsWhiteSpace(rest.front())) {
+      rest.remove_prefix(1);
     }
-    while (!pseudo.empty() && IsWhiteSpace(pseudo.back())) {
-      pseudo.remove_suffix(1);
-    }
-    parsed.pseudo_classes.push_back(std::string(pseudo));
-    if (next_colon == std::string_view::npos) {
+    if (rest.empty()) break;
+    
+    size_t next_space = rest.find_first_of(" \n\r\t>+~");
+    if (next_space == std::string_view::npos) {
+      parts.push_back(rest);
       break;
     }
-    rest = rest.substr(next_colon);
+
+    parts.push_back(rest.substr(0, next_space));
+    char comb = rest[next_space];
+    rest.remove_prefix(next_space);
+
+    if (IsWhiteSpace(comb)) {
+      while (!rest.empty() && IsWhiteSpace(rest.front())) {
+        rest.remove_prefix(1);
+      }
+      if (!rest.empty() && Contains(rest.front(), {'>', '+', '~'})) {
+        comb = rest.front();
+        rest.remove_prefix(1);
+      } else {
+        comb = ' ';
+      }
+    } else if (Contains(comb, {'>', '+', '~'})) {
+      rest.remove_prefix(1);
+    }
+
+    combinators.push_back(comb);
   }
+
+  ParsedSelector parsed;
+  if (parts.empty()) return parsed;
+  
+  std::string_view target_str = parts.back();
+  size_t colon = target_str.find(':');
+  std::string_view target_without_pseudos = target_str;
+  if (colon != std::string_view::npos) {
+    target_without_pseudos = target_str.substr(0, colon);
+  }
+  
+  SelectorPart target_part = ParseSinglePart(target_without_pseudos);
+  parsed.base = std::move(target_part.base);
+  parsed.id = std::move(target_part.id);
+  parsed.classes = std::move(target_part.classes);
+  parsed.attributes = std::move(target_part.attributes);
+  
+  if (colon != std::string_view::npos) {
+    std::string_view rest_pseudos = target_str.substr(colon);
+    while (!rest_pseudos.empty() && rest_pseudos.front() == ':') {
+      rest_pseudos.remove_prefix(1);
+      size_t next_colon = rest_pseudos.find(':');
+      std::string_view pseudo = rest_pseudos.substr(0, next_colon);
+      while (!pseudo.empty() && IsWhiteSpace(pseudo.front())) {
+        pseudo.remove_prefix(1);
+      }
+      while (!pseudo.empty() && IsWhiteSpace(pseudo.back())) {
+        pseudo.remove_suffix(1);
+      }
+      parsed.pseudo_classes.push_back(std::string(pseudo));
+      if (next_colon == std::string_view::npos) {
+        break;
+      }
+      rest_pseudos = rest_pseudos.substr(next_colon);
+    }
+  }
+  
+  for (int i = static_cast<int>(parts.size()) - 2; i >= 0; --i) {
+    SelectorPart parent_part = ParseSinglePart(parts[i]);
+    parent_part.combinator = combinators[i];
+    parsed.parents.push_back(std::move(parent_part));
+  }
+  
   return parsed;
 }
 
@@ -584,9 +628,8 @@ auto EvaluateMediaQuery(std::string_view query) -> bool {
     }
 
     int val = 0;
-    try {
-      val = std::stoi(std::string(val_str));
-    } catch (...) {
+    auto [ptr, ec] = std::from_chars(val_str.data(), val_str.data() + val_str.size(), val);
+    if (ec != std::errc() || ptr != val_str.data() + val_str.size()) {
       return false;
     }
 

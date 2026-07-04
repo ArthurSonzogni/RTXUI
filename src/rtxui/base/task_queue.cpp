@@ -1,11 +1,12 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/core/task_queue.hpp"
+#include "rtxui/base/task_queue.hpp"
 
 namespace task {
 
 auto TaskQueue::PostTask(PendingTask task) -> void {
+  std::lock_guard<std::mutex> lock(mutex_);
   if (!task.time) {
     immediate_tasks_.push(task);
     return;
@@ -20,6 +21,7 @@ auto TaskQueue::PostTask(PendingTask task) -> void {
 }
 
 auto TaskQueue::Get() -> MaybeTask {
+  std::lock_guard<std::mutex> lock(mutex_);
   // Attempt to execute a task immediately.
   if (!immediate_tasks_.empty()) {
     auto task = immediate_tasks_.front();

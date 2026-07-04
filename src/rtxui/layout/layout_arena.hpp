@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <memory>
 #include <vector>
+#include <cstdlib>
+#include <iostream>
 
 namespace rtxui {
 
@@ -94,7 +96,10 @@ struct LayoutArenaAllocator {
 
   T* allocate(std::size_t n) {
     void* ptr = g_layout_arena.Allocate(n * sizeof(T), alignof(T));
-    if (!ptr) throw std::bad_alloc();
+    if (!ptr) {
+      std::cerr << "Fatal: Out of memory in LayoutArena allocator\n";
+      std::abort();
+    }
     return static_cast<T*>(ptr);
   }
 

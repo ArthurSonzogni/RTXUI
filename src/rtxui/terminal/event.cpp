@@ -8,7 +8,7 @@
 #include <utility>
 #include <variant>
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 
 // Disable warning for shadowing variable
 #ifdef __clang__

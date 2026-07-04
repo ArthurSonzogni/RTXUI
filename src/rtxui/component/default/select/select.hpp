@@ -29,6 +29,10 @@ class select : public Component<select> {
   std::string arrow_char = "▾";
   std::string dropdown_class = "closed";
 
+  bool last_is_open_ = false;
+  int last_hovered_index_ = -1;
+  std::string last_value_;
+
   void InitReflection() override;
   std::string_view Setup() override;
   bool OnEvent(Event event) override;

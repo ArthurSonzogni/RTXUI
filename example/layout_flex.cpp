@@ -450,7 +450,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
           (align == "stretch" &&
            (direction == "column" || direction == "column-reverse"));
       return std::make_shared<ManualStructVisitor>(
-          std::unordered_map<std::string, std::string>{
+          std::map<std::string, std::string, std::less<>>{
               {"label", b.label},
               {"color", b.color},
               {"width", should_stretch_w ? "auto" : std::to_string(b.width)},

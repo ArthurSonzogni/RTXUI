@@ -127,7 +127,11 @@ add_library(rtxui_lib STATIC
 )
 
 target_compile_features(rtxui_lib PUBLIC cxx_std_26)
-target_include_directories(rtxui_lib PUBLIC "include" "src")
+target_include_directories(rtxui_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<INSTALL_INTERFACE:include>
+)
 
 if(EMSCRIPTEN)
   add_compile_options("-sASYNCIFY")

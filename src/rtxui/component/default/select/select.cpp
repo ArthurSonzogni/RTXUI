@@ -4,6 +4,7 @@
 #include "rtxui/component/default/select/select.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -33,6 +34,11 @@ std::string_view select::Setup() {
         display: inline-flex;
         flex-direction: column;
         min-width: 15;
+        position: relative;
+      }
+      self.open {
+        display: flex;
+        z-index: 1000;
       }
       .select-btn {
         display: flex;
@@ -58,9 +64,10 @@ std::string_view select::Setup() {
         flex-direction: column;
         background-color: lighten(15%);
         position: absolute;
+        top: 100%;
+        left: 0;
         width: 100%;
-        margin-top: 1;
-        z-index: 10;
+        z-index: 1000;
       }
       .closed {
         display: none;
@@ -95,6 +102,10 @@ std::vector<OptionInfo> select::GetOptions() {
 }
 
 bool select::OnEvent(Event event) {
+  if (Component<select>::OnEvent(event)) {
+    return true;
+  }
+
   auto* root = Root();
   if (!root) {
     return false;
@@ -104,17 +115,33 @@ bool select::OnEvent(Event event) {
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
+    int click_x = mouse.x - 1;
+    int click_y = mouse.y - 1;
+
     if (mouse.button == Event::Mouse::Button::Left &&
         mouse.motion == Event::Mouse::Motion::Pressed) {
-      int click_x = mouse.x - 1;
-      int click_y = mouse.y - 1;
       int abs_x = root->absolute_x();
       int abs_y = root->absolute_y();
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
-          click_y < abs_y + layout_h) {
+      bool click_inside_select = (click_x >= abs_x && click_x < abs_x + layout_w &&
+                                  click_y >= abs_y && click_y < abs_y + layout_h);
+      bool click_inside_dropdown = false;
+      if (is_open) {
+        if (auto* dropdown_el = root->QuerySelector(".dropdown-list")) {
+          int drop_x = dropdown_el->absolute_x();
+          int drop_y = dropdown_el->absolute_y();
+          int drop_w = dropdown_el->layout_width();
+          int drop_h = dropdown_el->layout_height();
+          if (click_x >= drop_x && click_x < drop_x + drop_w &&
+              click_y >= drop_y && click_y < drop_y + drop_h) {
+            click_inside_dropdown = true;
+          }
+        }
+      }
+
+      if (click_inside_select) {
         // Focus this element
         if (root->Parent()) {
           Element* root_el = root;
@@ -137,10 +164,29 @@ bool select::OnEvent(Event event) {
           }
         }
         changed = true;
+      } else if (click_inside_dropdown) {
+        // Click was inside the dropdown. Do nothing here to allow event propagation to the option components.
       } else {
         if (is_open) {
           is_open = false;
           changed = true;
+        }
+      }
+    } else if (is_open && mouse.motion == Event::Mouse::Motion::Moved) {
+      auto options = GetOptions();
+      for (int i = 0; i < static_cast<int>(options.size()); ++i) {
+        auto* opt_el = options[i].element;
+        int opt_x = opt_el->absolute_x();
+        int opt_y = opt_el->absolute_y();
+        int opt_w = opt_el->layout_width();
+        int opt_h = opt_el->layout_height();
+        if (click_x >= opt_x && click_x < opt_x + opt_w &&
+            click_y >= opt_y && click_y < opt_y + opt_h) {
+          if (hovered_index != i) {
+            hovered_index = i;
+            changed = true;
+          }
+          break;
         }
       }
     }
@@ -241,23 +287,77 @@ bool select::Digest() {
   dropdown_class = is_open ? "open" : "closed";
   arrow_char = is_open ? "▴" : "▾";
 
-  if (root) {
+  bool state_changed = false;
+  if (is_open != last_is_open_) {
+    last_is_open_ = is_open;
+    state_changed = true;
+  }
+  if (hovered_index != last_hovered_index_) {
+    last_hovered_index_ = hovered_index;
+    state_changed = true;
+  }
+  if (value != last_value_) {
+    last_value_ = value;
+    state_changed = true;
+  }
+
+  if (root && state_changed) {
+    auto& comp_cls = classes_;
+    auto it_comp = std::find(comp_cls.begin(), comp_cls.end(), "open");
+    if (is_open) {
+      if (it_comp == comp_cls.end()) {
+        comp_cls.push_back("open");
+      }
+    } else {
+      if (it_comp != comp_cls.end()) {
+        comp_cls.erase(it_comp);
+      }
+    }
+
+    auto& root_cls = root->classes;
+    auto it_root = std::find(root_cls.begin(), root_cls.end(), "open");
+    if (is_open) {
+      if (it_root == root_cls.end()) {
+        root_cls.push_back("open");
+      }
+    } else {
+      if (it_root != root_cls.end()) {
+        root_cls.erase(it_root);
+      }
+    }
+    root->Visit([](Element& el) { el.ClearResolvedStyles(); });
+
     auto options = GetOptions();
     selected_label = "Select...";
     for (size_t i = 0; i < options.size(); ++i) {
       auto& opt = options[i];
-      opt.element->classes.clear();
+      auto& cls = opt.element->classes;
+      auto it_sel = std::find(cls.begin(), cls.end(), "selected");
+      if (it_sel != cls.end()) {
+        cls.erase(it_sel);
+      }
+      auto it_hov = std::find(cls.begin(), cls.end(), "hovered");
+      if (it_hov != cls.end()) {
+        cls.erase(it_hov);
+      }
       if (opt.value == value) {
         selected_label = opt.label;
-        opt.element->classes.push_back("selected");
+        if (std::find(cls.begin(), cls.end(), "selected") == cls.end()) {
+          cls.push_back("selected");
+        }
       }
       if (is_open && static_cast<int>(i) == hovered_index) {
-        opt.element->classes.push_back("hovered");
+        if (std::find(cls.begin(), cls.end(), "hovered") == cls.end()) {
+          cls.push_back("hovered");
+        }
       }
+      opt.element->Visit([](Element& el) { el.ClearResolvedStyles(); });
     }
+    this->Render();
   }
 
-  return Component<select>::Digest();
+  bool parent_digest = Component<select>::Digest();
+  return state_changed || parent_digest;
 }
 
 void select::SelectOption(std::string_view opt_val) {

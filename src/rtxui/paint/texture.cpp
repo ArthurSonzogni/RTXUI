@@ -5,7 +5,7 @@
 
 #include <sstream>
 
-#include "rtxui/core/likely.hpp"
+#include "rtxui/base/likely.hpp"
 
 namespace {
 void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {

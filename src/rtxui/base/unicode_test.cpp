@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 
 // --- EatCodePoint ---
 

@@ -3,13 +3,14 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <sstream>
 #include <vector>
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
@@ -101,7 +102,8 @@ int ResolveSize(const Length& length, int parent_size) {
 
 void AdjustOutOfFlowCoordinates(PhysicalFragment* frag,
                                 int shift_x,
-                                int shift_y) {
+                                int shift_y,
+                                Element* shifted_root) {
   if (shift_x == 0 && shift_y == 0) {
     return;
   }
@@ -110,10 +112,37 @@ void AdjustOutOfFlowCoordinates(PhysicalFragment* frag,
       if (child.fragment->dom_node &&
           (child.fragment->dom_node->style.position == PositionType::Absolute ||
            child.fragment->dom_node->style.position == PositionType::Fixed)) {
-        child.x -= shift_x;
-        child.y -= shift_y;
+        bool npa_inside_shifted_subtree = false;
+        if (child.fragment->dom_node->style.position == PositionType::Absolute && shifted_root) {
+          // Find Nearest Positioned Ancestor (NPA) of the absolute child
+          Element* curr = child.fragment->dom_node->Parent();
+          Element* npa = nullptr;
+          while (curr) {
+            if (curr->style.position != PositionType::Static) {
+              npa = curr;
+              break;
+            }
+            curr = curr->Parent();
+          }
+          // Check if NPA is equal to or a descendant of shifted_root
+          if (npa) {
+            Element* check = npa;
+            while (check) {
+              if (check == shifted_root) {
+                npa_inside_shifted_subtree = true;
+                break;
+              }
+              check = check->Parent();
+            }
+          }
+        }
+
+        if (!npa_inside_shifted_subtree) {
+          child.x -= shift_x;
+          child.y -= shift_y;
+        }
       } else {
-        AdjustOutOfFlowCoordinates(child.fragment.get(), shift_x, shift_y);
+        AdjustOutOfFlowCoordinates(child.fragment.get(), shift_x, shift_y, shifted_root);
       }
     }
   }
@@ -125,7 +154,8 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
                                             LayoutContext context) {
   auto* box = node.box;
   if (!box) {
-    throw std::runtime_error("LayoutInputNode has null LayoutBox.");
+    std::cerr << "LayoutInputNode has null LayoutBox.\n";
+    std::abort();
   }
 
   if (box->algorithm == LayoutBox::Algorithm::Text) {
@@ -158,8 +188,8 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
     case LayoutBox::Algorithm::Grid:
       return LayoutGrid(node, constraints, context);
     case LayoutBox::Algorithm::Text:
-      throw std::runtime_error(
-          "Text nodes should not be laid out directly. Use InlineFlow.");
+      std::cerr << "Text nodes should not be laid out directly. Use InlineFlow.\n";
+      std::abort();
   }
   return nullptr;
 }
@@ -190,33 +220,51 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
                              std::shared_ptr<PhysicalFragment>& fragment,
                              const LayoutContext& parent_context) {
   for (auto& child_box : parent->children) {
+
     if (child_box->style.position == PositionType::Absolute ||
         child_box->style.position == PositionType::Fixed) {
       bool is_fixed = child_box->style.position == PositionType::Fixed;
-      int container_w =
-          is_fixed ? parent_context.viewport_w : parent_context.npa_w;
-      int container_h =
-          is_fixed ? parent_context.viewport_h : parent_context.npa_h;
+      int container_w = parent_context.npa_w;
+      int container_h = parent_context.npa_h;
+      int npa_offset_x = parent_context.npa_offset_x;
+      int npa_offset_y = parent_context.npa_offset_y;
+
+      if (is_fixed) {
+        container_w = parent_context.viewport_w;
+        container_h = parent_context.viewport_h;
+        npa_offset_x = parent_context.viewport_offset_x;
+        npa_offset_y = parent_context.viewport_offset_y;
+      } else if (parent->style.position != PositionType::Static) {
+        container_w = fragment->width;
+        container_h = fragment->height;
+        npa_offset_x = 0;
+        npa_offset_y = 0;
+      }
 
       LayoutConstraints child_c;
       int child_w = ResolveSize(child_box->style.width, container_w);
       int child_h = ResolveSize(child_box->style.height, container_h);
 
-      child_c.width = {
-          child_w != -1 ? child_w : container_w,
-          child_w != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
-      child_c.height = {
-          child_h != -1 ? child_h : container_h,
-          child_h != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
-
-      LayoutContext child_context = parent_context;
-      if (child_box->style.position != PositionType::Static) {
-        child_context.npa_w = child_w != -1 ? child_w : container_w;
-        child_context.npa_h = child_h != -1 ? child_h : container_h;
-        child_context.npa_offset_x = 0;
-        child_context.npa_offset_y = 0;
+      int max_avail_w = container_w;
+      if (child_w == -1 && (child_box->style.left.unit == Unit::Auto || child_box->style.right.unit == Unit::Auto)) {
+        max_avail_w = parent_context.viewport_w;
+      }
+      int max_avail_h = container_h;
+      if (child_h == -1 && (child_box->style.top.unit == Unit::Auto || child_box->style.bottom.unit == Unit::Auto)) {
+        max_avail_h = parent_context.viewport_h;
       }
 
+      child_c.width = {
+          child_w != -1 ? child_w : max_avail_w,
+          child_w != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
+      child_c.height = {
+          child_h != -1 ? child_h : max_avail_h,
+          child_h != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
+
+      int x = 0;
+      int y = 0;
+
+      // Temporary layout fragment to calculate child width/height
       LayoutInputNode child_input = {child_box.get()};
       std::shared_ptr<LayoutBox> wrapper_box = nullptr;
       if (child_box->algorithm == LayoutBox::Algorithm::Text) {
@@ -230,37 +278,73 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
         wrapper_box->style.display_outside = DisplayOutside::Inline;
         child_input.box = wrapper_box.get();
       }
+
+      // We run layout using a temporary child_context which we'll refine below
+      LayoutContext child_context = parent_context;
       auto child_frag = RunLayout(child_input, child_c, child_context);
 
-      int x = 0;
-      int y = 0;
-
-      if (child_box->style.left.unit != Unit::Auto) {
-        x = child_box->style.left.Resolve(container_w);
+      if (child_box->style.left.unit != Unit::Auto && child_box->style.right.unit != Unit::Auto) {
+        int left_val = child_box->style.left.Resolve(container_w);
+        int right_val = child_box->style.right.Resolve(container_w);
+        int avail_space = container_w - left_val - right_val;
+        if (child_box->style.margin_left_auto && child_box->style.margin_right_auto) {
+          int m = std::max(0, avail_space - child_frag->width) / 2;
+          x = left_val + m;
+        } else if (child_box->style.margin_left_auto) {
+          x = left_val + std::max(0, avail_space - child_frag->width);
+        } else if (child_box->style.margin_right_auto) {
+          x = left_val + child_box->style.margin.left;
+        } else {
+          x = left_val + child_box->style.margin.left;
+        }
+      } else if (child_box->style.left.unit != Unit::Auto) {
+        x = child_box->style.left.Resolve(container_w) + child_box->style.margin.left;
       } else if (child_box->style.right.unit != Unit::Auto) {
         x = container_w - child_box->style.right.Resolve(container_w) -
-            child_frag->width;
+            child_frag->width - child_box->style.margin.right;
+      } else {
+        x = child_box->style.margin.left;
       }
 
-      if (child_box->style.top.unit != Unit::Auto) {
-        y = child_box->style.top.Resolve(container_h);
+      if (child_box->style.top.unit != Unit::Auto && child_box->style.bottom.unit != Unit::Auto) {
+        int top_val = child_box->style.top.Resolve(container_h);
+        int bottom_val = child_box->style.bottom.Resolve(container_h);
+        int avail_space = container_h - top_val - bottom_val;
+        if (child_box->style.margin_top_auto && child_box->style.margin_bottom_auto) {
+          int m = std::max(0, avail_space - child_frag->height) / 2;
+          y = top_val + m;
+        } else if (child_box->style.margin_top_auto) {
+          y = top_val + std::max(0, avail_space - child_frag->height);
+        } else if (child_box->style.margin_bottom_auto) {
+          y = top_val + child_box->style.margin.top;
+        } else {
+          y = top_val + child_box->style.margin.top;
+        }
+      } else if (child_box->style.top.unit != Unit::Auto) {
+        y = child_box->style.top.Resolve(container_h) + child_box->style.margin.top;
       } else if (child_box->style.bottom.unit != Unit::Auto) {
         y = container_h - child_box->style.bottom.Resolve(container_h) -
-            child_frag->height;
+            child_frag->height - child_box->style.margin.bottom;
+      } else {
+        y = child_box->style.margin.top;
       }
 
-      x += child_box->style.margin.left;
-      y += child_box->style.margin.top;
+      int relative_to_parent_x = x - npa_offset_x;
+      int relative_to_parent_y = y - npa_offset_y;
 
-      int relative_to_parent_x = 0;
-      int relative_to_parent_y = 0;
+      // Update child_context viewport offset and nearest positioned ancestor context
+      child_context.viewport_offset_x += relative_to_parent_x;
+      child_context.viewport_offset_y += relative_to_parent_y;
+      if (child_box->style.position != PositionType::Static) {
+        child_context.npa_w = child_w != -1 ? child_w : container_w;
+        child_context.npa_h = child_h != -1 ? child_h : container_h;
+        child_context.npa_offset_x = 0;
+        child_context.npa_offset_y = 0;
+      }
 
-      if (is_fixed) {
-        relative_to_parent_x = x - parent_context.viewport_offset_x;
-        relative_to_parent_y = y - parent_context.viewport_offset_y;
-      } else {
-        relative_to_parent_x = x - parent_context.npa_offset_x;
-        relative_to_parent_y = y - parent_context.npa_offset_y;
+      // Re-run layout if viewport_offset changed
+      if (relative_to_parent_x != 0 || relative_to_parent_y != 0) {
+        child_frag = RunLayout(child_input, child_c, child_context);
       }
 
       fragment->children.push_back(
@@ -423,7 +507,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
     if (shift != child_box->style.margin.left) {
       AdjustOutOfFlowCoordinates(child_frag.get(),
-                                 shift - child_box->style.margin.left, 0);
+                                 shift - child_box->style.margin.left, 0,
+                                 child_box->dom_node);
     }
 
     if (child_box->style.position == PositionType::Relative) {
@@ -960,8 +1045,13 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
   } else {
-    container_frag->height =
-        cursor_y + box->style.padding.bottom + box->style.border.bottom;
+    int resolved_h = ResolveSize(box->style.height, constraints.height.value);
+    if (resolved_h != -1) {
+      container_frag->height = resolved_h;
+    } else {
+      container_frag->height =
+          cursor_y + box->style.padding.bottom + box->style.border.bottom;
+    }
   }
   if (!is_fixed_width) {
     container_frag->width =
@@ -973,6 +1063,14 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     int max_w = ResolveSize(box->style.max_width, avail_width);
     if (max_w != -1 && container_frag->width > max_w) {
       container_frag->width = max_w;
+    }
+  }
+
+  // Apply min-height constraint
+  {
+    int min_h = ResolveSize(box->style.min_height, constraints.height.value);
+    if (min_h != -1 && container_frag->height < min_h) {
+      container_frag->height = min_h;
     }
   }
 
@@ -1922,10 +2020,36 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       int rowspan = 1;
       if (cell->dom_node) {
         if (auto* cs = cell->dom_node->GetAttribute("colspan")) {
-          try { colspan = std::max(1, std::stoi(*cs)); } catch (...) {}
+          std::string_view s = *cs;
+          while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+            s.remove_prefix(1);
+          }
+          while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+            s.remove_suffix(1);
+          }
+          if (!s.empty()) {
+            int val = 1;
+            auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+            if (ec == std::errc() && ptr == s.data() + s.size()) {
+              colspan = std::max(1, val);
+            }
+          }
         }
         if (auto* rs = cell->dom_node->GetAttribute("rowspan")) {
-          try { rowspan = std::max(1, std::stoi(*rs)); } catch (...) {}
+          std::string_view s = *rs;
+          while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+            s.remove_prefix(1);
+          }
+          while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+            s.remove_suffix(1);
+          }
+          if (!s.empty()) {
+            int val = 1;
+            auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+            if (ec == std::errc() && ptr == s.data() + s.size()) {
+              rowspan = std::max(1, val);
+            }
+          }
         }
       }
 

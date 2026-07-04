@@ -8,6 +8,10 @@
 #include "rtxui/internal/component.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/layout/layout.hpp"
+#include "rtxui/layout/layout_tree_builder.hpp"
+#include "rtxui/layout/physical_fragment.hpp"
+#include "rtxui/style/style.hpp"
 
 namespace rtxui {
 namespace {
@@ -3189,5 +3193,594 @@ TEST_CASE("Screen.LayoutFlexDemoClickTest", "[terminal][flex]") {
   CHECK(flex_container->style.flex_direction == Direction::RowReverse);
 }
 
+TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ScreenTooltipHoverRegressionTest : public Component<ScreenTooltipHoverRegressionTest> {
+   public:
+    std::string tooltip_text = "regression-test";
+    void InitReflection() override {
+      Bind(tooltip_text);
+      Import<tooltip>();
+    }
+    std::string_view view = R"xml(
+      <div id="container" style="width: 10; height: 3;">
+        <tooltip id="tt" content="{tooltip_text}">
+          <div id="trigger" style="width: 5; height: 1;">Trigger</div>
+        </tooltip>
+      </div>
+    )xml";
+  };
+
+  auto component = Ref<ScreenTooltipHoverRegressionTest>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* tt_el = component->Root()->QuerySelector("#tt");
+  auto* trigger_el = component->Root()->QuerySelector("#trigger");
+  REQUIRE(tt_el != nullptr);
+  REQUIRE(trigger_el != nullptr);
+
+  auto* tt_comp = const_cast<ComponentBase*>(tt_el->component());
+  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  REQUIRE(tt_ptr != nullptr);
+
+  // Initial state: hidden
+  CHECK(tt_ptr->tooltip_class == "hidden");
+
+  // Send mouse hover event on the trigger element (x=2, y=1)
+  Event::Mouse hover_in;
+  hover_in.button = Event::Mouse::Button::None;
+  hover_in.motion = Event::Mouse::Motion::Moved;
+  hover_in.x = 2; // tx = 1, inside trigger
+  hover_in.y = 1; // ty = 0, inside trigger
+  screen.Dispatch(hover_in);
+
+  // Verify that the tooltip class reactively updated to visible
+  CHECK(tt_ptr->tooltip_class == "visible");
+
+  // Hover out
+  Event::Mouse hover_out;
+  hover_out.button = Event::Mouse::Button::None;
+  hover_out.motion = Event::Mouse::Motion::Moved;
+  hover_out.x = 20; // outside bounds
+  hover_out.y = 1;
+  screen.Dispatch(hover_out);
+
+  // Verify tooltip class is hidden again
+  CHECK(tt_ptr->tooltip_class == "hidden");
+}
+
+TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(40, 10);
+
+  class ScreenTooltipVisibleTest : public Component<ScreenTooltipVisibleTest> {
+   public:
+    std::string tooltip_text = "regression-test";
+    void InitReflection() override {
+      Bind(tooltip_text);
+      Import<tooltip>();
+      Import<div>();
+    }
+    std::string_view view = R"xml(
+      <div id="container" style="padding-top: 4; height: 10; width: 40; display: block;">
+        <tooltip id="tt" content="{tooltip_text}" placement="top">
+          <div id="trigger" style="width: 10; height: 1;">Trigger</div>
+        </tooltip>
+      </div>
+    )xml";
+  };
+
+  auto component = Ref<ScreenTooltipVisibleTest>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* tt_el = component->Root()->QuerySelector("#tt");
+  REQUIRE(tt_el != nullptr);
+
+  // Hover in
+  Event::Mouse hover_in;
+  hover_in.button = Event::Mouse::Button::None;
+  hover_in.motion = Event::Mouse::Motion::Moved;
+  hover_in.x = 2; // inside trigger
+  hover_in.y = 5; // inside trigger
+  screen.Dispatch(hover_in);
+
+  auto* tt_comp = const_cast<ComponentBase*>(tt_el->component());
+  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  REQUIRE(tt_ptr != nullptr);
+  CHECK(tt_ptr->tooltip_class == "visible");
+
+  // Check if "regression-test" is in the output
+  CHECK(device->GetOutput().find("regression-test") != std::string::npos);
+
+  // Clear output buffer history
+  device->ClearOutput();
+
+  // Hover out
+  Event::Mouse hover_out;
+  hover_out.button = Event::Mouse::Button::None;
+  hover_out.motion = Event::Mouse::Motion::Moved;
+  hover_out.x = 35; // far away
+  hover_out.y = 5; // far away
+  screen.Dispatch(hover_out);
+
+  CHECK(tt_ptr->tooltip_class == "hidden");
+  CHECK(device->GetOutput().find("regression-test") == std::string::npos);
+}
+
+TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+
+  class TooltipDemoTest : public Component<TooltipDemoTest> {
+   public:
+    std::string custom_text = "Press any key to modify this text!";
+    void InitReflection() override {
+      Bind(custom_text);
+      rtxui::Component<TooltipDemoTest>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div class="container">
+        <h2>RTXUI Tooltip Component Demo</h2>
+        <p class="desc">
+          Hover over the buttons below using your mouse cursor to see tooltips rendered in different directions.
+        </p>
+
+        <div class="showcase">
+          <div class="row">
+            <tooltip id="tt_top" content="Tooltip aligned at the TOP of the element" placement="top">
+              <button id="btn_top" class="btn">Top Tooltip</button>
+            </tooltip>
+
+            <tooltip content="Tooltip aligned at the BOTTOM of the element" placement="bottom">
+              <button class="btn">Bottom Tooltip</button>
+            </tooltip>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        self {
+          display: block;
+          padding: 2;
+        }
+        h2 {
+          margin-bottom: 0;
+        }
+        .desc {
+          margin-bottom: 3;
+        }
+        .showcase {
+          display: flex;
+          flex-direction: column;
+          gap: 4;
+          width: 60;
+        }
+        .row {
+          display: flex;
+          flex-direction: row;
+          justify-content: space-around;
+          align-items: center;
+          width: 100%;
+        }
+        .btn {
+          padding: 0 2;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<TooltipDemoTest>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  // Find button and tooltip
+  auto* btn = component->Root()->QuerySelector("#btn_top");
+  auto* tt = component->Root()->QuerySelector("#tt_top");
+  REQUIRE(btn != nullptr);
+  REQUIRE(tt != nullptr);
+
+  // Find absolute position of the button
+  int btn_x = btn->absolute_x();
+  int btn_y = btn->absolute_y();
+  REQUIRE(btn_x > 0);
+  REQUIRE(btn_y > 0);
+
+  // Hover on the button
+  Event::Mouse hover_in;
+  hover_in.button = Event::Mouse::Button::None;
+  hover_in.motion = Event::Mouse::Motion::Moved;
+  hover_in.x = btn_x + 1; // 1-indexed
+  hover_in.y = btn_y + 1; // 1-indexed
+  screen.Dispatch(hover_in);
+
+  auto* tt_comp = const_cast<ComponentBase*>(tt->component());
+  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  REQUIRE(tt_ptr != nullptr);
+  CHECK(tt_ptr->tooltip_class == "visible");
+
+  CHECK(device->GetOutput().find("Tooltip aligned at the TOP of the") != std::string::npos);
+}
+
+TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(40, 10);
+
+  class TooltipMarginAutoTest : public Component<TooltipMarginAutoTest> {
+   public:
+    std::string tooltip_text = "regression-test";
+    void InitReflection() override {
+      Bind(tooltip_text);
+      Import<tooltip>();
+      Import<div>();
+    }
+    std::string_view view = R"xml(
+      <div id="container" style="width: 40; height: 10; display: block;">
+        <div id="showcase" style="width: 20; margin: auto; display: block;">
+          <tooltip id="tt" content="{tooltip_text}" placement="bottom">
+            <div id="trigger" style="width: 10; height: 1;">Trigger</div>
+          </tooltip>
+        </div>
+      </div>
+    )xml";
+  };
+
+  auto component = Ref<TooltipMarginAutoTest>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* trigger = component->Root()->QuerySelector("#trigger");
+  auto* tt = component->Root()->QuerySelector("#tt");
+  REQUIRE(trigger != nullptr);
+  REQUIRE(tt != nullptr);
+
+  int trigger_x = trigger->absolute_x();
+  int trigger_y = trigger->absolute_y();
+  REQUIRE(trigger_x >= 10);
+
+  // Hover on trigger
+  Event::Mouse hover_in;
+  hover_in.button = Event::Mouse::Button::None;
+  hover_in.motion = Event::Mouse::Motion::Moved;
+  hover_in.x = trigger_x + 1; // 1-indexed
+  hover_in.y = trigger_y + 1; // 1-indexed
+  screen.Dispatch(hover_in);
+
+  auto* tt_comp = const_cast<ComponentBase*>(tt->component());
+  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  REQUIRE(tt_ptr != nullptr);
+  CHECK(tt_ptr->tooltip_class == "visible");
+
+  // Verify alignment by searching for the text in the rendered mock screen
+  CHECK(device->GetOutput().find("regression-test") != std::string::npos);
+}
+
+TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 15);
+
+  class TooltipPlacementsTest : public Component<TooltipPlacementsTest> {
+   public:
+    void InitReflection() override {
+      Import<tooltip>();
+      Import<div>();
+    }
+    std::string_view view = R"xml(
+      <div id="container" style="padding: 5; display: block; width: 60; height: 15;">
+        <tooltip id="tt_bottom" content="bottom-popup" placement="bottom">
+          <div id="trigger_bottom" style="width: 10; height: 1;">TriggerB</div>
+        </tooltip>
+        <tooltip id="tt_left" content="left-popup" placement="left">
+          <div id="trigger_left" style="width: 10; height: 1;">TriggerL</div>
+        </tooltip>
+        <tooltip id="tt_right" content="right-popup" placement="right">
+          <div id="trigger_right" style="width: 10; height: 1;">TriggerR</div>
+        </tooltip>
+      </div>
+    )xml";
+  };
+
+  auto component = Ref<TooltipPlacementsTest>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  // Test Bottom
+  {
+    auto* trigger = component->Root()->QuerySelector("#trigger_bottom");
+    REQUIRE(trigger != nullptr);
+    int tx = trigger->absolute_x();
+    int ty = trigger->absolute_y();
+    Event::Mouse m;
+    m.button = Event::Mouse::Button::None;
+    m.motion = Event::Mouse::Motion::Moved;
+    m.x = tx + 1;
+    m.y = ty + 1;
+    device->ClearOutput();
+    screen.Dispatch(m);
+    CHECK(device->GetOutput().find("bottom-popup") != std::string::npos);
+
+    // Hover out
+    m.x = 1;
+    m.y = 1;
+    device->ClearOutput();
+    screen.Dispatch(m);
+    CHECK(device->GetOutput().find("bottom-popup") == std::string::npos);
+  }
+
+  // Test Left
+  {
+    auto* trigger = component->Root()->QuerySelector("#trigger_left");
+    REQUIRE(trigger != nullptr);
+    int tx = trigger->absolute_x();
+    int ty = trigger->absolute_y();
+    Event::Mouse m;
+    m.button = Event::Mouse::Button::None;
+    m.motion = Event::Mouse::Motion::Moved;
+    m.x = tx + 1;
+    m.y = ty + 1;
+    device->ClearOutput();
+    screen.Dispatch(m);
+    CHECK(device->GetOutput().find("left-popup") != std::string::npos);
+
+    // Hover out
+    m.x = 1;
+    m.y = 1;
+    device->ClearOutput();
+    screen.Dispatch(m);
+    CHECK(device->GetOutput().find("left-popup") == std::string::npos);
+  }
+
+  // Test Right
+  {
+    auto* trigger = component->Root()->QuerySelector("#trigger_right");
+    REQUIRE(trigger != nullptr);
+    int tx = trigger->absolute_x();
+    int ty = trigger->absolute_y();
+    Event::Mouse m;
+    m.button = Event::Mouse::Button::None;
+    m.motion = Event::Mouse::Motion::Moved;
+    m.x = tx + 1;
+    m.y = ty + 1;
+    device->ClearOutput();
+    screen.Dispatch(m);
+    CHECK(device->GetOutput().find("right-popup") != std::string::npos);
+
+    // Hover out
+    m.x = 1;
+    m.y = 1;
+    device->ClearOutput();
+    screen.Dispatch(m);
+    CHECK(device->GetOutput().find("right-popup") == std::string::npos);
+  }
+}
+
+TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(40, 10);
+
+  class NestedStickyTest : public Component<NestedStickyTest> {
+   public:
+    int sticky_clicks = 0;
+
+    NestedStickyTest() {
+      Import("OnStickyClick", [this]() { sticky_clicks++; });
+    }
+
+    void InitReflection() override {
+      Import<div>();
+    }
+    std::string_view view = R"xml(
+      <div id="scrollable" style="width: 40; height: 5; overflow-y: scroll; display: block;">
+        <div id="month-container" style="display: block;">
+          <div id="sticky-header" onclick="OnStickyClick" style="position: sticky; top: 0; width: 10; height: 1;">StickyH</div>
+          <div style="display: block; height: 10;">Spacer</div>
+        </div>
+      </div>
+    )xml";
+  };
+
+  auto component = Ref<NestedStickyTest>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* scrollable = component->Root()->QuerySelector("#scrollable");
+  auto* sticky = component->Root()->QuerySelector("#sticky-header");
+  REQUIRE(scrollable != nullptr);
+  REQUIRE(sticky != nullptr);
+
+  // 1. scroll_y = 0: sticky is at absolute coordinates (0, 0)
+  {
+    scrollable->set_scroll_y(0);
+    component->Digest();
+    screen.Draw();
+    
+    component->sticky_clicks = 0;
+
+    // Click at absolute (0, 0), which is 1-based mouse (1, 1)
+    Event::Mouse m;
+    m.button = Event::Mouse::Button::Left;
+    m.motion = Event::Mouse::Motion::Pressed;
+    m.x = 1;
+    m.y = 1;
+    screen.Dispatch(m);
+
+    CHECK(component->sticky_clicks == 1);
+  }
+
+  // 2. scroll_y = 3: month-container scrolls up, but sticky-header should stick to viewport top (y = 0)
+  {
+    scrollable->set_scroll_y(3);
+    component->Digest();
+    screen.Draw();
+
+    component->sticky_clicks = 0;
+
+    // Click at absolute (0, 0), which is 1-based mouse (1, 1)
+    Event::Mouse m;
+    m.button = Event::Mouse::Button::Left;
+    m.motion = Event::Mouse::Motion::Pressed;
+    m.x = 1;
+    m.y = 1;
+    screen.Dispatch(m);
+
+    CHECK(component->sticky_clicks == 1);
+  }
+}
+
+TEST_CASE("Screen.FocusDisplayNone", "[screen][focus][display_none]") {
+  class FocusDisplayNoneTest : public Component<FocusDisplayNoneTest> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<FocusDisplayNoneTest>::InitReflection();
+    }
+    std::string_view view = R"xml(
+      <div>
+        <div id="first" tabindex="0">Visible 1</div>
+        <div id="hidden-container" style="display: none;">
+          <div id="hidden-child" tabindex="0">Hidden Child</div>
+        </div>
+        <div id="second" tabindex="0">Visible 2</div>
+      </div>
+    )xml";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<FocusDisplayNoneTest>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* first = component->Root()->QuerySelector("#first");
+  auto* hidden_child = component->Root()->QuerySelector("#hidden-child");
+  auto* second = component->Root()->QuerySelector("#second");
+
+  REQUIRE(first != nullptr);
+  REQUIRE(hidden_child != nullptr);
+  REQUIRE(second != nullptr);
+
+  // Tab 1: should focus 'first'
+  screen.Dispatch(Event::Tab());
+  CHECK(first->focused());
+  CHECK_FALSE(hidden_child->focused());
+  CHECK_FALSE(second->focused());
+
+  // Tab 2: should focus 'second' (skipping 'hidden-child')
+  screen.Dispatch(Event::Tab());
+  CHECK_FALSE(first->focused());
+  CHECK_FALSE(hidden_child->focused());
+  CHECK(second->focused());
+
+  // TabReverse (Shift-Tab): should focus 'first'
+  screen.Dispatch(Event::TabReverse());
+  CHECK(first->focused());
+  CHECK_FALSE(hidden_child->focused());
+  CHECK_FALSE(second->focused());
+}
+
+TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
+  class BorderUpdateComponent : public Component<BorderUpdateComponent> {
+   public:
+    std::string border_style = "solid";
+
+    void SelectBorder(std::string name) {
+      border_style = name;
+    }
+
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Import<rtxui::button>();
+      Bind(border_style);
+      Bind(SelectBorder);
+      Component<BorderUpdateComponent>::InitReflection();
+    }
+
+    std::string_view view = R"xml(
+      <div class="main-container">
+        <div class="sidebar">
+          <button id="btn-double" onclick="SelectBorder(double)">double</button>
+        </div>
+        <div class="demo-area">
+          <div id="scrollable-content">
+            Content
+          </div>
+        </div>
+      </div>
+      <style>
+        self {
+          display: block;
+          padding: 1;
+          width: 100%;
+          height: 100%;
+        }
+        .main-container {
+          display: flex;
+          width: 100%;
+          height: 100%;
+          gap: 2;
+        }
+        .sidebar {
+          display: block;
+          width: 48;
+          flex-shrink: 0;
+          border: solid;
+          padding: 1;
+        }
+        .demo-area {
+          display: block;
+          flex-grow: 1;
+          border: solid;
+          padding: 1;
+        }
+        #scrollable-content {
+          display: block;
+          width: 44;
+          height: 13;
+          border: {border_style};
+          overflow-y: scroll;
+          overflow-x: scroll;
+        }
+      </style>
+    )xml";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<BorderUpdateComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* main = component->Root()->QuerySelector(".main-container");
+  auto* sidebar = component->Root()->QuerySelector(".sidebar");
+  auto* demo = component->Root()->QuerySelector(".demo-area");
+  auto* box = component->Root()->QuerySelector("#scrollable-content");
+  auto* btn = component->Root()->QuerySelector("#btn-double");
+  REQUIRE(main != nullptr);
+  REQUIRE(sidebar != nullptr);
+  REQUIRE(demo != nullptr);
+  REQUIRE(box != nullptr);
+  REQUIRE(btn != nullptr);
+
+  CHECK(main->style.display_inside == DisplayInside::Flex);
+  CHECK(sidebar->layout_width() == 48);
+  CHECK(demo->layout_width() == 28);
+  CHECK(box->style.border_style == BorderStyle::Solid);
+
+  // Click double button
+  Event::Mouse click;
+  click.button = Event::Mouse::Button::Left;
+  click.motion = Event::Mouse::Motion::Pressed;
+  click.x = 5;
+  click.y = 4;
+  screen.Dispatch(click);
+
+  CHECK(main->style.display_inside == DisplayInside::Flex);
+  CHECK(sidebar->layout_width() == 48);
+  CHECK(demo->layout_width() == 28);
+  CHECK(box->style.border_style == BorderStyle::Double);
+}
+
 }  // namespace
 }  // namespace rtxui
+
+

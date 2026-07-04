@@ -70,7 +70,7 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
   ComplexLoopApp() {
     Bind(tasks, [](const Task& t) {
       return std::make_shared<ManualStructVisitor>(
-          std::unordered_map<std::string, std::string>{
+          std::map<std::string, std::string, std::less<>>{
               {"name", t.name},
               {"status", t.completed ? "✅ Done" : "⏳ Pending"}});
     });

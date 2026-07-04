@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 

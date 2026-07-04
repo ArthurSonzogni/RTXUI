@@ -18,7 +18,7 @@
 
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/slot_element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -105,14 +105,14 @@ Element* ComponentBase::Root() const {
 
 bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
   if (arg.empty()) {
-    auto it = callbacks_.find(std::string(name));
+    auto it = callbacks_.find(name);
     if (it != callbacks_.end()) {
       it->second();
       return true;
     }
   }
 
-  auto it_param = parameterized_callbacks_.find(std::string(name));
+  auto it_param = parameterized_callbacks_.find(name);
   if (it_param != parameterized_callbacks_.end()) {
     it_param->second(std::string(arg));
     return true;
@@ -122,8 +122,8 @@ bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
 }
 
 void Bindings::Import(std::string_view name, std::function<void()> callback) {
-  if (callbacks_.count(std::string(name)) ||
-      parameterized_callbacks_.count(std::string(name))) {
+  if (callbacks_.count(name) ||
+      parameterized_callbacks_.count(name)) {
     std::println("Error: Callback '{}' is already imported.", name);
     std::exit(1);
   }
@@ -133,8 +133,8 @@ void Bindings::Import(std::string_view name, std::function<void()> callback) {
 
 void Bindings::Import(std::string_view name,
                       std::function<void(std::string)> callback) {
-  if (callbacks_.count(std::string(name)) ||
-      parameterized_callbacks_.count(std::string(name))) {
+  if (callbacks_.count(name) ||
+      parameterized_callbacks_.count(name)) {
     std::println("Error: Callback '{}' is already imported.", name);
     std::exit(1);
   }
@@ -143,7 +143,7 @@ void Bindings::Import(std::string_view name,
 }
 
 void Bindings::Import(std::string_view name, ComponentFactory factory) {
-  if (imports_.count(std::string(name))) {
+  if (imports_.count(name)) {
     std::println("Error: Component '{}' is already imported.", name);
     std::exit(1);
   }
@@ -184,6 +184,7 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
     (*reg)["strike"] = []() { return Ref<strike>::New(); };
     (*reg)["del"] = []() { return Ref<del>::New(); };
     (*reg)["code"] = []() { return Ref<code>::New(); };
+    (*reg)["tooltip"] = []() { return Ref<tooltip>::New(); };
     return reg;
   }();
   return *registry;
@@ -447,57 +448,43 @@ std::string Interpolate(std::string_view text,
   return result;
 }
 
-void XmlParseError(const xml::Error& error, std::string_view xml_string) {
-  std::cerr << "======== Error parsing DOM ========" << std::endl;
-  int error_line = error.line;
-  int error_column = error.column;
+} // namespace
 
-  std::vector<std::string_view> dom_lines = Split(xml_string, '\n');
-  std::cerr << "    ┌" << Repeat("─", 76) << std::endl;
-  for (int line = 0; line < dom_lines.size(); line++) {
-    std::cerr << std::setw(4) << line << "│ " << dom_lines[line] << std::endl;
-    if (line != error_line) {
-      continue;
+void PrintCompilerStyleError(std::string_view source_string,
+                             int error_line,
+                             int error_column,
+                             std::string_view message,
+                             std::string_view label) {
+  std::vector<std::string_view> lines = Split(source_string, '\n');
+  std::cerr << "======== " << label << " Error ========" << std::endl;
+  std::cerr << "Error: " << message << std::endl;
+  std::cerr << "Line " << (error_line + 1) << ", Column " << (error_column + 1) << ":" << std::endl;
+  std::cerr << "      ┌" << Repeat("─", 76) << std::endl;
+
+  int start_line = std::max(0, error_line - 2);
+  int end_line = std::min(static_cast<int>(lines.size()) - 1, error_line + 2);
+
+  for (int line = start_line; line <= end_line; ++line) {
+    if (line == error_line) {
+      std::cerr << " > " << std::setw(4) << (line + 1) << " │ " << lines[line] << std::endl;
+      std::cerr << "   " << "     │ " << Repeat(" ", error_column) << "^" << std::endl;
+    } else {
+      std::cerr << "   " << std::setw(4) << (line + 1) << " │ " << lines[line] << std::endl;
     }
-    std::string arrow_line = Repeat("-", std::max(76, error_column));
-    arrow_line[error_column + 1] = '^';
-    std::cerr << "    └" << arrow_line << std::endl;
-    std::cerr << "      " << Repeat(" ", error_column) << "|" << std::endl;
-    std::cerr << error_line << ":" << error_column << ": " << error.message
-              << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    ┌" << Repeat("─", 76) << std::endl;
   }
-  std::cerr << "    └" << Repeat("─", 76) << std::endl;
+  std::cerr << "      └" << Repeat("─", 76) << std::endl;
   std::cerr << std::flush;
+}
+
+namespace {
+
+void XmlParseError(const xml::Error& error, std::string_view xml_string) {
+  PrintCompilerStyleError(xml_string, error.line, error.column, error.message, "DOM");
   std::exit(1);
 }
 
 void CssParseError(const css::Error& error, std::string_view css_string) {
-  std::cerr << "======== Error parsing CSS ========" << std::endl;
-  int error_line = error.line;
-  int error_column = error.column;
-
-  std::vector<std::string_view> css_lines = Split(css_string, '\n');
-  std::cerr << "    ┌" << Repeat("─", 76) << std::endl;
-  for (int line = 0; line < css_lines.size(); line++) {
-    std::cerr << std::setw(4) << line << "│ " << css_lines[line] << std::endl;
-    if (line != error_line) {
-      continue;
-    }
-    std::string arrow_line = Repeat("-", std::max(76, error_column));
-    if (error_column < arrow_line.length()) {
-      arrow_line[error_column + 1] = '^';
-    }
-    std::cerr << "    └" << arrow_line << std::endl;
-    std::cerr << "      " << Repeat(" ", error_column) << "|" << std::endl;
-    std::cerr << error_line << ":" << error_column << ": " << error.message
-              << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "    ┌" << Repeat("─", 76) << std::endl;
-  }
-  std::cerr << "    └" << Repeat("─", 76) << std::endl;
-  std::cerr << std::flush;
+  PrintCompilerStyleError(css_string, error.line, error.column, error.message, "CSS");
   std::exit(1);
 }
 
@@ -505,26 +492,30 @@ bool MatchSelector(const Element* element,
                    const Element* root,
                    const css::ParsedSelector& selector,
                    bool check_pseudos) {
-  bool base_match = false;
-  if (selector.base == "self") {
-    base_match = (element == root);
-  } else if (selector.base.starts_with("#")) {
-    base_match =
-        (!element->id.empty() && element->id == selector.base.substr(1));
-  } else if (selector.base.starts_with(".")) {
-    std::string_view class_name = selector.base.substr(1);
-    for (const auto& cls : element->classes) {
-      if (cls == class_name) {
-        base_match = true;
+  if (!selector.base.empty()) {
+    if (selector.base == "self") {
+      if (element != root) return false;
+    } else {
+      if (element->tag() != selector.base) return false;
+    }
+  }
+  if (!selector.id.empty()) {
+    if (element->id != selector.id) return false;
+  }
+  for (const auto& cls : selector.classes) {
+    bool found = false;
+    for (const auto& el_cls : element->classes) {
+      if (el_cls == cls) {
+        found = true;
         break;
       }
     }
-  } else {
-    base_match = (element->tag() == selector.base);
+    if (!found) return false;
   }
-
-  if (!base_match) {
-    return false;
+  for (const auto& attr : selector.attributes) {
+    const std::string* el_attr = element->GetAttribute(attr.name);
+    if (!el_attr) return false;
+    if (attr.has_value && *el_attr != attr.value) return false;
   }
 
   if (check_pseudos) {
@@ -552,6 +543,14 @@ bool MatchSelector(const Element* element,
           !element->scrollbar_thumb_active()) {
         return false;
       }
+    }
+  }
+
+  if (!selector.parents.empty()) {
+    // Forward declaration check
+    bool MatchSelectorParents(const Element* element, const Element* root, const std::vector<css::SelectorPart>& parents);
+    if (!MatchSelectorParents(element, root, selector.parents)) {
+      return false;
     }
   }
 
@@ -598,6 +597,167 @@ bool MatchPseudos(const Element* element,
         !element->scrollbar_thumb_active()) {
       return false;
     }
+    if (pseudo == "first-child") {
+      const Element* parent = element->Parent();
+      if (!parent) return false;
+      std::vector<const Element*> siblings;
+      for (const auto& child : parent->children()) {
+        if (child->tag() != "style" && !child->is_text()) {
+          siblings.push_back(child.get());
+        }
+      }
+      if (siblings.empty() || siblings[0] != element) {
+        return false;
+      }
+    }
+    if (pseudo == "last-child") {
+      const Element* parent = element->Parent();
+      if (!parent) return false;
+      std::vector<const Element*> siblings;
+      for (const auto& child : parent->children()) {
+        if (child->tag() != "style" && !child->is_text()) {
+          siblings.push_back(child.get());
+        }
+      }
+      if (siblings.empty() || siblings.back() != element) {
+        return false;
+      }
+    }
+    if (pseudo.starts_with("nth-child(")) {
+      if (!pseudo.ends_with(")")) return false;
+      std::string_view arg = std::string_view(pseudo).substr(10, pseudo.size() - 11);
+      const Element* parent = element->Parent();
+      if (!parent) return false;
+      std::vector<const Element*> siblings;
+      for (const auto& child : parent->children()) {
+        if (child->tag() != "style" && !child->is_text()) {
+          siblings.push_back(child.get());
+        }
+      }
+      int index = -1;
+      for (size_t i = 0; i < siblings.size(); ++i) {
+        if (siblings[i] == element) {
+          index = static_cast<int>(i) + 1;
+          break;
+        }
+      }
+      if (index == -1) return false;
+
+      if (arg == "even") {
+        if (index % 2 != 0) return false;
+      } else if (arg == "odd") {
+        if (index % 2 == 0) return false;
+      } else {
+        int target = 0;
+        auto [ptr, ec] = std::from_chars(arg.data(), arg.data() + arg.size(), target);
+        if (ec != std::errc{} || target != index) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+bool MatchSelectorPart(const Element* element, const Element* root, const css::SelectorPart& part) {
+  if (!part.base.empty()) {
+    if (part.base == "self") {
+      if (element != root) return false;
+    } else {
+      if (element->tag() != part.base) return false;
+    }
+  }
+  if (!part.id.empty()) {
+    if (element->id != part.id) return false;
+  }
+  for (const auto& cls : part.classes) {
+    bool found = false;
+    for (const auto& el_cls : element->classes) {
+      if (el_cls == cls) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) return false;
+  }
+  for (const auto& attr : part.attributes) {
+    const std::string* el_attr = element->GetAttribute(attr.name);
+    if (!el_attr) return false;
+    if (attr.has_value && *el_attr != attr.value) return false;
+  }
+  return true;
+}
+
+namespace {
+const Element* GetRealParent(const Element* element) {
+  if (!element) return nullptr;
+  const Element* parent = element->Parent();
+  while (parent && parent->is_slot()) {
+    parent = parent->Parent();
+  }
+  return parent;
+}
+
+const Element* GetPrecedingSibling(const Element* element) {
+  if (!element) return nullptr;
+  const Element* parent = element->Parent();
+  if (!parent) return nullptr;
+  const auto& children = parent->children();
+
+  size_t idx = -1;
+  for (size_t i = 0; i < children.size(); ++i) {
+    if (children[i].get() == element) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx == -1 || idx == 0) return nullptr;
+
+  for (int i = static_cast<int>(idx) - 1; i >= 0; --i) {
+    const Element* sibling = children[i].get();
+    if (sibling->tag() != "style") {
+      if (sibling->is_text()) continue;
+      return sibling;
+    }
+  }
+  return nullptr;
+}
+} // namespace
+
+bool MatchSelectorParents(const Element* element, const Element* root, const std::vector<css::SelectorPart>& parents) {
+  const Element* curr = element;
+  for (const auto& parent_part : parents) {
+    if (parent_part.combinator == '>') {
+      curr = GetRealParent(curr);
+      if (!curr) return false;
+      if (!MatchSelectorPart(curr, root, parent_part)) return false;
+    } else if (parent_part.combinator == '+') {
+      curr = GetPrecedingSibling(curr);
+      if (!curr) return false;
+      if (!MatchSelectorPart(curr, root, parent_part)) return false;
+    } else if (parent_part.combinator == '~') {
+      bool found = false;
+      while (true) {
+        curr = GetPrecedingSibling(curr);
+        if (!curr) break;
+        if (MatchSelectorPart(curr, root, parent_part)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) return false;
+    } else {
+      bool found = false;
+      while (true) {
+        curr = GetRealParent(curr);
+        if (!curr) break;
+        if (MatchSelectorPart(curr, root, parent_part)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) return false;
+    }
   }
   return true;
 }
@@ -607,6 +767,11 @@ void ResolveStylesRecursive(Element* element,
                             bool check_pseudos) {
   if (!element || !component) {
     return;
+  }
+  // Resolve nested component internal styles first, so that parent styles (template/classes)
+  // take precedence and override the child's internal styles.
+  if (element->component() && element->component() != component) {
+    ResolveStylesRecursive(element, element->component(), check_pseudos);
   }
 
   if (IsStyledByComponent(element, component)) {
@@ -630,6 +795,15 @@ void ResolveStylesRecursive(Element* element,
           const auto& parsed = ruleset->parsed_selector;
           if (is_universal && parsed.base == "self" &&
               element != component->Root()) {
+            continue;
+          }
+
+          if (!parsed.base.empty() && parsed.base != "self" &&
+              element->tag() != parsed.base) {
+            continue;
+          }
+
+          if (!parsed.id.empty() && element->id != parsed.id) {
             continue;
           }
 
@@ -669,6 +843,12 @@ void ResolveStylesRecursive(Element* element,
           }
           if (!attributes_match) {
             continue;
+          }
+
+          if (!parsed.parents.empty()) {
+            if (!MatchSelectorParents(element, component->Root(), parsed.parents)) {
+              continue;
+            }
           }
 
           if (check_pseudos) {
@@ -734,8 +914,6 @@ void ResolveStylesRecursive(Element* element,
 
 recurse:
   if (element->component() && element->component() != component) {
-    ResolveStylesRecursive(element, element->component(), check_pseudos);
-
     bool has_slot_children = false;
     for (const auto& [name, slot_el] : element->component()->slots()) {
       if (slot_el && slot_el->ChildCount() > 0) {
@@ -864,18 +1042,19 @@ void ComponentBase::Render() {
           if (!ruleset.parsed_selector.pseudo_classes.empty()) {
             categorized_rules_->has_pseudo_classes = true;
           }
-          std::string_view selector = ruleset.parsed_selector.base;
-          if (selector == "self") {
+          std::string_view selector_base = ruleset.parsed_selector.base;
+          std::string_view selector_id = ruleset.parsed_selector.id;
+
+          if (!selector_id.empty()) {
+            categorized_rules_->by_id[selector_id].push_back(&ruleset);
+          } else if (!ruleset.parsed_selector.classes.empty()) {
+            categorized_rules_->by_class[ruleset.parsed_selector.classes[0]].push_back(&ruleset);
+          } else if (selector_base == "self") {
             categorized_rules_->universal.push_back(&ruleset);
-          } else if (selector.starts_with("#")) {
-            categorized_rules_->by_id[selector.substr(1)].push_back(&ruleset);
-          } else if (selector.starts_with(".")) {
-            categorized_rules_->by_class[selector.substr(1)].push_back(
-                &ruleset);
-          } else if (selector.empty()) {
+          } else if (selector_base.empty()) {
             categorized_rules_->universal.push_back(&ruleset);
           } else {
-            categorized_rules_->by_tag[selector].push_back(&ruleset);
+            categorized_rules_->by_tag[selector_base].push_back(&ruleset);
           }
         }
       } else {
@@ -1758,7 +1937,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 }
 
 Ref<Element> ComponentBase::Slot(std::string_view name) {
-  auto it = slots_.find(std::string(name));
+  auto it = slots_.find(name);
   return (it != slots_.end()) ? it->second : Ref<Element>();
 }
 
@@ -1905,11 +2084,10 @@ void HotReloadManager::Register(ComponentBase* component, std::string_view view_
     [component](const HotReloadInfo& info) { return info.component == component; }), 
     list.end());
     
-  try {
-    auto mod_time = std::filesystem::last_write_time(path_str);
+  std::error_code ec;
+  auto mod_time = std::filesystem::last_write_time(path_str, ec);
+  if (!ec) {
     list.push_back({component, std::string(view_var_name), path_str, mod_time});
-  } catch (...) {
-    // ignore
   }
 }
 
@@ -1924,22 +2102,22 @@ bool HotReloadManager::PollChanges() {
   bool reloaded = false;
   auto& list = GetRegisteredHotReloads();
   for (auto& info : list) {
-    try {
-      if (!std::filesystem::exists(info.filepath)) {
-        continue;
+    std::error_code ec;
+    if (!std::filesystem::exists(info.filepath, ec)) {
+      continue;
+    }
+    auto current_time = std::filesystem::last_write_time(info.filepath, ec);
+    if (ec) {
+      continue;
+    }
+    if (current_time != info.last_modified) {
+      info.last_modified = current_time;
+      
+      std::string new_template = ExtractHotReloadTemplate(info.filepath, info.view_var_name);
+      if (!new_template.empty()) {
+        info.component->HotReload(new_template);
+        reloaded = true;
       }
-      auto current_time = std::filesystem::last_write_time(info.filepath);
-      if (current_time != info.last_modified) {
-        info.last_modified = current_time;
-        
-        std::string new_template = ExtractHotReloadTemplate(info.filepath, info.view_var_name);
-        if (!new_template.empty()) {
-          info.component->HotReload(new_template);
-          reloaded = true;
-        }
-      }
-    } catch (...) {
-      // ignore
     }
   }
   return reloaded;

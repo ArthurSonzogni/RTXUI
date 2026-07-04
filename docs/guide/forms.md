@@ -221,3 +221,32 @@ class MyApp : public Component<MyApp> {
 
 </template>
 </ExampleTabs>
+
+---
+
+## 7. Label (`<label>`)
+
+A helper element that delegates mouse click events and focus to an associated interactive element (like a checkbox or text input).
+It can associate either explicitly via the `for` attribute (matching the target element's `id`), or implicitly by nesting the target element inside the `<label>`.
+
+### Explicit Association (via `for` attribute)
+```html
+<label for="my-checkbox">Notification Settings</label>
+<checkbox id="my-checkbox" checked="{enabled}">Enable Alerts</checkbox>
+```
+
+### Implicit Association (via Nesting)
+```html
+<label>
+  Accept Terms
+  <checkbox checked="{accepted}">Accept</checkbox>
+</label>
+```
+
+<ExampleTabs src="/wasm/rtxui_example_label.js">
+<template #source>
+
+<<< @/../example/label.cpp
+
+</template>
+</ExampleTabs>

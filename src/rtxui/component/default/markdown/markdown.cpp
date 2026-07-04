@@ -3,7 +3,7 @@
 // the LICENSE file.
 #include "rtxui/component/default/markdown/markdown.hpp"
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/markdown/markdown.hpp"
 #include "rtxui/xml/xml.hpp"
 

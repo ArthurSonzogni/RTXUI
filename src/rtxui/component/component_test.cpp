@@ -9,7 +9,7 @@
 #include <fstream>
 
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/screen.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -1304,8 +1304,8 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   option_mouse_click.x = dark_option_el->absolute_x() + 1;
   option_mouse_click.y = dark_option_el->absolute_y() + 1;
   Event option_click_event(option_mouse_click);
-  // Send click to option
-  CHECK(dark_option_ptr->OnEvent(option_click_event) == true);
+  // Send click to option via container propagation
+  CHECK(container->OnEvent(option_click_event) == true);
   container->Digest();
   screen.Draw();
 
@@ -1313,6 +1313,140 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   CHECK(select_ptr->value == "dark");
   CHECK(container->my_theme == "dark");
   CHECK(select_ptr->selected_label == "Dark Theme");
+}
+
+TEST_CASE("Select Component Positioning and Mouse Hover Alignment", "[component][select][position][hover]") {
+  auto container = rtxui::Ref<SelectTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* select_el = container->Root()->QuerySelector("select");
+  REQUIRE(select_el != nullptr);
+  auto* select_comp = const_cast<rtxui::ComponentBase*>(select_el->component());
+  REQUIRE(select_comp != nullptr);
+  auto* select_ptr = dynamic_cast<rtxui::select*>(select_comp);
+  REQUIRE(select_ptr != nullptr);
+
+  // Click on the select element to open it
+  select_el->set_focused(true);
+  Event::Mouse mouse_click;
+  mouse_click.button = Event::Mouse::Button::Left;
+  mouse_click.motion = Event::Mouse::Motion::Pressed;
+  mouse_click.x = select_el->absolute_x() + 2;
+  mouse_click.y = select_el->absolute_y() + 1;
+  Event click_event(mouse_click);
+  CHECK(select_ptr->OnEvent(click_event) == true);
+  container->Digest();
+  screen.Draw();
+  std::cout << "TEST INFO: select_el pointer=" << select_el
+            << " select_ptr->Root()=" << select_ptr->Root()
+            << " select_el->classes=";
+  for (const auto& c : select_el->classes) std::cout << c << " ";
+  std::cout << "\nTEST INFO: z_index value=" << select_el->base_style.z_index.value_or(-99)
+            << " has_val=" << select_el->base_style.z_index.has_value() << std::endl;
+  CHECK(select_el->base_style.z_index.value_or(0) == 1000);
+
+  // Verify the absolute coordinates of the dropdown-list
+  auto* dropdown_el = container->Root()->QuerySelector(".dropdown-list");
+  REQUIRE(dropdown_el != nullptr);
+  CHECK(dropdown_el->absolute_x() == select_el->absolute_x());
+  CHECK(dropdown_el->absolute_y() == select_el->absolute_y() + select_el->layout_height());
+
+  auto options = select_ptr->GetOptions();
+  REQUIRE(options.size() == 3);
+  auto* opt0 = options[0].element;
+  auto* opt1 = options[1].element;
+
+  // Initially "light" (opt1) is selected and hovered, and "dark" (opt0) is not.
+  CHECK(opt1->base_style.background_color.value_or(Color()) == Color::RGB(59, 130, 246));
+  CHECK(!opt0->base_style.background_color.has_value());
+
+  // Verify options are hoverable by moving mouse
+  auto* dark_option_el = container->Root()->QuerySelector("option"); // first option is "dark" at index 0
+  REQUIRE(dark_option_el != nullptr);
+  int dark_x = dark_option_el->absolute_x();
+  int dark_y = dark_option_el->absolute_y();
+
+  Event::Mouse mouse_move;
+  mouse_move.button = Event::Mouse::Button::None;
+  mouse_move.motion = Event::Mouse::Motion::Moved;
+  mouse_move.x = dark_x + 1; // 1-indexed for screen
+  mouse_move.y = dark_y + 1; // 1-indexed for screen
+  Event move_event(mouse_move);
+
+  CHECK(select_ptr->OnEvent(move_event) == true);
+  container->Digest();
+  screen.Draw();
+
+  // hovered_index should now be 0 ("dark")
+  CHECK(select_ptr->hovered_index == 0);
+
+  // Now "dark" (opt0) is hovered (blue) and "light" (opt1) is only selected (slate)
+  CHECK(opt0->base_style.background_color.value_or(Color()) == Color::RGB(59, 130, 246));
+  CHECK(opt1->base_style.background_color.value_or(Color()) == Color::RGB(51, 65, 85));
+}
+
+class SelectZIndexTestComponent : public rtxui::Component<SelectZIndexTestComponent> {
+ public:
+  std::string my_theme = "light";
+
+  void InitReflection() override {
+    Bind(my_theme);
+    Import<rtxui::select>();
+    Import<rtxui::option>();
+    rtxui::Component<SelectZIndexTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div style="display: block; width: 40; height: 10;">
+      <select value="{my_theme}">
+        <option value="dark">Dark Theme</option>
+        <option value="light">Light Theme</option>
+        <option value="solarized">Solarized</option>
+      </select>
+      <div id="sibling" style="display: block; width: 40; height: 5;">
+        SIBLING_CONTENT_LINE_1
+        SIBLING_CONTENT_LINE_2
+      </div>
+    </div>
+  )";
+};
+
+TEST_CASE("Select Component Z-index sibling overlap", "[component][select][z-index]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(40, 10);
+
+  auto container = rtxui::Ref<SelectZIndexTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* select_el = container->Root()->QuerySelector("select");
+  REQUIRE(select_el != nullptr);
+  auto* select_comp = const_cast<rtxui::ComponentBase*>(select_el->component());
+  REQUIRE(select_comp != nullptr);
+  auto* select_ptr = dynamic_cast<rtxui::select*>(select_comp);
+  REQUIRE(select_ptr != nullptr);
+
+  // Click on the select element to open it
+  select_el->set_focused(true);
+  Event::Mouse mouse_click;
+  mouse_click.button = Event::Mouse::Button::Left;
+  mouse_click.motion = Event::Mouse::Motion::Pressed;
+  mouse_click.x = select_el->absolute_x() + 2;
+  mouse_click.y = select_el->absolute_y() + 1;
+  Event click_event(mouse_click);
+  CHECK(select_ptr->OnEvent(click_event) == true);
+  container->Digest();
+  device->ClearOutput();
+  screen.Draw();
+
+  std::string output = device->GetOutput();
+
+  // If z-index is correct, the dropdown should overlay the sibling.
+  // The first option in the dropdown is "Dark Theme", which should render at absolute_y = 1
+  // (covering "SIBLING_CONTENT_LINE_1" which also starts at absolute_y = 1).
+  // Therefore, "Dark Theme" must be present in the output, and "SIBLING_CONTENT_LINE_1" must NOT.
+  CHECK(output.find("Dark Theme") != std::string::npos);
+  CHECK(output.find("SIBLING_CONTENT_LINE_1") == std::string::npos);
 }
 
 class HrTestComponent : public rtxui::Component<HrTestComponent> {
@@ -3120,6 +3254,21 @@ TEST_CASE("Details and Summary Components", "[component][details]") {
 
   CHECK(details_ptr->open == false);
   CHECK(container->open == false);
+
+  // 5. Toggle via Mouse Click on summary-line
+  Event::Mouse mouse_click;
+  mouse_click.button = Event::Mouse::Button::Left;
+  mouse_click.motion = Event::Mouse::Motion::Pressed;
+  mouse_click.x = summary_line_el->absolute_x() + 1;
+  mouse_click.y = summary_line_el->absolute_y() + 1;
+  Event click_event(mouse_click);
+
+  screen.Dispatch(click_event);
+  container->Digest();
+  screen.Draw();
+
+  CHECK(details_ptr->open == true);
+  CHECK(container->open == true);
 }
 
 TEST_CASE("Details Component Default Summary", "[component][details]") {
@@ -3335,6 +3484,62 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   CHECK(pane2_el->style.display_none == false);
 }
 
+TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
+  auto container = rtxui::Ref<TabsTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  REQUIRE(tabs_el != nullptr);
+  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  REQUIRE(tabs_ptr != nullptr);
+
+  // Initial tab: tab1
+  CHECK(tabs_ptr->value == "tab1");
+
+  auto headers_slot = tabs_ptr->Slot("headers");
+  REQUIRE(headers_slot != nullptr);
+  REQUIRE(headers_slot->ChildCount() == 2);
+
+  auto* tab2_header = headers_slot->ChildAt(1);
+  REQUIRE(tab2_header != nullptr);
+
+  // Click on the second tab header (tab2_header)
+  Event::Mouse mouse_click;
+  mouse_click.button = Event::Mouse::Button::Left;
+  mouse_click.motion = Event::Mouse::Motion::Pressed;
+  mouse_click.x = tab2_header->absolute_x() + 1;
+  mouse_click.y = tab2_header->absolute_y() + 1;
+  Event click_event(mouse_click);
+
+  screen.Dispatch(click_event);
+  container->Digest();
+  screen.Draw();
+
+  // Verify tab switched to tab2
+  CHECK(tabs_ptr->value == "tab2");
+  CHECK(container->active_tab == "tab2");
+
+  // Verify keyboard interaction: focus the first tab header (tab1_header)
+  auto* tab1_header = headers_slot->ChildAt(0);
+  REQUIRE(tab1_header != nullptr);
+
+  container->Root()->Visit([](Element& el) { el.set_focused(false); });
+  tab1_header->set_focused(true);
+
+  // Press Return key
+  Event return_event = Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::Return,
+  });
+  screen.Dispatch(return_event);
+  container->Digest();
+  screen.Draw();
+
+  // Verify tab switched back to tab1
+  CHECK(tabs_ptr->value == "tab1");
+}
+
 // --- Dialog ---
 class DialogTestComponent : public rtxui::Component<DialogTestComponent> {
  public:
@@ -3343,11 +3548,13 @@ class DialogTestComponent : public rtxui::Component<DialogTestComponent> {
   void InitReflection() override {
     Bind(dialog_open);
     Import<rtxui::dialog>();
+    Import<rtxui::button>();
     rtxui::Component<DialogTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <dialog open="{dialog_open}" title="Confirm Dialog">
       Body Content
+      <button id="dlg-btn">Confirm</button>
     </dialog>
   )";
 };
@@ -3373,6 +3580,41 @@ TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
 
   CHECK(dialog_ptr->open == true);
   CHECK(dialog_ptr->overlay_class == "open");
+
+  // Verify the nested button is present and queryable inside dialog slot
+  auto* btn_el = dialog_el->QuerySelector("#dlg-btn");
+  REQUIRE(btn_el != nullptr);
+  CHECK(btn_el->tag() == "button");
+}
+
+TEST_CASE("Dialog Component Layout Centering", "[component][dialog][layout]") {
+  auto container = rtxui::Ref<DialogTestComponent>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+  rtxui::Screen screen(container, device);
+
+  container->dialog_open = true;
+  container->Digest();
+  screen.Draw();
+
+  auto* overlay_el = container->Root()->QuerySelector(".dialog-overlay");
+  auto* box_el = container->Root()->QuerySelector(".dialog-box");
+  REQUIRE(overlay_el != nullptr);
+  REQUIRE(box_el != nullptr);
+
+  CHECK(overlay_el->layout_width() == 80);
+  CHECK(overlay_el->layout_height() == 24);
+
+  int box_w = box_el->layout_width();
+  int box_h = box_el->layout_height();
+  REQUIRE(box_w > 0);
+  REQUIRE(box_h > 0);
+
+  int expected_x = (80 - box_w) / 2;
+  int expected_y = (24 - box_h) / 2;
+
+  CHECK(box_el->absolute_x() == expected_x);
+  CHECK(box_el->absolute_y() == expected_y);
 }
 
 // --- Hot Reload ---
@@ -3388,7 +3630,7 @@ class HotReloadTestComponent : public rtxui::Component<HotReloadTestComponent> {
 };
 
 TEST_CASE("Component Template Hot Reloading", "[component][hotreload]") {
-  std::string temp_file = "build/temp_hot_reload_test.cpp";
+  std::string temp_file = "temp_hot_reload_test.cpp";
   
   // 1. Write initial template to temp file
   {
@@ -3419,11 +3661,10 @@ TEST_CASE("Component Template Hot Reloading", "[component][hotreload]") {
   }
   
   // Force file modification time forward to simulate a save
-  try {
-    auto current_time = std::filesystem::last_write_time(temp_file);
-    std::filesystem::last_write_time(temp_file, current_time + std::chrono::seconds(2));
-  } catch (...) {
-    // fallback if system lacks write time support
+  std::error_code ec;
+  auto current_time = std::filesystem::last_write_time(temp_file, ec);
+  if (!ec) {
+    std::filesystem::last_write_time(temp_file, current_time + std::chrono::seconds(2), ec);
   }
   
   // Poll changes and verify it detects and reloads
@@ -3440,6 +3681,534 @@ TEST_CASE("Component Template Hot Reloading", "[component][hotreload]") {
   // Clean up
   std::filesystem::remove(temp_file);
 }
+
+// --- Label ---
+class LabelTestComponent : public rtxui::Component<LabelTestComponent> {
+ public:
+  bool cb1_checked = false;
+  bool cb2_checked = false;
+
+  void InitReflection() override {
+    Bind(cb1_checked);
+    Bind(cb2_checked);
+    Import<rtxui::label>();
+    Import<rtxui::checkbox>();
+    Import<rtxui::div>();
+    rtxui::Component<LabelTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <!-- Explicit association via for -->
+      <label id="lbl1" for="cb1">Explicit Label</label>
+      <checkbox id="cb1" checked="{cb1_checked}">CB1</checkbox>
+
+      <!-- Implicit association via nesting -->
+      <label id="lbl2">
+        Implicit Label
+        <checkbox id="cb2" checked="{cb2_checked}">CB2</checkbox>
+      </label>
+    </div>
+  )";
+};
+
+TEST_CASE("Label Component Interaction", "[component][label]") {
+  auto container = rtxui::Ref<LabelTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* lbl1_el = container->Root()->QuerySelector("#lbl1");
+  auto* cb1_el = container->Root()->QuerySelector("#cb1");
+  auto* lbl2_el = container->Root()->QuerySelector("#lbl2");
+  auto* cb2_el = container->Root()->QuerySelector("#cb2");
+
+  REQUIRE(lbl1_el != nullptr);
+  REQUIRE(cb1_el != nullptr);
+  REQUIRE(lbl2_el != nullptr);
+  REQUIRE(cb2_el != nullptr);
+
+  auto* lbl1_comp = const_cast<rtxui::ComponentBase*>(lbl1_el->component());
+  auto* lbl2_comp = const_cast<rtxui::ComponentBase*>(lbl2_el->component());
+  REQUIRE(lbl1_comp != nullptr);
+  REQUIRE(lbl2_comp != nullptr);
+
+  // Initial state: unchecked
+  CHECK(container->cb1_checked == false);
+  CHECK(container->cb2_checked == false);
+
+  // 1. Click on Explicit Label (lbl1)
+  Event::Mouse mouse1;
+  mouse1.button = Event::Mouse::Button::Left;
+  mouse1.motion = Event::Mouse::Motion::Pressed;
+  mouse1.x = lbl1_el->absolute_x() + 1;
+  mouse1.y = lbl1_el->absolute_y() + 1;
+  Event click1(mouse1);
+  
+  CHECK(lbl1_comp->OnEvent(click1) == true);
+  container->Digest();
+  screen.Draw();
+
+  // Verify cb1 toggled, cb2 unchanged, cb1 focused!
+  CHECK(container->cb1_checked == true);
+  CHECK(container->cb2_checked == false);
+  CHECK(cb1_el->focused() == true);
+
+  // 2. Click on Implicit Label (lbl2)
+  Event::Mouse mouse2;
+  mouse2.button = Event::Mouse::Button::Left;
+  mouse2.motion = Event::Mouse::Motion::Pressed;
+  mouse2.x = lbl2_el->absolute_x() + 1;
+  mouse2.y = lbl2_el->absolute_y() + 1;
+  Event click2(mouse2);
+
+  CHECK(lbl2_comp->OnEvent(click2) == true);
+  container->Digest();
+  screen.Draw();
+
+  // Verify cb2 toggled, cb2 focused!
+  CHECK(container->cb1_checked == true);
+  CHECK(container->cb2_checked == true);
+  CHECK(cb2_el->focused() == true);
+}
+
+// --- Tooltip ---
+class TooltipTestComponent : public rtxui::Component<TooltipTestComponent> {
+ public:
+  std::string tooltip_text = "Helpful Info";
+  std::string tooltip_place = "top";
+
+  void InitReflection() override {
+    Bind(tooltip_text);
+    Bind(tooltip_place);
+    Import<rtxui::tooltip>();
+    Import<rtxui::div>();
+    rtxui::Component<TooltipTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <tooltip id="tt" content="{tooltip_text}" placement="{tooltip_place}">
+        <div id="trigger">Hover Me</div>
+      </tooltip>
+    </div>
+  )";
+};
+
+TEST_CASE("Tooltip Component Interaction", "[component][tooltip]") {
+  auto container = rtxui::Ref<TooltipTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* tt_el = container->Root()->QuerySelector("#tt");
+  auto* trigger_el = container->Root()->QuerySelector("#trigger");
+  REQUIRE(tt_el != nullptr);
+  REQUIRE(trigger_el != nullptr);
+
+  auto* tt_comp = const_cast<rtxui::ComponentBase*>(tt_el->component());
+  auto* tt_ptr = static_cast<rtxui::tooltip*>(tt_comp);
+  REQUIRE(tt_ptr != nullptr);
+
+  // Initial state: not hovered, class is hidden
+  CHECK(tt_ptr->tooltip_class == "hidden");
+
+  // Simulated hover
+  tt_el->set_hovered(true);
+  container->Digest();
+  screen.Draw();
+
+  // Verify class is now visible
+  CHECK(tt_ptr->tooltip_class == "visible");
+
+  // Hover removed
+  tt_el->set_hovered(false);
+  container->Digest();
+  screen.Draw();
+
+  // Verify class is hidden again
+  CHECK(tt_ptr->tooltip_class == "hidden");
+}
+
+TEST_CASE("Tooltip Placement Styles", "[component][tooltip][alignment]") {
+  auto container = rtxui::Ref<TooltipTestComponent>::New();
+  rtxui::Screen screen(container);
+
+  auto* tt_el = container->Root()->QuerySelector("#tt");
+  REQUIRE(tt_el != nullptr);
+
+  tt_el->set_hovered(true);
+
+  auto check_placement = [&](const std::string& place, auto verify_fn) {
+    container->tooltip_place = place;
+    container->Digest();
+    screen.Draw();
+
+    auto* popup = container->Root()->QuerySelector(".tooltip-popup");
+    REQUIRE(popup != nullptr);
+    verify_fn(popup->style);
+  };
+
+  SECTION("Top Placements") {
+    check_placement("top", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.bottom.unit == rtxui::Unit::Percent);
+      CHECK(style.bottom.value == 100.0f);
+      CHECK(style.left.unit == rtxui::Unit::Cells);
+      CHECK(style.left.value == 0.0f);
+      CHECK(style.right.unit == rtxui::Unit::Cells);
+      CHECK(style.right.value == 0.0f);
+      CHECK(style.margin_left_auto == true);
+      CHECK(style.margin_right_auto == true);
+    });
+
+    check_placement("top-start", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.bottom.unit == rtxui::Unit::Percent);
+      CHECK(style.bottom.value == 100.0f);
+      CHECK(style.left.unit == rtxui::Unit::Cells);
+      CHECK(style.left.value == 0.0f);
+      CHECK(style.right.unit == rtxui::Unit::Auto);
+      CHECK(style.margin_left_auto == false);
+      CHECK(style.margin_right_auto == true);
+    });
+
+    check_placement("top-end", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.bottom.unit == rtxui::Unit::Percent);
+      CHECK(style.bottom.value == 100.0f);
+      CHECK(style.left.unit == rtxui::Unit::Auto);
+      CHECK(style.right.unit == rtxui::Unit::Cells);
+      CHECK(style.right.value == 0.0f);
+      CHECK(style.margin_left_auto == true);
+      CHECK(style.margin_right_auto == false);
+    });
+  }
+
+  SECTION("Bottom Placements") {
+    check_placement("bottom", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.top.unit == rtxui::Unit::Percent);
+      CHECK(style.top.value == 100.0f);
+      CHECK(style.left.unit == rtxui::Unit::Cells);
+      CHECK(style.left.value == 0.0f);
+      CHECK(style.right.unit == rtxui::Unit::Cells);
+      CHECK(style.right.value == 0.0f);
+      CHECK(style.margin_left_auto == true);
+      CHECK(style.margin_right_auto == true);
+    });
+
+    check_placement("bottom-start", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.top.unit == rtxui::Unit::Percent);
+      CHECK(style.top.value == 100.0f);
+      CHECK(style.left.unit == rtxui::Unit::Cells);
+      CHECK(style.left.value == 0.0f);
+      CHECK(style.right.unit == rtxui::Unit::Auto);
+      CHECK(style.margin_left_auto == false);
+      CHECK(style.margin_right_auto == true);
+    });
+
+    check_placement("bottom-end", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.top.unit == rtxui::Unit::Percent);
+      CHECK(style.top.value == 100.0f);
+      CHECK(style.left.unit == rtxui::Unit::Auto);
+      CHECK(style.right.unit == rtxui::Unit::Cells);
+      CHECK(style.right.value == 0.0f);
+      CHECK(style.margin_left_auto == true);
+      CHECK(style.margin_right_auto == false);
+    });
+  }
+
+  SECTION("Left Placements") {
+    check_placement("left", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.right.unit == rtxui::Unit::Percent);
+      CHECK(style.right.value == 100.0f);
+      CHECK(style.top.unit == rtxui::Unit::Cells);
+      CHECK(style.top.value == 0.0f);
+      CHECK(style.bottom.unit == rtxui::Unit::Cells);
+      CHECK(style.bottom.value == 0.0f);
+      CHECK(style.margin_top_auto == true);
+      CHECK(style.margin_bottom_auto == true);
+    });
+
+    check_placement("left-start", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.right.unit == rtxui::Unit::Percent);
+      CHECK(style.right.value == 100.0f);
+      CHECK(style.top.unit == rtxui::Unit::Cells);
+      CHECK(style.top.value == 0.0f);
+      CHECK(style.bottom.unit == rtxui::Unit::Auto);
+      CHECK(style.margin_top_auto == false);
+      CHECK(style.margin_bottom_auto == true);
+    });
+
+    check_placement("left-end", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.right.unit == rtxui::Unit::Percent);
+      CHECK(style.right.value == 100.0f);
+      CHECK(style.bottom.unit == rtxui::Unit::Cells);
+      CHECK(style.bottom.value == 0.0f);
+      CHECK(style.top.unit == rtxui::Unit::Auto);
+      CHECK(style.margin_top_auto == true);
+      CHECK(style.margin_bottom_auto == false);
+    });
+  }
+
+  SECTION("Right Placements") {
+    check_placement("right", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.left.unit == rtxui::Unit::Percent);
+      CHECK(style.left.value == 100.0f);
+      CHECK(style.top.unit == rtxui::Unit::Cells);
+      CHECK(style.top.value == 0.0f);
+      CHECK(style.bottom.unit == rtxui::Unit::Cells);
+      CHECK(style.bottom.value == 0.0f);
+      CHECK(style.margin_top_auto == true);
+      CHECK(style.margin_bottom_auto == true);
+    });
+
+    check_placement("right-start", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.left.unit == rtxui::Unit::Percent);
+      CHECK(style.left.value == 100.0f);
+      CHECK(style.top.unit == rtxui::Unit::Cells);
+      CHECK(style.top.value == 0.0f);
+      CHECK(style.bottom.unit == rtxui::Unit::Auto);
+      CHECK(style.margin_top_auto == false);
+      CHECK(style.margin_bottom_auto == true);
+    });
+
+    check_placement("right-end", [](const rtxui::ComputedStyle& style) {
+      CHECK(style.left.unit == rtxui::Unit::Percent);
+      CHECK(style.left.value == 100.0f);
+      CHECK(style.bottom.unit == rtxui::Unit::Cells);
+      CHECK(style.bottom.value == 0.0f);
+      CHECK(style.top.unit == rtxui::Unit::Auto);
+      CHECK(style.margin_top_auto == true);
+      CHECK(style.margin_bottom_auto == false);
+    });
+  }
+}
+
+class TabsCrashPreventionTestComponent : public rtxui::Component<TabsCrashPreventionTestComponent> {
+ public:
+  std::string active_tab = "tab1";
+
+  void InitReflection() override {
+    Bind(active_tab);
+    Import<rtxui::tabs>();
+    Import<rtxui::tab_pane>();
+    rtxui::Component<TabsCrashPreventionTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <tabs value="{active_tab}">
+      <tab-pane label="Tab One" name="tab1">Content One</tab-pane>
+    </tabs>
+  )";
+};
+
+TEST_CASE("Tabs SelectTab Crash Prevention", "[component][tabs][bug]") {
+  auto container = rtxui::Ref<TabsCrashPreventionTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  REQUIRE(tabs_el != nullptr);
+  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  REQUIRE(tabs_ptr != nullptr);
+
+  CHECK_NOTHROW(tabs_ptr->SelectTab(""));
+  CHECK_NOTHROW(tabs_ptr->SelectTab("invalid"));
+  CHECK_NOTHROW(tabs_ptr->SelectTab("999"));
+}
+
+class SelectPreservationTestComponent : public rtxui::Component<SelectPreservationTestComponent> {
+ public:
+  std::string theme = "light";
+  void InitReflection() override {
+    Bind(theme);
+    Import<rtxui::select>();
+    Import<rtxui::option>();
+    rtxui::Component<SelectPreservationTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <select value="{theme}">
+      <option class="custom-class" value="dark">Dark Theme</option>
+      <option class="custom-class" value="light">Light Theme</option>
+    </select>
+  )";
+};
+
+TEST_CASE("Select Option Class Preservation", "[component][select][bug]") {
+  auto container = rtxui::Ref<SelectPreservationTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* opt_el = container->Root()->QuerySelector("option");
+  REQUIRE(opt_el != nullptr);
+  
+  bool has_custom = std::find(opt_el->classes.begin(), opt_el->classes.end(), "custom-class") != opt_el->classes.end();
+  CHECK(has_custom == true);
+
+  container->theme = "dark";
+  container->Digest();
+  screen.Draw();
+
+  has_custom = std::find(opt_el->classes.begin(), opt_el->classes.end(), "custom-class") != opt_el->classes.end();
+  CHECK(has_custom == true);
+}
+
+class ComplexSelectorTestApp : public Component<ComplexSelectorTestApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    Import<rtxui::p>();
+    Component<ComplexSelectorTestApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div>
+        <span id="direct">Direct child</span>
+        <p>
+          <span id="nested">Nested inside p</span>
+        </p>
+      </div>
+    </div>
+    <style>
+      div span {
+        background-color: rgb(255, 0, 0);
+      }
+      div > span {
+        color: rgb(0, 255, 0);
+      }
+    </style>
+  )";
+};
+
+TEST_CASE("CSS Child and Descendant Combinator Matching", "[component][css]") {
+  auto app = Ref<ComplexSelectorTestApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+  rtxui::Screen screen(app, device);
+
+  auto* root_div = app->Root();
+  REQUIRE(root_div != nullptr);
+
+  auto* direct_span = root_div->QuerySelector("#direct");
+  REQUIRE(direct_span != nullptr);
+  // It is a descendant of div (div span -> bg red) AND a direct child of div (div > span -> color green)
+  CHECK(direct_span->style.background_color.value() == Color::RGB(255, 0, 0));
+  CHECK(direct_span->style.foreground_color.value() == Color::RGB(0, 255, 0));
+
+  auto* nested_span = root_div->QuerySelector("#nested");
+  REQUIRE(nested_span != nullptr);
+  // It is a descendant of div (div span -> bg red) but NOT a direct child (div > span should NOT match, color is default/unset)
+  CHECK(nested_span->style.background_color.value() == Color::RGB(255, 0, 0));
+  CHECK(!nested_span->style.foreground_color.has_value());
+}
+
+namespace rtxui {
+void PrintCompilerStyleError(std::string_view source_string,
+                             int error_line,
+                             int error_column,
+                             std::string_view message,
+                             std::string_view label);
+}
+
+TEST_CASE("PrintCompilerStyleError Formatting", "[component][error]") {
+  std::string_view sample = "line 1\nline 2\nline 3 error here\nline 4\nline 5";
+
+  std::stringstream buffer;
+  std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
+
+  rtxui::PrintCompilerStyleError(sample, 2, 7, "invalid token", "DOM");
+
+  std::cerr.rdbuf(old);
+
+  std::string output = buffer.str();
+
+  CHECK(output.find("DOM Error") != std::string::npos);
+  CHECK(output.find("invalid token") != std::string::npos);
+  CHECK(output.find("Line 3, Column 8:") != std::string::npos);
+  CHECK(output.find(" >    3 │ line 3 error here") != std::string::npos);
+  CHECK(output.find("        │        ^") != std::string::npos);
+  CHECK(output.find("      1 │ line 1") != std::string::npos);
+  CHECK(output.find("      2 │ line 2") != std::string::npos);
+  CHECK(output.find("      4 │ line 4") != std::string::npos);
+  CHECK(output.find("      5 │ line 5") != std::string::npos);
+}
+
+class AdvancedCSSFeaturesTestApp : public Component<AdvancedCSSFeaturesTestApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    Component<AdvancedCSSFeaturesTestApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div>
+        <span id="child1">First</span>
+        <span id="child2">Second</span>
+        <span id="child3">Third</span>
+        <span id="child4">Fourth</span>
+      </div>
+    </div>
+    <style>
+      span:first-child {
+        background-color: rgb(255, 0, 0);
+      }
+      span:last-child {
+        background-color: rgb(0, 255, 0);
+      }
+      span:nth-child(even) {
+        color: rgb(0, 0, 255);
+      }
+      span#child2 + span {
+        display: none;
+      }
+      span#child1 ~ span {
+        margin-left: 10px;
+      }
+    </style>
+  )";
+};
+
+TEST_CASE("CSS Sibling Combinators and Structural Pseudo-classes", "[component][css]") {
+  auto app = Ref<AdvancedCSSFeaturesTestApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+  rtxui::Screen screen(app, device);
+
+  auto* root_div = app->Root();
+  REQUIRE(root_div != nullptr);
+
+  auto* child1 = root_div->QuerySelector("#child1");
+  auto* child2 = root_div->QuerySelector("#child2");
+  auto* child3 = root_div->QuerySelector("#child3");
+  auto* child4 = root_div->QuerySelector("#child4");
+
+  REQUIRE(child1 != nullptr);
+  REQUIRE(child2 != nullptr);
+  REQUIRE(child3 != nullptr);
+  REQUIRE(child4 != nullptr);
+
+  // Test first-child
+  CHECK(child1->style.background_color.value() == Color::RGB(255, 0, 0));
+  CHECK(!child2->style.background_color.has_value());
+
+  // Test last-child
+  CHECK(child4->style.background_color.value() == Color::RGB(0, 255, 0));
+  CHECK(!child3->style.background_color.has_value());
+
+  // Test nth-child(even)
+  CHECK(!child1->style.foreground_color.has_value());
+  CHECK(child2->style.foreground_color.value() == Color::RGB(0, 0, 255));
+  CHECK(!child3->style.foreground_color.has_value());
+  CHECK(child4->style.foreground_color.value() == Color::RGB(0, 0, 255));
+
+  // Test adjacent sibling combinator (+)
+  CHECK(child3->style.display_none == true);
+  CHECK(child2->style.display_none == false);
+
+  // Test general sibling combinator (~)
+  CHECK(child1->style.margin.left == 0);
+  CHECK(child2->style.margin.left == 10);
+  CHECK(child3->style.margin.left == 10);
+  CHECK(child4->style.margin.left == 10);
+}
+
+
+
 
 
 

@@ -79,3 +79,18 @@ Represents terminal color definitions.
 | :--- | :--- | :--- |
 | `RGB` | `static Color RGB(uint8_t r, uint8_t g, uint8_t b)` | Instantiates RGB color object. |
 | `RGBA` | `static Color RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)` | Instantiates RGBA color object with transparency. |
+
+---
+
+## 5. Threading & Asynchronous Tasks
+
+RTXUI is built on a thread-safe task-posting model. You can schedule callbacks onto the UI thread from background worker threads, and the screen event loop will immediately wake up via internal non-blocking self-pipes to digest and redraw the changes.
+
+### `task::TaskRunner`
+Provides thread-safe task queues to coordinate main thread execution.
+
+| Method | Signature | Description |
+| :--- | :--- | :--- |
+| `Current` | `static TaskRunner* Current()` | Returns the active TaskRunner instance for the calling thread. |
+| `PostTask` | `void PostTask(std::function<void()> task)` | Thread-safe call to schedule a callback to run on the UI thread's next loop tick. |
+| `PostDelayedTask` | `void PostDelayedTask(std::function<void()> task, std::chrono::steady_clock::duration d)` | Schedules a callback to execute after a specified time delay. |

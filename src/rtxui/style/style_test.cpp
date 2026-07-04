@@ -6,7 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <string>
 
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/style/apply_style.hpp"
 
@@ -93,6 +93,15 @@ TEST_CASE("CSS with complex selectors", "[css]") {
   }
 
   CHECK(stylesheet.value()[0].selector == "div > p.active #id");
+  auto parsed = stylesheet.value()[0].parsed_selector;
+  CHECK(parsed.base == "");
+  CHECK(parsed.id == "id");
+  REQUIRE(parsed.parents.size() == 2);
+  CHECK(parsed.parents[0].base == "p");
+  CHECK(parsed.parents[0].classes == std::vector<std::string>{"active"});
+  CHECK(parsed.parents[0].combinator == ' ');
+  CHECK(parsed.parents[1].base == "div");
+  CHECK(parsed.parents[1].combinator == '>');
 }
 
 TEST_CASE("CSS with reactive bindings", "[css]") {
@@ -801,3 +810,86 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle", "[style][grid]")
     CHECK(style.column_gap == rtxui::Length::Fr(2.0f));
   }
 }
+
+TEST_CASE("Opacity parsing in ApplyStyle", "[style][opacity]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("Standard opacity values") {
+    rtxui::ApplyStyle(style, {"opacity", "0.7"});
+    CHECK(style.opacity == 0.7f);
+
+    rtxui::ApplyStyle(style, {"opacity", "0.0"});
+    CHECK(style.opacity == 0.0f);
+
+    rtxui::ApplyStyle(style, {"opacity", "1.0"});
+    CHECK(style.opacity == 1.0f);
+
+    rtxui::ApplyStyle(style, {"opacity", "1"});
+    CHECK(style.opacity == 1.0f);
+
+    rtxui::ApplyStyle(style, {"opacity", "0"});
+    CHECK(style.opacity == 0.0f);
+  }
+
+  SECTION("Clamping out of bounds values") {
+    rtxui::ApplyStyle(style, {"opacity", "-0.5"});
+    CHECK(style.opacity == 0.0f);
+
+    rtxui::ApplyStyle(style, {"opacity", "1.5"});
+    CHECK(style.opacity == 1.0f);
+  }
+
+  SECTION("Whitespace and parsing format") {
+    rtxui::ApplyStyle(style, {"opacity", "  0.35  "});
+    CHECK(style.opacity == 0.35f);
+
+    rtxui::ApplyStyle(style, {"opacity", ".5"});
+    CHECK(style.opacity == 0.5f);
+  }
+}
+
+TEST_CASE("CSS style parsing handles invalid values robustly", "[style][robustness]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("Invalid color values") {
+    style.foreground_color = std::nullopt;
+    rtxui::ApplyStyle(style, {"color", "rgb(256, 12)"});
+    CHECK(!style.foreground_color.has_value());
+
+    rtxui::ApplyStyle(style, {"color", "rgb(abc, 12, 34)"});
+    CHECK(!style.foreground_color.has_value());
+
+    rtxui::ApplyStyle(style, {"background-color", "rgba(1, 2, abc, 0.5)"});
+    CHECK(!style.background_color.has_value());
+
+    rtxui::ApplyStyle(style, {"background-color", "rgba(1, 2, 3, xyz)"});
+    CHECK(!style.background_color.has_value());
+  }
+
+  SECTION("Invalid grid properties") {
+    style.grid_column_span = 1;
+    rtxui::ApplyStyle(style, {"grid-column", "span abc"});
+    CHECK(style.grid_column_span == 1);
+
+    rtxui::ApplyStyle(style, {"grid-column", "xyz"});
+    CHECK(style.grid_column_span == 1);
+
+    style.grid_row_span = 1;
+    rtxui::ApplyStyle(style, {"grid-row", "span "});
+    CHECK(style.grid_row_span == 1);
+
+    style.grid_template_columns.clear();
+    rtxui::ApplyStyle(style, {"grid-template-columns", "repeat(abc, 10px)"});
+    CHECK(style.grid_template_columns.empty());
+  }
+
+  SECTION("Invalid border width") {
+    style.border = {0, 0, 0, 0};
+    style.border_style = rtxui::BorderStyle::None;
+    rtxui::ApplyStyle(style, {"border", "abc"});
+    CHECK(style.border.top == 0);
+    CHECK(style.border_style == rtxui::BorderStyle::None);
+  }
+}
+
+

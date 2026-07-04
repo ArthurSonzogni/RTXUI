@@ -63,7 +63,10 @@ class SelectDemo : public Component<SelectDemo> {
       </style>
     )html";
 
-  SelectDemo() { Bind(my_theme); }
+  SelectDemo() {
+    Bind(my_theme);
+    EnableHotReload();
+  }
 };
 
 int main() {

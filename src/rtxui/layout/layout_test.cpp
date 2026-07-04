@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/refcounted.hpp"
@@ -954,6 +954,69 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     INFO("Scroll 9 render:\n" << layer);
     CHECK(texture[0, 0].character == "S");
   }
+}
+
+TEST_CASE("Layout: position sticky direct child of scroll container",
+          "[layout][sticky][scroll]") {
+  struct StickyDirectComponent : Component<StickyDirectComponent> {
+    void InitReflection() override {
+      Import<div>();
+      Component<StickyDirectComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div class="scrollable">
+        <div class="sticky-element">S</div>
+        <div class="spacer">.</div>
+      </div>
+      <style>
+        .scrollable {
+          display: block;
+          width: 5;
+          height: 5;
+          overflow-y: scroll;
+        }
+        .sticky-element {
+          position: sticky;
+          top: 0;
+          left: 0;
+          width: 1;
+          height: 1;
+          z-index: 1;
+        }
+        .spacer {
+          display: block;
+          width: 5;
+          height: 20;
+        }
+      </style>
+    )html";
+  };
+
+  auto c = Ref<StickyDirectComponent>::New();
+  c->Mount();
+  c->Digest();
+
+  auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+  REQUIRE(scrollable_element != nullptr);
+  scrollable_element->set_scroll_y(10);
+
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  Texture texture(5, 5);
+  for (int y = 0; y < 5; ++y) {
+    for (int x = 0; x < 5; ++x) {
+      texture[x, y].character = " ";
+    }
+  }
+  if (layout_box) {
+    LayoutConstraints constraints;
+    constraints.width = {5, MeasureMode::Exactly};
+    constraints.height = {5, MeasureMode::Exactly};
+    auto fragment = RunLayout({layout_box.get()}, constraints);
+    Paint(fragment.get(), texture);
+  }
+  std::string layer = GetTextLayer(texture);
+  INFO("Scroll 10 direct render:\n" << layer);
+  CHECK(texture[0, 0].character == "S");
 }
 
 TEST_CASE("Layout: Flexbox Grow Cumulative Distribution",
@@ -2055,6 +2118,269 @@ TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
                           << " a=" << (int)right_cell.background_color.a);
   CHECK(right_cell.character == "▎");
   CHECK(right_cell.background_color.a == 0);
+}
+
+TEST_CASE("Layout: position sticky pushing calendar test",
+          "[layout][sticky][scroll]") {
+  struct TestMonthSection : Component<TestMonthSection> {
+    std::string name;
+    void InitReflection() override {
+      Import<div>();
+      Bind(name);
+      Component<TestMonthSection>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div class="month-container">
+        <div class="sticky-header">{name}</div>
+        <div class="item">D</div>
+        <div class="item">D</div>
+      </div>
+      <style>
+        self { display: block; }
+        .month-container { display: block; }
+        .sticky-header {
+          position: sticky;
+          top: 0;
+          height: 1;
+          z-index: 1;
+        }
+        .item {
+          display: block;
+          height: 1;
+        }
+      </style>
+    )html";
+  };
+
+  struct TestStickyDemo : Component<TestStickyDemo> {
+    void InitReflection() override {
+      Import<TestMonthSection>("month-section");
+      Import<div>();
+      Component<TestStickyDemo>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div class="scroll-window">
+        <month-section name="J" />
+        <month-section name="F" />
+        <div class="spacer-bottom"></div>
+      </div>
+      <style>
+        self { display: block; }
+        .scroll-window {
+          display: block;
+          height: 4;
+          overflow-y: scroll;
+        }
+        .spacer-bottom {
+          display: block;
+          height: 10;
+        }
+      </style>
+    )html";
+  };
+
+  auto c = Ref<TestStickyDemo>::New();
+  c->Mount();
+  c->Digest();
+
+  auto* scrollable_element = c->Root()->QuerySelector(".scroll-window");
+  REQUIRE(scrollable_element != nullptr);
+
+  // 1. scroll_y = 0
+  {
+    scrollable_element->set_scroll_y(0);
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 4);
+    for (int y = 0; y < 4; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {4, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+    std::string layer = GetTextLayer(texture);
+    INFO("Scroll 0 render:\n" << layer);
+    CHECK(texture[0, 0].character == "J");
+    CHECK(texture[0, 1].character == "D");
+    CHECK(texture[0, 2].character == "D");
+    CHECK(texture[0, 3].character == "F");
+  }
+
+  // 2. scroll_y = 1
+  {
+    scrollable_element->set_scroll_y(1);
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 4);
+    for (int y = 0; y < 4; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {4, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+    std::string layer = GetTextLayer(texture);
+    INFO("Scroll 1 render:\n" << layer);
+    CHECK(texture[0, 0].character == "J");
+    CHECK(texture[0, 1].character == "D");
+    CHECK(texture[0, 2].character == "F");
+    CHECK(texture[0, 3].character == "D");
+  }
+
+  // 3. scroll_y = 2
+  {
+    scrollable_element->set_scroll_y(2);
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 4);
+    for (int y = 0; y < 4; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {4, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+    std::string layer = GetTextLayer(texture);
+    INFO("Scroll 2 render:\n" << layer);
+    CHECK(texture[0, 0].character == "J");
+    CHECK(texture[0, 1].character == "F");
+    CHECK(texture[0, 2].character == "D");
+    CHECK(texture[0, 3].character == "D");
+  }
+
+  // 4. scroll_y = 3
+  {
+    scrollable_element->set_scroll_y(3);
+    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    Texture texture(5, 4);
+    for (int y = 0; y < 4; ++y) {
+      for (int x = 0; x < 5; ++x) {
+        texture[x, y].character = " ";
+      }
+    }
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {5, MeasureMode::Exactly};
+      constraints.height = {4, MeasureMode::Exactly};
+      auto fragment = RunLayout({layout_box.get()}, constraints);
+      Paint(fragment.get(), texture);
+    }
+    std::string layer = GetTextLayer(texture);
+    INFO("Scroll 3 render:\n" << layer);
+    CHECK(texture[0, 0].character == "F");
+    CHECK(texture[0, 1].character == "D");
+    CHECK(texture[0, 2].character == "D");
+  }
+}
+
+TEST_CASE("Layout: InlineFlow respects height and min-height", "[layout][inline][height]") {
+  struct TestInlineHeight : Component<TestInlineHeight> {
+    void InitReflection() override {
+      Import<div>();
+      Component<TestInlineHeight>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div class="container">
+        <div class="inline-box">Item</div>
+      </div>
+      <style>
+        .container {
+          display: block;
+        }
+        .inline-box {
+          display: inline-block;
+          height: 3;
+          width: 10;
+        }
+      </style>
+    )html";
+  };
+
+  auto c = Ref<TestInlineHeight>::New();
+  c->Mount();
+  c->Digest();
+
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  REQUIRE(layout_box != nullptr);
+
+  LayoutConstraints constraints;
+  constraints.width = {40, MeasureMode::AtMost};
+  constraints.height = {20, MeasureMode::AtMost};
+  auto fragment = RunLayout({layout_box.get()}, constraints);
+  REQUIRE(fragment != nullptr);
+
+  auto* inline_box_el = c->Root()->QuerySelector(".inline-box");
+  REQUIRE(inline_box_el != nullptr);
+  CHECK(inline_box_el->layout_height() == 3);
+  CHECK(inline_box_el->layout_width() == 10);
+}
+
+TEST_CASE("Layout: Absolute position centering via margin auto", "[layout][absolute][margin-auto]") {
+  struct TestAbsoluteCentering : Component<TestAbsoluteCentering> {
+    void InitReflection() override {
+      Import<div>();
+      Component<TestAbsoluteCentering>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div class="container">
+        <div class="child">X</div>
+      </div>
+      <style>
+        .container {
+          position: relative;
+          width: 40;
+          height: 20;
+          display: block;
+        }
+        .child {
+          position: absolute;
+          left: 10;
+          right: 10;
+          top: 5;
+          bottom: 5;
+          width: 10;
+          height: 4;
+          margin: auto;
+        }
+      </style>
+    )html";
+  };
+
+  auto c = Ref<TestAbsoluteCentering>::New();
+  c->Mount();
+  c->Digest();
+
+  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  REQUIRE(layout_box != nullptr);
+
+  LayoutConstraints constraints;
+  constraints.width = {40, MeasureMode::Exactly};
+  constraints.height = {20, MeasureMode::Exactly};
+  auto fragment = RunLayout({layout_box.get()}, constraints);
+  REQUIRE(fragment != nullptr);
+
+  Texture texture(40, 20);
+  Paint(fragment.get(), texture);
+
+  auto* child_el = c->Root()->QuerySelector(".child");
+  REQUIRE(child_el != nullptr);
+  CHECK(child_el->absolute_x() == 15);
+  CHECK(child_el->absolute_y() == 8);
+  CHECK(child_el->layout_width() == 10);
+  CHECK(child_el->layout_height() == 4);
 }
 
 }  // namespace rtxui

@@ -36,5 +36,7 @@
 #include "rtxui/component/default/s/s.hpp"
 #include "rtxui/component/default/code/code.hpp"
 #include "rtxui/component/default/pre/pre.hpp"
+#include "rtxui/component/default/label/label.hpp"
+#include "rtxui/component/default/tooltip/tooltip.hpp"
 
 #endif  // RTXUI_DEFAULT_COMPONENTS_INTERNAL_HPP_

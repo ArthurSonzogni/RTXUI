@@ -7,7 +7,7 @@
 // https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/WordBreakProperty.txt
 // - Markus Kuhn -- 2007-05-26 (Unicode 5.0)
 //   http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c
-#include "rtxui/core/string.hpp"
+#include "rtxui/base/string.hpp"
 
 #include <array>    // for array
 #include <cstddef>  // for size_t

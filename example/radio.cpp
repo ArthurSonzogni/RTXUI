@@ -13,6 +13,13 @@ class RadioDemo : public Component<RadioDemo> {
   bool select_b = false;
   bool select_c = false;
 
+  std::string selected_tech() const {
+    if (select_a) return "PostgreSQL";
+    if (select_b) return "MongoDB";
+    if (select_c) return "Redis";
+    return "";
+  }
+
   std::string_view view = R"html(
       <div class="content">
         <h1>RTXUI Radio Button Group Demonstration</h1>
@@ -25,10 +32,7 @@ class RadioDemo : public Component<RadioDemo> {
         </div>
 
         <p class="status">
-          Selected Tech: 
-          {select_a ? "PostgreSQL" : ""}
-          {select_b ? "MongoDB" : ""}
-          {select_c ? "Redis" : ""}
+          Selected Tech: {selected_tech}
         </p>
       </div>
 
@@ -65,6 +69,7 @@ class RadioDemo : public Component<RadioDemo> {
     Bind(select_a);
     Bind(select_b);
     Bind(select_c);
+    Bind(selected_tech);
     Import<rtxui::radio>();
     Import<rtxui::div>();
     Import<rtxui::p>();

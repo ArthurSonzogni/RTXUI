@@ -4,8 +4,11 @@
 #ifndef TASK_RUNNER_HPP
 #define TASK_RUNNER_HPP
 
-#include "rtxui/core/task.hpp"
-#include "rtxui/core/task_queue.hpp"
+#include <functional>
+#include <mutex>
+
+#include "rtxui/base/task.hpp"
+#include "rtxui/base/task_queue.hpp"
 
 namespace task {
 
@@ -31,9 +34,14 @@ class TaskRunner {
   // Runs the tasks in the queue, blocking until all tasks are executed.
   auto Run() -> void;
 
+  using WakeupCallback = std::function<void()>;
+  auto SetWakeupCallback(WakeupCallback callback) -> void;
+
  private:
   TaskRunner* previous_task_runner_ = nullptr;
   TaskQueue queue_;
+  mutable std::mutex mutex_;
+  WakeupCallback wakeup_callback_;
 };
 
 }  // namespace task

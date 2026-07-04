@@ -15,16 +15,21 @@ namespace rtxui {
 namespace {
 
 float StoF(std::string_view s) {
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+    s.remove_prefix(1);
+  }
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+    s.remove_suffix(1);
+  }
   if (s.empty()) {
     return 0.0f;
   }
-  std::string temp(s);
-  char* endptr = nullptr;
-  float val = std::strtof(temp.c_str(), &endptr);
-  if (endptr == temp.c_str()) {
-    return 0.0f;
+  float value = 0.0f;
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+  if (ec == std::errc()) {
+    return value;
   }
-  return val;
+  return 0.0f;
 }
 int StoI(std::string_view s) {
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
@@ -157,16 +162,28 @@ std::optional<Color> ParseColor(std::string_view value) {
     std::string_view g_str =
         value.substr(first_comma + 1, second_comma - first_comma - 1);
     std::string_view b_str = value.substr(second_comma + 1);
-    try {
-      int r = StoI(r_str);
-      int g = StoI(g_str);
-      int b = StoI(b_str);
+    auto trim = [](std::string_view sv) {
+      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
+        sv.remove_prefix(1);
+      }
+      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
+        sv.remove_suffix(1);
+      }
+      return sv;
+    };
+    r_str = trim(r_str);
+    g_str = trim(g_str);
+    b_str = trim(b_str);
+    int r = 0, g = 0, b = 0;
+    auto [r_ptr, r_ec] = std::from_chars(r_str.data(), r_str.data() + r_str.size(), r);
+    auto [g_ptr, g_ec] = std::from_chars(g_str.data(), g_str.data() + g_str.size(), g);
+    auto [b_ptr, b_ec] = std::from_chars(b_str.data(), b_str.data() + b_str.size(), b);
+    if (r_ec == std::errc() && r_ptr == r_str.data() + r_str.size() &&
+        g_ec == std::errc() && g_ptr == g_str.data() + g_str.size() &&
+        b_ec == std::errc() && b_ptr == b_str.data() + b_str.size()) {
       return Color::RGB(r, g, b);
-    } catch (const std::invalid_argument&) {
-      return std::nullopt;
-    } catch (const std::out_of_range&) {
-      return std::nullopt;
     }
+    return std::nullopt;
   }
 
   // Parse rgba(r, g, b, a)
@@ -191,17 +208,32 @@ std::optional<Color> ParseColor(std::string_view value) {
     std::string_view b_str =
         value.substr(second_comma + 1, third_comma - second_comma - 1);
     std::string_view a_str = value.substr(third_comma + 1);
-    try {
-      int r = StoI(r_str);
-      int g = StoI(g_str);
-      int b = StoI(b_str);
-      float a = StoF(a_str);
+    auto trim = [](std::string_view sv) {
+      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
+        sv.remove_prefix(1);
+      }
+      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
+        sv.remove_suffix(1);
+      }
+      return sv;
+    };
+    r_str = trim(r_str);
+    g_str = trim(g_str);
+    b_str = trim(b_str);
+    a_str = trim(a_str);
+    int r = 0, g = 0, b = 0;
+    float a = 0.0f;
+    auto [r_ptr, r_ec] = std::from_chars(r_str.data(), r_str.data() + r_str.size(), r);
+    auto [g_ptr, g_ec] = std::from_chars(g_str.data(), g_str.data() + g_str.size(), g);
+    auto [b_ptr, b_ec] = std::from_chars(b_str.data(), b_str.data() + b_str.size(), b);
+    auto [a_ptr, a_ec] = std::from_chars(a_str.data(), a_str.data() + a_str.size(), a);
+    if (r_ec == std::errc() && r_ptr == r_str.data() + r_str.size() &&
+        g_ec == std::errc() && g_ptr == g_str.data() + g_str.size() &&
+        b_ec == std::errc() && b_ptr == b_str.data() + b_str.size() &&
+        a_ec == std::errc() && a_ptr == a_str.data() + a_str.size()) {
       return Color::RGBA(r, g, b, a * 255.f);
-    } catch (const std::invalid_argument&) {
-      return std::nullopt;
-    } catch (const std::out_of_range&) {
-      return std::nullopt;
     }
+    return std::nullopt;
   }
 
   if (value == "red") {
@@ -384,9 +416,8 @@ std::vector<Length> ParseGridTemplate(std::string_view v) {
         while (!pattern_str.empty() && std::isspace(static_cast<unsigned char>(pattern_str.back()))) pattern_str.remove_suffix(1);
 
         int count = 0;
-        try {
-          count = std::stoi(std::string(count_str));
-        } catch (...) {
+        auto [ptr, ec] = std::from_chars(count_str.data(), count_str.data() + count_str.size(), count);
+        if (ec != std::errc() || ptr != count_str.data() + count_str.size()) {
           continue;
         }
 
@@ -658,17 +689,30 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       if (parts[0] == "auto") {
         style.margin_left_auto = true;
         style.margin_right_auto = true;
+        style.margin_top_auto = true;
+        style.margin_bottom_auto = true;
         style.margin = {0, 0, 0, 0};
       } else {
         int m = StoI(parts[0]);
         style.margin_left_auto = false;
         style.margin_right_auto = false;
+        style.margin_top_auto = false;
+        style.margin_bottom_auto = false;
         style.margin = {m, m, m, m};
       }
     } else if (parts.size() == 2) {
-      int v_val = StoI(parts[0]);
-      style.margin.top = v_val;
-      style.margin.bottom = v_val;
+      if (parts[0] == "auto") {
+        style.margin_top_auto = true;
+        style.margin_bottom_auto = true;
+        style.margin.top = 0;
+        style.margin.bottom = 0;
+      } else {
+        int v_val = StoI(parts[0]);
+        style.margin_top_auto = false;
+        style.margin_bottom_auto = false;
+        style.margin.top = v_val;
+        style.margin.bottom = v_val;
+      }
       if (parts[1] == "auto") {
         style.margin_left_auto = true;
         style.margin_right_auto = true;
@@ -682,8 +726,20 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         style.margin.right = h_val;
       }
     } else if (parts.size() == 3) {
-      style.margin.top = StoI(parts[0]);
-      style.margin.bottom = StoI(parts[2]);
+      if (parts[0] == "auto") {
+        style.margin_top_auto = true;
+        style.margin.top = 0;
+      } else {
+        style.margin_top_auto = false;
+        style.margin.top = StoI(parts[0]);
+      }
+      if (parts[2] == "auto") {
+        style.margin_bottom_auto = true;
+        style.margin.bottom = 0;
+      } else {
+        style.margin_bottom_auto = false;
+        style.margin.bottom = StoI(parts[2]);
+      }
       if (parts[1] == "auto") {
         style.margin_left_auto = true;
         style.margin_right_auto = true;
@@ -697,8 +753,20 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         style.margin.right = h_val;
       }
     } else if (parts.size() >= 4) {
-      style.margin.top = StoI(parts[0]);
-      style.margin.bottom = StoI(parts[2]);
+      if (parts[0] == "auto") {
+        style.margin_top_auto = true;
+        style.margin.top = 0;
+      } else {
+        style.margin_top_auto = false;
+        style.margin.top = StoI(parts[0]);
+      }
+      if (parts[2] == "auto") {
+        style.margin_bottom_auto = true;
+        style.margin.bottom = 0;
+      } else {
+        style.margin_bottom_auto = false;
+        style.margin.bottom = StoI(parts[2]);
+      }
       if (parts[1] == "auto") {
         style.margin_right_auto = true;
         style.margin.right = 0;
@@ -718,14 +786,24 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "margin-top") {
-    int m = StoI(v);
-    style.margin.top = m;
+    if (v == "auto") {
+      style.margin_top_auto = true;
+      style.margin.top = 0;
+    } else {
+      style.margin_top_auto = false;
+      style.margin.top = StoI(v);
+    }
     return;
   }
 
   if (p == "margin-bottom") {
-    int m = StoI(v);
-    style.margin.bottom = m;
+    if (v == "auto") {
+      style.margin_bottom_auto = true;
+      style.margin.bottom = 0;
+    } else {
+      style.margin_bottom_auto = false;
+      style.margin.bottom = StoI(v);
+    }
     return;
   }
 
@@ -796,15 +874,21 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       return;
     }
     // Try to parse as a number for width
-    try {
-      int bw = StoI(v);
-      style.border = {bw, bw, bw, bw};
-      style.border_style = BorderStyle::Solid;
-      return;  // Return only on success
-    } catch (const std::invalid_argument&) {
-      // Not a number, fall through to other properties or do nothing
-    } catch (const std::out_of_range&) {
-      // Out of range for int.
+    int bw = 0;
+    std::string_view s = v;
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+      s.remove_prefix(1);
+    }
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+      s.remove_suffix(1);
+    }
+    if (!s.empty()) {
+      auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), bw);
+      if (ec == std::errc() && ptr == s.data() + s.size()) {
+        style.border = {bw, bw, bw, bw};
+        style.border_style = BorderStyle::Solid;
+        return;
+      }
     }
     return;
   }
@@ -1107,12 +1191,30 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       auto parts = SplitWords(v);
       for (size_t i = 0; i < parts.size(); ++i) {
         if (parts[i] == "span" && i + 1 < parts.size()) {
-          try { span = std::stoi(std::string(parts[i + 1])); } catch (...) {}
+          std::string_view s = parts[i + 1];
+          int val = 1;
+          auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+          if (ec == std::errc() && ptr == s.data() + s.size()) {
+            span = val;
+          }
           break;
         }
       }
     } else {
-      try { span = std::stoi(std::string(v)); } catch (...) {}
+      std::string_view s = v;
+      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+        s.remove_prefix(1);
+      }
+      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+        s.remove_suffix(1);
+      }
+      if (!s.empty()) {
+        int val = 1;
+        auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+        if (ec == std::errc() && ptr == s.data() + s.size()) {
+          span = val;
+        }
+      }
     }
     style.grid_column_span = std::max(1, span);
     return;
@@ -1124,12 +1226,30 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       auto parts = SplitWords(v);
       for (size_t i = 0; i < parts.size(); ++i) {
         if (parts[i] == "span" && i + 1 < parts.size()) {
-          try { span = std::stoi(std::string(parts[i + 1])); } catch (...) {}
+          std::string_view s = parts[i + 1];
+          int val = 1;
+          auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+          if (ec == std::errc() && ptr == s.data() + s.size()) {
+            span = val;
+          }
           break;
         }
       }
     } else {
-      try { span = std::stoi(std::string(v)); } catch (...) {}
+      std::string_view s = v;
+      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+        s.remove_prefix(1);
+      }
+      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+        s.remove_suffix(1);
+      }
+      if (!s.empty()) {
+        int val = 1;
+        auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
+        if (ec == std::errc() && ptr == s.data() + s.size()) {
+          span = val;
+        }
+      }
     }
     style.grid_row_span = std::max(1, span);
     return;
@@ -1330,7 +1450,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       }
       if (s_value == "inline-block") {
         style.display_outside = DisplayOutside::Inline;
-        style.display_inside = DisplayInside::Flow;
+        style.display_inside = DisplayInside::FlowRoot;
+        return;
+      }
+      if (s_value == "flow-root") {
+        style.display_outside = DisplayOutside::Block;
+        style.display_inside = DisplayInside::FlowRoot;
         return;
       }
       if (s_value == "inline-flex") {
@@ -1358,6 +1483,9 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
       if (inside == "flow") {
         style.display_inside = DisplayInside::Flow;
+      }
+      if (inside == "flow-root") {
+        style.display_inside = DisplayInside::FlowRoot;
       }
 
       if (inside == "flex") {

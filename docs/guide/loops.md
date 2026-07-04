@@ -65,7 +65,7 @@ void InitReflection() override {
   BindCollection("items", &items, [](const TodoItem& item) {
     return rtxui::FieldMap{
       {"title", item.title},
-      {"completed", item.completed}
+      {"status", item.completed ? "Done" : "Pending"}
     };
   });
 }
@@ -75,7 +75,7 @@ Template usage:
 ```html
 <ul>
   <li for="{todo in items}">
-    <span>{todo.title}</span> - Status: {todo.completed ? 'Done' : 'Pending'}
+    <span>{todo.title}</span> - Status: {todo.status}
   </li>
 </ul>
 ```
