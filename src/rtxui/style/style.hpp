@@ -18,6 +18,9 @@ namespace css {
 struct Declaration {
   std::string_view property;
   std::string_view value;
+  /// Set when the value carried an `!important` suffix. Important
+  /// declarations win over normal ones regardless of rule order.
+  bool important = false;
 };
 
 struct AttributeSelector {

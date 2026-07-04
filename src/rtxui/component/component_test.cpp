@@ -1643,6 +1643,44 @@ TEST_CASE("Italic and Em Components cell.italic rendering",
   CHECK(rendered.find("\x1B[23m") != std::string::npos);
 }
 
+class ImportantTestComponent
+    : public rtxui::Component<ImportantTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<ImportantTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div id="a" class="base">A</div>
+      <div id="b" class="base" style="color: rgb(9, 9, 9);">B</div>
+    </div>
+    <style>
+      .base { color: rgb(1, 1, 1) !important; }
+      #a { color: rgb(2, 2, 2); }
+    </style>
+  )";
+};
+
+TEST_CASE("CSS !important wins over later rules and inline styles",
+          "[component][css][important]") {
+  auto container = rtxui::Ref<ImportantTestComponent>::New();
+  container->Mount();
+
+  // The #id rule is applied after the class rule, but the class rule is
+  // !important and must win.
+  auto* a = container->Root()->QuerySelector("#a");
+  REQUIRE(a != nullptr);
+  CHECK(a->base_style.foreground_color.value_or(Color()) ==
+        Color::RGB(1, 1, 1));
+
+  // An !important rule also beats a normal inline style.
+  auto* b = container->Root()->QuerySelector("#b");
+  REQUIRE(b != nullptr);
+  CHECK(b->base_style.foreground_color.value_or(Color()) ==
+        Color::RGB(1, 1, 1));
+}
+
 class VarTestComponent : public rtxui::Component<VarTestComponent> {
  public:
   void InitReflection() override {

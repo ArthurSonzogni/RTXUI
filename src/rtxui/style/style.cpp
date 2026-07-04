@@ -164,7 +164,19 @@ auto Parser::ParseDeclaration() -> Expected<Declaration, Error> {
     Advance();  // Skip ';'
   }
 
-  return Declaration{property, value.value()};
+  // Detect and strip a trailing "!important" from the value.
+  std::string_view val = value.value();
+  bool important = false;
+  constexpr std::string_view kImportant = "!important";
+  if (val.size() >= kImportant.size() && val.ends_with(kImportant)) {
+    important = true;
+    val.remove_suffix(kImportant.size());
+    while (!val.empty() && IsWhiteSpace(val.back())) {
+      val.remove_suffix(1);
+    }
+  }
+
+  return Declaration{property, val, important};
 }
 
 namespace {
@@ -677,7 +689,8 @@ auto Print(const StyleSheet& stylesheet) -> std::string {
         result += "  ";
       }
       result += "  " + std::string(decl.property) + ": " +
-                std::string(decl.value) + ";\n";
+                std::string(decl.value) +
+                (decl.important ? " !important" : "") + ";\n";
     }
     if (!ruleset.media_query.empty()) {
       result += "  }\n}\n";
