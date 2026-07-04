@@ -495,6 +495,40 @@ TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
   }
 }
 
+TEST_CASE("CSS inset shorthand", "[style][inset]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("one value") {
+    rtxui::ApplyStyle(style, {"inset", "3"});
+    CHECK(style.top == rtxui::Length::Cells(3));
+    CHECK(style.right == rtxui::Length::Cells(3));
+    CHECK(style.bottom == rtxui::Length::Cells(3));
+    CHECK(style.left == rtxui::Length::Cells(3));
+  }
+
+  SECTION("two values") {
+    rtxui::ApplyStyle(style, {"inset", "1 2"});
+    CHECK(style.top == rtxui::Length::Cells(1));
+    CHECK(style.bottom == rtxui::Length::Cells(1));
+    CHECK(style.left == rtxui::Length::Cells(2));
+    CHECK(style.right == rtxui::Length::Cells(2));
+  }
+
+  SECTION("four values") {
+    rtxui::ApplyStyle(style, {"inset", "1 2 3 4"});
+    CHECK(style.top == rtxui::Length::Cells(1));
+    CHECK(style.right == rtxui::Length::Cells(2));
+    CHECK(style.bottom == rtxui::Length::Cells(3));
+    CHECK(style.left == rtxui::Length::Cells(4));
+  }
+
+  SECTION("calc value") {
+    rtxui::ApplyStyle(style, {"inset", "calc(50% - 1)"});
+    CHECK(style.top.Resolve(10) == 4);
+    CHECK(style.left.Resolve(10) == 4);
+  }
+}
+
 TEST_CASE("CSS calc() parsing and resolution", "[style][calc]") {
   auto width_of = [](std::string_view css_value) {
     rtxui::ComputedStyle style;

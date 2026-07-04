@@ -161,6 +161,7 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 | :--- | :--- | :---: | :--- |
 | `transition` | `property duration timing-function` | ❌ | Shorthand (e.g. `transition: background-color 0.2s linear`). |
 | `position` | `static \| relative \| absolute \| fixed` | ❌ | Selects positioning flow model. |
+| `inset` | 1-4 [`<length>`](#value-types) values | ❌ | Shorthand setting `top`/`right`/`bottom`/`left` (same expansion as `margin`). |
 | `top` | [`<length>`](#value-types) | ❌ | Offset relative to top boundary. |
 | `bottom` | [`<length>`](#value-types) | ❌ | Offset relative to bottom boundary. |
 | `left` | [`<length>`](#length) | ❌ | Offset relative to left boundary. |
