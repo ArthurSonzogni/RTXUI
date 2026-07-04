@@ -1238,6 +1238,36 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "inset") {
+    auto parts = SplitWords(v);
+    if (parts.size() == 1) {
+      Length len = ParseLength(parts[0]);
+      style.top = len;
+      style.right = len;
+      style.bottom = len;
+      style.left = len;
+    } else if (parts.size() == 2) {
+      Length vertical = ParseLength(parts[0]);
+      Length horizontal = ParseLength(parts[1]);
+      style.top = vertical;
+      style.bottom = vertical;
+      style.left = horizontal;
+      style.right = horizontal;
+    } else if (parts.size() == 3) {
+      style.top = ParseLength(parts[0]);
+      Length horizontal = ParseLength(parts[1]);
+      style.left = horizontal;
+      style.right = horizontal;
+      style.bottom = ParseLength(parts[2]);
+    } else if (parts.size() >= 4) {
+      style.top = ParseLength(parts[0]);
+      style.right = ParseLength(parts[1]);
+      style.bottom = ParseLength(parts[2]);
+      style.left = ParseLength(parts[3]);
+    }
+    return;
+  }
+
   if (p == "position") {
     if (v == "static") {
       style.position = PositionType::Static;
