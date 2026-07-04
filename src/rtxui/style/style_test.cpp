@@ -580,6 +580,58 @@ TEST_CASE("CSS calc() parsing and resolution", "[style][calc]") {
   }
 }
 
+TEST_CASE("CSS min()/max()/clamp() lengths", "[style][calc][minmax]") {
+  auto width_of = [](std::string_view css_value) {
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"width", css_value});
+    return style.width;
+  };
+
+  SECTION("min caps a percentage") {
+    rtxui::Length w = width_of("min(100%, 6)");
+    CHECK(w.unit == rtxui::Unit::MinMax);
+    CHECK(w.Resolve(10) == 6);
+    CHECK(w.Resolve(4) == 4);
+  }
+
+  SECTION("max enforces a floor") {
+    rtxui::Length w = width_of("max(50%, 8)");
+    CHECK(w.Resolve(10) == 8);
+    CHECK(w.Resolve(30) == 15);
+  }
+
+  SECTION("clamp") {
+    rtxui::Length w = width_of("clamp(4, 50%, 12)");
+    CHECK(w.Resolve(4) == 4);    // preferred below the minimum
+    CHECK(w.Resolve(16) == 8);   // preferred inside the range
+    CHECK(w.Resolve(40) == 12);  // preferred above the maximum
+  }
+
+  SECTION("constant expressions fold to Cells") {
+    rtxui::Length w = width_of("min(3, 7)");
+    CHECK(w.unit == rtxui::Unit::Cells);
+    CHECK(w.Resolve(0) == 3);
+    CHECK(width_of("clamp(2, 10, 6)").Resolve(0) == 6);
+  }
+
+  SECTION("calc() inside an argument") {
+    CHECK(width_of("min(calc(100% - 2), 20)").Resolve(10) == 8);
+  }
+
+  SECTION("identical expressions share an interned id") {
+    rtxui::Length a = width_of("min(100%, 17)");
+    rtxui::Length b = width_of("min(100%, 17)");
+    CHECK(a == b);
+  }
+
+  SECTION("invalid expressions resolve to auto") {
+    CHECK(width_of("min(1)").unit == rtxui::Unit::Auto);
+    CHECK(width_of("clamp(1, 2)").unit == rtxui::Unit::Auto);
+    CHECK(width_of("min(abc, 2)").unit == rtxui::Unit::Auto);
+    CHECK(width_of("min(1, 2").unit == rtxui::Unit::Auto);
+  }
+}
+
 TEST_CASE("CSS !important parsing", "[css][important]") {
   auto stylesheet = css::Parse(R"(
     div {

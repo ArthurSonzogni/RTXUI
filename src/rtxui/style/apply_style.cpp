@@ -491,6 +491,75 @@ class CalcParser {
   size_t pos_ = 0;
 };
 
+// Parses "min(a, b)", "max(a, b)", or "clamp(lo, mid, hi)" where each
+// argument is a calc-style linear expression. Constant expressions fold to
+// plain Cells/Percent lengths; basis-dependent ones are interned.
+Length ParseMinMax(std::string_view value) {
+  MinMaxExpr::Op op;
+  size_t name_len;
+  if (value.starts_with("min(")) {
+    op = MinMaxExpr::Op::Min;
+    name_len = 4;
+  } else if (value.starts_with("max(")) {
+    op = MinMaxExpr::Op::Max;
+    name_len = 4;
+  } else {
+    op = MinMaxExpr::Op::Clamp;
+    name_len = 6;
+  }
+  value.remove_prefix(name_len);
+  if (value.empty() || value.back() != ')') {
+    return Length::Auto();
+  }
+  value.remove_suffix(1);
+
+  // Split arguments on top-level commas.
+  std::vector<std::string_view> args;
+  size_t start = 0;
+  int depth = 0;
+  for (size_t i = 0; i < value.size(); ++i) {
+    if (value[i] == '(') {
+      ++depth;
+    } else if (value[i] == ')') {
+      --depth;
+    } else if (value[i] == ',' && depth == 0) {
+      args.push_back(value.substr(start, i - start));
+      start = i + 1;
+    }
+  }
+  args.push_back(value.substr(start));
+
+  size_t expected = (op == MinMaxExpr::Op::Clamp) ? 3 : 2;
+  if (args.size() != expected) {
+    return Length::Auto();
+  }
+
+  CalcLinear parsed[3] = {};
+  for (size_t i = 0; i < expected; ++i) {
+    auto linear = CalcParser(args[i]).Parse();
+    if (!linear) {
+      return Length::Auto();
+    }
+    parsed[i] = *linear;
+  }
+
+  MinMaxExpr expr;
+  expr.op = op;
+  expr.a_cells = parsed[0].cells;
+  expr.a_percent = parsed[0].percent;
+  expr.b_cells = parsed[1].cells;
+  expr.b_percent = parsed[1].percent;
+  if (op == MinMaxExpr::Op::Clamp) {
+    expr.c_cells = parsed[2].cells;
+    expr.c_percent = parsed[2].percent;
+  }
+
+  if (!expr.DependsOnBasis()) {
+    return Length::Cells(static_cast<float>(expr.Evaluate(0)));
+  }
+  return Length::MakeMinMax(RegisterMinMaxExpr(expr));
+}
+
 Length ParseCalc(std::string_view value) {
   // `value` is the full "calc(...)" token; parse the inner expression.
   value.remove_prefix(5);
@@ -518,6 +587,10 @@ Length ParseLength(std::string_view value) {
   }
   if (value.starts_with("calc(")) {
     return ParseCalc(value);
+  }
+  if (value.starts_with("min(") || value.starts_with("max(") ||
+      value.starts_with("clamp(")) {
+    return ParseMinMax(value);
   }
   if (value.back() == '%') {
     value.remove_suffix(1);
