@@ -112,6 +112,10 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 | `flex-shrink` | [`<number>`](#value-types) |   | Factor determining how much item shrinks. |
 | `flex-basis` | [`<length>`](#value-types) | ❌ | Initial size of flex item before free space is distributed. |
 | `flex` | shorthand | ❌ | Shorthand for flex-grow, flex-shrink, and flex-basis. |
+| `justify-items` | `stretch \| start \| center \| end` | ❌ | Inline-axis alignment of items inside their grid cell. |
+| `justify-self` | `auto \| stretch \| start \| center \| end` | ❌ | Per-item override of `justify-items`. |
+| `place-items` | `<align-items> <justify-items>?` | ❌ | Shorthand for `align-items` + `justify-items`. |
+| `place-self` | `<align-self> <justify-self>?` | ❌ | Shorthand for `align-self` + `justify-self`. |
 | `align-items` | `stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of items along the cross axis. |
 | `align-self` | `auto \| stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of individual flex item along the cross axis. |
 | `align-content` | `stretch \| flex-start \| flex-end \| center \| space-between \| space-around \| space-evenly` | ❌ | Alignment of flex lines in multi-line flex container. |

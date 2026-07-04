@@ -1488,34 +1488,84 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  auto parse_align_items = [](std::string_view kw) -> std::optional<AlignItems> {
+    if (kw == "stretch") return AlignItems::Stretch;
+    if (kw == "flex-start" || kw == "start") return AlignItems::FlexStart;
+    if (kw == "flex-end" || kw == "end") return AlignItems::FlexEnd;
+    if (kw == "center") return AlignItems::Center;
+    if (kw == "baseline") return AlignItems::Baseline;
+    return std::nullopt;
+  };
+  auto parse_align_self = [](std::string_view kw) -> std::optional<AlignSelf> {
+    if (kw == "auto") return AlignSelf::Auto;
+    if (kw == "stretch") return AlignSelf::Stretch;
+    if (kw == "flex-start" || kw == "start") return AlignSelf::FlexStart;
+    if (kw == "flex-end" || kw == "end") return AlignSelf::FlexEnd;
+    if (kw == "center") return AlignSelf::Center;
+    if (kw == "baseline") return AlignSelf::Baseline;
+    return std::nullopt;
+  };
+
   if (p == "align-items") {
-    if (v == "stretch") {
-      style.align_items = AlignItems::Stretch;
-    } else if (v == "flex-start") {
-      style.align_items = AlignItems::FlexStart;
-    } else if (v == "flex-end") {
-      style.align_items = AlignItems::FlexEnd;
-    } else if (v == "center") {
-      style.align_items = AlignItems::Center;
-    } else if (v == "baseline") {
-      style.align_items = AlignItems::Baseline;
+    if (auto parsed = parse_align_items(v)) {
+      style.align_items = *parsed;
     }
     return;
   }
 
   if (p == "align-self") {
-    if (v == "auto") {
-      style.align_self = AlignSelf::Auto;
-    } else if (v == "stretch") {
-      style.align_self = AlignSelf::Stretch;
-    } else if (v == "flex-start") {
-      style.align_self = AlignSelf::FlexStart;
-    } else if (v == "flex-end") {
-      style.align_self = AlignSelf::FlexEnd;
-    } else if (v == "center") {
-      style.align_self = AlignSelf::Center;
-    } else if (v == "baseline") {
-      style.align_self = AlignSelf::Baseline;
+    if (auto parsed = parse_align_self(v)) {
+      style.align_self = *parsed;
+    }
+    return;
+  }
+
+  if (p == "justify-items") {
+    if (auto parsed = parse_align_items(v)) {
+      style.justify_items = *parsed;
+    }
+    return;
+  }
+
+  if (p == "justify-self") {
+    if (auto parsed = parse_align_self(v)) {
+      style.justify_self = *parsed;
+    }
+    return;
+  }
+
+  if (p == "place-items") {
+    auto parts = SplitWords(v);
+    if (parts.size() == 1) {
+      if (auto parsed = parse_align_items(parts[0])) {
+        style.align_items = *parsed;
+        style.justify_items = *parsed;
+      }
+    } else if (parts.size() >= 2) {
+      if (auto parsed = parse_align_items(parts[0])) {
+        style.align_items = *parsed;
+      }
+      if (auto parsed = parse_align_items(parts[1])) {
+        style.justify_items = *parsed;
+      }
+    }
+    return;
+  }
+
+  if (p == "place-self") {
+    auto parts = SplitWords(v);
+    if (parts.size() == 1) {
+      if (auto parsed = parse_align_self(parts[0])) {
+        style.align_self = *parsed;
+        style.justify_self = *parsed;
+      }
+    } else if (parts.size() >= 2) {
+      if (auto parsed = parse_align_self(parts[0])) {
+        style.align_self = *parsed;
+      }
+      if (auto parsed = parse_align_self(parts[1])) {
+        style.justify_self = *parsed;
+      }
     }
     return;
   }

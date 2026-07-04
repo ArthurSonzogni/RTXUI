@@ -2712,9 +2712,39 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     }
     final_h += (pc.r_span - 1) * row_gap_val;
 
+    // Grid cell alignment: justify-items/justify-self control the inline
+    // axis, align-items/align-self the block axis. Stretch (the default)
+    // fills the cell; other values size the item naturally and offset it.
+    auto effective_align = [](AlignSelf self, AlignItems items) {
+      switch (self) {
+        case AlignSelf::Auto:
+          return items;
+        case AlignSelf::Stretch:
+          return AlignItems::Stretch;
+        case AlignSelf::FlexStart:
+          return AlignItems::FlexStart;
+        case AlignSelf::FlexEnd:
+          return AlignItems::FlexEnd;
+        case AlignSelf::Center:
+          return AlignItems::Center;
+        case AlignSelf::Baseline:
+          return AlignItems::Baseline;
+      }
+      return items;
+    };
+    AlignItems justify =
+        effective_align(pc.box->style.justify_self, box->style.justify_items);
+    AlignItems align =
+        effective_align(pc.box->style.align_self, box->style.align_items);
+
+    bool stretch_x = (justify == AlignItems::Stretch) &&
+                     pc.box->style.width.unit == Unit::Auto;
+    bool stretch_y = (align == AlignItems::Stretch) &&
+                     pc.box->style.height.unit == Unit::Auto;
+
     LayoutConstraints final_c;
-    final_c.width = {final_w, MeasureMode::Exactly};
-    final_c.height = {final_h, MeasureMode::Exactly};
+    final_c.width = {final_w, stretch_x ? MeasureMode::Exactly : MeasureMode::AtMost};
+    final_c.height = {final_h, stretch_y ? MeasureMode::Exactly : MeasureMode::AtMost};
 
     int cx = col_offsets[c];
     int cy = row_offsets[r];
@@ -2723,6 +2753,22 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     final_context.is_measurement = context.is_measurement;
 
     auto final_frag = RunLayout({pc.box}, final_c, final_context);
+
+    if (!stretch_x && final_frag->width < final_w) {
+      if (justify == AlignItems::Center) {
+        cx += (final_w - final_frag->width) / 2;
+      } else if (justify == AlignItems::FlexEnd) {
+        cx += final_w - final_frag->width;
+      }
+    }
+    if (!stretch_y && final_frag->height < final_h) {
+      if (align == AlignItems::Center) {
+        cy += (final_h - final_frag->height) / 2;
+      } else if (align == AlignItems::FlexEnd) {
+        cy += final_h - final_frag->height;
+      }
+    }
+
     container_frag->children.push_back({final_frag, cx, cy});
   }
 
