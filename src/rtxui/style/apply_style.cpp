@@ -1378,6 +1378,25 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "text-transform") {
+    if (v == "none") {
+      style.text_transform = TextTransform::None;
+      return;
+    }
+    if (v == "uppercase") {
+      style.text_transform = TextTransform::Uppercase;
+      return;
+    }
+    if (v == "lowercase") {
+      style.text_transform = TextTransform::Lowercase;
+      return;
+    }
+    if (v == "capitalize") {
+      style.text_transform = TextTransform::Capitalize;
+      return;
+    }
+  }
+
   if (p == "white-space") {
     if (v == "normal") {
       style.white_space = WhiteSpace::Normal;

@@ -463,6 +463,38 @@ TEST_CASE("Text decoration parsing in ApplyStyle", "[style][text-decoration]") {
   }
 }
 
+TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("uppercase") {
+    rtxui::ApplyStyle(style, {"text-transform", "uppercase"});
+    REQUIRE(style.text_transform.has_value());
+    CHECK(style.text_transform.value() == rtxui::TextTransform::Uppercase);
+  }
+
+  SECTION("lowercase") {
+    rtxui::ApplyStyle(style, {"text-transform", "lowercase"});
+    REQUIRE(style.text_transform.has_value());
+    CHECK(style.text_transform.value() == rtxui::TextTransform::Lowercase);
+  }
+
+  SECTION("capitalize") {
+    rtxui::ApplyStyle(style, {"text-transform", "capitalize"});
+    REQUIRE(style.text_transform.has_value());
+    CHECK(style.text_transform.value() == rtxui::TextTransform::Capitalize);
+  }
+
+  SECTION("none") {
+    rtxui::ApplyStyle(style, {"text-transform", "none"});
+    REQUIRE(style.text_transform.has_value());
+    CHECK(style.text_transform.value() == rtxui::TextTransform::None);
+  }
+
+  SECTION("unset by default") {
+    CHECK_FALSE(style.text_transform.has_value());
+  }
+}
+
 TEST_CASE("Font style parsing in ApplyStyle", "[style][font-style]") {
   rtxui::ComputedStyle style;
 

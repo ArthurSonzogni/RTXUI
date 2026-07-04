@@ -1643,6 +1643,62 @@ TEST_CASE("Italic and Em Components cell.italic rendering",
   CHECK(rendered.find("\x1B[23m") != std::string::npos);
 }
 
+class TextTransformTestComponent
+    : public rtxui::Component<TextTransformTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<TextTransformTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div class="up">hello wörld</div>
+      <div class="down">QUIET Text</div>
+      <div class="cap">two words</div>
+      <div class="up"><span>inherited text</span></div>
+    </div>
+    <style>
+      .up { text-transform: uppercase; }
+      .down { text-transform: lowercase; }
+      .cap { text-transform: capitalize; }
+    </style>
+  )";
+};
+
+TEST_CASE("Text transform rendering", "[component][text-transform][paint]") {
+  auto container = rtxui::Ref<TextTransformTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string all_text;
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      all_text += texture[x, y].character;
+    }
+    all_text += "\n";
+  }
+
+  // Uppercase transforms ASCII letters; multi-byte UTF-8 passes through.
+  CHECK(all_text.find("HELLO WöRLD") != std::string::npos);
+  CHECK(all_text.find("quiet text") != std::string::npos);
+  CHECK(all_text.find("Two Words") != std::string::npos);
+  // The transform inherits into nested inline elements.
+  CHECK(all_text.find("INHERITED TEXT") != std::string::npos);
+}
+
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
   void InitReflection() override {
