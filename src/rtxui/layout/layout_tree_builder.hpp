@@ -15,6 +15,7 @@ class LayoutTreeBuilder {
       Element* dom_node,
       TextAlign parent_align = TextAlign::Left,
       WhiteSpace parent_ws = WhiteSpace::Normal,
+      TextTransform parent_text_transform = TextTransform::None,
       std::optional<Color> parent_fg = std::nullopt,
       std::optional<bool> parent_bold = std::nullopt,
       std::optional<bool> parent_italic = std::nullopt,

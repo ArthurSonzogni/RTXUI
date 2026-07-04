@@ -4,10 +4,49 @@
 
 namespace rtxui {
 
+namespace {
+// Applies CSS text-transform to text in place. Only ASCII letters are
+// transformed; multi-byte UTF-8 sequences (bytes >= 0x80) pass through
+// untouched, so the string stays valid UTF-8 and its length never changes.
+void ApplyTextTransform(std::string& text, TextTransform transform) {
+  switch (transform) {
+    case TextTransform::None:
+      return;
+    case TextTransform::Uppercase:
+      for (char& c : text) {
+        if (c >= 'a' && c <= 'z') {
+          c -= 'a' - 'A';
+        }
+      }
+      return;
+    case TextTransform::Lowercase:
+      for (char& c : text) {
+        if (c >= 'A' && c <= 'Z') {
+          c += 'a' - 'A';
+        }
+      }
+      return;
+    case TextTransform::Capitalize: {
+      bool at_word_start = true;
+      for (char& c : text) {
+        bool is_alpha = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        if (at_word_start && c >= 'a' && c <= 'z') {
+          c -= 'a' - 'A';
+        }
+        at_word_start = !is_alpha && !(c >= '0' && c <= '9') &&
+                        static_cast<unsigned char>(c) < 0x80;
+      }
+      return;
+    }
+  }
+}
+}  // namespace
+
 // Static Build method implementation
 std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
                                                     TextAlign parent_align,
                                                     WhiteSpace parent_ws,
+                                                    TextTransform parent_text_transform,
                                                     std::optional<Color> parent_fg,
                                                     std::optional<bool> parent_bold,
                                                     std::optional<bool> parent_italic,
@@ -30,6 +69,10 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
   WhiteSpace resolved_ws = dom_node->style.white_space.value_or(parent_ws);
   box->style.white_space = resolved_ws;
+
+  TextTransform resolved_text_transform =
+      dom_node->style.text_transform.value_or(parent_text_transform);
+  box->style.text_transform = resolved_text_transform;
 
   std::optional<Color> resolved_fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent_fg;
   box->style.foreground_color = resolved_fg;
@@ -58,6 +101,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     auto text_node = static_cast<TextElement*>(dom_node);
     box->is_text = true;
     box->text_data = text_node->text();
+    ApplyTextTransform(box->text_data, resolved_text_transform);
     box->algorithm = LayoutBox::Algorithm::Text;
 
     return box;
@@ -70,6 +114,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       auto slot_style = child_dom.get()->style;
       TextAlign slot_align = slot_style.text_align.value_or(resolved_align);
       WhiteSpace slot_ws = slot_style.white_space.value_or(resolved_ws);
+      TextTransform slot_text_transform =
+          slot_style.text_transform.value_or(resolved_text_transform);
       std::optional<Color> slot_fg = slot_style.foreground_color.has_value() ? slot_style.foreground_color : resolved_fg;
       std::optional<bool> slot_bold = slot_style.bold.has_value() ? slot_style.bold : resolved_bold;
       std::optional<bool> slot_italic = slot_style.italic.has_value() ? slot_style.italic : resolved_italic;
@@ -80,7 +126,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
       for (auto& grandchild_dom : child_dom.get()->children()) {
         auto grandchild_box =
-            Build(grandchild_dom.get(), slot_align, slot_ws, slot_fg, slot_bold, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink);
+            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -88,7 +134,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_fg, resolved_bold, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink);
+    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink);
     if (child_box) {
       raw_children.push_back(child_box);
     }

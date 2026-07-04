@@ -133,6 +133,13 @@ enum class WhiteSpace {
   Pre,
 };
 
+enum class TextTransform {
+  None,
+  Uppercase,
+  Lowercase,
+  Capitalize,
+};
+
 enum class PositionType {
   Static,
   Relative,
@@ -278,6 +285,7 @@ struct ComputedStyle {
   Color scrollbar_color_track = Color::RGBA(80, 80, 80, 120);
   std::optional<TextAlign> text_align;
   std::optional<WhiteSpace> white_space;
+  std::optional<TextTransform> text_transform;
   std::optional<ListStyleType> list_style_type;
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
@@ -386,6 +394,7 @@ struct ComputedStyle {
     scrollbar_color_track = other.scrollbar_color_track;
     text_align = other.text_align;
     white_space = other.white_space;
+    text_transform = other.text_transform;
     list_style_type = other.list_style_type;
     scroll_speed_x = other.scroll_speed_x;
     scroll_speed_y = other.scroll_speed_y;
