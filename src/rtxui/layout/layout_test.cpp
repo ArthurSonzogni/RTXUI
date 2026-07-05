@@ -2412,6 +2412,48 @@ TEST_CASE("Layout: calc() width", "[layout][calc]") {
                                                 }));
 }
 
+TEST_CASE("Layout: text-align justify stretches wrapped lines",
+          "[layout][text-align][justify]") {
+  struct JustifyTest : Component<JustifyTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return "<style>div { display: block; text-align: justify; }</style>"
+             "<div>aa bb cc dd ee</div>";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<JustifyTest>::New(), 10, 2);
+
+  // "aa bb cc" (8 wide) is justified to 10 by widening both gaps;
+  // the last line is never justified.
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "aa  bb  cc",
+                                     "dd ee     ",
+                                 }));
+}
+
+TEST_CASE("Layout: justify skips hard-break lines",
+          "[layout][text-align][justify]") {
+  struct JustifyBreakTest : Component<JustifyBreakTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return "<style>div { display: block; text-align: justify;"
+             " white-space: pre-wrap; }</style>"
+             "<div>a b\ncc dd ee ff</div>";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<JustifyBreakTest>::New(), 8, 3);
+
+  // "a b" ends with an explicit newline: not justified.
+  // "cc dd ee" wraps: justified to 8. "ff" is the last line.
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "a b     ",
+                                     "cc dd ee",
+                                     "ff      ",
+                                 }));
+}
+
 TEST_CASE("Layout: aspect-ratio derives height from width", "[layout][aspect-ratio]") {
   struct AspectRatioTest : Component<AspectRatioTest> {
     std::string_view Setup() {

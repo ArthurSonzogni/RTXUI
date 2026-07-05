@@ -1745,6 +1745,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.text_align = TextAlign::Center;
       return;
     }
+    if (v == "justify") {
+      style.text_align = TextAlign::Justify;
+      return;
+    }
   }
 
   if (p == "text-transform") {

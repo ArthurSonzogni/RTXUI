@@ -767,14 +767,18 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     size_t start_index;
     size_t end_index;
     int occupied_width;
+    // True when the line was ended by an explicit newline in the text.
+    // text-align: justify never stretches such lines (nor the last line).
+    bool hard_break = false;
   };
   std::vector<LineInfo> lines;
   size_t line_start_index = 0;
 
-  auto commit_line = [&]() {
+  auto commit_line = [&](bool hard_break = false) {
     max_line_width = std::max(max_line_width, cursor_x);
     lines.push_back(
-        {line_start_index, container_frag->children.size(), cursor_x});
+        {line_start_index, container_frag->children.size(), cursor_x,
+         hard_break});
     cursor_x = 0;
     cursor_y += line_height;
     line_height = 1;
@@ -857,7 +861,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           col_start = cur_col + g_width;
           cur_col = col_start;
           have_last_space = false;
-          commit_line();
+          commit_line(/*hard_break=*/true);
           i = byte_end;
           continue;
         }
@@ -916,7 +920,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         col_start = cur_col + g.width;
         cur_col = col_start;
         have_last_space = false;
-        commit_line();
+        commit_line(/*hard_break=*/true);
         continue;
       }
 
@@ -1150,6 +1154,86 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
             container_frag->children[i].x += shift;
           }
         }
+      }
+    }
+  }
+
+  // text-align: justify stretches the space runs of every soft-wrapped line
+  // (never the last line or lines ended by an explicit newline) so the line
+  // fills the content width. The spaces are widened in place: each affected
+  // text fragment gets an arena-allocated copy of its text with extra spaces
+  // inserted, so the styling of the spaces is preserved.
+  if (box->style.text_align == TextAlign::Justify && final_content_width > 0 &&
+      lines.size() > 1) {
+    for (size_t li = 0; li + 1 < lines.size(); ++li) {
+      const auto& line = lines[li];
+      if (line.hard_break) {
+        continue;
+      }
+      int extra = final_content_width - line.occupied_width;
+      if (extra <= 0) {
+        continue;
+      }
+
+      // Count expandable gaps: runs of spaces inside text fragments.
+      // (0x20 never occurs inside a multi-byte UTF-8 sequence.)
+      int gap_count = 0;
+      for (size_t i = line.start_index; i < line.end_index; ++i) {
+        const auto& frag = container_frag->children[i].fragment;
+        if (!frag->is_text) {
+          continue;
+        }
+        bool in_run = false;
+        for (char c : frag->text_content) {
+          if (c == ' ') {
+            gap_count += !in_run;
+            in_run = true;
+          } else {
+            in_run = false;
+          }
+        }
+      }
+      if (gap_count == 0) {
+        continue;
+      }
+
+      int gap_seen = 0;
+      int shift = 0;
+      for (size_t i = line.start_index; i < line.end_index; ++i) {
+        auto& link = container_frag->children[i];
+        link.x += shift;
+        auto& frag = link.fragment;
+        if (!frag->is_text ||
+            frag->text_content.find(' ') == std::string_view::npos) {
+          continue;
+        }
+
+        std::string_view text = frag->text_content;
+        // Worst case: every gap in this fragment takes the whole remainder.
+        char* buffer = static_cast<char*>(
+            ActiveLayoutArena().Allocate(text.size() + extra, 1));
+        size_t out = 0;
+        bool in_run = false;
+        int added = 0;
+        for (char c : text) {
+          buffer[out++] = c;
+          if (c == ' ') {
+            if (!in_run) {
+              in_run = true;
+              int share = extra / gap_count + (gap_seen < extra % gap_count);
+              ++gap_seen;
+              for (int s = 0; s < share; ++s) {
+                buffer[out++] = ' ';
+              }
+              added += share;
+            }
+          } else {
+            in_run = false;
+          }
+        }
+        frag->text_content = std::string_view(buffer, out);
+        frag->width += added;
+        shift += added;
       }
     }
   }
