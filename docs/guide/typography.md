@@ -34,6 +34,39 @@ The 16 standard CSS color keywords are supported (`black`, `white`, `red`,
 
 ---
 
+## Weight and Style
+
+Terminals render four text intensities and an italic face; RTXUI maps the
+standard CSS properties onto them:
+
+```css
+font-weight: bold;      /* bold — also: bolder, or numbers >= 600 */
+font-weight: lighter;   /* dim  — also: numbers <= 300 */
+font-weight: normal;
+font-style: italic;     /* also: oblique */
+```
+
+The semantic inline tags apply these for you: `<b>`/`<strong>` for bold,
+`<i>`/`<em>` for italic, `<u>` for underline, `<s>`/`<del>` for
+strikethrough.
+
+---
+
+## Case Transformation
+
+`text-transform` changes the rendered case without touching the underlying
+text. It is inherited.
+
+```css
+text-transform: uppercase;   /* MENU */
+text-transform: lowercase;   /* menu */
+text-transform: capitalize;  /* Menu Item */
+```
+
+ASCII letters are transformed; other characters pass through unchanged.
+
+---
+
 ## Text Alignment
 
 Use `text-align` to control horizontal text placement within a block element:
@@ -42,9 +75,12 @@ Use `text-align` to control horizontal text placement within a block element:
 text-align: left;    /* Default */
 text-align: center;
 text-align: right;
+text-align: justify;
 ```
 
-The alignment is inherited by child elements.
+`justify` widens the spaces of soft-wrapped lines so each fills the content
+width; the last line, and lines ended by an explicit newline, keep their
+natural width. The alignment is inherited by child elements.
 
 <ExampleTabs src="/wasm/rtxui_example_text_align.js">
 <template #source>
@@ -82,6 +118,31 @@ text-decoration: double-underline strikethrough;
 
 </template>
 </ExampleTabs>
+
+---
+
+## Whitespace and Wrapping
+
+`white-space` controls how newlines and wrapping behave inside an element:
+
+| Value | Newlines | Wrapping |
+|---|---|---|
+| `normal` (default) | Rendered as spaces | Wraps at spaces |
+| `nowrap` | Rendered as spaces | Never wraps |
+| `pre` | Hard line breaks | Never wraps |
+| `pre-wrap` | Hard line breaks | Wraps at spaces |
+| `pre-line` | Hard line breaks; space runs collapse to one | Wraps at spaces |
+
+The `<pre>` element sets `white-space: pre` for you; `<textarea>` uses
+`pre-wrap`. For text that must not wrap, pair `nowrap` with
+`text-overflow: ellipsis` to truncate with `…` instead of overflowing:
+
+```css
+.crumb {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+```
 
 ---
 

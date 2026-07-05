@@ -1,6 +1,9 @@
 # CSS Basics & Selectors
 
-RTXUI components package style templates alongside markup declarations, matching modern component design standards.
+Each component carries its styles next to its markup, and those styles apply
+only to that component's own template — class names cannot collide across
+components. This page covers where styles live, which selectors match, and
+how values work in a terminal.
 
 ## Declaring Styles
 
@@ -49,3 +52,49 @@ self {
 }
 ```
 This is essential for wrapping custom components in custom borders or configuring their layout growth constraints in flex containers.
+
+Attribute selectors are also supported: `input[value]` matches elements
+having the attribute, `button[disabled=true]` matches an exact value.
+
+## Inline Styles
+
+The `style` attribute applies declarations to a single element, taking
+precedence over rules from `<style>` blocks:
+
+```html
+<div style="padding: 1; color: red;">Highlighted</div>
+```
+
+## Values in a Terminal
+
+Lengths are measured in **character cells** — `padding: 1` is one cell, and
+because cells are roughly twice as tall as they are wide, one vertical cell
+looks about as large as two horizontal ones. Percentages resolve against the
+parent, and lengths accept arithmetic:
+
+```css
+.sidebar { width: 25%; }
+.content { width: calc(100% - 20); }
+.panel   { width: min(100%, 60); height: clamp(5, 50%, 20); }
+```
+
+## Custom Properties
+
+Variables declared with `--name` inherit down the tree and are read with
+`var(--name)` or `var(--name, fallback)` — the usual way to define a theme
+in one place:
+
+```css
+self { --accent: rgb(59, 130, 246); }
+.card { border-color: var(--accent); }
+.card-title { color: var(--accent); }
+```
+
+## `!important`
+
+Appending `!important` to a declaration makes it win over normal
+declarations from later rules and over inline styles, as in standard CSS.
+Reach for it rarely; more specific selectors usually express intent better.
+
+The [CSS property reference](/css_reference) lists every supported property
+with its accepted values.
