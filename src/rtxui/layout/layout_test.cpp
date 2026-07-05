@@ -2412,6 +2412,38 @@ TEST_CASE("Layout: calc() width", "[layout][calc]") {
                                                 }));
 }
 
+TEST_CASE("Layout: aspect-ratio derives height from width", "[layout][aspect-ratio]") {
+  struct AspectRatioTest : Component<AspectRatioTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          div { display: block; }
+          .tile {
+            width: 8;
+            aspect-ratio: 4 / 1;
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="tile"></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<AspectRatioTest>::New(), 10, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // Width 8 with ratio 4:1 -> height 2.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRRRR..",
+                                                    "RRRRRRRR..",
+                                                    "..........",
+                                                }));
+}
+
 TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
   struct MinWidthTest : Component<MinWidthTest> {
     std::string_view Setup() {

@@ -353,6 +353,8 @@ struct ComputedStyle {
   std::optional<TextAlign> text_align;
   std::optional<WhiteSpace> white_space;
   std::optional<TextTransform> text_transform;
+  // Width / height ratio in cells; 0 means auto (no preferred ratio).
+  float aspect_ratio = 0;
   std::optional<ListStyleType> list_style_type;
   int scroll_speed_x = 1;
   int scroll_speed_y = 1;
@@ -465,6 +467,7 @@ struct ComputedStyle {
     text_align = other.text_align;
     white_space = other.white_space;
     text_transform = other.text_transform;
+    aspect_ratio = other.aspect_ratio;
     list_style_type = other.list_style_type;
     scroll_speed_x = other.scroll_speed_x;
     scroll_speed_y = other.scroll_speed_y;

@@ -458,6 +458,9 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     parent_resolved_height = constraints.height.value;
   } else {
     int resolved = ResolveSize(box->style.height, constraints.height.value);
+    if (resolved == -1 && box->style.aspect_ratio > 0) {
+      resolved = static_cast<int>(width / box->style.aspect_ratio + 0.5f);
+    }
     if (resolved != -1) {
       parent_resolved_height = resolved;
     }
@@ -592,6 +595,13 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     fragment->height = constraints.height.value;
   } else {
     int resolved_h = ResolveSize(box->style.height, constraints.height.value);
+    if (resolved_h == -1 && box->style.aspect_ratio > 0) {
+      // aspect-ratio derives the auto height from the used width. Content
+      // taller than the ratio height overflows (pair with overflow if
+      // clipping is desired).
+      resolved_h =
+          static_cast<int>(fragment->width / box->style.aspect_ratio + 0.5f);
+    }
     fragment->height = (resolved_h != -1) ? resolved_h : cur_y;
   }
 
