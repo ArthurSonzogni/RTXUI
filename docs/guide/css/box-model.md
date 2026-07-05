@@ -35,6 +35,26 @@ Sizing attributes `width` and `height` accept two types of length units:
     .half-pane { width: 50%; } /* Fills half the parent width */
     ```
 
+Both forms combine in `calc()` and are bounded by `min()`, `max()`, and
+`clamp()` — see [values in a terminal](/guide/css/basics#values-in-a-terminal).
+`min-width`/`max-width` and `min-height`/`max-height` constrain the resolved
+size.
+
+## Aspect Ratio
+
+`aspect-ratio: <width> / <height>` derives a block element's automatic
+height from its used width. Ratios are measured in cells; since terminal
+cells are roughly twice as tall as they are wide, `2 / 1` produces a
+visually square box:
+
+```css
+.tile { width: 30%; aspect-ratio: 2 / 1; }
+```
+
+An explicit `height`, or `min-`/`max-height`, takes precedence. Content
+taller than the ratio overflows — combine with `overflow` when clipping is
+wanted.
+
 ## Live Demo - Borders
 
 <ExampleTabs src="/wasm/rtxui_example_borders.js">
