@@ -37,6 +37,7 @@ export default withMermaid({
           { text: 'Basics & Selectors', link: '/guide/css/basics' },
           { text: 'Box Model & Spacing', link: '/guide/css/box-model' },
           { text: 'Flexbox', link: '/guide/css/flexbox' },
+          { text: 'Grid', link: '/guide/css/grid' },
           { text: 'Positioning & Layers', link: '/guide/css/positioning' },
           { text: 'Typography', link: '/guide/typography' },
           { text: 'Scrolling', link: '/guide/scrolling' },
