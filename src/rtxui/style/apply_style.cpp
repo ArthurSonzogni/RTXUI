@@ -1311,6 +1311,41 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "aspect-ratio") {
+    if (v == "auto") {
+      style.aspect_ratio = 0;
+      return;
+    }
+    // "<width> / <height>" or a single ratio number. Ratios are in cells;
+    // terminal cells are roughly twice as tall as wide, so a visually square
+    // box is approximately "2 / 1".
+    auto parts = SplitWords(v);
+    float w = 0;
+    float h = 1;
+    if (parts.size() == 1) {
+      size_t slash = parts[0].find('/');
+      if (slash != std::string_view::npos) {
+        w = StoF(parts[0].substr(0, slash));
+        h = StoF(parts[0].substr(slash + 1));
+      } else {
+        w = StoF(parts[0]);
+      }
+    } else if (parts.size() == 3 && parts[1] == "/") {
+      w = StoF(parts[0]);
+      h = StoF(parts[2]);
+    } else if (parts.size() == 2) {
+      // "W/ H" or "W /H" split into two tokens.
+      std::string joined = std::string(parts[0]) + std::string(parts[1]);
+      size_t slash = joined.find('/');
+      if (slash != std::string::npos) {
+        w = StoF(std::string_view(joined).substr(0, slash));
+        h = StoF(std::string_view(joined).substr(slash + 1));
+      }
+    }
+    style.aspect_ratio = (w > 0 && h > 0) ? (w / h) : 0;
+    return;
+  }
+
   if (p == "inset") {
     auto parts = SplitWords(v);
     if (parts.size() == 1) {

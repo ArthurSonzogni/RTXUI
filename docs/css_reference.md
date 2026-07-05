@@ -175,6 +175,7 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 | `transition` | `property duration timing-function` | ❌ | Shorthand (e.g. `transition: background-color 0.2s linear`). |
 | `position` | `static \| relative \| absolute \| fixed` | ❌ | Selects positioning flow model. |
 | `inset` | 1-4 [`<length>`](#value-types) values | ❌ | Shorthand setting `top`/`right`/`bottom`/`left` (same expansion as `margin`). |
+| `aspect-ratio` | `<w> / <h> \| <number> \| auto` | ❌ | Derives a block element's auto height from its used width. Ratios are in cells — terminal cells are ~2:1 tall, so `2 / 1` looks square. Content taller than the ratio overflows. |
 | `top` | [`<length>`](#value-types) | ❌ | Offset relative to top boundary. |
 | `bottom` | [`<length>`](#value-types) | ❌ | Offset relative to bottom boundary. |
 | `left` | [`<length>`](#length) | ❌ | Offset relative to left boundary. |

@@ -495,6 +495,36 @@ TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
   }
 }
 
+TEST_CASE("CSS aspect-ratio parsing", "[style][aspect-ratio]") {
+  rtxui::ComputedStyle style;
+
+  SECTION("W / H with spaces") {
+    rtxui::ApplyStyle(style, {"aspect-ratio", "4 / 2"});
+    CHECK(style.aspect_ratio == 2.0f);
+  }
+
+  SECTION("W/H without spaces") {
+    rtxui::ApplyStyle(style, {"aspect-ratio", "16/8"});
+    CHECK(style.aspect_ratio == 2.0f);
+  }
+
+  SECTION("single number") {
+    rtxui::ApplyStyle(style, {"aspect-ratio", "3"});
+    CHECK(style.aspect_ratio == 3.0f);
+  }
+
+  SECTION("auto") {
+    rtxui::ApplyStyle(style, {"aspect-ratio", "2"});
+    rtxui::ApplyStyle(style, {"aspect-ratio", "auto"});
+    CHECK(style.aspect_ratio == 0.0f);
+  }
+
+  SECTION("invalid") {
+    rtxui::ApplyStyle(style, {"aspect-ratio", "4 / 0"});
+    CHECK(style.aspect_ratio == 0.0f);
+  }
+}
+
 TEST_CASE("CSS inset shorthand", "[style][inset]") {
   rtxui::ComputedStyle style;
 
