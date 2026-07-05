@@ -1,5 +1,7 @@
 #include "rtxui/internal/screen.hpp"
 
+#include "rtxui/base/task_runner.hpp"
+
 #include <memory>
 
 #include "catch2/catch_test_macros.hpp"
@@ -3786,6 +3788,56 @@ TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
   CHECK(sidebar->layout_width() == 48);
   CHECK(demo->layout_width() == 28);
   CHECK(box->style.border_style == BorderStyle::Double);
+}
+
+class PostedTaskComponent : public Component<PostedTaskComponent> {
+ public:
+  std::string text = "one";
+
+  void InitReflection() override {
+    Bind(text);
+    Import<div>();
+    Component<PostedTaskComponent>::InitReflection();
+  }
+  std::string_view view = R"html(<div>{text}</div>)html";
+};
+
+TEST_CASE("Screen.PostedTaskTriggersDigestAndRepaint", "[terminal][task]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<PostedTaskComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+  REQUIRE(device->GetOutput().find("one") != std::string::npos);
+  device->ClearOutput();
+
+  // A task posted to the UI loop (as a worker thread would do) mutates
+  // bound state. A single Step() must digest and repaint it without any
+  // input event.
+  task::TaskRunner::Current()->PostTask(
+      [&component]() { component->text = "twotwo"; });
+  screen.Step();
+
+  CHECK(component->text == "twotwo");
+
+  // The diff renderer interleaves escape sequences between cells; strip
+  // them before searching for the repainted text.
+  std::string visible;
+  const std::string& raw = device->GetOutput();
+  for (size_t i = 0; i < raw.size(); ++i) {
+    if (raw[i] == '\x1B') {
+      ++i;
+      if (i < raw.size() && raw[i] == '[') {
+        ++i;
+        while (i < raw.size() && !(raw[i] >= '@' && raw[i] <= '~')) {
+          ++i;
+        }
+      }
+      continue;
+    }
+    visible += raw[i];
+  }
+  INFO("raw size: " << raw.size() << " visible: [" << visible << "]");
+  CHECK(visible.find("twotwo") != std::string::npos);
 }
 
 }  // namespace
