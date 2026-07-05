@@ -10,7 +10,7 @@ Every user-defined component inherits from `rtxui::Component<Derived>`, where `D
 To define a component, create a struct/class inheriting from `rtxui::Component` and override the `Setup()` method to return your XML/HTML template:
 
 ```cpp
-#include <rtxui/component/component.hpp>
+#include <rtxui/rtxui.hpp>
 
 struct MyCard : public rtxui::Component<MyCard> {
   std::string_view Setup() override {
