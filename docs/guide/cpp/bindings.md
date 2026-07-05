@@ -46,10 +46,15 @@ struct TodoList : public rtxui::Component<TodoList> {
   std::string_view Setup() override {
     return R"html(
       <ul>
-        <li for="{todo in items}">{todo}</li>
+        <for each="{items}" as="todo">
+          <li>{todo}</li>
+        </for>
       </ul>
     )html";
   }
 };
 ```
-Notice that the first parameter of `BindCollection` is the string name referenced in the template iterator expression.
+The first parameter of `BindCollection` is the name the template's
+`each="{...}"` refers to. `Bind(items)` is equivalent when the template name
+should match the member name. Collections of structs additionally take a
+mapper — see [Loops & Lists](/guide/loops#collections-of-structs).
