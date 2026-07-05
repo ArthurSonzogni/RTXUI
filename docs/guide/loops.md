@@ -1,15 +1,15 @@
 # Loops & Lists
 
-To render lists of elements from a bound C++ container, RTXUI supports loops. You can loop over standard collections like `std::vector` using **block-level `<for>` tags** or the **inline `for` attribute**.
+The `<for>` tag renders its children once per item of a bound C++ container,
+such as a `std::vector`.
 
----
+## The `<for>` tag
 
-## 1. Block-Level Loops (`<for>`)
-
-To iterate over a bound collection and render a block of children, use the `<for>` tag. Define the target collection with `each` and specify the element variable name with `as`:
+Name the bound collection with `each`, and choose the loop variable's name
+with `as`:
 
 ```cpp
-// Bound in InitReflection
+// Bound in the constructor or InitReflection():
 std::vector<std::string> fruits = {"Apple", "Banana", "Cherry"};
 Bind(fruits);
 ```
@@ -17,72 +17,59 @@ Bind(fruits);
 ```html
 <ul>
   <for each="{fruits}" as="fruit">
-    <li>{fruit} (Index: {$index})</li>
+    <li>{fruit} (index: {$index})</li>
   </for>
 </ul>
 ```
-*   **`$index`**: A built-in iteration variable representing the current index (0-indexed).
 
----
+Inside the loop body:
 
-## 2. Inline Loops (`for` attribute)
+- `{fruit}` interpolates the current item, converted to a string.
+- `{$index}` interpolates the current zero-based index. It is most useful for
+  passing to a parameterized callback, e.g.
+  `<button onclick="RemoveItem({$index})">`
+  (see [Event Handlers](/guide/bindings)).
 
-To repeat a single element without wrapping it in a `<for>` block, use the `for` attribute directly on the tag.
+When the collection changes — items added, removed, or mutated — the loop's
+rendered children are reconciled on the next digest.
 
-### React-style inline loop
-```html
-<ul>
-  <li for="{fruit in fruits}">{fruit}</li>
-</ul>
-```
+## Collections of structs
 
-### Vue-style inline loop
-```html
-<ul>
-  <li :for="fruit in fruits">{fruit}</li>
-</ul>
-```
-
----
-
-## 3. Complex Objects & Mappers
-
-For containers holding complex structs or classes, you must supply a custom mapper function during `BindCollection()` to expose object properties to the template:
+A collection of plain values stringifies each item directly. For a collection
+of structs, provide a mapper that exposes named fields to the template. The
+mapper returns a `ManualStructVisitor` built from a field-name → value map:
 
 ```cpp
-struct TodoItem {
-  std::string title;
+struct Task {
+  std::string name;
   bool completed;
 };
 
-// Inside your Component class definition:
-std::vector<TodoItem> items;
+std::vector<Task> tasks;
 
-void InitReflection() override {
-  ComponentBase::InitReflection();
-  
-  // Provide mapper mapper function returning a field dictionary
-  BindCollection("items", &items, [](const TodoItem& item) {
-    return rtxui::FieldMap{
-      {"title", item.title},
-      {"status", item.completed ? "Done" : "Pending"}
-    };
-  });
-}
+// In the constructor or InitReflection():
+Bind(tasks, [](const Task& t) {
+  return std::make_shared<ManualStructVisitor>(
+      std::map<std::string, std::string, std::less<>>{
+          {"name", t.name},
+          {"status", t.completed ? "Done" : "Pending"}});
+});
 ```
 
-Template usage:
+The template reads the mapped fields with dot notation on the loop variable:
+
 ```html
 <ul>
-  <li for="{todo in items}">
-    <span>{todo.title}</span> - Status: {todo.status}
-  </li>
+  <for each="{tasks}" as="task">
+    <li>{task.name} — {task.status}</li>
+  </for>
 </ul>
 ```
 
----
+`BindCollection("name", &collection, mapper)` is equivalent when you want the
+template name to differ from the member name.
 
-## Simple Loop Example
+## Examples
 
 <ExampleTabs src="/wasm/rtxui_example_loop_simple.js">
 <template #source>
@@ -92,10 +79,6 @@ Template usage:
 </template>
 </ExampleTabs>
 
----
-
-## Advanced Loop Example
-
 <ExampleTabs src="/wasm/rtxui_example_loop.js">
 <template #source>
 
@@ -104,11 +87,7 @@ Template usage:
 </template>
 </ExampleTabs>
 
----
-
-## Interactive Demo
-
-Below is the interactive tab view demonstrating collection loops:
+A larger interactive list with add/remove:
 
 <ExampleTabs src="/wasm/rtxui_example_loop_complex.js">
 <template #source>

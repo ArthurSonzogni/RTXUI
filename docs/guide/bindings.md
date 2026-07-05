@@ -35,14 +35,14 @@ struct ClickApp : public rtxui::Component<ClickApp> {
 
 Once registered, you can wire callbacks to layout components in two styles:
 
-### React-style (`onclick`, `onchange`)
-Use the event attribute name with curly braces enclosing the callback name:
+### HTML-style (`onclick`, `onchange`)
+The attribute value is the name of a bound callback:
 ```html
-<button onclick="{Increment}">Increment</button>
+<button onclick="Increment">Increment</button>
 ```
 
-### Vue-style (`@click`, `@change`)
-Use the `@` shorthand prefix followed by the callback name:
+### `@` shorthand (`@click`, `@change`)
+The `@` prefix is equivalent:
 ```html
 <button @click="Increment">Increment</button>
 ```
@@ -74,13 +74,18 @@ Import("RemoveItem", [this](std::string index_str) {
 });
 ```
 
-To invoke a parameterized callback in a template, pass the values or loop variables in parentheses:
+To invoke a parameterized callback in a template, pass a value or an
+interpolated loop variable in parentheses. Inside a
+[`<for>` loop](/guide/loops), `{$index}` interpolates to the current item's
+index:
 ```html
 <ul>
-  <li for="{todo in todo_list}">
-    <span>{todo}</span>
-    <button @click="RemoveItem({$index})">Delete</button>
-  </li>
+  <for each="{todo_list}" as="todo">
+    <li>
+      <span>{todo}</span>
+      <button @click="RemoveItem({$index})">Delete</button>
+    </li>
+  </for>
 </ul>
 ```
 

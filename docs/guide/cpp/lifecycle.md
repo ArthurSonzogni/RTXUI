@@ -7,7 +7,7 @@ The runtime engine of an RTXUI application is managed by the `rtxui::Screen` cla
 To launch your application, mount your root component onto a `Screen` instance and invoke the `.Loop()` method. This initializes the terminal, configures mouse/keyboard event listeners, and blocks until an exit signal (e.g. `Ctrl-C` or closing input) is received:
 
 ```cpp
-#include <rtxui/terminal/screen.hpp>
+#include <rtxui/rtxui.hpp>
 
 int main() {
   auto root = std::make_shared<MyRootComponent>();

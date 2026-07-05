@@ -1,12 +1,27 @@
-# Cookbook & Recipes
+# Cookbook
 
-This cookbook contains practical design patterns and solutions for common user interface scenarios in RTXUI.
+Self-contained patterns for interface problems that come up in most terminal
+applications. Each recipe is a complete component you can paste into a project
+and adapt.
+
+The recipes rely on three RTXUI idioms worth internalizing:
+
+- **State lives in C++ members; the template reads it.** Templates interpolate
+  bound names — they do not evaluate expressions, contain statements, or
+  perform assignments.
+- **Logic is a computed method.** A `const` method returns a class string or a
+  boolean; the template binds it with `class="{method_name}"` or
+  `condition="{method_name}"`. Ternaries and comparisons live in C++.
+- **Event handlers name a bound method**, optionally with one argument:
+  `onclick="Select(home)"` invokes `void Select(std::string)` with `"home"`.
 
 ---
 
-## 1. Multi-Tab Navigation Interfaces
+## Tabbed navigation
 
-To build a multi-tab view, use a state variable to track the active tab index/name, render button selectors, and conditionally display content blocks using the `<if>` tag.
+Track the active tab in a state variable. Buttons call a single parameterized
+method; each button's class and each pane's visibility come from computed
+methods. The `<if>`/`<elif>`/`<else>` chain shows one pane at a time.
 
 ```cpp
 #include <rtxui/rtxui.hpp>
@@ -15,8 +30,23 @@ class TabbedApp : public rtxui::Component<TabbedApp> {
  public:
   std::string active_tab = "home";
 
+  void Select(std::string tab) { active_tab = tab; }
+
+  bool is_home() const { return active_tab == "home"; }
+  bool is_settings() const { return active_tab == "settings"; }
+
+  std::string home_class() const { return TabClass("home"); }
+  std::string settings_class() const { return TabClass("settings"); }
+  std::string about_class() const { return TabClass("about"); }
+
   void InitReflection() override {
     Bind(active_tab);
+    Bind(Select);
+    Bind(is_home);
+    Bind(is_settings);
+    Bind(home_class);
+    Bind(settings_class);
+    Bind(about_class);
     Import<rtxui::div>();
     Import<rtxui::button>();
     Component<TabbedApp>::InitReflection();
@@ -24,23 +54,21 @@ class TabbedApp : public rtxui::Component<TabbedApp> {
 
   std::string_view view = R"html(
     <div class="container">
-      <!-- Tab Header -->
       <div class="tabs-header">
-        <button class="tab-btn {active_tab == 'home' ? 'active' : ''}" onclick="{active_tab = 'home'}">Home</button>
-        <button class="tab-btn {active_tab == 'settings' ? 'active' : ''}" onclick="{active_tab = 'settings'}">Settings</button>
-        <button class="tab-btn {active_tab == 'about' ? 'active' : ''}" onclick="{active_tab = 'about'}">About</button>
+        <button class="{home_class}" onclick="Select(home)">Home</button>
+        <button class="{settings_class}" onclick="Select(settings)">Settings</button>
+        <button class="{about_class}" onclick="Select(about)">About</button>
       </div>
 
-      <!-- Tab Content Area -->
       <div class="tab-content">
-        <if condition="{active_tab == 'home'}">
-          <div>Welcome to the Home Screen!</div>
+        <if condition="{is_home}">
+          <div>Welcome to the home screen.</div>
         </if>
-        <elif condition="{active_tab == 'settings'}">
-          <div>Configure your RTXUI application settings here.</div>
+        <elif condition="{is_settings}">
+          <div>Settings go here.</div>
         </elif>
         <else>
-          <div>RTXUI - Reactive Terminal UI Engine v1.0</div>
+          <div>About this application.</div>
         </else>
       </div>
     </div>
@@ -53,56 +81,68 @@ class TabbedApp : public rtxui::Component<TabbedApp> {
       .tab-content { padding: 1; min-height: 5; }
     </style>
   )html";
+
+ private:
+  std::string TabClass(const std::string& tab) const {
+    return active_tab == tab ? "tab-btn active" : "tab-btn";
+  }
 };
 ```
 
+For most tabbed interfaces the built-in
+[`<tabs>`/`<tab-pane>` components](/html_reference) are enough; this recipe
+is the underlying pattern for when you need full control over the header.
+
 ---
 
-## 2. Asynchronous Background Tasks (Thread Safety)
+## Background work without freezing the UI
 
-Since RTXUI's UI logic is run on the main thread, performing heavy blocking operations (like downloading a file or doing a heavy database search) directly inside a callback will freeze the terminal render loop. 
-
-To run tasks in the background, spin up a `std::thread`, and then post the results back to the main thread using `task::TaskRunner::Current()`.
+Callbacks run on the main thread, so blocking inside one (network requests,
+large file reads) freezes rendering. Run the work on a `std::thread` and post
+the result back to the main loop with `task::TaskRunner`, which may be called
+from other threads. State mutations posted this way are picked up by the
+normal digest cycle.
 
 ```cpp
 #include <rtxui/rtxui.hpp>
-#include <thread>
+
 #include <chrono>
+#include <thread>
 
 class AsyncApp : public rtxui::Component<AsyncApp> {
  public:
   std::string status = "Idle";
   bool is_loading = false;
 
-  void InitReflection() override {
-    Bind(status);
-    Bind(is_loading);
-    Import<rtxui::div>();
-    Import<rtxui::button>();
-    Component<AsyncApp>::InitReflection();
-  }
-
   void StartBackgroundTask() {
-    if (is_loading) return;
-
+    if (is_loading) {
+      return;
+    }
     status = "Fetching data...";
     is_loading = true;
 
-    // Get the main loop task runner pointer
     auto* main_runner = task::TaskRunner::Current();
-
-    // Spawn a worker thread
     std::thread([this, main_runner]() {
-      // Simulate heavy asynchronous network or disk work
+      // Stand-in for real work: a network call, a database query, ...
       std::this_thread::sleep_for(std::chrono::seconds(2));
 
-      // Use the main thread runner to safely update state and redraw the UI
+      // Only the main thread may touch component state. PostTask schedules
+      // this lambda on the UI loop and wakes it.
       main_runner->PostTask([this]() {
-        this->status = "Successfully loaded 42 items!";
-        this->is_loading = false;
-        // The Screen loop detects state changes during Digest and automatically repaints!
+        status = "Loaded 42 items.";
+        is_loading = false;
       });
     }).detach();
+  }
+
+  void InitReflection() override {
+    Bind(status);
+    Bind(is_loading);
+    Bind(StartBackgroundTask);
+    Import<rtxui::div>();
+    Import<rtxui::button>();
+    Import<rtxui::strong>();
+    Component<AsyncApp>::InitReflection();
   }
 
   std::string_view view = R"html(
@@ -112,83 +152,86 @@ class AsyncApp : public rtxui::Component<AsyncApp> {
         <div class="loader">Processing...</div>
       </if>
       <else>
-        <button onclick="StartBackgroundTask">Trigger Load</button>
+        <button onclick="StartBackgroundTask">Trigger load</button>
       </else>
     </div>
 
     <style>
       .panel { padding: 1; border: solid; width: 40; }
       .loader { color: #f59e0b; }
-      button { background-color: #10b981; color: #000; padding: 0 1; cursor: pointer; }
     </style>
   )html";
 };
 ```
 
+A detached thread must not outlive the component it captures. In real
+applications, join or signal worker threads before the component is
+destroyed, or route results through state that survives the component.
+
 ---
 
-## 3. Creating Modal Dialogs & Overlays
+## Confirmation dialog
 
-To overlay alerts, popup windows, or dropdown context menus on top of existing components, use `position: absolute` or `fixed` combined with `z-index`.
+The built-in [`<dialog>`](/html_reference) element renders centered above the
+rest of the interface with a dimmed backdrop, and closes on
+<kbd>Escape</kbd>. Bind its `open` attribute to a boolean and flip that
+boolean from methods.
 
 ```cpp
 #include <rtxui/rtxui.hpp>
 
-class ModalApp : public rtxui::Component<ModalApp> {
+class ConfirmApp : public rtxui::Component<ConfirmApp> {
  public:
-  bool show_modal = false;
+  bool confirming = false;
+  std::string result = "No action taken.";
+
+  void Ask() { confirming = true; }
+  void Confirm() {
+    result = "Action confirmed.";
+    confirming = false;
+  }
+  void Cancel() {
+    result = "Action cancelled.";
+    confirming = false;
+  }
 
   void InitReflection() override {
-    Bind(show_modal);
+    Bind(confirming);
+    Bind(result);
+    Bind(Ask);
+    Bind(Confirm);
+    Bind(Cancel);
     Import<rtxui::div>();
     Import<rtxui::button>();
-    Component<ModalApp>::InitReflection();
+    Import<rtxui::dialog>();
+    Import<rtxui::p>();
+    Component<ConfirmApp>::InitReflection();
   }
 
   std::string_view view = R"html(
-    <div class="main-screen">
-      <div>Main application contents.</div>
-      <button onclick="{show_modal = true}">Open Dialog</button>
+    <div class="main">
+      <div>{result}</div>
+      <button onclick="Ask">Delete everything</button>
 
-      <!-- Absolute Modal Overlay -->
-      <if condition="{show_modal}">
-        <div class="modal-backdrop">
-          <div class="modal-card">
-            <h3>Confirm Action</h3>
-            <p>Are you sure you want to perform this action?</p>
-            <div class="modal-actions">
-              <button class="confirm-btn" onclick="{show_modal = false}">Confirm</button>
-              <button onclick="{show_modal = false}">Cancel</button>
-            </div>
-          </div>
+      <dialog open="{confirming}" title="Confirm">
+        <p>Are you sure? This cannot be undone.</p>
+        <div class="actions">
+          <button class="danger" onclick="Confirm">Confirm</button>
+          <button onclick="Cancel">Cancel</button>
         </div>
-      </if>
+      </dialog>
     </div>
 
     <style>
-      .main-screen { position: relative; width: 60; height: 10; padding: 1; border: double; }
-      
-      .modal-backdrop {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: rgba(15, 23, 42, 0.7);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 100;
-      }
-
-      .modal-card {
-        background-color: #1e293b;
-        border: solid;
-        border-color: #ef4444;
-        padding: 1;
-        width: 30;
-      }
-
-      .modal-actions { display: flex; flex-direction: row; justify-content: flex-end; margin-top: 1; }
-      .confirm-btn { margin-right: 1; background-color: #ef4444; color: #fff; }
+      .main { padding: 1; width: 60; height: 10; }
+      .actions { display: flex; flex-direction: row; justify-content: flex-end; gap: 1; margin-top: 1; }
+      .danger { background-color: #ef4444; color: #fff; }
     </style>
   )html";
 };
 ```
+
+To build an overlay by hand instead — a dropdown, a toast, a context menu —
+use `position: absolute` (or `fixed`) with `z-index` inside a
+`position: relative` ancestor, and gate it behind an `<if>`. The
+[positioning guide](/guide/css/positioning) covers the mechanics.

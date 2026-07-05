@@ -20,7 +20,7 @@ To project dynamic content into your text nodes, wrap the C++ variable or member
 All public member variables inside a component class must be registered in the reflection system inside the `InitReflection()` method:
 
 ```cpp
-#include <rtxui/component/component.hpp>
+#include <rtxui/rtxui.hpp>
 
 class ProfileApp : public rtxui::Component<ProfileApp> {
  public:
