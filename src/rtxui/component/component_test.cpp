@@ -1643,6 +1643,47 @@ TEST_CASE("Italic and Em Components cell.italic rendering",
   CHECK(rendered.find("\x1B[23m") != std::string::npos);
 }
 
+class PseudoVarTestComponent
+    : public rtxui::Component<PseudoVarTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<PseudoVarTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div id="box">Box</div>
+    <style>
+      #box {
+        --tone: rgb(1, 2, 3);
+        background-color: var(--tone);
+      }
+      #box:hover {
+        --tone: rgb(7, 8, 9);
+        background-color: var(--tone);
+      }
+    </style>
+  )";
+};
+
+TEST_CASE("Custom properties in pseudo-class rules",
+          "[component][css][var][pseudo]") {
+  auto container = rtxui::Ref<PseudoVarTestComponent>::New();
+  container->Mount();
+
+  auto* box = container->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+  CHECK(box->base_style.background_color.value_or(Color()) ==
+        Color::RGB(1, 2, 3));
+
+  box->set_hovered(true);
+  container->ResolveTargetStyles(rtxui::time::GetTimeMs() + 200.0);
+  CHECK(box->style.background_color.value_or(Color()) == Color::RGB(7, 8, 9));
+
+  box->set_hovered(false);
+  container->ResolveTargetStyles(rtxui::time::GetTimeMs() + 400.0);
+  CHECK(box->style.background_color.value_or(Color()) == Color::RGB(1, 2, 3));
+}
+
 class ImportantTestComponent
     : public rtxui::Component<ImportantTestComponent> {
  public:

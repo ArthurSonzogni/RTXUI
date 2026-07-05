@@ -955,6 +955,29 @@ void ResolveStylesRecursive(Element* element,
       }
     }
 
+    // In the pseudo pass, --* declarations from matching pseudo-class rules
+    // (e.g. ":hover { --glow: ...; }") overlay the element's resolved map
+    // for this element's own substitutions. The overlay is intentionally not
+    // stored: it must not leak into descendants or later frames.
+    css::CustomProperties pseudo_props;
+    bool has_pseudo_props = false;
+    if (check_pseudos) {
+      for (const auto* ruleset : matched) {
+        for (const auto& declaration : ruleset->declarations) {
+          if (declaration.property.starts_with("--")) {
+            if (!has_pseudo_props) {
+              pseudo_props = element->custom_properties;
+              has_pseudo_props = true;
+            }
+            pseudo_props[std::string(declaration.property)] =
+                std::string(declaration.value);
+          }
+        }
+      }
+    }
+    const css::CustomProperties& active_props =
+        has_pseudo_props ? pseudo_props : element->custom_properties;
+
     // Phase 2: apply regular declarations, expanding var() references.
     ComputedStyle& style_out =
         check_pseudos ? element->target_style : element->base_style;
@@ -964,7 +987,7 @@ void ResolveStylesRecursive(Element* element,
       }
       if (declaration.value.find("var(") != std::string_view::npos) {
         auto expanded =
-            css::SubstituteVars(declaration.value, element->custom_properties);
+            css::SubstituteVars(declaration.value, active_props);
         if (!expanded) {
           return;  // Undefined variable without fallback: ignore.
         }

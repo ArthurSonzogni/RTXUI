@@ -103,7 +103,7 @@ self {
 }
 ```
 
-A declaration referencing an undefined variable without a fallback is ignored. Fallbacks may nest further `var()` references. Custom properties declared inside pseudo-class rules (e.g. `:hover`) are not currently supported.
+A declaration referencing an undefined variable without a fallback is ignored. Fallbacks may nest further `var()` references. Custom properties declared inside pseudo-class rules (e.g. `#box:hover { --tone: ...; }`) apply to that element's own declarations; they do not propagate to descendants.
 | `text-overflow` | `clip \| ellipsis` | ❌ | Behavior when text overflows its block container. |
 | `visibility` | `visible \| hidden` | ❌ | Controls element visibility. |
 | `cursor` | `default \| pointer` | ❌ | Determines mouse pointer styling when hovering. |
