@@ -947,7 +947,14 @@ void ScreenImpl::Step() {
     }
   }
 
-  task_runner_.RunUntilNextDelayedTask();
+  bool executed_task = false;
+  task_runner_.RunUntilNextDelayedTask(&executed_task);
+  if (executed_task) {
+    // Tasks posted from other threads (or delayed tasks) commonly mutate
+    // component state; digest so those changes reach the terminal without
+    // waiting for the next input event.
+    DigestAndDraw();
+  }
 
   if (TickTransitions(time::GetTimeMs())) {
     Draw();

@@ -58,7 +58,7 @@ auto TaskRunner::SetWakeupCallback(WakeupCallback callback) -> void {
 }
 
 /// Runs the tasks in the queue.
-auto TaskRunner::RunUntilNextDelayedTask()
+auto TaskRunner::RunUntilNextDelayedTask(bool* executed_any)
     -> std::chrono::steady_clock::duration {
   // Install the current task runner, as the "current" running one.
   assert(!previous_task_runner_);
@@ -75,6 +75,9 @@ auto TaskRunner::RunUntilNextDelayedTask()
     }
 
     if (std::holds_alternative<Task>(maybe_task)) {
+      if (executed_any) {
+        *executed_any = true;
+      }
       std::get<Task>(maybe_task)();
       continue;
     }
