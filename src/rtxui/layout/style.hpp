@@ -177,6 +177,7 @@ enum class TextAlign {
   Left,
   Right,
   Center,
+  Justify,
 };
 
 enum class FlexWrap {
