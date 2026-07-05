@@ -3,26 +3,23 @@ layout: home
 
 hero:
   name: RTXUI
-  text: Reactive Terminal UI
-  tagline: Modern C++26 reactive rendering engine for terminals with HTML/CSS-like syntax.
+  text: Terminal interfaces, written like web pages
+  tagline: Describe your UI with HTML templates and CSS. Drive it with plain C++ state. RTXUI renders it in the terminal — or, via WebAssembly, in the browser.
   actions:
     - theme: brand
       text: Get Started
-      link: /guide/hello-world
+      link: /guide/getting-started
     - theme: alt
-      text: C++ API Reference
-      link: /cpp_api
+      text: Hello World
+      link: /guide/hello-world
 
 features:
-  - icon: 🚀
-    title: Modern Reactivity
-    details: Transparent state observation and computed values via compile-time reflection.
-  - icon: 🎨
-    title: CSS-like Styling
-    details: Native Box model, flex direction, background-color, borders, and scrolling.
-  - icon: 💻
-    title: WebAssembly Support
-    details: Easily compile applications to WebAssembly to run interactive terminal demos in the browser.
+  - title: A real layout engine
+    details: Block, inline, flexbox, and grid layout; borders, padding, scrolling, positioning, and transitions — computed in terminal cells by a browser-style pipeline.
+  - title: Plain C++ state
+    details: Component members are ordinary variables. Mutate them in an event handler; the engine detects the change and repaints only what differs. No wrapper types, no setters.
+  - title: Built for the terminal
+    details: Keyboard navigation (Tab, arrows, Home/End, Escape), mouse and wheel support, Unicode and CJK text, and hot reload of templates while the program runs.
 ---
 
 <div class="demo-section">
