@@ -1,96 +1,122 @@
 # C++ API Reference
 
-This reference catalog lists the public C++ classes, structures, and methods provided by the RTXUI runtime.
+The public C++ surface of RTXUI. Everything below is available through a
+single include:
 
----
+```cpp
+#include <rtxui/rtxui.hpp>
+```
 
-## 1. Components
+## `rtxui::Ref<T>`
 
-### `rtxui::Component<Derived>`
-The base class for defining reactive UI elements. Implemented using the Curiously Recurring Template Pattern (CRTP).
+Reference-counted handle used for components and DOM elements. Create
+instances with the static factory:
 
-| Method | Signature | Description |
-| :--- | :--- | :--- |
-| `Setup` | `virtual std::string_view Setup() = 0` | Returns the component's HTML/XML layout template. |
-| `InitReflection` | `virtual void InitReflection()` | Registers member fields for data-binding. Call the base implementation inside overrides. |
-| `Bind` | `void Bind(T& ref)` | Binds a variable (int, bool, string) for template value interpolation. |
-| `BindCollection` | `void BindCollection(std::string name, const Container* ptr)` | Binds a standard container (vector, list) for `<for>` loops. |
-| `BindCollection` | `void BindCollection(std::string name, const Container* ptr, MapperFn mapper)` | Binds a container with a custom object property mapping function. |
+| Member | Description |
+| :--- | :--- |
+| `Ref<T>::New(args...)` | Constructs a `T` and returns a `Ref<T>` owning it. |
+| `operator->`, `get()` | Access the underlying object. |
 
----
+## `rtxui::Component<Derived>`
 
-## 2. DOM Primitives
+Base class for user components (CRTP: the class passes itself as the
+template argument). A component provides its template either as a `view`
+data member (enables [hot reload](/guide/hot-reload)) or by overriding
+`Setup()`:
 
-### `rtxui::Element`
-Represents an active DOM node in the parsed XML tree.
+```cpp
+class MyCard : public rtxui::Component<MyCard> {
+ public:
+  std::string_view view = R"html(...)html";
+  // — or —
+  std::string_view Setup() override { return R"html(...)html"; }
+};
+```
 
-| Method / Property | Signature | Description |
-| :--- | :--- | :--- |
-| `Parent` | `Element* Parent()` | Returns a pointer to the parent DOM element. |
-| `ChildCount` | `size_t ChildCount() const` | Returns the count of immediate children. |
-| `ChildAt` | `Element* ChildAt(size_t index)` | Returns child node at the given index. |
-| `children` | `const std::vector<Ref<Element>>& children() const` | Returns references to all child nodes. |
-| `Attributes` | `const std::map<std::string, std::string>& Attributes() const` | Returns parsed XML attributes. |
-| `scroll_x` | `int scroll_x() const` | Gets current horizontal scroll offset. |
-| `set_scroll_x` | `void set_scroll_x(int x)` | Sets horizontal scroll position. |
-| `scroll_width` | `int scroll_width() const` | Gets total width of scrollable content. |
-| `scroll_y` | `int scroll_y() const` | Gets current vertical scroll offset. |
-| `set_scroll_y` | `void set_scroll_y(int y)` | Sets vertical scroll position. |
-| `scroll_height` | `int scroll_height() const` | Gets total height of scrollable content. |
-| `QuerySelector` | `Element* QuerySelector(std::string_view selector)` | Finds a node matching a selector (e.g. `.class` or `#id`). |
+### Registration
 
----
+Members become visible to the template after registration, done in the
+constructor or in `InitReflection()`:
 
-## 3. Screen Runtime
+| Call | Registers |
+| :--- | :--- |
+| `Bind(member)` | A data member as reactive state, a `const` method as a computed value, a non-`const` method as an event handler, or a container for `<for>` loops. |
+| `Bind(container, mapper)` | A container of structs; `mapper` returns a `ManualStructVisitor` exposing named fields. |
+| `BindCollection("name", &container[, mapper])` | Same as `Bind` for containers, under an explicit template name. |
+| `Import("name", lambda)` | A lambda or free function as an event handler; a `std::function<void(std::string)>` becomes a parameterized handler. |
+| `Import<ComponentType>()` | Another component type, usable as a tag in this template. |
 
-### `rtxui::Screen`
-Controls layout calculations, event dispatching, and rendering loops.
+### Behavior and structure
 
-| Method | Signature | Description |
-| :--- | :--- | :--- |
-| `Screen` | `Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> dev = nullptr)` | Mounts root component onto terminal screen renderer. |
-| `Loop` | `void Loop()` | Enters interactive blocking terminal input loop. |
-| `Draw` | `void Draw()` | Manually triggers layout updates and repaints (runs digest cycle). |
-| `HandleEvent` | `void HandleEvent(const Event& event)` | Feeds a keyboard/mouse event to active element tree. |
+| Method | Description |
+| :--- | :--- |
+| `void InitReflection()` *(virtual)* | Registration hook; call the base implementation when overriding. |
+| `bool OnEvent(Event)` *(virtual)* | Intercept input before built-in handling. Return `true` to consume the event. Events propagate to children via the base implementation. |
+| `bool Digest()` | Compares bound state against snapshots; re-renders on change. Called by the screen loop. |
+| `Element* Root() const` | The root of this component's element tree. |
+| `Ref<Element> Slot(std::string_view name)` | The slot element with the given name (`""` for the default slot). |
+| `void EnableHotReload()` | Watches the component's source file and re-parses `view` on change. See [Hot Reload](/guide/hot-reload). |
+| `CaptureMouse()` / `ReleaseMouse()` | Route all mouse events to this component (e.g. while dragging). |
 
----
+## `rtxui::Element`
 
-## 4. Events & Color Primitives
+A node in the live element tree.
 
-### `rtxui::Event`
-Represents standard keyboard, mouse click, and mouse scroll inputs.
+| Member | Description |
+| :--- | :--- |
+| `Element* Parent()` | Parent element, or `nullptr` at the root. |
+| `size_t ChildCount() const`, `Element* ChildAt(size_t)` | Indexed child access. |
+| `const std::vector<Ref<Element>>& children() const` | All children. |
+| `Element* QuerySelector(std::string_view)` | First descendant matching a selector (`#id`, `.class`, or tag). |
+| `const std::map<std::string, std::string>& Attributes() const` | Parsed attributes. |
+| `id`, `classes` | The element's id string and class list. |
+| `scroll_x()` / `scroll_y()` | Current scroll offsets in cells. |
+| `set_scroll_x(int, bool smooth = false)` / `set_scroll_y(...)` | Set scroll offsets, optionally animated. |
+| `scroll_width()` / `scroll_height()` | Total size of the scrollable content. |
+| `focused()`, `hovered()`, `active()` | Interaction state, as used by CSS pseudo-classes. |
 
-| Method | Signature | Description |
-| :--- | :--- | :--- |
-| `is_mouse` | `bool is_mouse() const` | Checks if event represents a mouse click/move/scroll. |
-| `ArrowLeft` | `static const Event& ArrowLeft()` | Static left arrow key event. |
-| `ArrowRight` | `static const Event& ArrowRight()` | Static right arrow key event. |
-| `ArrowUp` | `static const Event& ArrowUp()` | Static up arrow key event. |
-| `ArrowDown` | `static const Event& ArrowDown()` | Static down arrow key event. |
-| `PageUp` | `static const Event& PageUp()` | Static page up key event. |
-| `PageDown` | `static const Event& PageDown()` | Static page down key event. |
-| `Escape` | `static const Event& Escape()` | Static Escape key event. |
-| `CtrlC` | `static const Event& CtrlC()` | Static Ctrl-C key event. |
+## `rtxui::Screen`
 
-### `rtxui::Color`
-Represents terminal color definitions.
+Connects a component tree to the terminal and owns the event loop.
 
-| Method | Signature | Description |
-| :--- | :--- | :--- |
-| `RGB` | `static Color RGB(uint8_t r, uint8_t g, uint8_t b)` | Instantiates RGB color object. |
-| `RGBA` | `static Color RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)` | Instantiates RGBA color object with transparency. |
+| Method | Description |
+| :--- | :--- |
+| `Screen(Ref<ComponentBase>, std::shared_ptr<TerminalDevice> = nullptr)` | Mounts the component and draws the first frame. Pass a custom device for headless use (tests use `MockTerminalDevice`). |
+| `void Loop()` | Runs the event loop until the user quits. |
+| `void Step()` | Runs a single loop iteration: wait, dispatch, run posted tasks, digest, draw. |
+| `void Dispatch(Event)` | Injects one event as if it came from the terminal. |
+| `void Draw()` | Renders the current state unconditionally. |
+| `void SetSmoothScrollEnabled(bool)` | Toggles scroll animation (disable for deterministic tests). |
 
----
+## `rtxui::Event`
 
-## 5. Threading & Asynchronous Tasks
+A variant over keyboard, mouse, and resize inputs.
 
-RTXUI is built on a thread-safe task-posting model. You can schedule callbacks onto the UI thread from background worker threads, and the screen event loop will immediately wake up via internal non-blocking self-pipes to digest and redraw the changes.
+| Member | Description |
+| :--- | :--- |
+| `event.is<Event::Keyboard>()`, `event.is<Event::Mouse>()` | Kind tests. |
+| `event.get<T>()`, `event.get_if<T>()` | Typed access to the payload. |
+| `Event::ArrowUp()`, `Event::Return()`, `Event::Escape()`, ... | Named constants for common keys: arrows, `PageUp`/`PageDown`, `Home`/`End`, `Tab`/`TabReverse`, `Return`, `Escape`, `CtrlC`, function keys, and letters. Compare with `==`. |
 
-### `task::TaskRunner`
-Provides thread-safe task queues to coordinate main thread execution.
+`Event::Keyboard` exposes `codepoint`, `special` (the key enum), `modifier`,
+and `motion` (pressed/repeat/released). `Event::Mouse` exposes `button`,
+`motion`, and `x`/`y` cell coordinates.
 
-| Method | Signature | Description |
-| :--- | :--- | :--- |
-| `Current` | `static TaskRunner* Current()` | Returns the active TaskRunner instance for the calling thread. |
-| `PostTask` | `void PostTask(std::function<void()> task)` | Thread-safe call to schedule a callback to run on the UI thread's next loop tick. |
-| `PostDelayedTask` | `void PostDelayedTask(std::function<void()> task, std::chrono::steady_clock::duration d)` | Schedules a callback to execute after a specified time delay. |
+## `rtxui::Color`
+
+| Member | Description |
+| :--- | :--- |
+| `Color::RGB(r, g, b)` | Opaque color. |
+| `Color::RGBA(r, g, b, a)` | Color with alpha; alpha blends over the cell behind it. |
+
+## `task::TaskRunner`
+
+Thread-safe task posting onto the UI loop. This is the supported way to
+update the interface from other threads: the loop wakes immediately, runs
+the task, digests, and repaints.
+
+| Method | Description |
+| :--- | :--- |
+| `static TaskRunner* Current()` | The runner for the current thread. On the main thread this is the screen's runner; capture it there and share it with workers. |
+| `void PostTask(Task)` | Schedules a callback on the loop. Callable from any thread. |
+| `void PostDelayedTask(Task, std::chrono::steady_clock::duration)` | Schedules a callback after a delay. |
