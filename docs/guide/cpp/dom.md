@@ -4,11 +4,13 @@ Once templates are parsed, components build an underlying tree of `rtxui::Elemen
 
 ## Query Selector Queries
 
-You can query elements programmatically using CSS-style selector queries (e.g. `#id` or `.class`) by invoking the component's `QuerySelector` method:
+Elements are found with CSS-style selectors (`#id`, `.class`, or a tag
+name) using `QuerySelector` on any `Element`. A component reaches its own
+tree through `Root()`:
 
 ```cpp
 void ResetScrollbar() {
-  rtxui::Element* element = QuerySelector("#my-list");
+  rtxui::Element* element = Root()->QuerySelector("#my-list");
   if (element) {
     element->set_scroll_y(0);
   }

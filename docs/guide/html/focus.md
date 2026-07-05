@@ -1,6 +1,22 @@
-# Keyboard Focus & Traversal
+# Keyboard Focus & Navigation
 
-Interactive applications require keyboard focus routing so components can intercept keystrokes or mouse clicks.
+RTXUI applications are fully keyboard-operable out of the box. This page
+describes what users can do with the keyboard, and how to control which
+elements participate.
+
+## Built-in keys
+
+| Key | Behavior |
+| :--- | :--- |
+| <kbd>Tab</kbd> / <kbd>Shift-Tab</kbd> | Move focus through focusable elements in order. |
+| Arrow keys / <kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd> | Spatial navigation: focus the nearest focusable element in that direction; inside a scrollable, scroll. |
+| <kbd>Enter</kbd> / <kbd>Space</kbd> | Activate the focused element (equivalent to a click). |
+| <kbd>PageUp</kbd> / <kbd>PageDown</kbd> | Scroll the focused scrollable by a viewport. |
+| <kbd>Home</kbd> / <kbd>End</kbd> | Jump the focused scrollable to its start or end. |
+| <kbd>Escape</kbd> | Close the open `<dialog>`; otherwise exit the application. |
+
+Component `OnEvent` overrides see events before these built-in behaviors, so
+custom key handling always wins.
 
 ## Focus Control
 
