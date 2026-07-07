@@ -44,3 +44,38 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1
           UBSAN_OPTIONS: print_stacktrace=1
         run: ctest --test-dir build --output-on-failure
+
+  benchmarks:
+    name: Benchmarks (smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y g++-14 ninja-build
+
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DRTXUI_BUILD_TESTS=OFF
+          -DRTXUI_BUILD_BENCHMARKS=ON
+
+      - name: Build benchmarks
+        run: >
+          cmake --build build
+          --target rtxui_benchmark rtxui_layout_benchmark
+          rtxui_steady_state_benchmark rtxui_xml_benchmark
+
+      # Smoke-run each benchmark: catches compile/runtime breakage. We do NOT
+      # gate on timing — wall-clock numbers vary too much across shared CI
+      # runners to be a reliable regression signal (see benchmarks/README.md).
+      - name: Run benchmarks
+        run: |
+          for bench in rtxui_benchmark rtxui_layout_benchmark rtxui_steady_state_benchmark rtxui_xml_benchmark; do
+            echo "=== $bench ==="
+            ./build/$bench
+          done

@@ -1,0 +1,15 @@
+{
+  "frames": 50,
+  "avg_digest_ms": 0.034735,
+  "min_digest_ms": 0.024666,
+  "max_digest_ms": 0.05831,
+  "median_digest_ms": 0.0325665,
+  "avg_draw_ms": 1.78604,
+  "min_draw_ms": 1.38403,
+  "max_draw_ms": 2.53478,
+  "median_draw_ms": 1.72537,
+  "avg_frame_ms": 1.82078,
+  "min_frame_ms": 1.41003,
+  "max_frame_ms": 2.5868,
+  "median_frame_ms": 1.76139
+}
