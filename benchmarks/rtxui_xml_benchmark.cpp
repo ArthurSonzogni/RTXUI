@@ -1,8 +1,10 @@
+#include "benchmark_common.hpp"
 #include "rtxui/xml/xml.hpp"
-#include <chrono>
+
 #include <iostream>
-#include <numeric>
-#include <vector>
+
+using rtxui::bench::Clock;
+using rtxui::bench::MicrosBetween;
 
 const std::string_view kXmlTemplate = R"xml(
   <template>
@@ -78,14 +80,14 @@ int main() {
     }
   }
 
-  auto t0 = std::chrono::high_resolution_clock::now();
+  auto t0 = Clock::now();
   for (int i = 0; i < kIterations; ++i) {
     auto res = xml::Parse(kXmlTemplate);
     (void)res;
   }
-  auto t1 = std::chrono::high_resolution_clock::now();
+  auto t1 = Clock::now();
 
-  double duration_us = std::chrono::duration<double, std::micro>(t1 - t0).count();
+  double duration_us = MicrosBetween(t0, t1);
   std::cout << "{\n"
             << "  \"iterations\": " << kIterations << ",\n"
             << "  \"total_time_ms\": " << duration_us / 1000.0 << ",\n"

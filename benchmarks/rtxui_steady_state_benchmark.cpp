@@ -1,83 +1,20 @@
-#include "rtxui/rtxui.hpp"
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+//
+// Measures per-frame Digest + Draw cost for a large, unchanging tree: the
+// steady state where nothing mutates and the engine should do minimal work.
+#include "benchmark_common.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
-#include <chrono>
-#include <iostream>
-#include <numeric>
 #include <vector>
 
 using namespace rtxui;
-
-class StressLayoutComponent : public Component<StressLayoutComponent> {
- public:
-  std::vector<std::string> items;
-  std::string view;
-
-  StressLayoutComponent() {
-    items.reserve(500);
-    for (int i = 0; i < 500; ++i) {
-      items.push_back("Item description " + std::to_string(i) + " with some extra ASCII text filler!");
-    }
-
-    RegisterCollection("items", &items);
-
-    view = R"xml(
-      <template>
-        <style>
-          .root-container {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            height: 100%;
-            border: 1px solid #777;
-            padding: 2px;
-          }
-          .header {
-            display: block;
-            background-color: #222;
-            color: #fff;
-            padding: 1px;
-            font-weight: bold;
-            text-align: center;
-          }
-          .grid {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
-            padding: 1px;
-          }
-          .card {
-            display: block;
-            width: 30%;
-            border: 1px solid #444;
-            margin: 1px;
-            padding: 1px;
-          }
-          .card-title {
-            display: block;
-            color: #0ff;
-            font-weight: bold;
-          }
-          .card-body {
-            display: inline;
-            white-space: nowrap;
-          }
-        </style>
-        <div class="root-container">
-          <div class="header">STRESS LAYOUT STEADY STATE BENCHMARK</div>
-          <div class="grid">
-            <for each="{items}" as="item">
-              <div class="card">
-                <div class="card-title">Card #{$index}</div>
-                <span class="card-body">{item}</span>
-              </div>
-            </for>
-          </div>
-        </div>
-      </template>
-    )xml";
-  }
-};
+using rtxui::bench::Clock;
+using rtxui::bench::ComputeStats;
+using rtxui::bench::EmitFrameJson;
+using rtxui::bench::MicrosBetween;
+using rtxui::bench::StressLayoutComponent;
 
 int main() {
   auto app = Ref<StressLayoutComponent>::New();
@@ -101,47 +38,25 @@ int main() {
 
   // Measurement phase (steady state, no changes)
   for (int i = 0; i < kBenchmarkFrames; ++i) {
-    auto t0 = std::chrono::high_resolution_clock::now();
+    auto t0 = Clock::now();
     app->Digest();
-    auto t1 = std::chrono::high_resolution_clock::now();
+    auto t1 = Clock::now();
 
     screen.Draw();
-    auto t2 = std::chrono::high_resolution_clock::now();
+    auto t2 = Clock::now();
 
     device->ClearOutput();
 
-    double digest_us = std::chrono::duration<double, std::micro>(t1 - t0).count();
-    double draw_us = std::chrono::duration<double, std::micro>(t2 - t1).count();
+    double digest_us = MicrosBetween(t0, t1);
+    double draw_us = MicrosBetween(t1, t2);
 
     digest_times_us.push_back(digest_us);
     draw_times_us.push_back(draw_us);
     total_times_us.push_back(digest_us + draw_us);
   }
 
-  auto avg = [](const std::vector<double>& v) {
-    return std::accumulate(v.begin(), v.end(), 0.0) / v.size();
-  };
-
-  auto min_val = [](const std::vector<double>& v) {
-    return *std::min_element(v.begin(), v.end());
-  };
-
-  auto max_val = [](const std::vector<double>& v) {
-    return *std::max_element(v.begin(), v.end());
-  };
-
-  std::cout << "{\n"
-            << "  \"frames\": " << kBenchmarkFrames << ",\n"
-            << "  \"avg_digest_ms\": " << avg(digest_times_us) / 1000.0 << ",\n"
-            << "  \"min_digest_ms\": " << min_val(digest_times_us) / 1000.0 << ",\n"
-            << "  \"max_digest_ms\": " << max_val(digest_times_us) / 1000.0 << ",\n"
-            << "  \"avg_draw_ms\": " << avg(draw_times_us) / 1000.0 << ",\n"
-            << "  \"min_draw_ms\": " << min_val(draw_times_us) / 1000.0 << ",\n"
-            << "  \"max_draw_ms\": " << max_val(draw_times_us) / 1000.0 << ",\n"
-            << "  \"avg_frame_ms\": " << avg(total_times_us) / 1000.0 << ",\n"
-            << "  \"min_frame_ms\": " << min_val(total_times_us) / 1000.0 << ",\n"
-            << "  \"max_frame_ms\": " << max_val(total_times_us) / 1000.0 << "\n"
-            << "}\n";
+  EmitFrameJson(kBenchmarkFrames, ComputeStats(digest_times_us),
+                ComputeStats(draw_times_us), ComputeStats(total_times_us));
 
   return 0;
 }
