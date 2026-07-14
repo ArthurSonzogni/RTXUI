@@ -131,7 +131,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
                                                     std::optional<bool> parent_strikethrough,
                                                     std::optional<bool> parent_blink,
                                                     int parent_letter_spacing,
-                                                    int parent_line_height) {
+                                                    int parent_line_height,
+                                                    OverflowWrap parent_overflow_wrap) {
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
@@ -159,6 +160,10 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   int resolved_line_height =
       dom_node->style.line_height.value_or(parent_line_height);
   box->style.line_height = resolved_line_height;
+
+  OverflowWrap resolved_overflow_wrap =
+      dom_node->style.overflow_wrap.value_or(parent_overflow_wrap);
+  box->style.overflow_wrap = resolved_overflow_wrap;
 
   std::optional<Color> resolved_fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent_fg;
   box->style.foreground_color = resolved_fg;
@@ -230,10 +235,12 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           slot_style.letter_spacing.value_or(resolved_letter_spacing);
       int slot_line_height =
           slot_style.line_height.value_or(resolved_line_height);
+      OverflowWrap slot_overflow_wrap =
+          slot_style.overflow_wrap.value_or(resolved_overflow_wrap);
 
       for (auto& grandchild_dom : child_dom.get()->children()) {
         auto grandchild_box =
-            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_dim, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink, slot_letter_spacing, slot_line_height);
+            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_dim, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink, slot_letter_spacing, slot_line_height, slot_overflow_wrap);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -241,7 +248,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_dim, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink, resolved_letter_spacing, resolved_line_height);
+    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_dim, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink, resolved_letter_spacing, resolved_line_height, resolved_overflow_wrap);
     if (child_box) {
       raw_children.push_back(child_box);
     }
@@ -292,6 +299,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           anonymous_box->style.text_align = resolved_align;
           anonymous_box->style.white_space = resolved_ws;
           anonymous_box->style.line_height = resolved_line_height;
+          anonymous_box->style.overflow_wrap = resolved_overflow_wrap;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);

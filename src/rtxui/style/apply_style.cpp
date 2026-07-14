@@ -1865,6 +1865,18 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  // word-wrap is the legacy alias of overflow-wrap.
+  if (p == "overflow-wrap" || p == "word-wrap") {
+    if (v == "normal") {
+      style.overflow_wrap = OverflowWrap::Normal;
+      return;
+    }
+    if (v == "break-word" || v == "anywhere") {
+      style.overflow_wrap = OverflowWrap::Anywhere;
+      return;
+    }
+  }
+
   if (p == "white-space") {
     if (v == "normal") {
       style.white_space = WhiteSpace::Normal;

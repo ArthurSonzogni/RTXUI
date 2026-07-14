@@ -2031,6 +2031,63 @@ TEST_CASE("Line height rendering", "[component][line-height][paint]") {
   CHECK(second_row - first_row == 2);
 }
 
+class OverflowWrapTestComponent
+    : public rtxui::Component<OverflowWrapTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<OverflowWrapTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div class="break">abcdefghijklmno</div>
+      <div class="keep">abcdefghijklmno</div>
+    </div>
+    <style>
+      .break, .keep { width: 6; }
+      .keep { overflow-wrap: normal; }
+    </style>
+  )";
+};
+
+TEST_CASE("Overflow wrap rendering", "[component][overflow-wrap][paint]") {
+  auto container = rtxui::Ref<OverflowWrapTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto row_text = [&](int y) {
+    std::string row;
+    for (int x = 0; x < texture.width(); ++x) {
+      row += texture[x, y].character;
+    }
+    while (!row.empty() && row.back() == ' ') {
+      row.pop_back();
+    }
+    return row;
+  };
+
+  // Default: the word emergency-breaks at the container edge, and each
+  // line stays within the specified width (regression: the break used to
+  // land one column too late).
+  CHECK(row_text(0) == "abcdef");
+  CHECK(row_text(1) == "ghijkl");
+  CHECK(row_text(2) == "mno");
+  // overflow-wrap: normal keeps the word intact and lets it overflow.
+  CHECK(row_text(3) == "abcdefghijklmno");
+}
+
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
   void InitReflection() override {
