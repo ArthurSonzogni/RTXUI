@@ -331,6 +331,15 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_spatial_navigation example/spatial_navigation.cpp)
   target_link_libraries(rtxui_example_spatial_navigation PRIVATE rtxui)
+
+  add_executable(rtxui_example_cookbook_tabs example/cookbook_tabs.cpp)
+  target_link_libraries(rtxui_example_cookbook_tabs PRIVATE rtxui)
+
+  add_executable(rtxui_example_cookbook_async example/cookbook_async.cpp)
+  target_link_libraries(rtxui_example_cookbook_async PRIVATE rtxui)
+
+  add_executable(rtxui_example_cookbook_dialog example/cookbook_dialog.cpp)
+  target_link_libraries(rtxui_example_cookbook_dialog PRIVATE rtxui)
 endif()
 
 include(CMakePackageConfigHelpers)
