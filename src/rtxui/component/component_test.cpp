@@ -1973,6 +1973,64 @@ TEST_CASE("Letter spacing rendering", "[component][letter-spacing][paint]") {
                       "f") != std::string::npos);
 }
 
+class LineHeightTestComponent
+    : public rtxui::Component<LineHeightTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<LineHeightTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div class="lh">first
+second</div>
+    <style>
+      .lh { line-height: 2; white-space: pre; }
+    </style>
+  )";
+};
+
+TEST_CASE("Line height rendering", "[component][line-height][paint]") {
+  auto container = rtxui::Ref<LineHeightTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto row_text = [&](int y) {
+    std::string row;
+    for (int x = 0; x < texture.width(); ++x) {
+      row += texture[x, y].character;
+    }
+    return row;
+  };
+
+  int first_row = -1;
+  int second_row = -1;
+  for (int y = 0; y < texture.height(); ++y) {
+    if (row_text(y).find("first") != std::string::npos) {
+      first_row = y;
+    }
+    if (row_text(y).find("second") != std::string::npos) {
+      second_row = y;
+    }
+  }
+  REQUIRE(first_row != -1);
+  REQUIRE(second_row != -1);
+  // line-height: 2 makes each line box two rows tall: one blank row
+  // separates consecutive lines.
+  CHECK(second_row - first_row == 2);
+}
+
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
   void InitReflection() override {

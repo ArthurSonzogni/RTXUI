@@ -1859,6 +1859,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "line-height") {
+    // Whole rows only: the value is the minimum height of each line box.
+    style.line_height = (v == "normal") ? 1 : std::max(1, StoI(v));
+    return;
+  }
+
   if (p == "white-space") {
     if (v == "normal") {
       style.white_space = WhiteSpace::Normal;
