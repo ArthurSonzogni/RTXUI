@@ -2486,6 +2486,146 @@ TEST_CASE("Layout: aspect-ratio derives height from width", "[layout][aspect-rat
                                                 }));
 }
 
+TEST_CASE("Layout: aspect-ratio in flex context", "[layout][aspect-ratio][flex]") {
+  struct FlexAspectTest : Component<FlexAspectTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .row {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+          }
+          .tile {
+            width: 6;
+            aspect-ratio: 3 / 1;
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="row"><div class="tile"></div></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexAspectTest>::New(), 8, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // A flex item 6 wide with ratio 3:1 is 2 tall.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRR..",
+                                                    "RRRRRR..",
+                                                    "........",
+                                                }));
+}
+
+TEST_CASE("Layout: aspect-ratio on a flex container",
+          "[layout][aspect-ratio][flex]") {
+  struct FlexContainerAspectTest : Component<FlexContainerAspectTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .rowc {
+            display: flex;
+            width: 8;
+            aspect-ratio: 4 / 1;
+            background-color: rgb(0, 0, 255);
+          }
+        </style>
+        <div class="rowc"></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexContainerAspectTest>::New(), 10, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "BBBBBBBB..",
+                                                    "BBBBBBBB..",
+                                                    "..........",
+                                                }));
+}
+
+TEST_CASE("Layout: aspect-ratio in grid context", "[layout][aspect-ratio][grid]") {
+  struct GridAspectTest : Component<GridAspectTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .grid {
+            display: grid;
+            grid-template-columns: 8;
+          }
+          .tile {
+            width: 6;
+            aspect-ratio: 3 / 1;
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="grid"><div class="tile"></div></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridAspectTest>::New(), 10, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // The ratio height derives from the item's used width (6), not from its
+  // 8-wide track (regression: the row used to become 3 tall).
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRR....",
+                                                    "RRRRRR....",
+                                                    "..........",
+                                                }));
+}
+
+TEST_CASE("Layout: aspect-ratio on a grid container",
+          "[layout][aspect-ratio][grid]") {
+  struct GridContainerAspectTest : Component<GridContainerAspectTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .gridc {
+            display: grid;
+            grid-template-columns: 8;
+            aspect-ratio: 4 / 1;
+            background-color: rgb(0, 128, 0);
+          }
+          .item { background-color: rgb(255, 0, 0); }
+        </style>
+        <div class="gridc"><div class="item">A</div></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridContainerAspectTest>::New(), 10, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(0, 128, 0), 'G'},
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // The container is 8 wide, so ratio 4:1 gives it 2 rows; the single
+  // 1-row item leaves the second row showing the container background.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRRRR..",
+                                                    "GGGGGGGG..",
+                                                    "..........",
+                                                }));
+}
+
 TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
   struct MinWidthTest : Component<MinWidthTest> {
     std::string_view Setup() {
