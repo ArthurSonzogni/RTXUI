@@ -1300,6 +1300,12 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                       ? parent_h
                       : ResolveSize(box->style.height, parent_h);
 
+  // aspect-ratio derives the flex container's auto height from its
+  // resolved width; min/max constraints below still win.
+  if (my_height == -1 && my_width != -1 && box->style.aspect_ratio > 0) {
+    my_height = static_cast<int>(my_width / box->style.aspect_ratio + 0.5f);
+  }
+
   // Apply max-width constraint
   int max_width_resolved = ResolveSize(box->style.max_width, parent_w);
   if (max_width_resolved != -1 && my_width > max_width_resolved) {
@@ -2484,6 +2490,27 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   return fragment;
 }
 
+// Grid cell alignment: justify-items/justify-self control the inline axis,
+// align-items/align-self the block axis. Stretch (the default) fills the
+// cell; other values size the item naturally and offset it.
+static AlignItems EffectiveAlign(AlignSelf self, AlignItems items) {
+  switch (self) {
+    case AlignSelf::Auto:
+      return items;
+    case AlignSelf::Stretch:
+      return AlignItems::Stretch;
+    case AlignSelf::FlexStart:
+      return AlignItems::FlexStart;
+    case AlignSelf::FlexEnd:
+      return AlignItems::FlexEnd;
+    case AlignSelf::Center:
+      return AlignItems::Center;
+    case AlignSelf::Baseline:
+      return AlignItems::Baseline;
+  }
+  return items;
+}
+
 std::shared_ptr<PhysicalFragment> LayoutGrid(
     LayoutInputNode node,
     LayoutConstraints constraints,
@@ -2707,7 +2734,16 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
       child_width += col_widths[pc.col + i];
     }
     child_width += (pc.c_span - 1) * col_gap_val;
-    child_c.width = {child_width, MeasureMode::Exactly};
+    // Mirror the final pass: only a stretched item fills the cell exactly.
+    // A non-stretched one is sized by its own width, so measure it that way
+    // (an aspect-ratio height must derive from the used width, not the
+    // track width).
+    bool stretch_x = EffectiveAlign(pc.box->style.justify_self,
+                                    box->style.justify_items) ==
+                         AlignItems::Stretch &&
+                     pc.box->style.width.unit == Unit::Auto;
+    child_c.width = {child_width,
+                     stretch_x ? MeasureMode::Exactly : MeasureMode::AtMost};
 
     bool all_fixed = true;
     int fixed_height_sum = 0;
@@ -2846,30 +2882,10 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     }
     final_h += (pc.r_span - 1) * row_gap_val;
 
-    // Grid cell alignment: justify-items/justify-self control the inline
-    // axis, align-items/align-self the block axis. Stretch (the default)
-    // fills the cell; other values size the item naturally and offset it.
-    auto effective_align = [](AlignSelf self, AlignItems items) {
-      switch (self) {
-        case AlignSelf::Auto:
-          return items;
-        case AlignSelf::Stretch:
-          return AlignItems::Stretch;
-        case AlignSelf::FlexStart:
-          return AlignItems::FlexStart;
-        case AlignSelf::FlexEnd:
-          return AlignItems::FlexEnd;
-        case AlignSelf::Center:
-          return AlignItems::Center;
-        case AlignSelf::Baseline:
-          return AlignItems::Baseline;
-      }
-      return items;
-    };
     AlignItems justify =
-        effective_align(pc.box->style.justify_self, box->style.justify_items);
+        EffectiveAlign(pc.box->style.justify_self, box->style.justify_items);
     AlignItems align =
-        effective_align(pc.box->style.align_self, box->style.align_items);
+        EffectiveAlign(pc.box->style.align_self, box->style.align_items);
 
     bool stretch_x = (justify == AlignItems::Stretch) &&
                      pc.box->style.width.unit == Unit::Auto;
@@ -2923,6 +2939,12 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   container_frag->height = content_h + border_v + padding_v;
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
+  } else if (box->style.aspect_ratio > 0 &&
+             ResolveSize(box->style.height, constraints.height.value) == -1) {
+    // aspect-ratio derives the grid container's auto height from its used
+    // width; rows taller than the ratio height overflow.
+    container_frag->height = static_cast<int>(
+        container_frag->width / box->style.aspect_ratio + 0.5f);
   }
 
   if (box->dom_node && !context.is_measurement) {
