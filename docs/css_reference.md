@@ -55,6 +55,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 <CssProperty name="text-decoration" values="underline | double-underline | line-through | strikethrough | blink | none" inherited description="Text decorations (can specify space-separated lists)." />
 <CssProperty name="text-transform" values="uppercase | lowercase | capitalize | none" inherited description="Case transformation of text (ASCII letters; other characters pass through)." />
 <CssProperty name="letter-spacing" values="<integer> | normal" inherited description="Blank cells inserted between characters. Whole cells only; negative values clamp to 0. Spaced words never wrap mid-word." />
+<CssProperty name="line-height" values="<integer> | normal" inherited description="Minimum rows each line box occupies (whole rows; values below 1 clamp to 1). Tall inline content can still grow a line further." />
 <CssProperty name="text-overflow" values="clip | ellipsis" description="Behavior when text overflows its block container." />
 <CssProperty name="visibility" values="visible | hidden" description="Controls element visibility. Hidden elements keep their layout size." />
 <CssProperty name="cursor" values="default | pointer" description="Mouse pointer styling when hovering the element." />

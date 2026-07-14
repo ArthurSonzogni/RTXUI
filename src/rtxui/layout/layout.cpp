@@ -760,7 +760,10 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   int cursor_x = 0;
   int cursor_y = box->style.padding.top + box->style.border.top;
-  int line_height = 1;
+  // CSS line-height acts as a minimum: tall inline children still grow the
+  // line beyond it.
+  const int min_line_height = box->style.line_height.value_or(1);
+  int line_height = min_line_height;
   int max_line_width = 0;
 
   struct LineInfo {
@@ -781,7 +784,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
          hard_break});
     cursor_x = 0;
     cursor_y += line_height;
-    line_height = 1;
+    line_height = min_line_height;
     line_start_index = container_frag->children.size();
   };
 
