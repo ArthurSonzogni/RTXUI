@@ -660,6 +660,50 @@ TEST_CASE("CSS min()/max()/clamp() lengths", "[style][calc][minmax]") {
     CHECK(width_of("min(abc, 2)").unit == rtxui::Unit::Auto);
     CHECK(width_of("min(1, 2").unit == rtxui::Unit::Auto);
   }
+
+  SECTION("min() nested inside max()") {
+    rtxui::Length w = width_of("max(min(100%, 6), 4)");
+    CHECK(w.Resolve(10) == 6);
+    CHECK(w.Resolve(5) == 5);
+    CHECK(w.Resolve(2) == 4);
+  }
+
+  SECTION("min() nested inside calc()") {
+    rtxui::Length w = width_of("calc(min(100%, 6) + 2)");
+    CHECK(w.unit == rtxui::Unit::MinMax);
+    CHECK(w.Resolve(10) == 8);
+    CHECK(w.Resolve(3) == 5);
+  }
+
+  SECTION("nested min() scaled and divided inside calc()") {
+    CHECK(width_of("calc(2 * min(50%, 10))").Resolve(10) == 10);
+    CHECK(width_of("calc(2 * min(50%, 10))").Resolve(40) == 20);
+    CHECK(width_of("calc(min(100%, 8) / 2)").Resolve(10) == 4);
+    CHECK(width_of("calc(100% - min(50%, 4))").Resolve(20) == 16);
+  }
+
+  SECTION("constant nested expressions fold to Cells") {
+    rtxui::Length w = width_of("calc(min(3, 7) + 2)");
+    CHECK(w.unit == rtxui::Unit::Cells);
+    CHECK(w.Resolve(0) == 5);
+    CHECK(width_of("max(min(1, 2), 3)").unit == rtxui::Unit::Cells);
+  }
+
+  SECTION("clamp() with nested basis-dependent bounds") {
+    rtxui::Length w = width_of("clamp(4, 50%, min(100% - 2, 12))");
+    CHECK(w.Resolve(4) == 4);    // preferred below the minimum
+    CHECK(w.Resolve(16) == 8);   // preferred inside the range
+    CHECK(w.Resolve(40) == 12);  // hi bound capped at 12
+    CHECK(w.Resolve(22) == 11);  // hi bound is 100% - 2 = 20, preferred wins
+  }
+
+  SECTION("unsupported nested combinations resolve to auto") {
+    // At most one basis-dependent min/max term per linear expression.
+    CHECK(width_of("calc(min(100%, 5) + min(100%, 6))").unit ==
+          rtxui::Unit::Auto);
+    // A min/max term cannot be multiplied by a percentage.
+    CHECK(width_of("calc(min(100%, 5) * 50%)").unit == rtxui::Unit::Auto);
+  }
 }
 
 TEST_CASE("CSS !important parsing", "[css][important]") {

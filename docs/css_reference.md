@@ -76,7 +76,14 @@ Multiplication requires at least one plain-number operand and division a plain n
 .panel { height: clamp(5, 50%, 20); }
 ```
 
-`min()`/`max()` take exactly two arguments, and `min()`/`max()` cannot be nested inside each other or inside `calc()`.
+`min()`/`max()` take exactly two arguments. They may be nested inside each other and inside `calc()`, and scaled by plain numbers:
+
+```css
+.column { width: calc(min(100%, 60) - 4); }
+.thumb { height: max(min(50%, 10), 3); }
+```
+
+One limitation: a single `calc()`-style expression may contain at most one basis-dependent `min()`/`max()`/`clamp()` term (adding two of them together is treated as invalid).
 
 ### `!important`
 
