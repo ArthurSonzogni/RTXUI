@@ -7,7 +7,7 @@ updates automatically, and vice versa.
 
 ---
 
-## 1. Input (`<input>`)
+## Input (`<input>`)
 
 A single-line text entry field. Bind a `std::string` member to the `value`
 attribute for two-way updates. Supports arrow-key navigation (Ctrl to move by
@@ -40,7 +40,7 @@ class MyApp : public Component<MyApp> {
 
 ---
 
-## 2. Textarea (`<textarea>`)
+## Textarea (`<textarea>`)
 
 A multi-line scrollable text editor. Bind a `std::string` to `value`. Supports
 arrow-key navigation, Enter for newlines, Home/End for line boundaries, and
@@ -72,7 +72,7 @@ class MyApp : public Component<MyApp> {
 
 ---
 
-## 3. Checkbox (`<checkbox>`)
+## Checkbox (`<checkbox>`)
 
 A boolean toggle. Bind a `bool` member to the `checked` attribute. Click or
 press Space when focused to toggle. The element's text content becomes the
@@ -104,7 +104,7 @@ class MyApp : public Component<MyApp> {
 
 ---
 
-## 4. Slider (`<slider>`)
+## Slider (`<slider>`)
 
 A range slider control. Bind an `int` to `value` and configure the range with
 `min`, `max`, `step`, and `width` attributes. Drag the thumb with the mouse
@@ -145,7 +145,7 @@ class MyApp : public Component<MyApp> {
 
 ---
 
-## 5. Progress Bar (`<progress>`)
+## Progress Bar (`<progress>`)
 
 A non-interactive progress indicator. Bind an `int` to `value` and set the
 `max` attribute to define the range. Use `width` to control the bar length.
@@ -183,7 +183,7 @@ class MyApp : public Component<MyApp> {
 
 ---
 
-## 6. Select / Dropdown (`<select>`)
+## Select / Dropdown (`<select>`)
 
 A dropdown picker menu. Bind a `std::string` to `value`. Children are
 `<option>` elements whose `value` attributes determine the bound string.
@@ -224,7 +224,7 @@ class MyApp : public Component<MyApp> {
 
 ---
 
-## 7. Label (`<label>`)
+## Label (`<label>`)
 
 A helper element that delegates mouse click events and focus to an associated interactive element (like a checkbox or text input).
 It can associate either explicitly via the `for` attribute (matching the target element's `id`), or implicitly by nesting the target element inside the `<label>`.
