@@ -221,6 +221,14 @@ enum class TextTransform {
   Capitalize,
 };
 
+// How words longer than the line are handled. Unlike CSS, the default is
+// Anywhere (emergency-break at the container edge): overflowing the box is
+// rarely what a terminal UI wants.
+enum class OverflowWrap {
+  Anywhere,
+  Normal,
+};
+
 enum class PositionType {
   Static,
   Relative,
@@ -375,6 +383,7 @@ struct ComputedStyle {
   std::optional<int> letter_spacing;
   // Minimum rows each line box occupies; inherited. 1 means normal.
   std::optional<int> line_height;
+  std::optional<OverflowWrap> overflow_wrap;
   // Width / height ratio in cells; 0 means auto (no preferred ratio).
   float aspect_ratio = 0;
   std::optional<ListStyleType> list_style_type;
@@ -491,6 +500,7 @@ struct ComputedStyle {
     text_transform = other.text_transform;
     letter_spacing = other.letter_spacing;
     line_height = other.line_height;
+    overflow_wrap = other.overflow_wrap;
     aspect_ratio = other.aspect_ratio;
     list_style_type = other.list_style_type;
     scroll_speed_x = other.scroll_speed_x;
