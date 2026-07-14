@@ -30,8 +30,10 @@ def check_docs_contain_properties(props):
     doc_text = CSS_DOCS.read_text(encoding="utf-8").lower()
     missing = []
     for prop in props:
-        # Check if property is documented as a heading, code block, or bold term
-        if f"`{prop}`" not in doc_text:
+        # Documented either as inline code (`prop`) or as a property card
+        # (<CssProperty name="prop" ...).
+        if (f"`{prop}`" not in doc_text
+                and f'<cssproperty name="{prop}"' not in doc_text):
             missing.append(prop)
     return missing
 

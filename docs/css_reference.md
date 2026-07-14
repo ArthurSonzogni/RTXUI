@@ -6,60 +6,57 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 
 ## 1. Spacing, Sizing, and Box Model
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `margin` | [`<integer>`](#value-types) | ❌ | Shorthand margin width on all sides. |
-| `margin-top` | [`<integer>`](#value-types) | ❌ | Vertical space above the element. |
-| `margin-bottom` | [`<integer>`](#value-types) | ❌ | Vertical space below the element. |
-| `margin-left` | [`<integer>`](#value-types) | ❌ | Horizontal space to the left. |
-| `margin-right` | [`<integer>`](#value-types) | ❌ | Horizontal space to the right. |
-| `padding` | [`<integer>`](#value-types) | ❌ | Shorthand internal padding on all sides. |
-| `padding-top` | [`<integer>`](#value-types) | ❌ | Internal vertical padding at the top. |
-| `padding-bottom` | [`<integer>`](#value-types) | ❌ | Internal vertical padding at the bottom. |
-| `padding-left` | [`<integer>`](#value-types) | ❌ | Internal horizontal padding at the left. |
-| `padding-right` | [`<integer>`](#value-types) | ❌ | Internal horizontal padding at the right. |
-| `width` | [`<length>`](#value-types) |   | Constrains element layout width. |
-| `height` | [`<length>`](#value-types) |   | Constrains element layout height. |
-| `min-width` | [`<length>`](#value-types) | ❌ | Minimum layout width constraint. |
-| `max-width` | [`<length>`](#value-types) | ❌ | Maximum layout width constraint. |
-| `min-height` | [`<length>`](#value-types) | ❌ | Minimum layout height constraint. |
-| `max-height` | [`<length>`](#value-types) | ❌ | Maximum layout height constraint. |
+<CssProperty name="margin" values="<integer>" shorthand description="Shorthand margin width on all sides." />
+<CssProperty name="margin-top" values="<integer>" description="Vertical space above the element." />
+<CssProperty name="margin-bottom" values="<integer>" description="Vertical space below the element." />
+<CssProperty name="margin-left" values="<integer>" description="Horizontal space to the left." />
+<CssProperty name="margin-right" values="<integer>" description="Horizontal space to the right." />
+<CssProperty name="padding" values="<integer>" shorthand description="Shorthand internal padding on all sides." />
+<CssProperty name="padding-top" values="<integer>" description="Internal vertical padding at the top." />
+<CssProperty name="padding-bottom" values="<integer>" description="Internal vertical padding at the bottom." />
+<CssProperty name="padding-left" values="<integer>" description="Internal horizontal padding at the left." />
+<CssProperty name="padding-right" values="<integer>" description="Internal horizontal padding at the right." />
+<CssProperty name="width" values="<length>" animatable description="Constrains element layout width." />
+<CssProperty name="height" values="<length>" animatable description="Constrains element layout height." />
+<CssProperty name="min-width" values="<length>" description="Minimum layout width constraint." />
+<CssProperty name="max-width" values="<length>" description="Maximum layout width constraint." />
+<CssProperty name="min-height" values="<length>" description="Minimum layout height constraint." />
+<CssProperty name="max-height" values="<length>" description="Maximum layout height constraint." />
 
 ---
 
 ## 2. Borders and Frames
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `border` | [`<border-style>`](#border-styles) \| [`<integer>`](#value-types) | ❌ | Shorthand to configure borders on all sides. |
-| `border-width` | [`<integer>`](#value-types) | ❌ | Border frame cell thickness on all sides. |
-| `border-top` | [`<integer>`](#value-types) | ❌ | Top border frame thickness. |
-| `border-bottom` | [`<integer>`](#value-types) | ❌ | Bottom border frame thickness. |
-| `border-left` | [`<integer>`](#value-types) | ❌ | Left border frame thickness. |
-| `border-right` | [`<integer>`](#value-types) | ❌ | Right border frame thickness. |
-| `border-style` | [`<border-style>`](#border-styles) | ❌ | Character set mapping style of the frame. |
-| `border-color` | [`<color>`](#colors) |   | Color of all border frame lines. |
-| `border-color-top` | [`<color>`](#colors) |   | Color of the top border line. |
-| `border-color-bottom` | [`<color>`](#colors) |   | Color of the bottom border line. |
-| `border-color-left` | [`<color>`](#colors) |   | Color of the left border line. |
-| `border-color-right` | [`<color>`](#colors) |   | Color of the right border line. |
+<CssProperty name="border" values="<border-style> | <integer>" shorthand description="Shorthand to configure borders on all sides." />
+<CssProperty name="border-width" values="<integer>" description="Border frame cell thickness on all sides." />
+<CssProperty name="border-top" values="<integer>" description="Top border frame thickness." />
+<CssProperty name="border-bottom" values="<integer>" description="Bottom border frame thickness." />
+<CssProperty name="border-left" values="<integer>" description="Left border frame thickness." />
+<CssProperty name="border-right" values="<integer>" description="Right border frame thickness." />
+<CssProperty name="border-style" values="<border-style>" description="Character set mapping style of the frame." />
+<CssProperty name="border-color" values="<color>" animatable description="Color of all border frame lines." />
+<CssProperty name="border-color-top" values="<color>" animatable description="Color of the top border line." />
+<CssProperty name="border-color-bottom" values="<color>" animatable description="Color of the bottom border line." />
+<CssProperty name="border-color-left" values="<color>" animatable description="Color of the left border line." />
+<CssProperty name="border-color-right" values="<color>" animatable description="Color of the right border line." />
 
 ---
 
 ## 3. Typography and Coloring
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `color` | [`<color>`](#colors) |   | Foreground text character color. |
-| `foreground-color` | [`<color>`](#colors) |   | Alias for `color`. |
-| `background-color` | [`<color>`](#colors) |   | Background block container cell color. |
-| `opacity` | [`<number>`](#value-types) |   | Transparency value (`0.0` for transparent to `1.0` for opaque). |
-| `text-align` | `left \| right \| center \| justify` | ❌ | Horizontal alignment of inline text flows. `justify` widens space runs on soft-wrapped lines (never the last line or lines ended by an explicit newline). |
-| `white-space` | `normal \| nowrap \| pre \| pre-wrap \| pre-line \| break-spaces` | ❌ | `nowrap`/`pre` disable wrapping; `pre-line` collapses space runs while honoring newlines. Note: this engine preserves interior whitespace and newlines in all modes, so `normal`, `pre-wrap`, and `break-spaces` behave alike. |
-| `font-weight` | `bold \| bolder \| lighter \| normal \| <number>` | ❌ | Text weight. `bold`/`bolder`/`>=600` render bold; `lighter`/`<=300` render with the terminal's dim attribute. |
-| `font-style` | `italic \| oblique \| normal` | ❌ | Applies italic styling to text (rendered with the terminal's italic attribute). |
-| `text-decoration` | `underline \| double-underline \| line-through \| strikethrough \| blink \| none` | ❌ | Text decorations (can specify space-separated lists). |
-| `text-transform` | `uppercase \| lowercase \| capitalize \| none` | ❌ | Case transformation of text (ASCII letters; other characters pass through). Inherited. |
+<CssProperty name="color" values="<color>" animatable inherited description="Foreground text character color." />
+<CssProperty name="foreground-color" values="<color>" animatable inherited description="Alias for color." />
+<CssProperty name="background-color" values="<color>" animatable description="Background block container cell color." />
+<CssProperty name="opacity" values="<number>" animatable description="Transparency value (0.0 for transparent to 1.0 for opaque)." />
+<CssProperty name="text-align" values="left | right | center | justify" inherited description="Horizontal alignment of inline text flows. justify widens space runs on soft-wrapped lines (never the last line or lines ended by an explicit newline)." />
+<CssProperty name="white-space" values="normal | nowrap | pre | pre-wrap | pre-line | break-spaces" inherited description="nowrap/pre disable wrapping; pre-line collapses space runs while honoring newlines. Note: this engine preserves interior whitespace and newlines in all modes, so normal, pre-wrap, and break-spaces behave alike." />
+<CssProperty name="font-weight" values="bold | bolder | lighter | normal | <number>" inherited description="Text weight. bold/bolder/>=600 render bold; lighter/<=300 render with the terminal's dim attribute." />
+<CssProperty name="font-style" values="italic | oblique | normal" inherited description="Applies italic styling to text (rendered with the terminal's italic attribute)." />
+<CssProperty name="text-decoration" values="underline | double-underline | line-through | strikethrough | blink | none" inherited description="Text decorations (can specify space-separated lists)." />
+<CssProperty name="text-transform" values="uppercase | lowercase | capitalize | none" inherited description="Case transformation of text (ASCII letters; other characters pass through)." />
+<CssProperty name="text-overflow" values="clip | ellipsis" description="Behavior when text overflows its block container." />
+<CssProperty name="visibility" values="visible | hidden" description="Controls element visibility. Hidden elements keep their layout size." />
+<CssProperty name="cursor" values="default | pointer" description="Mouse pointer styling when hovering the element." />
 
 ### `calc()`
 
@@ -104,92 +101,79 @@ self {
 ```
 
 A declaration referencing an undefined variable without a fallback is ignored. Fallbacks may nest further `var()` references. Custom properties declared inside pseudo-class rules (e.g. `#box:hover { --tone: ...; }`) apply to that element's own declarations; they do not propagate to descendants.
-| `text-overflow` | `clip \| ellipsis` | ❌ | Behavior when text overflows its block container. |
-| `visibility` | `visible \| hidden` | ❌ | Controls element visibility. |
-| `cursor` | `default \| pointer` | ❌ | Determines mouse pointer styling when hovering. |
 
 ---
 
 ## 4. Flexbox Layout
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `display` | `none \| block \| inline \| flex \| grid` | ❌ | Enables the flex/grid layout engine or hides elements. |
-| `flex-direction` | `row \| column` | ❌ | Main formatting axis direction. |
-| `flex-wrap` | `nowrap \| wrap \| wrap-reverse` | ❌ | Controls wrapping behavior of flex items. |
-| `flex-grow` | [`<number>`](#value-types) |   | Portion of free space item claims along main axis. |
-| `flex-shrink` | [`<number>`](#value-types) |   | Factor determining how much item shrinks. |
-| `flex-basis` | [`<length>`](#value-types) | ❌ | Initial size of flex item before free space is distributed. |
-| `flex` | shorthand | ❌ | Shorthand for flex-grow, flex-shrink, and flex-basis. |
-| `justify-items` | `stretch \| start \| center \| end` | ❌ | Inline-axis alignment of items inside their grid cell. |
-| `justify-self` | `auto \| stretch \| start \| center \| end` | ❌ | Per-item override of `justify-items`. |
-| `place-items` | `<align-items> <justify-items>?` | ❌ | Shorthand for `align-items` + `justify-items`. |
-| `place-self` | `<align-self> <justify-self>?` | ❌ | Shorthand for `align-self` + `justify-self`. |
-| `align-items` | `stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of items along the cross axis. |
-| `align-self` | `auto \| stretch \| flex-start \| flex-end \| center \| baseline` | ❌ | Alignment of individual flex item along the cross axis. |
-| `align-content` | `stretch \| flex-start \| flex-end \| center \| space-between \| space-around \| space-evenly` | ❌ | Alignment of flex lines in multi-line flex container. |
-| `justify-content` | `flex-start \| flex-end \| center \| space-between \| space-around \| space-evenly` | ❌ | Alignment of items along the main axis. |
-| `gap` | [`<length>`](#value-types) | ❌ | Spacing between flex items. |
-| `row-gap` | [`<length>`](#value-types) | ❌ | Spacing between flex rows/lines. |
-| `column-gap` | [`<length>`](#value-types) | ❌ | Spacing between flex columns/items. |
+<CssProperty name="display" values="none | block | inline | flex | grid" description="Enables the flex/grid layout engine or hides elements." />
+<CssProperty name="flex-direction" values="row | column" description="Main formatting axis direction." />
+<CssProperty name="flex-wrap" values="nowrap | wrap | wrap-reverse" description="Controls wrapping behavior of flex items." />
+<CssProperty name="flex-grow" values="<number>" animatable description="Portion of free space item claims along main axis." />
+<CssProperty name="flex-shrink" values="<number>" animatable description="Factor determining how much item shrinks." />
+<CssProperty name="flex-basis" values="<length>" description="Initial size of flex item before free space is distributed." />
+<CssProperty name="flex" values="shorthand" shorthand description="Shorthand for flex-grow, flex-shrink, and flex-basis." />
+<CssProperty name="justify-items" values="stretch | start | center | end" description="Inline-axis alignment of items inside their grid cell." />
+<CssProperty name="justify-self" values="auto | stretch | start | center | end" description="Per-item override of justify-items." />
+<CssProperty name="place-items" values="<align-items> <justify-items>?" shorthand description="Shorthand for align-items + justify-items." />
+<CssProperty name="place-self" values="<align-self> <justify-self>?" shorthand description="Shorthand for align-self + justify-self." />
+<CssProperty name="align-items" values="stretch | flex-start | flex-end | center | baseline" description="Alignment of items along the cross axis." />
+<CssProperty name="align-self" values="auto | stretch | flex-start | flex-end | center | baseline" description="Alignment of individual flex item along the cross axis." />
+<CssProperty name="align-content" values="stretch | flex-start | flex-end | center | space-between | space-around | space-evenly" description="Alignment of flex lines in multi-line flex container." />
+<CssProperty name="justify-content" values="flex-start | flex-end | center | space-between | space-around | space-evenly" description="Alignment of items along the main axis." />
+<CssProperty name="gap" values="<length>" shorthand description="Spacing between flex items." />
+<CssProperty name="row-gap" values="<length>" description="Spacing between flex rows/lines." />
+<CssProperty name="column-gap" values="<length>" description="Spacing between flex columns/items." />
 
 ---
 
 ## 5. Grid Layout
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `grid-template-columns` | list of [`<length>`](#value-types) | ❌ | Defines the column tracks of the grid. Supports `repeat(count, track_size)`. |
-| `grid-template-rows` | list of [`<length>`](#value-types) | ❌ | Defines the row tracks of the grid. Supports `repeat(count, track_size)`. |
-| `grid-template` | shorthand | ❌ | Shorthand for grid-template-rows and grid-template-columns (separated by `/`). |
-| `grid-column` | `span <integer> \| <integer>` | ❌ | Sets the column span of the grid item. |
-| `grid-column-end` | `span <integer> \| <integer>` | ❌ | Alias for `grid-column`. |
-| `grid-row` | `span <integer> \| <integer>` | ❌ | Sets the row span of the grid item. |
-| `grid-row-end` | `span <integer> \| <integer>` | ❌ | Alias for `grid-row`. |
-| `grid-gap` | [`<length>`](#value-types) | ❌ | Alias for `gap`. |
-| `grid-row-gap` | [`<length>`](#value-types) | ❌ | Alias for `row-gap`. |
-| `grid-column-gap` | [`<length>`](#value-types) | ❌ | Alias for `column-gap`. |
+<CssProperty name="grid-template-columns" values="list of <length>" description="Defines the column tracks of the grid. Supports repeat(count, track_size)." />
+<CssProperty name="grid-template-rows" values="list of <length>" description="Defines the row tracks of the grid. Supports repeat(count, track_size)." />
+<CssProperty name="grid-template" values="shorthand" shorthand description="Shorthand for grid-template-rows and grid-template-columns (separated by /)." />
+<CssProperty name="grid-column" values="span <integer> | <integer>" description="Sets the column span of the grid item." />
+<CssProperty name="grid-column-end" values="span <integer> | <integer>" description="Alias for grid-column." />
+<CssProperty name="grid-row" values="span <integer> | <integer>" description="Sets the row span of the grid item." />
+<CssProperty name="grid-row-end" values="span <integer> | <integer>" description="Alias for grid-row." />
+<CssProperty name="grid-gap" values="<length>" shorthand description="Alias for gap." />
+<CssProperty name="grid-row-gap" values="<length>" description="Alias for row-gap." />
+<CssProperty name="grid-column-gap" values="<length>" description="Alias for column-gap." />
 
 ---
 
 ## 6. Scrolling & Overflow
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `overflow` | [`<overflow>`](#overflow-modes) | ❌ | Shorthand to configure horizontal & vertical overflow. |
-| `overflow-x` | [`<overflow>`](#overflow-modes) | ❌ | Horizontal layout overflow (`visible`, `hidden`, `scroll`). |
-| `overflow-y` | [`<overflow>`](#overflow-modes) | ❌ | Vertical layout overflow (`visible`, `hidden`, `scroll`). |
-| `scrollbar-width` | `auto \| none` | ❌ | `none` hides visual scrollbars while keeping list scrollable. |
-| `scrollbar-color` | [`<color>`](#colors) [`<color>`](#colors) |   | Foreground (thumb) and background (track) colors of scrollbars. |
-| `scroll-speed` | [`<integer>`](#value-types) | ❌ | Shorthand scroll step speed multiplier. |
-| `scroll-speed-x` | [`<integer>`](#value-types) | ❌ | Horizontal scroll step distance. |
-| `scroll-speed-y` | [`<integer>`](#value-types) | ❌ | Vertical scroll step distance. |
-| `scroll-behavior` | `auto \| smooth` | ❌ | Smooth scrolling transitions configuration. |
+<CssProperty name="overflow" values="<overflow>" shorthand description="Shorthand to configure horizontal & vertical overflow." />
+<CssProperty name="overflow-x" values="<overflow>" description="Horizontal layout overflow (visible, hidden, scroll)." />
+<CssProperty name="overflow-y" values="<overflow>" description="Vertical layout overflow (visible, hidden, scroll)." />
+<CssProperty name="scrollbar-width" values="auto | none" description="none hides visual scrollbars while keeping list scrollable." />
+<CssProperty name="scrollbar-color" values="<color> <color>" animatable description="Foreground (thumb) and background (track) colors of scrollbars." />
+<CssProperty name="scroll-speed" values="<integer>" description="Shorthand scroll step speed multiplier." />
+<CssProperty name="scroll-speed-x" values="<integer>" description="Horizontal scroll step distance." />
+<CssProperty name="scroll-speed-y" values="<integer>" description="Vertical scroll step distance." />
+<CssProperty name="scroll-behavior" values="auto | smooth" description="Smooth scrolling transitions configuration." />
 
 ---
 
 ## 7. Transitions and Positioning
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `transition` | `property duration timing-function` | ❌ | Shorthand (e.g. `transition: background-color 0.2s linear`). |
-| `position` | `static \| relative \| absolute \| fixed` | ❌ | Selects positioning flow model. |
-| `inset` | 1-4 [`<length>`](#value-types) values | ❌ | Shorthand setting `top`/`right`/`bottom`/`left` (same expansion as `margin`). |
-| `aspect-ratio` | `<w> / <h> \| <number> \| auto` | ❌ | Derives a block element's auto height from its used width. Ratios are in cells — terminal cells are ~2:1 tall, so `2 / 1` looks square. Content taller than the ratio overflows. |
-| `top` | [`<length>`](#value-types) | ❌ | Offset relative to top boundary. |
-| `bottom` | [`<length>`](#value-types) | ❌ | Offset relative to bottom boundary. |
-| `left` | [`<length>`](#length) | ❌ | Offset relative to left boundary. |
-| `right` | [`<length>`](#length) | ❌ | Offset relative to right boundary. |
-| `z-index` | [`<integer>`](#value-types) | ❌ | Determines rendering paint layers. |
+<CssProperty name="transition" values="property duration timing-function" shorthand description="Shorthand (e.g. transition: background-color 0.2s linear)." />
+<CssProperty name="position" values="static | relative | absolute | fixed" description="Selects positioning flow model." />
+<CssProperty name="inset" values="1-4 <length> values" shorthand description="Shorthand setting top/right/bottom/left (same expansion as margin)." />
+<CssProperty name="aspect-ratio" values="<w> / <h> | <number> | auto" description="Derives a block element's auto height from its used width. Ratios are in cells — terminal cells are ~2:1 tall, so 2 / 1 looks square. Content taller than the ratio overflows." />
+<CssProperty name="top" values="<length>" description="Offset relative to top boundary." />
+<CssProperty name="bottom" values="<length>" description="Offset relative to bottom boundary." />
+<CssProperty name="left" values="<length>" description="Offset relative to left boundary." />
+<CssProperty name="right" values="<length>" description="Offset relative to right boundary." />
+<CssProperty name="z-index" values="<integer>" description="Determines rendering paint layers." />
 
 ---
 
 ## 8. List Styles
 
-| Property | Value Type | Animatable | Description |
-| :--- | :--- | :---: | :--- |
-| `list-style-type` | `disc \| circle \| square \| decimal \| none` | ❌ | Sets the marker prefix style for list items (`• `, `○ `, `■ `, numbers, or none). |
-| `list-style` | `disc \| circle \| square \| decimal \| none` | ❌ | Shorthand configuration for list styling. |
+<CssProperty name="list-style-type" values="disc | circle | square | decimal | none" description="Sets the marker prefix style for list items (• , ○ , ■ , numbers, or none)." />
+<CssProperty name="list-style" values="disc | circle | square | decimal | none" shorthand description="Shorthand configuration for list styling." />
 
 ---
 
