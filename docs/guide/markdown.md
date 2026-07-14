@@ -1,104 +1,94 @@
 # Markdown Component
 
-RTXUI provides a built-in `<markdown>` component that allows you to render formatted text using Markdown syntax. It automatically converts Markdown to HTML and renders it as standard RTXUI elements.
+The built-in `<markdown>` component renders Markdown text as regular RTXUI
+elements. The Markdown source is converted to HTML internally, so the result
+participates in layout and styling like any other part of the tree.
 
 ## Basic Usage
 
-To use the `<markdown>` component, provide your Markdown text to the `content` attribute:
+Pass the Markdown source through the `content` attribute. For anything longer
+than a single line, bind a C++ string — C++ string literals give you real
+newlines, which attribute text does not:
 
-```html
-<markdown content="# Hello World\nThis is **bold** and *italic*." />
+```cpp
+class MyDoc : public Component<MyDoc> {
+  std::string my_content = R"md(
+# Hello World
+
+This is **bold** and *italic*.
+)md";
+
+  std::string_view view = R"html(
+    <markdown content="{my_content}" />
+  )html";
+
+  MyDoc() { Bind(my_content); }
+};
 ```
 
-## Styling Markdown
+Because `content` is a reactive binding, updating `my_content` re-renders the
+Markdown on the next frame. This is how a live preview or a document viewer
+that reloads files works — see the [complete example](#complete-example)
+below, which reads a `.md` file from disk.
 
-One of the most powerful features of the `<markdown>` component is the ability to style the generated HTML tags using the `stylesheet` attribute. This stylesheet is scoped to the component and allows you to target standard tags like `h1`, `p`, `ul`, `code`, etc.
+## Styling
 
-```html
-<markdown 
-  content="# Styled Title"
-  stylesheet="h1 { color: #3b82f6; border-bottom: solid; }"
-/>
+The `stylesheet` attribute takes CSS scoped to the component. Target the
+generated tags — `h1`, `p`, `ul`, `code`, `blockquote`, and so on:
+
+```cpp
+std::string my_styles = R"css(
+  h1 { color: #3b82f6; border-bottom: solid; }
+  code { background-color: #1e293b; }
+)css";
 ```
 
-## Table Support
+```html
+<markdown content="{my_content}" stylesheet="{my_styles}" />
+```
 
-The `<markdown>` component parses standard Markdown pipe-tables into standard HTML table elements (`<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>`), which can be styled via the `stylesheet` attribute.
+`stylesheet` is reactive too: changing the bound string restyles the rendered
+document.
 
-### Input (Markdown)
+## Tables
+
+Markdown pipe-tables are parsed into standard HTML table elements (`<table>`,
+`<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>`), which you can style through the
+`stylesheet` attribute:
 
 ```markdown
-| Feature          | Status       |
-|------------------|--------------|
-| Table parsing    | Live ✅      |
-| Escaped pipes \| | Supported ✅ |
+| Name     | Role     |
+|----------|----------|
+| Ada      | Engineer |
+| Grace    | Admiral  |
 ```
 
-### Output (Rendered)
-
-| Feature          | Status       |
-|------------------|--------------|
-| Table parsing    | Live ✅      |
-| Escaped pipes \| | Supported ✅ |
-
-### Usage Example
-
-```html
-<markdown 
-  content="| Feature | Status |\n|---|---|\n| Table parsing | Live ✅ |\n| Escaped pipes \| | Supported ✅ |"
-  stylesheet="
-    table { border: solid; border-color: #334155; }
-    th { font-weight: bold; color: #60a5fa; border-bottom: solid; border-color: #334155; padding-left: 1; }
-    td { padding-left: 1; }
-  "
-/>
+```css
+table { border: solid; border-color: #334155; }
+th { font-weight: bold; border-bottom: solid; border-color: #334155; padding-left: 1; }
+td { padding-left: 1; }
 ```
 
-## Example Demo
-
-Below is an interactive demo showing the Markdown component in action. You can see how the Markdown source is rendered and styled in real-time.
-
-<WasmTerminal example="`rtxui_example_markdown`" />
+Escaped pipes (`\|`) inside cells and inline formatting inside cells are
+supported.
 
 ## Supported Syntax
 
 The built-in parser supports:
 
-- **Headings**: `#` through `######`
-- **Paragraphs**: Separated by blank lines
-- **Blockquotes**: Starting with `>`
-- **Fenced Code Blocks**: Using ` ``` `
-- **Lists**: Ordered (`1. `) and Unordered (`- `, `* `, `+ `)
-- **Inline Formatting**: `**bold**`, `*italic*`, `` `code` ``
-- **Links**: `[text](url)`
-- **Tables**: Standard Markdown pipe-tables (e.g. `| Col 1 | Col 2 |`), supporting inline formatting and escaped pipes (`\|`).
+- Headings: `#` through `######`
+- Paragraphs, separated by blank lines
+- Blockquotes, starting with `>`
+- Fenced code blocks, using ` ``` `
+- Lists: ordered (`1. `) and unordered (`- `, `* `, `+ `)
+- Inline formatting: `**bold**`, `*italic*`, `` `code` ``
+- Links: `[text](url)`
+- Tables: pipe-tables with inline formatting and escaped pipes (`\|`)
 
-## Integration with Reactivity
+## Complete Example
 
-Since `content` and `stylesheet` are reactive properties, you can bind them to variables in your component:
-
-```cpp
-class MyDoc : public Component<MyDoc> {
- public:
-  std::string my_content = "# Dynamic Content";
-  std::string my_styles = "h1 { color: red; }";
-
-  void InitReflection() override {
-    Bind(my_content);
-    Bind(my_styles);
-  }
-
-  std::string_view view = R"html(
-    <markdown content="{my_content}" stylesheet="{my_styles}" />
-  )html";
-};
-```
-
----
-
-### Complete Example Code
-
-Below is the complete standalone example code for rendering and dynamically updating the Markdown component.
+The example below loads a Markdown file from disk, renders it, and lets you
+edit the stylesheet live.
 
 <ExampleTabs src="/wasm/rtxui_example_markdown.js">
 <template #source>
@@ -107,4 +97,3 @@ Below is the complete standalone example code for rendering and dynamically upda
 
 </template>
 </ExampleTabs>
-

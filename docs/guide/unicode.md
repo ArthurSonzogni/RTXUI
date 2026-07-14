@@ -1,15 +1,19 @@
 # Unicode & CJK Support
 
-RTXUI includes native support for Unicode grapheme cluster parsing and string layout width calculation.
+RTXUI measures text in grapheme clusters and computes display widths per
+cluster, so layout works with any script the terminal can render.
 
-### Wide Characters
+## Wide Characters
 
-Wide characters (such as Chinese, Japanese, and Korean) take up exactly two terminal cell columns. RTXUI correctly calculates these widths to ensure they align properly in flexbox and grid layouts.
+Wide characters (such as Chinese, Japanese, and Korean ideographs) occupy two
+terminal cell columns. RTXUI accounts for this when measuring text, so wide
+characters align correctly in flexbox and grid layouts.
 
+## Layout Alignment
 
-### Layout Alignment
-
-Because RTXUI understands character widths, it can accurately center text or justify content even when mixing ASCII and Unicode characters.
+Because widths are computed from display columns rather than byte or code
+point counts, centering and alignment stay correct when ASCII and wide
+characters are mixed on the same line.
 
 <ExampleTabs src="/wasm/rtxui_example_cjk.js">
 <template #source>

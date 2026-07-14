@@ -1,27 +1,25 @@
-# Live HTML/CSS Hot-Reloading
+# HTML/CSS Hot-Reloading
 
-RTXUI offers a developer mode that extracts and updates HTML templates and CSS styles from C++ source files in real-time, refreshing the active terminal interface in under 10ms without recompilation.
-
----
+RTXUI can re-read a component's HTML template and `<style>` block from its C++
+source file while the application is running, updating the live interface
+without recompiling.
 
 ## How It Works
 
-By utilizing modern C++20 `std::source_location`, RTXUI tracks which C++ source file and which member variable contains your component's HTML template (`view`). When the file is saved in your editor, a file watcher extracts the modified string literal and updates the live DOM subtree.
+`EnableHotReload()` records which source file defines the component, using
+`std::source_location`, and which member variable holds its template. While
+the application runs, the event loop polls the file's modification time; when
+the file is saved, the
+raw string literal is re-extracted from the C++ source, re-parsed, and the
+component's DOM subtree is rebuilt and re-bound.
 
-```mermaid
-graph TD
-    A[Developer edits C++ source file] -->|Saves file| B(File Watcher)
-    B -->|Detects change| C[Template Extractor]
-    C -->|Parses C++ file| D[Extracts new view string]
-    D -->|New template| E[DOM Re-render & Bind]
-    E -->|Digests state| F[Terminal Redraws]
-```
+Only the template text is reloaded — the compiled C++ stays as it was. Changes
+to methods, bindings, event handlers, or member variables still require a
+rebuild.
 
----
+## Usage
 
-## Basic Usage
-
-To enable hot-reloading for a component, call `EnableHotReload()` in its constructor.
+Call `EnableHotReload()` in the component's constructor:
 
 ```cpp
 #include <rtxui/rtxui.hpp>
@@ -31,7 +29,7 @@ class MyPanel : public rtxui::Component<MyPanel> {
   std::string_view view = R"html(
     <div class="panel">
       <h1>Live Panel</h1>
-      <p>Modify this text, save the file, and watch the terminal update!</p>
+      <p>Modify this text, save the file, and watch the terminal update.</p>
     </div>
     <style>
       .panel {
@@ -44,31 +42,31 @@ class MyPanel : public rtxui::Component<MyPanel> {
   )html";
 
   MyPanel() {
-    // Automatically binds the file location and "view" variable
     EnableHotReload();
   }
 };
 ```
 
----
+By default the template is assumed to live in a member named `view`. If yours
+is named differently, pass the name:
 
-## Enabling Developer Mode
-
-To avoid overhead in production, hot-reloading is conditionally compiled. Ensure you define `RTXUI_DEV_MODE` during compilation or set the appropriate CMake option.
-
-### CMake Configuration
-Add the dev mode definition in your development build:
-```cmake
-target_compile_definitions(my_app PRIVATE RTXUI_DEV_MODE)
+```cpp
+EnableHotReload("my_custom_view");
 ```
 
----
+An overload also accepts an explicit file path, for cases where
+`std::source_location` does not point at the file you want watched:
 
-## Best Practices & Limitations
+```cpp
+EnableHotReload("view", "src/panels/my_panel.cpp");
+```
 
-*   **HTML/CSS only**: Only changes to HTML markup and `<style>` blocks inside raw string literals can be hot-reloaded. 
-*   **No Logic Recompilation**: Modifying C++ methods, bindings, event handlers, or member variables still requires a standard build compilation.
-*   **Variable Names**: By default, `EnableHotReload()` assumes your template is stored in a member variable named `view`. If you use a different variable name, pass it as a string argument:
-    ```cpp
-    EnableHotReload("my_custom_view");
-    ```
+## Limitations
+
+- Only HTML markup and `<style>` blocks inside the watched raw string literal
+  are reloaded.
+- The extractor locates the template by the member variable's name in the
+  source text, so the declaration must keep the form
+  `std::string_view view = R"html(...)html";`.
+- If the edited template fails to parse, the error is printed to stderr and
+  the previous template stays active.
