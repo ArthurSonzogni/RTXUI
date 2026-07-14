@@ -87,3 +87,6 @@ Positioning terminal cells with flexbox, grid, borders, and margins.
 | [media.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/media.cpp) | `@media` rules reacting to terminal resizes. | [Media Queries](/guide/css/media-queries) |
 | [spatial_navigation.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/spatial_navigation.cpp) | Arrow-key focus movement across a 2D grid. | [Focus](/guide/html/focus) |
 | [tabindex.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/tabindex.cpp) | Custom focus order with `tabindex`. | [Focus](/guide/html/focus) |
+| [cookbook_tabs.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/cookbook_tabs.cpp) | Hand-built tabbed navigation. | [Cookbook](/guide/cookbook) |
+| [cookbook_async.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/cookbook_async.cpp) | Worker thread posting results to the UI loop. | [Cookbook](/guide/cookbook) |
+| [cookbook_dialog.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/cookbook_dialog.cpp) | Confirmation flow with `<dialog>`. | [Cookbook](/guide/cookbook) |
