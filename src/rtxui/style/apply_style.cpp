@@ -1852,6 +1852,13 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "letter-spacing") {
+    // Whole cells only; a terminal cannot render fractional or negative
+    // spacing, so those clamp to zero.
+    style.letter_spacing = (v == "normal") ? 0 : std::max(0, StoI(v));
+    return;
+  }
+
   if (p == "white-space") {
     if (v == "normal") {
       style.white_space = WhiteSpace::Normal;

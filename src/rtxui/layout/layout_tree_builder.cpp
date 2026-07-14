@@ -1,5 +1,7 @@
 
 #include "rtxui/layout/layout_tree_builder.hpp"
+
+#include "rtxui/base/string.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 
 namespace rtxui {
@@ -89,6 +91,30 @@ void CollapseWhitespacePreLine(std::string& text) {
   }
   text = std::move(result);
 }
+// letter-spacing inserts non-breaking spaces (U+00A0) between grapheme
+// clusters, so the extra cells take part in measurement and painting while
+// the line breaker (which only breaks at ASCII spaces) keeps spaced words
+// intact. Newlines keep their hard-break role: no spacing is inserted next
+// to them.
+void ApplyLetterSpacing(std::string& text, int spacing) {
+  if (spacing <= 0 || text.empty()) {
+    return;
+  }
+  static constexpr std::string_view kNbsp = "\xc2\xa0";
+  std::string result;
+  result.reserve(text.size() * (1 + static_cast<size_t>(spacing)));
+  std::string_view previous;
+  for (const Grapheme& g : Graphemes(text)) {
+    if (!previous.empty() && previous != "\n" && g.text != "\n") {
+      for (int i = 0; i < spacing; ++i) {
+        result += kNbsp;
+      }
+    }
+    result += g.text;
+    previous = g.text;
+  }
+  text = std::move(result);
+}
 }  // namespace
 
 // Static Build method implementation
@@ -103,7 +129,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
                                                     std::optional<bool> parent_underlined,
                                                     std::optional<bool> parent_underlined_double,
                                                     std::optional<bool> parent_strikethrough,
-                                                    std::optional<bool> parent_blink) {
+                                                    std::optional<bool> parent_blink,
+                                                    int parent_letter_spacing) {
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
@@ -123,6 +150,10 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   TextTransform resolved_text_transform =
       dom_node->style.text_transform.value_or(parent_text_transform);
   box->style.text_transform = resolved_text_transform;
+
+  int resolved_letter_spacing =
+      dom_node->style.letter_spacing.value_or(parent_letter_spacing);
+  box->style.letter_spacing = resolved_letter_spacing;
 
   std::optional<Color> resolved_fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent_fg;
   box->style.foreground_color = resolved_fg;
@@ -167,6 +198,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       case WhiteSpace::PreWrap:
         break;  // Newlines are preserved and honored as hard breaks.
     }
+    ApplyLetterSpacing(box->text_data, resolved_letter_spacing);
     box->algorithm = LayoutBox::Algorithm::Text;
 
     return box;
@@ -189,10 +221,12 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       std::optional<bool> slot_underlined_double = slot_style.underlined_double.has_value() ? slot_style.underlined_double : resolved_underlined_double;
       std::optional<bool> slot_strikethrough = slot_style.strikethrough.has_value() ? slot_style.strikethrough : resolved_strikethrough;
       std::optional<bool> slot_blink = slot_style.blink.has_value() ? slot_style.blink : resolved_blink;
+      int slot_letter_spacing =
+          slot_style.letter_spacing.value_or(resolved_letter_spacing);
 
       for (auto& grandchild_dom : child_dom.get()->children()) {
         auto grandchild_box =
-            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_dim, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink);
+            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_dim, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink, slot_letter_spacing);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -200,7 +234,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_dim, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink);
+    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_dim, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink, resolved_letter_spacing);
     if (child_box) {
       raw_children.push_back(child_box);
     }

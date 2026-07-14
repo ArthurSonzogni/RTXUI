@@ -23,7 +23,8 @@ class LayoutTreeBuilder {
       std::optional<bool> parent_underlined = std::nullopt,
       std::optional<bool> parent_underlined_double = std::nullopt,
       std::optional<bool> parent_strikethrough = std::nullopt,
-      std::optional<bool> parent_blink = std::nullopt);
+      std::optional<bool> parent_blink = std::nullopt,
+      int parent_letter_spacing = 0);
 };
 }  // namespace rtxui
 #endif  // RTXUI_LAYOUT_LAYOUT_TREE_BUILDER_HPP

@@ -1914,6 +1914,65 @@ TEST_CASE("Text transform rendering", "[component][text-transform][paint]") {
   CHECK(all_text.find("INHERITED TEXT") != std::string::npos);
 }
 
+class LetterSpacingTestComponent
+    : public rtxui::Component<LetterSpacingTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<LetterSpacingTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div class="spaced">ab cd</div>
+      <div class="wide">xy</div>
+      <div class="spaced"><span>ef</span></div>
+    </div>
+    <style>
+      .spaced { letter-spacing: 1; }
+      .wide { letter-spacing: 2; }
+    </style>
+  )";
+};
+
+TEST_CASE("Letter spacing rendering", "[component][letter-spacing][paint]") {
+  auto container = rtxui::Ref<LetterSpacingTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string all_text;
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      all_text += texture[x, y].character;
+    }
+    all_text += "\n";
+  }
+
+  // One non-breaking space (U+00A0) between every pair of grapheme
+  // clusters, including around the (still breakable) ASCII word gap.
+  CHECK(all_text.find("a\xC2\xA0"
+                      "b\xC2\xA0 \xC2\xA0"
+                      "c\xC2\xA0"
+                      "d") != std::string::npos);
+  // letter-spacing: 2 inserts two cells.
+  CHECK(all_text.find("x\xC2\xA0\xC2\xA0y") != std::string::npos);
+  // The spacing inherits into nested inline elements.
+  CHECK(all_text.find("e\xC2\xA0"
+                      "f") != std::string::npos);
+}
+
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
   void InitReflection() override {
