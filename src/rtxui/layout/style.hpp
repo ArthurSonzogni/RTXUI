@@ -34,9 +34,17 @@ enum class MeasureMode { Exactly, AtMost, Undefined };
 enum class Direction { Row, RowReverse, Column, ColumnReverse };
 enum class Unit { Auto, Cells, Percent, Fr, Calc, MinMax };
 
+struct MinMaxExpr;
+/// Returns the interned expression for an id (see RegisterMinMaxExpr).
+MinMaxExpr GetMinMaxExpr(int id);
+
 // A min()/max()/clamp() expression over linear (cells + percent) operands.
 // Instances are interned in a global table (see RegisterMinMaxExpr) and
 // referenced from Length by id, keeping Length small for the common case.
+// An operand may additionally reference another interned expression
+// (`coef * Evaluate(registry[ref])`), which is how min()/max()/clamp() nest
+// inside each other and inside calc(). References always point at earlier
+// registry entries, so evaluation cannot cycle.
 struct MinMaxExpr {
   enum class Op { Min, Max, Clamp };
   Op op = Op::Min;
@@ -44,26 +52,36 @@ struct MinMaxExpr {
   float a_cells = 0, a_percent = 0;
   float b_cells = 0, b_percent = 0;
   float c_cells = 0, c_percent = 0;
+  int a_ref = -1, b_ref = -1, c_ref = -1;
+  float a_ref_coef = 0, b_ref_coef = 0, c_ref_coef = 0;
 
   bool operator==(const MinMaxExpr&) const = default;
 
   bool DependsOnBasis() const {
-    return a_percent != 0 || b_percent != 0 || c_percent != 0;
+    // Referenced expressions always depend on the basis: constant ones are
+    // folded before registration.
+    return a_percent != 0 || b_percent != 0 || c_percent != 0 ||
+           a_ref != -1 || b_ref != -1 || c_ref != -1;
   }
 
   int Evaluate(int basis) const {
-    auto lin = [basis](float cells, float percent) {
-      return cells + basis * (percent / 100.0f);
+    auto lin = [basis](float cells, float percent, int ref, float ref_coef) {
+      float v = cells + basis * (percent / 100.0f);
+      if (ref != -1) {
+        v += ref_coef * GetMinMaxExpr(ref).Evaluate(basis);
+      }
+      return v;
     };
-    float a = lin(a_cells, a_percent);
-    float b = lin(b_cells, b_percent);
+    float a = lin(a_cells, a_percent, a_ref, a_ref_coef);
+    float b = lin(b_cells, b_percent, b_ref, b_ref_coef);
     switch (op) {
       case Op::Min:
         return static_cast<int>(std::min(a, b));
       case Op::Max:
         return static_cast<int>(std::max(a, b));
       case Op::Clamp:
-        return static_cast<int>(std::max(a, std::min(b, lin(c_cells, c_percent))));
+        return static_cast<int>(
+            std::max(a, std::min(b, lin(c_cells, c_percent, c_ref, c_ref_coef))));
     }
     return 0;
   }
@@ -72,7 +90,6 @@ struct MinMaxExpr {
 /// Interns the expression and returns its id (stable for the process
 /// lifetime; identical expressions share an id).
 int RegisterMinMaxExpr(const MinMaxExpr& expr);
-MinMaxExpr GetMinMaxExpr(int id);
 
 struct Length {
   float value = 0;

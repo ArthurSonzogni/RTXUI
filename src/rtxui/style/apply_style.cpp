@@ -364,12 +364,18 @@ std::optional<Color> TransformColor(std::optional<Color> current,
 }
 
 // calc() expressions are folded at parse time into the linear form
-// `cells + percent% of basis`. Multiplication and division require one
-// side to be a plain number (no percent component), matching CSS.
+// `cells + percent% of basis [+ ref_coef * minmax(ref)]`. Multiplication and
+// division require one side to be a plain number (no percent component),
+// matching CSS. `ref` points at an interned MinMaxExpr for nested
+// min()/max()/clamp(); at most one such term per expression.
 struct CalcLinear {
   float cells = 0;
   float percent = 0;
+  int ref = -1;
+  float ref_coef = 0;
 };
+
+std::optional<CalcLinear> ParseMinMaxLinear(std::string_view value);
 
 class CalcParser {
  public:
@@ -409,9 +415,17 @@ class CalcParser {
       if (!rhs) {
         return std::nullopt;
       }
+      // A linear expression carries at most one nested min/max term.
+      if (lhs->ref != -1 && rhs->ref != -1) {
+        return std::nullopt;
+      }
       float sign = (op == '+') ? 1.0f : -1.0f;
       lhs->cells += sign * rhs->cells;
       lhs->percent += sign * rhs->percent;
+      if (rhs->ref != -1) {
+        lhs->ref = rhs->ref;
+        lhs->ref_coef = sign * rhs->ref_coef;
+      }
     }
   }
 
@@ -432,19 +446,32 @@ class CalcParser {
         return std::nullopt;
       }
       if (op == '*') {
-        // At most one side may carry a percent component.
-        if (lhs->percent != 0 && rhs->percent != 0) {
+        // A side carrying a nested min/max term may only be scaled by a
+        // plain number; otherwise at most one side may carry a percent.
+        if (lhs->ref != -1 || rhs->ref != -1) {
+          if (lhs->ref != -1 && (rhs->percent != 0 || rhs->ref != -1)) {
+            return std::nullopt;
+          }
+          if (rhs->ref != -1 && (lhs->percent != 0 || lhs->ref != -1)) {
+            return std::nullopt;
+          }
+        } else if (lhs->percent != 0 && rhs->percent != 0) {
           return std::nullopt;
         }
-        lhs = CalcLinear{lhs->cells * rhs->cells,
-                         lhs->percent * rhs->cells + rhs->percent * lhs->cells};
+        lhs = CalcLinear{
+            lhs->cells * rhs->cells,
+            lhs->percent * rhs->cells + rhs->percent * lhs->cells,
+            lhs->ref != -1 ? lhs->ref : rhs->ref,
+            lhs->ref != -1 ? lhs->ref_coef * rhs->cells
+                           : rhs->ref_coef * lhs->cells};
       } else {
         // The divisor must be a plain non-zero number.
-        if (rhs->percent != 0 || rhs->cells == 0) {
+        if (rhs->percent != 0 || rhs->ref != -1 || rhs->cells == 0) {
           return std::nullopt;
         }
         lhs->cells /= rhs->cells;
         lhs->percent /= rhs->cells;
+        lhs->ref_coef /= rhs->cells;
       }
     }
   }
@@ -464,6 +491,31 @@ class CalcParser {
     if (s_.substr(pos_).starts_with("calc(")) {
       pos_ += 4;  // Nested calc( behaves like a parenthesis.
       return ParseFactor();
+    }
+    if (s_.substr(pos_).starts_with("min(") ||
+        s_.substr(pos_).starts_with("max(") ||
+        s_.substr(pos_).starts_with("clamp(")) {
+      // Consume the whole call up to its matching parenthesis and hand it to
+      // the min/max parser.
+      size_t open = s_.find('(', pos_);
+      int depth = 0;
+      size_t end = open;
+      for (; end < s_.size(); ++end) {
+        if (s_[end] == '(') {
+          ++depth;
+        } else if (s_[end] == ')' && --depth == 0) {
+          break;
+        }
+      }
+      if (end == s_.size()) {
+        return std::nullopt;  // Unbalanced parentheses.
+      }
+      auto inner = ParseMinMaxLinear(s_.substr(pos_, end + 1 - pos_));
+      if (!inner) {
+        return std::nullopt;
+      }
+      pos_ = end + 1;
+      return inner;
     }
 
     size_t start = pos_;
@@ -492,9 +544,10 @@ class CalcParser {
 };
 
 // Parses "min(a, b)", "max(a, b)", or "clamp(lo, mid, hi)" where each
-// argument is a calc-style linear expression. Constant expressions fold to
-// plain Cells/Percent lengths; basis-dependent ones are interned.
-Length ParseMinMax(std::string_view value) {
+// argument is a calc-style linear expression (which may itself contain
+// nested min()/max()/clamp()). Constant expressions fold to plain cells;
+// basis-dependent ones are interned and returned as a reference term.
+std::optional<CalcLinear> ParseMinMaxLinear(std::string_view value) {
   MinMaxExpr::Op op;
   size_t name_len;
   if (value.starts_with("min(")) {
@@ -509,7 +562,7 @@ Length ParseMinMax(std::string_view value) {
   }
   value.remove_prefix(name_len);
   if (value.empty() || value.back() != ')') {
-    return Length::Auto();
+    return std::nullopt;
   }
   value.remove_suffix(1);
 
@@ -531,14 +584,14 @@ Length ParseMinMax(std::string_view value) {
 
   size_t expected = (op == MinMaxExpr::Op::Clamp) ? 3 : 2;
   if (args.size() != expected) {
-    return Length::Auto();
+    return std::nullopt;
   }
 
   CalcLinear parsed[3] = {};
   for (size_t i = 0; i < expected; ++i) {
     auto linear = CalcParser(args[i]).Parse();
     if (!linear) {
-      return Length::Auto();
+      return std::nullopt;
     }
     parsed[i] = *linear;
   }
@@ -547,17 +600,48 @@ Length ParseMinMax(std::string_view value) {
   expr.op = op;
   expr.a_cells = parsed[0].cells;
   expr.a_percent = parsed[0].percent;
+  expr.a_ref = parsed[0].ref;
+  expr.a_ref_coef = parsed[0].ref_coef;
   expr.b_cells = parsed[1].cells;
   expr.b_percent = parsed[1].percent;
+  expr.b_ref = parsed[1].ref;
+  expr.b_ref_coef = parsed[1].ref_coef;
   if (op == MinMaxExpr::Op::Clamp) {
     expr.c_cells = parsed[2].cells;
     expr.c_percent = parsed[2].percent;
+    expr.c_ref = parsed[2].ref;
+    expr.c_ref_coef = parsed[2].ref_coef;
   }
 
   if (!expr.DependsOnBasis()) {
-    return Length::Cells(static_cast<float>(expr.Evaluate(0)));
+    return CalcLinear{static_cast<float>(expr.Evaluate(0)), 0};
   }
-  return Length::MakeMinMax(RegisterMinMaxExpr(expr));
+  return CalcLinear{0, 0, RegisterMinMaxExpr(expr), 1};
+}
+
+// Converts a parsed linear expression to a Length. A basis-dependent
+// min/max term is wrapped in an interned expression; min(x, x) == x serves
+// as the identity when the term has linear companions.
+Length LinearToLength(const CalcLinear& linear) {
+  if (linear.ref == -1) {
+    if (linear.percent == 0) {
+      return Length::Cells(linear.cells);
+    }
+    if (linear.cells == 0) {
+      return Length::Pct(linear.percent);
+    }
+    return Length::MakeCalc(linear.cells, linear.percent);
+  }
+  if (linear.cells == 0 && linear.percent == 0 && linear.ref_coef == 1) {
+    return Length::MakeMinMax(linear.ref);
+  }
+  MinMaxExpr wrap;
+  wrap.op = MinMaxExpr::Op::Min;
+  wrap.a_cells = wrap.b_cells = linear.cells;
+  wrap.a_percent = wrap.b_percent = linear.percent;
+  wrap.a_ref = wrap.b_ref = linear.ref;
+  wrap.a_ref_coef = wrap.b_ref_coef = linear.ref_coef;
+  return Length::MakeMinMax(RegisterMinMaxExpr(wrap));
 }
 
 Length ParseCalc(std::string_view value) {
@@ -572,13 +656,7 @@ Length ParseCalc(std::string_view value) {
   if (!linear) {
     return Length::Auto();  // Invalid expression: treated as unset.
   }
-  if (linear->percent == 0) {
-    return Length::Cells(linear->cells);
-  }
-  if (linear->cells == 0) {
-    return Length::Pct(linear->percent);
-  }
-  return Length::MakeCalc(linear->cells, linear->percent);
+  return LinearToLength(*linear);
 }
 
 Length ParseLength(std::string_view value) {
@@ -590,7 +668,11 @@ Length ParseLength(std::string_view value) {
   }
   if (value.starts_with("min(") || value.starts_with("max(") ||
       value.starts_with("clamp(")) {
-    return ParseMinMax(value);
+    auto linear = ParseMinMaxLinear(value);
+    if (!linear) {
+      return Length::Auto();
+    }
+    return LinearToLength(*linear);
   }
   if (value.back() == '%') {
     value.remove_suffix(1);
