@@ -371,6 +371,8 @@ struct ComputedStyle {
   std::optional<TextAlign> text_align;
   std::optional<WhiteSpace> white_space;
   std::optional<TextTransform> text_transform;
+  // Extra cells inserted between grapheme clusters; inherited.
+  std::optional<int> letter_spacing;
   // Width / height ratio in cells; 0 means auto (no preferred ratio).
   float aspect_ratio = 0;
   std::optional<ListStyleType> list_style_type;
@@ -485,6 +487,7 @@ struct ComputedStyle {
     text_align = other.text_align;
     white_space = other.white_space;
     text_transform = other.text_transform;
+    letter_spacing = other.letter_spacing;
     aspect_ratio = other.aspect_ratio;
     list_style_type = other.list_style_type;
     scroll_speed_x = other.scroll_speed_x;

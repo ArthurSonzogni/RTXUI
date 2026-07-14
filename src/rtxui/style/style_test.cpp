@@ -463,6 +463,34 @@ TEST_CASE("Text decoration parsing in ApplyStyle", "[style][text-decoration]") {
   }
 }
 
+TEST_CASE("Letter spacing parsing in ApplyStyle", "[style][letter-spacing]") {
+  auto spacing_of = [](std::string_view css_value) {
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"letter-spacing", css_value});
+    return style.letter_spacing;
+  };
+
+  SECTION("integer cells") {
+    REQUIRE(spacing_of("2").has_value());
+    CHECK(spacing_of("2").value() == 2);
+  }
+
+  SECTION("normal is zero") {
+    REQUIRE(spacing_of("normal").has_value());
+    CHECK(spacing_of("normal").value() == 0);
+  }
+
+  SECTION("negative values clamp to zero") {
+    REQUIRE(spacing_of("-3").has_value());
+    CHECK(spacing_of("-3").value() == 0);
+  }
+
+  SECTION("unset by default") {
+    rtxui::ComputedStyle style;
+    CHECK(!style.letter_spacing.has_value());
+  }
+}
+
 TEST_CASE("Text transform parsing in ApplyStyle", "[style][text-transform]") {
   rtxui::ComputedStyle style;
 
