@@ -67,6 +67,23 @@ ASCII letters are transformed; other characters pass through unchanged.
 
 ---
 
+## Spacing
+
+`letter-spacing` inserts blank cells between characters, and `line-height`
+sets how many rows each line occupies. Both take whole numbers of cells and
+are inherited:
+
+```css
+h1 { letter-spacing: 1; }   /* H E A D I N G */
+p  { line-height: 2; }      /* one blank row between lines */
+```
+
+The cells added by `letter-spacing` are non-breaking: a spaced word never
+wraps in the middle, while the gaps between words stay breakable.
+`line-height` is a minimum — a taller inline element still grows its line.
+
+---
+
 ## Text Alignment
 
 Use `text-align` to control horizontal text placement within a block element:
@@ -142,6 +159,15 @@ The `<pre>` element sets `white-space: pre` for you; `<textarea>` uses
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+```
+
+Words longer than the line break at the container edge by default
+(`overflow-wrap: anywhere` — note this differs from CSS, whose default lets
+long words overflow). Set `overflow-wrap: normal` to keep such words intact
+and let them overflow instead:
+
+```css
+.url { overflow-wrap: normal; }
 ```
 
 ---
