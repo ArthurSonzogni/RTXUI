@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/component/default/tabs/tabs.hpp"
 
+#include <charconv>
 #include <iostream>
 
 #include "rtxui/component/component_internal.hpp"

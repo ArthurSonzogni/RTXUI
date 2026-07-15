@@ -1,6 +1,7 @@
 #include "rtxui/layout/layout.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>

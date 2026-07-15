@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/internal/screen.hpp"
 
+#include <charconv>
 #include <cmath>
 #include <sys/ioctl.h>
 #include <unistd.h>
