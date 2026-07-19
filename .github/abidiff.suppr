@@ -1,0 +1,17 @@
+# libabigail suppression specification used by .github/workflows/abi.yml.
+#
+# Standard library template instantiations are emitted as weak symbols in
+# whichever binary uses them and are not part of RTXUI's own ABI.
+[suppress_function]
+  name_regexp = ^(std|__gnu_cxx|__cxxabiv1)::
+[suppress_type]
+  name_regexp = ^(std|__gnu_cxx|__cxxabiv1)::
+[suppress_variable]
+  name_regexp = ^(std|__gnu_cxx|__cxxabiv1)::
+
+# Symbols scoped inside a function body (mangled prefix _ZZ): lambdas, local
+# statics and their guards. Implementation details, not API.
+[suppress_function]
+  symbol_name_regexp = ^_ZZ
+[suppress_variable]
+  symbol_name_regexp = ^_ZZ

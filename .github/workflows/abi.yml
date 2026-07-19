@@ -1,0 +1,116 @@
+# Detect ABI changes with libabigail's abidiff.
+#
+# rtxui_lib is built (Debug, PIC) at a baseline commit and at HEAD, each
+# archive is linked whole-archive into a shared object, and the two are
+# compared. Reports go to the run's step summary.
+#
+# - pull_request: baseline is the merge-base with the target branch; an
+#   incompatible ABI change fails the job.
+# - push to main: baseline is the previous commit; an incompatible ABI change
+#   only emits a warning annotation (breaking changes on main are allowed,
+#   this job exists to make them visible, not to forbid them).
+name: ABI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  abidiff:
+    name: abidiff vs baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y g++-14 ninja-build abigail-tools
+
+      - name: Pick baseline commit
+        id: baseline
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            baseline=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+          else
+            baseline="${{ github.event.before }}"
+            if ! git cat-file -e "$baseline^{commit}" 2>/dev/null; then
+              # Force push or new branch: fall back to the parent commit.
+              baseline=$(git rev-parse HEAD^ 2>/dev/null || true)
+            fi
+          fi
+          if [ -z "$baseline" ]; then
+            echo "No baseline commit; skipping ABI comparison."
+          else
+            echo "Baseline: $(git log -1 --oneline "$baseline")"
+          fi
+          echo "sha=$baseline" >> "$GITHUB_OUTPUT"
+
+      - name: Build baseline and head libraries
+        if: steps.baseline.outputs.sha != ''
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          build() { # <source-dir> <build-dir> <output.so>
+            cmake -S "$1" -B "$2" -G Ninja \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+              -DRTXUI_BUILD_TESTS=OFF \
+              -DRTXUI_BUILD_EXAMPLES=OFF \
+              -DRTXUI_BUILD_BENCHMARKS=OFF
+            cmake --build "$2" --target rtxui_lib
+            g++-14 -shared -o "$3" \
+              -Wl,--whole-archive "$2/librtxui_lib.a" -Wl,--no-whole-archive
+          }
+          git worktree add abi-baseline "${{ steps.baseline.outputs.sha }}"
+          build abi-baseline build-baseline librtxui-baseline.so
+          build . build-head librtxui-head.so
+
+      - name: Compare ABI
+        if: steps.baseline.outputs.sha != ''
+        run: |
+          set +e
+          abidiff \
+            --suppressions .github/abidiff.suppr \
+            --headers-dir1 abi-baseline/include \
+            --headers-dir2 include \
+            librtxui-baseline.so librtxui-head.so > abi-report.txt 2>&1
+          status=$?
+          set -e
+          cat abi-report.txt
+
+          # abidiff's exit status is a bit-field:
+          #   1 = tool error, 2 = usage error,
+          #   4 = ABI changed, 8 = the change is incompatible.
+          if [ $((status & 3)) -ne 0 ]; then
+            echo "abidiff failed to run (exit $status)" >&2
+            exit "$status"
+          fi
+
+          {
+            if [ "$status" -eq 0 ]; then
+              echo "### ✅ No ABI change"
+            elif [ $((status & 8)) -ne 0 ]; then
+              echo "### ❌ Incompatible ABI change"
+            else
+              echo "### ⚠️ Compatible ABI change (additions only)"
+            fi
+            echo ""
+            echo "Baseline: \`$(git log -1 --oneline "${{ steps.baseline.outputs.sha }}")\`"
+            echo ""
+            echo "<details><summary>abidiff report</summary>"
+            echo ""
+            echo '```'
+            cat abi-report.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ $((status & 8)) -ne 0 ]; then
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              exit 1
+            fi
+            echo "::warning::Incompatible ABI change since ${{ steps.baseline.outputs.sha }} (see the run summary)."
+          fi
