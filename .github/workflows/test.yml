@@ -13,22 +13,39 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Release
+          - name: GCC Release
             build_type: Release
             sanitize: "OFF"
+            cc: gcc-14
+            cxx: g++-14
+          - name: Clang Release
+            build_type: Release
+            sanitize: "OFF"
+            cc: clang-20
+            cxx: clang++-20
           - name: ASAN+UBSAN Debug
             build_type: Debug
             sanitize: "ON"
+            cc: gcc-14
+            cxx: g++-14
     steps:
       - uses: actions/checkout@v4
 
       - name: Install toolchain
-        run: sudo apt-get update && sudo apt-get install -y g++-14 ninja-build
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+          if [[ "${{ matrix.cc }}" == clang* ]]; then
+            # apt.llvm.org: prebuilt packages, much faster than building or
+            # using a setup action.
+            wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+          else
+            sudo apt-get install -y g++-14
+          fi
 
       - name: Configure
         env:
-          CC: gcc-14
-          CXX: g++-14
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: >
           cmake -B build -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
