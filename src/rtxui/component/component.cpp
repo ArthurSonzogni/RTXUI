@@ -485,9 +485,11 @@ void XmlParseError(const xml::Error& error, std::string_view xml_string) {
   std::exit(1);
 }
 
+// Unlike XmlParseError, this is reachable every time a <style> block's text
+// is re-interpolated with changed bound state (i.e. on every Digest()), so it
+// must not crash the running process on a malformed value.
 void CssParseError(const css::Error& error, std::string_view css_string) {
   PrintCompilerStyleError(css_string, error.line, error.column, error.message, "CSS");
-  std::exit(1);
 }
 
 bool MatchSelector(const Element* element,
