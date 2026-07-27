@@ -887,6 +887,11 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
   if (!device_) {
     device_ = std::make_shared<SystemTerminalDevice>();
   }
+  // Bracketed paste mode makes the terminal wrap pasted content in
+  // "\x1b[200~"/"\x1b[201~" markers instead of sending it as if typed, so
+  // it can be inserted as literal text (see TerminalInputParser) instead of
+  // being misinterpreted as individual keystrokes or escape sequences.
+  device_->Write("\x1b[?2004h");
   UpdateSize();
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
@@ -896,6 +901,7 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
 }
 
 ScreenImpl::~ScreenImpl() {
+  device_->Write("\x1b[?2004l");
 #ifndef __EMSCRIPTEN__
   if (wakeup_pipe_[0] != -1) {
     close(wakeup_pipe_[0]);

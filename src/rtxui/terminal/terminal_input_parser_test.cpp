@@ -479,4 +479,63 @@ TEST_CASE("Event.DeviceControlString", "[terminal]") {
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
+TEST_CASE("Event.BracketedPaste", "[terminal][paste]") {
+  TerminalInputParser parser;
+  std::string sequence = "\x1B[200~hi\nb\x1B[201~";
+  for (char c : sequence) {
+    parser.Add(c);
+  }
+
+  std::vector<Event> received_events;
+  while (auto event = parser.GetEvent()) {
+    received_events.push_back(std::move(*event));
+  }
+
+  // "hi" + Return (from '\n') + "b", nothing from the start/end markers
+  // themselves.
+  REQUIRE(received_events.size() == 4);
+  CHECK(received_events[0].get_if<Event::Keyboard>()->codepoint == 'h');
+  CHECK(received_events[1].get_if<Event::Keyboard>()->codepoint == 'i');
+  CHECK(received_events[2] == Event::Return());
+  CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint == 'b');
+}
+
+TEST_CASE("Event.BracketedPasteDoesNotInterpretContentAsEscapeSequences",
+          "[terminal][paste]") {
+  // Pasted text containing what looks like an escape sequence (e.g. copied
+  // from a terminal session log) must be inserted as literal characters,
+  // not interpreted -- that's the entire point of bracketed paste mode.
+  TerminalInputParser parser;
+  std::string sequence = "\x1B[200~\x1B[Ax\x1B[201~";
+  for (char c : sequence) {
+    parser.Add(c);
+  }
+
+  std::vector<Event> received_events;
+  while (auto event = parser.GetEvent()) {
+    received_events.push_back(std::move(*event));
+  }
+
+  REQUIRE(received_events.size() == 4);
+  CHECK(received_events[0].get_if<Event::Keyboard>()->codepoint == '\x1B');
+  CHECK(received_events[1].get_if<Event::Keyboard>()->codepoint == '[');
+  CHECK(received_events[2].get_if<Event::Keyboard>()->codepoint == 'A');
+  CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint == 'x');
+}
+
+TEST_CASE("Event.BracketedPasteUtf8", "[terminal][paste]") {
+  TerminalInputParser parser;
+  std::string sequence = "\x1B[200~é\x1B[201~";
+  for (char c : sequence) {
+    parser.Add(c);
+  }
+
+  auto event = parser.GetEvent();
+  REQUIRE(event.has_value());
+  auto* keyboard = event->get_if<Event::Keyboard>();
+  REQUIRE(keyboard);
+  CHECK(keyboard->codepoint == 0xE9);  // U+00E9 LATIN SMALL LETTER E WITH ACUTE
+  CHECK_FALSE(parser.GetEvent().has_value());
+}
+
 // NOLINTEND

@@ -43,11 +43,19 @@ class TerminalInputParser {
 
   void AddEvent(Event event);
   std::optional<Event> ToEvent(std::string_view);
+  void EmitPastedText(std::string_view text);
 
   std::vector<Event> events_;
   int position_ = -1;
   int timeout_ = 0;
   std::string pending_;
+
+  // Bracketed paste mode (enabled by Screen via "\x1b[?2004h") wraps pasted
+  // content in "\x1b[200~" / "\x1b[201~" markers. While inside, incoming
+  // bytes are literal paste content, not escape sequences to interpret --
+  // they bypass the normal pending_/Parse() state machine entirely.
+  bool in_bracketed_paste_ = false;
+  std::string paste_buffer_;
 };
 
 #endif /* end of include guard: RTXUI_TERMINAL_TERMINAL_INPUT_PARSER */

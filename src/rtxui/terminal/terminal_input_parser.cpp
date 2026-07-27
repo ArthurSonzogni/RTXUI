@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "rtxui/internal/event.hpp"  // for Event
+#include "rtxui/base/string.hpp"     // for EatCodePoint
 
 std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
   static const auto& mapping = *new std::map<std::string, Event>{
@@ -219,10 +220,45 @@ void TerminalInputParser::Timeout(int time) {
   }
 }
 void TerminalInputParser::Add(char c) {
+  if (in_bracketed_paste_) {
+    paste_buffer_ += c;
+    constexpr std::string_view kPasteEnd = "\x1B[201~";
+    if (paste_buffer_.size() >= kPasteEnd.size() &&
+        std::string_view(paste_buffer_)
+                .substr(paste_buffer_.size() - kPasteEnd.size()) ==
+            kPasteEnd) {
+      EmitPastedText(std::string_view(paste_buffer_)
+                         .substr(0, paste_buffer_.size() - kPasteEnd.size()));
+      paste_buffer_.clear();
+      in_bracketed_paste_ = false;
+    }
+    return;
+  }
   pending_ += c;
   timeout_ = 0;
   position_ = -1;
   Send(Parse());
+}
+void TerminalInputParser::EmitPastedText(std::string_view text) {
+  size_t i = 0;
+  while (i < text.size()) {
+    if (text[i] == '\n' || text[i] == '\r') {
+      if (text[i] == '\r' && i + 1 < text.size() && text[i + 1] == '\n') {
+        ++i;
+      }
+      events_.push_back(Event::Return());
+      ++i;
+      continue;
+    }
+    size_t end = i;
+    uint32_t codepoint = 0;
+    if (EatCodePoint(text, i, &end, &codepoint)) {
+      events_.push_back(Event::Keyboard::From(codepoint));
+      i = end;
+    } else {
+      ++i;
+    }
+  }
 }
 unsigned char TerminalInputParser::Current() {
   return pending_[position_];
@@ -395,6 +431,10 @@ TerminalInputParser::Output TerminalInputParser::ParseCSI() {
         case 'R':
           return ParseCursorPosition(std::move(arguments));
         default:
+          if (pending_ == "\x1B[200~") {
+            in_bracketed_paste_ = true;
+            return DROP;
+          }
           if (auto event = ToEvent(pending_)) {
             return *event;
           } else {
