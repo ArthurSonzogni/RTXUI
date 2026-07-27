@@ -249,3 +249,16 @@ TEST_CASE("XML.EscapedCharacters", "[xml]") {
   CHECK(div.children[0].type == xml::Node::kText);
   CHECK(div.children[0].text == "<escaped> & \"text\" '! < < < 😀");
 }
+
+TEST_CASE("XML.EmbeddedNulByteIsRejectedNotMisreadAsEndOfFile", "[xml]") {
+  // Parser::Get() returns '\0' both for a real NUL byte and for "past the
+  // end of input". An embedded NUL used to be silently misread as an early
+  // end of file, truncating the parse instead of failing clearly.
+  std::string input = "<div>";
+  input += '\0';
+  input += "</div>";
+
+  auto nodes = xml::Parse(input);
+  REQUIRE_FALSE(nodes.has_value());
+  CHECK(nodes.error().message == "Invalid NUL character in input");
+}

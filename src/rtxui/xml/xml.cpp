@@ -438,6 +438,26 @@ auto Parser::MakeErrorExpected(std::string expected) -> Error {
 }  // namespace
 
 auto Parse(std::string_view xml) -> Expected<Nodes, Error> {
+  // Parser::Get() returns '\0' both for a real embedded NUL byte and for
+  // "past the end of input", so an embedded NUL would otherwise be
+  // silently misread as a premature end of file. XML doesn't allow NUL in
+  // content anyway (https://www.w3.org/TR/xml/#charsets), so reject it
+  // upfront with a clear error instead of a confusing "expected X, got
+  // end of file".
+  if (size_t nul_pos = xml.find('\0'); nul_pos != std::string_view::npos) {
+    int line = 0;
+    int column = 0;
+    for (size_t i = 0; i < nul_pos; ++i) {
+      if (xml[i] == '\n') {
+        ++line;
+        column = 0;
+      } else {
+        ++column;
+      }
+    }
+    return Error{"Invalid NUL character in input", line, column};
+  }
+
   std::vector<Node> nodes;
   Parser parser(xml);
   while (true) {
