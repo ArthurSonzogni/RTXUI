@@ -59,7 +59,14 @@ std::string EscapeAttributeQuotes(std::string_view text) {
   return result;
 }
 
-std::string ProcessInlineMixed(std::string_view s) {
+// Bold/italic/link content recurses into ProcessInlineMixed once per
+// nesting level. Adversarial input with many nested markers (e.g.
+// "_*_*_*..._*_*_") can nest arbitrarily deep; cap it and fall back to the
+// (already HTML-escaped) content as-is once too deep, rather than
+// overflowing the stack.
+constexpr int kMaxInlineNestingDepth = 32;
+
+std::string ProcessInlineMixed(std::string_view s, int depth = 0) {
   std::string result;
   size_t i = 0;
   while (i < s.size()) {
@@ -86,7 +93,10 @@ std::string ProcessInlineMixed(std::string_view s) {
           std::string_view link_url =
               s.substr(text_end + 2, url_end - (text_end + 2));
           result += "<a href=\"" + EscapeAttributeQuotes(link_url) + "\">" +
-                    ProcessInlineMixed(link_text) + "</a>";
+                    (depth < kMaxInlineNestingDepth
+                         ? ProcessInlineMixed(link_text, depth + 1)
+                         : std::string(link_text)) +
+                    "</a>";
           i = url_end + 1;
           continue;
         }
@@ -108,7 +118,11 @@ std::string ProcessInlineMixed(std::string_view s) {
           end += (count - 2);
         }
         std::string_view content = s.substr(start, end - start);
-        result += "<strong>" + ProcessInlineMixed(content) + "</strong>";
+        result += "<strong>" +
+                  (depth < kMaxInlineNestingDepth
+                       ? ProcessInlineMixed(content, depth + 1)
+                       : std::string(content)) +
+                  "</strong>";
         i = end + 2;
         continue;
       }
@@ -132,7 +146,11 @@ std::string ProcessInlineMixed(std::string_view s) {
       }
       if (end != std::string_view::npos) {
         std::string_view content = s.substr(start, end - start);
-        result += "<em>" + ProcessInlineMixed(content) + "</em>";
+        result += "<em>" +
+                  (depth < kMaxInlineNestingDepth
+                       ? ProcessInlineMixed(content, depth + 1)
+                       : std::string(content)) +
+                  "</em>";
         i = end + 1;
         continue;
       }

@@ -88,6 +88,25 @@ TEST_CASE("Markdown: Deeply nested blockquotes do not overflow the stack",
   REQUIRE_NOTHROW(MarkdownToHtml(input));
 }
 
+TEST_CASE("Markdown: Deeply nested emphasis markers do not overflow the "
+          "stack",
+          "[markdown]") {
+  // Regression: bold/italic/link content recursed one level deeper into
+  // ProcessInlineMixed per nesting level, with no cap. Found by fuzzing
+  // (excessive stack usage on an adversarial input using many nested
+  // markers); this constructs a similar pattern directly.
+  int n = 100000;
+  std::string input;
+  for (int i = 0; i < n; ++i) {
+    input += (i % 2 == 0) ? "_*" : "*_";
+  }
+  input += "x";
+  for (int i = 0; i < n; ++i) {
+    input += (i % 2 == 0) ? "*_" : "_*";
+  }
+  REQUIRE_NOTHROW(MarkdownToHtml(input));
+}
+
 TEST_CASE("Markdown: Unterminated fenced code block still closes its tags",
           "[markdown]") {
   // Found by fuzzing: a ``` with no closing fence (truncated/streamed
