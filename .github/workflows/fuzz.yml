@@ -1,0 +1,59 @@
+# Short fuzzing smoke test (FuzzTest, built with ASAN+UBSAN).
+#
+# Each parser-facing fuzz target (XML/template, CSS, terminal input,
+# markdown) runs for a bounded time on every push/PR. This is a smoke test
+# meant to catch crashes and regressions quickly, not a substitute for a
+# real fuzzing campaign — see fuzz.sh for that.
+name: Fuzz
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  fuzz:
+    name: Fuzz smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build ccache
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: fuzz-ccache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-ccache-${{ runner.os }}-
+
+      - name: Configure
+        env:
+          CC: clang-20
+          CXX: clang++-20
+        run: >
+          cmake -B build_fuzz -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DFUZZTEST_FUZZING_MODE=ON
+          -DRTXUI_BUILD_TESTS=ON
+          -DRTXUI_BUILD_EXAMPLES=OFF
+          -DRTXUI_BUILD_FUZZERS=ON
+          -DRTXUI_SANITIZE=ON
+
+      - name: Build
+        run: cmake --build build_fuzz --target rtxui_fuzzer
+
+      - name: Fuzz each target
+        env:
+          ASAN_OPTIONS: detect_leaks=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: |
+          cd build_fuzz
+          for target in XML.TestXML Style.TestStyle TerminalInputParser.Fuzz Markdown.TestMarkdown; do
+            echo "=== Fuzzing $target ==="
+            ./rtxui_fuzzer --fuzz="$target" --fuzz_for=30s
+          done
