@@ -1036,6 +1036,72 @@ TEST_CASE("Textarea Component Backspace/Delete", "[component][textarea]") {
   CHECK(ta_ptr->cursor_pos == 5);
 }
 
+TEST_CASE("Textarea selection highlight actually renders (not just resolves "
+          "in base_style)",
+          "[component][textarea][regression]") {
+  // Regression: the .selection span's background-color correctly resolved
+  // in base_style, but was silently dropped at paint time by a
+  // LayoutInlineFlow bug (see "Inline span background-color is applied
+  // when painted"). Verify the real painted output, not just the resolved
+  // style, for both a single-line selection and one spanning multiple
+  // lines within the same <span>.
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+  ta_el->set_focused(true);
+
+  // Checks the .selection span's painted background is distinctly the blue
+  // highlight rather than the neutral gray textarea background -- not an
+  // exact color match, since self's opacity is itself blended in at paint
+  // time (its own :hover/:focus transition), which isn't what this
+  // regression test is about. absolute_x()/absolute_y() are only populated
+  // by a Paint() pass, so this paints once, then reads the position back
+  // (rather than guessing an offset from padding, which both is easy to
+  // get wrong and would still read stale pre-paint coordinates).
+  auto SelectionBackgroundLooksHighlighted = [&]() {
+    auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+    rtxui::LayoutConstraints viewport = {
+        {40, rtxui::MeasureMode::Exactly},
+        {10, rtxui::MeasureMode::Exactly},
+    };
+    auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+    Texture texture(40, 10);
+    rtxui::Paint(root_fragment.get(), texture);
+    auto* selection_el = container->Root()->QuerySelector(".selection");
+    if (!selection_el) {
+      return false;
+    }
+    Color bg =
+        texture[selection_el->absolute_x(), selection_el->absolute_y()]
+            .background_color;
+    // The unselected background is a neutral gray (r == g == b); the blue
+    // selection highlight is not.
+    return bg.b > bg.r && bg.b > bg.g;
+  };
+
+  SECTION("single-line selection") {
+    ta_ptr->value = "hello world";
+    ta_ptr->selection_start = 2;
+    ta_ptr->cursor_pos = 5;  // selects "llo"
+    ta_ptr->Digest();
+
+    CHECK(SelectionBackgroundLooksHighlighted());
+  }
+
+  SECTION("selection spanning multiple lines within one span") {
+    ta_ptr->value = "line one\nline two\nline three";
+    ta_ptr->selection_start = 2;
+    ta_ptr->cursor_pos = 21;  // spans into "line three"
+    ta_ptr->Digest();
+
+    CHECK(SelectionBackgroundLooksHighlighted());
+  }
+}
+
 class CheckboxTestComponent : public rtxui::Component<CheckboxTestComponent> {
  public:
   bool my_checked = false;
@@ -3879,6 +3945,60 @@ TEST_CASE("Pre code newlines preserved through interpolation",
   REQUIRE(pos_main != std::string::npos);
   REQUIRE(pos_return != std::string::npos);
   CHECK(rendered.find('\n', pos_main) < pos_return);
+}
+
+struct InlineSpanBackgroundTestComponent
+    : public rtxui::Component<InlineSpanBackgroundTestComponent> {
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<InlineSpanBackgroundTestComponent>::InitReflection();
+  }
+  std::string_view view = R"html(
+    <div>before <span class="hl">highlighted</span> after</div>
+    <style>
+      .hl { background-color: rgb(38, 79, 120); }
+    </style>
+  )html";
+};
+
+TEST_CASE("Inline span background-color is applied when painted",
+          "[component][layout][regression]") {
+  // Regression: LayoutInlineFlow's optimization for inline elements with no
+  // border/padding/margin (e.g. a plain <span>) flattens them and processes
+  // their text node directly, but read the *text node's* style for
+  // background-color instead of the *span's*. background-color doesn't
+  // inherit, so the text node never actually carried it -- the span's own
+  // background-color was silently dropped at paint time (while still
+  // resolving correctly in base_style, since that part of the pipeline was
+  // unaffected). This is what made textarea/input's .selection highlight
+  // invisible.
+  auto container = rtxui::Ref<InlineSpanBackgroundTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {40, rtxui::MeasureMode::Exactly},
+      {3, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(40, 3);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string rendered = texture.Render();
+  auto pos = rendered.find("highlighted");
+  REQUIRE(pos != std::string::npos);
+
+  // Find which (x, y) cell that character lands on by re-deriving it from
+  // the element's own layout position, since `rendered` embeds ANSI codes.
+  auto* span = container->Root()->QuerySelector(".hl");
+  REQUIRE(span != nullptr);
+  int x = span->absolute_x();
+  int y = span->absolute_y();
+  CHECK(texture[x, y].background_color == Color::RGB(38, 79, 120));
 }
 
 class SliderDemoSquashTestComponent : public rtxui::Component<SliderDemoSquashTestComponent> {
