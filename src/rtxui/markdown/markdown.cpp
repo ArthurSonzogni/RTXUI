@@ -18,15 +18,22 @@ enum class ListType { None, Unordered, Ordered };
 std::string EscapeHtml(std::string_view text) {
   std::string result;
   result.reserve(text.size());
-  for (char c : text) {
+  for (unsigned char c : text) {
     if (c == '&') {
       result += "&amp;";
     } else if (c == '<') {
       result += "&lt;";
     } else if (c == '>') {
       result += "&gt;";
+    } else if (c < 0x20 && c != '\t' && c != '\n' && c != '\r') {
+      // These control characters (most notably NUL) are outright forbidden
+      // by the XML spec and can't be represented via a character reference
+      // either; drop them rather than hand the parser unrepresentable
+      // input. `unsigned char` matters here: UTF-8 continuation bytes are
+      // >= 0x80 and must not be mistaken for control characters when `char`
+      // is signed.
     } else {
-      result += c;
+      result += static_cast<char>(c);
     }
   }
   return result;
