@@ -340,6 +340,9 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_cookbook_dialog example/cookbook_dialog.cpp)
   target_link_libraries(rtxui_example_cookbook_dialog PRIVATE rtxui)
+
+  add_executable(rtxui_example_playground example/playground.cpp)
+  target_link_libraries(rtxui_example_playground PRIVATE rtxui)
 endif()
 
 include(CMakePackageConfigHelpers)

@@ -660,14 +660,27 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
       if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
-        std::string character = "\n";
-        auto new_graphemes = GetGraphemesList(character);
         if (cursor_pos < 0) {
           cursor_pos = 0;
         }
         if (cursor_pos > n) {
           cursor_pos = n;
         }
+
+        // Carry over the previous line's leading spaces/tabs so the new line
+        // keeps the same indentation.
+        int line_start = FindLineStart(graphemes, cursor_pos);
+        int indent_end = line_start;
+        while (indent_end < cursor_pos &&
+               (graphemes[indent_end].text == " " ||
+                graphemes[indent_end].text == "\t")) {
+          indent_end++;
+        }
+        std::string character = "\n";
+        for (int i = line_start; i < indent_end; ++i) {
+          character += graphemes[i].text;
+        }
+        auto new_graphemes = GetGraphemesList(character);
 
         graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(),
                          new_graphemes.end());
