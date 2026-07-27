@@ -378,7 +378,15 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
                            : GetCursorPositionFromColumn(graphemes, target_col);
 
           auto now = std::chrono::steady_clock::now();
-          if (now - last_click_time_ < std::chrono::milliseconds(500) && click_pos == last_click_pos_) {
+          // last_click_time_ defaults to time_point::min() as a "no
+          // previous click" sentinel; subtracting from it overflows
+          // (signed integer overflow is UB), so check for it explicitly
+          // instead of ever computing `now - time_point::min()`.
+          bool is_double_click =
+              last_click_time_ != std::chrono::steady_clock::time_point::min() &&
+              now - last_click_time_ < std::chrono::milliseconds(500) &&
+              click_pos == last_click_pos_;
+          if (is_double_click) {
             double_clicked_ = true;
             auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
             double_click_anchor_start_ = w_start;
@@ -595,10 +603,16 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           HandleBackspace(graphemes, cursor_pos,
                           kb.modifier.ctrl || kb.modifier.alt);
         }
-        value = GraphemesToString(graphemes);
-        self->PropagateBinding("value", value);
+        // Cursor position must be computed from `graphemes` before `value`
+        // is reassigned below: Grapheme::text is a string_view into the
+        // string `graphemes` was built from, so reassigning `value` first
+        // frees that buffer out from under every grapheme's text (a real
+        // heap-use-after-free once `value` is long enough to not fit in
+        // std::string's small-string-optimization buffer).
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
         KeepCursorVisible(root, is_multiline);
         return true;
       }
@@ -609,10 +623,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           HandleDelete(graphemes, cursor_pos,
                        kb.modifier.ctrl || kb.modifier.alt);
         }
-        value = GraphemesToString(graphemes);
-        self->PropagateBinding("value", value);
+        // See the Backspace branch above for why this must come before the
+        // `value` reassignment.
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
         KeepCursorVisible(root, is_multiline);
         return true;
       }
@@ -636,10 +652,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
             graphemes.erase(graphemes.begin() + line_start,
                             graphemes.begin() + line_start + to_remove);
             cursor_pos = std::max(line_start, cursor_pos - to_remove);
-            value = GraphemesToString(graphemes);
-            self->PropagateBinding("value", value);
+            // See the Backspace branch above for why this must come before
+            // the `value` reassignment.
             auto pos2d = GetCursor2D(graphemes, cursor_pos);
             ideal_column_ = pos2d.column;
+            value = GraphemesToString(graphemes);
+            self->PropagateBinding("value", value);
             KeepCursorVisible(root, is_multiline);
           }
         } else {
@@ -649,10 +667,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           graphemes.insert(graphemes.begin() + cursor_pos,
                            new_graphemes.begin(), new_graphemes.end());
           cursor_pos += static_cast<int>(new_graphemes.size());
-          value = GraphemesToString(graphemes);
-          self->PropagateBinding("value", value);
+          // See the Backspace branch above for why this must come before
+          // the `value` reassignment.
           auto pos2d = GetCursor2D(graphemes, cursor_pos);
           ideal_column_ = pos2d.column;
+          value = GraphemesToString(graphemes);
+          self->PropagateBinding("value", value);
           KeepCursorVisible(root, is_multiline);
         }
         return true;
@@ -685,11 +705,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(),
                          new_graphemes.end());
         cursor_pos += static_cast<int>(new_graphemes.size());
-        value = GraphemesToString(graphemes);
-        self->PropagateBinding("value", value);
-
+        // See the Backspace branch above for why this must come before the
+        // `value` reassignment.
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
         KeepCursorVisible(root, is_multiline);
         return true;
       }
@@ -709,11 +730,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(),
                          new_graphemes.end());
         cursor_pos += static_cast<int>(new_graphemes.size());
-        value = GraphemesToString(graphemes);
-        self->PropagateBinding("value", value);
-
+        // See the Backspace branch above for why this must come before the
+        // `value` reassignment.
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
+        value = GraphemesToString(graphemes);
+        self->PropagateBinding("value", value);
         KeepCursorVisible(root, is_multiline);
         return true;
       }
