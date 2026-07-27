@@ -78,6 +78,16 @@ TEST_CASE("Markdown: Blockquotes", "[markdown]") {
   REQUIRE(MarkdownToHtml(input) == expected);
 }
 
+TEST_CASE("Markdown: Deeply nested blockquotes do not overflow the stack",
+          "[markdown]") {
+  // Regression: each '>' recursed one level deeper into MarkdownToHtml;
+  // 50000 of them (trivial to produce, e.g. in pasted chat/comment text)
+  // used to crash the whole process with a stack overflow.
+  std::string input(50000, '>');
+  input += " deep";
+  REQUIRE_NOTHROW(MarkdownToHtml(input));
+}
+
 TEST_CASE("Markdown: Fenced Code Blocks", "[markdown]") {
   const std::string input = R"(```
 int x = 42;
