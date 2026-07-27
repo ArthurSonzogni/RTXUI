@@ -2389,6 +2389,37 @@ TEST_CASE("Markdown Component rendering", "[component][markdown]") {
   CHECK(h1_el->style.foreground_color.has_value());
 }
 
+class MarkdownLinkInjectionTestContainer
+    : public rtxui::Component<MarkdownLinkInjectionTestContainer> {
+ public:
+  std::string content = "[click](\" onclick=\"Evil)";
+  void InitReflection() override {
+    Bind(content);
+    Import<rtxui::markdown>();
+    rtxui::Component<MarkdownLinkInjectionTestContainer>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <markdown id="md" content="{content}"></markdown>
+  )";
+};
+
+TEST_CASE("Markdown link URL with a quote does not crash Mount or inject "
+          "attributes",
+          "[component][markdown]") {
+  // Regression: a link URL containing '"' used to produce HTML that failed
+  // to parse as XML (crashing the whole process on Mount, since that path
+  // is not recoverable like Digest()'s), or, when it happened to still
+  // parse, injected an extra "onclick" attribute into the <a> element.
+  auto container = rtxui::Ref<MarkdownLinkInjectionTestContainer>::New();
+  CHECK_NOTHROW(container->Mount());
+  CHECK_NOTHROW(container->Digest());
+
+  auto* link_el = container->Root()->QuerySelector("a");
+  REQUIRE(link_el != nullptr);
+  CHECK(link_el->GetAttribute("onclick") == nullptr);
+}
+
 class MarkdownListTestContainer
     : public rtxui::Component<MarkdownListTestContainer> {
  public:
