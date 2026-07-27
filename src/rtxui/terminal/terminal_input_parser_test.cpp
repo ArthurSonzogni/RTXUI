@@ -491,12 +491,18 @@ TEST_CASE("Event.BracketedPaste", "[terminal][paste]") {
     received_events.push_back(std::move(*event));
   }
 
-  // "hi" + Return (from '\n') + "b", nothing from the start/end markers
-  // themselves.
+  // "hi" + a plain '\n' character (from '\n') + "b", nothing from the
+  // start/end markers themselves. A plain '\n' codepoint, not
+  // Event::Return(): the latter is "user pressed Enter" and carries over
+  // the current line's indentation, which pasted text must not get (it
+  // already has its own).
   REQUIRE(received_events.size() == 4);
   CHECK(received_events[0].get_if<Event::Keyboard>()->codepoint == 'h');
   CHECK(received_events[1].get_if<Event::Keyboard>()->codepoint == 'i');
-  CHECK(received_events[2] == Event::Return());
+  auto* newline_kb = received_events[2].get_if<Event::Keyboard>();
+  REQUIRE(newline_kb);
+  CHECK(newline_kb->codepoint == '\n');
+  CHECK(newline_kb->special == Event::Keyboard::Special::None);
   CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint == 'b');
 }
 

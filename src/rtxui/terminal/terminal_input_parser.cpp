@@ -246,7 +246,11 @@ void TerminalInputParser::EmitPastedText(std::string_view text) {
       if (text[i] == '\r' && i + 1 < text.size() && text[i + 1] == '\n') {
         ++i;
       }
-      events_.push_back(Event::Return());
+      // A plain '\n' character event, not Event::Return(): the latter goes
+      // through the "user pressed Enter" handler, which carries over the
+      // current line's indentation. Pasted text already has its own
+      // indentation, so that would double it on every line.
+      events_.push_back(Event::Keyboard::From(static_cast<uint32_t>('\n')));
       ++i;
       continue;
     }

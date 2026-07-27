@@ -738,8 +738,16 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::None && kb.codepoint >= 32 &&
-          !kb.modifier.ctrl && !kb.modifier.meta) {
+      // A literal '\n' codepoint only ever arrives from pasted text (see
+      // TerminalInputParser::EmitPastedText): unlike Event::Return() (the
+      // "user pressed Enter" key), it must NOT carry over the current
+      // line's indentation, since pasted text already has its own. For a
+      // single-line field, a pasted '\n' is simply dropped, matching how a
+      // real single-line input discards newlines from pasted content.
+      bool is_pasted_newline = kb.codepoint == '\n' && is_multiline;
+      if (kb.special == Event::Keyboard::Special::None &&
+          (kb.codepoint >= 32 || is_pasted_newline) && !kb.modifier.ctrl &&
+          !kb.modifier.meta) {
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
         std::string character = CodePointToString(kb.codepoint);
