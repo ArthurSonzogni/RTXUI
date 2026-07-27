@@ -25,12 +25,6 @@ class DetailsDemo : public rtxui::Component<DetailsDemo> {
     Bind(open2);
     Bind(checkbox_state);
     Bind(status_text);
-    Import<rtxui::details>();
-    Import<rtxui::summary>();
-    Import<rtxui::checkbox>();
-    Import<rtxui::div>();
-    Import<rtxui::p>();
-    Import<rtxui::h1>();
     rtxui::Component<DetailsDemo>::InitReflection();
   }
 

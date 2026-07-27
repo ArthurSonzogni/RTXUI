@@ -880,6 +880,61 @@ TEST_CASE("Textarea Component Enter Key", "[component][textarea]") {
   CHECK(ta_ptr->cursor_pos == 6);
 }
 
+TEST_CASE("Textarea Component Enter Key Preserves Indentation",
+          "[component][textarea]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  ta_el->set_focused(true);
+
+  SECTION("spaces") {
+    ta_ptr->value = "    int main() {";
+    ta_ptr->cursor_pos = static_cast<int>(ta_ptr->value.size());
+    ta_ptr->Digest();
+
+    ta_ptr->OnEvent(Event::Return());
+    ta_ptr->Digest();
+    CHECK(ta_ptr->value == "    int main() {\n    ");
+    CHECK(ta_ptr->cursor_pos == static_cast<int>(ta_ptr->value.size()));
+  }
+
+  SECTION("tabs") {
+    ta_ptr->value = "\t\tif (true) {";
+    ta_ptr->cursor_pos = static_cast<int>(ta_ptr->value.size());
+    ta_ptr->Digest();
+
+    ta_ptr->OnEvent(Event::Return());
+    ta_ptr->Digest();
+    CHECK(ta_ptr->value == "\t\tif (true) {\n\t\t");
+    CHECK(ta_ptr->cursor_pos == static_cast<int>(ta_ptr->value.size()));
+  }
+
+  SECTION("no leading whitespace") {
+    ta_ptr->value = "hello";
+    ta_ptr->cursor_pos = static_cast<int>(ta_ptr->value.size());
+    ta_ptr->Digest();
+
+    ta_ptr->OnEvent(Event::Return());
+    ta_ptr->Digest();
+    CHECK(ta_ptr->value == "hello\n");
+  }
+
+  SECTION("only indentation carried, not trailing content") {
+    ta_ptr->value = "  first line\n  second";
+    ta_ptr->cursor_pos = static_cast<int>(ta_ptr->value.size());
+    ta_ptr->Digest();
+
+    ta_ptr->OnEvent(Event::Return());
+    ta_ptr->Digest();
+    CHECK(ta_ptr->value == "  first line\n  second\n  ");
+  }
+}
+
 TEST_CASE("Textarea Component Arrow Up/Down Navigation",
           "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
@@ -2366,6 +2421,48 @@ TEST_CASE("Markdown List rendering", "[component][markdown][list]") {
   CHECK(RemoveWhitespace(print).find("•</span>listitem1") != std::string::npos);
 }
 
+class MarkdownCodeBlockTestContainer
+    : public rtxui::Component<MarkdownCodeBlockTestContainer> {
+ public:
+  std::string content = "```\nint main() {\n  return 0;\n}\n```";
+  void InitReflection() override {
+    Bind(content);
+    Import<rtxui::markdown>();
+    rtxui::Component<MarkdownCodeBlockTestContainer>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <markdown id="md" content="{content}"></markdown>
+  )";
+};
+
+TEST_CASE("Markdown code block newlines preserved",
+          "[component][markdown][pre]") {
+  auto container = rtxui::Ref<MarkdownCodeBlockTestContainer>::New();
+  container->Mount();
+  container->Digest();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string rendered = texture.Render();
+  auto pos_main = rendered.find("int main()");
+  auto pos_return = rendered.find("return 0;");
+  REQUIRE(pos_main != std::string::npos);
+  REQUIRE(pos_return != std::string::npos);
+  CHECK(rendered.find('\n', pos_main) < pos_return);
+}
+
 TEST_CASE("Default Components Registration", "[component]") {
   CHECK(rtxui::GetGlobalComponentFactory("ul") != nullptr);
   CHECK(rtxui::GetGlobalComponentFactory("ol") != nullptr);
@@ -3545,6 +3642,98 @@ TEST_CASE("Pre component whitespace preservation", "[component][pre]") {
   CHECK(rendered.find("Line 1") != std::string::npos);
   CHECK(rendered.find("  Line 2 with spaces") != std::string::npos);
   CHECK(rendered.find("Line 3") != std::string::npos);
+}
+
+struct PreCodeTestComponent : public rtxui::Component<PreCodeTestComponent> {
+  void InitReflection() override {
+    Import<rtxui::pre>();
+    Import<rtxui::code>();
+    rtxui::Component<PreCodeTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <pre><code>int main() {
+  return 0;
+}</code></pre>
+    </div>
+  )";
+};
+
+TEST_CASE("Pre code newlines preserved", "[component][pre]") {
+  auto container = rtxui::Ref<PreCodeTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  // Each source line must land on its own row.
+  std::string rendered = texture.Render();
+  CHECK(rendered.find("int main() {") != std::string::npos);
+  CHECK(rendered.find("  return 0;") != std::string::npos);
+  CHECK(rendered.find("int main() {   return 0; }") == std::string::npos);
+  auto pos_main = rendered.find("int main()");
+  auto pos_return = rendered.find("return 0;");
+  REQUIRE(pos_main != std::string::npos);
+  REQUIRE(pos_return != std::string::npos);
+  CHECK(rendered.find('\n', pos_main) < pos_return);
+}
+
+struct PreCodeBindingTestComponent
+    : public rtxui::Component<PreCodeBindingTestComponent> {
+  std::string source = "int main() {\n  return 0;\n}";
+  void InitReflection() override {
+    Bind(source);
+    Import<rtxui::pre>();
+    Import<rtxui::code>();
+    rtxui::Component<PreCodeBindingTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <pre><code>{source}</code></pre>
+    </div>
+  )";
+};
+
+TEST_CASE("Pre code newlines preserved through interpolation",
+          "[component][pre]") {
+  auto container = rtxui::Ref<PreCodeBindingTestComponent>::New();
+  container->Mount();
+
+  SECTION("initial value") {}
+  SECTION("value updated after mount") {
+    container->source = "// updated\nint main() {\n  return 0;\n}";
+    container->Digest();
+  }
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string rendered = texture.Render();
+  auto pos_main = rendered.find("int main()");
+  auto pos_return = rendered.find("return 0;");
+  REQUIRE(pos_main != std::string::npos);
+  REQUIRE(pos_return != std::string::npos);
+  CHECK(rendered.find('\n', pos_main) < pos_return);
 }
 
 class SliderDemoSquashTestComponent : public rtxui::Component<SliderDemoSquashTestComponent> {

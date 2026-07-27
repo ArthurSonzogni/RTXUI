@@ -61,6 +61,7 @@ export default withMermaid({
         collapsed: false,
         items: [
           { text: 'Hot Reload', link: '/guide/hot-reload' },
+          { text: 'Playground', link: '/guide/playground' },
           { text: 'Unicode & CJK', link: '/guide/unicode' },
           { text: 'Markdown', link: '/guide/markdown' },
           { text: 'Cookbook', link: '/guide/cookbook' },

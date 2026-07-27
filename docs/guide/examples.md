@@ -90,3 +90,4 @@ Positioning terminal cells with flexbox, grid, borders, and margins.
 | [cookbook_tabs.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/cookbook_tabs.cpp) | Hand-built tabbed navigation. | [Cookbook](/guide/cookbook) |
 | [cookbook_async.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/cookbook_async.cpp) | Worker thread posting results to the UI loop. | [Cookbook](/guide/cookbook) |
 | [cookbook_dialog.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/cookbook_dialog.cpp) | Confirmation flow with `<dialog>`. | [Cookbook](/guide/cookbook) |
+| [playground.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/playground.cpp) | A live HTML/CSS editor and preview, side by side. | [Playground](/guide/playground) |

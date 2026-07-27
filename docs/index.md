@@ -25,14 +25,15 @@ features:
 <div class="demo-section">
   <h2>Try RTXUI in your Browser</h2>
   <p class="demo-desc">
-    This live interactive WebAssembly terminal showcases RTXUI's reflection-based reactivity, flexbox layouts, borders, and nested scrolling. 
-    Click the "Clicks" button to increment, right-click to decrement, or click the scrollable box and use your keyboard or mouse wheel.
+    This live playground compiles RTXUI to WebAssembly and runs it right here. Edit the HTML and CSS
+    in the left-hand editor — every keystroke reparses the template and re-renders the preview on the
+    right, using the same engine that powers every RTXUI app.
   </p>
 
-<ExampleTabs src="/wasm/rtxui_example_demo.js">
+<ExampleTabs src="/wasm/rtxui_example_playground.js" :cols="120" :rows="32">
 <template #source>
 
-<<< @/../example/demo.cpp
+<<< @/../example/playground.cpp
 
 </template>
 </ExampleTabs>
