@@ -37,6 +37,40 @@ namespace {
 
 void handle_sigwinch(int sig) {}
 
+// absolute_x()/absolute_y() reflect an element's scrolled screen position,
+// but not whether a scrollable ancestor currently clips it out of view
+// (e.g. a textarea scrolled away from its cursor, without moving the
+// cursor itself). Used to avoid positioning the native terminal cursor
+// outside the box that's actually drawn on screen.
+bool IsWithinScrollClip(Element* el) {
+  if (!el) {
+    return false;
+  }
+  int x = el->absolute_x();
+  int y = el->absolute_y();
+  for (Element* ancestor = el->Parent(); ancestor; ancestor = ancestor->Parent()) {
+    bool clips_x = ancestor->style.overflow_x != Overflow::Visible;
+    bool clips_y = ancestor->style.overflow_y != Overflow::Visible;
+    if (!clips_x && !clips_y) {
+      continue;
+    }
+    int border = (ancestor->style.border_style != BorderStyle::None) ? 1 : 0;
+    int content_x0 = ancestor->absolute_x() + border + ancestor->style.padding.left;
+    int content_y0 = ancestor->absolute_y() + border + ancestor->style.padding.top;
+    int content_x1 = ancestor->absolute_x() + ancestor->layout_width() - border -
+                     ancestor->style.padding.right;
+    int content_y1 = ancestor->absolute_y() + ancestor->layout_height() - border -
+                     ancestor->style.padding.bottom;
+    if (clips_x && (x < content_x0 || x >= content_x1)) {
+      return false;
+    }
+    if (clips_y && (y < content_y0 || y >= content_y1)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 std::optional<int> GetEffectiveTabIndex(Element* el) {
   if (!el) {
     return std::nullopt;
@@ -1913,7 +1947,7 @@ void ScreenImpl::Draw() {
     FindCursor(root);
   }
 
-  if (cursor_element) {
+  if (cursor_element && IsWithinScrollClip(cursor_element)) {
     int cx = cursor_element->absolute_x() + 1;
     int cy = cursor_element->absolute_y() + 1;
     device_->Write("\x1b[?25h\x1b[5 q\x1b[" + std::to_string(cy) + ";" +
