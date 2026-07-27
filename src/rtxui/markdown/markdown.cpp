@@ -32,6 +32,26 @@ std::string EscapeHtml(std::string_view text) {
   return result;
 }
 
+// Escapes '"' in a link URL so it's safe to place inside a double-quoted XML
+// attribute value. `link_url` is a substring of `s`, which ProcessInlineMixed
+// only ever receives already passed through EscapeHtml (see ParseInline), so
+// '&', '<', '>' are already encoded here; only the quote is still raw.
+// Without this, a URL containing a '"' breaks out of the attribute and can
+// inject arbitrary attributes (including rtxui event handlers like onclick=)
+// into the DOM.
+std::string EscapeAttributeQuotes(std::string_view text) {
+  std::string result;
+  result.reserve(text.size());
+  for (char c : text) {
+    if (c == '"') {
+      result += "&quot;";
+    } else {
+      result += c;
+    }
+  }
+  return result;
+}
+
 std::string ProcessInlineMixed(std::string_view s) {
   std::string result;
   size_t i = 0;
@@ -58,7 +78,7 @@ std::string ProcessInlineMixed(std::string_view s) {
           std::string_view link_text = s.substr(i + 1, text_end - (i + 1));
           std::string_view link_url =
               s.substr(text_end + 2, url_end - (text_end + 2));
-          result += "<a href=\"" + std::string(link_url) + "\">" +
+          result += "<a href=\"" + EscapeAttributeQuotes(link_url) + "\">" +
                     ProcessInlineMixed(link_text) + "</a>";
           i = url_end + 1;
           continue;

@@ -127,6 +127,16 @@ TEST_CASE("Markdown: HTML Escaping", "[markdown]") {
           "<p>a &lt; b &amp; c &gt; d</p>\n");
 }
 
+TEST_CASE("Markdown: Link URL with a quote does not break out of the "
+          "href attribute",
+          "[markdown]") {
+  // A '"' in the URL must not terminate the href attribute early: doing so
+  // let markdown content inject arbitrary attributes (e.g. onclick=) into
+  // the generated DOM, and could also make the output fail to parse as XML.
+  REQUIRE(MarkdownToHtml("[click](\" onclick=\"Evil)") ==
+          "<p><a href=\"&quot; onclick=&quot;Evil\">click</a></p>\n");
+}
+
 TEST_CASE("Markdown: Tables", "[markdown]") {
   const std::string input = R"(| Header 1 | Header 2 |
 | --- | --- |
