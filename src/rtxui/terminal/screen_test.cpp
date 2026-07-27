@@ -138,6 +138,82 @@ TEST_CASE("Screen.BracketedPasteInsertsTextIntoFocusedInput",
   CHECK(in_ptr->value == "hi there");
 }
 
+TEST_CASE("Screen.PasteNewlineIntoInputIsDropped", "[terminal][paste]") {
+  // A single-line <input> has nowhere to put a newline: pasted '\n's must
+  // be dropped rather than doing something undefined.
+  class PasteInputComponent : public Component<PasteInputComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::input>();
+      Component<PasteInputComponent>::InitReflection();
+    }
+    std::string_view view = R"(<input id="in" />)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto container = Ref<PasteInputComponent>::New();
+  Screen screen(container, device);
+  screen.Draw();
+
+  auto* in_el = container->Root()->QuerySelector("#in");
+  REQUIRE(in_el != nullptr);
+  in_el->set_focused(true);
+
+  std::string sequence = "\x1B[200~foo\nbar\x1B[201~";
+  device->PushInput(sequence);
+  for (size_t i = 0; i < sequence.size(); ++i) {
+    screen.Step();
+  }
+
+  auto* in_ptr =
+      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  REQUIRE(in_ptr != nullptr);
+  CHECK(in_ptr->value == "foobar");
+}
+
+TEST_CASE("Screen.PastingIntoTextareaDoesNotDoubleIndentation",
+          "[terminal][paste][regression]") {
+  // Regression: pasted newlines used to be turned into Event::Return(),
+  // the same event a manual Enter keypress produces -- including
+  // textarea's auto-indent, which carries the current line's leading
+  // whitespace onto the new line. Since pasted text already has its own
+  // indentation, every line's indentation compounded on top of the
+  // previous one's.
+  class PasteTextareaComponent : public Component<PasteTextareaComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::textarea>();
+      Component<PasteTextareaComponent>::InitReflection();
+    }
+    std::string_view view = R"(<textarea id="ta" />)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto container = Ref<PasteTextareaComponent>::New();
+  Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("#ta");
+  REQUIRE(ta_el != nullptr);
+  ta_el->set_focused(true);
+
+  auto* ta_ptr =
+      dynamic_cast<textarea*>(const_cast<ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+  // The cursor sits on an already-indented line before pasting.
+  ta_ptr->value = "  ";
+  ta_ptr->cursor_pos = 2;
+  ta_ptr->Digest();
+
+  std::string sequence = "\x1B[200~foo\n  bar\n    baz\x1B[201~";
+  device->PushInput(sequence);
+  for (size_t i = 0; i < sequence.size(); ++i) {
+    screen.Step();
+  }
+
+  CHECK(ta_ptr->value == "  foo\n  bar\n    baz");
+}
+
 TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
