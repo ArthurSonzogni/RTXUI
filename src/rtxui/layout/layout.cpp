@@ -1105,9 +1105,14 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
                child->style.padding.Vert() == 0) {
       for (auto& grandchild : child->children) {
         if (grandchild->is_text) {
+          // background-color doesn't inherit, so a styled <span> (e.g.
+          // class="selection") only carries it on `child` (the element),
+          // never on the raw text node inside it (`grandchild`). The other
+          // properties here do inherit, so grandchild's own (already
+          // correctly inherited) values are used for those.
           process_text_in_flow(
               grandchild->text_data, child->dom_node,
-              {grandchild->style.background_color,
+              {child->style.background_color,
                grandchild->style.foreground_color, grandchild->style.bold,
                grandchild->style.dim, grandchild->style.italic,
                grandchild->style.underlined,
