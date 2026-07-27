@@ -75,8 +75,6 @@ class TextareaDemo : public Component<TextareaDemo> {
           display: block;
           width: 70;
           height: 12;
-          background-color: rgb(30, 41, 59);
-          color: white;
           padding-left: 1;
           padding-right: 1;
           overflow-y: scroll;

@@ -335,8 +335,6 @@ class SectionInputs : public Component<SectionInputs> {
       input {
         padding-left: 1;
         padding-right: 1;
-        background-color: #0f172a;
-        color: white;
       }
       .echo-text {
         color: #64748b;
@@ -345,8 +343,6 @@ class SectionInputs : public Component<SectionInputs> {
       textarea {
         padding-left: 1;
         padding-right: 1;
-        background-color: #0f172a;
-        color: white;
         height: 3;
       }
     </style>
@@ -833,8 +829,6 @@ class SectionMarkdown : public Component<SectionMarkdown> {
       }
       .md-editor-textarea {
         padding: 1;
-        background-color: #0f172a;
-        color: white;
         height: 10;
         width: 100%;
       }

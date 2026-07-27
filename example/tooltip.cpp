@@ -153,8 +153,6 @@ class TooltipDemo : public Component<TooltipDemo> {
       }
       input {
         width: 100%;
-        background-color: rgb(30, 41, 59);
-        color: white;
         padding-left: 1;
       }
     </style>
