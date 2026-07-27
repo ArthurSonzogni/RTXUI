@@ -137,6 +137,18 @@ TEST_CASE("Markdown: HTML Escaping", "[markdown]") {
           "<p>a &lt; b &amp; c &gt; d</p>\n");
 }
 
+TEST_CASE("Markdown: NUL and other C0 control characters are stripped",
+          "[markdown]") {
+  // Found by fuzzing: a NUL byte was passed straight through into the
+  // generated HTML, which then failed to parse as XML (the XML parser
+  // can't tell an embedded NUL apart from end-of-input, and no XML
+  // character reference can represent NUL anyway).
+  REQUIRE(MarkdownToHtml(std::string("a") + '\0' + "b") == "<p>ab</p>\n");
+  REQUIRE(MarkdownToHtml(std::string("a\x01\x1B" "b")) == "<p>ab</p>\n");
+  // Tab, LF and CR must be preserved.
+  REQUIRE(MarkdownToHtml("a\tb") == "<p>a\tb</p>\n");
+}
+
 TEST_CASE("Markdown: Link URL with a quote does not break out of the "
           "href attribute",
           "[markdown]") {
