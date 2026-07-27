@@ -498,7 +498,12 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
     }
   }
 
-  // Close any remaining active blocks
+  // Close any remaining active blocks. An unterminated fenced code block
+  // (no closing ``` line, e.g. truncated/streamed input) must still close
+  // its <pre><code>, or the output is unbalanced HTML that fails to parse.
+  if (in_code_block) {
+    html += "</code></pre>\n";
+  }
   close_paragraph();
   close_list();
   close_blockquote();

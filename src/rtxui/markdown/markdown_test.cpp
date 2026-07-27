@@ -88,6 +88,16 @@ TEST_CASE("Markdown: Deeply nested blockquotes do not overflow the stack",
   REQUIRE_NOTHROW(MarkdownToHtml(input));
 }
 
+TEST_CASE("Markdown: Unterminated fenced code block still closes its tags",
+          "[markdown]") {
+  // Found by fuzzing: a ``` with no closing fence (truncated/streamed
+  // input, or a user still mid-edit) left <pre><code> open with no closing
+  // tags, producing HTML that failed to parse as XML.
+  REQUIRE(MarkdownToHtml("```") == "<pre><code></code></pre>\n");
+  REQUIRE(MarkdownToHtml("```\nint x = 1;") ==
+          "<pre><code>int x = 1;\n</code></pre>\n");
+}
+
 TEST_CASE("Markdown: Fenced Code Blocks", "[markdown]") {
   const std::string input = R"(```
 int x = 42;
