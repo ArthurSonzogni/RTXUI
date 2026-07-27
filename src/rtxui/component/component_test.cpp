@@ -3428,6 +3428,90 @@ TEST_CASE("Child component style is preserved when parent stylesheet styles it",
         Color::RGB(100, 100, 100));
 }
 
+TEST_CASE("Input hover/focus states derive from an app-overridden "
+          "background color",
+          "[component][input][style]") {
+  // input's own self:hover / self:focus rules use lighten(), which resolves
+  // relative to whatever background-color is already resolved for self by
+  // the time the pseudo-class pass runs (base_style, already reflecting any
+  // app override) -- so an app only has to override the base color once.
+  auto container = rtxui::Ref<StyledParentTestComponent>::New();
+  container->Mount();
+  auto* input_el = container->Root()->QuerySelector("#test-input");
+  REQUIRE(input_el != nullptr);
+  CHECK(input_el->base_style.background_color.value() ==
+        Color::RGB(100, 100, 100));
+
+  input_el->set_hovered(true);
+  container->ResolveTargetStyles();
+  Color hover = input_el->target_style.background_color.value();
+  CHECK(hover.r > 100);
+  CHECK(hover.g > 100);
+  CHECK(hover.b > 100);
+
+  input_el->set_hovered(false);
+  input_el->set_focused(true);
+  container->ResolveTargetStyles();
+  Color focus = input_el->target_style.background_color.value();
+  CHECK(focus.r > hover.r);
+}
+
+class SelectionHighlightTestComponent
+    : public rtxui::Component<SelectionHighlightTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::input>();
+    rtxui::Component<SelectionHighlightTestComponent>::InitReflection();
+  }
+  std::string_view view = R"html(
+    <input id="test-input" class="custom-input" />
+    <style>
+      .custom-input {
+        background-color: rgb(230, 230, 200);
+      }
+    </style>
+  )html";
+};
+
+TEST_CASE("Input selection highlight is readable regardless of the "
+          "app-chosen background color",
+          "[component][input][style]") {
+  // .selection is a separate <span>, not self: background-color doesn't
+  // inherit, so it can't derive from whatever color the app gives self.
+  // It uses a fixed, readable color pair instead of trying to (and it
+  // can't currently be made to derive from an app override; see the
+  // git history for why lighten()/darken() and CSS custom properties
+  // don't work here).
+  auto container = rtxui::Ref<SelectionHighlightTestComponent>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* input_el = container->Root()->QuerySelector("#test-input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_el->set_focused(true);
+  input_ptr->value = "hello world";
+  input_ptr->cursor_pos = 0;
+  input_ptr->selection_start = -1;
+  input_ptr->Digest();
+
+  Event::Keyboard kb;
+  kb.special = Event::Keyboard::Special::ArrowRight;
+  kb.modifier.shift = true;
+  input_ptr->OnEvent(Event(kb));
+  input_ptr->Digest();
+
+  auto* selection_el = container->Root()->QuerySelector(".selection");
+  REQUIRE(selection_el != nullptr);
+  CHECK(selection_el->base_style.background_color.value() ==
+        Color::RGB(38, 79, 120));
+  CHECK(selection_el->base_style.foreground_color.value() ==
+        Color::RGB(255, 255, 255));
+}
+
 class DynamicTagsTestComponent
     : public rtxui::Component<DynamicTagsTestComponent> {
  public:

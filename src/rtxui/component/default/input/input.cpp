@@ -34,7 +34,7 @@ std::string_view input::Setup() {
         overflow-x: scroll;
         scrollbar-width: none;
         white-space: nowrap;
-        background-color: lighten(7%);
+        background-color: rgb(40, 40, 40);
         opacity: 0.8;
         transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
       }
@@ -52,8 +52,15 @@ std::string_view input::Setup() {
       .cursor-focused {
         background-color: transparent;
       }
+      /* An absolute color pair (not derived from self's background) so the
+         selection highlight stays readable no matter what color an app
+         gives the input: self's background-color is a separate element,
+         so it can't be referenced here (background-color doesn't inherit,
+         and nested-component style resolution finishes before an outer
+         app's overrides are known anyway). */
       .selection {
-        background-color: lighten(20%);
+        background-color: rgb(38, 79, 120);
+        color: white;
       }
     </style>
   )html";
