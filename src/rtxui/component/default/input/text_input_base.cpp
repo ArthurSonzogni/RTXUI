@@ -493,8 +493,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
       }
 
       if (event == Event::CtrlC() || event == Event::CtrlX()) {
+        // With no selection, there's nothing to copy: leave the event
+        // unhandled so it falls through to Screen's global Ctrl+C-quits
+        // shortcut, rather than silently swallowing it whenever any text
+        // input happens to be focused.
         if (selection_start == -1 || selection_start == cursor_pos) {
-          return true;
+          return false;
         }
         int sel_min = std::min(selection_start, cursor_pos);
         int sel_max = std::max(selection_start, cursor_pos);

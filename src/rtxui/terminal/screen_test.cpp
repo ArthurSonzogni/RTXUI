@@ -103,6 +103,41 @@ TEST_CASE("Screen.StepExecution", "[terminal]") {
   // verifying the return flow.
 }
 
+TEST_CASE("Screen.BracketedPasteInsertsTextIntoFocusedInput",
+          "[terminal][paste]") {
+  // End-to-end: raw bytes (as a terminal would send them for a real paste,
+  // wrapped in bracketed-paste markers) through the device, parser, and
+  // Screen's event dispatch, landing as text in a focused <input>.
+  class PasteInputComponent : public Component<PasteInputComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::input>();
+      Component<PasteInputComponent>::InitReflection();
+    }
+    std::string_view view = R"(<input id="in" />)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto container = Ref<PasteInputComponent>::New();
+  Screen screen(container, device);
+  screen.Draw();
+
+  auto* in_el = container->Root()->QuerySelector("#in");
+  REQUIRE(in_el != nullptr);
+  in_el->set_focused(true);
+
+  std::string sequence = "\x1B[200~hi there\x1B[201~";
+  device->PushInput(sequence);
+  for (size_t i = 0; i < sequence.size(); ++i) {
+    screen.Step();
+  }
+
+  auto* in_ptr =
+      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  REQUIRE(in_ptr != nullptr);
+  CHECK(in_ptr->value == "hi there");
+}
+
 TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
@@ -1710,7 +1745,13 @@ TEST_CASE("Screen.CutSelectionWritesOSC52AndDeletesSelection",
   CHECK(in_ptr->value == "hello ");
 }
 
-TEST_CASE("Screen.CopyWithNoSelectionWritesNothing", "[terminal][clipboard]") {
+TEST_CASE("Screen.CopyWithNoSelectionLeavesEventUnhandled",
+          "[terminal][clipboard]") {
+  // With nothing selected, Ctrl+C must be left unhandled (not silently
+  // swallowed): Screen's global Ctrl+C-quits-the-app shortcut only fires
+  // when no component consumes the event first, and any input being
+  // focused is common enough that always consuming Ctrl+C there would
+  // otherwise make quitting the app that way stop working entirely.
   class ClipboardInputComponent : public Component<ClipboardInputComponent> {
    public:
     void InitReflection() override {
@@ -1738,10 +1779,11 @@ TEST_CASE("Screen.CopyWithNoSelectionWritesNothing", "[terminal][clipboard]") {
   in_ptr->Digest();
 
   device->ClearOutput();
-  in_ptr->OnEvent(Event::CtrlC());
+  bool handled = in_ptr->OnEvent(Event::CtrlC());
   in_ptr->Digest();
   screen.Draw();
 
+  CHECK_FALSE(handled);
   CHECK(device->GetOutput().find("\x1b]52;c;") == std::string::npos);
 }
 
