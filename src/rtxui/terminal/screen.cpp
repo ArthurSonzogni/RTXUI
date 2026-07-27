@@ -836,6 +836,13 @@ class ScreenImpl {
   int last_height_ = 0;
   bool has_drawn_ = false;
   bool running_ = true;
+  // Set while draining a burst of already-queued events (e.g. a paste,
+  // which synthesizes one keyboard event per character all at once) so
+  // DigestAndDraw() only actually redraws once, after the last of them --
+  // otherwise each character would trigger its own full layout/paint/write
+  // cycle, visibly "typing" the paste out one character at a time instead
+  // of applying it immediately.
+  bool suppress_draw_ = false;
   std::shared_ptr<PhysicalFragment> root_fragment_;
   std::shared_ptr<LayoutBox> root_box_;
   std::unique_ptr<Texture> last_texture_;
@@ -977,9 +984,15 @@ void ScreenImpl::Step() {
     if (bytes_read == 1) {
       UpdateSize();
       parser_->Add(c);
+      // A single byte can complete several already-queued events at once
+      // (e.g. the last byte of a paste's end marker synthesizes one
+      // keyboard event per pasted character): suppress intermediate draws
+      // so the whole batch applies as a single redraw.
       while (auto event = parser_->GetEvent()) {
+        suppress_draw_ = parser_->HasPendingEvents();
         HandleEvent(*event);
       }
+      suppress_draw_ = false;
     } else if (bytes_read == 0) {
       running_ = false;
     } else {
@@ -2006,7 +2019,7 @@ void ScreenImpl::UpdateSize() {
 }
 
 void ScreenImpl::DigestAndDraw() {
-  if (component_->Digest()) {
+  if (component_->Digest() && !suppress_draw_) {
     Draw();
   }
 }
