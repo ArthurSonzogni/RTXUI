@@ -3428,32 +3428,31 @@ TEST_CASE("Child component style is preserved when parent stylesheet styles it",
         Color::RGB(100, 100, 100));
 }
 
-TEST_CASE("Input hover/focus states derive from an app-overridden "
-          "background color",
+TEST_CASE("Input hover and focus do not compound when both apply at once",
           "[component][input][style]") {
-  // input's own self:hover / self:focus rules use lighten(), which resolves
-  // relative to whatever background-color is already resolved for self by
-  // the time the pseudo-class pass runs (base_style, already reflecting any
-  // app override) -- so an app only has to override the base color once.
+  // self:hover and self:focus both commonly match simultaneously in
+  // practice: clicking an input focuses it while the mouse typically
+  // stays over it, so it's hovered too. Regression: both rules used to
+  // set background-color via lighten(), which resolves relative to
+  // whatever's already in the style being built -- so when both rules
+  // applied in the same pass, self:focus lightened the already-lightened
+  // self:hover result, producing a washed-out, hard-to-read color instead
+  // of the intended focus look. Fixed colors don't have this problem:
+  // whichever rule is declared later always wins outright.
   auto container = rtxui::Ref<StyledParentTestComponent>::New();
   container->Mount();
   auto* input_el = container->Root()->QuerySelector("#test-input");
   REQUIRE(input_el != nullptr);
-  CHECK(input_el->base_style.background_color.value() ==
-        Color::RGB(100, 100, 100));
 
-  input_el->set_hovered(true);
-  container->ResolveTargetStyles();
-  Color hover = input_el->target_style.background_color.value();
-  CHECK(hover.r > 100);
-  CHECK(hover.g > 100);
-  CHECK(hover.b > 100);
-
-  input_el->set_hovered(false);
   input_el->set_focused(true);
   container->ResolveTargetStyles();
-  Color focus = input_el->target_style.background_color.value();
-  CHECK(focus.r > hover.r);
+  Color focus_only = input_el->target_style.background_color.value();
+
+  input_el->set_hovered(true);  // still focused too, as after a real click
+  container->ResolveTargetStyles();
+  Color hover_and_focus = input_el->target_style.background_color.value();
+
+  CHECK(hover_and_focus == focus_only);
 }
 
 class SelectionHighlightTestComponent
