@@ -3540,6 +3540,37 @@ TEST_CASE("Component.InlineStyleParsingRegression", "[component][style]") {
   CHECK(target->style.background_color.value() == Color::RGB(255, 0, 0));
 }
 
+TEST_CASE("Invalid interpolated CSS does not crash the process",
+          "[component][style]") {
+  class DynamicStyleComp : public rtxui::Component<DynamicStyleComp> {
+   public:
+    std::string rule = "color: red;";
+    void InitReflection() override {
+      Bind(rule);
+      Import<rtxui::div>();
+      rtxui::Component<DynamicStyleComp>::InitReflection();
+    }
+    std::string_view view = R"xml(
+      <div id="target" class="box">hi</div>
+      <style>
+        .box { {rule} }
+      </style>
+    )xml";
+  };
+
+  auto component = rtxui::Ref<DynamicStyleComp>::New();
+  component->Mount();
+
+  // A bound value producing malformed CSS must be reported, not fatal: this
+  // string is re-parsed by Render() on every Digest(), unlike the top-level
+  // XML template which is only parsed once at Mount().
+  component->rule = "not valid css {{{ ]]]";
+  CHECK_NOTHROW(component->Digest());
+
+  auto* target = component->Root()->QuerySelector("#target");
+  REQUIRE(target != nullptr);
+}
+
 #include "rtxui/component/default/code/code.hpp"
 #include "rtxui/component/default/s/s.hpp"
 #include "rtxui/component/default/u/u.hpp"
