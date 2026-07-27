@@ -18,6 +18,7 @@ class TerminalInputParser {
   void Timeout(int time);
   void Add(char c);
   std::optional<Event> GetEvent();
+  bool HasPendingEvents() const { return !events_.empty(); }
 
  private:
   unsigned char Current();

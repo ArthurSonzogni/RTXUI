@@ -214,6 +214,62 @@ TEST_CASE("Screen.PastingIntoTextareaDoesNotDoubleIndentation",
   CHECK(ta_ptr->value == "  foo\n  bar\n    baz");
 }
 
+TEST_CASE("Screen.PasteAppliesAsOneRedrawNotOnePerCharacter",
+          "[terminal][paste][regression]") {
+  // Regression: pasted text was inserted as a burst of individual keyboard
+  // events (one per character, all queued from the same end-of-paste
+  // marker byte), but each one triggered its own full digest+layout+
+  // paint+write cycle, since Step()'s draining loop called HandleEvent()
+  // (which redraws on every handled event) once per queued event with no
+  // batching. For any paste beyond a couple of characters, this was
+  // visible as the pasted text "typing" itself out instead of appearing
+  // immediately. Uses a component with no CSS transitions of its own, so
+  // the only thing that can trigger a redraw here is the keyboard events
+  // themselves -- isolating this from an unrelated focus/hover color
+  // transition that might also be independently animating.
+  class BoundTrackerComponent : public Component<BoundTrackerComponent> {
+   public:
+    std::string typed;
+    void InitReflection() override {
+      Bind(typed);
+      Component<BoundTrackerComponent>::InitReflection();
+    }
+    bool OnEvent(Event event) override {
+      if (auto* kb = event.get_if<Event::Keyboard>()) {
+        typed += static_cast<char>(kb->codepoint);
+        return true;
+      }
+      return false;
+    }
+    std::string_view view = "{typed}";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<BoundTrackerComponent>::New();
+  Screen screen(component, device);
+
+  device->ClearOutput();
+  std::string paste_content(20, 'x');
+  std::string sequence = "\x1B[200~" + paste_content + "\x1B[201~";
+  device->PushInput(sequence);
+  for (size_t i = 0; i < sequence.size(); ++i) {
+    screen.Step();
+  }
+
+  CHECK(component->typed == paste_content);
+
+  std::string output = device->GetOutput();
+  int redraw_count = 0;
+  for (std::string_view marker : {"\x1B[?25h", "\x1B[?25l"}) {
+    size_t pos = 0;
+    while ((pos = output.find(marker, pos)) != std::string::npos) {
+      ++redraw_count;
+      pos += marker.size();
+    }
+  }
+  CHECK(redraw_count == 1);
+}
+
 TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
