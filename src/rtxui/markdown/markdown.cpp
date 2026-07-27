@@ -243,10 +243,24 @@ std::vector<std::string> SplitTableCells(std::string_view line) {
   return cells;
 }
 
+// Blockquotes recurse into MarkdownToHtmlImpl once per nesting level (one
+// '>' peeled off per level). Without a cap, a single line of many '>'
+// characters (trivial to produce, e.g. in user-submitted chat/comment text)
+// recurses once per character and overflows the stack.
+constexpr int kMaxBlockquoteDepth = 32;
+
+std::string MarkdownToHtmlImpl(std::string_view markdown, int depth);
+
 }  // namespace
 
 
 std::string MarkdownToHtml(std::string_view markdown) {
+  return MarkdownToHtmlImpl(markdown, 0);
+}
+
+namespace {
+
+std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
   std::string html;
   auto lines = SplitLines(markdown);
 
@@ -280,8 +294,15 @@ std::string MarkdownToHtml(std::string_view markdown) {
 
   auto close_blockquote = [&]() {
     if (in_blockquote) {
-      html += "<blockquote>\n" + MarkdownToHtml(current_blockquote) +
-              "</blockquote>\n";
+      html += "<blockquote>\n";
+      if (depth < kMaxBlockquoteDepth) {
+        html += MarkdownToHtmlImpl(current_blockquote, depth + 1);
+      } else {
+        // Max nesting reached: stop recursing and render the remainder as
+        // plain escaped text instead of overflowing the stack.
+        html += "<p>" + ParseInline(current_blockquote) + "</p>\n";
+      }
+      html += "</blockquote>\n";
       current_blockquote.clear();
       in_blockquote = false;
     }
@@ -478,5 +499,7 @@ std::string MarkdownToHtml(std::string_view markdown) {
 
   return html;
 }
+
+}  // namespace
 
 }  // namespace rtxui
