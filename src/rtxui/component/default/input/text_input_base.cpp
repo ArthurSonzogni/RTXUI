@@ -492,6 +492,26 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
 
+      if (event == Event::CtrlC() || event == Event::CtrlX()) {
+        if (selection_start == -1 || selection_start == cursor_pos) {
+          return true;
+        }
+        int sel_min = std::min(selection_start, cursor_pos);
+        int sel_max = std::max(selection_start, cursor_pos);
+        self->SetClipboard(GraphemesToString(graphemes, sel_min, sel_max - sel_min));
+        if (event == Event::CtrlX()) {
+          DeleteSelection(graphemes, selection_start, cursor_pos);
+          // See the Backspace branch above for why this must come before
+          // the `value` reassignment.
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
+          ideal_column_ = pos2d.column;
+          value = GraphemesToString(graphemes);
+          self->PropagateBinding("value", value);
+          KeepCursorVisible(root, is_multiline);
+        }
+        return true;
+      }
+
       if (kb.special == Event::Keyboard::Special::ArrowLeft) {
         if (kb.modifier.shift && selection_start == -1) {
           selection_start = cursor_pos;

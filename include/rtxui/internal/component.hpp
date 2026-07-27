@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <ranges>
 #include <set>
 #include <sstream>
@@ -110,6 +111,13 @@ class ComponentBase : public RefCounted, public Bindings {
   void CaptureMouse();
   void ReleaseMouse();
   static ComponentBase* GetMouseCapturer();
+
+  // Requests the system clipboard be set to `text` (via the terminal's OSC
+  // 52 escape sequence). The write only happens once Screen flushes it on
+  // the next frame, via TakePendingClipboardWrite() -- there is no direct
+  // path from a component to the terminal device.
+  void SetClipboard(std::string_view text);
+  static std::optional<std::string> TakePendingClipboardWrite();
 
   Element* Root() const;
   Ref<Element> Slot(std::string_view name);

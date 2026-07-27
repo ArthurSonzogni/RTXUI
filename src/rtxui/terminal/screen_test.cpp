@@ -1635,6 +1635,116 @@ TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
   CHECK(output.find("\x1b[?25l") != std::string::npos);
 }
 
+TEST_CASE("Screen.CopySelectionWritesOSC52", "[terminal][clipboard]") {
+  class ClipboardInputComponent : public Component<ClipboardInputComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::input>();
+      Component<ClipboardInputComponent>::InitReflection();
+    }
+    std::string_view view = R"(<input id="in" />)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto container = Ref<ClipboardInputComponent>::New();
+  Screen screen(container, device);
+  screen.Draw();
+
+  auto* in_el = container->Root()->QuerySelector("#in");
+  REQUIRE(in_el != nullptr);
+  auto* in_ptr =
+      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  REQUIRE(in_ptr != nullptr);
+
+  in_el->set_focused(true);
+  in_ptr->value = "hello world";
+  in_ptr->selection_start = 0;
+  in_ptr->cursor_pos = 5;  // selects "hello"
+  in_ptr->Digest();
+
+  device->ClearOutput();
+  in_ptr->OnEvent(Event::CtrlC());
+  in_ptr->Digest();
+  screen.Draw();
+
+  // "hello" base64-encodes to "aGVsbG8=".
+  CHECK(device->GetOutput().find("\x1b]52;c;aGVsbG8=") != std::string::npos);
+  CHECK(in_ptr->value == "hello world");  // Copy must not modify the value.
+}
+
+TEST_CASE("Screen.CutSelectionWritesOSC52AndDeletesSelection",
+          "[terminal][clipboard]") {
+  class ClipboardInputComponent : public Component<ClipboardInputComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::input>();
+      Component<ClipboardInputComponent>::InitReflection();
+    }
+    std::string_view view = R"(<input id="in" />)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto container = Ref<ClipboardInputComponent>::New();
+  Screen screen(container, device);
+  screen.Draw();
+
+  auto* in_el = container->Root()->QuerySelector("#in");
+  REQUIRE(in_el != nullptr);
+  auto* in_ptr =
+      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  REQUIRE(in_ptr != nullptr);
+
+  in_el->set_focused(true);
+  in_ptr->value = "hello world";
+  in_ptr->selection_start = 6;
+  in_ptr->cursor_pos = 11;  // selects "world"
+  in_ptr->Digest();
+
+  device->ClearOutput();
+  in_ptr->OnEvent(Event::CtrlX());
+  in_ptr->Digest();
+  screen.Draw();
+
+  // "world" base64-encodes to "d29ybGQ=".
+  CHECK(device->GetOutput().find("\x1b]52;c;d29ybGQ=") != std::string::npos);
+  CHECK(in_ptr->value == "hello ");
+}
+
+TEST_CASE("Screen.CopyWithNoSelectionWritesNothing", "[terminal][clipboard]") {
+  class ClipboardInputComponent : public Component<ClipboardInputComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::input>();
+      Component<ClipboardInputComponent>::InitReflection();
+    }
+    std::string_view view = R"(<input id="in" />)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto container = Ref<ClipboardInputComponent>::New();
+  Screen screen(container, device);
+  screen.Draw();
+
+  auto* in_el = container->Root()->QuerySelector("#in");
+  REQUIRE(in_el != nullptr);
+  auto* in_ptr =
+      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  REQUIRE(in_ptr != nullptr);
+
+  in_el->set_focused(true);
+  in_ptr->value = "hello world";
+  in_ptr->selection_start = -1;
+  in_ptr->cursor_pos = 3;
+  in_ptr->Digest();
+
+  device->ClearOutput();
+  in_ptr->OnEvent(Event::CtrlC());
+  in_ptr->Digest();
+  screen.Draw();
+
+  CHECK(device->GetOutput().find("\x1b]52;c;") == std::string::npos);
+}
+
 TEST_CASE("Screen.ScrollIntoViewWithBorder", "[terminal][focus][scroll]") {
   auto device = std::make_shared<MockTerminalDevice>();
 

@@ -20,6 +20,7 @@
 #include <iostream>
 
 #include "rtxui/component/component_internal.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/base/task_runner.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -1954,6 +1955,15 @@ void ScreenImpl::Draw() {
                    std::to_string(cx) + "H");
   } else {
     device_->Write("\x1b[?25l");
+  }
+
+  // OSC 52: sets the system clipboard via the terminal itself, so it works
+  // over SSH without any host clipboard tool dependency. Most terminals
+  // allow this "write" direction; reading the clipboard back this way is
+  // commonly disabled for security, which is why paste instead relies on
+  // bracketed paste mode.
+  if (auto text = ComponentBase::TakePendingClipboardWrite()) {
+    device_->Write("\x1b]52;c;" + Base64Encode(*text) + "\x07");
   }
 
   if (use_diff) {
