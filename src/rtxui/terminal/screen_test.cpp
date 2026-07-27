@@ -1579,6 +1579,62 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
   REQUIRE(scrollable->scroll_y() == 3);
 }
 
+TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
+          "[terminal][scroll][cursor]") {
+  // Regression: the native terminal cursor was positioned using
+  // absolute_x()/absolute_y(), which reflects an element's scrolled screen
+  // position but not whether a scrollable ancestor currently clips it out
+  // of view. Scrolling a textarea's viewport away from the cursor (e.g.
+  // via mouse wheel), without moving the cursor itself, left the native
+  // cursor positioned off-screen (even at a negative row) instead of
+  // hidden.
+  class ScrollCursorComponent : public Component<ScrollCursorComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::textarea>();
+      Component<ScrollCursorComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <textarea id="ta" />
+      <style>
+        #ta { width: 20; height: 3; }
+      </style>
+    )html";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto container = Ref<ScrollCursorComponent>::New();
+  Screen screen(container, device);
+
+  auto* ta_el = container->Root()->QuerySelector("#ta");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<textarea*>(
+      const_cast<ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  screen.Draw();
+  ta_el->set_focused(true);
+
+  std::string text;
+  for (int i = 0; i < 10; ++i) {
+    text += "line " + std::to_string(i) + "\n";
+  }
+  ta_ptr->value = text;
+  ta_ptr->cursor_pos = 5;  // inside "line 0", within the initial viewport.
+  ta_ptr->Digest();
+  device->ClearOutput();
+  screen.Draw();
+  CHECK(device->GetOutput().find("\x1b[?25h") != std::string::npos);
+
+  // Scroll away from the cursor's line, without moving the cursor.
+  ta_el->set_scroll_y(7);
+  device->ClearOutput();
+  screen.Draw();
+  std::string output = device->GetOutput();
+  CHECK(output.find("\x1b[?25h") == std::string::npos);
+  CHECK(output.find("\x1b[?25l") != std::string::npos);
+}
+
 TEST_CASE("Screen.ScrollIntoViewWithBorder", "[terminal][focus][scroll]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
