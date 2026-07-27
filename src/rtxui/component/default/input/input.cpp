@@ -38,12 +38,19 @@ std::string_view input::Setup() {
         opacity: 0.8;
         transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
       }
+      /* Fixed absolute colors, not lighten(): self:hover and self:focus can
+         both match at once (e.g. clicking focuses the input while the
+         mouse is still over it, so it's also hovered), and since both
+         rules apply to the same style in cascade order, lighten() would
+         compound -- self:focus lightening the already-lightened
+         self:hover result -- producing a much brighter, washed-out color
+         instead of a stable focus look. */
       self:hover {
-        background-color: lighten(14%);
+        background-color: rgb(75, 75, 75);
         opacity: 0.9;
       }
       self:focus {
-        background-color: lighten(24%);
+        background-color: rgb(101, 101, 101);
         opacity: 1.0;
       }
       .cursor {
