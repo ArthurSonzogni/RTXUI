@@ -347,3 +347,19 @@ TEST_CASE("Graphemes.RangeForWidth", "[unicode]") {
   }
   CHECK(total == string_width(input));
 }
+
+TEST_CASE("Base64Encode", "[base64]") {
+  // Standard test vectors (RFC 4648).
+  CHECK(Base64Encode("") == "");
+  CHECK(Base64Encode("f") == "Zg==");
+  CHECK(Base64Encode("fo") == "Zm8=");
+  CHECK(Base64Encode("foo") == "Zm9v");
+  CHECK(Base64Encode("foob") == "Zm9vYg==");
+  CHECK(Base64Encode("fooba") == "Zm9vYmE=");
+  CHECK(Base64Encode("foobar") == "Zm9vYmFy");
+  CHECK(Base64Encode("hello world") == "aGVsbG8gd29ybGQ=");
+
+  // Bytes with the high bit set must round-trip correctly (not sign-extend).
+  std::string binary("\xFF\x00\x80", 3);
+  CHECK(Base64Encode(binary) == "/wCA");
+}

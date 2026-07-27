@@ -19,6 +19,7 @@ auto Join(const std::vector<std::string>& parts, std::string_view delimiter)
 auto StripIndent(const std::string_view& text) -> std::string;
 auto Repeat(std::string_view text, int count) -> std::string;
 auto CodePointToString(uint32_t codepoint) -> std::string;
+auto Base64Encode(std::string_view input) -> std::string;
 auto EatCodePoint(std::string_view input,
                   size_t start,
                   size_t* end,

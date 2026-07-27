@@ -1674,6 +1674,42 @@ auto CodePointToString(uint32_t codepoint) -> std::string {
   return std::string{};
 }
 
+auto Base64Encode(std::string_view input) -> std::string {
+  static constexpr char kAlphabet[] =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  std::string result;
+  result.reserve(((input.size() + 2) / 3) * 4);
+
+  size_t i = 0;
+  while (i + 3 <= input.size()) {
+    uint32_t n = (static_cast<uint8_t>(input[i]) << 16) |
+                (static_cast<uint8_t>(input[i + 1]) << 8) |
+                static_cast<uint8_t>(input[i + 2]);
+    result += kAlphabet[(n >> 18) & 0x3F];
+    result += kAlphabet[(n >> 12) & 0x3F];
+    result += kAlphabet[(n >> 6) & 0x3F];
+    result += kAlphabet[n & 0x3F];
+    i += 3;
+  }
+
+  size_t remaining = input.size() - i;
+  if (remaining == 1) {
+    uint32_t n = static_cast<uint8_t>(input[i]) << 16;
+    result += kAlphabet[(n >> 18) & 0x3F];
+    result += kAlphabet[(n >> 12) & 0x3F];
+    result += "==";
+  } else if (remaining == 2) {
+    uint32_t n = (static_cast<uint8_t>(input[i]) << 16) |
+                (static_cast<uint8_t>(input[i + 1]) << 8);
+    result += kAlphabet[(n >> 18) & 0x3F];
+    result += kAlphabet[(n >> 12) & 0x3F];
+    result += kAlphabet[(n >> 6) & 0x3F];
+    result += "=";
+  }
+
+  return result;
+}
+
 void GraphemeIterator::NextSlow() {
   size_t start = pos_;
   size_t end = start;

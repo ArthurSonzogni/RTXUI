@@ -79,6 +79,7 @@ void ComponentBase::InitReflection() {}
 
 namespace {
 ComponentBase* g_mouse_capturer = nullptr;
+std::optional<std::string> g_pending_clipboard_write;
 }  // namespace
 
 void ComponentBase::CaptureMouse() {
@@ -93,6 +94,16 @@ void ComponentBase::ReleaseMouse() {
 
 ComponentBase* ComponentBase::GetMouseCapturer() {
   return g_mouse_capturer;
+}
+
+void ComponentBase::SetClipboard(std::string_view text) {
+  g_pending_clipboard_write = std::string(text);
+}
+
+std::optional<std::string> ComponentBase::TakePendingClipboardWrite() {
+  std::optional<std::string> result = std::move(g_pending_clipboard_write);
+  g_pending_clipboard_write.reset();
+  return result;
 }
 
 bool ComponentBase::OnEvent(Event event) {
