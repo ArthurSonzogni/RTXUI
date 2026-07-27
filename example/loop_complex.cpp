@@ -55,7 +55,7 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
         }
         .container { padding: 1; }
         .input-row { display: flex; gap: 1; margin-bottom: 1; }
-        input { background-color: rgb(30, 41, 59); color: white; width: 25; padding: 0 1; }
+        input { width: 25; padding: 0 1; }
         .list { display: flex; flex-direction: column; gap: 0; border: tall; border-color: rgb(51, 65, 85); }
         .item { display: flex; gap: 2; padding: 0 1; align-items: center; }
         .status { width: 10; color: rgb(56, 189, 248); }

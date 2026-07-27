@@ -185,8 +185,6 @@ class Playground : public Component<Playground> {
       .editor {
         flex-grow: 1;
         width: 100%;
-        background-color: rgb(30, 41, 59);
-        color: rgb(226, 232, 240);
         padding-left: 1;
         padding-right: 1;
         overflow-y: scroll;
