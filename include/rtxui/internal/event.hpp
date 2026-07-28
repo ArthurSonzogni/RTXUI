@@ -63,6 +63,11 @@ struct Event {
       Released,
     };
     Motion motion = Pressed;
+    // Set only by TerminalInputParser::EmitPastedText, for components (e.g.
+    // TextInputBase's undo grouping) that need to tell a pasted character
+    // apart from one the user actually typed, even though both arrive as
+    // the same kind of single-codepoint event.
+    bool from_paste = false;
     std::strong_ordering operator<=>(const Keyboard&) const = default;
     std::string Print() const;
   };

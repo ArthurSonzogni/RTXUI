@@ -1114,6 +1114,333 @@ TEST_CASE("Input Component Maxlength Attribute Parsed From XML",
   CHECK(input_ptr->maxlength == 5);
 }
 
+TEST_CASE("Input Component Undo/Redo Basic Single Character",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");
+
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+  CHECK(input_ptr->cursor_pos == 0);
+
+  // Redo via Ctrl+Y.
+  input_ptr->OnEvent(Event::CtrlY());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");
+  CHECK(input_ptr->cursor_pos == 1);
+}
+
+TEST_CASE("Input Component Undo/Redo Via Ctrl+Shift+Z",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+
+  Event::Keyboard redo_kb;
+  redo_kb.codepoint = 'z';
+  redo_kb.modifier.ctrl = true;
+  redo_kb.modifier.shift = true;
+  input_ptr->OnEvent(Event(redo_kb));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");
+}
+
+TEST_CASE("Input Component Undo Groups Contiguous Typing Into One Step",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  for (char c : std::string("abc")) {
+    input_ptr->OnEvent(Event::Keyboard::From(c));
+    input_ptr->Digest();
+  }
+  CHECK(input_ptr->value == "abc");
+
+  // One undo removes the whole contiguously-typed run, not just the 'c'.
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+
+  // There is exactly one undo step recorded for the whole run: undo is now
+  // a no-op.
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+}
+
+TEST_CASE("Input Component Cursor Move Breaks The Undo Group",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::Keyboard::From('b'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "ab");
+
+  // Moving the cursor between edits must start a new undo group, even
+  // though the next edit is still a plain character insert.
+  input_ptr->OnEvent(Event::ArrowLeft());
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::Keyboard::From('c'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "acb");
+
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "ab");  // only the 'c' insert is undone
+
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");  // the earlier "ab" run undoes as one step
+}
+
+TEST_CASE("Input Component Undo Restores Deleted Text; Consecutive "
+          "Backspaces Merge",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "abc";
+  input_ptr->cursor_pos = 3;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Backspace());
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::Backspace());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");
+
+  // One undo restores the whole contiguous backspace run.
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "abc");
+  CHECK(input_ptr->cursor_pos == 3);
+}
+
+TEST_CASE("Input Component New Edit After Undo Clears The Redo Stack",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+
+  input_ptr->OnEvent(Event::Keyboard::From('z'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "z");
+
+  // Redo has nothing to reapply: the 'a' branch was abandoned once a new
+  // edit happened.
+  input_ptr->OnEvent(Event::CtrlY());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "z");
+}
+
+TEST_CASE("Input Component Pasted Text Undoes As One Step, Separate From "
+          "Surrounding Typing",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+
+  for (char c : std::string("xyz")) {
+    Event::Keyboard kb = Event::Keyboard::From(c);
+    kb.from_paste = true;
+    input_ptr->OnEvent(Event(kb));
+    input_ptr->Digest();
+  }
+  CHECK(input_ptr->value == "axyz");
+
+  input_ptr->OnEvent(Event::Keyboard::From('b'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "axyzb");
+
+  // Undo order: the trailing manual 'b', then the whole paste as one
+  // step, then the leading manual 'a' -- three separate steps, not five.
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "axyz");
+
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");
+
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+}
+
+TEST_CASE("Input Component Undo/Redo Blocked While Readonly Or Disabled",
+          "[component][input][undo][readonly][disabled]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");
+
+  input_ptr->readonly = true;
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");  // undo is blocked
+
+  input_ptr->readonly = false;
+  input_ptr->disabled = true;
+  input_ptr->Digest();
+  bool handled = input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK_FALSE(handled);
+  CHECK(input_ptr->value == "a");
+}
+
+TEST_CASE("Input Component Undo With Empty History Is A No-op",
+          "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  std::string original = input_ptr->value;
+  bool handled = input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(handled);
+  CHECK(input_ptr->value == original);
+}
+
+TEST_CASE("Input Component Cut Is Undoable", "[component][input][undo]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "hello world";
+  input_ptr->selection_start = 0;
+  input_ptr->cursor_pos = 5;  // selects "hello"
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::CtrlX());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == " world");
+
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello world");
+}
+
 TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
@@ -1282,6 +1609,42 @@ TEST_CASE("Textarea Component Maxlength Blocks Enter And Tab Past The Limit",
   textarea_ptr->OnEvent(Event::Return());
   textarea_ptr->Digest();
   CHECK(textarea_ptr->value == "ab");  // no room for the newline either
+}
+
+TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
+          "[component][textarea][undo]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "ab";
+  textarea_ptr->cursor_pos = 2;
+  textarea_el->set_focused(true);
+  textarea_ptr->Digest();
+
+  textarea_ptr->OnEvent(Event::Return());
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "ab\n");
+
+  Event::Keyboard tab_kb;
+  tab_kb.special = Event::Keyboard::Special::Tab;
+  textarea_ptr->OnEvent(Event(tab_kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "ab\n\t");
+
+  // Two separate undo steps: first the tab, then the newline.
+  textarea_ptr->OnEvent(Event::CtrlZ());
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "ab\n");
+
+  textarea_ptr->OnEvent(Event::CtrlZ());
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "ab");
 }
 
 TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {

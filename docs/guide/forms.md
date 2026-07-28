@@ -38,6 +38,14 @@ truncated to fit rather than rejected outright, matching a browser's
 maxlength field. It only limits interactive edits — assigning a longer
 string to the bound C++ variable directly is unaffected.
 
+Ctrl+Z undoes; Ctrl+Y or Ctrl+Shift+Z redoes. Edits coalesce into a single
+undo step while they're contiguous — typing "abc" without moving the
+cursor undoes as one step, as do consecutive Backspace/Delete presses —
+but moving the cursor, selecting text, pasting, cutting, Enter, or
+Tab-indent each start a fresh step (so pasted text always undoes as a
+whole, separately from typing before or after it). Undo/redo is blocked
+while `readonly` or `disabled`.
+
 ```html
 <input value="{text}" />
 ```
@@ -72,11 +80,12 @@ Ctrl+Backspace/Delete for word deletion. Enter carries over the current
 line's leading indentation onto the new line; Tab/Shift-Tab indent and
 unindent the current line.
 
-Selection, copy/cut, paste, `disabled`, `readonly`, `placeholder`, and
-`maxlength` all work the same way as `<input>` (see above; a multi-line
-placeholder string renders across multiple lines, same as `value`;
-`maxlength` also blocks Enter/Tab-indent once there's no room left). A
-newline pasted into a
+Selection, copy/cut, paste, `disabled`, `readonly`, `placeholder`,
+`maxlength`, and undo/redo all work the same way as `<input>` (see above;
+a multi-line placeholder string renders across multiple lines, same as
+`value`; `maxlength` also blocks Enter/Tab-indent once there's no room
+left; Enter and Tab-indent each undo as their own step, never merged with
+surrounding typing). A newline pasted into a
 single-line `<input>` is dropped; pasting into a `<textarea>` inserts the
 newlines as-is without
 triggering the auto-indent that a manually-typed Enter gets. Under
