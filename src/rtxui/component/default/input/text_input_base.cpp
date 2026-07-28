@@ -292,6 +292,24 @@ void CapInsertionToMaxLength(std::vector<Grapheme>& new_graphemes,
 
 }  // namespace
 
+namespace {
+constexpr size_t kMaxUndoDepth = 200;
+}  // namespace
+
+void TextInputBase::BeginEdit(EditKind kind) {
+  bool has_selection = (selection_start != -1 && selection_start != cursor_pos);
+  bool contiguous = !has_selection && kind != EditKind::Other &&
+                    kind == last_edit_kind_ && cursor_pos == last_edit_end_pos_;
+  if (!contiguous) {
+    undo_stack_.push_back({value, cursor_pos, selection_start});
+    if (undo_stack_.size() > kMaxUndoDepth) {
+      undo_stack_.erase(undo_stack_.begin());
+    }
+    redo_stack_.clear();
+  }
+  last_edit_kind_ = kind;
+}
+
 void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
   if (!root) {
     return;
@@ -511,6 +529,34 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
 
+      bool is_redo_chord = kb.codepoint == 'z' && kb.modifier.ctrl &&
+                           kb.modifier.shift && !kb.modifier.alt &&
+                           !kb.modifier.meta;
+      if (event == Event::CtrlZ() || is_redo_chord || event == Event::CtrlY()) {
+        if (readonly) {
+          return true;
+        }
+        bool is_redo = is_redo_chord || event == Event::CtrlY();
+        auto& from_stack = is_redo ? redo_stack_ : undo_stack_;
+        auto& to_stack = is_redo ? undo_stack_ : redo_stack_;
+        if (!from_stack.empty()) {
+          to_stack.push_back({value, cursor_pos, selection_start});
+          HistoryEntry entry = from_stack.back();
+          from_stack.pop_back();
+          value = entry.value;
+          cursor_pos = entry.cursor_pos;
+          selection_start = entry.selection_start;
+          self->PropagateBinding("value", value);
+          last_edit_kind_ = EditKind::Other;
+          last_edit_end_pos_ = -1;
+          auto new_graphemes = GetGraphemesList(value);
+          auto pos2d = GetCursor2D(new_graphemes, cursor_pos);
+          ideal_column_ = pos2d.column;
+          KeepCursorVisible(root, is_multiline);
+        }
+        return true;
+      }
+
       if (event == Event::CtrlC() || event == Event::CtrlX()) {
         // With no selection, there's nothing to copy: leave the event
         // unhandled so it falls through to Screen's global Ctrl+C-quits
@@ -523,6 +569,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         int sel_max = std::max(selection_start, cursor_pos);
         self->SetClipboard(GraphemesToString(graphemes, sel_min, sel_max - sel_min));
         if (event == Event::CtrlX() && !readonly) {
+          BeginEdit(EditKind::Other);
           DeleteSelection(graphemes, selection_start, cursor_pos);
           // See the Backspace branch above for why this must come before
           // the `value` reassignment.
@@ -530,6 +577,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           ideal_column_ = pos2d.column;
           value = GraphemesToString(graphemes);
           self->PropagateBinding("value", value);
+          last_edit_end_pos_ = cursor_pos;
           KeepCursorVisible(root, is_multiline);
         }
         return true;
@@ -643,6 +691,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (readonly) {
           return true;
         }
+        BeginEdit(EditKind::Delete);
         if (DeleteSelection(graphemes, selection_start, cursor_pos)) {
           // Selection deleted
         } else {
@@ -659,6 +708,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         ideal_column_ = pos2d.column;
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
+        last_edit_end_pos_ = cursor_pos;
         KeepCursorVisible(root, is_multiline);
         return true;
       }
@@ -666,6 +716,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (readonly) {
           return true;
         }
+        BeginEdit(EditKind::Delete);
         if (DeleteSelection(graphemes, selection_start, cursor_pos)) {
           // Selection deleted
         } else {
@@ -678,6 +729,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         ideal_column_ = pos2d.column;
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
+        last_edit_end_pos_ = cursor_pos;
         KeepCursorVisible(root, is_multiline);
         return true;
       }
@@ -685,6 +737,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (readonly) {
           return true;
         }
+        BeginEdit(EditKind::Other);
         if (kb.modifier.shift) {
           // Unindent: remove a tab or up to 4 spaces at the start of the line
           int line_start = FindLineStart(graphemes, cursor_pos);
@@ -728,12 +781,14 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           self->PropagateBinding("value", value);
           KeepCursorVisible(root, is_multiline);
         }
+        last_edit_end_pos_ = cursor_pos;
         return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
         if (readonly) {
           return true;
         }
+        BeginEdit(EditKind::Other);
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
         if (cursor_pos < 0) {
@@ -768,6 +823,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         ideal_column_ = pos2d.column;
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
+        last_edit_end_pos_ = cursor_pos;
         KeepCursorVisible(root, is_multiline);
         return true;
       }
@@ -784,6 +840,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (readonly) {
           return true;
         }
+        BeginEdit(kb.from_paste ? EditKind::Paste : EditKind::Insert);
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
         std::string character = CodePointToString(kb.codepoint);
@@ -805,6 +862,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         ideal_column_ = pos2d.column;
         value = GraphemesToString(graphemes);
         self->PropagateBinding("value", value);
+        last_edit_end_pos_ = cursor_pos;
         KeepCursorVisible(root, is_multiline);
         return true;
       }

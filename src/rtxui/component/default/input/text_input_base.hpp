@@ -7,6 +7,7 @@
 #include <chrono>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "rtxui/internal/component.hpp"
 
@@ -52,6 +53,25 @@ class TextInputBase {
   void KeepCursorVisible(Element* root, bool is_multiline);
   bool OnEventShared(ComponentBase* self, Event event, bool is_multiline);
   bool DigestShared(ComponentBase* self);
+
+  // Undo/redo history. Contiguous edits of the same EditKind at the same
+  // cursor position coalesce into a single undo step (so typing "abc"
+  // then Ctrl+Z removes all three characters at once); anything else -
+  // a cursor move, a selection, a paste next to manual typing, cut,
+  // Tab-indent, Enter - starts a new step. See BeginEdit's definition for
+  // the exact rule.
+  enum class EditKind { None, Insert, Paste, Delete, Other };
+  struct HistoryEntry {
+    std::string value;
+    int cursor_pos = 0;
+    int selection_start = -1;
+  };
+  void BeginEdit(EditKind kind);
+
+  std::vector<HistoryEntry> undo_stack_;
+  std::vector<HistoryEntry> redo_stack_;
+  EditKind last_edit_kind_ = EditKind::None;
+  int last_edit_end_pos_ = -1;
 };
 
 }  // namespace rtxui

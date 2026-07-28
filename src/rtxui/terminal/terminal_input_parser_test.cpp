@@ -504,6 +504,13 @@ TEST_CASE("Event.BracketedPaste", "[terminal][paste]") {
   CHECK(newline_kb->codepoint == '\n');
   CHECK(newline_kb->special == Event::Keyboard::Special::None);
   CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint == 'b');
+
+  // Every event synthesized from pasted text (including the plain '\n')
+  // is marked from_paste, so components can tell it apart from the user
+  // actually typing (e.g. TextInputBase's undo grouping).
+  for (const auto& event : received_events) {
+    CHECK(event.get_if<Event::Keyboard>()->from_paste);
+  }
 }
 
 TEST_CASE("Event.BracketedPasteDoesNotInterpretContentAsEscapeSequences",

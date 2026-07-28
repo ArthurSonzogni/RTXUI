@@ -250,14 +250,18 @@ void TerminalInputParser::EmitPastedText(std::string_view text) {
       // through the "user pressed Enter" handler, which carries over the
       // current line's indentation. Pasted text already has its own
       // indentation, so that would double it on every line.
-      events_.push_back(Event::Keyboard::From(static_cast<uint32_t>('\n')));
+      auto newline_kb = Event::Keyboard::From(static_cast<uint32_t>('\n'));
+      newline_kb.from_paste = true;
+      events_.push_back(Event(newline_kb));
       ++i;
       continue;
     }
     size_t end = i;
     uint32_t codepoint = 0;
     if (EatCodePoint(text, i, &end, &codepoint)) {
-      events_.push_back(Event::Keyboard::From(codepoint));
+      auto kb = Event::Keyboard::From(codepoint);
+      kb.from_paste = true;
+      events_.push_back(Event(kb));
       i = end;
     } else {
       ++i;
