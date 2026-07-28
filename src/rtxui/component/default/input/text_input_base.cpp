@@ -807,6 +807,8 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
   bool cur_focused = root ? root->focused() : false;
   is_focused_ = cur_focused;
 
+  placeholder_text = value.empty() ? placeholder : "";
+
   auto graphemes = GetGraphemesList(value);
   int n = static_cast<int>(graphemes.size());
   if (cursor_pos < 0) {

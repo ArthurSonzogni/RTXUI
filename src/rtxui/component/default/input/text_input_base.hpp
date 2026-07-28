@@ -19,6 +19,7 @@ class TextInputBase {
   int selection_start = -1;
   bool disabled = false;
   bool readonly = false;
+  std::string placeholder;
 
   // Render bindings
   std::string left_text;
@@ -32,6 +33,10 @@ class TextInputBase {
   std::string right_unselected;
   std::string selection_class_left;
   std::string selection_class_right;
+
+  // Shows `placeholder` only while `value` is empty, without ever
+  // overwriting `placeholder` itself (so it survives type-then-delete).
+  std::string placeholder_text;
 
  protected:
   bool is_focused_ = false;

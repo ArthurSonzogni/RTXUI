@@ -9,6 +9,8 @@ void input::InitReflection() {
   Bind(value);
   Bind(disabled);
   Bind(readonly);
+  Bind(placeholder);
+  Bind(placeholder_text);
   Bind(selection_start);
   Bind(left_text);
   Bind(cursor_char);
@@ -25,7 +27,7 @@ void input::InitReflection() {
 
 std::string_view input::Setup() {
   return R"html(
-    <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span>
+    <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
     <style>
       self {
         display: inline-flex;
@@ -70,6 +72,11 @@ std::string_view input::Setup() {
       .selection {
         background-color: rgb(38, 79, 120);
         color: white;
+      }
+      /* Fixed absolute color, not lighten()/dim, for the same reason the
+         selection colors are fixed above. */
+      .placeholder {
+        color: rgb(150, 150, 150);
       }
       /* Listed after :hover/:focus so it wins the cascade for a
          disabled-and-hovered field (mouse hover isn't gated on
