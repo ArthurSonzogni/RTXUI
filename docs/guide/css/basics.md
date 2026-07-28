@@ -29,7 +29,8 @@ The CSS parser supports a wide range of standard selectors and combinators:
 *   **Class Selectors**: Targets class names (e.g., `.card { padding: 1; }`).
 *   **ID Selectors**: Targets unique identifiers (e.g., `#submit-btn { background-color: green; }`).
 *   **Compound Selectors**: Combine tags, classes, and IDs simultaneously (e.g., `div.card#active { border-color: red; }`).
-*   **Pseudo-classes**: Targets interactive states (`:hover`, `:focus`, `:active`) and scrollbars.
+*   **Pseudo-classes**: Targets interactive states (`:hover`, `:focus`, `:active`,
+    `:disabled`, `:read-only`) and scrollbars.
 *   **Structural Pseudo-classes**:
     *   `:first-child`: Matches the first element among its siblings.
     *   `:last-child`: Matches the last element among its siblings.

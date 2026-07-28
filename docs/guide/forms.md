@@ -22,6 +22,13 @@ uses the terminal's own paste action: RTXUI enables bracketed paste mode, so
 pasted text is inserted as a single update rather than one keystroke per
 character.
 
+Set `disabled="true"` (or bind it, e.g. `disabled="{is_disabled}"`) to remove
+the field from keyboard/mouse interaction and tab order entirely; it matches
+the `:disabled` CSS pseudo-class, which the default style uses to dim it.
+Set `readonly="true"` to keep the field focusable, selectable, and copyable
+while blocking anything that would change its value (typing, paste,
+backspace/delete, cut); it matches `:read-only`.
+
 ```html
 <input value="{text}" />
 ```
@@ -56,10 +63,12 @@ Ctrl+Backspace/Delete for word deletion. Enter carries over the current
 line's leading indentation onto the new line; Tab/Shift-Tab indent and
 unindent the current line.
 
-Selection, copy/cut, and paste work the same way as `<input>` (see above).
-A newline pasted into a single-line `<input>` is dropped; pasting into a
-`<textarea>` inserts the newlines as-is without triggering the auto-indent
-that a manually-typed Enter gets.
+Selection, copy/cut, paste, `disabled`, and `readonly` all work the same way
+as `<input>` (see above). A newline pasted into a single-line `<input>` is
+dropped; pasting into a `<textarea>` inserts the newlines as-is without
+triggering the auto-indent that a manually-typed Enter gets. Under
+`readonly`, Enter and Tab/Shift-Tab (which would otherwise insert a newline
+or indent) are no-ops too.
 
 ```html
 <textarea value="{text}" />

@@ -558,6 +558,12 @@ bool MatchSelector(const Element* element,
           !element->scrollbar_thumb_active()) {
         return false;
       }
+      if (pseudo == "disabled" && !element->disabled()) {
+        return false;
+      }
+      if (pseudo == "read-only" && !element->read_only()) {
+        return false;
+      }
     }
   }
 
@@ -610,6 +616,12 @@ bool MatchPseudos(const Element* element,
     }
     if (pseudo == "scrollbar-thumb-active" &&
         !element->scrollbar_thumb_active()) {
+      return false;
+    }
+    if (pseudo == "disabled" && !element->disabled()) {
+      return false;
+    }
+    if (pseudo == "read-only" && !element->read_only()) {
       return false;
     }
     if (pseudo == "first-child") {

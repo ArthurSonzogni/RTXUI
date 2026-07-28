@@ -7,6 +7,8 @@ namespace rtxui {
 
 void input::InitReflection() {
   Bind(value);
+  Bind(disabled);
+  Bind(readonly);
   Bind(selection_start);
   Bind(left_text);
   Bind(cursor_char);
@@ -68,6 +70,14 @@ std::string_view input::Setup() {
       .selection {
         background-color: rgb(38, 79, 120);
         color: white;
+      }
+      /* Listed after :hover/:focus so it wins the cascade for a
+         disabled-and-hovered field (mouse hover isn't gated on
+         interactivity, unlike focus, which OnEventShared/DigestShared
+         never let a disabled field acquire). */
+      self:disabled {
+        background-color: rgb(40, 40, 40);
+        opacity: 0.4;
       }
     </style>
   )html";

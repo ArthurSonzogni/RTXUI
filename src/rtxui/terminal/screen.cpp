@@ -76,6 +76,9 @@ std::optional<int> GetEffectiveTabIndex(Element* el) {
   if (!el) {
     return std::nullopt;
   }
+  if (el->disabled()) {
+    return std::nullopt;
+  }
   const auto& attrs = el->Attributes();
   if (attrs.count("tabindex")) {
     std::string_view s = attrs.at("tabindex");
@@ -1277,6 +1280,13 @@ void ScreenImpl::HandleEvent(Event event) {
         int tx = mouse.x - 1;
         int ty = mouse.y - 1;
         if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
+          // A disabled element must not gain focus or fire click handlers
+          // (matches real browsers: a click on a disabled control doesn't
+          // even dispatch, so it can't bubble to an ancestor's onclick
+          // either). It still falls through to the generic OnEvent
+          // dispatch below, which TextInputBase::OnEventShared already
+          // no-ops for a disabled input/textarea.
+          bool clicked_is_disabled = clicked_element->disabled();
 
           // Check scrollbar click first
           Element* curr = clicked_element;
@@ -1462,17 +1472,19 @@ void ScreenImpl::HandleEvent(Event event) {
             return;
           }
 
-          bool focus_changed = (focused_element_ != clicked_element);
-          if (component_->Root()) {
-            component_->Root()->Visit(
-                [](Element& el) { el.set_focused(false); });
-          }
-          focused_element_ = clicked_element;
-          focused_element_->set_focused(true);
-          ScrollIntoView(focused_element_);
-          if (focus_changed) {
-            component_->ResolveTargetStyles();
-            Draw();
+          if (!clicked_is_disabled) {
+            bool focus_changed = (focused_element_ != clicked_element);
+            if (component_->Root()) {
+              component_->Root()->Visit(
+                  [](Element& el) { el.set_focused(false); });
+            }
+            focused_element_ = clicked_element;
+            focused_element_->set_focused(true);
+            ScrollIntoView(focused_element_);
+            if (focus_changed) {
+              component_->ResolveTargetStyles();
+              Draw();
+            }
           }
           std::vector<std::string> attr_keys;
           if (mouse.button == Event::Mouse::Button::Left) {
@@ -1483,7 +1495,7 @@ void ScreenImpl::HandleEvent(Event event) {
 
           curr = clicked_element;
           handled = false;
-          while (curr) {
+          while (curr && !clicked_is_disabled) {
             if (curr->tag() == "a") {
               const auto& attrs = curr->Attributes();
               if (attrs.count("href")) {
