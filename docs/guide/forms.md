@@ -78,7 +78,10 @@ A multi-line scrollable text editor. Bind a `std::string` to `value`. Supports
 arrow-key navigation, Enter for newlines, Home/End for line boundaries, and
 Ctrl+Backspace/Delete for word deletion. Enter carries over the current
 line's leading indentation onto the new line; Tab/Shift-Tab indent and
-unindent the current line.
+unindent the current line. A vertical scrollbar (`scrollbar-width: auto` by
+default, same as any other scrollable element) shows the scroll position;
+set `scrollbar-width: none` on it to hide it, as `<input>` does for its
+own horizontal scrollbar.
 
 Selection, copy/cut, paste, `disabled`, `readonly`, `placeholder`,
 `maxlength`, and undo/redo all work the same way as `<input>` (see above;

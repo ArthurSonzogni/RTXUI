@@ -38,7 +38,6 @@ std::string_view textarea::Setup() {
         padding-left: 1;
         padding-right: 1;
         overflow-y: scroll;
-        scrollbar-width: none;
         background-color: rgb(40, 40, 40);
         opacity: 0.8;
         transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
