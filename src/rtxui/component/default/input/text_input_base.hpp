@@ -20,6 +20,7 @@ class TextInputBase {
   bool disabled = false;
   bool readonly = false;
   std::string placeholder;
+  int maxlength = -1;  // -1 means unlimited.
 
   // Render bindings
   std::string left_text;
