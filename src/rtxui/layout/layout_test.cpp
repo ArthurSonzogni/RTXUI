@@ -2626,6 +2626,110 @@ TEST_CASE("Layout: aspect-ratio on a grid container",
                                                 }));
 }
 
+TEST_CASE("Layout: aspect-ratio derives width from height", "[layout][aspect-ratio]") {
+  struct AspectRatioWidthTest : Component<AspectRatioWidthTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          div { display: block; }
+          .tile {
+            height: 2;
+            aspect-ratio: 4 / 1;
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="tile"></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<AspectRatioWidthTest>::New(), 10, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // Height 2 with ratio 4:1 -> width 8.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRRRR..",
+                                                    "RRRRRRRR..",
+                                                    "..........",
+                                                }));
+}
+
+TEST_CASE("Layout: aspect-ratio derives width from height in a flex column",
+          "[layout][aspect-ratio][flex]") {
+  struct FlexColumnAspectTest : Component<FlexColumnAspectTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .col {
+            display: flex;
+            flex-direction: column;
+            height: 2;
+            align-items: flex-start;
+          }
+          .tile {
+            flex-grow: 1;
+            aspect-ratio: 3 / 1;
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="col"><div class="tile"></div></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexColumnAspectTest>::New(), 8, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // A flex column item stretched to height 2 with ratio 3:1 is 6 wide.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRR..",
+                                                    "RRRRRR..",
+                                                    "........",
+                                                }));
+}
+
+TEST_CASE("Layout: aspect-ratio derives a flex container's width from height",
+          "[layout][aspect-ratio][flex]") {
+  struct FlexContainerAspectWidthTest
+      : Component<FlexContainerAspectWidthTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .colc {
+            display: flex;
+            flex-direction: column;
+            height: 2;
+            aspect-ratio: 4 / 1;
+            background-color: rgb(0, 0, 255);
+          }
+        </style>
+        <div class="colc"></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexContainerAspectWidthTest>::New(), 10, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "BBBBBBBB..",
+                                                    "BBBBBBBB..",
+                                                    "..........",
+                                                }));
+}
+
 TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
   struct MinWidthTest : Component<MinWidthTest> {
     std::string_view Setup() {

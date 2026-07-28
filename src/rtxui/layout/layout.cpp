@@ -383,6 +383,15 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   auto* box = node.box;
   int avail_width = constraints.width.value;
 
+  // Resolved independently of width, so it's safe to consult before width is
+  // known: used below so aspect-ratio can derive an auto width from a
+  // definite height (the mirror of the height-from-width derivation further
+  // down, which runs once `width` is already settled).
+  int early_resolved_height = (constraints.height.mode == MeasureMode::Exactly)
+                                   ? constraints.height.value
+                                   : ResolveSize(box->style.height,
+                                                 constraints.height.value);
+
   int width = 0;
   bool is_auto_width = false;
 
@@ -392,6 +401,9 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     int resolved = ResolveSize(box->style.width, avail_width);
     if (resolved != -1) {
       width = resolved;
+    } else if (early_resolved_height != -1 && box->style.aspect_ratio > 0) {
+      width = static_cast<int>(early_resolved_height * box->style.aspect_ratio +
+                               0.5f);
     } else {
       is_auto_width = true;
       width = (constraints.width.mode == MeasureMode::Undefined)
@@ -1306,10 +1318,14 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                       ? parent_h
                       : ResolveSize(box->style.height, parent_h);
 
-  // aspect-ratio derives the flex container's auto height from its
-  // resolved width; min/max constraints below still win.
+  // aspect-ratio derives the flex container's auto dimension from whichever
+  // of width/height is already resolved; min/max constraints below still
+  // win. Only one of width/height can be auto here for the ratio to apply
+  // unambiguously (if both are, sizing falls back to content as before).
   if (my_height == -1 && my_width != -1 && box->style.aspect_ratio > 0) {
     my_height = static_cast<int>(my_width / box->style.aspect_ratio + 0.5f);
+  } else if (my_width == -1 && my_height != -1 && box->style.aspect_ratio > 0) {
+    my_width = static_cast<int>(my_height * box->style.aspect_ratio + 0.5f);
   }
 
   // Apply max-width constraint
