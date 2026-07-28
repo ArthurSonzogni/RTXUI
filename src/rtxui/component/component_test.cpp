@@ -988,6 +988,132 @@ TEST_CASE("Input Component Placeholder Uses A Dim Fixed Color",
         Color::RGB(150, 150, 150));
 }
 
+TEST_CASE("Input Component Maxlength Blocks Typing Past The Limit",
+          "[component][input][maxlength]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_ptr->maxlength = 3;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::Keyboard::From('b'));
+  input_ptr->Digest();
+  input_ptr->OnEvent(Event::Keyboard::From('c'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "abc");
+
+  // A 4th character has no room and is dropped, but the key is still
+  // consumed (matches how a real maxlength field swallows the keystroke
+  // rather than beeping/propagating it elsewhere).
+  bool handled = input_ptr->OnEvent(Event::Keyboard::From('d'));
+  input_ptr->Digest();
+  CHECK(handled);
+  CHECK(input_ptr->value == "abc");
+
+  // Backspace still works at the limit.
+  input_ptr->OnEvent(Event::Backspace());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "ab");
+
+  // ... freeing up room for one more character.
+  input_ptr->OnEvent(Event::Keyboard::From('z'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "abz");
+}
+
+TEST_CASE("Input Component Maxlength Truncates A Paste To Fit",
+          "[component][input][maxlength]") {
+  // Pasted text arrives as one synthetic keyboard event per character (see
+  // TerminalInputParser::EmitPastedText), so each character-insert event
+  // already re-checks maxlength -- a paste naturally gets truncated to fit
+  // rather than rejected outright, matching real browsers.
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "";
+  input_ptr->cursor_pos = 0;
+  input_ptr->maxlength = 3;
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  for (char c : std::string("hello")) {
+    input_ptr->OnEvent(Event::Keyboard::From(c));
+    input_ptr->Digest();
+  }
+  CHECK(input_ptr->value == "hel");
+}
+
+TEST_CASE("Input Component Maxlength Allows Replacing A Selection At The Limit",
+          "[component][input][maxlength]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "abc";
+  input_ptr->maxlength = 3;
+  input_ptr->selection_start = 0;
+  input_ptr->cursor_pos = 3;  // whole value selected
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  // At the limit, but replacing the (fully selected) value is allowed
+  // because the selection is deleted before the new character is counted.
+  input_ptr->OnEvent(Event::Keyboard::From('x'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "x");
+}
+
+TEST_CASE("Input Component Maxlength Attribute Parsed From XML",
+          "[component][input][maxlength]") {
+  class MaxlengthInputTestComponent
+      : public rtxui::Component<MaxlengthInputTestComponent> {
+   public:
+    std::string my_text = "";
+    void InitReflection() override {
+      Bind(my_text);
+      Import<rtxui::input>();
+      rtxui::Component<MaxlengthInputTestComponent>::InitReflection();
+    }
+    std::string_view view = R"(
+      <input value="{my_text}" maxlength="5" />
+    )";
+  };
+
+  auto container = rtxui::Ref<MaxlengthInputTestComponent>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  CHECK(input_ptr->maxlength == 5);
+}
+
 TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
@@ -1128,6 +1254,34 @@ TEST_CASE("Textarea Component Placeholder Supports Multiple Lines",
   textarea_ptr->value = "not empty";
   textarea_ptr->Digest();
   CHECK(textarea_ptr->placeholder_text == "");
+}
+
+TEST_CASE("Textarea Component Maxlength Blocks Enter And Tab Past The Limit",
+          "[component][textarea][maxlength]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "ab";
+  textarea_ptr->cursor_pos = 2;
+  textarea_ptr->maxlength = 2;
+  textarea_el->set_focused(true);
+  textarea_ptr->Digest();
+
+  Event::Keyboard tab_kb;
+  tab_kb.special = Event::Keyboard::Special::Tab;
+  textarea_ptr->OnEvent(Event(tab_kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "ab");  // no room for the tab character
+
+  textarea_ptr->OnEvent(Event::Return());
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "ab");  // no room for the newline either
 }
 
 TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {

@@ -11,6 +11,7 @@ void input::InitReflection() {
   Bind(readonly);
   Bind(placeholder);
   Bind(placeholder_text);
+  Bind(maxlength);
   Bind(selection_start);
   Bind(left_text);
   Bind(cursor_char);

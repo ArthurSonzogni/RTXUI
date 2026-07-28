@@ -274,6 +274,22 @@ bool DeleteSelection(std::vector<Grapheme>& graphemes, int& selection_start, int
   return false;
 }
 
+// Truncates `new_graphemes` (in place) to whatever still fits under
+// `maxlength` given `current_count` graphemes already present, mirroring
+// how a real browser truncates rather than rejects a paste that would
+// overflow a maxlength field. A no-op when maxlength is unlimited (< 0).
+void CapInsertionToMaxLength(std::vector<Grapheme>& new_graphemes,
+                             int current_count,
+                             int maxlength) {
+  if (maxlength < 0) {
+    return;
+  }
+  int available = std::max(0, maxlength - current_count);
+  if (static_cast<int>(new_graphemes.size()) > available) {
+    new_graphemes.resize(available);
+  }
+}
+
 }  // namespace
 
 void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
@@ -700,6 +716,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           // Indent: insert a tab
           std::string tab = "\t";
           auto new_graphemes = GetGraphemesList(tab);
+          CapInsertionToMaxLength(new_graphemes, n, maxlength);
           graphemes.insert(graphemes.begin() + cursor_pos,
                            new_graphemes.begin(), new_graphemes.end());
           cursor_pos += static_cast<int>(new_graphemes.size());
@@ -740,6 +757,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           character += graphemes[i].text;
         }
         auto new_graphemes = GetGraphemesList(character);
+        CapInsertionToMaxLength(new_graphemes, n, maxlength);
 
         graphemes.insert(graphemes.begin() + cursor_pos, new_graphemes.begin(),
                          new_graphemes.end());
@@ -770,6 +788,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         n = static_cast<int>(graphemes.size());
         std::string character = CodePointToString(kb.codepoint);
         auto new_graphemes = GetGraphemesList(character);
+        CapInsertionToMaxLength(new_graphemes, n, maxlength);
         if (cursor_pos < 0) {
           cursor_pos = 0;
         }
