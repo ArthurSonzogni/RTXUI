@@ -765,6 +765,146 @@ TEST_CASE("Input Component State Preservation", "[component]") {
   CHECK(input_ptr->cursor_pos == 2);
 }
 
+TEST_CASE("Input Component Disabled Blocks All Interaction",
+          "[component][input][disabled]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_el->set_focused(true);
+  input_ptr->disabled = true;
+
+  bool handled = input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  CHECK_FALSE(handled);
+  CHECK(input_ptr->value == "hello world");
+
+  // A disabled field can't stay focused either.
+  CHECK_FALSE(input_el->focused());
+}
+
+TEST_CASE("Input Component Disabled Ignores Mouse Click Focus",
+          "[component][input][disabled]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+  input_ptr->disabled = true;
+  input_ptr->Digest();
+
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = input_el->absolute_x() + 1;
+  mouse.y = input_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+
+  CHECK_FALSE(input_el->focused());
+}
+
+TEST_CASE("Input Component Readonly Blocks Mutation But Allows Selection "
+          "And Copy",
+          "[component][input][readonly]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_el->set_focused(true);
+  input_ptr->readonly = true;
+
+  // Typing is swallowed: the key is consumed, but the value is untouched.
+  CHECK(input_ptr->OnEvent(Event::Keyboard::From('a')));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello world");
+
+  // Backspace/Delete are no-ops too, still consumed.
+  input_ptr->cursor_pos = 3;
+  input_ptr->Digest();
+  CHECK(input_ptr->OnEvent(Event::Backspace()));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello world");
+  CHECK(input_ptr->OnEvent(Event::Delete()));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello world");
+
+  // Navigation and shift-selection still work.
+  input_ptr->cursor_pos = 0;
+  input_ptr->selection_start = -1;
+  input_ptr->Digest();
+  Event::Keyboard kb;
+  kb.special = Event::Keyboard::Special::ArrowRight;
+  kb.modifier.shift = true;
+  input_ptr->OnEvent(Event(kb));
+  input_ptr->Digest();
+  CHECK(input_ptr->cursor_pos == 1);
+  CHECK(input_ptr->selection_start == 0);
+
+  // Ctrl+X must not delete the selection under readonly.
+  input_ptr->OnEvent(Event::CtrlX());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello world");
+}
+
+class DisabledReadonlyInputTestComponent
+    : public rtxui::Component<DisabledReadonlyInputTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::input>();
+    rtxui::Component<DisabledReadonlyInputTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(<input disabled="true" readonly="true" />)";
+};
+
+TEST_CASE("Input Component disabled/readonly Attributes Parsed From XML",
+          "[component][input][disabled][readonly]") {
+  auto container = rtxui::Ref<DisabledReadonlyInputTestComponent>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  CHECK(input_ptr->disabled);
+  CHECK(input_ptr->readonly);
+}
+
+TEST_CASE("Input Component :disabled pseudo-class dims the default style",
+          "[component][input][disabled][style]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+
+  container->ResolveTargetStyles();
+  float enabled_opacity = input_el->target_style.opacity;
+
+  input_el->set_disabled(true);
+  container->ResolveTargetStyles();
+  float disabled_opacity = input_el->target_style.opacity;
+
+  CHECK(disabled_opacity < enabled_opacity);
+}
+
 TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
@@ -834,6 +974,56 @@ TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   // Dimensions must not change after click (no resize-on-focus regression).
   CHECK(ta_el->layout_width() == initial_width);
   CHECK(ta_el->layout_height() == initial_height);
+}
+
+TEST_CASE("Textarea Component Readonly Blocks Enter And Tab Indent",
+          "[component][textarea][readonly]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_el->set_focused(true);
+  textarea_ptr->readonly = true;
+  textarea_ptr->cursor_pos = 0;
+  textarea_ptr->Digest();
+  std::string original = textarea_ptr->value;
+
+  Event::Keyboard tab_kb;
+  tab_kb.special = Event::Keyboard::Special::Tab;
+  CHECK(textarea_ptr->OnEvent(Event(tab_kb)));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == original);
+
+  CHECK(textarea_ptr->OnEvent(Event::Return()));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == original);
+}
+
+TEST_CASE("Textarea Component Disabled Blocks All Interaction",
+          "[component][textarea][disabled]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_el->set_focused(true);
+  textarea_ptr->disabled = true;
+  std::string original = textarea_ptr->value;
+
+  bool handled = textarea_ptr->OnEvent(Event::Keyboard::From('x'));
+  textarea_ptr->Digest();
+  CHECK_FALSE(handled);
+  CHECK(textarea_ptr->value == original);
+  CHECK_FALSE(textarea_el->focused());
 }
 
 TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {

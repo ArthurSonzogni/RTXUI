@@ -269,6 +269,17 @@ class Element : public RefCounted {
   bool active() const { return active_; }
   void set_active(bool a) { active_ = a; }
 
+  // Mirrors TextInputBase::disabled/readonly (or any future component with
+  // the same notion) each digest, the same way focused_/hovered_ mirror
+  // interaction state -- so :disabled/:read-only matching and Screen's
+  // click/tab-order handling don't need to reach into a specific
+  // component's own members.
+  bool disabled() const { return disabled_; }
+  void set_disabled(bool d) { disabled_ = d; }
+
+  bool read_only() const { return read_only_; }
+  void set_read_only(bool r) { read_only_ = r; }
+
   bool scrollbar_hovered() const { return scrollbar_hovered_; }
   void set_scrollbar_hovered(bool h) { scrollbar_hovered_ = h; }
 
@@ -303,6 +314,8 @@ class Element : public RefCounted {
   bool focused_ = false;
   bool hovered_ = false;
   bool active_ = false;
+  bool disabled_ = false;
+  bool read_only_ = false;
   bool scrollbar_hovered_ = false;
   bool scrollbar_active_ = false;
   bool scrollbar_thumb_hovered_ = false;

@@ -17,6 +17,8 @@ class TextInputBase {
   std::string value;
   int cursor_pos = 0;
   int selection_start = -1;
+  bool disabled = false;
+  bool readonly = false;
 
   // Render bindings
   std::string left_text;

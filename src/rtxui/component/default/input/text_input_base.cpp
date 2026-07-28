@@ -333,6 +333,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
                                   Event event,
                                   bool is_multiline) {
   auto* root = self->Root();
+  if (disabled) {
+    return false;
+  }
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
     bool is_captured = (self->GetMouseCapturer() == self);
@@ -503,7 +506,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         int sel_min = std::min(selection_start, cursor_pos);
         int sel_max = std::max(selection_start, cursor_pos);
         self->SetClipboard(GraphemesToString(graphemes, sel_min, sel_max - sel_min));
-        if (event == Event::CtrlX()) {
+        if (event == Event::CtrlX() && !readonly) {
           DeleteSelection(graphemes, selection_start, cursor_pos);
           // See the Backspace branch above for why this must come before
           // the `value` reassignment.
@@ -621,6 +624,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (kb.special == Event::Keyboard::Special::Backspace) {
+        if (readonly) {
+          return true;
+        }
         if (DeleteSelection(graphemes, selection_start, cursor_pos)) {
           // Selection deleted
         } else {
@@ -641,6 +647,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (kb.special == Event::Keyboard::Special::Delete) {
+        if (readonly) {
+          return true;
+        }
         if (DeleteSelection(graphemes, selection_start, cursor_pos)) {
           // Selection deleted
         } else {
@@ -657,6 +666,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::Tab) {
+        if (readonly) {
+          return true;
+        }
         if (kb.modifier.shift) {
           // Unindent: remove a tab or up to 4 spaces at the start of the line
           int line_start = FindLineStart(graphemes, cursor_pos);
@@ -702,6 +714,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
+        if (readonly) {
+          return true;
+        }
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
         if (cursor_pos < 0) {
@@ -748,6 +763,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
       if (kb.special == Event::Keyboard::Special::None &&
           (kb.codepoint >= 32 || is_pasted_newline) && !kb.modifier.ctrl &&
           !kb.modifier.meta) {
+        if (readonly) {
+          return true;
+        }
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
         std::string character = CodePointToString(kb.codepoint);
@@ -779,6 +797,13 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
 
 bool TextInputBase::DigestShared(ComponentBase* self) {
   auto* root = self->Root();
+  if (root) {
+    root->set_disabled(disabled);
+    root->set_read_only(readonly);
+  }
+  if (disabled && root && root->focused()) {
+    root->set_focused(false);
+  }
   bool cur_focused = root ? root->focused() : false;
   is_focused_ = cur_focused;
 

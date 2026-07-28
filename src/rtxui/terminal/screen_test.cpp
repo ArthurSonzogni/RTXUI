@@ -715,6 +715,55 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
   CHECK_FALSE(input2->focused());
 }
 
+TEST_CASE("Screen.DisabledInputExcludedFromTabOrder", "[terminal][focus][disabled]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class DisabledFocusCyclingComponent
+      : public Component<DisabledFocusCyclingComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Import<rtxui::input>();
+      Component<DisabledFocusCyclingComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div>
+        <input id="input1" />
+        <input id="input2" disabled="true" />
+        <input id="input3" />
+      </div>
+    )html";
+  };
+
+  auto component = Ref<DisabledFocusCyclingComponent>::New();
+  Screen screen(component, device);
+  screen.Draw();
+
+  auto* input1 = component->Root()->QuerySelector("#input1");
+  auto* input2 = component->Root()->QuerySelector("#input2");
+  auto* input3 = component->Root()->QuerySelector("#input3");
+  REQUIRE(input1 != nullptr);
+  REQUIRE(input2 != nullptr);
+  REQUIRE(input3 != nullptr);
+
+  // Tab cycles input1 -> input3, skipping the disabled input2 entirely.
+  screen.Dispatch(Event::Tab());
+  CHECK(input1->focused());
+  CHECK_FALSE(input2->focused());
+  CHECK_FALSE(input3->focused());
+
+  screen.Dispatch(Event::Tab());
+  CHECK_FALSE(input1->focused());
+  CHECK_FALSE(input2->focused());
+  CHECK(input3->focused());
+
+  // Wraps back to input1, still skipping input2.
+  screen.Dispatch(Event::Tab());
+  CHECK(input1->focused());
+  CHECK_FALSE(input2->focused());
+  CHECK_FALSE(input3->focused());
+}
+
 TEST_CASE("Screen.RadioFocusCyclingAndNavigation", "[terminal][focus][radio]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
