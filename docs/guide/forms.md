@@ -14,6 +14,14 @@ attribute for two-way updates. Supports arrow-key navigation (Ctrl to move by
 word), deletion (Ctrl to delete words), mouse click positioning, and horizontal
 scrolling on overflow.
 
+Text selection works via Shift+arrow keys, double-click (selects a word) and
+click-drag, or Ctrl+A (select all). With an active selection, Ctrl+C copies
+and Ctrl+X cuts to the system clipboard (via the terminal's OSC 52 escape
+sequence, so it works over SSH without a host-side clipboard tool). Pasting
+uses the terminal's own paste action: RTXUI enables bracketed paste mode, so
+pasted text is inserted as a single update rather than one keystroke per
+character.
+
 ```html
 <input value="{text}" />
 ```
@@ -44,7 +52,14 @@ class MyApp : public Component<MyApp> {
 
 A multi-line scrollable text editor. Bind a `std::string` to `value`. Supports
 arrow-key navigation, Enter for newlines, Home/End for line boundaries, and
-Ctrl+Backspace/Delete for word deletion.
+Ctrl+Backspace/Delete for word deletion. Enter carries over the current
+line's leading indentation onto the new line; Tab/Shift-Tab indent and
+unindent the current line.
+
+Selection, copy/cut, and paste work the same way as `<input>` (see above).
+A newline pasted into a single-line `<input>` is dropped; pasting into a
+`<textarea>` inserts the newlines as-is without triggering the auto-indent
+that a manually-typed Enter gets.
 
 ```html
 <textarea value="{text}" />
