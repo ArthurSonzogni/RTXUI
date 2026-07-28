@@ -4080,8 +4080,6 @@ TEST_CASE("Slider interaction layout squashing regression", "[component][slider]
   rtxui::Screen screen(container, device);
   screen.Draw();
 
-  std::string initial_output = device->GetOutput();
-
   auto* slider_el = container->Root()->QuerySelector("#slider");
   REQUIRE(slider_el != nullptr);
   auto* scroll_el = container->Root()->QuerySelector(".main-scroll");
@@ -4106,13 +4104,6 @@ TEST_CASE("Slider interaction layout squashing regression", "[component][slider]
 
   // Draw again to render final frame
   screen.Draw();
-
-  std::string final_output = device->GetOutput();
-
-  // Write outputs to a file
-  std::ofstream out("slider_output.txt");
-  out << "INITIAL OUTPUT:\n" << initial_output << "\n===================================\nFINAL OUTPUT:\n" << final_output << "\n";
-  out.close();
 
   int final_container_width = container_el->layout_width();
   int final_scroll_width = scroll_el->layout_width();
