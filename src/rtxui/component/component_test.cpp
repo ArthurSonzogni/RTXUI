@@ -905,6 +905,89 @@ TEST_CASE("Input Component :disabled pseudo-class dims the default style",
   CHECK(disabled_opacity < enabled_opacity);
 }
 
+TEST_CASE("Input Component Placeholder Shows Only When Value Is Empty",
+          "[component][input][placeholder]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->placeholder = "Type here...";
+  input_ptr->value = "";
+  input_ptr->Digest();
+  CHECK(input_ptr->placeholder_text == "Type here...");
+
+  // Typing a character hides the placeholder, and never touches its text.
+  input_el->set_focused(true);
+  input_ptr->OnEvent(Event::Keyboard::From('a'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "a");
+  CHECK(input_ptr->placeholder_text == "");
+  CHECK(input_ptr->placeholder == "Type here...");
+
+  // Deleting it back to empty brings the placeholder back.
+  input_ptr->OnEvent(Event::Backspace());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+  CHECK(input_ptr->placeholder_text == "Type here...");
+}
+
+TEST_CASE("Input Component Placeholder Attribute Parsed From XML",
+          "[component][input][placeholder]") {
+  class PlaceholderInputTestComponent
+      : public rtxui::Component<PlaceholderInputTestComponent> {
+   public:
+    std::string my_text = "";
+    void InitReflection() override {
+      Bind(my_text);
+      Import<rtxui::input>();
+      rtxui::Component<PlaceholderInputTestComponent>::InitReflection();
+    }
+    std::string_view view = R"(
+      <input value="{my_text}" placeholder="Search..." />
+    )";
+  };
+
+  auto container = rtxui::Ref<PlaceholderInputTestComponent>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  CHECK(input_ptr->placeholder == "Search...");
+  CHECK(input_ptr->placeholder_text == "Search...");
+}
+
+TEST_CASE("Input Component Placeholder Uses A Dim Fixed Color",
+          "[component][input][placeholder][style]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->placeholder = "hint";
+  input_ptr->value = "";
+  input_ptr->Digest();
+  container->ResolveTargetStyles();
+
+  auto* placeholder_el = container->Root()->QuerySelector(".placeholder");
+  REQUIRE(placeholder_el != nullptr);
+  CHECK(placeholder_el->target_style.foreground_color.value() ==
+        Color::RGB(150, 150, 150));
+}
+
 TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
@@ -1024,6 +1107,27 @@ TEST_CASE("Textarea Component Disabled Blocks All Interaction",
   CHECK_FALSE(handled);
   CHECK(textarea_ptr->value == original);
   CHECK_FALSE(textarea_el->focused());
+}
+
+TEST_CASE("Textarea Component Placeholder Supports Multiple Lines",
+          "[component][textarea][placeholder]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->placeholder = "Line one\nLine two";
+  textarea_ptr->value = "";
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->placeholder_text == "Line one\nLine two");
+
+  textarea_ptr->value = "not empty";
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->placeholder_text == "");
 }
 
 TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {
