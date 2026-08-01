@@ -195,8 +195,8 @@ class Playground : public Component<Playground> {
         overflow-y: scroll;
         margin-bottom: 1;
       }
-      /* Themes the gutter/current-line, which live inside <textarea>'s own
-         template and so aren't reachable by an ordinary .editor .gutter
+      /* Themes the gutter/current-line, which live inside the textarea's
+         own template and so aren't reachable by an ordinary .editor .gutter
          selector -- see docs/guide/css/basics.md. */
       .editor::part(gutter) {
         color: rgb(71, 85, 105);
