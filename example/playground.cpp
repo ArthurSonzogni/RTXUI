@@ -207,6 +207,15 @@ class Playground : public Component<Playground> {
       .editor::part(current-line) {
         background-color: rgb(49, 55, 79);
       }
+      .editor::part(selection) {
+        background-color: rgb(67, 56, 202);
+      }
+      .editor::part(cursor) {
+        color: rgb(226, 232, 240);
+      }
+      .editor::part(placeholder) {
+        color: rgb(100, 116, 139);
+      }
       .status {
         color: rgb(148, 163, 184);
       }
