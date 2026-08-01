@@ -1611,6 +1611,118 @@ TEST_CASE("Textarea Component Maxlength Blocks Enter And Tab Past The Limit",
   CHECK(textarea_ptr->value == "ab");  // no room for the newline either
 }
 
+TEST_CASE("Textarea Component Line Numbers Off By Default",
+          "[component][textarea][linenumbers]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->Digest();
+  CHECK_FALSE(textarea_ptr->show_gutter);
+  CHECK(textarea_ptr->gutter_lines.empty());
+}
+
+TEST_CASE("Textarea Component Line Numbers Absolute Mode",
+          "[component][textarea][linenumbers]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  // value == "line one\nline two\nline three"; cursor_pos 10 lands inside
+  // "line two" (the second logical line).
+  textarea_ptr->linenumbers = "true";
+  textarea_ptr->cursor_pos = 10;
+  textarea_ptr->Digest();
+
+  REQUIRE(textarea_ptr->show_gutter);
+  REQUIRE(textarea_ptr->gutter_lines.size() == 3);
+  CHECK(textarea_ptr->gutter_lines[0].text == "1");
+  CHECK(textarea_ptr->gutter_lines[1].text == "2");
+  CHECK(textarea_ptr->gutter_lines[2].text == "3");
+  CHECK(textarea_ptr->gutter_lines[0].css_class == "line-number");
+  CHECK(textarea_ptr->gutter_lines[1].css_class == "line-number active");
+  CHECK(textarea_ptr->gutter_lines[2].css_class == "line-number");
+  CHECK(textarea_ptr->gutter_width == 1);
+}
+
+TEST_CASE("Textarea Component Line Numbers Relative Mode",
+          "[component][textarea][linenumbers]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  // Active line (index 1) shows its absolute number; the others show their
+  // distance from it.
+  textarea_ptr->linenumbers = "relative";
+  textarea_ptr->cursor_pos = 10;
+  textarea_ptr->Digest();
+
+  REQUIRE(textarea_ptr->gutter_lines.size() == 3);
+  CHECK(textarea_ptr->gutter_lines[0].text == "1");
+  CHECK(textarea_ptr->gutter_lines[1].text == "2");
+  CHECK(textarea_ptr->gutter_lines[2].text == "1");
+}
+
+TEST_CASE("Textarea Component Line Numbers Line Start Offset",
+          "[component][textarea][linenumbers]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->linenumbers = "true";
+  textarea_ptr->line_start = 41;
+  textarea_ptr->Digest();
+
+  REQUIRE(textarea_ptr->gutter_lines.size() == 3);
+  CHECK(textarea_ptr->gutter_lines[0].text == "41");
+  CHECK(textarea_ptr->gutter_lines[1].text == "42");
+  CHECK(textarea_ptr->gutter_lines[2].text == "43");
+  CHECK(textarea_ptr->gutter_width == 2);
+}
+
+TEST_CASE("Textarea Component Line Numbers Line End Blanks Beyond Range",
+          "[component][textarea][linenumbers]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->linenumbers = "true";
+  textarea_ptr->line_end = 2;
+  textarea_ptr->Digest();
+
+  REQUIRE(textarea_ptr->gutter_lines.size() == 3);
+  CHECK(textarea_ptr->gutter_lines[0].text == "1");
+  CHECK(textarea_ptr->gutter_lines[1].text == "2");
+  // Line 3 is past line_end: blank gutter cell (whitespace only).
+  CHECK(textarea_ptr->gutter_lines[2].text.find_first_not_of(' ') ==
+        std::string::npos);
+}
+
 TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
           "[component][textarea][undo]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();

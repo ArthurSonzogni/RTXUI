@@ -95,8 +95,20 @@ triggering the auto-indent that a manually-typed Enter gets. Under
 `readonly`, Enter and Tab/Shift-Tab (which would otherwise insert a newline
 or indent) are no-ops too.
 
+Set `linenumbers` to `true` (or `absolute`) to show a line-number gutter, or
+to `relative` for vim-style relative numbers (the active line shows its
+absolute number; every other line shows its distance from it). `line_start`
+offsets the displayed numbers (e.g. `41` to show the field as an excerpt
+starting at line 41 of a larger file); `line_end` blanks the gutter past a
+given displayed number (unbounded by default). `line_wrap="subline"` gives
+word-wrapped continuation rows their own blank gutter entry instead of
+letting the logical-line numbering drift out of alignment with them; this
+is a wrap-count estimate, not an exact one.
+
 ```html
 <textarea value="{text}" />
+<textarea value="{text}" linenumbers="true" />
+<textarea value="{text}" linenumbers="relative" />
 ```
 
 ```cpp
