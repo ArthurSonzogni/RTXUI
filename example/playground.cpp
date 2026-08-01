@@ -137,11 +137,14 @@ class Playground : public Component<Playground> {
         <div class="pane-title">Editor
           <span class="hint">— HTML + CSS, live</span>
         </div>
-        <textarea 
+        <textarea
           class="editor"
           value="{code}"
           linenumbers="absolute"
           highlight_current_line="true"
+          gutter_color="rgb(71, 85, 105)"
+          gutter_active_color="rgb(129, 140, 248)"
+          current_line_color="rgb(49, 55, 79)"
         />
         <div class="status {status_class}">{status}</div>
       </div>

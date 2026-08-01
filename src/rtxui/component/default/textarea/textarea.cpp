@@ -50,12 +50,17 @@ void textarea::InitReflection() {
   Bind(show_gutter);
   Bind(gutter_width);
   Bind(highlight_current_line);
+  Bind(gutter_color);
+  Bind(gutter_active_color);
+  Bind(gutter_wrapped_color);
+  Bind(current_line_color);
   BindCollection("gutter_lines", &gutter_lines,
                  [](const GutterLine& line) {
                    return std::make_shared<ManualStructVisitor>(
                        std::map<std::string, std::string, std::less<>>{
                            {"text", line.text},
                            {"css_class", line.css_class},
+                           {"color", line.color},
                        });
                  });
   BindCollection("content_line_highlights", &content_line_highlights,
@@ -63,6 +68,7 @@ void textarea::InitReflection() {
                    return std::make_shared<ManualStructVisitor>(
                        std::map<std::string, std::string, std::less<>>{
                            {"css_class", row.css_class},
+                           {"color", row.color},
                        });
                  });
   Bind(selection_start);
@@ -84,14 +90,14 @@ std::string_view textarea::Setup() {
     <if condition="{show_gutter}">
       <div class="gutter">
         <for each="{gutter_lines}" as="line">
-          <div class="{line.css_class}">{line.text}</div>
+          <div class="{line.css_class}" style="color: {line.color}">{line.text}</div>
         </for>
       </div>
       <if condition="{highlight_current_line}">
         <div class="content-wrapper">
           <div class="line-highlights">
             <for each="{content_line_highlights}" as="row">
-              <div class="{row.css_class}"></div>
+              <div class="{row.css_class}" style="background-color: {row.color}"></div>
             </for>
           </div>
           <div class="content">
@@ -110,7 +116,7 @@ std::string_view textarea::Setup() {
         <div class="content-wrapper">
           <div class="line-highlights">
             <for each="{content_line_highlights}" as="row">
-              <div class="{row.css_class}"></div>
+              <div class="{row.css_class}" style="background-color: {row.color}"></div>
             </for>
           </div>
           <div class="content">
@@ -143,22 +149,23 @@ std::string_view textarea::Setup() {
         align-items: flex-start;
         padding-left: 0;
       }
+      /* Text color is set per row via inline style (see gutter_color /
+         gutter_active_color / gutter_wrapped_color and UpdateGutter), not
+         here: unlike .selection/.placeholder below, this is a color a whole
+         app theme needs to override, and elements generated inside this
+         template aren't reachable by the outer app's own stylesheet (not
+         styled by the component that instantiated this one), nor should
+         they use CSS custom properties (not supported by default
+         components). */
       .gutter {
         display: block;
         flex-shrink: 0;
         text-align: right;
         padding-left: 1;
         padding-right: 1;
-        color: rgb(120, 120, 120);
       }
       .line-number {
         display: block;
-      }
-      .line-number.active {
-        color: rgb(230, 230, 230);
-      }
-      .line-number.wrapped {
-        color: rgb(90, 90, 90);
       }
       .content-wrapper {
         display: block;
@@ -180,11 +187,6 @@ std::string_view textarea::Setup() {
         display: block;
         height: 1;
         width: 100%;
-      }
-      /* Fixed absolute color, not lighten(), for the same compounding
-         reason as self:hover/self:focus above. */
-      .current-line {
-        background-color: rgb(60, 60, 60);
       }
       .content {
         display: block;
@@ -300,8 +302,10 @@ void textarea::UpdateGutter() {
   if (highlight_current_line) {
     content_line_highlights.reserve(num_lines);
     for (int i = 0; i < num_lines; ++i) {
+      bool is_active = (i == active_line);
       content_line_highlights.push_back(
-          {(i == active_line) ? "line current-line" : "line"});
+          {is_active ? "line current-line" : "line",
+           is_active ? current_line_color : "transparent"});
     }
   }
 
@@ -346,16 +350,17 @@ void textarea::UpdateGutter() {
 
   gutter_lines.reserve(num_lines);
   for (int i = 0; i < num_lines; ++i) {
-    std::string css_class = (i == active_line) ? "line-number active"
-                                                : "line-number";
-    gutter_lines.push_back({PadLeft(labels[i], gutter_width), css_class});
+    bool is_active = (i == active_line);
+    std::string css_class = is_active ? "line-number active" : "line-number";
+    gutter_lines.push_back({PadLeft(labels[i], gutter_width), css_class,
+                            is_active ? gutter_active_color : gutter_color});
 
     if (content_width > 0 && line_widths[i] > content_width) {
       int wrapped_rows =
           (line_widths[i] + content_width - 1) / content_width - 1;
       for (int w = 0; w < wrapped_rows; ++w) {
-        gutter_lines.push_back(
-            {std::string(gutter_width, ' '), "line-number wrapped"});
+        gutter_lines.push_back({std::string(gutter_width, ' '),
+                                "line-number wrapped", gutter_wrapped_color});
       }
     }
   }

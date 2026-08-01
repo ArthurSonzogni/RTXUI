@@ -109,9 +109,21 @@ Set `highlight_current_line="true"` for a full-width background band behind
 the line the cursor is on, independently of `linenumbers` (works with or
 without a gutter).
 
+The gutter and current-line colors are plain attributes, not styled through
+CSS: `gutter_color`, `gutter_active_color` (the active line's number),
+`gutter_wrapped_color` (subline continuation entries), and
+`current_line_color` (the highlight band). This is deliberate — the divs
+`linenumbers`/`highlight_current_line` generate live inside `<textarea>`'s
+own template, so an app's own stylesheet can't reach them with an ordinary
+selector, and default components don't use CSS custom properties (`var()`)
+either, so these are exposed as regular bindable attributes instead.
+
 ```html
 <textarea value="{text}" />
 <textarea value="{text}" linenumbers="true" />
+<textarea value="{text}" linenumbers="true" highlight_current_line="true"
+          gutter_active_color="rgb(129, 140, 248)"
+          current_line_color="rgb(49, 55, 79)" />
 <textarea value="{text}" linenumbers="relative" highlight_current_line="true" />
 ```
 
