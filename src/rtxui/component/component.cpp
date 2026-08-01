@@ -491,6 +491,19 @@ void PrintCompilerStyleError(std::string_view source_string,
 
 namespace {
 
+std::function<void(const CssError&)>& GetCssErrorHandler() {
+  static std::function<void(const CssError&)> handler;
+  return handler;
+}
+
+}  // namespace
+
+void SetCssErrorHandler(std::function<void(const CssError&)> handler) {
+  GetCssErrorHandler() = std::move(handler);
+}
+
+namespace {
+
 void XmlParseError(const xml::Error& error, std::string_view xml_string) {
   PrintCompilerStyleError(xml_string, error.line, error.column, error.message, "DOM");
   std::exit(1);
@@ -498,8 +511,15 @@ void XmlParseError(const xml::Error& error, std::string_view xml_string) {
 
 // Unlike XmlParseError, this is reachable every time a <style> block's text
 // is re-interpolated with changed bound state (i.e. on every Digest()), so it
-// must not crash the running process on a malformed value.
+// must not crash the running process on a malformed value. Defaults to
+// printing to stderr (see PrintCompilerStyleError), but that corrupts a
+// running frame for any app that owns the terminal in raw mode -- see
+// SetCssErrorHandler.
 void CssParseError(const css::Error& error, std::string_view css_string) {
+  if (const auto& handler = GetCssErrorHandler()) {
+    handler(CssError{error.message, error.line, error.column});
+    return;
+  }
   PrintCompilerStyleError(css_string, error.line, error.column, error.message, "CSS");
 }
 
