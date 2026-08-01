@@ -137,7 +137,8 @@ class Playground : public Component<Playground> {
         <div class="pane-title">Editor
           <span class="hint">— HTML + CSS, live</span>
         </div>
-        <textarea class="editor" value="{code}" />
+        <textarea class="editor" value="{code}" linenumbers="relative"
+                  highlight_current_line="true" />
         <div class="status {status_class}">{status}</div>
       </div>
       <div class="pane preview-pane">

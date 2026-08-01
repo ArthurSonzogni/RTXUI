@@ -105,10 +105,14 @@ word-wrapped continuation rows their own blank gutter entry instead of
 letting the logical-line numbering drift out of alignment with them; this
 is a wrap-count estimate, not an exact one.
 
+Set `highlight_current_line="true"` for a full-width background band behind
+the line the cursor is on, independently of `linenumbers` (works with or
+without a gutter).
+
 ```html
 <textarea value="{text}" />
 <textarea value="{text}" linenumbers="true" />
-<textarea value="{text}" linenumbers="relative" />
+<textarea value="{text}" linenumbers="relative" highlight_current_line="true" />
 ```
 
 ```cpp

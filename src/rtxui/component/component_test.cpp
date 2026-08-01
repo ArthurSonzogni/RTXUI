@@ -1723,6 +1723,76 @@ TEST_CASE("Textarea Component Line Numbers Line End Blanks Beyond Range",
         std::string::npos);
 }
 
+TEST_CASE("Textarea Component Highlight Current Line Off By Default",
+          "[component][textarea][highlight_current_line]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->content_line_highlights.empty());
+}
+
+TEST_CASE("Textarea Component Highlight Current Line Marks The Cursor's Line",
+          "[component][textarea][highlight_current_line]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  // value == "line one\nline two\nline three"; cursor_pos 10 lands inside
+  // "line two" (the second logical line), independent of linenumbers.
+  textarea_ptr->highlight_current_line = true;
+  textarea_ptr->cursor_pos = 10;
+  textarea_ptr->Digest();
+
+  REQUIRE(textarea_ptr->content_line_highlights.size() == 3);
+  CHECK(textarea_ptr->content_line_highlights[0].css_class == "line");
+  CHECK(textarea_ptr->content_line_highlights[1].css_class ==
+        "line current-line");
+  CHECK(textarea_ptr->content_line_highlights[2].css_class == "line");
+
+  // Moving the cursor to line 0 moves the highlight with it.
+  textarea_ptr->cursor_pos = 0;
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->content_line_highlights[0].css_class ==
+        "line current-line");
+  CHECK(textarea_ptr->content_line_highlights[1].css_class == "line");
+}
+
+TEST_CASE("Textarea Component Highlight Current Line Works With Line Numbers",
+          "[component][textarea][highlight_current_line][linenumbers]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->linenumbers = "true";
+  textarea_ptr->highlight_current_line = true;
+  textarea_ptr->cursor_pos = 10;
+  textarea_ptr->Digest();
+
+  REQUIRE(textarea_ptr->show_gutter);
+  REQUIRE(textarea_ptr->gutter_lines.size() == 3);
+  REQUIRE(textarea_ptr->content_line_highlights.size() == 3);
+  CHECK(textarea_ptr->gutter_lines[1].css_class == "line-number active");
+  CHECK(textarea_ptr->content_line_highlights[1].css_class ==
+        "line current-line");
+}
+
 TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
           "[component][textarea][undo]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();

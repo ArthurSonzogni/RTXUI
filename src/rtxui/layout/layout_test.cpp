@@ -2830,4 +2830,55 @@ TEST_CASE("Layout: white-space pre-wrap wraps long lines", "[layout][white-space
                                  }));
 }
 
+// Regression test: a shrink-to-fit flex item (no explicit width) whose own
+// children are block-level (not a single text/inline node) used to report a
+// bogus width of ~10000 instead of shrinking to its content. Cause: the
+// intrinsic-measurement placeholder bound (10000, standing in for
+// "unbounded" while a parent's own shrink-to-fit width is still unknown) was
+// handed to auto-width block children as a real MeasureMode::AtMost
+// constraint, which normal block layout correctly fills -- so a child would
+// report "10000" as its own natural width, corrupting the parent's
+// max-child-width shrink-to-fit sum. Fixed by propagating
+// MeasureMode::Undefined (not AtMost) to auto-width block children whenever
+// the parent itself is being shrink-to-fit measured.
+TEST_CASE("Layout: flex item with auto width shrinks to its block children",
+          "[layout][flex][shrink-to-fit][bug]") {
+  struct ShrinkToFitTest : Component<ShrinkToFitTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <div class="row">
+          <div class="side">
+            <div>1</div>
+            <div>2</div>
+            <div>3</div>
+          </div>
+          <div class="main">rest</div>
+        </div>
+        <style>
+          .row { display: flex; flex-direction: row; align-items: flex-start; }
+          .side { display: block; flex-shrink: 0; }
+          .main { display: block; flex-grow: 1; }
+        </style>
+      )html";
+    }
+  };
+
+  auto container = Ref<ShrinkToFitTest>::New();
+  auto texture = RenderComponent(container, 10, 3);
+
+  auto* side_el = container->Root()->QuerySelector(".side");
+  auto* main_el = container->Root()->QuerySelector(".main");
+  REQUIRE(side_el != nullptr);
+  REQUIRE(main_el != nullptr);
+  CHECK(side_el->layout_width() == 1);
+  CHECK(main_el->layout_width() == 9);
+
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "1rest     ",
+                                     "2         ",
+                                     "3         ",
+                                 }));
+}
+
 }  // namespace rtxui

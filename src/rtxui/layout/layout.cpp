@@ -497,9 +497,23 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     }
 
     LayoutConstraints child_c;
+    // Normally a child's own auto width should fill the available space
+    // (MeasureMode::AtMost), matching standard block layout. But when this
+    // box itself is being shrink-to-fit measured (is_auto_width &&
+    // Undefined; e.g. a flex item with no explicit width), child_width_limit
+    // is just the unbounded-placeholder 10000, not a real constraint -- an
+    // auto-width block child "filling" it would report a width of ~10000
+    // instead of its own natural size, corrupting this box's shrink-to-fit
+    // sum (max_child_width below). Propagating Undefined instead makes an
+    // auto-width block child shrink-to-fit too, recursing correctly through
+    // nested auto-width block containers.
+    MeasureMode child_width_mode =
+        (is_auto_width && constraints.width.mode == MeasureMode::Undefined)
+            ? MeasureMode::Undefined
+            : MeasureMode::AtMost;
     child_c.width = {
         child_width_limit - child_box->style.margin.Horiz(),
-        MeasureMode::AtMost,
+        child_width_mode,
     };
     child_c.height = {
         std::max(0, child_height_limit - child_box->style.margin.Vert()),

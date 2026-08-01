@@ -49,12 +49,20 @@ void textarea::InitReflection() {
   Bind(line_wrap);
   Bind(show_gutter);
   Bind(gutter_width);
+  Bind(highlight_current_line);
   BindCollection("gutter_lines", &gutter_lines,
                  [](const GutterLine& line) {
                    return std::make_shared<ManualStructVisitor>(
                        std::map<std::string, std::string, std::less<>>{
                            {"text", line.text},
                            {"css_class", line.css_class},
+                       });
+                 });
+  BindCollection("content_line_highlights", &content_line_highlights,
+                 [](const LineRow& row) {
+                   return std::make_shared<ManualStructVisitor>(
+                       std::map<std::string, std::string, std::less<>>{
+                           {"css_class", row.css_class},
                        });
                  });
   Bind(selection_start);
@@ -79,12 +87,40 @@ std::string_view textarea::Setup() {
           <div class="{line.css_class}">{line.text}</div>
         </for>
       </div>
-      <div class="content">
-        <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
-      </div>
+      <if condition="{highlight_current_line}">
+        <div class="content-wrapper">
+          <div class="line-highlights">
+            <for each="{content_line_highlights}" as="row">
+              <div class="{row.css_class}"></div>
+            </for>
+          </div>
+          <div class="content">
+            <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+          </div>
+        </div>
+      </if>
+      <else>
+        <div class="content">
+          <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+        </div>
+      </else>
     </if>
     <else>
-      <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+      <if condition="{highlight_current_line}">
+        <div class="content-wrapper">
+          <div class="line-highlights">
+            <for each="{content_line_highlights}" as="row">
+              <div class="{row.css_class}"></div>
+            </for>
+          </div>
+          <div class="content">
+            <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+          </div>
+        </div>
+      </if>
+      <else>
+        <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+      </else>
     </else>
     <style>
       self {
@@ -124,9 +160,36 @@ std::string_view textarea::Setup() {
       .line-number.wrapped {
         color: rgb(90, 90, 90);
       }
+      .content-wrapper {
+        display: block;
+        position: relative;
+        flex-grow: 1;
+        width: 100%;
+      }
+      /* Painted behind .content (negative z-index, below .content's default
+         of 0) as a column of full-width, textless row divs; the active one
+         gets a background-color, the rest stay transparent. */
+      .line-highlights {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: -1;
+      }
+      .line {
+        display: block;
+        height: 1;
+        width: 100%;
+      }
+      /* Fixed absolute color, not lighten(), for the same compounding
+         reason as self:hover/self:focus above. */
+      .current-line {
+        background-color: rgb(60, 60, 60);
+      }
       .content {
         display: block;
         flex-grow: 1;
+        width: 100%;
         white-space: pre-wrap;
       }
       /* Fixed absolute colors, not lighten(): self:hover and self:focus can
@@ -191,15 +254,18 @@ bool textarea::Digest() {
   return changed;
 }
 
-// Recomputes `show_gutter`/`gutter_width`/`gutter_lines` from `linenumbers`,
-// `line_start`, `line_end`, `line_wrap`, `value` and `cursor_pos`. One entry
-// per logical line (not per rendered row: the whole value is always
-// rendered, there's no viewport-based windowing), so gutter_lines stays in
-// sync with the content even while scrolled.
+// Recomputes `show_gutter`/`gutter_width`/`gutter_lines` (from
+// `linenumbers`, `line_start`, `line_end`, `line_wrap`) and
+// `content_line_highlights` (from `highlight_current_line`), all derived
+// from `value` and `cursor_pos`. One entry per logical line (not per
+// rendered row: the whole value is always rendered, there's no
+// viewport-based windowing), so both collections stay in sync with the
+// content even while scrolled.
 void textarea::UpdateGutter() {
   show_gutter = !linenumbers.empty();
   gutter_lines.clear();
-  if (!show_gutter) {
+  content_line_highlights.clear();
+  if (!show_gutter && !highlight_current_line) {
     return;
   }
 
@@ -230,6 +296,18 @@ void textarea::UpdateGutter() {
   }
   line_widths.push_back(current_width);
   int num_lines = static_cast<int>(line_widths.size());
+
+  if (highlight_current_line) {
+    content_line_highlights.reserve(num_lines);
+    for (int i = 0; i < num_lines; ++i) {
+      content_line_highlights.push_back(
+          {(i == active_line) ? "line current-line" : "line"});
+    }
+  }
+
+  if (!show_gutter) {
+    return;
+  }
 
   // First pass: compute every line's label so the gutter can be sized to
   // the widest one before padding them all to that width.
