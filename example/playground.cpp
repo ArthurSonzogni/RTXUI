@@ -137,8 +137,12 @@ class Playground : public Component<Playground> {
         <div class="pane-title">Editor
           <span class="hint">— HTML + CSS, live</span>
         </div>
-        <textarea class="editor" value="{code}" linenumbers="relative"
-                  highlight_current_line="true" />
+        <textarea 
+          class="editor"
+          value="{code}"
+          linenumbers="absolute"
+          highlight_current_line="true"
+        />
         <div class="status {status_class}">{status}</div>
       </div>
       <div class="pane preview-pane">
@@ -250,6 +254,18 @@ class Playground : public Component<Playground> {
 
 int main() {
   auto app = Ref<Playground>::New();
+
+  // Without this, a CSS error in the live-edited code (e.g. mid-keystroke,
+  // before the user finishes typing a rule) would print straight to stderr
+  // and corrupt the running frame -- Screen owns the terminal in raw mode,
+  // so that output lands in the middle of the app instead of a scrollback
+  // the user could read anyway. Route it into the status line instead, same
+  // as the XML parse errors already handled in Playground::Digest above.
+  SetCssErrorHandler([app](const CssError& error) {
+    app->status = "CSS error, line " + std::to_string(error.line + 1) +
+                  ": " + error.message;
+  });
+
   Screen screen(app);
   screen.Loop();
   return 0;

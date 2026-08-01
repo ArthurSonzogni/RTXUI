@@ -583,6 +583,23 @@ class Component : public ComponentBase {
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory);
 ComponentFactory GetGlobalComponentFactory(std::string_view name);
 
+// Reported when a <style> block fails to parse. Line/column are 0-based,
+// relative to that <style> block's own text.
+struct CssError {
+  std::string message;
+  int line;
+  int column;
+};
+
+// Installs a handler invoked whenever a <style> block fails to parse (e.g.
+// one whose text is reactively interpolated from bound state). The default
+// handler prints a formatted error to stderr, which is fine for a plain
+// terminal session but corrupts a running frame for any app that owns the
+// terminal in raw mode -- apps that render arbitrary/live-edited CSS (e.g.
+// a playground) should install their own handler to surface the error
+// through their own UI instead. Pass nullptr to restore the default.
+void SetCssErrorHandler(std::function<void(const CssError&)> handler);
+
 struct HotReloadInfo {
   ComponentBase* component;
   std::string view_var_name;

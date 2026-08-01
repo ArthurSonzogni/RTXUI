@@ -4744,6 +4744,39 @@ TEST_CASE("Invalid interpolated CSS does not crash the process",
   REQUIRE(target != nullptr);
 }
 
+TEST_CASE("SetCssErrorHandler redirects CSS errors instead of printing",
+          "[component][style]") {
+  class DynamicStyleComp : public rtxui::Component<DynamicStyleComp> {
+   public:
+    std::string rule = "color: red;";
+    void InitReflection() override {
+      Bind(rule);
+      Import<rtxui::div>();
+      rtxui::Component<DynamicStyleComp>::InitReflection();
+    }
+    std::string_view view = R"xml(
+      <div id="target" class="box">hi</div>
+      <style>
+        .box { {rule} }
+      </style>
+    )xml";
+  };
+
+  std::optional<rtxui::CssError> captured;
+  rtxui::SetCssErrorHandler(
+      [&](const rtxui::CssError& error) { captured = error; });
+
+  auto component = rtxui::Ref<DynamicStyleComp>::New();
+  component->Mount();
+  component->rule = "not valid css {{{ ]]]";
+  component->Digest();
+
+  rtxui::SetCssErrorHandler(nullptr);  // Don't leak into other tests.
+
+  REQUIRE(captured.has_value());
+  CHECK_FALSE(captured->message.empty());
+}
+
 #include "rtxui/component/default/code/code.hpp"
 #include "rtxui/component/default/s/s.hpp"
 #include "rtxui/component/default/u/u.hpp"

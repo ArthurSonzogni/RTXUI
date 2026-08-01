@@ -70,3 +70,12 @@ EnableHotReload("view", "src/panels/my_panel.cpp");
   `std::string_view view = R"html(...)html";`.
 - If the edited template fails to parse, the error is printed to stderr and
   the previous template stays active.
+- A `<style>` block failing to parse (including one whose text is built from
+  reactive/interpolated state, not just file-watched hot reload) also prints
+  to stderr by default. Since an RTXUI app typically owns the terminal in raw
+  mode, that print lands mid-frame instead of a scrollback the user could
+  read — call `rtxui::SetCssErrorHandler(handler)` once (e.g. in `main()`) to
+  redirect these into your own UI (an app that renders arbitrary/live-edited
+  CSS, like a playground, should do this). `handler` receives a
+  `rtxui::CssError{message, line, column}`; pass `nullptr` to restore the
+  default stderr behavior.
