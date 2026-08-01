@@ -1273,4 +1273,41 @@ TEST_CASE("CSS style parsing handles invalid values robustly", "[style][robustne
   }
 }
 
+TEST_CASE("CSS ::part() selector parsing", "[css][part]") {
+  SECTION("tag base") {
+    auto stylesheet = css::Parse("textarea::part(gutter) { color: red; }");
+    REQUIRE(stylesheet.has_value());
+    REQUIRE(stylesheet.value().size() == 1);
+    const auto& sel = stylesheet.value()[0].parsed_selector;
+    CHECK(sel.base == "textarea");
+    CHECK(sel.part == "gutter");
+    CHECK(sel.pseudo_classes.empty());
+  }
+
+  SECTION("class base") {
+    auto stylesheet = css::Parse(".editor::part(gutter) { color: red; }");
+    REQUIRE(stylesheet.has_value());
+    const auto& sel = stylesheet.value()[0].parsed_selector;
+    CHECK(sel.base.empty());
+    REQUIRE(sel.classes.size() == 1);
+    CHECK(sel.classes[0] == "editor");
+    CHECK(sel.part == "gutter");
+  }
+
+  SECTION("no base") {
+    auto stylesheet = css::Parse("::part(active) { color: red; }");
+    REQUIRE(stylesheet.has_value());
+    CHECK(stylesheet.value()[0].parsed_selector.part == "active");
+  }
+
+  SECTION("plain pseudo-class selectors are unaffected") {
+    auto stylesheet = css::Parse("self:hover { color: red; }");
+    REQUIRE(stylesheet.has_value());
+    const auto& sel = stylesheet.value()[0].parsed_selector;
+    CHECK(sel.part.empty());
+    REQUIRE(sel.pseudo_classes.size() == 1);
+    CHECK(sel.pseudo_classes[0] == "hover");
+  }
+}
+
 

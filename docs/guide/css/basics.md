@@ -57,6 +57,45 @@ This is essential for wrapping custom components in custom borders or configurin
 Attribute selectors are also supported: `input[value]` matches elements
 having the attribute, `button[disabled=true]` matches an exact value.
 
+### Styling a Nested Component's Internals: `::part()`
+
+The opening line of this page said styles apply "only to that component's
+own template" — that's true even for a component you instantiate yourself.
+`<textarea linenumbers="true">`'s line-number gutter is built out of `<div>`s
+inside `textarea`'s own template; a `.gutter { color: ... }` rule in *your*
+component's stylesheet simply never reaches them, no matter how directly you
+wrote the `<textarea>` tag.
+
+A component opts specific internal elements into being styled from outside
+by marking them with a `part` attribute (space-separated for more than one,
+like `class`):
+
+```html
+<!-- inside some component's own template -->
+<div class="row" part="gutter active">...</div>
+```
+
+An outside component then targets that name with `::part(name)`, following
+whatever selector matches the *instantiation site* (tag, class, id — not the
+part element itself):
+
+```css
+textarea::part(gutter) { color: rgb(100, 116, 139); }
+.editor::part(active)  { color: rgb(129, 140, 248); }
+```
+
+This reaches through as many layers of nesting as it takes to get there —
+internal markup inside the component, and even further component
+boundaries in between. If `<Foo>`'s own template instantiates `<Bar
+part="baz">`, an app that only ever writes `<Foo class="thing">` can still
+reach `baz` directly with `.thing::part(baz)`, with no need for `Foo` to
+forward or re-expose it itself (there's no `exportparts`-style ceremony
+here, unlike standard CSS shadow DOM).
+
+Built-in components that expose parts document them alongside their other
+attributes — see the [`<textarea>`](/guide/forms) guide for the
+line-number gutter and current-line highlight parts.
+
 ## Inline Styles
 
 The `style` attribute applies declarations to a single element, taking

@@ -221,6 +221,10 @@ struct CategorizedRules {
       by_class;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_tag;
   bool has_pseudo_classes = false;
+  // Rulesets with a trailing `::part(name)`, e.g. `textarea::part(gutter)`.
+  // Matched separately (see MatchPartSelector): unlike every other bucket
+  // above, these can apply to elements this component doesn't itself own.
+  std::vector<const css::Ruleset*> part_rules;
 };
 
 ComponentBase::ComponentBase() = default;
@@ -612,6 +616,86 @@ bool IsStyledByComponent(const Element* element,
   return false;
 }
 
+// Matches `component`'s `component_selector::part(name)` rules against
+// `element`: an element whose own `part` attribute lists `name` as one of
+// its (space-separated, like classes) tokens, that lives somewhere inside
+// the subtree of an ancestor element `component` directly instantiated
+// (that ancestor's owner_component() == component), and whose ancestor
+// matches the selector's base/id/classes/attributes (everything before
+// ::part()). This forwards through any number of intermediate component
+// boundaries automatically -- e.g. if <Foo>'s own template instantiates
+// <Bar part="baz">, an app that only ever writes <Foo class="thing"> can
+// still reach it with `.thing::part(baz)`, with no exportparts-style
+// ceremony needed from Foo.
+
+bool MatchPartSelector(const Element* element,
+                       const ComponentBase* component,
+                       const css::ParsedSelector& selector) {
+  const std::string* part_attr = element->GetAttribute("part");
+  if (!part_attr) {
+    return false;
+  }
+  bool has_part = false;
+  for (auto token : Split(*part_attr, ' ')) {
+    if (token == selector.part) {
+      has_part = true;
+      break;
+    }
+  }
+  if (!has_part) {
+    return false;
+  }
+
+  // Find the ancestor element `component` directly instantiated (its
+  // owner_component() == component) -- that's the "host" the selector's
+  // base/id/classes/attributes match against, e.g. in
+  // `textarea::part(gutter)`, `textarea` describes the <textarea> usage
+  // site, not `element` itself. This is NOT simply
+  // `element->component()->Root()`: every XML tag is itself a component
+  // (see class_name.hpp's per-tag Component<T> subclasses), so a `part`
+  // element several tags deep inside another component's own template
+  // (e.g. a <div part="..."> written inside <textarea>'s Setup()) has its
+  // own immediate per-tag component wrapper in between -- walking up the
+  // DOM parent chain skips over all of those uniformly, however many
+  // there are, to find the actual outer instantiation boundary.
+  const Element* host = element->Parent();
+  while (host && host->owner_component() != component) {
+    host = host->Parent();
+  }
+  if (!host) {
+    return false;
+  }
+
+  if (!selector.base.empty() && host->tag() != selector.base) {
+    return false;
+  }
+  if (!selector.id.empty() && host->id != selector.id) {
+    return false;
+  }
+  for (const auto& required_class : selector.classes) {
+    bool found = false;
+    for (const auto& host_class : host->classes) {
+      if (host_class == required_class) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  for (const auto& attr : selector.attributes) {
+    const std::string* host_attr = host->GetAttribute(attr.name);
+    if (!host_attr) {
+      return false;
+    }
+    if (attr.has_value && *host_attr != attr.value) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool MatchPseudos(const Element* element,
                   const std::vector<std::string>& pseudo_classes) {
   for (const auto& pseudo : pseudo_classes) {
@@ -837,7 +921,11 @@ void ResolveStylesRecursive(Element* element,
     ResolveStylesRecursive(element, element->component(), check_pseudos);
   }
 
-  if (IsStyledByComponent(element, component)) {
+  bool is_styled = IsStyledByComponent(element, component);
+  const auto* categorized_for_parts = component->categorized_rules();
+  bool has_part_rules =
+      categorized_for_parts && !categorized_for_parts->part_rules.empty();
+  if (is_styled || has_part_rules) {
     if (!check_pseudos) {
       if (element->IsStyleResolvedFor(component)) {
         goto recurse;
@@ -853,7 +941,7 @@ void ResolveStylesRecursive(Element* element,
     // --* declarations are known before var() substitution happens.
     std::vector<const css::Ruleset*> matched;
     const auto* categorized = component->categorized_rules();
-    if (categorized) {
+    if (categorized && is_styled) {
       auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets,
                                  bool is_universal) {
         for (const auto* ruleset : rulesets) {
@@ -954,11 +1042,41 @@ void ResolveStylesRecursive(Element* element,
       }
     }
 
+    // ::part() rules: unlike every bucket above, these can match `element`
+    // even when `is_styled` is false (see MatchPartSelector) -- checked
+    // regardless of `categorized && is_styled` above.
+    if (categorized) {
+      for (const auto* ruleset : categorized->part_rules) {
+        if (!css::EvaluateMediaQuery(ruleset->media_query)) {
+          continue;
+        }
+        const auto& parsed = ruleset->parsed_selector;
+        if (!MatchPartSelector(element, component, parsed)) {
+          continue;
+        }
+        if (check_pseudos) {
+          if (!parsed.pseudo_classes.empty() &&
+              MatchPseudos(element, parsed.pseudo_classes)) {
+            matched.push_back(ruleset);
+          }
+        } else {
+          if (parsed.pseudo_classes.empty()) {
+            matched.push_back(ruleset);
+          }
+        }
+      }
+    }
+
     // Inline style attribute parsing. The declarations are string_views into
-    // css_rule, which must stay alive until they are applied below.
+    // css_rule, which must stay alive until they are applied below. Skipped
+    // when this pass was entered solely for ::part() matching (is_styled
+    // false): an element's own inline style is applied once, by the
+    // component that actually owns/rendered it, not by every outer
+    // component whose ::part() rules happen to reach in.
     std::string css_rule;
     std::vector<css::Declaration> inline_declarations;
-    const std::string* inline_style = element->GetAttribute("style");
+    const std::string* inline_style =
+        is_styled ? element->GetAttribute("style") : nullptr;
     if (inline_style && !inline_style->empty()) {
       css_rule = "dummy { " + *inline_style + " }";
       auto maybe_stylesheet = css::Parse(css_rule);
@@ -1075,7 +1193,10 @@ recurse:
         break;
       }
     }
-    if (!has_slot_children) {
+    // Without slot content, `component`'s own selectors could never reach
+    // anything inside this nested component's subtree -- UNLESS it has
+    // ::part() rules, which are specifically designed to reach in there.
+    if (!has_slot_children && !has_part_rules) {
       return;
     }
   }
@@ -1195,6 +1316,10 @@ void ComponentBase::Render() {
         for (const auto& ruleset : *stylesheet_) {
           if (!ruleset.parsed_selector.pseudo_classes.empty()) {
             categorized_rules_->has_pseudo_classes = true;
+          }
+          if (!ruleset.parsed_selector.part.empty()) {
+            categorized_rules_->part_rules.push_back(&ruleset);
+            continue;
           }
           std::string_view selector_base = ruleset.parsed_selector.base;
           std::string_view selector_id = ruleset.parsed_selector.id;
