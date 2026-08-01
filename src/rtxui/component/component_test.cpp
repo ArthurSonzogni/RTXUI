@@ -1793,6 +1793,41 @@ TEST_CASE("Textarea Component Highlight Current Line Works With Line Numbers",
         "line current-line");
 }
 
+TEST_CASE("Textarea Component Selection/Cursor/Placeholder Expose Part "
+          "Attributes For External ::part() Styling",
+          "[component][textarea][part]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->selection_start = 0;
+  textarea_ptr->cursor_pos = 4;  // selects "line" out of "line one..."
+  textarea_ptr->Digest();
+
+  auto* selection_el = textarea_el->QuerySelector(".selection");
+  REQUIRE(selection_el != nullptr);
+  const std::string* selection_part = selection_el->GetAttribute("part");
+  REQUIRE(selection_part != nullptr);
+  CHECK(*selection_part == "selection");
+
+  auto* cursor_el = textarea_el->QuerySelector(".cursor");
+  REQUIRE(cursor_el != nullptr);
+  const std::string* cursor_part = cursor_el->GetAttribute("part");
+  REQUIRE(cursor_part != nullptr);
+  CHECK(cursor_part->find("cursor") != std::string::npos);
+
+  auto* placeholder_el = textarea_el->QuerySelector(".placeholder");
+  REQUIRE(placeholder_el != nullptr);
+  const std::string* placeholder_part = placeholder_el->GetAttribute("part");
+  REQUIRE(placeholder_part != nullptr);
+  CHECK(*placeholder_part == "placeholder");
+}
+
 TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
           "[component][textarea][undo]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();

@@ -109,11 +109,14 @@ Set `highlight_current_line="true"` for a full-width background band behind
 the line the cursor is on, independently of `linenumbers` (works with or
 without a gutter).
 
-The gutter and current-line elements expose [`::part()`](/guide/css/basics)
-names so an app can theme them: `part="gutter"` on the gutter container,
-`part="line-number"` on every row (also `active` on the active line's row,
-and `wrapped` on a subline continuation row), and `part="line"` on every
-`highlight_current_line` row (also `current-line` on the active one).
+Several internal elements expose [`::part()`](/guide/css/basics) names so an
+app can theme them: `part="gutter"` on the gutter container, `part="line-number"`
+on every row (also `active` on the active line's row, and `wrapped` on a
+subline continuation row), `part="line"` on every `highlight_current_line`
+row (also `current-line` on the active one), and — regardless of
+`linenumbers`/`highlight_current_line` — `part="selection"` on the
+selected-text span, `part="cursor"` (also `cursor-focused` while focused) on
+the cursor cell, and `part="placeholder"` on the placeholder text.
 
 ```html
 <textarea value="{text}" />
@@ -125,6 +128,8 @@ and `wrapped` on a subline continuation row), and `part="line"` on every
 textarea::part(gutter)       { color: rgb(100, 116, 139); }
 textarea::part(active)       { color: rgb(129, 140, 248); }
 textarea::part(current-line) { background-color: rgb(49, 55, 79); }
+textarea::part(selection)    { background-color: rgb(67, 56, 202); }
+textarea::part(placeholder)  { color: rgb(100, 116, 139); }
 ```
 
 ```cpp

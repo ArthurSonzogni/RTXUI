@@ -95,13 +95,13 @@ std::string_view textarea::Setup() {
             </for>
           </div>
           <div class="content">
-            <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+            <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
           </div>
         </div>
       </if>
       <else>
         <div class="content">
-          <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+          <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
         </div>
       </else>
     </if>
@@ -114,12 +114,12 @@ std::string_view textarea::Setup() {
             </for>
           </div>
           <div class="content">
-            <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+            <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
           </div>
         </div>
       </if>
       <else>
-        <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+        <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
       </else>
     </else>
     <style>
@@ -213,6 +213,12 @@ std::string_view textarea::Setup() {
         background-color: rgb(101, 101, 101);
         opacity: 1.0;
       }
+      /* Transparent by design, not overridable via ::part(cursor): the
+         focused cursor cell is drawn by the terminal's own native cursor
+         (a blinking vertical bar), not simulated here, so there's no
+         background of ours to show through it either way -- ::part(cursor)
+         still lets an app retheme the cursor cell's foreground text
+         color, just not this property. */
       .cursor {
         background-color: transparent;
       }
@@ -224,13 +230,15 @@ std::string_view textarea::Setup() {
          gives the textarea: self's background-color is a separate element,
          so it can't be referenced here (background-color doesn't inherit,
          and nested-component style resolution finishes before an outer
-         app's overrides are known anyway). */
+         app's overrides are known anyway). Overridable via ::part(selection)
+         CSS, same reasoning as the gutter colors above. */
       .selection {
         background-color: rgb(38, 79, 120);
         color: white;
       }
       /* Fixed absolute color, not lighten()/dim, for the same reason the
-         selection colors are fixed above. */
+         selection colors are fixed above; overridable via ::part(placeholder)
+         CSS. */
       .placeholder {
         color: rgb(150, 150, 150);
       }
