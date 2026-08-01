@@ -324,8 +324,27 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
       }
       rest_pseudos = rest_pseudos.substr(next_colon);
     }
+    // `::part(name)` is a double-colon pseudo-ELEMENT, not a pseudo-CLASS:
+    // the loop above strips one leading ':' at a time, so "::part(name)"
+    // yields two tokens -- a spurious "" from the doubled colon, then
+    // "part(name)". Pull the part name out into its own field and drop
+    // both from pseudo_classes (an empty or "part(...)" entry wouldn't
+    // match anything in MatchPseudos anyway, but leaving them in would
+    // spuriously mark this ruleset as pseudo-class-bearing, forcing the
+    // more expensive per-frame pseudo-class resolution pass to run).
+    for (auto it = parsed.pseudo_classes.begin();
+         it != parsed.pseudo_classes.end();) {
+      if (it->empty()) {
+        it = parsed.pseudo_classes.erase(it);
+      } else if (it->starts_with("part(") && it->ends_with(")")) {
+        parsed.part = it->substr(5, it->size() - 6);
+        it = parsed.pseudo_classes.erase(it);
+      } else {
+        ++it;
+      }
+    }
   }
-  
+
   for (int i = static_cast<int>(parts.size()) - 2; i >= 0; --i) {
     SelectorPart parent_part = ParseSinglePart(parts[i]);
     parent_part.combinator = combinators[i];

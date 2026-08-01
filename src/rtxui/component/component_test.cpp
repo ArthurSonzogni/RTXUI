@@ -1793,36 +1793,6 @@ TEST_CASE("Textarea Component Highlight Current Line Works With Line Numbers",
         "line current-line");
 }
 
-TEST_CASE("Textarea Component Gutter And Current Line Colors Are Overridable",
-          "[component][textarea][highlight_current_line][linenumbers]") {
-  auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
-
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
-  REQUIRE(textarea_el != nullptr);
-  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
-      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
-  REQUIRE(textarea_ptr != nullptr);
-
-  textarea_ptr->linenumbers = "true";
-  textarea_ptr->highlight_current_line = true;
-  textarea_ptr->cursor_pos = 10;  // "line two", the second logical line.
-  textarea_ptr->gutter_color = "rgb(1, 2, 3)";
-  textarea_ptr->gutter_active_color = "rgb(4, 5, 6)";
-  textarea_ptr->current_line_color = "rgb(7, 8, 9)";
-  textarea_ptr->Digest();
-
-  REQUIRE(textarea_ptr->gutter_lines.size() == 3);
-  REQUIRE(textarea_ptr->content_line_highlights.size() == 3);
-  CHECK(textarea_ptr->gutter_lines[0].color == "rgb(1, 2, 3)");
-  CHECK(textarea_ptr->gutter_lines[1].color == "rgb(4, 5, 6)");  // active
-  CHECK(textarea_ptr->gutter_lines[2].color == "rgb(1, 2, 3)");
-  CHECK(textarea_ptr->content_line_highlights[0].color == "transparent");
-  CHECK(textarea_ptr->content_line_highlights[1].color ==
-        "rgb(7, 8, 9)");  // active
-  CHECK(textarea_ptr->content_line_highlights[2].color == "transparent");
-}
-
 TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
           "[component][textarea][undo]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();

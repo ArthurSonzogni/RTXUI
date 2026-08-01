@@ -2881,4 +2881,55 @@ TEST_CASE("Layout: flex item with auto width shrinks to its block children",
                                  }));
 }
 
+// Regression test: ::part() lets an outer component style an element buried
+// inside a nested component's own template (normally unreachable -- see
+// IsStyledByComponent, which gates every other selector bucket to elements
+// a component either rendered itself or directly instantiated). Two bugs
+// were found and fixed getting this to actually apply:
+// 1. every XML tag is itself a Component (see the tag registry in
+//    component.cpp), so `element->component()` gives the immediate
+//    per-tag wrapper, not the outer instantiation boundary -- matching
+//    has to walk up the DOM parent chain via owner_component() instead.
+// 2. ResolveStylesRecursive skips descending into a nested component's
+//    subtree entirely when it has no slotted content, since normally
+//    nothing outer could ever reach in there -- an optimization that
+//    silently broke ::part() once it made that reachable.
+TEST_CASE("Layout: ::part() lets an outer component style a nested "
+          "component's internals",
+          "[layout][style][part]") {
+  struct InnerWithPart : Component<InnerWithPart> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <div class="label" part="gizmo">X</div>
+        <style>
+          self { display: block; }
+          .label { color: rgb(0, 255, 0); }
+        </style>
+      )html";
+    }
+  };
+
+  struct OuterWithPartRule : Component<OuterWithPartRule> {
+    std::string_view Setup() {
+      Import<InnerWithPart>();
+      return R"html(
+        <InnerWithPart class="thing" />
+        <style>
+          .thing::part(gizmo) { color: rgb(255, 0, 0); }
+        </style>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<OuterWithPartRule>::New(), 1, 1);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+  // Red (the outer ::part() override), not green (Inner's own default).
+  CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"R"}));
+}
+
 }  // namespace rtxui

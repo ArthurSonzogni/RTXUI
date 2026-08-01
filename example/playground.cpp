@@ -142,9 +142,6 @@ class Playground : public Component<Playground> {
           value="{code}"
           linenumbers="absolute"
           highlight_current_line="true"
-          gutter_color="rgb(71, 85, 105)"
-          gutter_active_color="rgb(129, 140, 248)"
-          current_line_color="rgb(49, 55, 79)"
         />
         <div class="status {status_class}">{status}</div>
       </div>
@@ -197,6 +194,18 @@ class Playground : public Component<Playground> {
         padding-right: 1;
         overflow-y: scroll;
         margin-bottom: 1;
+      }
+      /* Themes the gutter/current-line, which live inside <textarea>'s own
+         template and so aren't reachable by an ordinary .editor .gutter
+         selector -- see docs/guide/css/basics.md. */
+      .editor::part(gutter) {
+        color: rgb(71, 85, 105);
+      }
+      .editor::part(active) {
+        color: rgb(129, 140, 248);
+      }
+      .editor::part(current-line) {
+        background-color: rgb(49, 55, 79);
       }
       .status {
         color: rgb(148, 163, 184);

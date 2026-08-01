@@ -44,6 +44,13 @@ struct ParsedSelector {
   std::vector<std::string> pseudo_classes;
   std::vector<AttributeSelector> attributes;
   std::vector<SelectorPart> parents; // Ancestors in right-to-left order
+  // From a trailing `::part(name)`, e.g. `textarea::part(gutter)`. Empty
+  // when the selector doesn't use ::part(). base/id/classes/attributes
+  // above describe the *host* (the component instantiation site, e.g.
+  // `textarea`), not the part element itself -- ::part() reaches into
+  // another component's own template to select an element it has marked
+  // with a matching `part="..."` attribute (see docs/guide/css/basics.md).
+  std::string part;
 };
 
 /// A CSS ruleset (selector { declarations }).
