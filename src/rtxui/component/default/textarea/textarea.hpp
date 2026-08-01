@@ -14,18 +14,28 @@
 namespace rtxui {
 
 // One rendered row of the line-number gutter (see textarea::UpdateGutter).
+// `color` is one of textarea::gutter_color/gutter_active_color/
+// gutter_wrapped_color, picked per row and applied via inline style (not a
+// CSS class) so an app can override it just by setting the corresponding
+// attribute on <textarea> -- default components don't use CSS custom
+// properties, and outer stylesheets can't reach elements generated inside
+// another component's own template anyway.
 struct GutterLine {
   std::string text;
   std::string css_class;
+  std::string color;
 
   bool operator==(const GutterLine&) const = default;
 };
 
 // One rendered row of the current-line background highlight (see
 // textarea::UpdateGutter); a full-width, textless block so it paints as a
-// background band behind that row's actual text.
+// background band behind that row's actual text. `color` is
+// textarea::current_line_color on the active row, "transparent" elsewhere
+// (see GutterLine::color for why this is inline style, not a CSS class).
 struct LineRow {
   std::string css_class;
+  std::string color;
 
   bool operator==(const LineRow&) const = default;
 };
@@ -52,6 +62,15 @@ class textarea : public Component<textarea>, public TextInputBase {
   // Background band behind the logical line the cursor is on. Independent
   // of `linenumbers`: works with or without a gutter.
   bool highlight_current_line = false;
+  // Gutter text color for a normal, non-active, non-wrapped-continuation
+  // line.
+  std::string gutter_color = "rgb(120, 120, 120)";
+  // Gutter text color for the active line's number.
+  std::string gutter_active_color = "rgb(230, 230, 230)";
+  // Gutter text color for a wrapped-continuation entry (line_wrap="subline").
+  std::string gutter_wrapped_color = "rgb(90, 90, 90)";
+  // Background color of the highlight_current_line band.
+  std::string current_line_color = "rgb(60, 60, 60)";
 
   // Render bindings
   bool show_gutter = false;
