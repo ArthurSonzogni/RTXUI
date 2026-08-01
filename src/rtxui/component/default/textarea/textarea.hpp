@@ -21,6 +21,15 @@ struct GutterLine {
   bool operator==(const GutterLine&) const = default;
 };
 
+// One rendered row of the current-line background highlight (see
+// textarea::UpdateGutter); a full-width, textless block so it paints as a
+// background band behind that row's actual text.
+struct LineRow {
+  std::string css_class;
+
+  bool operator==(const LineRow&) const = default;
+};
+
 class textarea : public Component<textarea>, public TextInputBase {
  public:
   // "" (off), "true"/"absolute" (1, 2, 3, ...), or "relative" (vim-style:
@@ -40,11 +49,15 @@ class textarea : public Component<textarea>, public TextInputBase {
   // continuation rows get their own (blank, `.wrapped`-classed) gutter
   // entry instead.
   std::string line_wrap;
+  // Background band behind the logical line the cursor is on. Independent
+  // of `linenumbers`: works with or without a gutter.
+  bool highlight_current_line = false;
 
   // Render bindings
   bool show_gutter = false;
   int gutter_width = 3;
   std::vector<GutterLine> gutter_lines;
+  std::vector<LineRow> content_line_highlights;
 
   void InitReflection() override;
   std::string_view Setup() override;
