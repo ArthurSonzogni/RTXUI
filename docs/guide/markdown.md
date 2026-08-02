@@ -76,7 +76,7 @@ supported.
 
 The built-in parser supports:
 
-- Headings: `#` through `######`
+- Headings: `#` through `######`, and Setext-style (`title` underlined with `===` for h1, `---` for h2)
 - Paragraphs, separated by blank lines
 - Blockquotes, starting with `>`
 - Fenced code blocks, using ` ``` `
