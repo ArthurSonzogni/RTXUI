@@ -188,6 +188,22 @@ std::string_view TrimTrailingCr(std::string_view line) {
   return line;
 }
 
+std::string_view TrimTrailingSpaces(std::string_view line) {
+  while (!line.empty() && (line.back() == ' ' || line.back() == '\t')) {
+    line.remove_suffix(1);
+  }
+  return line;
+}
+
+// Setext heading underline: a line made up of only '=' (h1) or only '-'
+// (h2) characters, at least one, ignoring trailing whitespace.
+bool IsSetextUnderline(std::string_view line, char marker) {
+  line = TrimTrailingSpaces(line);
+  return !line.empty() &&
+         std::all_of(line.begin(), line.end(),
+                      [marker](char c) { return c == marker; });
+}
+
 bool IsOrderedListItem(std::string_view line) {
   if (line.empty()) {
     return false;
@@ -502,6 +518,22 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
       }
       html += "<li>" + ParseInline(text) + "</li>\n";
       continue;
+    }
+
+    // Setext-style heading: a paragraph line immediately followed by a line
+    // of only '=' (h1) or only '-' (h2) characters turns that paragraph
+    // into a heading instead.
+    if (in_paragraph) {
+      bool is_h1_underline = IsSetextUnderline(line, '=');
+      bool is_h2_underline = !is_h1_underline && IsSetextUnderline(line, '-');
+      if (is_h1_underline || is_h2_underline) {
+        std::string tag = is_h1_underline ? "h1" : "h2";
+        html += "<" + tag + ">" + ParseInline(current_paragraph) + "</" +
+                tag + ">\n";
+        current_paragraph.clear();
+        in_paragraph = false;
+        continue;
+      }
     }
 
     // Regular line (paragraph)

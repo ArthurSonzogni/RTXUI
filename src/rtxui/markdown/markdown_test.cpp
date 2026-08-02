@@ -22,6 +22,32 @@ TEST_CASE("Markdown: Headings", "[markdown]") {
           "<p>####### Too many hashes</p>\n");
 }
 
+TEST_CASE("Markdown: Setext headings", "[markdown]") {
+  REQUIRE(MarkdownToHtml("title\n=====") == "<h1>title</h1>\n");
+  REQUIRE(MarkdownToHtml("subtitle\n--------") == "<h2>subtitle</h2>\n");
+
+  // A single underline character is enough.
+  REQUIRE(MarkdownToHtml("title\n=") == "<h1>title</h1>\n");
+  REQUIRE(MarkdownToHtml("subtitle\n-") == "<h2>subtitle</h2>\n");
+
+  // Inline formatting still applies to the heading text.
+  REQUIRE(MarkdownToHtml("**bold** title\n=====") ==
+          "<h1><strong>bold</strong> title</h1>\n");
+
+  // A multi-line paragraph is joined into a single heading, same as a
+  // regular paragraph would be.
+  REQUIRE(MarkdownToHtml("line 1\nline 2\n=====") ==
+          "<h1>line 1 line 2</h1>\n");
+
+  // Without a preceding paragraph, '=' or '-' only lines are plain text.
+  REQUIRE(MarkdownToHtml("=====") == "<p>=====</p>\n");
+  REQUIRE(MarkdownToHtml("-----") == "<p>-----</p>\n");
+
+  // A blank line breaks the paragraph, so the underline no longer applies.
+  REQUIRE(MarkdownToHtml("title\n\n=====") ==
+          "<p>title</p>\n<p>=====</p>\n");
+}
+
 TEST_CASE("Markdown: Paragraphs and line breaks", "[markdown]") {
   REQUIRE(MarkdownToHtml("Hello world") == "<p>Hello world</p>\n");
 
