@@ -605,6 +605,35 @@ struct CssError {
 /// through their own UI instead. Pass nullptr to restore the default.
 void SetCssErrorHandler(std::function<void(const CssError&)> handler);
 
+/// Reported when XML/HTML content generated from live-edited or bound state
+/// fails to parse (e.g. the <markdown> component's rendered body plus its
+/// wrapped stylesheet).
+struct XmlError {
+  /// The error message.
+  std::string message;
+
+  /// The line where the error occurred, within the generated document.
+  /// 0-based.
+  int line;
+
+  /// The column where the error occurred. 0-based.
+  int column;
+};
+
+/// Installs a handler invoked whenever XML/HTML content generated from
+/// live-edited or bound state fails to parse (see XmlError). The default
+/// handler prints a formatted error to stderr, which corrupts a running
+/// frame for any app that owns the terminal in raw mode -- apps that render
+/// live-edited content (e.g. a Markdown playground) should install their own
+/// handler to surface the error through their own UI instead, the same way
+/// SetCssErrorHandler works for <style> blocks. Pass nullptr to restore the
+/// default.
+void SetXmlErrorHandler(std::function<void(const XmlError&)> handler);
+
+/// Routes an XML/HTML parse error to the handler installed via
+/// SetXmlErrorHandler, or prints it to stderr if none was installed.
+void ReportXmlError(const XmlError& error, std::string_view xml_string);
+
 struct HotReloadInfo {
   ComponentBase* component;
   std::string view_var_name;

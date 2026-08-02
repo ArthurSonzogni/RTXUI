@@ -508,6 +508,28 @@ void SetCssErrorHandler(std::function<void(const CssError&)> handler) {
 
 namespace {
 
+std::function<void(const XmlError&)>& GetXmlErrorHandler() {
+  static std::function<void(const XmlError&)> handler;
+  return handler;
+}
+
+}  // namespace
+
+void SetXmlErrorHandler(std::function<void(const XmlError&)> handler) {
+  GetXmlErrorHandler() = std::move(handler);
+}
+
+void ReportXmlError(const XmlError& error, std::string_view xml_string) {
+  if (const auto& handler = GetXmlErrorHandler()) {
+    handler(error);
+    return;
+  }
+  PrintCompilerStyleError(xml_string, error.line, error.column, error.message,
+                           "XML");
+}
+
+namespace {
+
 void XmlParseError(const xml::Error& error, std::string_view xml_string) {
   PrintCompilerStyleError(xml_string, error.line, error.column, error.message, "DOM");
   std::exit(1);

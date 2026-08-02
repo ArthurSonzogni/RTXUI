@@ -3642,6 +3642,50 @@ TEST_CASE("Markdown code block newlines preserved",
   CHECK(rendered.find('\n', pos_main) < pos_return);
 }
 
+class MarkdownStylesheetErrorTestContainer
+    : public rtxui::Component<MarkdownStylesheetErrorTestContainer> {
+ public:
+  std::string stylesheet = "h1 { color: red; }";
+  void InitReflection() override {
+    Bind(stylesheet);
+    Import<rtxui::markdown>();
+    rtxui::Component<MarkdownStylesheetErrorTestContainer>::InitReflection();
+  }
+
+  std::string_view view = R"(
+    <markdown id="md" content="# Title" stylesheet="{stylesheet}"></markdown>
+  )";
+};
+
+TEST_CASE(
+    "Markdown Component reports XML parse errors from a malformed "
+    "stylesheet",
+    "[component][markdown]") {
+  // Regression: markdown::Digest() used to silently drop xml::Parse()
+  // failures on its generated document (stylesheet + rendered Markdown
+  // body), leaving the preview stuck on stale content with no way for a
+  // host app (e.g. the Markdown playground) to surface the error to the
+  // user.
+  auto container = rtxui::Ref<MarkdownStylesheetErrorTestContainer>::New();
+  container->Mount();
+  container->Digest();
+
+  std::optional<rtxui::XmlError> reported_error;
+  rtxui::SetXmlErrorHandler(
+      [&](const rtxui::XmlError& error) { reported_error = error; });
+
+  // A literal tag-like sequence inside a CSS comment breaks the XML parse
+  // of the generated document -- same bug class as the one fixed for
+  // playground.cpp by commit 40b3be1.
+  container->stylesheet = "/* <textarea> */ h1 { color: red; }";
+  container->Digest();
+
+  rtxui::SetXmlErrorHandler(nullptr);
+
+  REQUIRE(reported_error.has_value());
+  CHECK_FALSE(reported_error->message.empty());
+}
+
 TEST_CASE("Default Components Registration", "[component]") {
   CHECK(rtxui::GetGlobalComponentFactory("ul") != nullptr);
   CHECK(rtxui::GetGlobalComponentFactory("ol") != nullptr);
