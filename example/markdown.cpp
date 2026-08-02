@@ -250,6 +250,16 @@ int main() {
                   ": " + error.message;
   });
 
+  // The <markdown> component wraps the stylesheet and rendered Markdown body
+  // into one document and re-parses it as XML on every keystroke (see
+  // markdown.cpp's Digest()); a malformed stylesheet (e.g. a literal <tag>
+  // inside a CSS comment, same bug class as playground.cpp) can break that
+  // parse. Route it into the status line, same recovery pattern as the CSS
+  // handler above.
+  SetXmlErrorHandler([app](const XmlError& error) {
+    app->status = "HTML error: " + error.message;
+  });
+
   Screen screen(app);
   screen.Loop();
   return 0;

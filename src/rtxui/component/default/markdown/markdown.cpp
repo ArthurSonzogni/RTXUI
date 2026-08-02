@@ -48,6 +48,9 @@ bool markdown::Digest() {
     xml_string_ = StripIndent(template_);
     if (auto nodes = xml::Parse(xml_string_)) {
       xml_nodes_ = std::move(nodes.value());
+    } else {
+      const xml::Error& error = nodes.error();
+      ReportXmlError({error.message, error.line, error.column}, xml_string_);
     }
     this->Render();
   }
