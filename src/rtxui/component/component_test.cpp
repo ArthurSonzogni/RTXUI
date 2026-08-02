@@ -1512,6 +1512,60 @@ TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   CHECK(ta_el->layout_height() == initial_height);
 }
 
+TEST_CASE("Textarea Click While Scrolled Targets The Visible Line",
+          "[component][textarea]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+
+  // 20 short lines ("L0".."L19"), each one row tall -- taller than the
+  // textarea's default height (5), so it scrolls vertically.
+  std::string content;
+  int expected_pos_of_line_15 = 0;
+  for (int i = 0; i < 20; ++i) {
+    if (i == 15) {
+      expected_pos_of_line_15 = static_cast<int>(content.size());
+    }
+    content += "L" + std::to_string(i);
+    if (i != 19) content += "\n";
+  }
+  container->my_text = content;
+
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  // Move the cursor to the end to scroll the view down so line 15 ("L15")
+  // is the topmost visible row (scroll_y == 15, viewport height == 5).
+  ta_ptr->cursor_pos = static_cast<int>(ta_ptr->value.size());
+  ta_ptr->selection_start = -1;
+  ta_ptr->Digest();
+  screen.Draw();
+  REQUIRE(ta_el->scroll_y() == 15);
+
+  // Click the top-left cell of the (scrolled) content area -- this used to
+  // reset scroll_y to 0 as a side effect of focusing the clicked element
+  // (Screen::ScrollIntoView(), called on every mouse-click focus change,
+  // computes the element's position from its fragment's unscrolled
+  // content-space bounding box; the textarea's whole multi-line content is
+  // one fragment taller than the viewport, so it always resolved to that
+  // fragment's top edge and scrolled back up to it), so the click landed on
+  // "L0" instead of the visually-clicked "L15".
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = ta_el->absolute_x() + 2;  // inside padding-left:1
+  mouse.y = ta_el->absolute_y() + 1;  // top row, 1-based
+  screen.Dispatch(Event(mouse));
+
+  CHECK(ta_el->scroll_y() == 15);
+  CHECK(ta_ptr->cursor_pos == expected_pos_of_line_15);
+}
+
 TEST_CASE("Textarea Component Readonly Blocks Enter And Tab Indent",
           "[component][textarea][readonly]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
