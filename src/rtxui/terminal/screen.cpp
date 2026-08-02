@@ -1480,7 +1480,16 @@ void ScreenImpl::HandleEvent(Event event) {
             }
             focused_element_ = clicked_element;
             focused_element_->set_focused(true);
-            ScrollIntoView(focused_element_);
+            // No ScrollIntoView() here: a mouse click always lands on an
+            // already-visible cell, unlike Tab/arrow-key focus movement
+            // (which does call it, see above/below) where the newly focused
+            // element may be off-screen. ScrollIntoView() computes an
+            // element's position from its fragment's unscrolled content-space
+            // bounding box, so for an element taller than its scrollable
+            // ancestor's viewport (e.g. a textarea's text content, clicked
+            // while scrolled down) it would always resolve to that box's top
+            // edge and scroll back to it -- clobbering the scroll offset the
+            // click's own row/column math is about to read.
             if (focus_changed) {
               component_->ResolveTargetStyles();
               Draw();
