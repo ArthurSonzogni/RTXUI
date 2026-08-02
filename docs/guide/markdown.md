@@ -87,8 +87,15 @@ The built-in parser supports:
 
 ## Complete Example
 
-The example below loads a Markdown file from disk, renders it, and lets you
-edit the stylesheet live.
+`example/markdown.cpp` is a live playground: a `<textarea>` holds the
+Markdown source and another holds its CSS stylesheet, both bound straight to
+a `<markdown>` component's `content`/`stylesheet` props. Since those are
+ordinary reactive bindings, no manual reparse step is needed — every
+keystroke re-renders the preview on the right.
+
+```bash
+./build/rtxui_example_markdown
+```
 
 <ExampleTabs src="/wasm/rtxui_example_markdown.js">
 <template #source>
