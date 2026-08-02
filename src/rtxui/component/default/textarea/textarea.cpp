@@ -122,6 +122,7 @@ std::string_view textarea::Setup() {
         <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
       </else>
     </else>
+
     <style>
       self {
         display: block;
@@ -132,8 +133,6 @@ std::string_view textarea::Setup() {
         padding-right: 1;
         overflow-y: scroll;
         background-color: rgb(40, 40, 40);
-        opacity: 0.8;
-        transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
       }
       /* Only matches once the app sets a `linenumbers` attribute, so a
          plain textarea's layout/CSS is completely untouched. */
@@ -197,21 +196,6 @@ std::string_view textarea::Setup() {
         flex-grow: 1;
         width: 100%;
         white-space: pre-wrap;
-      }
-      /* Fixed absolute colors, not lighten(): self:hover and self:focus can
-         both match at once (e.g. clicking focuses the textarea while the
-         mouse is still over it, so it's also hovered), and since both
-         rules apply to the same style in cascade order, lighten() would
-         compound -- self:focus lightening the already-lightened
-         self:hover result -- producing a much brighter, washed-out color
-         instead of a stable focus look. */
-      self:hover {
-        background-color: rgb(75, 75, 75);
-        opacity: 0.9;
-      }
-      self:focus {
-        background-color: rgb(101, 101, 101);
-        opacity: 1.0;
       }
       /* Transparent by design, not overridable via ::part(cursor): the
          focused cursor cell is drawn by the terminal's own native cursor
