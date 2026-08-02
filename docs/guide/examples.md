@@ -83,7 +83,7 @@ Positioning terminal cells with flexbox, grid, borders, and margins.
 | [hr.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/hr.cpp) | Horizontal rules and separators. | [HTML Reference](/html_reference) |
 | [table.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/table.cpp) | HTML table elements. | [HTML Reference](/html_reference) |
 | [cjk.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/cjk.cpp) | Double-width CJK ideographs and mixed-width text. | [Unicode & CJK](/guide/unicode) |
-| [markdown.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/markdown.cpp) | Rendering Markdown files with live styling. | [Markdown](/guide/markdown) |
+| [markdown.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/markdown.cpp) | A live Markdown/CSS editor and preview, side by side. | [Markdown](/guide/markdown) |
 | [media.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/media.cpp) | `@media` rules reacting to terminal resizes. | [Media Queries](/guide/css/media-queries) |
 | [spatial_navigation.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/spatial_navigation.cpp) | Arrow-key focus movement across a 2D grid. | [Focus](/guide/html/focus) |
 | [tabindex.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/tabindex.cpp) | Custom focus order with `tabindex`. | [Focus](/guide/html/focus) |

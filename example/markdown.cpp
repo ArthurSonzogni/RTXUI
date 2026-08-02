@@ -1,225 +1,255 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <rtxui/rtxui.hpp>
-#include "rtxui/dom/element.hpp"
+#include <string>
+
 #include "rtxui/component/default_components_internal.hpp"
-#include <fstream>
-#include <sstream>
+#include "rtxui/rtxui.hpp"
 
 using namespace rtxui;
 
-class MarkdownDemo : public Component<MarkdownDemo> {
- public:
-  MarkdownDemo() {
-    // Try to load the documentation file from various relative paths
-    std::vector<std::string> paths = {
-        "docs/guide/markdown.md",      // From project root
-        "../docs/guide/markdown.md",   // From build directory
-        "../../docs/guide/markdown.md" // From deep build directory
-    };
+namespace {
 
-    bool loaded = false;
-    for (const auto& path : paths) {
-      std::ifstream file(path);
-      if (file.is_open()) {
-        std::stringstream ss;
-        ss << file.rdbuf();
-        markdown_content = ss.str();
-        loaded = true;
-        break;
-      }
-    }
-    
-    if (!loaded) {
-      markdown_content = "# Error\nCould not find `docs/guide/markdown.md`.\nMake sure you run this from the project root or build directory.";
-    }
-  }
+constexpr std::string_view kDefaultMarkdown = R"md(
+# Markdown Playground
 
-  std::string markdown_content = R"md(
-# Markdown in RTXUI
+Edit the **Markdown** on the left. This preview re-renders on every
+keystroke, using the same `<markdown>` component every RTXUI app can embed.
 
-RTXUI now supports **Markdown** natively via the `<markdown>` component!
+## Features
 
-## Supported Features
-
-- **Bold** and _Italic_ text
+- **Bold** and _italic_ text
 - [Links](https://github.com/ArthurSonzogni/RTXUI)
 - Inline `code` and fenced code blocks:
+
 ```cpp
 #include <rtxui/rtxui.hpp>
 int main() {
   return 0;
 }
 ```
-- Unordered and Ordered lists
+
+- Ordered and unordered lists
 - Blockquotes
-- Tables
 
-| Metric | Baseline | Optimized |
-| --- | --- | --- |
-| DOM Digest | 11.70 ms | 0.53 ms |
-| Layout/Paint | 3.85 ms | 0.52 ms |
+> Style the generated tags in the Stylesheet editor below.
 
-> "Markdown is a lightweight markup language for creating formatted text."
-
-## Custom Styling
-
-You can style the generated HTML tags using the `stylesheet` property.
+| Metric | Value |
+| --- | --- |
+| DOM Digest | 0.53 ms |
+| Layout/Paint | 0.52 ms |
 )md";
 
-  std::string custom_css = R"css(
-    h1 {
-      color: #3b82f6;
-      border-bottom: solid;
-      border-color: #3b82f6;
-      margin-bottom: 1;
-    }
+constexpr std::string_view kDefaultStylesheet = R"css(
+  h1 {
+    color: #3b82f6;
+    border-bottom: solid;
+    border-color: #3b82f6;
+    margin-bottom: 1;
+  }
+  h2 {
+    color: #60a5fa;
+    margin-top: 1;
+    border-bottom: solid;
+    border-color: #334155;
+  }
+  strong { color: #facc15; }
+  em { color: #a78bfa; }
+  code { color: #94a3b8; }
+  pre {
+    background-color: #1e293b;
+    border: tall;
+    border-color: #334155;
+    display: block;
+  }
+  blockquote {
+    border-left: heavy;
+    border-color: #4b5563;
+    padding-left: 2;
+    font-style: italic;
+    color: #9ca3af;
+  }
+  ul, ol { margin-left: 2; color: #d1d5db; }
+  a { color: #3b82f6; text-decoration: underline; }
+  table {
+    border: solid;
+    border-color: #334155;
+    margin-top: 1;
+    margin-bottom: 1;
+  }
+  th {
+    font-weight: bold;
+    color: #60a5fa;
+    border-bottom: solid;
+    border-color: #334155;
+    padding-left: 1;
+    padding-right: 1;
+  }
+  td { padding-left: 1; padding-right: 1; }
+)css";
 
-    h2 {
-      color: #60a5fa;
-      margin-top: 1;
-      border-bottom: solid;
-      border-color: #334155;
-    }
+}  // namespace
 
-    h3 {
-      color: #93c5fd;
-    }
+// Left editor + right preview, mirroring example/playground.cpp: two
+// `<textarea>`s hold the raw Markdown source and its stylesheet, and the
+// `<markdown>` component on the right re-renders both reactively -- no
+// manual reparse/HotReload plumbing needed, since `content`/`stylesheet` are
+// ordinary bound props.
+class MarkdownPlayground : public Component<MarkdownPlayground> {
+ public:
+  std::string markdown_source = std::string(kDefaultMarkdown);
+  std::string stylesheet = std::string(kDefaultStylesheet);
+  std::string status = "OK";
 
-    strong {
-      color: #facc15;
-    }
-
-    em {
-      color: #a78bfa;
-    }
-
-    code {
-      color: #94a3b8;
-    }
-
-    pre {
-      background-color: #1e293b;
-      border: tall;
-      border-color: #334155;
-      display: block;
-    }
-
-    blockquote {
-      border-left: heavy;
-      border-color: #4b5563;
-      padding-left: 2;
-      font-style: italic;
-      color: #9ca3af;
-    }
-
-    ul, ol {
-      margin-left: 2;
-      color: #d1d5db;
-    }
-
-    li {
-      margin-bottom: 0;
-    }
-
-    a {
-      color: #3b82f6;
-      text-decoration: underline;
-    }
-
-    table {
-      border: solid;
-      border-color: #334155;
-      margin-top: 1;
-      margin-bottom: 1;
-    }
-
-    th {
-      font-weight: bold;
-      color: #60a5fa;
-      border-bottom: solid;
-      border-color: #334155;
-      padding-left: 1;
-      padding-right: 1;
-    }
-
-    td {
-      padding-left: 1;
-      padding-right: 1;
-    }
-  )css";
+  std::string status_class() const { return status == "OK" ? "ok" : "error"; }
 
   void InitReflection() override {
+    Bind(markdown_source);
+    Bind(stylesheet);
+    Bind(status);
+    BindComputed(status_class);
     Import<rtxui::div>();
-    Import<rtxui::h1>();
-    Import<rtxui::p>();
+    Import<rtxui::span>();
+    Import<rtxui::textarea>();
     Import<rtxui::markdown>();
-    Bind(markdown_content);
-    Bind(custom_css);
-    Component<MarkdownDemo>::InitReflection();
+    Component<MarkdownPlayground>::InitReflection();
+  }
+
+  // Resets `status` to "OK" right before the reactive re-render triggered by
+  // an edit -- if the new stylesheet is malformed, SetCssErrorHandler's
+  // callback (wired up in main()) overwrites it again with the real error
+  // during that same render, same recovery pattern as playground.cpp.
+  bool Digest() override {
+    if (markdown_source != last_markdown_ || stylesheet != last_stylesheet_) {
+      last_markdown_ = markdown_source;
+      last_stylesheet_ = stylesheet;
+      status = "OK";
+    }
+    return Component<MarkdownPlayground>::Digest();
   }
 
   std::string_view view = R"html(
-    <div class="container">
-      <div class="preview-pane">
-        <h1 class="preview-title">Preview</h1>
-        <markdown
-          class="md-preview"
-          content="{markdown_content}"
-          stylesheet="{custom_css}"
-        ></markdown>
+    <div class="app">
+      <div class="pane editor-pane">
+        <div class="pane-title">Markdown
+          <span class="hint">— live</span>
+        </div>
+        <textarea
+          class="editor"
+          value="{markdown_source}"
+          linenumbers="absolute"
+          highlight_current_line="true"
+        />
+        <div class="pane-title">Stylesheet
+          <span class="hint">— CSS, live</span>
+        </div>
+        <textarea
+          class="editor"
+          value="{stylesheet}"
+          linenumbers="absolute"
+          highlight_current_line="true"
+        />
+        <div class="status {status_class}">{status}</div>
+      </div>
+      <div class="pane preview-pane">
+        <div class="pane-title">Preview</div>
+        <div class="preview-frame">
+          <markdown content="{markdown_source}" stylesheet="{stylesheet}" />
+        </div>
       </div>
     </div>
 
     <style>
       self {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background-color: rgb(15, 23, 42);
+        color: white;
+      }
+      .app {
         display: flex;
         flex-direction: row;
         width: 100%;
         height: 100%;
-        background-color: rgb(18, 18, 18);
-        color: #f1f5f9;
+      }
+      .pane {
+        display: flex;
+        flex-direction: column;
+        width: 50%;
+        height: 100%;
+        padding: 1;
+      }
+      .editor-pane {
+        border-right: solid;
+        border-color: rgb(51, 65, 85);
+      }
+      .pane-title {
+        font-weight: bold;
+        color: rgb(129, 140, 248);
+        margin-bottom: 1;
+      }
+      .hint {
+        font-weight: normal;
+        color: rgb(148, 163, 184);
+      }
+      .editor {
+        flex-grow: 1;
+        width: 100%;
+        padding-left: 1;
+        padding-right: 1;
+        overflow-y: scroll;
+        margin-bottom: 1;
+      }
+      /* Themes the gutter/current-line, which live inside the textarea's
+         own template and so aren't reachable by an ordinary .editor .gutter
+         selector -- see docs/guide/css/basics.md. */
+      .editor::part(gutter) {
+        color: rgb(71, 85, 105);
+      }
+      .editor::part(active) {
+        color: rgb(129, 140, 248);
+      }
+      .editor::part(current-line) {
+        background-color: rgb(49, 55, 79);
+      }
+      .editor::part(selection) {
+        background-color: rgb(67, 56, 202);
+      }
+      .editor::part(cursor) {
+        color: rgb(226, 232, 240);
+      }
+      .status {
+        color: rgb(148, 163, 184);
+      }
+      .status.error {
+        color: rgb(248, 113, 113);
+      }
+      .preview-frame {
+        flex-grow: 1;
+        width: 100%;
         overflow-y: scroll;
       }
-      .container {
-        display: flex;
-        flex-direction: row;
-        flex: 1;
-      }
-      .sidebar {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        border-right: solid;
-        border-color: #334155;
-        padding: 1;
-      }
-      .preview-pane {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        padding: 1;
-      }
-      .sidebar-title, .preview-title {
-        color: #3b82f6;
-        margin-bottom: 1;
-      }
-      .editor, .css-editor {
-        flex: 1;
-        margin-bottom: 1;
-        border: tall;
-        border-color: #334155;
-        background-color: #1e293b;
-      }
-      .editor { min-height: 10; }
-      .css-editor { min-height: 5; }
     </style>
   )html";
+
+ private:
+  std::string last_markdown_ = std::string(kDefaultMarkdown);
+  std::string last_stylesheet_ = std::string(kDefaultStylesheet);
 };
 
 int main() {
-  auto app = Ref<MarkdownDemo>::New();
+  auto app = Ref<MarkdownPlayground>::New();
+
+  // Without this, a CSS error in the live-edited stylesheet (e.g.
+  // mid-keystroke, before the user finishes typing a rule) would print
+  // straight to stderr and corrupt the running frame -- Screen owns the
+  // terminal in raw mode, so route it into the status line instead.
+  SetCssErrorHandler([app](const CssError& error) {
+    app->status = "CSS error, line " + std::to_string(error.line + 1) +
+                  ": " + error.message;
+  });
+
   Screen screen(app);
   screen.Loop();
   return 0;
