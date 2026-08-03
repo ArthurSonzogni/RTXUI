@@ -32,6 +32,12 @@ backspace/delete, cut); it matches `:read-only`.
 `placeholder` shows hint text (styled dim by default, via a `.placeholder`
 class) whenever `value` is empty, and never touches `value` itself.
 
+Its selection/cursor/placeholder spans expose the same
+[`::part()`](/guide/css/basics) names as `<textarea>` (see below):
+`part="selection"` on the selected-text span, `part="cursor"` (also
+`cursor-focused` while focused) on the cursor cell, and `part="placeholder"`
+on the placeholder text.
+
 `maxlength` caps how many graphemes `value` can grow to from user input
 (typing, pasting, Enter, Tab-indent). A paste that would overflow it is
 truncated to fit rather than rejected outright, matching a browser's
