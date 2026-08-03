@@ -87,41 +87,17 @@ std::string_view textarea::Setup() {
           <div class="{line.css_class}" part="{line.css_class}">{line.text}</div>
         </for>
       </div>
-      <if condition="{highlight_current_line}">
-        <div class="content-wrapper">
-          <div class="line-highlights">
-            <for each="{content_line_highlights}" as="row">
-              <div class="{row.css_class}" part="{row.css_class}"></div>
-            </for>
-          </div>
-          <div class="content">
-            <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
-          </div>
-        </div>
-      </if>
-      <else>
-        <div class="content">
-          <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
-        </div>
-      </else>
     </if>
-    <else>
-      <if condition="{highlight_current_line}">
-        <div class="content-wrapper">
-          <div class="line-highlights">
-            <for each="{content_line_highlights}" as="row">
-              <div class="{row.css_class}" part="{row.css_class}"></div>
-            </for>
-          </div>
-          <div class="content">
-            <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
-          </div>
-        </div>
-      </if>
-      <else>
+    <div class="content-wrapper">
+      <div class="line-highlights" if="{highlight_current_line}">
+        <for each="{content_line_highlights}" as="row">
+          <div class="{row.css_class}" part="{row.css_class}"></div>
+        </for>
+      </div>
+      <div class="content">
         <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
-      </else>
-    </else>
+      </div>
+    </div>
 
     <style>
       self {
