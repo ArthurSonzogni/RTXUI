@@ -17,12 +17,12 @@ void dialog::InitReflection() {
 
 std::string_view dialog::Setup() {
   return R"html(
-    <div class="dialog-overlay {overlay_class}">
-      <div class="dialog-box">
-        <div class="dialog-header">
-          <span class="dialog-title">{title}</span>
+    <div class="dialog-overlay {overlay_class}" part="dialog-overlay">
+      <div class="dialog-box" part="dialog-box">
+        <div class="dialog-header" part="dialog-header">
+          <span class="dialog-title" part="dialog-title">{title}</span>
         </div>
-        <div class="dialog-body">
+        <div class="dialog-body" part="dialog-body">
           <slot></slot>
         </div>
       </div>

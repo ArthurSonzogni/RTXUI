@@ -220,6 +220,12 @@ The `<details>` element represents a disclosure widget in which information is v
 * **Toggle Interaction**: Clicking the summary element or focusing it and pressing `Enter`/`Space` toggles the details visibility.
 * **Default Summary**: If no `<summary>` element is provided inside `<details>`, it automatically renders a default summary header labeled `"Details"`.
 
+### Styling internals
+Exposes `part="details-container"` on the outer wrapper, `part="summary-line"`
+on the clickable header row, `part="arrow"` on the disclosure triangle, and
+`part="details-content"` on the collapsible body -- see
+[`::part()`](/guide/css/basics).
+
 Example:
 ```xml
 <details open="{is_expanded}">
@@ -237,6 +243,11 @@ Example:
 
 The `<fieldset>` element is used to group several controls and labels within a web form. The `<legend>` element defines a caption for the `<fieldset>` and is nested inside its top border.
 
+### Styling internals
+Exposes `part="fieldset-wrapper"` on the outer container, `part="legend-line"`
+on the row holding the legend, and `part="fieldset-body"` on the content area
+-- see [`::part()`](/guide/css/basics).
+
 Example:
 ```xml
 <fieldset>
@@ -252,6 +263,10 @@ Example:
 
 The `<radio>` element represents a radio button, allowing a single selection among multiple options sharing the same `name` attribute value.
 
+### Styling internals
+Exposes `part="radio-mark"` on the glyph span -- see
+[`::part()`](/guide/css/basics).
+
 Example:
 ```xml
 <radio name="gender" checked="{is_male}">Male</radio>
@@ -263,6 +278,12 @@ Example:
 ## 10. Tabbed Interfaces (`<tabs>`, `<tab-pane>`)
 
 The `<tabs>` and `<tab-pane>` elements build tabbed panels that allow switching between different views.
+
+### Styling internals
+Exposes `part="tabs-container"` on the outer wrapper, `part="tabs-headers"`
+on the header row, `part="tabs-content"` on the pane area, and
+`part="tab-header-btn"` (also `active-tab` on the selected header) on each
+generated header button -- see [`::part()`](/guide/css/basics).
 
 Example:
 ```xml
@@ -281,6 +302,12 @@ Example:
 ## 11. Overlays & Dialogs (`<dialog>`)
 
 The `<dialog>` element represents a dialog box or other interactive component, such as a dismissible alert or subwindow overlay. When `open="true"`, it renders centered on top of all other elements using a translucent dark backdrop.
+
+### Styling internals
+Exposes `part="dialog-overlay"` on the full-screen backdrop, `part="dialog-box"`
+on the centered box, `part="dialog-header"`/`part="dialog-title"` on the
+header row and its text, and `part="dialog-body"` on the content area -- see
+[`::part()`](/guide/css/basics).
 
 Example:
 ```xml
@@ -337,6 +364,11 @@ The `<tooltip>` element represents a popup helper widget. When a user hovers the
 ### Attributes
 * `content`: The text content to display inside the tooltip popup box. Can be reactive.
 * `placement`: The direction to position the tooltip popup relative to the wrapped element. Supported values: `top` (default), `bottom`, `left`, `right`.
+
+### Styling internals
+Exposes `part="tooltip-container"` on the outer wrapper, `part="tooltip-trigger"`
+on the element wrapping the slotted trigger content, and `part="tooltip-popup"`
+on the floating popup -- see [`::part()`](/guide/css/basics).
 
 Example:
 ```xml

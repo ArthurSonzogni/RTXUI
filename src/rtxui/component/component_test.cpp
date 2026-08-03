@@ -2270,6 +2270,22 @@ TEST_CASE("Checkbox Component Basic Interactions", "[component][checkbox]") {
   CHECK(container->onchange_called == true);
 }
 
+TEST_CASE("Checkbox Component Exposes Checkmark Part Attribute For External "
+          "::part() Styling",
+          "[component][checkbox][part]") {
+  auto container = rtxui::Ref<CheckboxTestComponent>::New();
+  container->Mount();
+
+  auto* cb_el = container->Root()->QuerySelector("checkbox");
+  REQUIRE(cb_el != nullptr);
+
+  auto* checkmark_el = cb_el->QuerySelector(".checkmark");
+  REQUIRE(checkmark_el != nullptr);
+  const std::string* part = checkmark_el->GetAttribute("part");
+  REQUIRE(part != nullptr);
+  CHECK(*part == "checkmark");
+}
+
 class SliderTestComponent : public rtxui::Component<SliderTestComponent> {
  public:
   int my_val = 50;
@@ -2385,6 +2401,40 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
   CHECK(rtxui::ComponentBase::GetMouseCapturer() == nullptr);
 }
 
+TEST_CASE("Slider Component Exposes Track/Thumb Part Attributes For "
+          "External ::part() Styling",
+          "[component][slider][part]") {
+  auto container = rtxui::Ref<SliderTestComponent>::New();
+  container->Mount();
+
+  auto* slider_el = container->Root()->QuerySelector("slider");
+  REQUIRE(slider_el != nullptr);
+
+  auto* container_el = slider_el->QuerySelector(".slider-container");
+  REQUIRE(container_el != nullptr);
+  const std::string* container_part = container_el->GetAttribute("part");
+  REQUIRE(container_part != nullptr);
+  CHECK(*container_part == "slider-container");
+
+  auto* track_left_el = slider_el->QuerySelector(".track-left");
+  REQUIRE(track_left_el != nullptr);
+  const std::string* track_left_part = track_left_el->GetAttribute("part");
+  REQUIRE(track_left_part != nullptr);
+  CHECK(*track_left_part == "track-left");
+
+  auto* thumb_el = slider_el->QuerySelector(".thumb");
+  REQUIRE(thumb_el != nullptr);
+  const std::string* thumb_part = thumb_el->GetAttribute("part");
+  REQUIRE(thumb_part != nullptr);
+  CHECK(*thumb_part == "thumb");
+
+  auto* track_right_el = slider_el->QuerySelector(".track-right");
+  REQUIRE(track_right_el != nullptr);
+  const std::string* track_right_part = track_right_el->GetAttribute("part");
+  REQUIRE(track_right_part != nullptr);
+  CHECK(*track_right_part == "track-right");
+}
+
 class ProgressTestComponent : public rtxui::Component<ProgressTestComponent> {
  public:
   double my_progress = 25.0;
@@ -2426,6 +2476,29 @@ TEST_CASE("Progress Component Basic Rendering", "[component][progress]") {
   CHECK(progress_ptr->value == 70.0);
   CHECK(progress_ptr->filled_track == "███████");
   CHECK(progress_ptr->empty_track == "   ");  // 3 spaces
+}
+
+TEST_CASE("Progress Component Exposes Filled/Empty Part Attributes For "
+          "External ::part() Styling",
+          "[component][progress][part]") {
+  auto container = rtxui::Ref<ProgressTestComponent>::New();
+  container->Mount();
+  container->Digest();
+
+  auto* progress_el = container->Root()->QuerySelector("progress");
+  REQUIRE(progress_el != nullptr);
+
+  auto* filled_el = progress_el->QuerySelector(".filled");
+  REQUIRE(filled_el != nullptr);
+  const std::string* filled_part = filled_el->GetAttribute("part");
+  REQUIRE(filled_part != nullptr);
+  CHECK(*filled_part == "filled");
+
+  auto* empty_el = progress_el->QuerySelector(".empty");
+  REQUIRE(empty_el != nullptr);
+  const std::string* empty_part = empty_el->GetAttribute("part");
+  REQUIRE(empty_part != nullptr);
+  CHECK(*empty_part == "empty");
 }
 
 class SelectTestComponent : public rtxui::Component<SelectTestComponent> {
@@ -2551,6 +2624,40 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   CHECK(select_ptr->value == "dark");
   CHECK(container->my_theme == "dark");
   CHECK(select_ptr->selected_label == "Dark Theme");
+}
+
+TEST_CASE("Select Component Exposes Button/Dropdown Part Attributes For "
+          "External ::part() Styling",
+          "[component][select][part]") {
+  auto container = rtxui::Ref<SelectTestComponent>::New();
+  container->Mount();
+
+  auto* select_el = container->Root()->QuerySelector("select");
+  REQUIRE(select_el != nullptr);
+
+  auto* btn_el = select_el->QuerySelector(".select-btn");
+  REQUIRE(btn_el != nullptr);
+  const std::string* btn_part = btn_el->GetAttribute("part");
+  REQUIRE(btn_part != nullptr);
+  CHECK(*btn_part == "select-btn");
+
+  auto* label_el = select_el->QuerySelector(".select-label");
+  REQUIRE(label_el != nullptr);
+  const std::string* label_part = label_el->GetAttribute("part");
+  REQUIRE(label_part != nullptr);
+  CHECK(*label_part == "select-label");
+
+  auto* arrow_el = select_el->QuerySelector(".select-arrow");
+  REQUIRE(arrow_el != nullptr);
+  const std::string* arrow_part = arrow_el->GetAttribute("part");
+  REQUIRE(arrow_part != nullptr);
+  CHECK(*arrow_part == "select-arrow");
+
+  auto* dropdown_el = select_el->QuerySelector(".dropdown-list");
+  REQUIRE(dropdown_el != nullptr);
+  const std::string* dropdown_part = dropdown_el->GetAttribute("part");
+  REQUIRE(dropdown_part != nullptr);
+  CHECK(*dropdown_part == "dropdown-list");
 }
 
 TEST_CASE("Select Component Positioning and Mouse Hover Alignment", "[component][select][position][hover]") {
@@ -5441,6 +5548,41 @@ TEST_CASE("Details Component Default Summary", "[component][details]") {
   CHECK(text_el->text() == "Details");
 }
 
+TEST_CASE("Details Component Exposes Part Attributes For External "
+          "::part() Styling",
+          "[component][details][part]") {
+  auto container = rtxui::Ref<DetailsTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* details_el = container->Root()->QuerySelector("details");
+  REQUIRE(details_el != nullptr);
+
+  auto* container_el = details_el->QuerySelector(".details-container");
+  REQUIRE(container_el != nullptr);
+  const std::string* container_part = container_el->GetAttribute("part");
+  REQUIRE(container_part != nullptr);
+  CHECK(*container_part == "details-container");
+
+  auto* summary_line_el = details_el->QuerySelector(".summary-line");
+  REQUIRE(summary_line_el != nullptr);
+  const std::string* summary_line_part = summary_line_el->GetAttribute("part");
+  REQUIRE(summary_line_part != nullptr);
+  CHECK(*summary_line_part == "summary-line");
+
+  auto* arrow_el = details_el->QuerySelector(".arrow");
+  REQUIRE(arrow_el != nullptr);
+  const std::string* arrow_part = arrow_el->GetAttribute("part");
+  REQUIRE(arrow_part != nullptr);
+  CHECK(*arrow_part == "arrow");
+
+  auto* content_el = details_el->QuerySelector(".details-content");
+  REQUIRE(content_el != nullptr);
+  const std::string* content_part = content_el->GetAttribute("part");
+  REQUIRE(content_part != nullptr);
+  CHECK(*content_part == "details-content");
+}
+
 // --- Fieldset & Legend ---
 class FieldsetTestComponent : public rtxui::Component<FieldsetTestComponent> {
  public:
@@ -5478,6 +5620,35 @@ TEST_CASE("Fieldset and Legend Components", "[component][fieldset]") {
   auto* legend_el = legend_slot->ChildAt(0);
   CHECK(legend_el->tag() == "legend");
   CHECK(fieldset_ptr->legend_class == "has-legend");
+}
+
+TEST_CASE("Fieldset Component Exposes Part Attributes For External "
+          "::part() Styling",
+          "[component][fieldset][part]") {
+  auto container = rtxui::Ref<FieldsetTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* fieldset_el = container->Root()->QuerySelector("fieldset");
+  REQUIRE(fieldset_el != nullptr);
+
+  auto* wrapper_el = fieldset_el->QuerySelector(".fieldset-wrapper");
+  REQUIRE(wrapper_el != nullptr);
+  const std::string* wrapper_part = wrapper_el->GetAttribute("part");
+  REQUIRE(wrapper_part != nullptr);
+  CHECK(*wrapper_part == "fieldset-wrapper");
+
+  auto* legend_line_el = fieldset_el->QuerySelector(".legend-line");
+  REQUIRE(legend_line_el != nullptr);
+  const std::string* legend_line_part = legend_line_el->GetAttribute("part");
+  REQUIRE(legend_line_part != nullptr);
+  CHECK(*legend_line_part == "legend-line");
+
+  auto* body_el = fieldset_el->QuerySelector(".fieldset-body");
+  REQUIRE(body_el != nullptr);
+  const std::string* body_part = body_el->GetAttribute("part");
+  REQUIRE(body_part != nullptr);
+  CHECK(*body_part == "fieldset-body");
 }
 
 // --- Radio ---
@@ -5543,6 +5714,23 @@ TEST_CASE("Radio Component Grouping", "[component][radio]") {
   CHECK(radioB_ptr->checked == true);
   CHECK(container->opt_a == false);
   CHECK(container->opt_b == true);
+}
+
+TEST_CASE("Radio Component Exposes Radio-Mark Part Attribute For External "
+          "::part() Styling",
+          "[component][radio][part]") {
+  auto container = rtxui::Ref<RadioTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* radioA_el = container->Root()->QuerySelector("#radioA");
+  REQUIRE(radioA_el != nullptr);
+
+  auto* mark_el = radioA_el->QuerySelector(".radio-mark");
+  REQUIRE(mark_el != nullptr);
+  const std::string* mark_part = mark_el->GetAttribute("part");
+  REQUIRE(mark_part != nullptr);
+  CHECK(*mark_part == "radio-mark");
 }
 
 // --- Tabs ---
@@ -5688,6 +5876,49 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   CHECK(tabs_ptr->value == "tab1");
 }
 
+TEST_CASE("Tabs Component Exposes Part Attributes For External "
+          "::part() Styling",
+          "[component][tabs][part]") {
+  auto container = rtxui::Ref<TabsTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  REQUIRE(tabs_el != nullptr);
+  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  REQUIRE(tabs_ptr != nullptr);
+
+  auto* container_el = tabs_el->QuerySelector(".tabs-container");
+  REQUIRE(container_el != nullptr);
+  const std::string* container_part = container_el->GetAttribute("part");
+  REQUIRE(container_part != nullptr);
+  CHECK(*container_part == "tabs-container");
+
+  auto* headers_el = tabs_el->QuerySelector(".tabs-headers");
+  REQUIRE(headers_el != nullptr);
+  const std::string* headers_part = headers_el->GetAttribute("part");
+  REQUIRE(headers_part != nullptr);
+  CHECK(*headers_part == "tabs-headers");
+
+  auto* content_el = tabs_el->QuerySelector(".tabs-content");
+  REQUIRE(content_el != nullptr);
+  const std::string* content_part = content_el->GetAttribute("part");
+  REQUIRE(content_part != nullptr);
+  CHECK(*content_part == "tabs-content");
+
+  auto headers_slot = tabs_ptr->Slot("headers");
+  REQUIRE(headers_slot != nullptr);
+  REQUIRE(headers_slot->ChildCount() == 2);
+  auto* tab1_header = headers_slot->ChildAt(0);
+  const std::string* tab1_header_part = tab1_header->GetAttribute("part");
+  REQUIRE(tab1_header_part != nullptr);
+  CHECK(*tab1_header_part == "tab-header-btn active-tab");
+  auto* tab2_header = headers_slot->ChildAt(1);
+  const std::string* tab2_header_part = tab2_header->GetAttribute("part");
+  REQUIRE(tab2_header_part != nullptr);
+  CHECK(*tab2_header_part == "tab-header-btn");
+}
+
 // --- Dialog ---
 class DialogTestComponent : public rtxui::Component<DialogTestComponent> {
  public:
@@ -5769,6 +6000,50 @@ TEST_CASE("Dialog Component Layout Centering", "[component][dialog][layout]") {
 
   CHECK(box_el->absolute_x() == expected_x);
   CHECK(box_el->absolute_y() == expected_y);
+}
+
+TEST_CASE("Dialog Component Exposes Part Attributes For External "
+          "::part() Styling",
+          "[component][dialog][part]") {
+  auto container = rtxui::Ref<DialogTestComponent>::New();
+  rtxui::Screen screen(container);
+
+  container->dialog_open = true;
+  container->Digest();
+  screen.Draw();
+
+  auto* dialog_el = container->Root()->QuerySelector("dialog");
+  REQUIRE(dialog_el != nullptr);
+
+  auto* overlay_el = dialog_el->QuerySelector(".dialog-overlay");
+  REQUIRE(overlay_el != nullptr);
+  const std::string* overlay_part = overlay_el->GetAttribute("part");
+  REQUIRE(overlay_part != nullptr);
+  CHECK(*overlay_part == "dialog-overlay");
+
+  auto* box_el = dialog_el->QuerySelector(".dialog-box");
+  REQUIRE(box_el != nullptr);
+  const std::string* box_part = box_el->GetAttribute("part");
+  REQUIRE(box_part != nullptr);
+  CHECK(*box_part == "dialog-box");
+
+  auto* header_el = dialog_el->QuerySelector(".dialog-header");
+  REQUIRE(header_el != nullptr);
+  const std::string* header_part = header_el->GetAttribute("part");
+  REQUIRE(header_part != nullptr);
+  CHECK(*header_part == "dialog-header");
+
+  auto* title_el = dialog_el->QuerySelector(".dialog-title");
+  REQUIRE(title_el != nullptr);
+  const std::string* title_part = title_el->GetAttribute("part");
+  REQUIRE(title_part != nullptr);
+  CHECK(*title_part == "dialog-title");
+
+  auto* body_el = dialog_el->QuerySelector(".dialog-body");
+  REQUIRE(body_el != nullptr);
+  const std::string* body_part = body_el->GetAttribute("part");
+  REQUIRE(body_part != nullptr);
+  CHECK(*body_part == "dialog-body");
 }
 
 // --- Hot Reload ---
@@ -5978,6 +6253,35 @@ TEST_CASE("Tooltip Component Interaction", "[component][tooltip]") {
 
   // Verify class is hidden again
   CHECK(tt_ptr->tooltip_class == "hidden");
+}
+
+TEST_CASE("Tooltip Component Exposes Part Attributes For External "
+          "::part() Styling",
+          "[component][tooltip][part]") {
+  auto container = rtxui::Ref<TooltipTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* tt_el = container->Root()->QuerySelector("#tt");
+  REQUIRE(tt_el != nullptr);
+
+  auto* container_el = tt_el->QuerySelector(".tooltip-container");
+  REQUIRE(container_el != nullptr);
+  const std::string* container_part = container_el->GetAttribute("part");
+  REQUIRE(container_part != nullptr);
+  CHECK(*container_part == "tooltip-container");
+
+  auto* trigger_el = tt_el->QuerySelector(".tooltip-trigger");
+  REQUIRE(trigger_el != nullptr);
+  const std::string* trigger_part = trigger_el->GetAttribute("part");
+  REQUIRE(trigger_part != nullptr);
+  CHECK(*trigger_part == "tooltip-trigger");
+
+  auto* popup_el = tt_el->QuerySelector(".tooltip-popup");
+  REQUIRE(popup_el != nullptr);
+  const std::string* popup_part = popup_el->GetAttribute("part");
+  REQUIRE(popup_part != nullptr);
+  CHECK(*popup_part == "tooltip-popup");
 }
 
 TEST_CASE("Tooltip Placement Styles", "[component][tooltip][alignment]") {

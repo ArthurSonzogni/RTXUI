@@ -166,6 +166,9 @@ A boolean toggle. Bind a `bool` member to the `checked` attribute. Click or
 press Space when focused to toggle. The element's text content becomes the
 label.
 
+The checkmark glyph exposes [`part="checkmark"`](/guide/css/basics) so an
+app can theme it: `checkbox::part(checkmark) { color: ...; }`.
+
 ```html
 <checkbox checked="{enabled}">Enable Notifications</checkbox>
 ```
@@ -223,6 +226,10 @@ class MyApp : public Component<MyApp> {
 | `step`    | `int` | Increment per step (default `1`)     |
 | `width`   | `int` | Display width in terminal columns    |
 
+Exposes [`part="slider-container"`](/guide/css/basics) on the outer track
+wrapper, and `part="track-left"`/`part="thumb"`/`part="track-right"` on the
+three segments either side of and including the thumb.
+
 <ExampleTabs src="/wasm/rtxui_example_slider.js">
 <template #source>
 
@@ -260,6 +267,9 @@ class MyApp : public Component<MyApp> {
 | `value`   | `int` | Current progress value (bound)       |
 | `max`     | `int` | Maximum value (default `100`)        |
 | `width`   | `int` | Display width in terminal columns    |
+
+Exposes [`part="filled"`](/guide/css/basics) and `part="empty"` on the two
+track segments, e.g. `progress::part(filled) { color: ...; }`.
 
 <ExampleTabs src="/wasm/rtxui_example_progress.js">
 <template #source>
@@ -301,6 +311,10 @@ class MyApp : public Component<MyApp> {
   MyApp() { Bind(my_theme); }
 };
 ```
+
+Exposes [`part="select-btn"`](/guide/css/basics) on the closed button,
+`part="select-label"`/`part="select-arrow"` on its two children, and
+`part="dropdown-list"` on the open dropdown panel.
 
 <ExampleTabs src="/wasm/rtxui_example_select.js">
 <template #source>
