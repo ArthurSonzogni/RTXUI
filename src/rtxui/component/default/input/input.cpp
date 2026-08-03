@@ -28,7 +28,7 @@ void input::InitReflection() {
 
 std::string_view input::Setup() {
   return R"html(
-    <span>{left_unselected}</span><span class="{selection_class_left}">{left_selected}</span><span class="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder">{placeholder_text}</span>
+    <span>{left_unselected}</span><span class="{selection_class_left}" part="{selection_class_left}">{left_selected}</span><span class="{cursor_class}" part="{cursor_class}">{cursor_char}</span><span class="{selection_class_right}" part="{selection_class_right}">{right_selected}</span><span>{right_unselected}</span><span class="placeholder" part="placeholder">{placeholder_text}</span>
     <style>
       self {
         display: inline-flex;

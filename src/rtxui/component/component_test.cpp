@@ -1882,6 +1882,41 @@ TEST_CASE("Textarea Component Selection/Cursor/Placeholder Expose Part "
   CHECK(*placeholder_part == "placeholder");
 }
 
+TEST_CASE("Input Component Selection/Cursor/Placeholder Expose Part "
+          "Attributes For External ::part() Styling",
+          "[component][input][part]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->selection_start = 0;
+  input_ptr->cursor_pos = 5;  // selects "hello" out of "hello world"
+  input_ptr->Digest();
+
+  auto* selection_el = input_el->QuerySelector(".selection");
+  REQUIRE(selection_el != nullptr);
+  const std::string* selection_part = selection_el->GetAttribute("part");
+  REQUIRE(selection_part != nullptr);
+  CHECK(*selection_part == "selection");
+
+  auto* cursor_el = input_el->QuerySelector(".cursor");
+  REQUIRE(cursor_el != nullptr);
+  const std::string* cursor_part = cursor_el->GetAttribute("part");
+  REQUIRE(cursor_part != nullptr);
+  CHECK(cursor_part->find("cursor") != std::string::npos);
+
+  auto* placeholder_el = input_el->QuerySelector(".placeholder");
+  REQUIRE(placeholder_el != nullptr);
+  const std::string* placeholder_part = placeholder_el->GetAttribute("part");
+  REQUIRE(placeholder_part != nullptr);
+  CHECK(*placeholder_part == "placeholder");
+}
+
 TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
           "[component][textarea][undo]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
