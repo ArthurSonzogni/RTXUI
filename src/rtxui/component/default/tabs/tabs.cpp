@@ -51,11 +51,11 @@ void tabs::InitReflection() {
 
 std::string_view tabs::Setup() {
   return R"html(
-    <div class="tabs-container">
-      <div class="tabs-headers">
+    <div class="tabs-container" part="tabs-container">
+      <div class="tabs-headers" part="tabs-headers">
         <slot.headers></slot.headers>
       </div>
-      <div class="tabs-content">
+      <div class="tabs-content" part="tabs-content">
         <slot></slot>
       </div>
     </div>
@@ -185,6 +185,9 @@ bool tabs::Digest() {
       if (panes[i].name == value) {
         btn->classes.push_back("active-tab");
       }
+      btn->SetAttribute("part", panes[i].name == value
+                                     ? "tab-header-btn active-tab"
+                                     : "tab-header-btn");
       btn->SetAttribute("onclick", "SelectTab(" + std::to_string(i) + ")");
       btn->SetAttribute("tabindex", "0");
 

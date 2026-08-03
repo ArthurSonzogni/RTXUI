@@ -16,7 +16,7 @@ void checkbox::InitReflection() {
 
 std::string_view checkbox::Setup() {
   return R"html(
-    <span class="checkmark">{checked_char}</span>
+    <span class="checkmark" part="checkmark">{checked_char}</span>
     <slot></slot>
     <style>
       self {

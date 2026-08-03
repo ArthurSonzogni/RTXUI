@@ -18,7 +18,7 @@ void progress::InitReflection() {
 }
 
 std::string_view progress::Setup() {
-  return R"html(<span class="filled">{filled_track}</span><span class="empty">{empty_track}</span>    <style>
+  return R"html(<span class="filled" part="filled">{filled_track}</span><span class="empty" part="empty">{empty_track}</span>    <style>
       self {
         display: inline-block;
       }

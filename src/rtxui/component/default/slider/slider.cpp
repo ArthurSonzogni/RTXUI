@@ -27,8 +27,8 @@ void slider::InitReflection() {
 
 std::string_view slider::Setup() {
   return R"html(
-    <span class="{container_class}">
-      <span class="track-left">{track_left}</span><span class="thumb">{thumb_char}</span><span class="track-right">{track_right}</span>
+    <span class="{container_class}" part="slider-container">
+      <span class="track-left" part="track-left">{track_left}</span><span class="thumb" part="thumb">{thumb_char}</span><span class="track-right" part="track-right">{track_right}</span>
     </span>
     <style>
       self {

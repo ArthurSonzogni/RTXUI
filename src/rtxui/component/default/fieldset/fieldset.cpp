@@ -15,11 +15,11 @@ void fieldset::InitReflection() {
 
 std::string_view fieldset::Setup() {
   return R"html(
-    <div class="fieldset-wrapper">
-      <div class="legend-line {legend_class}">
+    <div class="fieldset-wrapper" part="fieldset-wrapper">
+      <div class="legend-line {legend_class}" part="legend-line">
         <slot.legend></slot.legend>
       </div>
-      <div class="fieldset-body">
+      <div class="fieldset-body" part="fieldset-body">
         <slot></slot>
       </div>
     </div>
