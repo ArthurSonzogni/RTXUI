@@ -16,7 +16,7 @@ void radio::InitReflection() {
 
 std::string_view radio::Setup() {
   return R"html(
-    <span class="radio-mark">{radio_char}</span>
+    <span class="radio-mark" part="radio-mark">{radio_char}</span>
     <slot></slot>
     <style>
       self {

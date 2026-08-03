@@ -17,11 +17,11 @@ void tooltip::InitReflection() {
 
 std::string_view tooltip::Setup() {
   return R"html(
-    <div class="tooltip-container">
-      <div class="tooltip-trigger">
+    <div class="tooltip-container" part="tooltip-container">
+      <div class="tooltip-trigger" part="tooltip-trigger">
         <slot></slot>
       </div>
-      <div class="tooltip-popup {tooltip_class} {placement}">
+      <div class="tooltip-popup {tooltip_class} {placement}" part="tooltip-popup">
         {content}
       </div>
     </div>

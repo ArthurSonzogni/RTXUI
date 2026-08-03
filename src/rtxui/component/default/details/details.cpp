@@ -24,12 +24,12 @@ void details::InitReflection() {
 
 std::string_view details::Setup() {
   return R"html(
-    <div class="details-container">
-      <div class="summary-line" tabindex="0" onclick="Toggle()">
-        <span class="arrow">{arrow_char}</span>
+    <div class="details-container" part="details-container">
+      <div class="summary-line" part="summary-line" tabindex="0" onclick="Toggle()">
+        <span class="arrow" part="arrow">{arrow_char}</span>
         <slot.summary></slot.summary>
       </div>
-      <div class="details-content {content_class}">
+      <div class="details-content {content_class}" part="details-content">
         <slot></slot>
       </div>
     </div>

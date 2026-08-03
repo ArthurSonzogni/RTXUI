@@ -22,11 +22,11 @@ void select::InitReflection() {
 
 std::string_view select::Setup() {
   return R"html(
-    <div class="select-btn">
-      <span class="select-label">{selected_label}</span>
-      <span class="select-arrow">{arrow_char}</span>
+    <div class="select-btn" part="select-btn">
+      <span class="select-label" part="select-label">{selected_label}</span>
+      <span class="select-arrow" part="select-arrow">{arrow_char}</span>
     </div>
-    <div class="dropdown-list {dropdown_class}">
+    <div class="dropdown-list {dropdown_class}" part="dropdown-list">
       <slot></slot>
     </div>
     <style>
