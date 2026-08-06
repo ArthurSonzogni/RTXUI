@@ -1566,6 +1566,196 @@ TEST_CASE("Textarea Click While Scrolled Targets The Visible Line",
   CHECK(ta_ptr->cursor_pos == expected_pos_of_line_15);
 }
 
+class GutterTextareaTestComponent
+    : public rtxui::Component<GutterTextareaTestComponent> {
+ public:
+  std::string my_text = "";
+  void InitReflection() override {
+    Bind(my_text);
+    Import<rtxui::textarea>();
+    rtxui::Component<GutterTextareaTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <textarea value="{my_text}" linenumbers="true" />
+  )";
+};
+
+TEST_CASE("Textarea Click Accounts For The Line-Number Gutter's Width",
+          "[component][textarea][regression]") {
+  // linenumbers must be set as a template attribute (not just the C++
+  // member) for `self[linenumbers]` in textarea's CSS to switch self into
+  // the flex row that actually places the gutter beside the content -- see
+  // GutterTextareaTestComponent's view.
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<GutterTextareaTestComponent>::New();
+  container->my_text = "abcdefgh\nijklmnop";
+
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+  REQUIRE(ta_ptr->show_gutter);
+
+  auto* content_el = ta_el->QuerySelector(".content");
+  REQUIRE(content_el != nullptr);
+  // The gutter must have actually claimed some of self's width -- otherwise
+  // this test can't tell a gutter-aware click from a gutter-oblivious one.
+  REQUIRE(content_el->absolute_x() > ta_el->absolute_x());
+
+  // Click on the second character of line 0 ('b'), which sits at column 1
+  // inside the content area (i.e. just past the gutter).
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = content_el->absolute_x() + 1 + 1;  // +1 for column 1, +1 for 1-based
+  mouse.y = content_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+
+  CHECK(ta_ptr->cursor_pos == 1);
+  CHECK(ta_ptr->value[ta_ptr->cursor_pos] == 'b');
+}
+
+TEST_CASE("Textarea Scroll And Click Account For Wrapped (Multi-Row) Lines",
+          "[component][textarea][regression]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+
+  // Each of these 6 logical lines is 80 unbroken characters, much longer
+  // than the textarea's content width, so white-space:pre-wrap wraps each
+  // one into multiple rows. Before this fix, KeepCursorVisible/OnEventShared
+  // treated 1 logical line as 1 row, so scroll_y (and click targeting) were
+  // computed in the wrong units entirely once any line wrapped.
+  std::string line(80, 'a');
+  std::string content;
+  for (int i = 0; i < 6; ++i) {
+    for (auto& c : line) {
+      c = static_cast<char>('a' + i);
+    }
+    content += line;
+    if (i != 5) {
+      content += "\n";
+    }
+  }
+  container->my_text = content;
+
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  auto* content_el = ta_el->QuerySelector(".content");
+  REQUIRE(content_el != nullptr);
+
+  // Move the cursor to the very end (the last character of the last row of
+  // the last line, i.e. visual row 17) to force a scroll down.
+  ta_ptr->cursor_pos = static_cast<int>(ta_ptr->value.size());
+  ta_ptr->selection_start = -1;
+  ta_ptr->Digest();
+  screen.Draw();
+
+  // self is 40 cells wide (default) with 1 cell of padding on each side and
+  // 1 reserved for the scrollbar (overflow-y: scroll) -- 37 cells of actual
+  // content width. Each 80-character line therefore wraps into ceil(80/37)
+  // = 3 rows, for 18 rows of content total, versus the textarea's default
+  // height of 5 -- both asserted here so this test breaks loudly (instead
+  // of silently passing on a no-op) if either default ever changes.
+  REQUIRE(content_el->layout_width() == 37);
+  REQUIRE(content_el->layout_height() == 18);
+  REQUIRE(ta_el->layout_height() == 5);
+
+  // Row-based scrolling: scroll_y must reveal row 17 at the bottom of the
+  // 5-row viewport, i.e. 17 - 5 + 1 = 13. The pre-fix logical-line-based
+  // code computed scroll_y = 1 here instead (5 logical newlines - 5 rows of
+  // height + 1), leaving the cursor's actual row far out of view.
+  CHECK(ta_el->scroll_y() == 13);
+
+  // Click the top-left visible cell -- an actual on-screen coordinate, so
+  // relative to self (ta_el), not to content_el (whose absolute position
+  // reflects the *unscrolled* content and is therefore off-screen, above
+  // the viewport, once scrolled down). With scroll_y == 13, that cell is
+  // row 13, which is the second wrapped row of line 4 ('e' * 80): row 12
+  // covers [324, 361), so row 13 starts at grapheme index 361.
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = ta_el->absolute_x() + 2;  // 1-based, inside padding-left:1
+  mouse.y = ta_el->absolute_y() + 1;  // 1-based, top visible row
+  screen.Dispatch(Event(mouse));
+
+  CHECK(ta_ptr->cursor_pos == 361);
+  CHECK(ta_ptr->value[ta_ptr->cursor_pos] == 'e');
+}
+
+TEST_CASE("Textarea Click Maps Correctly On A Word-Wrapped Row",
+          "[component][textarea][regression]") {
+  // Exercises the word-wrap (break-at-last-space) branch of the wrap
+  // algorithm, as opposed to the character-emergency-break branch the
+  // repeated-letter-line test above exercises.
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+
+  // "w0 w1 w2 ... w59": with the 37-cell content width established above,
+  // this wraps after "w11 " (37 characters, computed independently in
+  // Python against a reference greedy word-wrap: break at the last space
+  // when the next word doesn't fit), so row 1 starts at grapheme index 38
+  // with "w12 w13 w14 w15 ...". 60 words (7 rows total) is enough to make
+  // the textarea's default 5-row viewport actually scrollable, unlike a
+  // shorter value where scroll_y would just clamp back to 0.
+  std::string content;
+  for (int i = 0; i < 60; ++i) {
+    if (i != 0) {
+      content += " ";
+    }
+    content += "w" + std::to_string(i);
+  }
+  container->my_text = content;
+
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+  REQUIRE(ta_ptr->value.substr(38, 3) == "w12");
+  REQUIRE(ta_ptr->value.substr(50, 3) == "w15");
+
+  auto* content_el = ta_el->QuerySelector(".content");
+  REQUIRE(content_el != nullptr);
+
+  // Scroll row 1 into view directly (bypassing KeepCursorVisible, which is
+  // covered by the test above) to isolate the click-to-position mapping.
+  ta_el->set_scroll_y(1);
+  screen.Draw();
+  REQUIRE(ta_el->scroll_y() == 1);
+
+  // Click at actual on-screen coordinates (relative to self, not to
+  // content_el -- see the comment in the test above). Column 0 of the (now
+  // topmost) row 1 is the "w" of "w12".
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = ta_el->absolute_x() + 2;  // 1-based, inside padding-left:1
+  mouse.y = ta_el->absolute_y() + 1;  // 1-based, top visible row
+  screen.Dispatch(Event(mouse));
+  CHECK(ta_ptr->cursor_pos == 38);
+
+  // Column 12 of that same row (still row 1, since it hasn't wrapped a
+  // second time) is the "w" of "w15".
+  mouse.x = ta_el->absolute_x() + 2 + 12;
+  screen.Dispatch(Event(mouse));
+  CHECK(ta_ptr->cursor_pos == 50);
+}
+
 TEST_CASE("Textarea Component Readonly Blocks Enter And Tab Indent",
           "[component][textarea][readonly]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
