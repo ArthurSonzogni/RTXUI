@@ -9,6 +9,7 @@
 #include <string_view>
 #include <vector>
 
+#include "rtxui/base/string.hpp"
 #include "rtxui/internal/component.hpp"
 
 namespace rtxui {
@@ -53,6 +54,16 @@ class TextInputBase {
   void KeepCursorVisible(Element* root, bool is_multiline);
   bool OnEventShared(ComponentBase* self, Event event, bool is_multiline);
   bool DigestShared(ComponentBase* self);
+
+  // Converts an absolute screen coordinate into a grapheme index into
+  // `value`, matching the visual position actually painted (accounting for
+  // scroll, the line-number gutter, and word-wrapping). `graphemes` must be
+  // `GetGraphemesList(value)`.
+  int ClickToCursorPos(Element* root,
+                       bool is_multiline,
+                       int click_x,
+                       int click_y,
+                       const std::vector<Grapheme>& graphemes);
 
   // Undo/redo history. Contiguous edits of the same EditKind at the same
   // cursor position coalesce into a single undo step (so typing "abc"
