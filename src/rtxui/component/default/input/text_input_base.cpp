@@ -22,6 +22,10 @@ std::vector<Grapheme> GetGraphemesList(std::string_view val) {
   return res;
 }
 
+bool IsLineBreak(const Grapheme& g) {
+  return g.text == "\n" || g.text == "\r\n" || g.text == "\r";
+}
+
 std::string GraphemesToString(const std::vector<Grapheme>& graphemes,
                               size_t start = 0,
                               size_t count = std::string::npos) {
@@ -180,6 +184,141 @@ int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes,
   return best_pos;
 }
 
+bool IsSpace(const Grapheme& g) {
+  return g.text == " ";
+}
+
+// Mirrors the word-wrap algorithm in layout.cpp's LayoutInlineFlow (word
+// wrap at the last space, falling back to an emergency character break),
+// applied to the whole `value` as one continuous run -- matching how the
+// engine actually flows text across the textarea's
+// left_unselected/left_selected/cursor_char/right_selected/right_unselected
+// spans in a single inline formatting context. Returns the grapheme index
+// each visual row starts at (row 0 always starts at index 0), so mouse
+// clicks and KeepCursorVisible's scroll-into-view can agree with what's
+// actually painted once lines wrap.
+//
+// This doesn't replicate the engine's per-DOM-node space search (a space
+// seen while laying out an earlier span isn't visible when laying out a
+// later one), so a wrap point that lands exactly on a word split across two
+// of those spans can differ by a few cells from the real layout -- a narrow
+// edge case, not the common case of unstyled or fully-selected text.
+std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
+                                  int content_width,
+                                  bool overflow_wrap_normal) {
+  std::vector<int> row_starts = {0};
+  int n = static_cast<int>(graphemes.size());
+  if (content_width <= 0) {
+    // Not laid out yet: fall back to one row per logical line.
+    for (int i = 0; i < n; ++i) {
+      if (IsLineBreak(graphemes[i])) {
+        row_starts.push_back(i + 1);
+      }
+    }
+    return row_starts;
+  }
+
+  int run_start = 0;  // Grapheme index the pending (unbroken) run begins at.
+  int col_start = 0;  // Monotonic column value at run_start.
+  int cur_col = 0;     // Monotonic column value of the next grapheme.
+  int last_space_index = -1;
+  int last_space_col = 0;
+
+  auto commit_line = [&](int next_run_start) {
+    row_starts.push_back(next_run_start);
+    run_start = next_run_start;
+    last_space_index = -1;
+  };
+
+  for (int i = 0; i < n; ++i) {
+    const Grapheme& g = graphemes[i];
+    if (IsLineBreak(g)) {
+      col_start = cur_col + g.width;
+      cur_col = col_start;
+      commit_line(i + 1);
+      continue;
+    }
+
+    if (IsSpace(g)) {
+      last_space_index = i;
+      last_space_col = cur_col - col_start;
+    }
+
+    if (cur_col - col_start + g.width > content_width) {
+      if (last_space_index != -1) {
+        col_start = last_space_col + 1;
+        cur_col = col_start;
+        commit_line(last_space_index + 1);
+        cur_col += g.width;
+      } else if (overflow_wrap_normal) {
+        cur_col += g.width;  // Unbreakable word: let it overflow.
+      } else if (cur_col > col_start) {
+        // Emergency break before this grapheme, keeping the row within
+        // content_width.
+        col_start = cur_col;
+        commit_line(i);
+        cur_col += g.width;
+      } else {
+        // A single grapheme wider than content_width: place it anyway so
+        // this makes progress.
+        cur_col += g.width;
+        col_start = cur_col;
+        commit_line(i + 1);
+      }
+    } else {
+      cur_col += g.width;
+    }
+  }
+  return row_starts;
+}
+
+int RowOfIndex(const std::vector<int>& row_starts, int pos) {
+  auto it = std::upper_bound(row_starts.begin(), row_starts.end(), pos);
+  return static_cast<int>(std::distance(row_starts.begin(), it)) - 1;
+}
+
+int ColOfIndex(const std::vector<Grapheme>& graphemes, int row_start, int pos) {
+  int col = 0;
+  int n = static_cast<int>(graphemes.size());
+  for (int i = row_start; i < pos && i < n; ++i) {
+    col += graphemes[i].width;
+  }
+  return col;
+}
+
+// Inverse of RowOfIndex/ColOfIndex: nearest grapheme index within
+// `target_row` whose column is closest to `target_col`, matching
+// GetCursorPosFrom2D's nearest-distance behavior but scoped to a visual row
+// (from `row_starts`) instead of a logical line.
+int RowColToIndex(const std::vector<Grapheme>& graphemes,
+                  const std::vector<int>& row_starts,
+                  int target_row,
+                  int target_col) {
+  int num_rows = static_cast<int>(row_starts.size());
+  target_row = std::clamp(target_row, 0, num_rows - 1);
+  int n = static_cast<int>(graphemes.size());
+  int row_start = row_starts[target_row];
+  int row_end = (target_row + 1 < num_rows) ? row_starts[target_row + 1] : n;
+
+  int i = row_start;
+  int cur_col = 0;
+  int best_pos = row_start;
+  int min_dist = std::abs(target_col);
+  while (i < row_end) {
+    if (IsLineBreak(graphemes[i])) {
+      break;
+    }
+    cur_col += graphemes[i].width;
+    i++;
+    int dist = std::abs(cur_col - target_col);
+    if (dist < min_dist) {
+      min_dist = dist;
+      best_pos = i;
+    }
+  }
+  return best_pos;
+}
+
 int FindLineStart(const std::vector<Grapheme>& graphemes, int start_pos) {
   int pos = start_pos;
   while (pos > 0) {
@@ -316,9 +455,27 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
   }
 
   auto current_graphemes = GetGraphemesList(value);
-  auto pos2d = GetCursor2D(current_graphemes, cursor_pos);
-  int cursor_line = pos2d.line;
-  int cursor_col = pos2d.column;
+
+  // For a wrapped textarea, "line" must mean visual row, not logical line:
+  // self's scroll_y (and the mouse-click math in OnEventShared) operate in
+  // rendered-row units, which only match logical-line indices when no line
+  // wraps. See ComputeRowStarts for why.
+  Element* content_el = is_multiline ? root->QuerySelector(".content") : nullptr;
+  int cursor_line = 0;
+  int cursor_col = 0;
+  if (is_multiline) {
+    int wrap_width = content_el ? content_el->layout_width() : 0;
+    bool overflow_wrap_normal =
+        content_el && content_el->style.overflow_wrap.value_or(
+                          OverflowWrap::Anywhere) == OverflowWrap::Normal;
+    auto row_starts =
+        ComputeRowStarts(current_graphemes, wrap_width, overflow_wrap_normal);
+    cursor_line = RowOfIndex(row_starts, cursor_pos);
+    cursor_col = ColOfIndex(current_graphemes, row_starts[cursor_line], cursor_pos);
+  } else {
+    auto pos2d = GetCursor2D(current_graphemes, cursor_pos);
+    cursor_col = pos2d.column;
+  }
 
   int cursor_width = (cursor_pos < static_cast<int>(current_graphemes.size()))
                           ? std::max(1, current_graphemes[cursor_pos].width)
@@ -326,14 +483,19 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
 
   int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
 
-  // Horizontal Scroll
-  int padding_left = root->style.padding.left;
-  int padding_right = root->style.padding.right;
-  int border_horiz = border_offset * 2;
-  int padding_horiz = padding_left + padding_right;
-
-  int layout_w = root->layout_width();
-  int visible_width = layout_w - border_horiz - padding_horiz;
+  // Horizontal Scroll. For a wrapped textarea, this uses the content box's
+  // own width (excluding the line-number gutter, if any) rather than
+  // self's, since that's the width ComputeRowStarts wrapped against.
+  int visible_width;
+  if (is_multiline && content_el) {
+    visible_width = content_el->layout_width();
+  } else {
+    int padding_left = root->style.padding.left;
+    int padding_right = root->style.padding.right;
+    int border_horiz = border_offset * 2;
+    int padding_horiz = padding_left + padding_right;
+    visible_width = root->layout_width() - border_horiz - padding_horiz;
+  }
   if (visible_width > 0) {
     int curr_scroll_x = root->scroll_x();
     if (cursor_col < curr_scroll_x) {
@@ -361,6 +523,47 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
       }
     }
   }
+}
+
+int TextInputBase::ClickToCursorPos(Element* root,
+                                    bool is_multiline,
+                                    int click_x,
+                                    int click_y,
+                                    const std::vector<Grapheme>& graphemes) {
+  // For a wrapped textarea, hit-test against the ".content" box directly:
+  // its absolute position already bakes in self's scroll offset, border,
+  // padding and (when linenumbers is set) the gutter's width, so no manual
+  // offset arithmetic is needed here -- unlike self's own box, which a
+  // gutter makes narrower than self's full width.
+  Element* content_el = is_multiline ? root->QuerySelector(".content") : nullptr;
+  if (content_el) {
+    int wrap_width = content_el->layout_width();
+    int wrap_height = content_el->layout_height();
+    int inner_click_x = std::clamp(click_x - content_el->absolute_x(), 0,
+                                   std::max(0, wrap_width - 1));
+    int inner_click_y = std::clamp(click_y - content_el->absolute_y(), 0,
+                                   std::max(0, wrap_height - 1));
+    bool overflow_wrap_normal =
+        content_el->style.overflow_wrap.value_or(OverflowWrap::Anywhere) ==
+        OverflowWrap::Normal;
+    auto row_starts =
+        ComputeRowStarts(graphemes, wrap_width, overflow_wrap_normal);
+    return RowColToIndex(graphemes, row_starts, inner_click_y, inner_click_x);
+  }
+
+  int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
+  int padding_left = root->style.padding.left;
+  int padding_top = root->style.padding.top;
+  int inner_click_x =
+      click_x - root->absolute_x() - border_offset - padding_left;
+  int inner_click_y =
+      click_y - root->absolute_y() - border_offset - padding_top;
+
+  int target_col = inner_click_x + root->scroll_x();
+  int target_row = is_multiline ? (inner_click_y + root->scroll_y()) : 0;
+
+  return is_multiline ? GetCursorPosFrom2D(graphemes, target_row, target_col)
+                      : GetCursorPositionFromColumn(graphemes, target_col);
 }
 
 bool TextInputBase::OnEventShared(ComponentBase* self,
@@ -399,20 +602,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           root->set_focused(true);
           self->CaptureMouse();
 
-          int border_offset =
-              (root->style.border_style != BorderStyle::None) ? 1 : 0;
-          int padding_left = root->style.padding.left;
-          int padding_top = root->style.padding.top;
-          int inner_click_x = click_x - abs_x - border_offset - padding_left;
-          int inner_click_y = click_y - abs_y - border_offset - padding_top;
-
-          int target_col = inner_click_x + root->scroll_x();
-          int target_row = is_multiline ? (inner_click_y + root->scroll_y()) : 0;
-
           auto graphemes = GetGraphemesList(value);
-          int click_pos = is_multiline
-                           ? GetCursorPosFrom2D(graphemes, target_row, target_col)
-                           : GetCursorPositionFromColumn(graphemes, target_col);
+          int click_pos = ClickToCursorPos(root, is_multiline, click_x, click_y,
+                                           graphemes);
 
           auto now = std::chrono::steady_clock::now();
           // last_click_time_ defaults to time_point::min() as a "no
@@ -450,31 +642,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         }
         int click_x = mouse.x - 1;
         int click_y = mouse.y - 1;
-        int abs_x = root->absolute_x();
-        int abs_y = root->absolute_y();
-        int layout_w = root->layout_width();
-        int layout_h = root->layout_height();
-
-        int border_offset =
-            (root->style.border_style != BorderStyle::None) ? 1 : 0;
-        int padding_left = root->style.padding.left;
-        int padding_top = root->style.padding.top;
-        int padding_right = root->style.padding.right;
-        int padding_bottom = root->style.padding.bottom;
-
-        int inner_w = layout_w - border_offset * 2 - padding_left - padding_right;
-        int inner_h = layout_h - border_offset * 2 - padding_top - padding_bottom;
-
-        int inner_click_x = std::clamp(click_x - abs_x - border_offset - padding_left, 0, std::max(0, inner_w));
-        int inner_click_y = std::clamp(click_y - abs_y - border_offset - padding_top, 0, std::max(0, inner_h));
-
-        int target_col = inner_click_x + root->scroll_x();
-        int target_row = is_multiline ? (inner_click_y + root->scroll_y()) : 0;
 
         auto graphemes = GetGraphemesList(value);
-        int click_pos = is_multiline
-                         ? GetCursorPosFrom2D(graphemes, target_row, target_col)
-                         : GetCursorPositionFromColumn(graphemes, target_col);
+        int click_pos =
+            ClickToCursorPos(root, is_multiline, click_x, click_y, graphemes);
 
         if (double_clicked_) {
           if (click_pos >= double_click_anchor_end_) {
