@@ -1003,6 +1003,19 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           // cur_col - col_start keeps counting the characters typed
           // between the space and here instead of discarding them.
           col_start = last_space_col + 1;
+          // letter-spacing inserts NBSP padding between every grapheme
+          // pair, including around the space just broken at. Drop any such
+          // padding immediately after the space so the next line doesn't
+          // start with a stray NBSP. This peeks directly at the text
+          // buffer rather than the grapheme iterator's current position:
+          // the loop below will still visit these same NBSP graphemes and
+          // add their width to cur_col as usual, which nets out to zero
+          // pending width since col_start already absorbed it here.
+          while (byte_start + 1 < text.size() && text[byte_start] == '\xc2' &&
+                 text[byte_start + 1] == '\xa0') {
+            byte_start += 2;
+            col_start += 1;
+          }
           have_last_space = false;
           commit_line();
           byte_end =

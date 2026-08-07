@@ -3470,6 +3470,53 @@ class LetterSpacingTestComponent
   )";
 };
 
+class LetterSpacingWrapTestComponent
+    : public rtxui::Component<LetterSpacingWrapTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<LetterSpacingWrapTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div class="spaced">ab cd</div>
+    <style>
+      .spaced { letter-spacing: 1; width: 5; }
+    </style>
+  )";
+};
+
+TEST_CASE("Letter spacing doesn't leave a stray NBSP at the start of a "
+          "wrapped line",
+          "[component][letter-spacing][regression]") {
+  // Regression: letter-spacing inserts an NBSP on both sides of the space
+  // between words ("b" NBSP " " NBSP "c"). Wrapping at that space used to
+  // break right before the NBSP that pads the *next* word, so the new line
+  // started with a stray non-breaking space before its first real
+  // character.
+  auto container = rtxui::Ref<LetterSpacingWrapTestComponent>::New();
+  container->Mount();
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  // "ab cd" at letter-spacing:1, width:5 wraps as "a\xC2\xA0b\xC2\xA0" then
+  // "c\xC2\xA0d" - the second line must start with 'c', not an NBSP.
+  CHECK(texture[0, 0].character == "a");
+  CHECK(texture[1, 0].character == "\xC2\xA0");
+  CHECK(texture[2, 0].character == "b");
+  CHECK(texture[3, 0].character == "\xC2\xA0");
+  CHECK(texture[0, 1].character == "c");
+  CHECK(texture[1, 1].character == "\xC2\xA0");
+  CHECK(texture[2, 1].character == "d");
+}
+
 TEST_CASE("Letter spacing rendering", "[component][letter-spacing][paint]") {
   auto container = rtxui::Ref<LetterSpacingTestComponent>::New();
   container->Mount();
