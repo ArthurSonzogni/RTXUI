@@ -5031,6 +5031,13 @@ TEST_CASE("Flickering transition is not triggered on re-render when focused",
 
 TEST_CASE("Flickering transition is not triggered on input navigation",
           "[component][input][transition]") {
+  // Regression guard for the flicker bug fixed in 8addbd9 ("remove
+  // hover/focus color transitions on input/textarea"): input's self:focus
+  // opacity/transition rules were deleted outright (a washed-out look when
+  // hover+focus both applied), so opacity is now a constant 0.8 regardless
+  // of focus state, and no transition ever starts. This still guards
+  // against a future focus-triggered transition being re-added without
+  // re-checking that flicker.
   auto container = rtxui::Ref<InputReuseTestComponent>::New();
   container->Mount();
 
@@ -5047,7 +5054,7 @@ TEST_CASE("Flickering transition is not triggered on input navigation",
 
   // Complete any focus transition
   input_el->TickTransitions(now + 200.0);
-  CHECK(input_el->style.opacity == 1.0f);
+  CHECK(input_el->style.opacity == 0.8f);
   CHECK(input_el->active_transitions.empty());
 
   // Simulate navigating with ArrowLeft
@@ -5058,9 +5065,9 @@ TEST_CASE("Flickering transition is not triggered on input navigation",
   input_ptr->OnEvent(Event::ArrowLeft());
   input_ptr->Digest();
 
-  // Check that no transition was triggered and it stayed at opacity 1.0
+  // Check that no transition was triggered and opacity stayed constant
   CHECK(input_el->active_transitions.empty());
-  CHECK(input_el->style.opacity == 1.0f);
+  CHECK(input_el->style.opacity == 0.8f);
 }
 
 class StyledParentTestComponent
