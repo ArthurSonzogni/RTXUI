@@ -229,6 +229,16 @@ enum class OverflowWrap {
   Normal,
 };
 
+// Whether normal (non-emergency) line breaking may occur mid-word. Unlike
+// overflow-wrap (a last-resort fallback when a word would otherwise
+// overflow), break-all treats every character boundary as a break
+// opportunity, so words wrap as soon as they'd cross the line even when
+// pushing them whole to the next line would have fit.
+enum class WordBreak {
+  Normal,
+  BreakAll,
+};
+
 enum class PositionType {
   Static,
   Relative,
@@ -384,6 +394,7 @@ struct ComputedStyle {
   // Minimum rows each line box occupies; inherited. 1 means normal.
   std::optional<int> line_height;
   std::optional<OverflowWrap> overflow_wrap;
+  std::optional<WordBreak> word_break;
   // Width / height ratio in cells; 0 means auto (no preferred ratio).
   float aspect_ratio = 0;
   std::optional<ListStyleType> list_style_type;
@@ -501,6 +512,7 @@ struct ComputedStyle {
     letter_spacing = other.letter_spacing;
     line_height = other.line_height;
     overflow_wrap = other.overflow_wrap;
+    word_break = other.word_break;
     aspect_ratio = other.aspect_ratio;
     list_style_type = other.list_style_type;
     scroll_speed_x = other.scroll_speed_x;
