@@ -2626,6 +2626,42 @@ TEST_CASE("Layout: aspect-ratio on a grid container",
                                                 }));
 }
 
+TEST_CASE("Layout: aspect-ratio derives a grid container's width from height",
+          "[layout][aspect-ratio][grid]") {
+  struct GridContainerAspectWidthTest
+      : Component<GridContainerAspectWidthTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .gridc {
+            display: grid;
+            grid-template-rows: 1fr;
+            height: 2;
+            aspect-ratio: 4 / 1;
+            background-color: rgb(0, 0, 255);
+          }
+        </style>
+        <div class="gridc"></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<GridContainerAspectWidthTest>::New(), 10, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+
+  // Height 2 with ratio 4:1 -> width 8, resolved before the single 1fr
+  // column is sized so the column fills the derived width.
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "BBBBBBBB..",
+                                                    "BBBBBBBB..",
+                                                    "..........",
+                                                }));
+}
+
 TEST_CASE("Layout: aspect-ratio derives width from height", "[layout][aspect-ratio]") {
   struct AspectRatioWidthTest : Component<AspectRatioWidthTest> {
     std::string_view Setup() {

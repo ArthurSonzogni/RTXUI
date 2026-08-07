@@ -2558,11 +2558,23 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   int padding_h = box->style.padding.Horiz();
   int padding_v = box->style.padding.Vert();
 
+  // Resolved independently of width, so it's safe to consult before width is
+  // known: lets aspect-ratio derive an auto width from a definite height,
+  // mirroring the height-from-width derivation in the final pass below. Must
+  // run before avail_width, since column-track sizing needs it.
+  int early_resolved_height = (constraints.height.mode == MeasureMode::Exactly)
+                                   ? constraints.height.value
+                                   : ResolveSize(box->style.height,
+                                                 constraints.height.value);
+
   int parent_width = constraints.width.value;
-  if (constraints.width.mode == MeasureMode::Undefined) {
+  if (constraints.width.mode != MeasureMode::Exactly) {
     int resolved = ResolveSize(box->style.width, constraints.width.value);
     if (resolved != -1) {
       parent_width = resolved;
+    } else if (early_resolved_height != -1 && box->style.aspect_ratio > 0) {
+      parent_width = static_cast<int>(
+          early_resolved_height * box->style.aspect_ratio + 0.5f);
     }
   }
   int avail_width = parent_width - border_h - padding_h;
