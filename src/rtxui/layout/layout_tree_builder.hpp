@@ -9,24 +9,32 @@
 #include "rtxui/layout/layout_box.hpp"
 
 namespace rtxui {
+
+// Text-related style properties that inherit down the DOM tree. Build()
+// resolves each dom_node's own (possibly unset) values against this,
+// producing the InheritedTextStyle passed to its children.
+struct InheritedTextStyle {
+  TextAlign align = TextAlign::Left;
+  WhiteSpace white_space = WhiteSpace::Normal;
+  TextTransform text_transform = TextTransform::None;
+  std::optional<Color> fg;
+  std::optional<bool> bold;
+  std::optional<bool> dim;
+  std::optional<bool> italic;
+  std::optional<bool> underlined;
+  std::optional<bool> underlined_double;
+  std::optional<bool> strikethrough;
+  std::optional<bool> blink;
+  int letter_spacing = 0;
+  int line_height = 1;
+  OverflowWrap overflow_wrap = OverflowWrap::Anywhere;
+};
+
 class LayoutTreeBuilder {
  public:
   static std::shared_ptr<LayoutBox> Build(
       Element* dom_node,
-      TextAlign parent_align = TextAlign::Left,
-      WhiteSpace parent_ws = WhiteSpace::Normal,
-      TextTransform parent_text_transform = TextTransform::None,
-      std::optional<Color> parent_fg = std::nullopt,
-      std::optional<bool> parent_bold = std::nullopt,
-      std::optional<bool> parent_dim = std::nullopt,
-      std::optional<bool> parent_italic = std::nullopt,
-      std::optional<bool> parent_underlined = std::nullopt,
-      std::optional<bool> parent_underlined_double = std::nullopt,
-      std::optional<bool> parent_strikethrough = std::nullopt,
-      std::optional<bool> parent_blink = std::nullopt,
-      int parent_letter_spacing = 0,
-      int parent_line_height = 1,
-      OverflowWrap parent_overflow_wrap = OverflowWrap::Anywhere);
+      InheritedTextStyle parent = {});
 };
 }  // namespace rtxui
 #endif  // RTXUI_LAYOUT_LAYOUT_TREE_BUILDER_HPP
