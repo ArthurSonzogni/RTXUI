@@ -84,6 +84,11 @@ bool slider::OnEvent(Event event) {
   bool value_changed = false;
   bool is_captured = (GetMouseCapturer() == this);
   bool was_captured = is_captured;
+  // step is bindable and freely settable via the step="" attribute with no
+  // validation; a step of 0 (or negative) would divide/modulo by zero below
+  // and crash the app (SIGFPE). Clamp locally rather than overwriting the
+  // app-bound `step` member.
+  int safe_step = std::max(1, step);
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
@@ -142,12 +147,12 @@ bool slider::OnEvent(Event event) {
         int raw_val = min + static_cast<int>(std::round(pct * (max - min)));
 
         // Snap to nearest step
-        int remainder = (raw_val - min) % step;
+        int remainder = (raw_val - min) % safe_step;
         int new_val = raw_val;
-        if (remainder < step / 2.0) {
+        if (remainder < safe_step / 2.0) {
           new_val = raw_val - remainder;
         } else {
-          new_val = raw_val + (step - remainder);
+          new_val = raw_val + (safe_step - remainder);
         }
         new_val = std::clamp(new_val, min, max);
 
@@ -173,18 +178,18 @@ bool slider::OnEvent(Event event) {
         
         if (is_vertical) {
           if (kb.special == Event::Keyboard::Special::ArrowDown) {
-            delta = -step;
+            delta = -safe_step;
             is_primary_axis = true;
           } else if (kb.special == Event::Keyboard::Special::ArrowUp) {
-            delta = step;
+            delta = safe_step;
             is_primary_axis = true;
           }
         } else {
           if (kb.special == Event::Keyboard::Special::ArrowLeft) {
-            delta = -step;
+            delta = -safe_step;
             is_primary_axis = true;
           } else if (kb.special == Event::Keyboard::Special::ArrowRight) {
-            delta = step;
+            delta = safe_step;
             is_primary_axis = true;
           }
         }
