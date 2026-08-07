@@ -2528,6 +2528,55 @@ TEST_CASE("Slider Component Basic Interactions", "[component][slider]") {
   CHECK(container->onchange_called == true);
 }
 
+class SliderStepZeroTestComponent
+    : public rtxui::Component<SliderStepZeroTestComponent> {
+ public:
+  int my_val = 50;
+  void InitReflection() override {
+    Bind(my_val);
+    Import<rtxui::slider>();
+    rtxui::Component<SliderStepZeroTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <slider value="{my_val}" min="0" max="100" step="0" width="11" />
+  )";
+};
+
+TEST_CASE("Slider with step=0 doesn't crash on mouse drag",
+          "[component][slider][regression]") {
+  // Regression: step is bindable and freely settable via the step=""
+  // attribute with no validation. Snapping the dragged value to the
+  // nearest step did `(raw_val - min) % step` unconditionally, so step=0
+  // crashed the whole app with SIGFPE (integer modulo by zero) on the
+  // first mouse-drag interaction.
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<SliderStepZeroTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* slider_el = container->Root()->QuerySelector("slider");
+  REQUIRE(slider_el != nullptr);
+  int abs_x = slider_el->absolute_x();
+  int abs_y = slider_el->absolute_y();
+
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = abs_x + 2;
+  mouse.y = abs_y + 1;
+  screen.Dispatch(Event(mouse));
+
+  CHECK(container->my_val == 0);
+
+  // Keyboard arrows go through the same clamp (delta = ±step); with a
+  // sane step=1 floor they should still move the value.
+  Event::Keyboard right_arrow;
+  right_arrow.motion = Event::Keyboard::Motion::Pressed;
+  right_arrow.special = Event::Keyboard::Special::ArrowRight;
+  screen.Dispatch(Event(right_arrow));
+  CHECK(container->my_val == 1);
+}
+
 TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<SliderTestComponent>::New();
