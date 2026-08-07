@@ -6237,6 +6237,45 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   CHECK(tabs_ptr->value == "tab1");
 }
 
+TEST_CASE("Tabs Component keyboard focus survives an intervening Digest",
+          "[component][tabs][regression]") {
+  // Regression: tabs::Digest() used to unconditionally destroy and
+  // recreate every header button Element, even when only switching the
+  // active value (not the pane list). If anything else triggered a
+  // Digest() between focusing a header via keyboard and pressing
+  // Enter/Space, the focused button was replaced by a fresh, unfocused
+  // one, and the keypress silently did nothing.
+  auto container = rtxui::Ref<TabsTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(
+      const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  auto headers_slot = tabs_ptr->Slot("headers");
+  auto* tab2_header = headers_slot->ChildAt(1);
+
+  container->Root()->Visit([](Element& el) { el.set_focused(false); });
+  tab2_header->set_focused(true);
+
+  // Something else triggers a Digest() before the keypress arrives (e.g. an
+  // unrelated prop change elsewhere in the app).
+  container->Digest();
+
+  CHECK(tab2_header->focused());
+  CHECK(tabs_ptr->Slot("headers")->ChildAt(1) == tab2_header);
+
+  Event return_event = Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::Return,
+  });
+  screen.Dispatch(return_event);
+  container->Digest();
+  screen.Draw();
+
+  CHECK(tabs_ptr->value == "tab2");
+}
+
 TEST_CASE("Tabs Component Exposes Part Attributes For External "
           "::part() Styling",
           "[component][tabs][part]") {

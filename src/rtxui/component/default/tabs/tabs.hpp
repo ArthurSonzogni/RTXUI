@@ -31,6 +31,12 @@ class tabs : public Component<tabs> {
 
  private:
   std::vector<TabPaneInfo> GetTabPanes();
+
+  // Identity of the panes the header buttons were last built from. Rebuild
+  // the buttons only when this changes, so a keyboard-focused header button
+  // survives an unrelated Digest() instead of losing focus to a freshly
+  // recreated Element.
+  std::vector<Element*> last_pane_elements_;
 };
 
 }  // namespace rtxui

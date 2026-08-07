@@ -176,25 +176,48 @@ bool tabs::Digest() {
 
   auto headers_slot = Slot("headers");
   if (headers_slot) {
-    headers_slot->RemoveChildren();
-    for (size_t i = 0; i < panes.size(); ++i) {
-      auto btn = Ref<Element>::New();
-      btn->set_owner_component(this);
-      btn->SetTag("div");
+    std::vector<Element*> pane_elements;
+    pane_elements.reserve(panes.size());
+    for (auto& pane : panes) {
+      pane_elements.push_back(pane.element);
+    }
+
+    // Only recreate the header buttons when the set of panes actually
+    // changed. Rebuilding them on every Digest() (even a value-only change
+    // from switching tabs) would replace a keyboard-focused button with a
+    // fresh, unfocused Element - silently swallowing the next Enter/Space
+    // keypress if any unrelated Digest() runs in between.
+    if (pane_elements != last_pane_elements_) {
+      headers_slot->RemoveChildren();
+      for (size_t i = 0; i < panes.size(); ++i) {
+        auto btn = Ref<Element>::New();
+        btn->set_owner_component(this);
+        btn->SetTag("div");
+        btn->classes = {"tab-header-btn"};
+        btn->SetAttribute("onclick", "SelectTab(" + std::to_string(i) + ")");
+        btn->SetAttribute("tabindex", "0");
+
+        auto text_el = Ref<TextElement>::New(panes[i].label);
+        text_el->set_owner_component(this);
+        btn->AddChild(text_el);
+        headers_slot->AddChild(btn);
+      }
+      last_pane_elements_ = std::move(pane_elements);
+    }
+
+    // Update active-tab styling in place, regardless of whether the
+    // buttons were just rebuilt - this is what needs to happen on every
+    // value change, without touching element identity.
+    for (size_t i = 0; i < panes.size() && i < headers_slot->ChildCount();
+         ++i) {
+      auto* btn = headers_slot->ChildAt(i);
+      bool active = panes[i].name == value;
       btn->classes = {"tab-header-btn"};
-      if (panes[i].name == value) {
+      if (active) {
         btn->classes.push_back("active-tab");
       }
-      btn->SetAttribute("part", panes[i].name == value
-                                     ? "tab-header-btn active-tab"
-                                     : "tab-header-btn");
-      btn->SetAttribute("onclick", "SelectTab(" + std::to_string(i) + ")");
-      btn->SetAttribute("tabindex", "0");
-
-      auto text_el = Ref<TextElement>::New(panes[i].label);
-      text_el->set_owner_component(this);
-      btn->AddChild(text_el);
-      headers_slot->AddChild(btn);
+      btn->SetAttribute("part", active ? "tab-header-btn active-tab"
+                                        : "tab-header-btn");
     }
   }
 
