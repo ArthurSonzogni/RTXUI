@@ -1877,6 +1877,17 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "word-break") {
+    if (v == "normal") {
+      style.word_break = WordBreak::Normal;
+      return;
+    }
+    if (v == "break-all") {
+      style.word_break = WordBreak::BreakAll;
+      return;
+    }
+  }
+
   if (p == "white-space") {
     if (v == "normal") {
       style.white_space = WhiteSpace::Normal;

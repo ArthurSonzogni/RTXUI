@@ -28,6 +28,7 @@ struct InheritedTextStyle {
   int letter_spacing = 0;
   int line_height = 1;
   OverflowWrap overflow_wrap = OverflowWrap::Anywhere;
+  WordBreak word_break = WordBreak::Normal;
 };
 
 class LayoutTreeBuilder {

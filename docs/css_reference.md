@@ -58,6 +58,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 <CssProperty name="line-height" values="<integer> | normal" inherited description="Minimum rows each line box occupies (whole rows; values below 1 clamp to 1). Tall inline content can still grow a line further." />
 <CssProperty name="overflow-wrap" values="anywhere | break-word | normal" inherited description="How words longer than the line are handled. Unlike CSS the default is anywhere: break at the container edge. normal keeps the word intact and lets it overflow." />
 <CssProperty name="word-wrap" values="anywhere | break-word | normal" inherited description="Legacy alias for overflow-wrap." />
+<CssProperty name="word-break" values="normal | break-all" inherited description="break-all treats every character boundary as a break opportunity, wrapping as soon as a line is full instead of pushing an overflowing word whole to the next line (unlike overflow-wrap, a last-resort fallback for otherwise-unbreakable words)." />
 <CssProperty name="text-overflow" values="clip | ellipsis" description="Behavior when text overflows its block container." />
 <CssProperty name="visibility" values="visible | hidden" description="Controls element visibility. Hidden elements keep their layout size." />
 <CssProperty name="cursor" values="default | pointer" description="Mouse pointer styling when hovering the element." />

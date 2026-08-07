@@ -801,6 +801,11 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   const bool overflow_wrap_normal =
       box->style.overflow_wrap.value_or(OverflowWrap::Anywhere) ==
       OverflowWrap::Normal;
+  // word-break: break-all treats every grapheme boundary as a break
+  // opportunity, so a word wraps as soon as it would cross the line instead
+  // of being pushed whole to the next line first.
+  const bool word_break_all =
+      box->style.word_break.value_or(WordBreak::Normal) == WordBreak::BreakAll;
   int line_height = min_line_height;
   int max_line_width = 0;
 
@@ -926,9 +931,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
             commit_line();
             byte_end = i + 1;
             cur_col += g_width;
-          } else if (overflow_wrap_normal) {
+          } else if (overflow_wrap_normal && !word_break_all) {
             cur_col += g_width;  // Unbreakable word: let it overflow.
-          } else if (cursor_x > 0) {
+          } else if (!word_break_all && cursor_x > 0) {
             commit_line();
             cur_col += g_width;
           } else if (cur_col > col_start) {
@@ -997,9 +1002,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           byte_end =
               static_cast<size_t>(g.text.data() + g.text.size() - text.data());
           cur_col += g.width;
-        } else if (overflow_wrap_normal) {
+        } else if (overflow_wrap_normal && !word_break_all) {
           cur_col += g.width;  // Unbreakable word: let it overflow.
-        } else if (cursor_x > 0) {
+        } else if (!word_break_all && cursor_x > 0) {
           commit_line();
           cur_col += g.width;
         } else if (cur_col > col_start) {

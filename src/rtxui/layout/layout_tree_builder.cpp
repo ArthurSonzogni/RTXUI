@@ -153,6 +153,9 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       dom_node->style.overflow_wrap.value_or(parent.overflow_wrap);
   box->style.overflow_wrap = resolved.overflow_wrap;
 
+  resolved.word_break = dom_node->style.word_break.value_or(parent.word_break);
+  box->style.word_break = resolved.word_break;
+
   resolved.fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent.fg;
   box->style.foreground_color = resolved.fg;
 
@@ -226,6 +229,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           slot_style.line_height.value_or(resolved.line_height);
       slot.overflow_wrap =
           slot_style.overflow_wrap.value_or(resolved.overflow_wrap);
+      slot.word_break = slot_style.word_break.value_or(resolved.word_break);
 
       for (auto& grandchild_dom : child_dom.get()->children()) {
         auto grandchild_box = Build(grandchild_dom.get(), slot);
@@ -288,6 +292,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           anonymous_box->style.white_space = resolved.white_space;
           anonymous_box->style.line_height = resolved.line_height;
           anonymous_box->style.overflow_wrap = resolved.overflow_wrap;
+          anonymous_box->style.word_break = resolved.word_break;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);

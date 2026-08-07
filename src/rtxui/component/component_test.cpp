@@ -3623,6 +3623,65 @@ TEST_CASE("Overflow wrap rendering", "[component][overflow-wrap][paint]") {
   CHECK(row_text(3) == "abcdefghijklmno");
 }
 
+class WordBreakTestComponent : public rtxui::Component<WordBreakTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::b>();
+    rtxui::Component<WordBreakTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div class="normal">Ab <b>abcdefgh</b></div>
+      <div class="break">Ab <b>abcdefgh</b></div>
+    </div>
+    <style>
+      .normal, .break { width: 6; }
+      .break { word-break: break-all; }
+    </style>
+  )";
+};
+
+TEST_CASE("word-break: break-all wraps mid-word", "[component][word-break][paint]") {
+  auto container = rtxui::Ref<WordBreakTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto row_text = [&](int y) {
+    std::string row;
+    for (int x = 0; x < texture.width(); ++x) {
+      row += texture[x, y].character;
+    }
+    while (!row.empty() && row.back() == ' ') {
+      row.pop_back();
+    }
+    return row;
+  };
+
+  // Default: "abcdefgh" (a separate inline <b> child) doesn't fit after
+  // "Ab " on line 0, so it's pushed whole to line 1, then emergency-broken
+  // there like any overflowing unbreakable word.
+  CHECK(row_text(0) == "Ab");
+  CHECK(row_text(1) == "abcdef");
+  CHECK(row_text(2) == "gh");
+  // word-break: break-all fills line 0 to the edge (breaking right after
+  // "Ab abc") instead of pushing "abcdefgh" whole to the next line.
+  CHECK(row_text(3) == "Ab abc");
+  CHECK(row_text(4) == "defgh");
+}
+
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
   void InitReflection() override {
