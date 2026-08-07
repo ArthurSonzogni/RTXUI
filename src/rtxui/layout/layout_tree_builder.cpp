@@ -119,20 +119,7 @@ void ApplyLetterSpacing(std::string& text, int spacing) {
 
 // Static Build method implementation
 std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
-                                                    TextAlign parent_align,
-                                                    WhiteSpace parent_ws,
-                                                    TextTransform parent_text_transform,
-                                                    std::optional<Color> parent_fg,
-                                                    std::optional<bool> parent_bold,
-                                                    std::optional<bool> parent_dim,
-                                                    std::optional<bool> parent_italic,
-                                                    std::optional<bool> parent_underlined,
-                                                    std::optional<bool> parent_underlined_double,
-                                                    std::optional<bool> parent_strikethrough,
-                                                    std::optional<bool> parent_blink,
-                                                    int parent_letter_spacing,
-                                                    int parent_line_height,
-                                                    OverflowWrap parent_overflow_wrap) {
+                                                    InheritedTextStyle parent) {
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
@@ -143,51 +130,52 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   box->style = dom_node->style;
   box->dom_node = dom_node;
 
-  TextAlign resolved_align = dom_node->style.text_align.value_or(parent_align);
-  box->style.text_align = resolved_align;
+  InheritedTextStyle resolved;
+  resolved.align = dom_node->style.text_align.value_or(parent.align);
+  box->style.text_align = resolved.align;
 
-  WhiteSpace resolved_ws = dom_node->style.white_space.value_or(parent_ws);
-  box->style.white_space = resolved_ws;
+  resolved.white_space = dom_node->style.white_space.value_or(parent.white_space);
+  box->style.white_space = resolved.white_space;
 
-  TextTransform resolved_text_transform =
-      dom_node->style.text_transform.value_or(parent_text_transform);
-  box->style.text_transform = resolved_text_transform;
+  resolved.text_transform =
+      dom_node->style.text_transform.value_or(parent.text_transform);
+  box->style.text_transform = resolved.text_transform;
 
-  int resolved_letter_spacing =
-      dom_node->style.letter_spacing.value_or(parent_letter_spacing);
-  box->style.letter_spacing = resolved_letter_spacing;
+  resolved.letter_spacing =
+      dom_node->style.letter_spacing.value_or(parent.letter_spacing);
+  box->style.letter_spacing = resolved.letter_spacing;
 
-  int resolved_line_height =
-      dom_node->style.line_height.value_or(parent_line_height);
-  box->style.line_height = resolved_line_height;
+  resolved.line_height =
+      dom_node->style.line_height.value_or(parent.line_height);
+  box->style.line_height = resolved.line_height;
 
-  OverflowWrap resolved_overflow_wrap =
-      dom_node->style.overflow_wrap.value_or(parent_overflow_wrap);
-  box->style.overflow_wrap = resolved_overflow_wrap;
+  resolved.overflow_wrap =
+      dom_node->style.overflow_wrap.value_or(parent.overflow_wrap);
+  box->style.overflow_wrap = resolved.overflow_wrap;
 
-  std::optional<Color> resolved_fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent_fg;
-  box->style.foreground_color = resolved_fg;
+  resolved.fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent.fg;
+  box->style.foreground_color = resolved.fg;
 
-  std::optional<bool> resolved_bold = dom_node->style.bold.has_value() ? dom_node->style.bold : parent_bold;
-  box->style.bold = resolved_bold;
+  resolved.bold = dom_node->style.bold.has_value() ? dom_node->style.bold : parent.bold;
+  box->style.bold = resolved.bold;
 
-  std::optional<bool> resolved_dim = dom_node->style.dim.has_value() ? dom_node->style.dim : parent_dim;
-  box->style.dim = resolved_dim;
+  resolved.dim = dom_node->style.dim.has_value() ? dom_node->style.dim : parent.dim;
+  box->style.dim = resolved.dim;
 
-  std::optional<bool> resolved_italic = dom_node->style.italic.has_value() ? dom_node->style.italic : parent_italic;
-  box->style.italic = resolved_italic;
+  resolved.italic = dom_node->style.italic.has_value() ? dom_node->style.italic : parent.italic;
+  box->style.italic = resolved.italic;
 
-  std::optional<bool> resolved_underlined = dom_node->style.underlined.has_value() ? dom_node->style.underlined : parent_underlined;
-  box->style.underlined = resolved_underlined;
+  resolved.underlined = dom_node->style.underlined.has_value() ? dom_node->style.underlined : parent.underlined;
+  box->style.underlined = resolved.underlined;
 
-  std::optional<bool> resolved_underlined_double = dom_node->style.underlined_double.has_value() ? dom_node->style.underlined_double : parent_underlined_double;
-  box->style.underlined_double = resolved_underlined_double;
+  resolved.underlined_double = dom_node->style.underlined_double.has_value() ? dom_node->style.underlined_double : parent.underlined_double;
+  box->style.underlined_double = resolved.underlined_double;
 
-  std::optional<bool> resolved_strikethrough = dom_node->style.strikethrough.has_value() ? dom_node->style.strikethrough : parent_strikethrough;
-  box->style.strikethrough = resolved_strikethrough;
+  resolved.strikethrough = dom_node->style.strikethrough.has_value() ? dom_node->style.strikethrough : parent.strikethrough;
+  box->style.strikethrough = resolved.strikethrough;
 
-  std::optional<bool> resolved_blink = dom_node->style.blink.has_value() ? dom_node->style.blink : parent_blink;
-  box->style.blink = resolved_blink;
+  resolved.blink = dom_node->style.blink.has_value() ? dom_node->style.blink : parent.blink;
+  box->style.blink = resolved.blink;
 
   // Text nodes don't usually run an algorithm themselves;
   // they are consumed by the parent's InlineFlow.
@@ -195,8 +183,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     auto text_node = static_cast<TextElement*>(dom_node);
     box->is_text = true;
     box->text_data = text_node->text();
-    ApplyTextTransform(box->text_data, resolved_text_transform);
-    switch (resolved_ws) {
+    ApplyTextTransform(box->text_data, resolved.text_transform);
+    switch (resolved.white_space) {
       case WhiteSpace::Normal:
       case WhiteSpace::Nowrap:
         ReplaceNewlinesWithSpaces(box->text_data);
@@ -208,7 +196,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       case WhiteSpace::PreWrap:
         break;  // Newlines are preserved and honored as hard breaks.
     }
-    ApplyLetterSpacing(box->text_data, resolved_letter_spacing);
+    ApplyLetterSpacing(box->text_data, resolved.letter_spacing);
     box->algorithm = LayoutBox::Algorithm::Text;
 
     return box;
@@ -219,28 +207,28 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     if (child_dom.get()->is_slot()) {
       // Skip elements with no tag (e.g., SlotElement)
       auto slot_style = child_dom.get()->style;
-      TextAlign slot_align = slot_style.text_align.value_or(resolved_align);
-      WhiteSpace slot_ws = slot_style.white_space.value_or(resolved_ws);
-      TextTransform slot_text_transform =
-          slot_style.text_transform.value_or(resolved_text_transform);
-      std::optional<Color> slot_fg = slot_style.foreground_color.has_value() ? slot_style.foreground_color : resolved_fg;
-      std::optional<bool> slot_bold = slot_style.bold.has_value() ? slot_style.bold : resolved_bold;
-      std::optional<bool> slot_dim = slot_style.dim.has_value() ? slot_style.dim : resolved_dim;
-      std::optional<bool> slot_italic = slot_style.italic.has_value() ? slot_style.italic : resolved_italic;
-      std::optional<bool> slot_underlined = slot_style.underlined.has_value() ? slot_style.underlined : resolved_underlined;
-      std::optional<bool> slot_underlined_double = slot_style.underlined_double.has_value() ? slot_style.underlined_double : resolved_underlined_double;
-      std::optional<bool> slot_strikethrough = slot_style.strikethrough.has_value() ? slot_style.strikethrough : resolved_strikethrough;
-      std::optional<bool> slot_blink = slot_style.blink.has_value() ? slot_style.blink : resolved_blink;
-      int slot_letter_spacing =
-          slot_style.letter_spacing.value_or(resolved_letter_spacing);
-      int slot_line_height =
-          slot_style.line_height.value_or(resolved_line_height);
-      OverflowWrap slot_overflow_wrap =
-          slot_style.overflow_wrap.value_or(resolved_overflow_wrap);
+      InheritedTextStyle slot = resolved;
+      slot.align = slot_style.text_align.value_or(resolved.align);
+      slot.white_space = slot_style.white_space.value_or(resolved.white_space);
+      slot.text_transform =
+          slot_style.text_transform.value_or(resolved.text_transform);
+      slot.fg = slot_style.foreground_color.has_value() ? slot_style.foreground_color : resolved.fg;
+      slot.bold = slot_style.bold.has_value() ? slot_style.bold : resolved.bold;
+      slot.dim = slot_style.dim.has_value() ? slot_style.dim : resolved.dim;
+      slot.italic = slot_style.italic.has_value() ? slot_style.italic : resolved.italic;
+      slot.underlined = slot_style.underlined.has_value() ? slot_style.underlined : resolved.underlined;
+      slot.underlined_double = slot_style.underlined_double.has_value() ? slot_style.underlined_double : resolved.underlined_double;
+      slot.strikethrough = slot_style.strikethrough.has_value() ? slot_style.strikethrough : resolved.strikethrough;
+      slot.blink = slot_style.blink.has_value() ? slot_style.blink : resolved.blink;
+      slot.letter_spacing =
+          slot_style.letter_spacing.value_or(resolved.letter_spacing);
+      slot.line_height =
+          slot_style.line_height.value_or(resolved.line_height);
+      slot.overflow_wrap =
+          slot_style.overflow_wrap.value_or(resolved.overflow_wrap);
 
       for (auto& grandchild_dom : child_dom.get()->children()) {
-        auto grandchild_box =
-            Build(grandchild_dom.get(), slot_align, slot_ws, slot_text_transform, slot_fg, slot_bold, slot_dim, slot_italic, slot_underlined, slot_underlined_double, slot_strikethrough, slot_blink, slot_letter_spacing, slot_line_height, slot_overflow_wrap);
+        auto grandchild_box = Build(grandchild_dom.get(), slot);
         if (grandchild_box) {
           raw_children.push_back(grandchild_box);
         }
@@ -248,7 +236,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved_align, resolved_ws, resolved_text_transform, resolved_fg, resolved_bold, resolved_dim, resolved_italic, resolved_underlined, resolved_underlined_double, resolved_strikethrough, resolved_blink, resolved_letter_spacing, resolved_line_height, resolved_overflow_wrap);
+    auto child_box = Build(child_dom.get(), resolved);
     if (child_box) {
       raw_children.push_back(child_box);
     }
@@ -296,10 +284,10 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
               LayoutArenaAllocator<LayoutBox>());
           anonymous_box->is_anonymous = true;
           anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-          anonymous_box->style.text_align = resolved_align;
-          anonymous_box->style.white_space = resolved_ws;
-          anonymous_box->style.line_height = resolved_line_height;
-          anonymous_box->style.overflow_wrap = resolved_overflow_wrap;
+          anonymous_box->style.text_align = resolved.align;
+          anonymous_box->style.white_space = resolved.white_space;
+          anonymous_box->style.line_height = resolved.line_height;
+          anonymous_box->style.overflow_wrap = resolved.overflow_wrap;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);
