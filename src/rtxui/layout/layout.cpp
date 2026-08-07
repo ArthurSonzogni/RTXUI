@@ -925,8 +925,11 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           if (have_last_space) {
             emit_frag(last_space_byte, last_space_col);
             byte_start = last_space_byte + 1;
+            // cur_col already measures up to the current (overflowing)
+            // grapheme; only col_start moves to just past the space, so
+            // cur_col - col_start keeps counting the characters typed
+            // between the space and here instead of discarding them.
             col_start = last_space_col + 1;
-            cur_col = col_start;
             have_last_space = false;
             commit_line();
             byte_end = i + 1;
@@ -995,8 +998,11 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         if (have_last_space) {
           emit_frag(last_space_byte, last_space_col);
           byte_start = last_space_byte + 1;
+          // cur_col already measures up to the current (overflowing)
+          // grapheme; only col_start moves to just past the space, so
+          // cur_col - col_start keeps counting the characters typed
+          // between the space and here instead of discarding them.
           col_start = last_space_col + 1;
-          cur_col = col_start;
           have_last_space = false;
           commit_line();
           byte_end =

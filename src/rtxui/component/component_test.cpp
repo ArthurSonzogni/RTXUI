@@ -3682,6 +3682,64 @@ TEST_CASE("word-break: break-all wraps mid-word", "[component][word-break][paint
   CHECK(row_text(4) == "defgh");
 }
 
+class WordWrapStaleSpaceTestComponent
+    : public rtxui::Component<WordWrapStaleSpaceTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<WordWrapStaleSpaceTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div class="box">ab abcdefgh</div>
+    <style>
+      .box { width: 6; }
+    </style>
+  )";
+};
+
+TEST_CASE("Word wrap doesn't lose width when overflow is detected several "
+          "characters past the last space",
+          "[component][word-wrap][regression]") {
+  // Regression: when a single-word run overflows a few characters after the
+  // last recorded space (not immediately after it), the break-at-space
+  // logic used to reset cur_col back to col_start, discarding the width of
+  // the characters typed since the space. The resulting fragment's declared
+  // width undercounted its actual text, corrupting the following wrap.
+  auto container = rtxui::Ref<WordWrapStaleSpaceTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto row_text = [&](int y) {
+    std::string row;
+    for (int x = 0; x < texture.width(); ++x) {
+      row += texture[x, y].character;
+    }
+    while (!row.empty() && row.back() == ' ') {
+      row.pop_back();
+    }
+    return row;
+  };
+
+  // "ab abcdefgh" in a width:6 box: "ab" fits, then "abcdefgh" doesn't fit
+  // after it and overflow isn't detected until the 4th character of that
+  // word ("ab abc|d"), several characters past the space.
+  CHECK(row_text(0) == "ab");
+  CHECK(row_text(1) == "abcdef");
+  CHECK(row_text(2) == "gh");
+}
+
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
   void InitReflection() override {
