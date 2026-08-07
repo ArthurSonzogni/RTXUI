@@ -2766,6 +2766,48 @@ TEST_CASE("Layout: aspect-ratio derives a flex container's width from height",
                                                 }));
 }
 
+TEST_CASE("Layout: aspect-ratio transfers a stretched cross size to a flex "
+          "row item's width",
+          "[layout][aspect-ratio][flex]") {
+  struct FlexRowStretchAspectTest : Component<FlexRowStretchAspectTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <style>
+          .row {
+            display: flex;
+            flex-direction: row;
+            height: 2;
+            align-items: stretch;
+          }
+          .tile {
+            aspect-ratio: 3 / 1;
+            background-color: rgb(255, 0, 0);
+          }
+        </style>
+        <div class="row"><div class="tile"></div></div>
+      )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<FlexRowStretchAspectTest>::New(), 8, 3);
+
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+  };
+
+  // The item is stretched to the container's height (2); ratio 3:1 must
+  // transfer that into a width of 6 basis, before the flex algorithm locks
+  // width in as Exactly (regression: the item used to collapse to 0 wide,
+  // since block-flow's own aspect-ratio-from-height runs too late - width
+  // is already forced Exactly by the time height becomes definite).
+  CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
+                                                    "RRRRRR..",
+                                                    "RRRRRR..",
+                                                    "........",
+                                                }));
+}
+
 TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
   struct MinWidthTest : Component<MinWidthTest> {
     std::string_view Setup() {

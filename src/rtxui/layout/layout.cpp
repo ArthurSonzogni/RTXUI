@@ -24,6 +24,12 @@ thread_local LayoutArena g_layout_arenas[2];
 thread_local int g_active_layout_arena = 0;
 }  // namespace
 
+// Grid cell alignment: justify-items/justify-self control the inline axis,
+// align-items/align-self the block axis. Stretch (the default) fills the
+// cell; other values size the item naturally and offset it. Also used by
+// LayoutFlex to detect a stretched cross axis ahead of the final pass.
+static AlignItems EffectiveAlign(AlignSelf self, AlignItems items);
+
 LayoutArena& ActiveLayoutArena() {
   return g_layout_arenas[g_active_layout_arena];
 }
@@ -1429,6 +1435,21 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                      : ResolveSize(child->style.height, content_h);
     }
 
+    // CSS "transferred size": a row item with an auto flex-basis (width) and
+    // aspect-ratio that will be stretched to a definite cross size (height)
+    // needs its basis derived from that cross size up front, since the main
+    // size resolved here is locked in as an Exactly width by the final pass
+    // below - too late for block-flow's own aspect-ratio-from-height to see
+    // an auto width by then.
+    if (is_row && basis == -1 && child->style.aspect_ratio > 0 &&
+        child->style.height.unit == Unit::Auto &&
+        EffectiveAlign(child->style.align_self, box->style.align_items) ==
+            AlignItems::Stretch &&
+        !(auto_height && constraints.height.mode == MeasureMode::Undefined)) {
+      int stretched_h = content_h - child->style.margin.Vert();
+      basis = static_cast<int>(stretched_h * child->style.aspect_ratio + 0.5f);
+    }
+
     LayoutConstraints child_c;
     if (is_row) {
       child_c.width = {basis != -1 ? basis : 0, basis != -1
@@ -2526,9 +2547,6 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   return fragment;
 }
 
-// Grid cell alignment: justify-items/justify-self control the inline axis,
-// align-items/align-self the block axis. Stretch (the default) fills the
-// cell; other values size the item naturally and offset it.
 static AlignItems EffectiveAlign(AlignSelf self, AlignItems items) {
   switch (self) {
     case AlignSelf::Auto:
