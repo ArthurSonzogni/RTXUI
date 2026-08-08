@@ -174,8 +174,8 @@ RTXUI supports structured table layouts through `<table>`, `<tr>`, `<td>`, and `
 * `<th>`: Defines a header cell.
 
 ### Layout Behavior
-* **Column Sizing**: Column widths are calculated automatically. Cell widths conform to the maximum preferred width of cells in their respective column. If the table is styled with a fixed width, remaining space is distributed proportionally among columns.
-* **Row Sizing**: Row height is automatically set to the height of the tallest cell in that row. Shorter cells in the same row are stretched vertically to align backgrounds and borders.
+* **Column Sizing**: Column widths are calculated automatically. Cell widths conform to the maximum preferred width of cells in their respective column. If the table is styled with a fixed width, or a `min-width` wider than the content, remaining space is distributed proportionally among columns.
+* **Row Sizing**: Row height is automatically set to the height of the tallest cell in that row. Shorter cells in the same row are stretched vertically to align backgrounds and borders. A `height` or `min-height` wider than the content distributes the extra space across rows the same way; a `height` or `max-height` smaller than the content is honored as-is and rows overflow it rather than being compressed.
 
 ### Styling
 You can style tables, rows, and cells using CSS. Borders are fully supported on tables, rows, and cells (e.g. `border: solid;`).
