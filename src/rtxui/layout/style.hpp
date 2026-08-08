@@ -30,6 +30,11 @@ enum class DisplayInside {
   Grid,
 };
 
+enum class BoxSizing {
+  ContentBox,
+  BorderBox,
+};
+
 enum class MeasureMode { Exactly, AtMost, Undefined };
 enum class Direction { Row, RowReverse, Column, ColumnReverse };
 enum class Unit { Auto, Cells, Percent, Fr, Calc, MinMax };
@@ -334,6 +339,10 @@ struct ComputedStyle {
   Direction flex_direction = Direction::Row;
   FlexWrap flex_wrap = FlexWrap::NoWrap;
 
+  // RTXUI's width/height have always described the border-box (outer) size
+  // — unlike web CSS, whose initial value is content-box — so BorderBox is
+  // the default here to keep every pre-existing layout unchanged.
+  BoxSizing box_sizing = BoxSizing::BorderBox;
   Length width = Length::Auto();
   Length height = Length::Auto();
   Length min_width = Length::Auto();
@@ -460,6 +469,7 @@ struct ComputedStyle {
     display_none = other.display_none;
     flex_direction = other.flex_direction;
     flex_wrap = other.flex_wrap;
+    box_sizing = other.box_sizing;
     width = other.width;
     height = other.height;
     min_width = other.min_width;
