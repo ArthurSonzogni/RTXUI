@@ -490,6 +490,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     fragment->has_border = true;
+    fragment->border_width = box->style.border;
   }
 
   int cur_y = box->style.border.top + box->style.padding.top;
@@ -819,6 +820,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     container_frag->has_border = true;
+    container_frag->border_width = box->style.border;
   }
 
   int cursor_x = 0;
@@ -1859,6 +1861,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     fragment->has_border = true;
+    fragment->border_width = box->style.border;
   }
 
   int main_start = is_row ? (box->style.padding.left + box->style.border.left)
@@ -2393,6 +2396,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
         box->style.border_style != BorderStyle::None) {
       fragment->has_border = true;
+      fragment->border_width = box->style.border;
     }
     if (box->dom_node && !context.is_measurement) {
       box->dom_node->set_layout_width(fragment->width);
@@ -2530,6 +2534,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     fragment->has_border = true;
+    fragment->border_width = box->style.border;
   }
 
   int cur_y = box->style.border.top + box->style.padding.top;
@@ -2647,6 +2652,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
            row_box->style.border.Vert() > 0) &&
           row_box->style.border_style != BorderStyle::None) {
         row_bg_frag->has_border = true;
+        row_bg_frag->border_width = row_box->style.border;
       }
       if (row_box->dom_node && !context.is_measurement) {
         row_box->dom_node->set_layout_width(content_width_limit);
@@ -3071,6 +3077,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
       box->style.border_style != BorderStyle::None) {
     container_frag->has_border = true;
+    container_frag->border_width = box->style.border;
   }
 
   std::vector<int> col_offsets(C, 0);
