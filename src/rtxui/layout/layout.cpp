@@ -1250,6 +1250,14 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     }
   }
 
+  // Apply min-width constraint
+  {
+    int min_w = ResolveBoxWidth(box->style, box->style.min_width, avail_width);
+    if (min_w != -1 && container_frag->width < min_w) {
+      container_frag->width = min_w;
+    }
+  }
+
   // Apply min-height constraint
   {
     int min_h =
