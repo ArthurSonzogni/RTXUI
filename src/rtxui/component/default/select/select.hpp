@@ -16,6 +16,7 @@ struct OptionInfo {
   std::string value;
   std::string label;
   Element* element = nullptr;
+  bool disabled = false;
 };
 
 class select : public Component<select> {

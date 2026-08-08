@@ -9,6 +9,7 @@
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/component/component_internal.hpp"
+#include "rtxui/component/default/option/option.hpp"
 
 namespace rtxui {
 
@@ -100,7 +101,12 @@ std::vector<OptionInfo> select::GetOptions() {
           label += static_cast<TextElement&>(child).text();
         }
       });
-      opts.push_back({val, label, &el});
+      bool opt_disabled = false;
+      if (auto* opt = dynamic_cast<option*>(
+              const_cast<ComponentBase*>(el.component()))) {
+        opt_disabled = opt->disabled;
+      }
+      opts.push_back({val, label, &el, opt_disabled});
     }
   });
   return opts;
@@ -199,18 +205,26 @@ bool select::OnEvent(Event event) {
       if (root->focused()) {
         auto options = GetOptions();
         if (is_open) {
-          if (kb.special == Event::Keyboard::Special::ArrowDown) {
+          if (kb.special == Event::Keyboard::Special::ArrowDown ||
+              kb.special == Event::Keyboard::Special::ArrowUp) {
             if (!options.empty()) {
-              hovered_index = (hovered_index + 1) % options.size();
-              changed = true;
-            }
-            return true;
-          }
-          if (kb.special == Event::Keyboard::Special::ArrowUp) {
-            if (!options.empty()) {
-              hovered_index =
-                  (hovered_index - 1 + options.size()) % options.size();
-              changed = true;
+              int step =
+                  (kb.special == Event::Keyboard::Special::ArrowDown) ? 1 : -1;
+              int next = hovered_index;
+              // Wraps around, skipping disabled options; if every option is
+              // disabled this comes full circle back to hovered_index and
+              // leaves it unchanged.
+              for (size_t tries = 0; tries < options.size(); ++tries) {
+                next = static_cast<int>(
+                    (next + step + options.size()) % options.size());
+                if (!options[next].disabled) {
+                  break;
+                }
+              }
+              if (next != hovered_index) {
+                hovered_index = next;
+                changed = true;
+              }
             }
             return true;
           }
@@ -219,7 +233,9 @@ bool select::OnEvent(Event event) {
                kb.codepoint == 32)) {
             if (hovered_index >= 0 &&
                 hovered_index < static_cast<int>(options.size())) {
-              SelectOption(options[hovered_index].value);
+              if (!options[hovered_index].disabled) {
+                SelectOption(options[hovered_index].value);
+              }
             } else {
               is_open = false;
             }
@@ -243,13 +259,33 @@ bool select::OnEvent(Event event) {
                 }
               }
               int new_idx = curr_idx;
-              if (kb.special == Event::Keyboard::Special::ArrowDown) {
-                new_idx = (curr_idx == -1)
-                              ? 0
-                              : std::min(static_cast<int>(options.size() - 1),
-                                         curr_idx + 1);
+              if (curr_idx == -1) {
+                // Nothing selected yet: land on the first enabled option,
+                // regardless of arrow direction (matches the prior
+                // always-picks-0 behavior when nothing was disabled).
+                for (int i = 0; i < static_cast<int>(options.size()); ++i) {
+                  if (!options[i].disabled) {
+                    new_idx = i;
+                    break;
+                  }
+                }
               } else {
-                new_idx = (curr_idx == -1) ? 0 : std::max(0, curr_idx - 1);
+                // Clamps at the ends rather than wrapping, skipping disabled
+                // options; stops at the first edge it can't move past.
+                int step =
+                    (kb.special == Event::Keyboard::Special::ArrowDown) ? 1 : -1;
+                int candidate = curr_idx;
+                for (size_t tries = 0; tries < options.size(); ++tries) {
+                  candidate += step;
+                  if (candidate < 0 ||
+                      candidate >= static_cast<int>(options.size())) {
+                    break;
+                  }
+                  if (!options[candidate].disabled) {
+                    new_idx = candidate;
+                    break;
+                  }
+                }
               }
               if (new_idx != curr_idx) {
                 SelectOption(options[new_idx].value);

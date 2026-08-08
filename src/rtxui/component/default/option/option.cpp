@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/component/default/option/option.hpp"
 
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/select/select.hpp"
 #include "rtxui/dom/element.hpp"
 
@@ -10,6 +11,7 @@ namespace rtxui {
 
 void option::InitReflection() {
   Bind(value);
+  Bind(disabled);
   Component<option>::InitReflection();
 }
 
@@ -39,12 +41,16 @@ std::string_view option::Setup() {
       color: white;
       opacity: 1.0;
     }
+    self:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
   </style>)html";
 }
 
 bool option::OnEvent(Event event) {
   auto* root = Root();
-  if (!root) {
+  if (!root || disabled) {
     return false;
   }
 
@@ -76,6 +82,11 @@ bool option::OnEvent(Event event) {
     }
   }
   return false;
+}
+
+bool option::Digest() {
+  SyncDisabled(Root(), disabled);
+  return Component<option>::Digest();
 }
 
 namespace {

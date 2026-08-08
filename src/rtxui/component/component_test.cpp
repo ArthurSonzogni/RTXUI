@@ -2913,6 +2913,103 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   CHECK(select_ptr->selected_label == "Dark Theme");
 }
 
+class SelectDisabledOptionTestComponent
+    : public rtxui::Component<SelectDisabledOptionTestComponent> {
+ public:
+  std::string my_value = "a";
+
+  void InitReflection() override {
+    Bind(my_value);
+    Import<rtxui::select>();
+    Import<rtxui::option>();
+    rtxui::Component<SelectDisabledOptionTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <select value="{my_value}">
+      <option value="a">A</option>
+      <option id="opt-b" value="b" disabled="true">B</option>
+      <option value="c">C</option>
+    </select>
+  )";
+};
+
+TEST_CASE("Select skips a disabled <option> for click, keyboard select, and "
+          "keyboard navigation",
+          "[component][select][option][disabled][regression]") {
+  auto container = rtxui::Ref<SelectDisabledOptionTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* select_el = container->Root()->QuerySelector("select");
+  auto* select_ptr =
+      dynamic_cast<rtxui::select*>(const_cast<rtxui::ComponentBase*>(
+          select_el->component()));
+  REQUIRE(select_ptr != nullptr);
+
+  // Open the dropdown by clicking the select button (hovered_index starts
+  // on "a", index 0) - options are only actually laid out (and have a
+  // meaningful absolute position) once the dropdown is open.
+  select_el->set_focused(true);
+  Event::Mouse click_select;
+  click_select.button = Event::Mouse::Button::Left;
+  click_select.motion = Event::Mouse::Motion::Pressed;
+  click_select.x = select_el->absolute_x() + 2;
+  click_select.y = select_el->absolute_y() + 1;
+  CHECK(select_ptr->OnEvent(Event(click_select)) == true);
+  container->Digest();
+  screen.Draw();
+  REQUIRE(select_ptr->is_open);
+  CHECK(select_ptr->hovered_index == 0);
+
+  // Clicking the now-visible disabled option doesn't select it.
+  auto* b_option_el = container->Root()->QuerySelector("#opt-b");
+  REQUIRE(b_option_el != nullptr);
+  Event::Mouse click_b;
+  click_b.button = Event::Mouse::Button::Left;
+  click_b.motion = Event::Mouse::Motion::Pressed;
+  click_b.x = b_option_el->absolute_x() + 1;
+  click_b.y = b_option_el->absolute_y() + 1;
+  container->OnEvent(Event(click_b));
+  container->Digest();
+  CHECK(select_ptr->value == "a");
+
+  // ArrowDown skips disabled "b" (index 1) and lands on "c" (index 2).
+  select_ptr->OnEvent(Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::ArrowDown,
+  }));
+  CHECK(select_ptr->hovered_index == 2);
+
+  // ArrowDown again wraps around, skipping "b" again, back to "a" (index 0).
+  select_ptr->OnEvent(Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::ArrowDown,
+  }));
+  CHECK(select_ptr->hovered_index == 0);
+
+  // Force-hover the disabled option directly and confirm Enter doesn't
+  // select it (dropdown stays open, value unchanged).
+  select_ptr->hovered_index = 1;
+  select_ptr->OnEvent(Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::Return,
+  }));
+  CHECK(select_ptr->value == "a");
+  CHECK(select_ptr->is_open);
+
+  // Closed-state ArrowDown also skips the disabled option.
+  select_ptr->OnEvent(Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::Escape,
+  }));
+  REQUIRE_FALSE(select_ptr->is_open);
+  select_ptr->OnEvent(Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::ArrowDown,
+  }));
+  CHECK(select_ptr->value == "c");
+}
+
 TEST_CASE("Select Component Exposes Button/Dropdown Part Attributes For "
           "External ::part() Styling",
           "[component][select][part]") {
