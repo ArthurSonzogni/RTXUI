@@ -1225,6 +1225,31 @@ TEST_CASE("Layout: Table Grid Rendering", "[layout][table]") {
   CHECK(layout_text.find("val2") != std::string::npos);
 }
 
+// Regression test: LayoutTable applied max-width to its own box but never
+// min-width - same gap class as the grid-container and inline-block fixes
+// above, found by the same call-site audit.
+TEST_CASE("Layout: min-width is enforced on a table", "[layout][table][min-width]") {
+  struct T : Component<T> {
+    std::string_view Setup() override {
+      return R"html(
+        <table style="min-width: 20;">
+          <tr><td>X</td></tr>
+        </table>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  RenderComponent(app, 30, 2);
+  auto* table = app->Root()->QuerySelector("table");
+  auto* cell = app->Root()->QuerySelector("td");
+  REQUIRE(table != nullptr);
+  REQUIRE(cell != nullptr);
+  CHECK(table->layout_width() == 20);
+  // The lone column must stretch to fill the widened table, not stay at its
+  // 1-cell preferred width.
+  CHECK(cell->layout_width() == 20);
+}
+
 TEST_CASE("Layout: <br> forces a line break in inline flow", "[layout][br]") {
   struct BrTest : Component<BrTest> {
     std::string_view Setup() override {

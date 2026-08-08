@@ -2488,6 +2488,33 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     }
   }
 
+  // Apply min-width constraint. Unlike max-width above (a ceiling that
+  // simply lets auto-sizing shrink the table below it), min-width is a
+  // floor: the table must never end up narrower than it, so the extra
+  // width has to be distributed across columns, mirroring the "table is
+  // wider than its preferred content" stretch above.
+  int min_width_resolved = ResolveBoxWidth(box->style, box->style.min_width, avail_width);
+  if (min_width_resolved != -1 && width < min_width_resolved) {
+    int new_content_width_limit =
+        min_width_resolved - box->style.padding.Horiz() - box->style.border.Horiz();
+    int extra = std::max(0, new_content_width_limit - content_width_limit);
+    if (extra > 0 && total_preferred_width > 0) {
+      for (size_t col = 0; col < num_cols; ++col) {
+        col_widths[col] += (extra * col_preferred_width[col]) / total_preferred_width;
+      }
+      int new_total = 0;
+      for (int w : col_widths) {
+        new_total += w;
+      }
+      int remainder = new_content_width_limit - new_total;
+      if (remainder > 0 && !col_widths.empty()) {
+        col_widths.back() += remainder;
+      }
+    }
+    content_width_limit = new_content_width_limit;
+    width = min_width_resolved;
+  }
+
   // Create table fragment
   auto fragment = MakeArenaFragment(width, 0);
   fragment->dom_node = box->dom_node;
