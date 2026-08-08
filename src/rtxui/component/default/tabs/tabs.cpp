@@ -68,7 +68,8 @@ std::string_view tabs::Setup() {
       .tabs-headers {
         display: flex;
         flex-direction: row;
-        border-bottom: solid;
+        border-bottom: 1;
+        border-style: solid;
         border-color: rgb(74, 85, 104);
         margin-bottom: 1;
       }

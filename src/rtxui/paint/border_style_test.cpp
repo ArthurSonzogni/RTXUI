@@ -472,6 +472,70 @@ TEST_CASE("Individual Border Colors") {
                                                             }));
 }
 
+// Regression test: `has_border` used to be the only signal paint.cpp had -
+// once true, it drew a full 4-sided box with all 4 corners regardless of
+// each side's actual width, so a single `border-bottom: 1;` (all other
+// sides 0) rendered a two-row box with stray corner glyphs instead of a
+// flat line. PhysicalFragment now carries the per-side widths so paint.cpp
+// can gate each side/corner independently.
+TEST_CASE("Layout: a single border side renders as a plain line, no corners",
+          "[paint][border][asymmetric]") {
+  struct T : Component<T> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            .box {
+              border-bottom: 1;
+              border-style: ascii;
+              border-color: red;
+              width: 4;
+            }
+          </style>
+          <div class="box">Hi</div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<T>::New(), 4, 2);
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "Hi  ",
+                                     "----",
+                                 }));
+}
+
+// Regression test: a corner glyph should only appear when BOTH of its
+// adjacent sides are present - here only top+left are set, so only the
+// top-left corner should render as "+"; the top and left lines should meet
+// it flush, with nothing drawn on the (absent) right/bottom sides.
+TEST_CASE("Layout: a corner glyph only appears when both adjacent sides "
+          "are present",
+          "[paint][border][asymmetric]") {
+  struct T : Component<T> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            .box {
+              border-top: 1;
+              border-left: 1;
+              border-style: ascii;
+              border-color: red;
+              width: 4;
+            }
+          </style>
+          <div class="box">Hi</div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<T>::New(), 4, 2);
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "+---",
+                                     "|Hi ",
+                                 }));
+}
+
 TEST_CASE("Paint: Tall Border Parent Background Propagation") {
   struct TallBorderParentBgTest : Component<TallBorderParentBgTest> {
     std::string_view Setup() {
