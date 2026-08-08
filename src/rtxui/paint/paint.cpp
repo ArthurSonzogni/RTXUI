@@ -500,30 +500,73 @@ void PaintImpl(const PhysicalFragment* frag,
 
     const auto& data = GetBorderData(frag->border_style);
 
+    bool has_top = frag->border_width.top > 0;
+    bool has_right = frag->border_width.right > 0;
+    bool has_bottom = frag->border_width.bottom > 0;
+    bool has_left = frag->border_width.left > 0;
+
+    // A corner only gets a corner glyph when both of its adjacent sides are
+    // present; with just one adjacent side, that side's own line character
+    // extends flush to the edge instead (matching how a single `border-top`/
+    // `-right`/`-bottom`/`-left` renders as a plain line, not a partial box).
+    // When both sides are present, the corner glyph keeps the *vertical*
+    // (left/right, `b_color`) side's color, matching the pre-existing
+    // behavior for ordinary 4-sided borders (verified by "Individual Border
+    // Colors": corners take the color of the vertical border).
+    auto draw_corner = [&](int x, int y, bool side_a, bool side_b,
+                           const char* corner_char, uint8_t corner_loc,
+                           const char* a_char, uint8_t a_loc,
+                           const Color& a_color, const char* b_char,
+                           uint8_t b_loc, const Color& b_color) {
+      if (side_a && side_b) {
+        set_char(x, y, corner_char, corner_loc, b_color);
+      } else if (side_a) {
+        set_char(x, y, a_char, a_loc, a_color);
+      } else if (side_b) {
+        set_char(x, y, b_char, b_loc, b_color);
+      }
+    };
+
     // Corners
-    set_char(abs_x, abs_y, data.charset[0][0], data.locations[0][0],
-             left_border_color);  // tl
-    set_char(abs_x + w - 1, abs_y, data.charset[0][2], data.locations[0][2],
-             right_border_color);  // tr
-    set_char(abs_x, abs_y + h - 1, data.charset[2][0], data.locations[2][0],
-             left_border_color);  // bl
-    set_char(abs_x + w - 1, abs_y + h - 1, data.charset[2][2],
-             data.locations[2][2], right_border_color);  // br
+    draw_corner(abs_x, abs_y, has_top, has_left, data.charset[0][0],
+               data.locations[0][0], data.charset[0][1], data.locations[0][1],
+               top_border_color, data.charset[1][0], data.locations[1][0],
+               left_border_color);  // tl
+    draw_corner(abs_x + w - 1, abs_y, has_top, has_right, data.charset[0][2],
+               data.locations[0][2], data.charset[0][1], data.locations[0][1],
+               top_border_color, data.charset[1][2], data.locations[1][2],
+               right_border_color);  // tr
+    draw_corner(abs_x, abs_y + h - 1, has_bottom, has_left, data.charset[2][0],
+               data.locations[2][0], data.charset[2][1], data.locations[2][1],
+               bottom_border_color, data.charset[1][0], data.locations[1][0],
+               left_border_color);  // bl
+    draw_corner(abs_x + w - 1, abs_y + h - 1, has_bottom, has_right,
+               data.charset[2][2], data.locations[2][2], data.charset[2][1],
+               data.locations[2][1], bottom_border_color, data.charset[1][2],
+               data.locations[1][2], right_border_color);  // br
 
     // Top/Bottom
     for (int i = 1; i < w - 1; ++i) {
-      set_char(abs_x + i, abs_y, data.charset[0][1], data.locations[0][1],
-               top_border_color);  // t
-      set_char(abs_x + i, abs_y + h - 1, data.charset[2][1],
-               data.locations[2][1], bottom_border_color);  // b
+      if (has_top) {
+        set_char(abs_x + i, abs_y, data.charset[0][1], data.locations[0][1],
+                 top_border_color);  // t
+      }
+      if (has_bottom) {
+        set_char(abs_x + i, abs_y + h - 1, data.charset[2][1],
+                 data.locations[2][1], bottom_border_color);  // b
+      }
     }
 
     // Left/Right
     for (int i = 1; i < h - 1; ++i) {
-      set_char(abs_x, abs_y + i, data.charset[1][0], data.locations[1][0],
-               left_border_color);  // l
-      set_char(abs_x + w - 1, abs_y + i, data.charset[1][2],
-               data.locations[1][2], right_border_color);  // r
+      if (has_left) {
+        set_char(abs_x, abs_y + i, data.charset[1][0], data.locations[1][0],
+                 left_border_color);  // l
+      }
+      if (has_right) {
+        set_char(abs_x + w - 1, abs_y + i, data.charset[1][2],
+                 data.locations[1][2], right_border_color);  // r
+      }
     }
   }
 

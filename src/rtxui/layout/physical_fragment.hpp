@@ -25,6 +25,10 @@ struct PhysicalFragment {
   bool is_text = false;
   std::string_view text_content;
   bool has_border = false;
+  // Per-side border widths, so paint.cpp can draw only the sides/corners
+  // that are actually present instead of always drawing a full box outline
+  // whenever `has_border` is set.
+  Spacing border_width;
   BorderStyle border_style = BorderStyle::None;
   std::optional<Color> border_color_top;
   std::optional<Color> border_color_right;

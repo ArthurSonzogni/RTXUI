@@ -6478,6 +6478,44 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   CHECK(pane2_el->style.display_none == false);
 }
 
+// Regression test: `.tabs-headers { border-bottom: solid; }` never actually
+// rendered a divider - `border-bottom` only parses a numeric width, so
+// "solid" silently failed to parse and left both the width and the border
+// style unset. Now fixed to `border-bottom: 1; border-style: solid;`.
+TEST_CASE("Tabs header divider renders as a line under the headers",
+          "[component][tabs][border]") {
+  auto container = rtxui::Ref<TabsTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {40, rtxui::MeasureMode::Exactly},
+      {10, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(40, 10);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto* headers = container->Root()->QuerySelector(".tabs-headers");
+  REQUIRE(headers != nullptr);
+  // The bottom border grows the headers box by exactly 1 row: the header
+  // button labels occupy row 0 (tabs is the top-level element here), so the
+  // divider line must be on row 1.
+  CHECK(headers->layout_height() == 2);
+  bool found_divider_char = false;
+  for (int x = 0; x < headers->layout_width(); ++x) {
+    if (texture[x, 1].character == "─") {
+      found_divider_char = true;
+      break;
+    }
+  }
+  CHECK(found_divider_char);
+}
+
 TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   auto container = rtxui::Ref<TabsTestComponent>::New();
   rtxui::Screen screen(container);
