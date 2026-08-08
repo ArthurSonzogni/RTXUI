@@ -1057,6 +1057,13 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     }
   };
 
+  // <br> forces a line break in inline flow, regardless of its own display
+  // style: it carries no content, so it would otherwise be a silent no-op
+  // (an empty inline box contributes zero width and nothing to place).
+  auto is_br = [](LayoutBox* elem) {
+    return elem->dom_node && elem->dom_node->tag() == "br";
+  };
+
   auto place_opaque_box = [&](LayoutBox* elem) {
     if (elem->style.position == PositionType::Absolute ||
         elem->style.position == PositionType::Fixed) {
@@ -1150,6 +1157,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
            child->style.bold, child->style.dim, child->style.italic,
            child->style.underlined, child->style.underlined_double,
            child->style.strikethrough, child->style.blink});
+    } else if (is_br(child.get())) {
+      commit_line(/*hard_break=*/true);
     } else if (child->style.display_outside == DisplayOutside::Inline &&
                child->style.display_inside == DisplayInside::Flow &&
                child->algorithm != LayoutBox::Algorithm::Table &&
@@ -1174,6 +1183,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
                grandchild->style.underlined,
                grandchild->style.underlined_double,
                grandchild->style.strikethrough, grandchild->style.blink});
+        } else if (is_br(grandchild.get())) {
+          commit_line(/*hard_break=*/true);
         } else {
           place_opaque_box(grandchild.get());
         }
