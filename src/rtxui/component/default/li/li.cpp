@@ -68,13 +68,6 @@ std::string_view li::Setup() {
 bool li::Digest() {
   auto* root = Root();
   if (root) {
-    std::string chain = std::string(root->tag());
-    Element* curr_dbg = root->Parent();
-    while (curr_dbg) {
-      chain += " -> " + std::string(curr_dbg->tag());
-      curr_dbg = curr_dbg->Parent();
-    }
-
     // 1. Find closest list parent and list depth
     Element* immediate_list = nullptr;
     int list_depth = 0;
