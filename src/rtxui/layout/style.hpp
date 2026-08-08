@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "rtxui/paint/color.hpp"
@@ -315,15 +316,12 @@ struct TransitionConfig {
   bool operator==(const TransitionConfig&) const = default;
 };
 
-// Represents the "Computed CSS values"
-struct ComputedStyle {
-  // Optimization: Wrapping transitions in unique_ptr avoids heap allocation
-  // and destruction overhead (std::vector<TransitionConfig> with std::string
-  // members) for the vast majority of elements which have no transitions.
-  // Each Element has 3 ComputedStyle copies (style, base_style, target_style),
-  // so this eliminates ~40% of CPU time spent in Element::~Element().
-  std::unique_ptr<std::vector<TransitionConfig>> transitions;
-
+// The trivially-copyable part of ComputedStyle, kept in its own base so that
+// copying it compiles down to a single memcpy instead of ~100 individual field
+// assignments. Style copies are one of the hottest operations in a frame: every
+// Element holds three ComputedStyle members (style, base_style, target_style)
+// and Element::TriggerTransitions() copies one of them per element per frame.
+struct ComputedStyleCore {
   PositionType position = PositionType::Static;
   Length top = Length::Auto();
   Length right = Length::Auto();
@@ -411,8 +409,6 @@ struct ComputedStyle {
   int scroll_speed_y = 1;
   ScrollBehavior scroll_behavior = ScrollBehavior::Auto;
 
-  std::vector<Length> grid_template_columns;
-  std::vector<Length> grid_template_rows;
   int grid_column_span = 1;
   int grid_row_span = 1;
 
@@ -420,14 +416,44 @@ struct ComputedStyle {
   Visibility visibility = Visibility::Visible;
   TextOverflow text_overflow = TextOverflow::Clip;
 
+  bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }
+  bool IsInlineLevel() const {
+    return display_outside == DisplayOutside::Inline;
+  }
+};
+
+static_assert(std::is_trivially_copyable_v<ComputedStyleCore>,
+              "ComputedStyleCore must stay trivially copyable: copying it is a "
+              "per-element, per-frame hot path that relies on being a memcpy. "
+              "Add fields needing a non-trivial copy (containers, strings, "
+              "smart pointers) to ComputedStyle instead.");
+
+// Represents the "Computed CSS values"
+struct ComputedStyle : ComputedStyleCore {
+  // Optimization: Wrapping transitions in unique_ptr avoids heap allocation
+  // and destruction overhead (std::vector<TransitionConfig> with std::string
+  // members) for the vast majority of elements which have no transitions.
+  // Each Element has 3 ComputedStyle copies (style, base_style, target_style),
+  // so this eliminates ~40% of CPU time spent in Element::~Element().
+  std::unique_ptr<std::vector<TransitionConfig>> transitions;
+
+  // Grid tracks only exist on grid containers, a small minority of elements.
+  // They live here rather than in ComputedStyleCore so that the core stays
+  // trivially copyable; copying an empty vector costs far less than the field
+  // by field copy their presence in the core would force on every element.
+  std::vector<Length> grid_template_columns;
+  std::vector<Length> grid_template_rows;
+
   ComputedStyle() = default;
 
-  ComputedStyle(const ComputedStyle& other) {
+  ComputedStyle(const ComputedStyle& other)
+      : ComputedStyleCore(other),
+        grid_template_columns(other.grid_template_columns),
+        grid_template_rows(other.grid_template_rows) {
     if (other.transitions) {
       transitions =
           std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
     }
-    CopyPOD(other);
   }
 
   ComputedStyle& operator=(const ComputedStyle& other) {
@@ -444,98 +470,15 @@ struct ComputedStyle {
     } else {
       transitions.reset();
     }
-    CopyPOD(other);
+    grid_template_columns = other.grid_template_columns;
+    grid_template_rows = other.grid_template_rows;
+    ComputedStyleCore::operator=(other);
     return *this;
   }
 
   ComputedStyle(ComputedStyle&&) noexcept = default;
   ComputedStyle& operator=(ComputedStyle&&) noexcept = default;
-
-  bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }
-  bool IsInlineLevel() const {
-    return display_outside == DisplayOutside::Inline;
-  }
-
- private:
-  void CopyPOD(const ComputedStyle& other) {
-    position = other.position;
-    top = other.top;
-    right = other.right;
-    bottom = other.bottom;
-    left = other.left;
-    z_index = other.z_index;
-    display_outside = other.display_outside;
-    display_inside = other.display_inside;
-    display_none = other.display_none;
-    flex_direction = other.flex_direction;
-    flex_wrap = other.flex_wrap;
-    box_sizing = other.box_sizing;
-    width = other.width;
-    height = other.height;
-    min_width = other.min_width;
-    min_height = other.min_height;
-    max_width = other.max_width;
-    max_height = other.max_height;
-    margin_left_auto = other.margin_left_auto;
-    margin_right_auto = other.margin_right_auto;
-    margin_top_auto = other.margin_top_auto;
-    margin_bottom_auto = other.margin_bottom_auto;
-    flex_grow = other.flex_grow;
-    flex_shrink = other.flex_shrink;
-    flex_basis = other.flex_basis;
-    row_gap = other.row_gap;
-    column_gap = other.column_gap;
-    justify_content = other.justify_content;
-    align_items = other.align_items;
-    align_self = other.align_self;
-    justify_items = other.justify_items;
-    justify_self = other.justify_self;
-    align_content = other.align_content;
-    margin = other.margin;
-    padding = other.padding;
-    border = other.border;
-    border_style = other.border_style;
-    border_color_top = other.border_color_top;
-    border_color_right = other.border_color_right;
-    border_color_bottom = other.border_color_bottom;
-    border_color_left = other.border_color_left;
-    background_color = other.background_color;
-    foreground_color = other.foreground_color;
-    opacity = other.opacity;
-    bold = other.bold;
-    dim = other.dim;
-    italic = other.italic;
-    underlined = other.underlined;
-    underlined_double = other.underlined_double;
-    strikethrough = other.strikethrough;
-    blink = other.blink;
-    overflow_x = other.overflow_x;
-    overflow_y = other.overflow_y;
-    scrollbar_width = other.scrollbar_width;
-    has_scrollbar_color_thumb = other.has_scrollbar_color_thumb;
-    has_scrollbar_color_track = other.has_scrollbar_color_track;
-    scrollbar_color_thumb = other.scrollbar_color_thumb;
-    scrollbar_color_track = other.scrollbar_color_track;
-    text_align = other.text_align;
-    white_space = other.white_space;
-    text_transform = other.text_transform;
-    letter_spacing = other.letter_spacing;
-    line_height = other.line_height;
-    overflow_wrap = other.overflow_wrap;
-    word_break = other.word_break;
-    aspect_ratio = other.aspect_ratio;
-    list_style_type = other.list_style_type;
-    scroll_speed_x = other.scroll_speed_x;
-    scroll_speed_y = other.scroll_speed_y;
-    scroll_behavior = other.scroll_behavior;
-    cursor = other.cursor;
-    visibility = other.visibility;
-    text_overflow = other.text_overflow;
-    grid_template_columns = other.grid_template_columns;
-    grid_template_rows = other.grid_template_rows;
-    grid_column_span = other.grid_column_span;
-    grid_row_span = other.grid_row_span;
-  }
 };
+
 }  // namespace rtxui
 #endif  // RTXUI_LAYOUT_STYLE_HPP
