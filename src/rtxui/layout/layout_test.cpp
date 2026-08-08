@@ -3430,4 +3430,43 @@ TEST_CASE("Layout: an explicit width/height on a grid container is honored, "
   }
 }
 
+// Regression test: the ancestor scroll-extent aggregation shared by every
+// layout algorithm here only considered a child if it had its own dom_node.
+// Inline/text content sitting directly inside a block parent is wrapped in
+// a synthetic anonymous inline-flow box (dom_node == nullptr) by
+// layout_tree_builder.cpp - extremely common. That wrapper was silently
+// skipped, so even though the REAL element(s) inside it (e.g. a nested
+// inline-block) now correctly compute their own scroll_width, that true
+// extent never reached a further ancestor: .wrap's own scroll_width used to
+// stay stuck at its inline-block child's plain layout_width (3) instead of
+// picking up its scroll_width (18). AccumulateScrollExtent now recurses
+// into a dom_node==nullptr, non-text fragment's children instead of
+// skipping it.
+TEST_CASE("Layout: scroll_width propagates through an anonymous inline-flow "
+          "wrapper to a further block ancestor",
+          "[layout][scroll][anonymous-wrapper]") {
+  struct T : Component<T> {
+    void InitReflection() override {
+      Import<div>();
+      Component<T>::InitReflection();
+    }
+    std::string_view Setup() override {
+      return R"html(
+        <div class="wrap" style="width: 5; overflow-x: scroll;">
+          <div class="ib" style="display: inline-block; width: 3; overflow-x: scroll; white-space: nowrap;">HelloWorldLongText</div>
+        </div>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  RenderComponent(app, 40, 5);
+  auto* wrap = app->Root()->QuerySelector(".wrap");
+  auto* ib = app->Root()->QuerySelector(".ib");
+  REQUIRE(wrap != nullptr);
+  REQUIRE(ib != nullptr);
+
+  CHECK(ib->scroll_width() >= 18);
+  CHECK(wrap->scroll_width() == ib->scroll_width());
+}
+
 }  // namespace rtxui

@@ -203,6 +203,89 @@ void AdjustOutOfFlowCoordinates(PhysicalFragment* frag,
   }
 }
 
+// Recursively finds how far right/down a fragment subtree extends, in an
+// ancestor's content-area coordinate space (offset_x/offset_y accumulate
+// child_link positions on the way down). Shared by every layout algorithm
+// that supports being a scroll container, to compute scroll_width/height.
+//
+// A fragment with its own dom_node already has correct, independently
+// computed scroll_width()/height() (set by whichever LayoutXxx call
+// produced it) - no need to recurse further. Anonymous wrapper boxes
+// (dom_node == nullptr, not text - e.g. the inline-flow box
+// layout_tree_builder wraps consecutive inline children of a block parent
+// in) have no scroll_width/height of their own to read; without recursing
+// into their children, their entire subtree - including any real,
+// possibly-overflowing element inside - would be invisible to the
+// ancestor's scroll computation.
+void AccumulateScrollExtent(const PhysicalFragment* frag,
+                            int offset_x,
+                            int offset_y,
+                            int* out_right,
+                            int* out_bottom) {
+  if (!frag) {
+    return;
+  }
+  if (frag->is_text) {
+    // Text fragments share their enclosing element's dom_node (not their
+    // own), so reading `dom_node->scroll_width()` here would recursively
+    // read the very value this call is helping compute. They have no
+    // scroll concept of their own: just their own width/height.
+    *out_right = std::max(*out_right, offset_x + frag->width);
+    *out_bottom = std::max(*out_bottom, offset_y + frag->height);
+    return;
+  }
+  if (frag->dom_node) {
+    int extent_w =
+        frag->clips_descendants ? frag->width : frag->dom_node->scroll_width();
+    int extent_h = frag->clips_descendants ? frag->height
+                                           : frag->dom_node->scroll_height();
+    *out_right = std::max(*out_right, offset_x + extent_w);
+    *out_bottom = std::max(*out_bottom, offset_y + extent_h);
+    return;
+  }
+  for (const auto& child_link : frag->children) {
+    AccumulateScrollExtent(child_link.fragment.get(), offset_x + child_link.x,
+                           offset_y + child_link.y, out_right, out_bottom);
+  }
+}
+
+// Records scroll_width/height on `box`'s dom_node, clamps the current
+// scroll offset to the now-valid range, and propagates the (possibly
+// measurement-only) result onto `frag` for painting. Shared by every
+// layout algorithm that supports being a scroll container.
+void ApplyScrollExtent(LayoutBox* box,
+                       PhysicalFragment* frag,
+                       const LayoutContext& context,
+                       int total_scroll_width,
+                       int total_scroll_height) {
+  if (!context.is_measurement) {
+    box->dom_node->set_layout_width(frag->width);
+    box->dom_node->set_layout_height(frag->height);
+
+    box->dom_node->set_scroll_height(total_scroll_height);
+    int max_scroll = std::max(0, total_scroll_height - frag->height);
+    box->dom_node->ClampScrollY(max_scroll);
+    frag->scroll_y = box->dom_node->scroll_y();
+    frag->visual_scroll_y = box->dom_node->visual_scroll_y();
+
+    box->dom_node->set_scroll_width(total_scroll_width);
+    int max_scroll_x = std::max(0, total_scroll_width - frag->width);
+    box->dom_node->ClampScrollX(max_scroll_x);
+    frag->scroll_x = box->dom_node->scroll_x();
+    frag->visual_scroll_x = box->dom_node->visual_scroll_x();
+  } else {
+    int max_scroll = std::max(0, total_scroll_height - frag->height);
+    frag->scroll_y = std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
+    frag->visual_scroll_y = std::clamp(box->dom_node->visual_scroll_y(), 0.f,
+                                       static_cast<float>(max_scroll));
+
+    int max_scroll_x = std::max(0, total_scroll_width - frag->width);
+    frag->scroll_x = std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
+    frag->visual_scroll_x = std::clamp(box->dom_node->visual_scroll_x(), 0.f,
+                                       static_cast<float>(max_scroll_x));
+  }
+}
+
 // --- Dispatcher ---
 std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
                                             LayoutConstraints constraints,
@@ -697,56 +780,22 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     int total_scroll_width = max_child_width + box->style.padding.Horiz() +
                              box->style.border.Horiz();
 
+    int max_child_right = 0;
+    int max_child_bottom = 0;
     for (const auto& child_link : fragment->children) {
-      if (child_link.fragment && child_link.fragment->dom_node) {
-        int child_bottom =
-            child_link.y +
-            (child_link.fragment->clips_descendants
-                 ? child_link.fragment->height
-                 : child_link.fragment->dom_node->scroll_height());
-        int parent_bottom_needed =
-            child_bottom + box->style.padding.bottom + box->style.border.bottom;
-        total_scroll_height =
-            std::max(total_scroll_height, parent_bottom_needed);
-
-        int child_right = child_link.x +
-                          (child_link.fragment->clips_descendants
-                               ? child_link.fragment->width
-                               : child_link.fragment->dom_node->scroll_width());
-        int parent_right_needed =
-            child_right + box->style.padding.right + box->style.border.right;
-        total_scroll_width = std::max(total_scroll_width, parent_right_needed);
-      }
+      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
+                             child_link.y, &max_child_right, &max_child_bottom);
     }
+    total_scroll_width = std::max(
+        total_scroll_width,
+        max_child_right + box->style.padding.right + box->style.border.right);
+    total_scroll_height =
+        std::max(total_scroll_height, max_child_bottom +
+                                          box->style.padding.bottom +
+                                          box->style.border.bottom);
 
-    if (!context.is_measurement) {
-      box->dom_node->set_layout_width(fragment->width);
-      box->dom_node->set_layout_height(fragment->height);
-      box->dom_node->set_scroll_height(total_scroll_height);
-      int max_scroll = std::max(0, total_scroll_height - fragment->height);
-      box->dom_node->ClampScrollY(max_scroll);
-      fragment->scroll_y = box->dom_node->scroll_y();
-      fragment->visual_scroll_y = box->dom_node->visual_scroll_y();
-
-      box->dom_node->set_scroll_width(total_scroll_width);
-      int max_scroll_x = std::max(0, total_scroll_width - fragment->width);
-      box->dom_node->ClampScrollX(max_scroll_x);
-      fragment->scroll_x = box->dom_node->scroll_x();
-      fragment->visual_scroll_x = box->dom_node->visual_scroll_x();
-    } else {
-      int max_scroll = std::max(0, total_scroll_height - fragment->height);
-      fragment->scroll_y = std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
-      fragment->visual_scroll_y =
-          std::clamp(box->dom_node->visual_scroll_y(), 0.f,
-                     static_cast<float>(max_scroll));
-
-      int max_scroll_x = std::max(0, total_scroll_width - fragment->width);
-      fragment->scroll_x =
-          std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
-      fragment->visual_scroll_x =
-          std::clamp(box->dom_node->visual_scroll_x(), 0.f,
-                     static_cast<float>(max_scroll_x));
-    }
+    ApplyScrollExtent(box, fragment.get(), context, total_scroll_width,
+                      total_scroll_height);
   }
 
   return fragment;
@@ -1294,59 +1343,22 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         container_frag->height,
         cursor_y + box->style.padding.bottom + box->style.border.bottom);
 
+    int max_child_right = 0;
+    int max_child_bottom = 0;
     for (const auto& child_link : container_frag->children) {
-      // Text fragments share their enclosing element's dom_node, so their
-      // "scroll_width" would recursively read the value this loop is still
-      // computing; their contribution to the line's width is already
-      // captured by max_line_width above.
-      if (child_link.fragment && child_link.fragment->dom_node &&
-          !child_link.fragment->is_text) {
-        int child_bottom =
-            child_link.y + (child_link.fragment->clips_descendants
-                                ? child_link.fragment->height
-                                : child_link.fragment->dom_node->scroll_height());
-        total_scroll_height = std::max(
-            total_scroll_height,
-            child_bottom + box->style.padding.bottom + box->style.border.bottom);
-
-        int child_right =
-            child_link.x + (child_link.fragment->clips_descendants
-                                ? child_link.fragment->width
-                                : child_link.fragment->dom_node->scroll_width());
-        total_scroll_width = std::max(
-            total_scroll_width,
-            child_right + box->style.padding.right + box->style.border.right);
-      }
+      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
+                             child_link.y, &max_child_right, &max_child_bottom);
     }
+    total_scroll_width = std::max(
+        total_scroll_width,
+        max_child_right + box->style.padding.right + box->style.border.right);
+    total_scroll_height =
+        std::max(total_scroll_height, max_child_bottom +
+                                          box->style.padding.bottom +
+                                          box->style.border.bottom);
 
-    if (!context.is_measurement) {
-      box->dom_node->set_layout_width(container_frag->width);
-      box->dom_node->set_layout_height(container_frag->height);
-
-      box->dom_node->set_scroll_height(total_scroll_height);
-      int max_scroll = std::max(0, total_scroll_height - container_frag->height);
-      box->dom_node->ClampScrollY(max_scroll);
-      container_frag->scroll_y = box->dom_node->scroll_y();
-      container_frag->visual_scroll_y = box->dom_node->visual_scroll_y();
-
-      box->dom_node->set_scroll_width(total_scroll_width);
-      int max_scroll_x = std::max(0, total_scroll_width - container_frag->width);
-      box->dom_node->ClampScrollX(max_scroll_x);
-      container_frag->scroll_x = box->dom_node->scroll_x();
-      container_frag->visual_scroll_x = box->dom_node->visual_scroll_x();
-    } else {
-      int max_scroll = std::max(0, total_scroll_height - container_frag->height);
-      container_frag->scroll_y =
-          std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
-      container_frag->visual_scroll_y = std::clamp(
-          box->dom_node->visual_scroll_y(), 0.f, static_cast<float>(max_scroll));
-
-      int max_scroll_x = std::max(0, total_scroll_width - container_frag->width);
-      container_frag->scroll_x =
-          std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
-      container_frag->visual_scroll_x = std::clamp(
-          box->dom_node->visual_scroll_x(), 0.f, static_cast<float>(max_scroll_x));
-    }
+    ApplyScrollExtent(box, container_frag.get(), context, total_scroll_width,
+                      total_scroll_height);
   }
 
   int final_content_width =
@@ -2231,57 +2243,22 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   }
 
   if (box->dom_node) {
+    int max_child_right = 0;
+    int max_child_bottom = 0;
     for (const auto& child_link : fragment->children) {
-      if (child_link.fragment && child_link.fragment->dom_node) {
-        int child_bottom =
-            child_link.y +
-            (child_link.fragment->clips_descendants
-                 ? child_link.fragment->height
-                 : child_link.fragment->dom_node->scroll_height());
-        int parent_bottom_needed =
-            child_bottom + box->style.padding.bottom + box->style.border.bottom;
-        total_content_height =
-            std::max(total_content_height, parent_bottom_needed);
-
-        int child_right = child_link.x +
-                          (child_link.fragment->clips_descendants
-                               ? child_link.fragment->width
-                               : child_link.fragment->dom_node->scroll_width());
-        int parent_right_needed =
-            child_right + box->style.padding.right + box->style.border.right;
-        total_content_width =
-            std::max(total_content_width, parent_right_needed);
-      }
+      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
+                             child_link.y, &max_child_right, &max_child_bottom);
     }
+    total_content_width = std::max(
+        total_content_width,
+        max_child_right + box->style.padding.right + box->style.border.right);
+    total_content_height =
+        std::max(total_content_height, max_child_bottom +
+                                            box->style.padding.bottom +
+                                            box->style.border.bottom);
 
-    if (!context.is_measurement) {
-      box->dom_node->set_layout_width(fragment->width);
-      box->dom_node->set_layout_height(fragment->height);
-      box->dom_node->set_scroll_height(total_content_height);
-      int max_scroll = std::max(0, total_content_height - fragment->height);
-      box->dom_node->ClampScrollY(max_scroll);
-      fragment->scroll_y = box->dom_node->scroll_y();
-      fragment->visual_scroll_y = box->dom_node->visual_scroll_y();
-
-      box->dom_node->set_scroll_width(total_content_width);
-      int max_scroll_x = std::max(0, total_content_width - fragment->width);
-      box->dom_node->ClampScrollX(max_scroll_x);
-      fragment->scroll_x = box->dom_node->scroll_x();
-      fragment->visual_scroll_x = box->dom_node->visual_scroll_x();
-    } else {
-      int max_scroll = std::max(0, total_content_height - fragment->height);
-      fragment->scroll_y = std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
-      fragment->visual_scroll_y =
-          std::clamp(box->dom_node->visual_scroll_y(), 0.f,
-                     static_cast<float>(max_scroll));
-
-      int max_scroll_x = std::max(0, total_content_width - fragment->width);
-      fragment->scroll_x =
-          std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
-      fragment->visual_scroll_x =
-          std::clamp(box->dom_node->visual_scroll_x(), 0.f,
-                     static_cast<float>(max_scroll_x));
-    }
+    ApplyScrollExtent(box, fragment.get(), context, total_content_width,
+                      total_content_height);
   }
 
   return fragment;
@@ -3325,54 +3302,22 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     int total_scroll_height =
         std::max(container_frag->height, content_h + padding_v + border_v);
 
+    int max_child_right = 0;
+    int max_child_bottom = 0;
     for (const auto& child_link : container_frag->children) {
-      if (child_link.fragment && child_link.fragment->dom_node) {
-        int child_bottom =
-            child_link.y + (child_link.fragment->clips_descendants
-                                ? child_link.fragment->height
-                                : child_link.fragment->dom_node->scroll_height());
-        total_scroll_height = std::max(
-            total_scroll_height,
-            child_bottom + box->style.padding.bottom + box->style.border.bottom);
-
-        int child_right =
-            child_link.x + (child_link.fragment->clips_descendants
-                                ? child_link.fragment->width
-                                : child_link.fragment->dom_node->scroll_width());
-        total_scroll_width = std::max(
-            total_scroll_width,
-            child_right + box->style.padding.right + box->style.border.right);
-      }
+      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
+                             child_link.y, &max_child_right, &max_child_bottom);
     }
+    total_scroll_width = std::max(
+        total_scroll_width,
+        max_child_right + box->style.padding.right + box->style.border.right);
+    total_scroll_height =
+        std::max(total_scroll_height, max_child_bottom +
+                                          box->style.padding.bottom +
+                                          box->style.border.bottom);
 
-    if (!context.is_measurement) {
-      box->dom_node->set_layout_width(container_frag->width);
-      box->dom_node->set_layout_height(container_frag->height);
-
-      box->dom_node->set_scroll_height(total_scroll_height);
-      int max_scroll = std::max(0, total_scroll_height - container_frag->height);
-      box->dom_node->ClampScrollY(max_scroll);
-      container_frag->scroll_y = box->dom_node->scroll_y();
-      container_frag->visual_scroll_y = box->dom_node->visual_scroll_y();
-
-      box->dom_node->set_scroll_width(total_scroll_width);
-      int max_scroll_x = std::max(0, total_scroll_width - container_frag->width);
-      box->dom_node->ClampScrollX(max_scroll_x);
-      container_frag->scroll_x = box->dom_node->scroll_x();
-      container_frag->visual_scroll_x = box->dom_node->visual_scroll_x();
-    } else {
-      int max_scroll = std::max(0, total_scroll_height - container_frag->height);
-      container_frag->scroll_y =
-          std::clamp(box->dom_node->scroll_y(), 0, max_scroll);
-      container_frag->visual_scroll_y = std::clamp(
-          box->dom_node->visual_scroll_y(), 0.f, static_cast<float>(max_scroll));
-
-      int max_scroll_x = std::max(0, total_scroll_width - container_frag->width);
-      container_frag->scroll_x =
-          std::clamp(box->dom_node->scroll_x(), 0, max_scroll_x);
-      container_frag->visual_scroll_x = std::clamp(
-          box->dom_node->visual_scroll_x(), 0.f, static_cast<float>(max_scroll_x));
-    }
+    ApplyScrollExtent(box, container_frag.get(), context, total_scroll_width,
+                      total_scroll_height);
   }
 
   return container_frag;
