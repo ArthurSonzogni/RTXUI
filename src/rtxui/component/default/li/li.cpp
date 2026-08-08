@@ -13,33 +13,47 @@
 namespace rtxui {
 
 namespace {
-// The HTML start="" attribute on <ol>: the number the first item counts
-// from (default 1). Negative values are valid per spec.
-int GetListStart(Element* list) {
-  if (!list || list->tag() != "ol") {
-    return 1;
+// Parses a trimmed integer HTML attribute, returning `fallback` if the
+// attribute is absent or not a valid integer.
+int ParseIntAttribute(Element* el, const char* name, int fallback) {
+  if (!el) {
+    return fallback;
   }
-  auto* start_attr = list->GetAttribute("start");
-  if (!start_attr) {
-    return 1;
+  auto* attr = el->GetAttribute(name);
+  if (!attr) {
+    return fallback;
   }
-  std::string_view s = *start_attr;
+  std::string_view s = *attr;
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
     s.remove_prefix(1);
   }
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
     s.remove_suffix(1);
   }
-  int value = 1;
+  int value = fallback;
   auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
   if (ec != std::errc() || ptr != s.data() + s.size()) {
-    return 1;
+    return fallback;
   }
   return value;
 }
 
-int GetListItemIndex(Element* li_root, Element* immediate_list) {
-  int index = 0;
+// The HTML start="" attribute on <ol>: the number the first item counts
+// from (default 1). Negative values are valid per spec.
+int GetListStart(Element* list) {
+  if (!list || list->tag() != "ol") {
+    return 1;
+  }
+  return ParseIntAttribute(list, "start", 1);
+}
+
+// Resolves li_root's ordinal number within immediate_list, honoring each
+// preceding sibling <li>'s own HTML value="" override (which also shifts
+// the count for every item after it, per spec) and immediate_list's
+// start.
+int GetListItemNumber(Element* li_root, Element* immediate_list, int start) {
+  int current = start - 1;
+  int result = start;
   bool found = false;
 
   std::function<void(Element*)> traverse = [&](Element* el) {
@@ -57,8 +71,9 @@ int GetListItemIndex(Element* li_root, Element* immediate_list) {
         curr = curr->Parent();
       }
       if (closest_list == immediate_list) {
-        index++;
+        current = ParseIntAttribute(el, "value", current + 1);
         if (el == li_root) {
+          result = current;
           found = true;
           return;
         }
@@ -72,7 +87,7 @@ int GetListItemIndex(Element* li_root, Element* immediate_list) {
   };
 
   traverse(immediate_list);
-  return index;
+  return result;
 }
 }  // namespace
 
@@ -126,13 +141,12 @@ bool li::Digest() {
     if (type == ListStyleType::None) {
       new_marker = "";
     } else if (type == ListStyleType::Decimal) {
-      int index = 1;
-      int start = 1;
+      int number = 1;
       if (immediate_list) {
-        index = GetListItemIndex(root, immediate_list);
-        start = GetListStart(immediate_list);
+        number = GetListItemNumber(root, immediate_list,
+                                   GetListStart(immediate_list));
       }
-      new_marker = std::to_string(index - 1 + start) + ". ";
+      new_marker = std::to_string(number) + ". ";
     } else {
       // Unordered list types (Disc, Circle, Square)
       bool has_explicit_type = root->style.list_style_type.has_value() ||

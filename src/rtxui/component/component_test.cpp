@@ -4404,6 +4404,11 @@ class ListTestComponent : public rtxui::Component<ListTestComponent> {
           <li>fifth</li>
           <li>sixth</li>
         </ol>
+        <ol id="ol_value">
+          <li>first</li>
+          <li value="10">tenth</li>
+          <li>eleventh</li>
+        </ol>
         <ul id="ul_custom_square">
           <li>square item</li>
         </ul>
@@ -4462,6 +4467,15 @@ TEST_CASE("List Rendering - ul, ol, li, and CSS", "[component][list]") {
   CHECK(RemoveWhitespace(print_start) ==
         "<olid=\"ol_start\"start=\"5\"><li><span>5.</span>fifth</li><li><span>"
         "6.</span>sixth</li></ol>");
+
+  // 3c. A <li value=""> override also shifts every later item's number
+  // ("1. ", "10. ", "11. ")
+  auto* ol_value = root->QuerySelector("#ol_value");
+  REQUIRE(ol_value != nullptr);
+  auto print_value = ol_value->Print();
+  CHECK(RemoveWhitespace(print_value) ==
+        "<olid=\"ol_value\"><li><span>1.</span>first</li><livalue=\"10\">"
+        "<span>10.</span>tenth</li><li><span>11.</span>eleventh</li></ol>");
 
   // 4. Custom list-style-type: square ("■ ")
   auto* ul_custom_square = root->QuerySelector("#ul_custom_square");

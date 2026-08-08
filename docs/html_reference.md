@@ -98,6 +98,7 @@ Ordered lists render sequential numbers (`1. `, `2. `, etc.) prefixing each list
 
 ### List Items (`<li>`)
 List items render the marker (bullet or number) and flow their slot content.
+Inside an `<ol>`, a `value` attribute (e.g. `<li value="10">`) overrides that item's own number; every later, unlabelled item continues counting up from it.
 The prefix marker is styled using the `list-style-type` (or shorthand `list-style`) CSS property, which can be configured inside `<style>` blocks to affect list item descendants.
 
 Example:
