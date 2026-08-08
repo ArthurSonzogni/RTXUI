@@ -37,6 +37,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<select>` | Interactive | `display: inline flex; flex-direction: column;` | `value`, `onchange`, `disabled` | Dropdown picker list menu. |
 | `<option>` | Interactive | `display: block;` | `value`, `disabled` | Pickable choice element inside `<select>`. |
 | `<hr>` | Display | `display: block; margin-top: 1; margin-bottom: 1; overflow: hidden; white-space: nowrap;` | None | Horizontal rule/divider line. |
+| `<br />` | Display | `display: inline;` | None | Forces a line break inside inline flow content. |
 | `<table>` | Container | `display: block;` | None | Table container element. Organizes child row elements in a grid. |
 | `<tr>` | Container | `display: block;` | None | Table row element. Groups cell elements. |
 | `<td>` | Container | `display: block;` | None | Table data cell element. Fits slot content. |
@@ -145,7 +146,24 @@ The `<hr>` element renders a horizontal divider line spanning the full width of 
 
 ---
 
-## 6. Tables
+## 6. Line Break (`<br />`)
+
+The `<br />` element forces a line break inside inline flow content, the same
+way it splits a line of text mid-paragraph in HTML. It is not a registered
+component with a `view` template — it carries no content and no CSS-driven
+box of its own; it is handled directly by the inline layout algorithm and
+always breaks the line regardless of its `display` value.
+
+```xml
+<p>First line<br />Second line</p>
+```
+
+Write it self-closed (`<br />`); the XML parser requires a closing tag or a
+self-closing slash for every element.
+
+---
+
+## 7. Tables
 
 RTXUI supports structured table layouts through `<table>`, `<tr>`, `<td>`, and `<th>` elements.
 
@@ -206,7 +224,7 @@ Below is the interactive live demo showcasing table borders, alternating row bac
 
 ---
 
-## 7. Collapsible Details (`<details>`)
+## 8. Collapsible Details (`<details>`)
 
 The `<details>` element represents a disclosure widget in which information is visible only when the widget is toggled into an "open" state. A `<summary>` element is used to provide the visible label or header for the widget.
 
@@ -240,7 +258,7 @@ Example:
 
 ---
 
-## 8. Grouping & Layout (`<fieldset>`, `<legend>`)
+## 9. Grouping & Layout (`<fieldset>`, `<legend>`)
 
 The `<fieldset>` element is used to group several controls and labels within a web form. The `<legend>` element defines a caption for the `<fieldset>` and is nested inside its top border.
 
@@ -260,7 +278,7 @@ Example:
 
 ---
 
-## 9. Radio Buttons (`<radio>`)
+## 10. Radio Buttons (`<radio>`)
 
 The `<radio>` element represents a radio button, allowing a single selection among multiple options sharing the same `name` attribute value.
 
@@ -276,7 +294,7 @@ Example:
 
 ---
 
-## 10. Tabbed Interfaces (`<tabs>`, `<tab-pane>`)
+## 11. Tabbed Interfaces (`<tabs>`, `<tab-pane>`)
 
 The `<tabs>` and `<tab-pane>` elements build tabbed panels that allow switching between different views.
 
@@ -300,7 +318,7 @@ Example:
 
 ---
 
-## 11. Overlays & Dialogs (`<dialog>`)
+## 12. Overlays & Dialogs (`<dialog>`)
 
 The `<dialog>` element represents a dialog box or other interactive component, such as a dismissible alert or subwindow overlay. When `open="true"`, it renders centered on top of all other elements using a translucent dark backdrop.
 
@@ -320,7 +338,7 @@ Example:
 
 ---
 
-## 12. Click & Focus Association (`<label>`)
+## 13. Click & Focus Association (`<label>`)
 
 The `<label>` element represents a caption for an item in a user interface. Clicking on a `<label>` delegates the click event and transfers input focus to its associated element (such as a `<checkbox>`, `<radio>`, `<input>`, or `<button>`).
 
@@ -358,7 +376,7 @@ Below is the interactive live demo showcasing label interactions via explicit `f
 
 ---
 
-## 13. Context Tooltips (`<tooltip>`)
+## 14. Context Tooltips (`<tooltip>`)
 
 The `<tooltip>` element represents a popup helper widget. When a user hovers their mouse cursor over any element inside the `<tooltip>`, it triggers a floating overlay displaying the specified content.
 

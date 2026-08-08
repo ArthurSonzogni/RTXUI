@@ -1225,6 +1225,32 @@ TEST_CASE("Layout: Table Grid Rendering", "[layout][table]") {
   CHECK(layout_text.find("val2") != std::string::npos);
 }
 
+TEST_CASE("Layout: <br> forces a line break in inline flow", "[layout][br]") {
+  struct BrTest : Component<BrTest> {
+    std::string_view Setup() override {
+      return R"html(
+        <div>one<br />two<br />three</div>
+      )html";
+    }
+  };
+
+  auto app = Ref<BrTest>::New();
+  auto texture = RenderComponent(app, 10, 3);
+
+  auto* div = app->Root()->QuerySelector("div");
+  REQUIRE(div != nullptr);
+  CHECK(div->layout_height() == 3);
+
+  std::string layout_text = GetTextLayer(texture);
+  CHECK(layout_text.find("one") != std::string::npos);
+  CHECK(layout_text.find("two") != std::string::npos);
+  CHECK(layout_text.find("three") != std::string::npos);
+
+  // Each segment must land on its own row, not run together as "onetwothree".
+  CHECK(layout_text.find("onetwo") == std::string::npos);
+  CHECK(layout_text.find("twothree") == std::string::npos);
+}
+
 // Regression test: position:fixed elements must not be wrapped in anonymous
 // inline boxes during layout tree building. Previously, if a fixed element
 // appeared adjacent to an inline sibling, both were wrapped in an anonymous
