@@ -22,6 +22,7 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 <CssProperty name="max-width" values="<length>" description="Maximum layout width constraint." />
 <CssProperty name="min-height" values="<length>" description="Minimum layout height constraint." />
 <CssProperty name="max-height" values="<length>" description="Maximum layout height constraint." />
+<CssProperty name="box-sizing" values="content-box | border-box" description="Whether width/height (and their min/max variants) describe the content box or the border box. Default is border-box, unlike web CSS." />
 
 ---
 

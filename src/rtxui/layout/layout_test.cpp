@@ -1251,6 +1251,103 @@ TEST_CASE("Layout: <br> forces a line break in inline flow", "[layout][br]") {
   CHECK(layout_text.find("twothree") == std::string::npos);
 }
 
+TEST_CASE("Layout: box-sizing", "[layout][box-sizing]") {
+  SECTION("default (border-box): width already includes padding+border") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <div class="box">X</div>
+          <style>
+            .box { width: 10; padding-left: 3; border: solid; }
+          </style>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 20, 5);
+    auto* box = app->Root()->QuerySelector(".box");
+    REQUIRE(box != nullptr);
+    CHECK(box->layout_width() == 10);
+  }
+
+  SECTION("content-box: width excludes padding+border, so the box grows") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <div class="box">X</div>
+          <style>
+            .box {
+              box-sizing: content-box;
+              width: 10;
+              padding-left: 3;
+              border: solid;
+            }
+          </style>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 20, 5);
+    auto* box = app->Root()->QuerySelector(".box");
+    REQUIRE(box != nullptr);
+    // 10 content + 3 padding-left + 1 border-left + 1 border-right.
+    CHECK(box->layout_width() == 15);
+  }
+
+  SECTION("content-box: min-width also adds padding+border back") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <div style="width: 3;">
+            <div class="box">X</div>
+          </div>
+          <style>
+            .box {
+              box-sizing: content-box;
+              min-width: 10;
+              padding-left: 2;
+              border: solid;
+            }
+          </style>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 20, 5);
+    auto* box = app->Root()->QuerySelector(".box");
+    REQUIRE(box != nullptr);
+    // 10 content (min-width floor, wider than the 3-cell parent) + 2
+    // padding-left + 1 + 1 border.
+    CHECK(box->layout_width() == 14);
+  }
+
+  SECTION("content-box: flex-basis is a content size too") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <div style="display: flex;">
+            <div class="item">X</div>
+          </div>
+          <style>
+            .item {
+              box-sizing: content-box;
+              flex-basis: 5;
+              padding-left: 2;
+              border: solid;
+            }
+          </style>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 20, 5);
+    auto* item = app->Root()->QuerySelector(".item");
+    REQUIRE(item != nullptr);
+    // 5 content + 2 padding-left + 1 + 1 border.
+    CHECK(item->layout_width() == 9);
+  }
+}
+
 // Regression test: position:fixed elements must not be wrapped in anonymous
 // inline boxes during layout tree building. Previously, if a fixed element
 // appeared adjacent to an inline sibling, both were wrapped in an anonymous

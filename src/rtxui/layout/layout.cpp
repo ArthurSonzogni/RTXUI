@@ -129,6 +129,32 @@ int ResolveSize(const Length& length, int parent_size) {
   return -1;  // Represents 'Auto'
 }
 
+// Resolves a width/min-width/max-width/flex-basis Length against `style`'s
+// own box, against the border-box (outer) size the rest of layout expects
+// `width` to mean. box-sizing:content-box interprets the length as the
+// content size instead, so border+padding (already resolved to fixed cell
+// counts) are added back to recover the outer size.
+int ResolveBoxWidth(const ComputedStyle& style,
+                    const Length& length,
+                    int parent_size) {
+  int resolved = ResolveSize(length, parent_size);
+  if (resolved != -1 && style.box_sizing == BoxSizing::ContentBox) {
+    resolved += style.border.Horiz() + style.padding.Horiz();
+  }
+  return resolved;
+}
+
+// Same as ResolveBoxWidth, for height/min-height/max-height.
+int ResolveBoxHeight(const ComputedStyle& style,
+                     const Length& length,
+                     int parent_size) {
+  int resolved = ResolveSize(length, parent_size);
+  if (resolved != -1 && style.box_sizing == BoxSizing::ContentBox) {
+    resolved += style.border.Vert() + style.padding.Vert();
+  }
+  return resolved;
+}
+
 void AdjustOutOfFlowCoordinates(PhysicalFragment* frag,
                                 int shift_x,
                                 int shift_y,
@@ -271,8 +297,8 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
       }
 
       LayoutConstraints child_c;
-      int child_w = ResolveSize(child_box->style.width, container_w);
-      int child_h = ResolveSize(child_box->style.height, container_h);
+      int child_w = ResolveBoxWidth(child_box->style, child_box->style.width, container_w);
+      int child_h = ResolveBoxHeight(child_box->style, child_box->style.height, container_h);
 
       int max_avail_w = container_w;
       if (child_w == -1 && (child_box->style.left.unit == Unit::Auto || child_box->style.right.unit == Unit::Auto)) {
@@ -395,8 +421,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   // down, which runs once `width` is already settled).
   int early_resolved_height = (constraints.height.mode == MeasureMode::Exactly)
                                    ? constraints.height.value
-                                   : ResolveSize(box->style.height,
-                                                 constraints.height.value);
+                                   : ResolveBoxHeight(box->style, box->style.height,
+                                                      constraints.height.value);
 
   int width = 0;
   bool is_auto_width = false;
@@ -404,7 +430,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   if (constraints.width.mode == MeasureMode::Exactly) {
     width = avail_width;
   } else {
-    int resolved = ResolveSize(box->style.width, avail_width);
+    int resolved = ResolveBoxWidth(box->style, box->style.width, avail_width);
     if (resolved != -1) {
       width = resolved;
     } else if (early_resolved_height != -1 && box->style.aspect_ratio > 0) {
@@ -419,7 +445,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   }
 
   // Apply max-width constraint
-  int max_width_resolved = ResolveSize(box->style.max_width, avail_width);
+  int max_width_resolved = ResolveBoxWidth(box->style, box->style.max_width, avail_width);
   if (max_width_resolved != -1 && width > max_width_resolved) {
     width = max_width_resolved;
     is_auto_width = false;
@@ -476,7 +502,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   if (constraints.height.mode == MeasureMode::Exactly) {
     parent_resolved_height = constraints.height.value;
   } else {
-    int resolved = ResolveSize(box->style.height, constraints.height.value);
+    int resolved =
+        ResolveBoxHeight(box->style, box->style.height, constraints.height.value);
     if (resolved == -1 && box->style.aspect_ratio > 0) {
       resolved = static_cast<int>(width / box->style.aspect_ratio + 0.5f);
     }
@@ -610,7 +637,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
   // Cap width by max-width if needed
   {
-    int max_w = ResolveSize(box->style.max_width, avail_width);
+    int max_w = ResolveBoxWidth(box->style, box->style.max_width, avail_width);
     if (max_w != -1 && fragment->width > max_w) {
       fragment->width = max_w;
     }
@@ -618,7 +645,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
   // Apply min-width constraint
   {
-    int min_w = ResolveSize(box->style.min_width, avail_width);
+    int min_w = ResolveBoxWidth(box->style, box->style.min_width, avail_width);
     if (min_w != -1 && fragment->width < min_w) {
       fragment->width = min_w;
     }
@@ -627,7 +654,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   if (constraints.height.mode == MeasureMode::Exactly) {
     fragment->height = constraints.height.value;
   } else {
-    int resolved_h = ResolveSize(box->style.height, constraints.height.value);
+    int resolved_h =
+        ResolveBoxHeight(box->style, box->style.height, constraints.height.value);
     if (resolved_h == -1 && box->style.aspect_ratio > 0) {
       // aspect-ratio derives the auto height from the used width. Content
       // taller than the ratio height overflows (pair with overflow if
@@ -640,7 +668,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
   // Cap height by max-height if needed
   {
-    int max_h = ResolveSize(box->style.max_height, constraints.height.value);
+    int max_h =
+        ResolveBoxHeight(box->style, box->style.max_height, constraints.height.value);
     if (max_h != -1 && fragment->height > max_h) {
       fragment->height = max_h;
     }
@@ -648,7 +677,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
   // Apply min-height constraint
   {
-    int min_h = ResolveSize(box->style.min_height, constraints.height.value);
+    int min_h =
+        ResolveBoxHeight(box->style, box->style.min_height, constraints.height.value);
     if (min_h != -1 && fragment->height < min_h) {
       fragment->height = min_h;
     }
@@ -746,7 +776,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   int width = (constraints.width.mode == MeasureMode::Exactly)
                   ? avail_width
-                  : ResolveSize(box->style.width, avail_width);
+                  : ResolveBoxWidth(box->style, box->style.width, avail_width);
   bool is_fixed_width =
       (width != -1) || (box->is_anonymous && avail_width < 10000);
   if (width == -1) {
@@ -1198,7 +1228,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
   } else {
-    int resolved_h = ResolveSize(box->style.height, constraints.height.value);
+    int resolved_h =
+        ResolveBoxHeight(box->style, box->style.height, constraints.height.value);
     if (resolved_h != -1) {
       container_frag->height = resolved_h;
     } else {
@@ -1213,7 +1244,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   // Cap width by max-width if needed
   {
-    int max_w = ResolveSize(box->style.max_width, avail_width);
+    int max_w = ResolveBoxWidth(box->style, box->style.max_width, avail_width);
     if (max_w != -1 && container_frag->width > max_w) {
       container_frag->width = max_w;
     }
@@ -1221,7 +1252,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   // Apply min-height constraint
   {
-    int min_h = ResolveSize(box->style.min_height, constraints.height.value);
+    int min_h =
+        ResolveBoxHeight(box->style, box->style.min_height, constraints.height.value);
     if (min_h != -1 && container_frag->height < min_h) {
       container_frag->height = min_h;
     }
@@ -1229,7 +1261,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   // Cap height by max-height if needed
   {
-    int max_h = ResolveSize(box->style.max_height, constraints.height.value);
+    int max_h =
+        ResolveBoxHeight(box->style, box->style.max_height, constraints.height.value);
     if (max_h != -1 && container_frag->height > max_h) {
       container_frag->height = max_h;
     }
@@ -1368,10 +1401,10 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   int my_width = (constraints.width.mode == MeasureMode::Exactly)
                      ? parent_w
-                     : ResolveSize(box->style.width, parent_w);
+                     : ResolveBoxWidth(box->style, box->style.width, parent_w);
   int my_height = (constraints.height.mode == MeasureMode::Exactly)
                       ? parent_h
-                      : ResolveSize(box->style.height, parent_h);
+                      : ResolveBoxHeight(box->style, box->style.height, parent_h);
 
   // aspect-ratio derives the flex container's auto dimension from whichever
   // of width/height is already resolved; min/max constraints below still
@@ -1384,25 +1417,25 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   }
 
   // Apply max-width constraint
-  int max_width_resolved = ResolveSize(box->style.max_width, parent_w);
+  int max_width_resolved = ResolveBoxWidth(box->style, box->style.max_width, parent_w);
   if (max_width_resolved != -1 && my_width > max_width_resolved) {
     my_width = max_width_resolved;
   }
 
   // Apply min-width constraint
-  int min_width_resolved = ResolveSize(box->style.min_width, parent_w);
+  int min_width_resolved = ResolveBoxWidth(box->style, box->style.min_width, parent_w);
   if (min_width_resolved != -1 && my_width < min_width_resolved) {
     my_width = min_width_resolved;
   }
 
   // Apply max-height constraint
-  int max_height_resolved = ResolveSize(box->style.max_height, parent_h);
+  int max_height_resolved = ResolveBoxHeight(box->style, box->style.max_height, parent_h);
   if (max_height_resolved != -1 && my_height > max_height_resolved) {
     my_height = max_height_resolved;
   }
 
   // Apply min-height constraint
-  int min_height_resolved = ResolveSize(box->style.min_height, parent_h);
+  int min_height_resolved = ResolveBoxHeight(box->style, box->style.min_height, parent_h);
   if (min_height_resolved != -1 && my_height < min_height_resolved) {
     my_height = min_height_resolved;
   }
@@ -1463,11 +1496,12 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     }
     int basis = -1;
     if (child->style.flex_basis.unit != Unit::Auto) {
-      basis =
-          ResolveSize(child->style.flex_basis, is_row ? content_w : content_h);
+      basis = is_row
+                  ? ResolveBoxWidth(child->style, child->style.flex_basis, content_w)
+                  : ResolveBoxHeight(child->style, child->style.flex_basis, content_h);
     } else {
-      basis = is_row ? ResolveSize(child->style.width, content_w)
-                     : ResolveSize(child->style.height, content_h);
+      basis = is_row ? ResolveBoxWidth(child->style, child->style.width, content_w)
+                     : ResolveBoxHeight(child->style, child->style.height, content_h);
     }
 
     // CSS "transferred size": a row item with an auto flex-basis (width) and
@@ -1755,19 +1789,19 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   // Apply min/max constraints to the container size
   {
-    int max_w = ResolveSize(box->style.max_width, parent_w);
+    int max_w = ResolveBoxWidth(box->style, box->style.max_width, parent_w);
     if (max_w != -1 && resolved_width > max_w) {
       resolved_width = max_w;
     }
-    int min_w = ResolveSize(box->style.min_width, parent_w);
+    int min_w = ResolveBoxWidth(box->style, box->style.min_width, parent_w);
     if (min_w != -1 && resolved_width < min_w) {
       resolved_width = min_w;
     }
-    int max_h = ResolveSize(box->style.max_height, parent_h);
+    int max_h = ResolveBoxHeight(box->style, box->style.max_height, parent_h);
     if (max_h != -1 && resolved_height > max_h) {
       resolved_height = max_h;
     }
-    int min_h = ResolveSize(box->style.min_height, parent_h);
+    int min_h = ResolveBoxHeight(box->style, box->style.min_height, parent_h);
     if (min_h != -1 && resolved_height < min_h) {
       resolved_height = min_h;
     }
@@ -2192,7 +2226,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     width = avail_width;
     is_fixed_width = true;
   } else {
-    int resolved = ResolveSize(box->style.width, avail_width);
+    int resolved = ResolveBoxWidth(box->style, box->style.width, avail_width);
     if (resolved != -1) {
       width = resolved;
       is_fixed_width = true;
@@ -2205,7 +2239,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   }
 
   // Apply max-width constraint
-  int max_width_resolved = ResolveSize(box->style.max_width, avail_width);
+  int max_width_resolved = ResolveBoxWidth(box->style, box->style.max_width, avail_width);
   if (max_width_resolved != -1 && width > max_width_resolved) {
     width = max_width_resolved;
     is_auto_width = false;
@@ -2366,7 +2400,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     for (size_t col = 0; col < num_cols; ++col) {
       if (grid[row][col].is_top_left && grid[row][col].box) {
         auto* cell = grid[row][col].box;
-        int cell_w = ResolveSize(cell->style.width, content_width_limit);
+        int cell_w = ResolveBoxWidth(cell->style, cell->style.width, content_width_limit);
         int measured_width = 0;
         if (cell_w != -1) {
           measured_width = cell_w;
@@ -2617,12 +2651,12 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   // run before avail_width, since column-track sizing needs it.
   int early_resolved_height = (constraints.height.mode == MeasureMode::Exactly)
                                    ? constraints.height.value
-                                   : ResolveSize(box->style.height,
-                                                 constraints.height.value);
+                                   : ResolveBoxHeight(box->style, box->style.height,
+                                                      constraints.height.value);
 
   int parent_width = constraints.width.value;
   if (constraints.width.mode != MeasureMode::Exactly) {
-    int resolved = ResolveSize(box->style.width, constraints.width.value);
+    int resolved = ResolveBoxWidth(box->style, box->style.width, constraints.width.value);
     if (resolved != -1) {
       parent_width = resolved;
     } else if (early_resolved_height != -1 && box->style.aspect_ratio > 0) {
@@ -2636,7 +2670,8 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   if (constraints.height.mode != MeasureMode::Undefined) {
     parent_height = constraints.height.value;
   } else {
-    int resolved = ResolveSize(box->style.height, constraints.height.value);
+    int resolved =
+        ResolveBoxHeight(box->style, box->style.height, constraints.height.value);
     if (resolved != -1) {
       parent_height = resolved;
     }
@@ -3041,7 +3076,8 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
   } else if (box->style.aspect_ratio > 0 &&
-             ResolveSize(box->style.height, constraints.height.value) == -1) {
+             ResolveBoxHeight(box->style, box->style.height,
+                              constraints.height.value) == -1) {
     // aspect-ratio derives the grid container's auto height from its used
     // width; rows taller than the ratio height overflow.
     container_frag->height = static_cast<int>(

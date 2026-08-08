@@ -40,6 +40,30 @@ Both forms combine in `calc()` and are bounded by `min()`, `max()`, and
 `min-width`/`max-width` and `min-height`/`max-height` constrain the resolved
 size.
 
+## box-sizing
+
+`width` and `height` describe the border box (border + padding + content) by
+default — unlike web CSS, whose initial value is `content-box`. A box styled
+`width: 10; padding-left: 2; border: solid;` is exactly 10 cells wide; the
+content area shrinks to fit inside the padding and border.
+
+```css
+.card { width: 10; padding: 1; border: solid; } /* 10 cells wide total */
+```
+
+Set `box-sizing: content-box` to make `width`/`height` (and their `min-`/`max-`
+variants, and `flex-basis`) describe the content area instead, with padding
+and border added on top — the familiar web-CSS behavior:
+
+```css
+.card {
+  box-sizing: content-box;
+  width: 10;    /* 10 cells of content ... */
+  padding: 1;   /* ... plus 1 cell of padding each side ... */
+  border: solid; /* ... plus a 1-cell border each side: 14 cells total. */
+}
+```
+
 ## Aspect Ratio
 
 `aspect-ratio: <width> / <height>` derives a block element's automatic
