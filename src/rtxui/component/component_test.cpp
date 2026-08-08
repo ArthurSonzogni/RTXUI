@@ -4409,6 +4409,11 @@ class ListTestComponent : public rtxui::Component<ListTestComponent> {
           <li value="10">tenth</li>
           <li>eleventh</li>
         </ol>
+        <ol id="ol_reversed" reversed="">
+          <li>third</li>
+          <li>second</li>
+          <li>first</li>
+        </ol>
         <ul id="ul_custom_square">
           <li>square item</li>
         </ul>
@@ -4476,6 +4481,15 @@ TEST_CASE("List Rendering - ul, ol, li, and CSS", "[component][list]") {
   CHECK(RemoveWhitespace(print_value) ==
         "<olid=\"ol_value\"><li><span>1.</span>first</li><livalue=\"10\">"
         "<span>10.</span>tenth</li><li><span>11.</span>eleventh</li></ol>");
+
+  // 3d. The HTML boolean reversed="" attribute counts down from the item
+  // count (3 items -> "3. ", "2. ", "1. ")
+  auto* ol_reversed = root->QuerySelector("#ol_reversed");
+  REQUIRE(ol_reversed != nullptr);
+  auto print_reversed = ol_reversed->Print();
+  CHECK(RemoveWhitespace(print_reversed) ==
+        "<olid=\"ol_reversed\"reversed=\"\"><li><span>3.</span>third</li><li>"
+        "<span>2.</span>second</li><li><span>1.</span>first</li></ol>");
 
   // 4. Custom list-style-type: square ("■ ")
   auto* ul_custom_square = root->QuerySelector("#ul_custom_square");

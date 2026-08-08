@@ -94,7 +94,7 @@ If no custom style is specified, the marker style alternates automatically based
 * Nesting Level 3+: Square (`■ `)
 
 ### Ordered Lists (`<ol>`)
-Ordered lists render sequential numbers (`1. `, `2. `, etc.) prefixing each list item. They have a default left padding of `3` to accommodate double-digit list numbering. The `start` attribute (e.g. `<ol start="5">`) changes the number the first item counts from; negative values are allowed.
+Ordered lists render sequential numbers (`1. `, `2. `, etc.) prefixing each list item. They have a default left padding of `3` to accommodate double-digit list numbering. The `start` attribute (e.g. `<ol start="5">`) changes the number the first item counts from (negative values are allowed); the boolean `reversed` attribute counts down instead of up, starting from the item count unless `start` overrides it too.
 
 ### List Items (`<li>`)
 List items render the marker (bullet or number) and flow their slot content.
