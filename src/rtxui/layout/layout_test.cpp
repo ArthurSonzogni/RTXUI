@@ -3352,4 +3352,32 @@ TEST_CASE("Layout: an inline-block reports scroll_width for overflowing "
   CHECK(ib->scroll_width() >= 18);
 }
 
+// Regression test: LayoutGrid (like LayoutTable and LayoutInlineFlow above)
+// never called set_scroll_width/set_scroll_height, unlike LayoutBlockFlow
+// and LayoutFlex. A grid with explicit column tracks wider than its
+// max-width had no way to expose the true content extent.
+TEST_CASE("Layout: a grid container reports scroll_width when its tracks "
+          "overflow max-width",
+          "[layout][grid][scroll]") {
+  struct T : Component<T> {
+    std::string_view Setup() override {
+      return R"html(
+        <div class="grid" style="display: grid; grid-template-columns: 5 5 5 5; max-width: 5;">
+          <div>a</div><div>b</div><div>c</div><div>d</div>
+        </div>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  RenderComponent(app, 40, 5);
+  auto* grid = app->Root()->QuerySelector(".grid");
+  REQUIRE(grid != nullptr);
+
+  // max-width clamps the box's own reported size...
+  CHECK(grid->layout_width() == 5);
+  // ...but the 4 explicit 5-cell columns (20 total) must still be reachable
+  // via scroll_width.
+  CHECK(grid->scroll_width() == 20);
+}
+
 }  // namespace rtxui
