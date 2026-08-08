@@ -7202,7 +7202,113 @@ TEST_CASE("CSS Sibling Combinators and Structural Pseudo-classes", "[component][
   CHECK(child4->style.margin.left == 10);
 }
 
+class DisabledInteractiveTestComponent
+    : public rtxui::Component<DisabledInteractiveTestComponent> {
+ public:
+  bool cb_checked = false;
+  bool radio_checked = false;
+  std::string select_value = "a";
+  int slider_val = 50;
+  bool button_clicked = false;
 
+  void InitReflection() override {
+    Bind(cb_checked);
+    Bind(radio_checked);
+    Bind(select_value);
+    Bind(slider_val);
+    Import<rtxui::checkbox>();
+    Import<rtxui::radio>();
+    Import<rtxui::select>();
+    Import<rtxui::option>();
+    Import<rtxui::slider>();
+    Import<rtxui::button>();
+    Import("OnButtonClick", [this]() { button_clicked = true; });
+    rtxui::Component<DisabledInteractiveTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <checkbox id="cb" checked="{cb_checked}" disabled="true">Check</checkbox>
+    <radio id="rd" checked="{radio_checked}" disabled="true">Radio</radio>
+    <select id="sel" value="{select_value}" disabled="true">
+      <option value="a">A</option>
+      <option value="b">B</option>
+    </select>
+    <slider id="sl" value="{slider_val}" min="0" max="100" width="11" disabled="true" />
+    <button id="btn" onclick="OnButtonClick" disabled="true">Go</button>
+  )";
+};
+
+TEST_CASE("disabled=\"\" blocks interaction on checkbox/radio/select/slider/"
+          "button",
+          "[component][disabled][regression]") {
+  // Regression: disabled was only ever wired up for input/textarea (via
+  // TextInputBase); checkbox, radio, select, slider, and button silently
+  // ignored the attribute and stayed fully interactive. Each now syncs
+  // disabled onto its root Element (for :disabled CSS and Screen's
+  // tab-navigation/click gating, both keyed off Element::disabled()) and
+  // no-ops its own OnEvent (button has none of its own - Screen's click
+  // path already gates on Element::disabled() centrally).
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<DisabledInteractiveTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* root = container->Root();
+
+  auto* cb_el = root->QuerySelector("#cb");
+  auto* cb_ptr = dynamic_cast<rtxui::checkbox*>(
+      const_cast<rtxui::ComponentBase*>(cb_el->component()));
+  REQUIRE(cb_ptr != nullptr);
+  cb_el->set_focused(true);
+  cb_ptr->OnEvent(Event::Keyboard::From(' '));
+  CHECK_FALSE(cb_ptr->checked);
+
+  auto* rd_el = root->QuerySelector("#rd");
+  auto* rd_ptr = dynamic_cast<rtxui::radio*>(
+      const_cast<rtxui::ComponentBase*>(rd_el->component()));
+  REQUIRE(rd_ptr != nullptr);
+  rd_el->set_focused(true);
+  rd_ptr->OnEvent(Event::Keyboard::From(' '));
+  CHECK_FALSE(rd_ptr->checked);
+
+  auto* sel_el = root->QuerySelector("#sel");
+  auto* sel_ptr = dynamic_cast<rtxui::select*>(
+      const_cast<rtxui::ComponentBase*>(sel_el->component()));
+  REQUIRE(sel_ptr != nullptr);
+  sel_el->set_focused(true);
+  sel_ptr->OnEvent(Event::Keyboard({
+      Event::Keyboard::Motion::Pressed,
+      Event::Keyboard::Special::Return,
+  }));
+  CHECK_FALSE(sel_ptr->is_open);
+
+  auto* sl_el = root->QuerySelector("#sl");
+  auto* sl_ptr = dynamic_cast<rtxui::slider*>(
+      const_cast<rtxui::ComponentBase*>(sl_el->component()));
+  REQUIRE(sl_ptr != nullptr);
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = sl_el->absolute_x() + 2;
+  mouse.y = sl_el->absolute_y() + 1;
+  screen.Dispatch(Event(mouse));
+  CHECK(sl_ptr->value == 50);
+
+  auto* btn_el = root->QuerySelector("#btn");
+  Event::Mouse btn_mouse;
+  btn_mouse.button = Event::Mouse::Button::Left;
+  btn_mouse.motion = Event::Mouse::Motion::Pressed;
+  btn_mouse.x = btn_el->absolute_x() + 1;
+  btn_mouse.y = btn_el->absolute_y() + 1;
+  screen.Dispatch(Event(btn_mouse));
+  CHECK_FALSE(container->button_clicked);
+
+  // :disabled dims the default style for each, mirroring input's behavior.
+  container->ResolveTargetStyles();
+  CHECK(cb_el->target_style.opacity < 0.9f);
+  CHECK(rd_el->target_style.opacity < 0.9f);
+  CHECK(sl_el->target_style.opacity < 0.9f);
+  CHECK(btn_el->target_style.opacity < 0.85f);
+}
 
 
 

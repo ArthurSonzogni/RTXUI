@@ -3,13 +3,26 @@
 // the LICENSE file.
 #include "rtxui/component/default/button/button.hpp"
 
+#include "rtxui/component/component_internal.hpp"
+#include "rtxui/dom/element.hpp"
+
 namespace rtxui {
+
+void button::InitReflection() {
+  Bind(disabled);
+  Component<button>::InitReflection();
+}
+
+bool button::Digest() {
+  SyncDisabled(Root(), disabled);
+  return Component<button>::Digest();
+}
 
 const std::string_view button::view = R"html(
     <slot></slot>
     <style>
-      self { 
-        display: inline-block; 
+      self {
+        display: inline-block;
         padding-left: 1;
         padding-right: 1;
         cursor: pointer;
@@ -31,6 +44,10 @@ const std::string_view button::view = R"html(
         background-color: rgb(29, 78, 216);
         color: white;
         opacity: 1.0;
+      }
+      self:disabled {
+        cursor: default;
+        opacity: 0.4;
       }
     </style>
   )html";

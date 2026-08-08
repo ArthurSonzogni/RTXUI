@@ -14,6 +14,7 @@ namespace rtxui {
 class radio : public Component<radio> {
  public:
   bool checked = false;
+  bool disabled = false;
   std::string radio_char = "○";
 
   void InitReflection() override;

@@ -12,7 +12,11 @@ namespace rtxui {
 
 class button : public Component<button> {
  public:
+  bool disabled = false;
   static const std::string_view view;
+
+  void InitReflection() override;
+  bool Digest() override;
 };
 
 }  // namespace rtxui

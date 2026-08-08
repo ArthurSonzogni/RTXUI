@@ -70,6 +70,16 @@ void FocusExclusive(Element* element) {
   element->set_focused(true);
 }
 
+void SyncDisabled(Element* root, bool disabled) {
+  if (!root) {
+    return;
+  }
+  root->set_disabled(disabled);
+  if (disabled && root->focused()) {
+    root->set_focused(false);
+  }
+}
+
 RefCounted::~RefCounted() {
   assert(count_ == 0);
 }

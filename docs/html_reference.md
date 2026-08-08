@@ -26,15 +26,15 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<ul>` | List | `display: block; padding-left: 2;` | None | Unordered list block. |
 | `<ol>` | List | `display: block; padding-left: 3;` | None | Ordered list block. |
 | `<li>` | List | `display: block;` | None | Individual list item. |
-| `<button>` | Interactive | `display: inline-block; border: tall; padding-left: 1; padding-right: 1;` | `onclick` / `@click`, `oncontextmenu` / `@click.right` | Interactive clickable button widget. |
+| `<button>` | Interactive | `display: inline-block; border: tall; padding-left: 1; padding-right: 1;` | `onclick` / `@click`, `oncontextmenu` / `@click.right`, `disabled` | Interactive clickable button widget. |
 | `<input>` | Interactive | `display: inline flex; flex-direction: row; border: solid; border-color: #555; padding-left: 1; padding-right: 1; overflow-x: scroll; scrollbar-width: none; white-space: nowrap;` | `value` | Interactive single-line text entry field. |
 | `<textarea>` | Interactive | `display: block; border: solid; border-color: #555; padding-left: 1; padding-right: 1; overflow-y: scroll;` | `value` | Interactive multi-line scrollable text field. |
-| `<checkbox>` | Interactive | `display: inline-block; cursor: pointer;` | `checked`, `onchange` | Interactive boolean check toggle. |
+| `<checkbox>` | Interactive | `display: inline-block; cursor: pointer;` | `checked`, `onchange`, `disabled` | Interactive boolean check toggle. |
 | `<label>` | Interactive | `display: inline-flex; cursor: pointer;` | `for` | Click delegation and target-focus association. |
 | `<tooltip>` | Interactive | `display: inline-block;` | `content`, `placement` | Context popup helper displayed on trigger hover. |
-| `<slider>` | Interactive | `display: inline-block; cursor: pointer;` | `value`, `min`, `max`, `step`, `width`, `onchange` | Interactive range slider control. |
+| `<slider>` | Interactive | `display: inline-block; cursor: pointer;` | `value`, `min`, `max`, `step`, `width`, `onchange`, `disabled` | Interactive range slider control. |
 | `<progress>` | Display | `display: inline-block;` | `value`, `max`, `width` | Non-interactive progress bar tracker. |
-| `<select>` | Interactive | `display: inline flex; flex-direction: column;` | `value`, `onchange` | Dropdown picker list menu. |
+| `<select>` | Interactive | `display: inline flex; flex-direction: column;` | `value`, `onchange`, `disabled` | Dropdown picker list menu. |
 | `<option>` | Interactive | `display: block;` | `value` | Pickable choice element inside `<select>`. |
 | `<hr>` | Display | `display: block; margin-top: 1; margin-bottom: 1; overflow: hidden; white-space: nowrap;` | None | Horizontal rule/divider line. |
 | `<table>` | Container | `display: block;` | None | Table container element. Organizes child row elements in a grid. |
@@ -45,7 +45,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<summary>` | Interactive | `display: inline;` | None | Clickable summary header for `<details>`. |
 | `<fieldset>` | Container | `display: block;` | None | Grouping wrapper with border and optional legend. |
 | `<legend>` | Container | `display: inline;` | None | Group label nested inside `<fieldset>` top border. |
-| `<radio>` | Interactive | `display: inline-block;` | `checked`, `name`, `onchange` | Multi-choice radio button toggle. |
+| `<radio>` | Interactive | `display: inline-block;` | `checked`, `name`, `onchange`, `disabled` | Multi-choice radio button toggle. |
 | `<tabs>` | Container | `display: flex;` | `value`, `onchange` | Tabbed section switcher. |
 | `<tab-pane>` | Container | `display: block;` | `label`, `name` | Individual tabbed panel item. |
 | `<dialog>` | Container | `display: block;` | `open`, `title` | Floating modal overlay dialog window. Pressing `Escape` closes an open dialog. |

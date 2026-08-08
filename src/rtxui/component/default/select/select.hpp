@@ -22,6 +22,7 @@ class select : public Component<select> {
  public:
   std::string value;
   bool is_open = false;
+  bool disabled = false;
   int hovered_index = -1;
 
   // Render bindings
