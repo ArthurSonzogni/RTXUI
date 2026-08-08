@@ -1934,6 +1934,15 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  if (p == "box-sizing") {
+    if (v == "border-box") {
+      style.box_sizing = BoxSizing::BorderBox;
+    } else if (v == "content-box") {
+      style.box_sizing = BoxSizing::ContentBox;
+    }
+    return;
+  }
+
   if (p == "display") {
     // Parse combined display property (display-outside and display-inside)
     // For simplicity, handle common single-keyword values and assume default
