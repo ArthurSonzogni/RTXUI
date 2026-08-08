@@ -3080,6 +3080,24 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     container_frag->width = constraints.width.value;
   }
 
+  // Apply min-width/max-width constraints, unless width is exactly fixed by
+  // the parent constraint (matches LayoutBlockFlow/LayoutFlex: an Exactly
+  // constraint always wins). Percentages resolve against the incoming
+  // constraint (the true containing block), not the local `parent_width`
+  // above (this grid's own resolved width, used for track sizing).
+  if (constraints.width.mode != MeasureMode::Exactly) {
+    int max_w =
+        ResolveBoxWidth(box->style, box->style.max_width, constraints.width.value);
+    if (max_w != -1 && container_frag->width > max_w) {
+      container_frag->width = max_w;
+    }
+    int min_w =
+        ResolveBoxWidth(box->style, box->style.min_width, constraints.width.value);
+    if (min_w != -1 && container_frag->width < min_w) {
+      container_frag->width = min_w;
+    }
+  }
+
   container_frag->height = content_h + border_v + padding_v;
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
@@ -3090,6 +3108,20 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
     // width; rows taller than the ratio height overflow.
     container_frag->height = static_cast<int>(
         container_frag->width / box->style.aspect_ratio + 0.5f);
+  }
+
+  // Apply min-height/max-height constraints, same rule as width above.
+  if (constraints.height.mode != MeasureMode::Exactly) {
+    int max_h = ResolveBoxHeight(box->style, box->style.max_height,
+                                 constraints.height.value);
+    if (max_h != -1 && container_frag->height > max_h) {
+      container_frag->height = max_h;
+    }
+    int min_h = ResolveBoxHeight(box->style, box->style.min_height,
+                                 constraints.height.value);
+    if (min_h != -1 && container_frag->height < min_h) {
+      container_frag->height = min_h;
+    }
   }
 
   if (box->dom_node && !context.is_measurement) {

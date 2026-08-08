@@ -2081,6 +2081,40 @@ TEST_CASE("Layout: CSS Grid Layout basic positioning", "[layout][grid]") {
                                                 }));
 }
 
+// Regression test: LayoutGrid never applied min-width/max-width/min-height/
+// max-height to its own container box - found while auditing every layout
+// algorithm's size-resolution call sites for the box-sizing feature above.
+TEST_CASE("Layout: min-width/max-width are enforced on a grid container",
+          "[layout][grid][min-width][max-width]") {
+  struct T : Component<T> {
+    std::string_view Setup() override {
+      return R"html(
+        <div class="box">
+          <div>X</div>
+        </div>
+        <style>
+          .box { display: grid; min-width: 10; max-width: 15; }
+        </style>
+      )html";
+    }
+  };
+
+  {
+    auto app = Ref<T>::New();
+    RenderComponent(app, 3, 5);
+    auto* box = app->Root()->QuerySelector(".box");
+    REQUIRE(box != nullptr);
+    CHECK(box->layout_width() == 10);
+  }
+  {
+    auto app = Ref<T>::New();
+    RenderComponent(app, 20, 5);
+    auto* box = app->Root()->QuerySelector(".box");
+    REQUIRE(box != nullptr);
+    CHECK(box->layout_width() == 15);
+  }
+}
+
 TEST_CASE("Layout: CSS Grid Layout with fr units", "[layout][grid][fr]") {
   struct GridFrTest : Component<GridFrTest> {
     std::string_view Setup() {
