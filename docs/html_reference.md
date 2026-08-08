@@ -23,6 +23,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<s>`, `<strike>`, `<del>` | Typography | `display: inline; text-decoration: line-through;` | None | Strikes through inline text. |
 | `<code>` | Typography | `display: inline; background-color: rgba(255, 255, 255, 0.1); padding-left: 1; padding-right: 1;` | None | Inline code snippet with subtle background. |
 | `<pre>` | Typography | `display: block; white-space: pre; margin-top: 1; margin-bottom: 1;` | None | Preformatted text block preserving whitespace. |
+| `<blockquote>` | Typography | `display: block; margin-top: 1; margin-bottom: 1; padding-left: 1; border-left: 1; border-style: solid; border-color: #555;` | None | Quoted block, indented with a left border line. |
 | `<markdown>` | Display | `display: block;` | `content`, `stylesheet` | Renders a Markdown string as rich TUI content. |
 | `<ul>` | List | `display: block; padding-left: 2;` | None | Unordered list block. |
 | `<ol>` | List | `display: block; padding-left: 3;` | None | Ordered list block. |
