@@ -946,11 +946,28 @@ void ResolveStylesRecursive(Element* element,
     return;
   }
 
+  bool is_styled = IsStyledByComponent(element, component);
+  const auto* categorized_for_parts = component->categorized_rules();
+  bool has_part_rules =
+      categorized_for_parts && !categorized_for_parts->part_rules.empty();
+  // Whenever the styled branch below is about to run AND actually redo the
+  // custom-properties resolution (i.e. not short-circuited by the
+  // goto-recurse below for an element already resolved against `component`
+  // this frame), that redo unconditionally overwrites element->
+  // custom_properties with freshly-collected own_custom_properties before
+  // anything in between ever reads it - so this pass's copy would just be
+  // computed and immediately discarded. Skipping it here avoids copying
+  // (and reallocating tree nodes for) the custom-properties map twice per
+  // element per frame, the common case for any styled element.
+  bool will_recompute_custom_properties =
+      !check_pseudos && (is_styled || has_part_rules) &&
+      !element->IsStyleResolvedFor(component);
+
   // Custom properties inherit through every element in the tree — including
   // slot and other unstyled elements — so rebuild the resolved map from the
   // DOM parent up front (parents are visited before children). The element's
   // own --* declarations are overlaid again after collection below.
-  if (!check_pseudos) {
+  if (!check_pseudos && !will_recompute_custom_properties) {
     const Element* parent = element->Parent();
     if (parent) {
       element->custom_properties = parent->custom_properties;
@@ -967,10 +984,6 @@ void ResolveStylesRecursive(Element* element,
     ResolveStylesRecursive(element, element->component(), check_pseudos);
   }
 
-  bool is_styled = IsStyledByComponent(element, component);
-  const auto* categorized_for_parts = component->categorized_rules();
-  bool has_part_rules =
-      categorized_for_parts && !categorized_for_parts->part_rules.empty();
   if (is_styled || has_part_rules) {
     if (!check_pseudos) {
       if (element->IsStyleResolvedFor(component)) {
