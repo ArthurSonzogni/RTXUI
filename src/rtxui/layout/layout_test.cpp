@@ -3380,4 +3380,54 @@ TEST_CASE("Layout: a grid container reports scroll_width when its tracks "
   CHECK(grid->scroll_width() == 20);
 }
 
+// Regression test: LayoutGrid's plain `width`/`height` (as opposed to
+// min-/max-width/height, fixed in an earlier session) had no effect at all
+// on the grid container's own reported box size - container_frag->width/
+// height were purely track-derived, only ever overridden by an Exactly
+// constraint from the parent. An explicit width smaller than what the
+// tracks need silently grew the box to fit them instead of clamping it and
+// letting the tracks overflow, unlike every other layout algorithm here.
+TEST_CASE("Layout: an explicit width/height on a grid container is honored, "
+          "not just min-/max-width/height",
+          "[layout][grid][width]") {
+  SECTION("explicit width smaller than the tracks need: box stays clamped, "
+          "tracks overflow") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <div class="grid" style="display: grid; grid-template-columns: 5 5 5 5; width: 5;">
+            <div>a</div><div>b</div><div>c</div><div>d</div>
+          </div>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 40, 5);
+    auto* grid = app->Root()->QuerySelector(".grid");
+    REQUIRE(grid != nullptr);
+    CHECK(grid->layout_width() == 5);
+    // The overflow must still be reachable via scroll_width (session #3's
+    // earlier fix).
+    CHECK(grid->scroll_width() == 20);
+  }
+
+  SECTION("explicit width larger than the tracks need: box grows, extra "
+          "space stays empty") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <div class="grid" style="display: grid; grid-template-columns: 5 5; width: 30;">
+            <div>a</div><div>b</div>
+          </div>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 40, 5);
+    auto* grid = app->Root()->QuerySelector(".grid");
+    REQUIRE(grid != nullptr);
+    CHECK(grid->layout_width() == 30);
+  }
+}
+
 }  // namespace rtxui
