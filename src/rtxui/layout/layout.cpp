@@ -2702,6 +2702,25 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   if (box->dom_node && !context.is_measurement) {
     box->dom_node->set_layout_width(fragment->width);
     box->dom_node->set_layout_height(fragment->height);
+
+    // Columns can need more space than content_width_limit provides (e.g.
+    // more columns than available width, each floored at a 1-cell minimum)
+    // and are never shrunk back down to fit - the table simply overflows
+    // its own box, matching how other layout algorithms let content
+    // overflow an explicit/constrained size rather than compressing it.
+    // Report the true extent via scroll_width/scroll_height so a
+    // *wrapping* `overflow: scroll` container (the standard way to make a
+    // table scrollable) can actually reach the overflowing columns/rows -
+    // previously these were never set at all (defaulting to 0), so an
+    // ancestor's scroll_width computation silently underestimated the
+    // table's real content size and the overflow was unreachable, not just
+    // visually spilling.
+    int total_col_extent = num_cols > 0 ? col_x.back() + col_widths.back() : 0;
+    box->dom_node->set_scroll_width(
+        std::max(fragment->width, total_col_extent + box->style.padding.Horiz() +
+                                       box->style.border.Horiz()));
+    box->dom_node->set_scroll_height(std::max(
+        fragment->height, cur_y + box->style.padding.bottom + box->style.border.bottom));
   }
 
   return fragment;
