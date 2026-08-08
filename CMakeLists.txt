@@ -73,6 +73,7 @@ add_library(rtxui_lib STATIC
   "src/rtxui/component/default/span/span.cpp"
   "src/rtxui/component/default/b/b.cpp"
   "src/rtxui/component/default/a/a.cpp"
+  "src/rtxui/component/default/blockquote/blockquote.cpp"
   "src/rtxui/component/default/strong/strong.cpp"
   "src/rtxui/component/default/textarea/textarea.cpp"
   "src/rtxui/component/default/markdown/markdown.cpp"

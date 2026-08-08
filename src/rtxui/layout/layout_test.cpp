@@ -3469,4 +3469,41 @@ TEST_CASE("Layout: scroll_width propagates through an anonymous inline-flow "
   CHECK(wrap->scroll_width() == ib->scroll_width());
 }
 
+// Regression test: <blockquote> was completely unregistered - it fell
+// through to a plain, unstyled Element (default display:inline), which
+// this session found rendered at layout_width()==0, layout_height()==0
+// (block-level children inside an inline box don't establish normal block
+// layout). This is real, already-triggered output: markdown.cpp generates
+// <blockquote> for every markdown `>` quoted line. Registered as a real
+// component (matching the <a> pattern) with a left border + padding,
+// reusing this session's earlier single-side-border rendering fix.
+TEST_CASE("Layout: <blockquote> is a registered, block-level, indented "
+          "component",
+          "[layout][blockquote]") {
+  struct T : Component<T> {
+    void InitReflection() override {
+      Import<blockquote>();
+      Component<T>::InitReflection();
+    }
+    std::string_view Setup() override {
+      return R"html(
+        <blockquote>Quoted text</blockquote>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  auto texture = RenderComponent(app, 20, 3);
+  auto* bq = app->Root()->QuerySelector("blockquote");
+  REQUIRE(bq != nullptr);
+
+  CHECK(bq->layout_width() > 0);
+  CHECK(bq->layout_height() > 0);
+
+  std::string layout_text = GetTextLayer(texture);
+  CHECK(layout_text.find("Quoted text") != std::string::npos);
+  // The left border must actually render (session's earlier single-side
+  // border fix makes this a clean line, not a stray corner glyph).
+  CHECK(layout_text.find("\xe2\x94\x82") != std::string::npos);  // "│"
+}
+
 }  // namespace rtxui
