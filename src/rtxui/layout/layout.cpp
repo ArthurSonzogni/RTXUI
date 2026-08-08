@@ -3245,6 +3245,20 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   container_frag->width = content_w + border_h + padding_h;
   if (constraints.width.mode == MeasureMode::Exactly) {
     container_frag->width = constraints.width.value;
+  } else {
+    // An explicit width is the container's own used size, same as every
+    // other layout algorithm here (block/flex/table): it wins over the
+    // track-derived content_w even when the tracks need more or less space
+    // than it - tracks that don't fit simply overflow the box (matching
+    // the "explicit size wins, content overflows" convention), rather than
+    // silently growing/shrinking the container to match track content.
+    // Previously only min-width/max-width (a range) clamped this; a plain
+    // `width` had no effect at all on the container's own reported size.
+    int resolved_w = ResolveBoxWidth(box->style, box->style.width,
+                                     constraints.width.value);
+    if (resolved_w != -1) {
+      container_frag->width = resolved_w;
+    }
   }
 
   // Apply min-width/max-width constraints, unless width is exactly fixed by
@@ -3268,13 +3282,20 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   container_frag->height = content_h + border_v + padding_v;
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
-  } else if (box->style.aspect_ratio > 0 &&
-             ResolveBoxHeight(box->style, box->style.height,
-                              constraints.height.value) == -1) {
-    // aspect-ratio derives the grid container's auto height from its used
-    // width; rows taller than the ratio height overflow.
-    container_frag->height = static_cast<int>(
-        container_frag->width / box->style.aspect_ratio + 0.5f);
+  } else {
+    // Same "explicit size wins over track content" rule as width above -
+    // previously a plain `height` had no effect on the container's own
+    // reported size at all, only min-height/max-height did.
+    int resolved_h = ResolveBoxHeight(box->style, box->style.height,
+                                      constraints.height.value);
+    if (resolved_h != -1) {
+      container_frag->height = resolved_h;
+    } else if (box->style.aspect_ratio > 0) {
+      // aspect-ratio derives the grid container's auto height from its used
+      // width; rows taller than the ratio height overflow.
+      container_frag->height = static_cast<int>(
+          container_frag->width / box->style.aspect_ratio + 0.5f);
+    }
   }
 
   // Apply min-height/max-height constraints, same rule as width above.
