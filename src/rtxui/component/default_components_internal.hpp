@@ -5,6 +5,7 @@
 #define RTXUI_DEFAULT_COMPONENTS_INTERNAL_HPP_
 
 #include "rtxui/component/component_internal.hpp"
+#include "rtxui/component/default/a/a.hpp"
 #include "rtxui/component/default/b/b.hpp"
 #include "rtxui/component/default/button/button.hpp"
 #include "rtxui/component/default/checkbox/checkbox.hpp"
