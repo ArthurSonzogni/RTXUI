@@ -35,7 +35,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<slider>` | Interactive | `display: inline-block; cursor: pointer;` | `value`, `min`, `max`, `step`, `width`, `onchange`, `disabled` | Interactive range slider control. |
 | `<progress>` | Display | `display: inline-block;` | `value`, `max`, `width` | Non-interactive progress bar tracker. |
 | `<select>` | Interactive | `display: inline flex; flex-direction: column;` | `value`, `onchange`, `disabled` | Dropdown picker list menu. |
-| `<option>` | Interactive | `display: block;` | `value` | Pickable choice element inside `<select>`. |
+| `<option>` | Interactive | `display: block;` | `value`, `disabled` | Pickable choice element inside `<select>`. |
 | `<hr>` | Display | `display: block; margin-top: 1; margin-bottom: 1; overflow: hidden; white-space: nowrap;` | None | Horizontal rule/divider line. |
 | `<table>` | Container | `display: block;` | None | Table container element. Organizes child row elements in a grid. |
 | `<tr>` | Container | `display: block;` | None | Table row element. Groups cell elements. |

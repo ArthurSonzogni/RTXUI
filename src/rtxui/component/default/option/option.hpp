@@ -14,10 +14,12 @@ namespace rtxui {
 class option : public Component<option> {
  public:
   std::string value;
+  bool disabled = false;
 
   void InitReflection() override;
   std::string_view Setup() override;
   bool OnEvent(Event event) override;
+  bool Digest() override;
 };
 
 }  // namespace rtxui
