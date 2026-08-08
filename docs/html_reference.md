@@ -10,6 +10,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | :--- | :--- | :--- | :--- | :--- |
 | `<div>` | Container | `display: block;` | None | General block layout wrapper. Stacks children vertically. |
 | `<span>` | Container | `display: inline;` | None | General inline layout wrapper. Flows children horizontally. |
+| `<a>` | Typography | `display: inline; text-decoration: underline; color: #3b82f6; cursor: pointer;` | `href` | Hyperlink. `href="#id"` scrolls the matching element into view on click. |
 | `<h1>` | Typography | `display: block; font-weight: bold; text-decoration: underlined; margin-bottom: 1;` | None | Major section heading with bottom spacing. |
 | `<h2>`, `<h3>` | Typography | `display: block; font-weight: bold; margin-bottom: 1;` | None | Section heading with bottom spacing. |
 | `<h4>`, `<h5>`, `<h6>` | Typography | `display: block; font-weight: bold;` | None | Minor section heading. |
@@ -163,7 +164,32 @@ self-closing slash for every element.
 
 ---
 
-## 7. Tables
+## 7. Links (`<a>`)
+
+`<a href="...">` renders inline, underlined, with a default link color.
+
+```xml
+<a href="https://example.com">Visit example.com</a>
+```
+
+`href="#id"` is a page-local anchor link: clicking it scrolls the element
+with the matching `id` into view, without leaving the app. This is handled
+directly by the click dispatcher (not by `onclick`), so it works even if the
+target is off-screen inside a scrollable ancestor.
+
+```xml
+<a href="#section-2">Jump to section 2</a>
+<!-- ... -->
+<h2 id="section-2">Section 2</h2>
+```
+
+`<a>` does not open external URLs or otherwise leave the terminal - only the
+`#id` scroll-into-view behavior is built in. Handle other `href` values
+yourself with `onclick`/`@click`.
+
+---
+
+## 8. Tables
 
 RTXUI supports structured table layouts through `<table>`, `<tr>`, `<td>`, and `<th>` elements.
 
@@ -224,7 +250,7 @@ Below is the interactive live demo showcasing table borders, alternating row bac
 
 ---
 
-## 8. Collapsible Details (`<details>`)
+## 9. Collapsible Details (`<details>`)
 
 The `<details>` element represents a disclosure widget in which information is visible only when the widget is toggled into an "open" state. A `<summary>` element is used to provide the visible label or header for the widget.
 
@@ -258,7 +284,7 @@ Example:
 
 ---
 
-## 9. Grouping & Layout (`<fieldset>`, `<legend>`)
+## 10. Grouping & Layout (`<fieldset>`, `<legend>`)
 
 The `<fieldset>` element is used to group several controls and labels within a web form. The `<legend>` element defines a caption for the `<fieldset>` and is nested inside its top border.
 
@@ -278,7 +304,7 @@ Example:
 
 ---
 
-## 10. Radio Buttons (`<radio>`)
+## 11. Radio Buttons (`<radio>`)
 
 The `<radio>` element represents a radio button, allowing a single selection among multiple options sharing the same `name` attribute value.
 
@@ -294,7 +320,7 @@ Example:
 
 ---
 
-## 11. Tabbed Interfaces (`<tabs>`, `<tab-pane>`)
+## 12. Tabbed Interfaces (`<tabs>`, `<tab-pane>`)
 
 The `<tabs>` and `<tab-pane>` elements build tabbed panels that allow switching between different views.
 
@@ -318,7 +344,7 @@ Example:
 
 ---
 
-## 12. Overlays & Dialogs (`<dialog>`)
+## 13. Overlays & Dialogs (`<dialog>`)
 
 The `<dialog>` element represents a dialog box or other interactive component, such as a dismissible alert or subwindow overlay. When `open="true"`, it renders centered on top of all other elements using a translucent dark backdrop.
 
@@ -338,7 +364,7 @@ Example:
 
 ---
 
-## 13. Click & Focus Association (`<label>`)
+## 14. Click & Focus Association (`<label>`)
 
 The `<label>` element represents a caption for an item in a user interface. Clicking on a `<label>` delegates the click event and transfers input focus to its associated element (such as a `<checkbox>`, `<radio>`, `<input>`, or `<button>`).
 
@@ -376,7 +402,7 @@ Below is the interactive live demo showcasing label interactions via explicit `f
 
 ---
 
-## 14. Context Tooltips (`<tooltip>`)
+## 15. Context Tooltips (`<tooltip>`)
 
 The `<tooltip>` element represents a popup helper widget. When a user hovers their mouse cursor over any element inside the `<tooltip>`, it triggers a floating overlay displaying the specified content.
 

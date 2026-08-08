@@ -5647,6 +5647,7 @@ TEST_CASE("SetCssErrorHandler redirects CSS errors instead of printing",
   CHECK_FALSE(captured->message.empty());
 }
 
+#include "rtxui/component/default/a/a.hpp"
 #include "rtxui/component/default/code/code.hpp"
 #include "rtxui/component/default/s/s.hpp"
 #include "rtxui/component/default/u/u.hpp"
@@ -5710,6 +5711,68 @@ TEST_CASE("Underline, Strikethrough, and Code Components",
   REQUIRE(code_comp != nullptr);
   auto* code_ptr = dynamic_cast<rtxui::code*>(code_comp);
   REQUIRE(code_ptr != nullptr);
+}
+
+// Regression test: <a> was completely unregistered - it fell through to a
+// plain, unstyled Element. This was already silently affecting real output:
+// <markdown> generates <a href="..."> for markdown links (markdown.cpp), and
+// screen.cpp already has dedicated click handling for <a href="#id"> anchor
+// navigation (Screen.AnchorLinkScrolling) - both rendered with zero visual
+// indication of being a link. <a> now gets the same default styling as
+// every other simple inline tag here (underline, matching u/s/code above),
+// plus a link-colored foreground.
+struct AnchorTestComponent : public rtxui::Component<AnchorTestComponent> {
+  void InitReflection() override {
+    Import<rtxui::a>();
+    rtxui::Component<AnchorTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <a href="https://example.com">Link</a>
+  )";
+};
+
+TEST_CASE("Anchor component registration and default styling",
+          "[component][a]") {
+  auto container = rtxui::Ref<AnchorTestComponent>::New();
+  container->Mount();
+
+  auto* a_el = container->Root()->QuerySelector("a");
+  REQUIRE(a_el != nullptr);
+  auto* a_comp = const_cast<rtxui::ComponentBase*>(a_el->component());
+  REQUIRE(a_comp != nullptr);
+  auto* a_ptr = dynamic_cast<rtxui::a*>(a_comp);
+  REQUIRE(a_ptr != nullptr);
+
+  // href must still land on the underlying Element's generic attribute map -
+  // that's what screen.cpp's anchor-click handler reads.
+  const std::string* href = a_el->GetAttribute("href");
+  REQUIRE(href != nullptr);
+  CHECK(*href == "https://example.com");
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  bool found = false;
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      const auto& cell = texture[x, y];
+      if (cell.character == "L") {
+        CHECK(cell.underlined);
+        CHECK(cell.foreground_color == Color::RGB(0x3b, 0x82, 0xf6));
+        found = true;
+      }
+    }
+  }
+  CHECK(found);
 }
 
 #include "rtxui/component/default/pre/pre.hpp"
