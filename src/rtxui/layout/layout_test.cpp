@@ -3321,4 +3321,35 @@ TEST_CASE("Layout: ::part() lets an outer component style a nested "
   CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"R"}));
 }
 
+// Regression test: LayoutInlineFlow (used for inline-block, among other
+// things) never called set_scroll_width/set_scroll_height at all, unlike
+// LayoutBlockFlow/LayoutFlex which both fully support being a scroll
+// container. An inline-block with a fixed width, white-space:nowrap text
+// wider than it, and overflow-x:scroll had no way to reach the overflowing
+// text: scroll_width defaulted to 0, so ClampScrollX always clamped to 0.
+TEST_CASE("Layout: an inline-block reports scroll_width for overflowing "
+          "nowrap text",
+          "[layout][inline-block][scroll]") {
+  struct T : Component<T> {
+    void InitReflection() override {
+      Import<div>();
+      Component<T>::InitReflection();
+    }
+    std::string_view Setup() override {
+      return R"html(
+        <div class="ib" style="display: inline-block; width: 3; overflow-x: scroll; white-space: nowrap;">HelloWorldLongText</div>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  RenderComponent(app, 40, 5);
+  auto* ib = app->Root()->QuerySelector(".ib");
+  REQUIRE(ib != nullptr);
+
+  CHECK(ib->layout_width() == 3);
+  // "HelloWorldLongText" is 18 cells - the box's own reported width stays
+  // at the explicit 3, but scroll_width must expose the true extent.
+  CHECK(ib->scroll_width() >= 18);
+}
+
 }  // namespace rtxui
