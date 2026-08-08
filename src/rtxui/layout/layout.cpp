@@ -2572,6 +2572,57 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     }
   }
 
+  int table_target_height;
+  // Apply height/min-height/max-height. `height` (like block-flow) is the
+  // used height whenever set - explicit and min-height both act as a floor
+  // relative to content, growing the table by distributing the extra space
+  // across rows proportionally (same idea as the min-width column stretch
+  // above). A floor smaller than content, or an explicit/max-height ceiling
+  // smaller than content, is honored as-is without shrinking rows: content
+  // simply overflows the table's reported box, matching how every other
+  // layout algorithm here treats an explicit size smaller than content.
+  {
+    int row_content_total = 0;
+    for (int h : row_heights) {
+      row_content_total += h;
+    }
+
+    int resolved_height =
+        ResolveBoxHeight(box->style, box->style.height, constraints.height.value);
+    int target_fragment_height =
+        (resolved_height != -1)
+            ? resolved_height
+            : row_content_total + box->style.padding.Vert() + box->style.border.Vert();
+
+    int max_height_resolved =
+        ResolveBoxHeight(box->style, box->style.max_height, constraints.height.value);
+    if (max_height_resolved != -1 && target_fragment_height > max_height_resolved) {
+      target_fragment_height = max_height_resolved;
+    }
+    int min_height_resolved =
+        ResolveBoxHeight(box->style, box->style.min_height, constraints.height.value);
+    if (min_height_resolved != -1 && target_fragment_height < min_height_resolved) {
+      target_fragment_height = min_height_resolved;
+    }
+
+    int target_row_content_total = target_fragment_height -
+                                   box->style.padding.Vert() -
+                                   box->style.border.Vert();
+    if (target_row_content_total > row_content_total && row_content_total > 0 &&
+        !row_heights.empty()) {
+      int extra = target_row_content_total - row_content_total;
+      int distributed = 0;
+      for (size_t i = 0; i + 1 < row_heights.size(); ++i) {
+        int add = (extra * row_heights[i]) / row_content_total;
+        row_heights[i] += add;
+        distributed += add;
+      }
+      row_heights.back() += (extra - distributed);
+    }
+
+    table_target_height = target_fragment_height;
+  }
+
   std::vector<PhysicalFragment::ChildLink> row_bg_links;
   std::vector<PhysicalFragment::ChildLink> row_cells_links;
 
@@ -2640,8 +2691,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   for (auto& link : row_bg_links) fragment->children.push_back(link);
   for (auto& link : row_cells_links) fragment->children.push_back(link);
 
-  fragment->height =
-      cur_y + box->style.padding.bottom + box->style.border.bottom;
+  fragment->height = table_target_height;
 
   if (box->dom_node && !context.is_measurement) {
     box->dom_node->set_layout_width(fragment->width);

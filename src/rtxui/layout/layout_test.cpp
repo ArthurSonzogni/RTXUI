@@ -1250,6 +1250,68 @@ TEST_CASE("Layout: min-width is enforced on a table", "[layout][table][min-width
   CHECK(cell->layout_width() == 20);
 }
 
+// Regression test: LayoutTable ignored `height`/min-height/max-height
+// entirely - its own box height was always purely content-driven (sum of
+// row heights), found by the same call-site audit as the tests above.
+TEST_CASE("Layout: height/min-height/max-height are honored on a table",
+          "[layout][table][height]") {
+  SECTION("explicit height grows a 1-row table, stretching the row") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <table style="height: 10;">
+            <tr><td>X</td></tr>
+          </table>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 10, 20);
+    auto* table = app->Root()->QuerySelector("table");
+    auto* cell = app->Root()->QuerySelector("td");
+    REQUIRE(table != nullptr);
+    REQUIRE(cell != nullptr);
+    CHECK(table->layout_height() == 10);
+    CHECK(cell->layout_height() == 10);
+  }
+
+  SECTION("min-height grows the table the same way") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <table style="min-height: 10;">
+            <tr><td>X</td></tr>
+          </table>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 10, 20);
+    auto* table = app->Root()->QuerySelector("table");
+    REQUIRE(table != nullptr);
+    CHECK(table->layout_height() == 10);
+  }
+
+  SECTION("max-height caps a taller table without touching its rows") {
+    struct T : Component<T> {
+      std::string_view Setup() override {
+        return R"html(
+          <table style="max-height: 2;">
+            <tr><td>one</td></tr>
+            <tr><td>two</td></tr>
+            <tr><td>three</td></tr>
+          </table>
+        )html";
+      }
+    };
+    auto app = Ref<T>::New();
+    RenderComponent(app, 10, 20);
+    auto* table = app->Root()->QuerySelector("table");
+    REQUIRE(table != nullptr);
+    CHECK(table->layout_height() == 2);
+  }
+}
+
 TEST_CASE("Layout: <br> forces a line break in inline flow", "[layout][br]") {
   struct BrTest : Component<BrTest> {
     std::string_view Setup() override {
