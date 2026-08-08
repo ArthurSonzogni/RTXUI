@@ -10,6 +10,7 @@ namespace rtxui {
 
 void radio::InitReflection() {
   Bind(checked);
+  Bind(disabled);
   Bind(radio_char);
   Component<radio>::InitReflection();
 }
@@ -37,6 +38,10 @@ std::string_view radio::Setup() {
       self:active {
         background-color: lighten(35%);
       }
+      self:disabled {
+        cursor: default;
+        opacity: 0.4;
+      }
       .radio-mark {
         margin-right: 1;
       }
@@ -46,7 +51,7 @@ std::string_view radio::Setup() {
 
 bool radio::OnEvent(Event event) {
   auto* root = Root();
-  if (!root) {
+  if (!root || disabled) {
     return false;
   }
 
@@ -133,6 +138,7 @@ bool radio::OnEvent(Event event) {
 
 bool radio::Digest() {
   radio_char = checked ? "◉" : "○";
+  SyncDisabled(Root(), disabled);
   return Component<radio>::Digest();
 }
 

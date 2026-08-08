@@ -10,6 +10,7 @@ namespace rtxui {
 
 void checkbox::InitReflection() {
   Bind(checked);
+  Bind(disabled);
   Bind(checked_char);
   Component<checkbox>::InitReflection();
 }
@@ -37,6 +38,10 @@ std::string_view checkbox::Setup() {
       self:active {
         background-color: lighten(35%);
       }
+      self:disabled {
+        cursor: default;
+        opacity: 0.4;
+      }
       .checkmark {
         margin-right: 1;
       }
@@ -46,7 +51,7 @@ std::string_view checkbox::Setup() {
 
 bool checkbox::OnEvent(Event event) {
   auto* root = Root();
-  if (!root) {
+  if (!root || disabled) {
     return false;
   }
 
@@ -103,6 +108,7 @@ bool checkbox::OnEvent(Event event) {
 
 bool checkbox::Digest() {
   checked_char = checked ? "☑" : "☐";
+  SyncDisabled(Root(), disabled);
   return Component<checkbox>::Digest();
 }
 

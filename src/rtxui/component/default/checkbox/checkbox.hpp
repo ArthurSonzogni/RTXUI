@@ -14,6 +14,7 @@ namespace rtxui {
 class checkbox : public Component<checkbox> {
  public:
   bool checked = false;
+  bool disabled = false;
   std::string checked_char = " ";
 
   void InitReflection() override;

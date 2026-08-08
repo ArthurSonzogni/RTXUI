@@ -18,6 +18,7 @@ class slider : public Component<slider> {
   int max = 100;
   int step = 1;
   int width = 20;
+  bool disabled = false;
   std::string direction = "horizontal";
 
   // Render bindings

@@ -17,6 +17,12 @@ ComponentBase* GetParentComponent(ComponentBase* comp);
 // document, so only one element is ever focused at a time.
 void FocusExclusive(Element* element);
 
+// Syncs a component's bound `disabled` state onto its root Element, for
+// :disabled CSS matching and Screen's tab-navigation/click gating (both
+// keyed off Element::disabled()) - and drops focus if the element is
+// currently focused while disabled, mirroring TextInputBase's behavior.
+void SyncDisabled(Element* root, bool disabled);
+
 }  // namespace rtxui
 
 #endif  // RTXUI_COMPONENT_INTERNAL_HPP_
