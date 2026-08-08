@@ -1348,6 +1348,28 @@ TEST_CASE("Layout: box-sizing", "[layout][box-sizing]") {
   }
 }
 
+// Regression test: LayoutInlineFlow (used for inline-block, among others)
+// applied max-width, min-height, and max-height, but never min-width -
+// found while adding box-sizing regression tests above (a min-width test on
+// an inline-block silently did nothing until this was fixed).
+TEST_CASE("Layout: min-width is enforced on an inline-block", "[layout][min-width]") {
+  struct T : Component<T> {
+    std::string_view Setup() override {
+      return R"html(
+        <div class="box">X</div>
+        <style>
+          .box { display: inline-block; min-width: 10; }
+        </style>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  RenderComponent(app, 20, 5);
+  auto* box = app->Root()->QuerySelector(".box");
+  REQUIRE(box != nullptr);
+  CHECK(box->layout_width() == 10);
+}
+
 // Regression test: position:fixed elements must not be wrapped in anonymous
 // inline boxes during layout tree building. Previously, if a fixed element
 // appeared adjacent to an inline sibling, both were wrapped in an anonymous
