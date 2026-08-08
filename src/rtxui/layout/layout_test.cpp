@@ -1250,6 +1250,51 @@ TEST_CASE("Layout: min-width is enforced on a table", "[layout][table][min-width
   CHECK(cell->layout_width() == 20);
 }
 
+// Regression test: when a table has more columns than available width, each
+// column is floored at a 1-cell minimum and the sum is never shrunk back
+// down or reported outward, so a wrapping `overflow: scroll` container (the
+// standard way to make a table horizontally scrollable) previously
+// underestimated how far it needed to let the user scroll - LayoutTable
+// never called set_scroll_width/set_scroll_height at all, leaving them at
+// their default of 0. The table's own reported width intentionally stays at
+// its explicit/constrained value (matching how every other overflow case in
+// this engine works: an explicit size is honored, content overflows it) -
+// only scroll_width/scroll_height need to reflect the true extent.
+TEST_CASE("Layout: a table wider than its box reports its true scroll_width",
+          "[layout][table][scroll]") {
+  struct T : Component<T> {
+    void InitReflection() override {
+      Import<div>();
+      Component<T>::InitReflection();
+    }
+    std::string_view Setup() override {
+      return R"html(
+        <div class="wrap" style="width: 5; overflow-x: scroll;">
+          <table>
+            <tr>
+              <td>1</td><td>2</td><td>3</td><td>4</td><td>5</td>
+              <td>6</td><td>7</td><td>8</td><td>9</td><td>10</td>
+            </tr>
+          </table>
+        </div>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  RenderComponent(app, 40, 5);
+
+  auto* table = app->Root()->QuerySelector("table");
+  auto* wrap = app->Root()->QuerySelector(".wrap");
+  REQUIRE(table != nullptr);
+  REQUIRE(wrap != nullptr);
+
+  // 10 columns can't all fit in a width-5 box even at their 1-cell floor.
+  CHECK(table->scroll_width() > table->layout_width());
+  // The wrapping scrollable container must see the same true extent, not
+  // just the table's own (smaller) reported width.
+  CHECK(wrap->scroll_width() == table->scroll_width());
+}
+
 // Regression test: LayoutTable ignored `height`/min-height/max-height
 // entirely - its own box height was always purely content-driven (sum of
 // row heights), found by the same call-site audit as the tests above.
