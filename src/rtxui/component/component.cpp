@@ -56,6 +56,20 @@ ComponentBase* GetParentComponent(ComponentBase* comp) {
   return GetOwningComponent(comp->Root()->Parent());
 }
 
+void FocusExclusive(Element* element) {
+  if (!element) {
+    return;
+  }
+  if (element->Parent()) {
+    Element* document_root = element;
+    while (document_root->Parent()) {
+      document_root = document_root->Parent();
+    }
+    document_root->Visit([](Element& el) { el.set_focused(false); });
+  }
+  element->set_focused(true);
+}
+
 RefCounted::~RefCounted() {
   assert(count_ == 0);
 }

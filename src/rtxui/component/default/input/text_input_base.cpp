@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 
@@ -595,15 +596,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
 
         if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
             click_y < abs_y + layout_h) {
-          // Unfocus all other elements
-          if (root->Parent()) {
-            Element* root_el = root;
-            while (root_el->Parent()) {
-              root_el = root_el->Parent();
-            }
-            root_el->Visit([](Element& el) { el.set_focused(false); });
-          }
-          root->set_focused(true);
+          FocusExclusive(root);
           self->CaptureMouse();
 
           auto graphemes = GetGraphemesList(value);
