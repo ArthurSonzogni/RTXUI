@@ -1756,6 +1756,54 @@ TEST_CASE("Textarea Click Maps Correctly On A Word-Wrapped Row",
   CHECK(ta_ptr->cursor_pos == 50);
 }
 
+TEST_CASE("Textarea click mapping doesn't lose width when a wrapped word's "
+          "overflow is detected several characters past the last space",
+          "[component][textarea][regression]") {
+  // Regression: text_input_base.cpp's ComputeRowStarts mirrors
+  // layout.cpp's word-wrap algorithm for mouse click-to-cursor mapping,
+  // and had the same stale-last-space bug (see the layout.cpp fix earlier
+  // this session): breaking at a last space several characters before the
+  // overflow point reset cur_col back to col_start, discarding the
+  // already-scanned characters' width. That undercounted how much of the
+  // next (very long) word fit per row, so every row boundary after the
+  // first wrap point drifted - a click that should land on grapheme index
+  // 67 landed on 74 instead (7 characters lost, matching the 7 unbreakable
+  // characters that fit on the first row before it overflowed).
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+
+  // 10 short words (30 chars incl. trailing space) followed by a single
+  // 50-character unbreakable run. With the 37-cell content width
+  // established by the tests above: row0 = "w0 w1 ... w9" (29 chars,
+  // trailing space dropped), row1 = the first 37 x's (indices 30-66,
+  // pushed whole past the last space since the word doesn't fit after
+  // "w9 "), row2 = the remaining 13 x's starting at index 67.
+  std::string content = "w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 ";  // 30 chars
+  content += std::string(50, 'x');
+  container->my_text = content;
+
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+  auto* content_el = ta_el->QuerySelector(".content");
+  REQUIRE(content_el != nullptr);
+  REQUIRE(content_el->layout_width() == 37);
+
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = ta_el->absolute_x() + 2;       // 1-based, inside padding-left:1
+  mouse.y = ta_el->absolute_y() + 1 + 2;  // 1-based, row index 2 (0-based)
+  screen.Dispatch(Event(mouse));
+
+  CHECK(ta_ptr->cursor_pos == 67);
+}
+
 TEST_CASE("Textarea Component Readonly Blocks Enter And Tab Indent",
           "[component][textarea][readonly]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
