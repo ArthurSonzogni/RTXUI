@@ -246,8 +246,12 @@ std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
 
     if (cur_col - col_start + g.width > content_width) {
       if (last_space_index != -1) {
+        // cur_col already measures up to the current (overflowing)
+        // grapheme; only col_start moves to just past the space, so
+        // cur_col - col_start keeps counting the characters typed between
+        // the space and here instead of discarding them (mirrors the fix
+        // for the same bug in layout.cpp's LayoutInlineFlow).
         col_start = last_space_col + 1;
-        cur_col = col_start;
         commit_line(last_space_index + 1);
         cur_col += g.width;
       } else if (overflow_wrap_normal) {
