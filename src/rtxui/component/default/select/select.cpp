@@ -14,6 +14,7 @@ namespace rtxui {
 
 void select::InitReflection() {
   Bind(value);
+  Bind(disabled);
   Bind(selected_label);
   Bind(arrow_char);
   Bind(dropdown_class);
@@ -59,6 +60,10 @@ std::string_view select::Setup() {
         background-color: lighten(24%);
         opacity: 1.0;
       }
+      self:disabled .select-btn {
+        cursor: default;
+        opacity: 0.4;
+      }
       .dropdown-list {
         display: flex;
         flex-direction: column;
@@ -102,6 +107,9 @@ std::vector<OptionInfo> select::GetOptions() {
 }
 
 bool select::OnEvent(Event event) {
+  if (disabled) {
+    return false;
+  }
   if (Component<select>::OnEvent(event)) {
     return true;
   }
@@ -276,6 +284,10 @@ bool select::OnEvent(Event event) {
 
 bool select::Digest() {
   auto* root = Root();
+  SyncDisabled(root, disabled);
+  if (disabled) {
+    is_open = false;
+  }
   dropdown_class = is_open ? "open" : "closed";
   arrow_char = is_open ? "▴" : "▾";
 

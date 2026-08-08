@@ -17,6 +17,7 @@ void slider::InitReflection() {
   Bind(max);
   Bind(step);
   Bind(width);
+  Bind(disabled);
   Bind(direction);
   Bind(track_left);
   Bind(thumb_char);
@@ -61,6 +62,10 @@ std::string_view slider::Setup() {
       self:focus {
         background-color: lighten(25%);
       }
+      self:disabled {
+        cursor: default;
+        opacity: 0.4;
+      }
       .track-left {
         opacity: 1.0;
       }
@@ -76,7 +81,7 @@ std::string_view slider::Setup() {
 
 bool slider::OnEvent(Event event) {
   auto* root = Root();
-  if (!root) {
+  if (!root || disabled) {
     return false;
   }
 
@@ -229,6 +234,7 @@ bool slider::OnEvent(Event event) {
 }
 
 bool slider::Digest() {
+  SyncDisabled(Root(), disabled);
   int track_size = std::max(2, width);
   int range = max - min;
   int pos = 0;
