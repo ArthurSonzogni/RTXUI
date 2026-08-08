@@ -6736,6 +6736,52 @@ TEST_CASE("Label Component Interaction", "[component][label]") {
   CHECK(cb2_el->focused() == true);
 }
 
+class DisabledLabelTestComponent
+    : public rtxui::Component<DisabledLabelTestComponent> {
+ public:
+  bool cb_checked = false;
+  void InitReflection() override {
+    Bind(cb_checked);
+    Import<rtxui::label>();
+    Import<rtxui::checkbox>();
+    rtxui::Component<DisabledLabelTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <label id="lbl" for="cb">Label</label>
+    <checkbox id="cb" checked="{cb_checked}" disabled="true">CB</checkbox>
+  )";
+};
+
+TEST_CASE("Clicking a label doesn't check or focus its disabled target",
+          "[component][label][disabled][regression]") {
+  // label::OnEvent doesn't itself check target_el->disabled() before
+  // focusing and triggering it - it relies on the target's own OnEvent
+  // (which no-ops while disabled, see the disabled=\"\" work earlier this
+  // session) and its own `parent->Digest()` call at the end (which
+  // cascades into the target's Digest(), re-running SyncDisabled and
+  // dropping the focus it had just set) to self-correct within the same
+  // synchronous call. Pin that down explicitly so a future refactor that
+  // drops the seemingly-redundant Digest() call doesn't quietly leave a
+  // disabled checkbox focused.
+  auto container = rtxui::Ref<DisabledLabelTestComponent>::New();
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  auto* lbl_el = container->Root()->QuerySelector("#lbl");
+  auto* cb_el = container->Root()->QuerySelector("#cb");
+  auto* lbl_comp = const_cast<rtxui::ComponentBase*>(lbl_el->component());
+
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  mouse.x = lbl_el->absolute_x() + 1;
+  mouse.y = lbl_el->absolute_y() + 1;
+  lbl_comp->OnEvent(Event(mouse));
+
+  CHECK_FALSE(container->cb_checked);
+  CHECK_FALSE(cb_el->focused());
+}
+
 // --- Tooltip ---
 class TooltipTestComponent : public rtxui::Component<TooltipTestComponent> {
  public:
