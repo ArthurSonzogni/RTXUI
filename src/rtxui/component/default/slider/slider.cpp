@@ -106,15 +106,7 @@ bool slider::OnEvent(Event event) {
 
         if (click_x >= track_x && click_x < track_x + track_w &&
             click_y >= track_y && click_y < track_y + track_h) {
-          // Focus this element
-          if (root->Parent()) {
-            Element* root_el = root;
-            while (root_el->Parent()) {
-              root_el = root_el->Parent();
-            }
-            root_el->Visit([](Element& el) { el.set_focused(false); });
-          }
-          root->set_focused(true);
+          FocusExclusive(root);
 
           CaptureMouse();
           is_captured = true;

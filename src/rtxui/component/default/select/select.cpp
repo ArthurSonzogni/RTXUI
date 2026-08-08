@@ -142,15 +142,7 @@ bool select::OnEvent(Event event) {
       }
 
       if (click_inside_select) {
-        // Focus this element
-        if (root->Parent()) {
-          Element* root_el = root;
-          while (root_el->Parent()) {
-            root_el = root_el->Parent();
-          }
-          root_el->Visit([](Element& el) { el.set_focused(false); });
-        }
-        root->set_focused(true);
+        FocusExclusive(root);
 
         is_open = !is_open;
         if (is_open) {

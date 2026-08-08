@@ -13,6 +13,10 @@ ComponentBase* GetOwningComponent(Element* element);
 ComponentBase* GetAttributeOwnerComponent(Element* element);
 ComponentBase* GetParentComponent(ComponentBase* comp);
 
+// Focuses `element` and clears focus from every other element in the
+// document, so only one element is ever focused at a time.
+void FocusExclusive(Element* element);
+
 }  // namespace rtxui
 
 #endif  // RTXUI_COMPONENT_INTERNAL_HPP_
