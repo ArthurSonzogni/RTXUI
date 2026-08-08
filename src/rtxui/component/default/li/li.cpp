@@ -38,29 +38,15 @@ int ParseIntAttribute(Element* el, const char* name, int fallback) {
   return value;
 }
 
-// The HTML start="" attribute on <ol>: the number the first item counts
-// from (default 1). Negative values are valid per spec.
-int GetListStart(Element* list) {
-  if (!list || list->tag() != "ol") {
-    return 1;
-  }
-  return ParseIntAttribute(list, "start", 1);
-}
-
-// Resolves li_root's ordinal number within immediate_list, honoring each
-// preceding sibling <li>'s own HTML value="" override (which also shifts
-// the count for every item after it, per spec) and immediate_list's
-// start.
-int GetListItemNumber(Element* li_root, Element* immediate_list, int start) {
-  int current = start - 1;
-  int result = start;
-  bool found = false;
-
+// Visits every <li> whose closest list ancestor is `immediate_list`, in
+// document order. Stops early (returning false from the visitor) once
+// satisfied.
+void ForEachListItem(Element* immediate_list,
+                     const std::function<bool(Element*)>& visit) {
+  bool stop = false;
   std::function<void(Element*)> traverse = [&](Element* el) {
-    if (found || !el) return;
-
+    if (stop || !el) return;
     if (el->tag() == "li") {
-      // Check if this 'li' element's closest list parent is immediate_list
       Element* curr = el->Parent();
       Element* closest_list = nullptr;
       while (curr) {
@@ -70,23 +56,61 @@ int GetListItemNumber(Element* li_root, Element* immediate_list, int start) {
         }
         curr = curr->Parent();
       }
-      if (closest_list == immediate_list) {
-        current = ParseIntAttribute(el, "value", current + 1);
-        if (el == li_root) {
-          result = current;
-          found = true;
-          return;
-        }
+      if (closest_list == immediate_list && !visit(el)) {
+        stop = true;
+        return;
       }
     }
-
     for (auto& child : el->children()) {
       traverse(child.get());
-      if (found) return;
+      if (stop) return;
     }
   };
-
   traverse(immediate_list);
+}
+
+// The HTML start="" attribute on <ol>: the number the first item counts
+// from (default 1, or the item count if reversed). Negative values are
+// valid per spec.
+int GetListStart(Element* list, bool reversed) {
+  if (!list || list->tag() != "ol") {
+    return 1;
+  }
+  if (list->GetAttribute("start")) {
+    return ParseIntAttribute(list, "start", 1);
+  }
+  if (!reversed) {
+    return 1;
+  }
+  int count = 0;
+  ForEachListItem(list, [&](Element*) { count++; return true; });
+  return count;
+}
+
+// The HTML boolean reversed attribute on <ol>: items count down instead
+// of up.
+bool GetListReversed(Element* list) {
+  return list && list->tag() == "ol" && list->GetAttribute("reversed");
+}
+
+// Resolves li_root's ordinal number within immediate_list, honoring each
+// preceding sibling <li>'s own HTML value="" override (which also shifts
+// the count for every item after it, per spec), immediate_list's start,
+// and its counting direction (1, or -1 when reversed).
+int GetListItemNumber(Element* li_root,
+                      Element* immediate_list,
+                      int start,
+                      int step) {
+  int current = start - step;
+  int result = start;
+  ForEachListItem(immediate_list, [&](Element* el) {
+    current = ParseIntAttribute(el, "value", current + step);
+    if (el == li_root) {
+      result = current;
+      return false;
+    }
+    return true;
+  });
   return result;
 }
 }  // namespace
@@ -143,8 +167,10 @@ bool li::Digest() {
     } else if (type == ListStyleType::Decimal) {
       int number = 1;
       if (immediate_list) {
-        number = GetListItemNumber(root, immediate_list,
-                                   GetListStart(immediate_list));
+        bool reversed = GetListReversed(immediate_list);
+        int start = GetListStart(immediate_list, reversed);
+        number = GetListItemNumber(root, immediate_list, start,
+                                   reversed ? -1 : 1);
       }
       new_marker = std::to_string(number) + ". ";
     } else {
