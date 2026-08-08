@@ -4400,6 +4400,10 @@ class ListTestComponent : public rtxui::Component<ListTestComponent> {
           <li>first</li>
           <li>second</li>
         </ol>
+        <ol id="ol_start" start="5">
+          <li>fifth</li>
+          <li>sixth</li>
+        </ol>
         <ul id="ul_custom_square">
           <li>square item</li>
         </ul>
@@ -4450,6 +4454,14 @@ TEST_CASE("List Rendering - ul, ol, li, and CSS", "[component][list]") {
   CHECK(RemoveWhitespace(print_decimal) ==
         "<olid=\"ol_decimal\"><li><span>1.</span>first</li><li><span>2.</"
         "span>second</li></ol>");
+
+  // 3b. Ordered list honors the HTML start="" attribute ("5. ", "6. ")
+  auto* ol_start = root->QuerySelector("#ol_start");
+  REQUIRE(ol_start != nullptr);
+  auto print_start = ol_start->Print();
+  CHECK(RemoveWhitespace(print_start) ==
+        "<olid=\"ol_start\"start=\"5\"><li><span>5.</span>fifth</li><li><span>"
+        "6.</span>sixth</li></ol>");
 
   // 4. Custom list-style-type: square ("■ ")
   auto* ul_custom_square = root->QuerySelector("#ul_custom_square");

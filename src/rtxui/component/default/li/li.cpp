@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/li/li.hpp"
 
+#include <cctype>
+#include <charconv>
 #include <functional>
 #include <string>
 
@@ -11,6 +13,31 @@
 namespace rtxui {
 
 namespace {
+// The HTML start="" attribute on <ol>: the number the first item counts
+// from (default 1). Negative values are valid per spec.
+int GetListStart(Element* list) {
+  if (!list || list->tag() != "ol") {
+    return 1;
+  }
+  auto* start_attr = list->GetAttribute("start");
+  if (!start_attr) {
+    return 1;
+  }
+  std::string_view s = *start_attr;
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+    s.remove_prefix(1);
+  }
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+    s.remove_suffix(1);
+  }
+  int value = 1;
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+  if (ec != std::errc() || ptr != s.data() + s.size()) {
+    return 1;
+  }
+  return value;
+}
+
 int GetListItemIndex(Element* li_root, Element* immediate_list) {
   int index = 0;
   bool found = false;
@@ -100,10 +127,12 @@ bool li::Digest() {
       new_marker = "";
     } else if (type == ListStyleType::Decimal) {
       int index = 1;
+      int start = 1;
       if (immediate_list) {
         index = GetListItemIndex(root, immediate_list);
+        start = GetListStart(immediate_list);
       }
-      new_marker = std::to_string(index) + ". ";
+      new_marker = std::to_string(index - 1 + start) + ". ";
     } else {
       // Unordered list types (Disc, Circle, Square)
       bool has_explicit_type = root->style.list_style_type.has_value() ||
