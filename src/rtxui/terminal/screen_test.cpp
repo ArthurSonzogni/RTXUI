@@ -4229,7 +4229,80 @@ TEST_CASE("Screen.PostedTaskTriggersDigestAndRepaint", "[terminal][task]") {
   CHECK(visible.find("twotwo") != std::string::npos);
 }
 
+// Regression test: a `position: fixed` overlay must be clickable even when an
+// intermediate ancestor's box doesn't cover the click.
+//
+// This mirrors the shape of the built-in <dialog>: the component's own root is
+// an ordinary block of near-zero height, and the full-screen overlay hangs off
+// it. Hit testing culled a subtree against that wrapper's bounds before
+// descending into it, so every click on the dialog was discarded and only the
+// keyboard could reach its buttons.
+TEST_CASE("Screen.ClickFixedPositionOverlay", "[terminal][mouse][dialog]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class OverlayComponent : public Component<OverlayComponent> {
+   public:
+    bool open = false;
+    int overlay_clicks = 0;
+
+    void Open() { open = true; }
+    void ClickOverlay() { overlay_clicks++; }
+
+    std::string overlay_class() const { return open ? "" : "closed"; }
+
+    std::string_view view =
+        R"(<div id="page"><div id="open" onclick="Open">open</div><div class="dialog-wrapper"><div id="overlay" class="{overlay_class}" onclick="ClickOverlay">overlay</div></div></div>
+      <style>
+        #page { display: block; width: 100%; height: 100%; }
+        /* Contributes no height of its own, like the dialog root. */
+        .dialog-wrapper { display: block; }
+        #overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 100;
+        }
+        .closed { display: none; }
+      </style>
+    )";
+
+    OverlayComponent() {
+      Bind(open);
+      Bind(overlay_class);
+      Bind(Open);
+      Bind(ClickOverlay);
+    }
+  };
+
+  auto component = Ref<OverlayComponent>::New();
+  Screen screen(component, device);
+
+  auto click_at = [&](int x, int y) {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    mouse.x = x;
+    mouse.y = y;
+    Event event = mouse;
+    screen.Dispatch(event);
+  };
+
+  // Closed: `display: none` keeps the overlay out of layout, so row 1 reaches
+  // the page underneath rather than the overlay.
+  click_at(1, 1);
+  CHECK(component->overlay_clicks == 0);
+
+  // Open it through its trigger on row 0.
+  click_at(1, 0);
+  REQUIRE(component->open);
+
+  // Row 1 lies inside #page but outside the zero-height wrapper that owns the
+  // overlay -- the case that used to be culled.
+  click_at(1, 1);
+  CHECK(component->overlay_clicks == 1);
+}
+
 }  // namespace
 }  // namespace rtxui
-
-

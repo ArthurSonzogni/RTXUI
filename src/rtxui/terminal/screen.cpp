@@ -374,9 +374,53 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
   return nullptr;
 }
 
+// A `position: fixed` fragment is placed against the viewport, so it paints
+// wherever it likes regardless of where its ancestors sit. FindElementAtImpl
+// culls a subtree against its ancestor's box *before* descending, which makes
+// such a fragment unreachable whenever an ancestor's box doesn't cover the
+// click -- an overlay whose parent is a zero-height wrapper, say, which is
+// exactly the shape of the built-in <dialog>. Collect them up front so they
+// can be tested against the viewport directly.
+void CollectFixedFragments(
+    const std::shared_ptr<PhysicalFragment>& fragment,
+    std::vector<std::shared_ptr<PhysicalFragment>>& out) {
+  if (!fragment) {
+    return;
+  }
+  for (const auto& child : fragment->children) {
+    if (child.fragment && child.fragment->dom_node &&
+        child.fragment->dom_node->style.position == PositionType::Fixed) {
+      out.push_back(child.fragment);
+    }
+    CollectFixedFragments(child.fragment, out);
+  }
+}
+
 Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
                        int target_x,
                        int target_y) {
+  std::vector<std::shared_ptr<PhysicalFragment>> fixed;
+  CollectFixedFragments(fragment, fixed);
+
+  // Topmost first, matching paint order. `display: none` subtrees never reach
+  // layout, so a closed overlay contributes no fragment here and cannot
+  // swallow clicks meant for the interface underneath it.
+  std::stable_sort(fixed.begin(), fixed.end(),
+                   [](const std::shared_ptr<PhysicalFragment>& a,
+                      const std::shared_ptr<PhysicalFragment>& b) {
+                     return a->dom_node->style.z_index.value_or(0) >
+                            b->dom_node->style.z_index.value_or(0);
+                   });
+
+  for (const auto& candidate : fixed) {
+    // Fixed fragments already carry viewport coordinates in their own x/y.
+    if (auto* found =
+            FindElementAtImpl(candidate, target_x, target_y, candidate->x,
+                              candidate->y, 0, 0, 0, 0)) {
+      return found;
+    }
+  }
+
   return FindElementAtImpl(fragment, target_x, target_y, 0, 0, 0, 0, 0, 0);
 }
 
