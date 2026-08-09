@@ -7,8 +7,8 @@
 
 #include <functional>
 #include <map>
-#include <print>
 #include <string>
+#include <string_view>
 
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/refcounted.hpp"
@@ -17,6 +17,13 @@
 namespace rtxui {
 
 class ComponentBase;
+
+// Defined out of line so that this header does not need <print>: libstdc++
+// only shipped it in GCC 14, and requiring that of every consumer for an
+// error message is a poor trade. Both terminate the process.
+[[noreturn]] RTXUI_EXPORT void ReportDuplicateImport(std::string_view name);
+[[noreturn]] RTXUI_EXPORT void ReportDuplicateImportAlias(
+    std::string_view class_name, std::string_view alias);
 
 using ComponentFactory = std::function<Ref<ComponentBase>()>;
 using ComponentImportMap = std::map<std::string, ComponentFactory, std::less<>>;
@@ -66,8 +73,7 @@ class RTXUI_EXPORT Bindings {
   void Import() {
     std::string name(T::StaticTag());
     if (imports_.count(name)) {
-      std::println("Error: Component '{}' is already imported.", name);
-      std::exit(1);
+      ReportDuplicateImport(name);
     }
 
     imports_[name] = []() { return Ref<ComponentBase>(new T()); };
@@ -83,10 +89,7 @@ class RTXUI_EXPORT Bindings {
     requires std::derived_from<T, ComponentBase>
   void Import(std::string_view alias) {
     if (imports_.count(alias)) {
-      std::println(
-          "Error: Can't import '{}' as '{}`, since it is already imported.",
-          ClassName<T>(), alias);
-      std::exit(1);
+      ReportDuplicateImportAlias(ClassName<T>(), alias);
     }
 
     imports_[std::string(alias)] = [] { return Ref<T>::New(); };

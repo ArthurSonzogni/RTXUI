@@ -553,6 +553,14 @@ if(RTXUI_BUILD_TESTS)
     add_test(NAME verify_examples
       COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_examples.py"
     )
+
+    # Verify each public header compiles on its own. Most valuable where the
+    # standard library differs from the one used day to day.
+    add_test(NAME verify_headers
+      COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_headers.py"
+              --cxx "${CMAKE_CXX_COMPILER}"
+              --export-header-dir "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    )
   endif()
 
   # Catch2
