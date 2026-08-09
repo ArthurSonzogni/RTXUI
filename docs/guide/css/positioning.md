@@ -25,11 +25,11 @@ For elements configured with `position: absolute`, `position: fixed`, or `positi
 *   `top`: Spacing from the container's top edge.
 *   `bottom`: Spacing from the container's bottom edge.
 
-::: warning `sticky` pins to the top and left only
-`position: sticky` currently honours `top` and `left`. `bottom` and `right`
-are accepted but have no effect on a sticky element, which will simply scroll
-away as if it were `relative`. `absolute` and `fixed` support all four.
-:::
+A sticky element honours all four offsets. `top`/`left` pin it as it scrolls
+up or left out of view; `bottom`/`right` pin it while it is still below or to
+the right of the viewport, which is how a footer stays visible until the
+content it belongs to scrolls past. When both edges of one axis are set, the
+leading edge (`top`, `left`) wins.
 
 ```html
 <div class="modal-box">Centered Overlay</div>

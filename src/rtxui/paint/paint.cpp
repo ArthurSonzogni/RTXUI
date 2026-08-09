@@ -377,6 +377,8 @@ void PaintImpl(const PhysicalFragment* frag,
                int accum_scroll_y,
                int viewport_x,
                int viewport_y,
+               int viewport_w,
+               int viewport_h,
                Color inherited_foreground_color,
                Color parent_background_color,
                bool inherited_bold,
@@ -908,9 +910,13 @@ void PaintImpl(const PhysicalFragment* frag,
 
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
+  int next_viewport_w = viewport_w;
+  int next_viewport_h = viewport_h;
   if (frag->clips_descendants) {
     next_viewport_x = abs_x + border_l + padding_l;
     next_viewport_y = abs_y + border_t + padding_t;
+    next_viewport_w = w - border_l - border_r - padding_l - padding_r;
+    next_viewport_h = h - border_t - border_b - padding_t - padding_b;
   }
 
   for (auto& child : sorted_children) {
@@ -945,6 +951,10 @@ void PaintImpl(const PhysicalFragment* frag,
             frag->clips_descendants ? next_viewport_x : viewport_x;
         sticky.viewport_y =
             frag->clips_descendants ? next_viewport_y : viewport_y;
+        sticky.viewport_width =
+            frag->clips_descendants ? next_viewport_w : viewport_w;
+        sticky.viewport_height =
+            frag->clips_descendants ? next_viewport_h : viewport_h;
         sticky.parent_x = abs_x;
         sticky.parent_y = abs_y;
         sticky.parent_width = w;
@@ -966,7 +976,9 @@ void PaintImpl(const PhysicalFragment* frag,
     PaintImpl(child.fragment.get(), texture, child_off_x, child_off_y,
               child_accum_scroll_x, child_accum_scroll_y,
               is_fixed ? viewport_x : next_viewport_x,
-              is_fixed ? viewport_y : next_viewport_y, current_foreground_color,
+              is_fixed ? viewport_y : next_viewport_y,
+              is_fixed ? viewport_w : next_viewport_w,
+              is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
               current_background_color, current_bold, current_dim,
               current_italic, current_underlined, current_underlined_double,
               current_strikethrough, current_blink,
@@ -980,6 +992,7 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y) {
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y,
+            texture.width(), texture.height(),
             Color::RGB(255, 255, 255), Color(), false, false, false, false,
             false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
