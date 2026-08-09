@@ -345,6 +345,166 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
   }
 }
 
+// Flexbox conformance. Every one of these passed on first run; they are here
+// so that stays true.
+TEST_CASE("Layout: flexbox conformance", "[layout][flex][conformance]") {
+  SECTION("flex-grow absorbs the free space") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:6;}.a{width:2;flex-grow:1;}.b{width:2;}</style><div class="f"><div class="a">AAAA</div><div class="b">BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
+          == CheckGrid({"AAAABB"}));
+  }
+
+  SECTION("equal flex-grow splits the remainder") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:8;}.a{width:2;flex-grow:1;}.b{width:2;flex-grow:1;}</style><div class="f"><div class="a">AAAA</div><div class="b">BBBB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
+          == CheckGrid({"AAAABBBB"}));
+  }
+
+  SECTION("flex-shrink 0 holds an item at its basis") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:4;}.a{width:4;flex-shrink:0;}.b{width:4;flex-shrink:1;}</style><div class="f"><div class="a">AAAA</div><div class="b">BBBB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1))
+          == CheckGrid({"AAAA"}));
+  }
+
+  SECTION("justify-content flex-end") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:6;justify-content:flex-end;}</style><div class="f"><div>AB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
+          == CheckGrid({"    AB"}));
+  }
+
+  SECTION("justify-content center") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:6;justify-content:center;}</style><div class="f"><div>AB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
+          == CheckGrid({"  AB  "}));
+  }
+
+  SECTION("justify-content space-between") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:6;justify-content:space-between;}</style><div class="f"><div>A</div><div>B</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
+          == CheckGrid({"A    B"}));
+  }
+
+  SECTION("align-items flex-end") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:2;height:3;align-items:flex-end;}</style><div class="f"><div>AB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3))
+          == CheckGrid({"  ", "  ", "AB"}));
+  }
+
+  SECTION("align-items center") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:2;height:3;align-items:center;}</style><div class="f"><div>AB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3))
+          == CheckGrid({"  ", "AB", "  "}));
+  }
+
+  SECTION("flex-direction column") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;flex-direction:column;width:2;height:2;}</style><div class="f"><div>AB</div><div>CD</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 2))
+          == CheckGrid({"AB", "CD"}));
+  }
+
+  SECTION("gap separates items") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;width:5;gap:1;}</style><div class="f"><div>AB</div><div>CD</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 5, 1))
+          == CheckGrid({"AB CD"}));
+  }
+
+  SECTION("flex-wrap moves the overflow to a new line") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.f{display:flex;flex-wrap:wrap;width:4;}.i{width:3;}</style><div class="f"><div class="i">AAA</div><div class="i">BBB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
+          == CheckGrid({"AAA ", "BBB "}));
+  }
+
+}
+
+TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
+  SECTION("explicit column tracks") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1))
+          == CheckGrid({"AABB"}));
+  }
+
+  SECTION("fr units share the free space") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:1fr 1fr;width:4;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1))
+          == CheckGrid({"AABB"}));
+  }
+
+  SECTION("uneven fr split") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:1fr 3fr;width:8;}</style><div class="g"><div>AAAA</div><div>BBBBBB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
+          == CheckGrid({"AABBBBBB"}));
+  }
+
+  SECTION("overflow lands on an implicit row") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
+          == CheckGrid({"AABB", "CC  "}));
+  }
+
+  SECTION("grid-column span widens an item") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}.s{grid-column:span 2;}</style><div class="g"><div class="s">AAAA</div><div>BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
+          == CheckGrid({"AAAA", "BB  "}));
+  }
+
+  SECTION("explicit row tracks") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template-rows:1 1;width:2;height:2;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 2))
+          == CheckGrid({"AA", "BB"}));
+  }
+
+  SECTION("column-gap separates tracks") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;column-gap:1;width:5;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 5, 1))
+          == CheckGrid({"AA BB"}));
+  }
+
+  SECTION("the grid-template shorthand") {
+    struct T : Component<T> {
+      std::string_view view = R"html(<style>.g{display:grid;grid-template:1 1 / 2 2;width:4;height:2;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div><div>DD</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
+          == CheckGrid({"AABB", "CCDD"}));
+  }
+
+}
+
 TEST_CASE("Layout: Padding and Box Model", "[layout]") {
   struct BoxModelTest : Component<BoxModelTest> {
     std::string_view Setup() {
