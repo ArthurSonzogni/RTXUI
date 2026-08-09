@@ -1,7 +1,13 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Arrow-key spatial navigation.
+//
+// Focus moves to the nearest focusable element in the direction pressed, computed
+// from the laid-out geometry.
+//
+// Try it: move around the grid with the arrow keys.
 #include <string>
 #include <vector>
 
@@ -19,21 +25,22 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
     click_count++;
   }
 
-  void InitReflection() override {
+  SpatialNavDemo() {
     Import("OnButtonClick", [this](std::string label) { OnButtonClick(label); });
     Bind(last_action);
     Bind(click_count);
-    Component<SpatialNavDemo>::InitReflection();
   }
 
   std::string_view view = R"html(
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+
         display: flex;
         flex-direction: column;
         padding: 1;
         gap: 1;
-        background-color: rgb(18, 18, 18);
+        background-color: var(--bg);
         color: #f1f5f9;
       }
       h1 {

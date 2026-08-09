@@ -1,7 +1,10 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Every border style: solid, double, dashed, round, tall, vkey and more.
+//
+// Each tile names the style it draws, so this doubles as a lookup table.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -20,7 +23,9 @@ class BorderBox : public Component<BorderBox> {
 
       <style>
         self {
-          background-color: rgb(18, 18, 18);
+          --bg: rgb(13, 17, 23);
+
+          background-color: var(--bg);
           display: block;
           flex-grow: 1;
         }
@@ -99,7 +104,7 @@ class BordersDemo : public Component<BordersDemo> {
         self {
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
           width: 100%;
           height: 100%;

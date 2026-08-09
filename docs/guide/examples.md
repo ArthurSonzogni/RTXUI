@@ -4,6 +4,17 @@ Every example in the repository's
 [example/](https://github.com/ArthurSonzogni/RTXUI/tree/main/example)
 directory, grouped by topic. Each builds as `build/rtxui_example_<name>`.
 
+## Applications
+
+Complete applications, showing how the individual features below compose.
+
+| Example | Demonstrates | Guide |
+| :--- | :--- | :--- |
+| [app_dashboard.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/app_dashboard.cpp) | A service-health dashboard: bound collection, computed values, conditional rendering, flex layout. | [Reactivity](/reactivity) |
+| [app_filebrowser.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/app_filebrowser.cpp) | A keyboard-driven file browser: focus navigation, scroll-into-view, a scrollable list. | [Scrolling](/guide/scrolling) |
+| [demo.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/demo.cpp) | Kitchen sink: one program exercising most of the library at once. | [Reactivity](/reactivity) |
+| [playground.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/playground.cpp) | A live HTML/CSS editor and preview, side by side. | [Playground](/guide/playground) |
+
 ## Core Concepts
 
 Components, reactivity, interpolation, conditional rendering, and slots.
@@ -14,10 +25,8 @@ Components, reactivity, interpolation, conditional rendering, and slots.
 | [counter.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/counter.cpp) | Basic state reactivity and interpolation. | [Interpolation](/guide/interpolation) |
 | [conditional.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/conditional.cpp) | Conditional rendering from boolean state. | [Conditionals](/guide/conditionals) |
 | [loop_simple.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/loop_simple.cpp) | Rendering a list of strings. | [Loops & Lists](/guide/loops) |
-| [loop.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/loop.cpp) | Adding and removing list items interactively. | [Loops & Lists](/guide/loops) |
 | [loop_complex.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/loop_complex.cpp) | Collections of structs with per-field bindings. | [Loops & Lists](/guide/loops) |
 | [slots.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/slots.cpp) | Reusable components with named slots. | [Slots](/guide/cpp/slots) |
-| [demo.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/demo.cpp) | A dashboard combining many widgets and tabs. | [Reactivity](/reactivity) |
 
 ## Form Elements
 

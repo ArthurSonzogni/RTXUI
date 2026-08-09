@@ -152,15 +152,32 @@ defines `RTXUI_HAS_REFLECTION`), struct fields inside bound collections are
 readable from templates directly — `{task.name}` works without writing a
 mapper. Without it, provide the mapper shown in the
 [loops guide](/guide/loops#collections-of-structs). Binding itself is
-explicit in either case: components list their reactive members in the
-constructor or in `InitReflection()`.
+explicit in either case: components list their reactive members in their
+constructor.
 
-## Demo
+## Demos
 
-<ExampleTabs src="/wasm/rtxui_example_demo.js">
+The smallest complete picture: a bound `int`, a computed value derived from
+it, and two handlers that mutate it.
+
+<ExampleTabs src="/wasm/rtxui_example_counter.js">
 <template #source>
 
-<<< @/../example/demo.cpp
+<<< @/../example/counter.cpp
 
 </template>
 </ExampleTabs>
+
+The same machinery at application scale — a bound collection of structs,
+several computed values, and conditional rendering driven by the selection:
+
+<ExampleTabs src="/wasm/rtxui_example_app_dashboard.js" :cols="100" :rows="28">
+<template #source>
+
+<<< @/../example/app_dashboard.cpp
+
+</template>
+</ExampleTabs>
+
+For a single program exercising most of the library at once, see
+[demo.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/demo.cpp).

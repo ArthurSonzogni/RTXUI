@@ -1,9 +1,12 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// CSS grid.
+//
+// grid-template sets the track sizes; items span tracks with grid-column and
+// grid-row.
 #include <rtxui/rtxui.hpp>
-#include "rtxui/component/default_components_internal.hpp"
 
 using namespace rtxui;
 
@@ -28,7 +31,13 @@ class GridDemo : public Component<GridDemo> {
       
       <style>
         self {
-          background-color: rgb(18, 18, 18);
+          --bg: rgb(13, 17, 23);
+          --border: rgb(48, 54, 61);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+          --danger: rgb(248, 81, 73);
+
+          background-color: var(--bg);
         }
 
         .content {
@@ -39,7 +48,7 @@ class GridDemo : public Component<GridDemo> {
         }
         h1 {
           font-weight: bold;
-          color: rgb(96, 165, 250);
+          color: var(--accent-bright);
           margin-bottom: 1;
         }
         p {
@@ -52,7 +61,7 @@ class GridDemo : public Component<GridDemo> {
           width: 90%;
           height: 18;
           border: solid;
-          border-color: rgb(74, 85, 104);
+          border-color: var(--border);
           padding: 1;
         }
         .grid-item {
@@ -60,23 +69,16 @@ class GridDemo : public Component<GridDemo> {
           padding: 1;
           border: tall;
         }
-        .item-1 { background-color: rgb(239, 68, 68); color: white; border-color: rgb(185, 28, 28); grid-column: span 2; }
+        .item-1 { background-color: var(--danger); color: white; border-color: rgb(185, 28, 28); grid-column: span 2; }
         .item-3 { background-color: rgb(234, 179, 8); color: black; border-color: rgb(161, 98, 7); }
         .item-4 { background-color: rgb(34, 197, 94); color: white; border-color: rgb(21, 128, 61); }
-        .item-5 { background-color: rgb(59, 130, 246); color: white; border-color: rgb(29, 78, 216); grid-row: span 2; }
+        .item-5 { background-color: var(--accent); color: white; border-color: rgb(29, 78, 216); grid-row: span 2; }
         .item-6 { background-color: rgb(168, 85, 247); color: white; border-color: rgb(126, 34, 206); }
         .item-7 { background-color: rgb(236, 72, 153); color: white; border-color: rgb(190, 24, 74); }
         .item-8 { background-color: rgb(20, 184, 166); color: white; border-color: rgb(13, 148, 136); }
-        .item-9 { background-color: rgb(100, 116, 139); color: white; border-color: rgb(71, 85, 105); }
+        .item-9 { background-color: rgb(100, 116, 139); color: white; border-color: var(--border); }
       </style>
     )html";
-
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::h1>();
-    Import<rtxui::p>();
-    Component<GridDemo>::InitReflection();
-  }
 };
 
 int main() {

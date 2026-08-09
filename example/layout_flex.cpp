@@ -1,7 +1,12 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// An interactive flexbox playground.
+//
+// Every flex property is driven from the UI: change flex-direction,
+// justify-content, align-items, and each item's grow/shrink/basis, and watch the
+// boxes redistribute.
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
@@ -135,7 +140,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
   void AddItem() {
     item_counter++;
     std::string colors[] = {
-        "rgb(239, 68, 68)",  "rgb(59, 130, 246)", "rgb(16, 185, 129)",
+        "var(--danger)",  "var(--accent)", "var(--success)",
         "rgb(245, 158, 11)", "rgb(139, 92, 246)",
     };
     std::string color = colors[(item_counter - 1) % 5];
@@ -271,9 +276,19 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
+          --text: rgb(230, 237, 243);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+          --danger: rgb(248, 81, 73);
+          --success: rgb(63, 185, 80);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
           width: 100%;
           height: 100%;
@@ -292,7 +307,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
         }
         .desc {
           display: block;
-          color: rgb(148, 163, 184);
+          color: var(--muted);
         }
         .content-split {
           display: flex;
@@ -304,17 +319,17 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
           width: 32;
           flex-shrink: 0;
           border-right: solid;
-          border-color: rgb(51, 65, 85);
+          border-color: var(--border);
           padding-right: 2;
           overflow-y: auto;
         }
         .preview-area {
           display: block;
           flex-grow: 1;
-          background-color: rgb(30, 41, 59);
+          background-color: var(--surface);
           padding: 1;
           border: solid;
-          border-color: rgb(71, 85, 105);
+          border-color: var(--border);
           overflow: hidden;
         }
         .css-panel {
@@ -322,7 +337,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
           width: 32;
           flex-shrink: 0;
           border-left: solid;
-          border-color: rgb(51, 65, 85);
+          border-color: var(--border);
           padding-left: 2;
           overflow-y: auto;
         }
@@ -338,7 +353,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
         }
         .divider {
           border-bottom: dashed;
-          border-color: rgb(51, 65, 85);
+          border-color: var(--border);
           margin-top: 1;
           margin-bottom: 1;
         }
@@ -349,29 +364,29 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
         button {
           width: 100%;
           border: tall;
-          border-color: rgb(71, 85, 105);
-          color: rgb(226, 232, 240);
+          border-color: var(--border);
+          color: var(--text);
           background-color: transparent;
           padding-left: 1;
           padding-right: 1;
           text-align: left;
         }
         button:hover {
-          background-color: rgb(30, 41, 59);
-          border-color: rgb(96, 165, 250);
+          background-color: var(--surface);
+          border-color: var(--accent-bright);
           color: white;
         }
         .btn-add {
-          border-color: rgb(16, 185, 129);
-          color: rgb(16, 185, 129);
+          border-color: var(--success);
+          color: var(--success);
         }
         .btn-add:hover {
           background-color: rgb(6, 95, 70);
           color: white;
         }
         .btn-remove {
-          border-color: rgb(239, 68, 68);
-          color: rgb(239, 68, 68);
+          border-color: var(--danger);
+          color: var(--danger);
         }
         .btn-remove:hover {
           background-color: rgb(153, 27, 27);
@@ -386,7 +401,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
         .slider-label {
           display: inline;
           width: 8;
-          color: rgb(148, 163, 184);
+          color: var(--muted);
         }
         .css-display {
           display: block;
@@ -395,7 +410,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
           background-color: rgb(15, 23, 42);
           padding: 1;
           border: solid;
-          border-color: rgb(71, 85, 105);
+          border-color: var(--border);
           margin-bottom: 1;
         }
         .flex-container {

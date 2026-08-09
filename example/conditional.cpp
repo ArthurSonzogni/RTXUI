@@ -1,3 +1,13 @@
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+//
+// Conditional rendering.
+//
+// <if condition="{computed}"> includes its children only when the bound value is
+// true; the `if` attribute does the same inline on any element.
+//
+// Try it: switch tabs to swap the rendered branch.
 #include <rtxui/rtxui.hpp>
 #include <string>
 
@@ -79,9 +89,14 @@ class ConditionalApp : public Component<ConditionalApp> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+
           display: block;
           padding: 2;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: #eee;
           overflow-y: scroll;
 
@@ -92,9 +107,9 @@ class ConditionalApp : public Component<ConditionalApp> {
 
           button {
             border: vkey;
-            border-color-left: rgb(71, 85, 105);
+            border-color-left: var(--border);
             border-color-right: rgb(10, 10, 10);
-            background-color: rgb(30, 41, 59);
+            background-color: var(--surface);
             color: white;
             padding: 0 1;
             opacity: 0.6;
@@ -110,16 +125,16 @@ class ConditionalApp : public Component<ConditionalApp> {
 
           .content {
             border: vkey;
-            border-color-left: rgb(71, 85, 105);
+            border-color-left: var(--border);
             border-color-right: rgb(10, 10, 10);
-            background-color: rgb(30, 41, 59);
+            background-color: var(--surface);
             padding: 1;
             min-height: 15;
 
             .card {
               border: tall;
-              border-color: rgb(51, 65, 85);
-              background-color: rgb(30, 41, 59);
+              border-color: var(--border);
+              background-color: var(--surface);
               padding: 1;
               margin-top: 1;
               display: flex;
@@ -129,7 +144,7 @@ class ConditionalApp : public Component<ConditionalApp> {
 
           .footer {
             margin-top: 2;
-            color: rgb(148, 163, 184);
+            color: var(--muted);
             font-style: italic;
           }
         }

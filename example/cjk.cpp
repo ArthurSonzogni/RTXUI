@@ -1,6 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// Double-width text.
+//
+// CJK ideographs and emoji occupy two terminal cells. Layout measures text in
+// cells, not code points, so alignment holds for mixed-width content.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -51,9 +56,11 @@ class CJKDemo : public Component<CJKDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+
           display: block;
           padding: 2;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: #eee;
           overflow-y: scroll;
         }

@@ -1,6 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// Recipe: updating the UI from a worker thread.
+//
+// The UI is single-threaded. A background thread must hand results back through
+// the task runner, which applies them between frames.
 #include <rtxui/rtxui.hpp>
 
 #include <chrono>

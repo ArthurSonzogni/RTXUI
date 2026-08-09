@@ -1,9 +1,10 @@
-// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// <radio> buttons sharing a `name`, with the selection bound to a C++ string.
 #include <rtxui/rtxui.hpp>
 
-#include "rtxui/component/default_components_internal.hpp"
 
 using namespace rtxui;
 
@@ -38,12 +39,16 @@ class RadioDemo : public Component<RadioDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --border: rgb(48, 54, 61);
+          --accent: rgb(88, 166, 255);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
         h1 {
-          color: rgb(59, 130, 246);
+          color: var(--accent);
           margin-bottom: 1;
         }
         p {
@@ -55,7 +60,7 @@ class RadioDemo : public Component<RadioDemo> {
           gap: 1;
           margin-bottom: 1;
           border-left: solid;
-          border-color: rgb(74, 85, 104);
+          border-color: var(--border);
           padding-left: 2;
         }
         .status {
@@ -65,16 +70,11 @@ class RadioDemo : public Component<RadioDemo> {
       </style>
     )html";
 
-  void InitReflection() override {
+  RadioDemo() {
     Bind(select_a);
     Bind(select_b);
     Bind(select_c);
     Bind(selected_tech);
-    Import<rtxui::radio>();
-    Import<rtxui::div>();
-    Import<rtxui::p>();
-    Import<rtxui::h1>();
-    Component<RadioDemo>::InitReflection();
   }
 };
 

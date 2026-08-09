@@ -90,3 +90,16 @@ RTXUI supports anchor navigation using `<a>` tags. When an `<a>` tag with a targ
 </template>
 </ExampleTabs>
 
+
+## An application using all of it
+
+A file browser: the listing scrolls, its rows are focusable, and moving the
+focus walks them while keeping the focused row on screen.
+
+<ExampleTabs src="/wasm/rtxui_example_app_filebrowser.js" :cols="100" :rows="28">
+<template #source>
+
+<<< @/../example/app_filebrowser.cpp
+
+</template>
+</ExampleTabs>

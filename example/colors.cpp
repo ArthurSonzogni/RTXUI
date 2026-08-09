@@ -1,6 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// Foreground and background colors.
+//
+// Colors accept rgb(), #rrggbb and named forms, and are composed into a swatch
+// grid by a small reusable child component.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -20,7 +25,9 @@ class ColorBox : public Component<ColorBox> {
 
       <style>
         self {
-          background-color: rgb(18, 18, 18);
+          --bg: rgb(13, 17, 23);
+
+          background-color: var(--bg);
           display: block;
           flex-grow: 1;
         }
@@ -122,7 +129,7 @@ class ColorDemo : public Component<ColorDemo> {
         self {
           display: block;
           padding: 2;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: #eee;
           height: 22;
           overflow-y: scroll;

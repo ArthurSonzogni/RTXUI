@@ -1,6 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// Recipe: a confirmation dialog.
+//
+// The built-in <dialog> renders centered above the interface with a dimmed
+// backdrop and closes on Escape. Bind its `open` attribute to a bool.
 #include <rtxui/rtxui.hpp>
 
 #include <string>
