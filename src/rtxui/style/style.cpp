@@ -350,7 +350,32 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
     parent_part.combinator = combinators[i];
     parsed.parents.push_back(std::move(parent_part));
   }
-  
+
+  // Specificity is summed over every compound in the selector, ancestors
+  // included, exactly as CSS does it. `*` contributes nothing, and a `base` of
+  // "self" is the component's own root rather than an element name, so it does
+  // not count as a type either.
+  int ids = 0;
+  int classes = 0;
+  int types = 0;
+  auto count_compound = [&](const std::string& base, const std::string& id,
+                            size_t class_count, size_t attribute_count) {
+    ids += id.empty() ? 0 : 1;
+    classes += static_cast<int>(class_count + attribute_count);
+    if (!base.empty() && base != "*" && base != "self") {
+      types += 1;
+    }
+  };
+  count_compound(parsed.base, parsed.id, parsed.classes.size(),
+                 parsed.attributes.size());
+  // Pseudo-classes weigh the same as a class in CSS.
+  classes += static_cast<int>(parsed.pseudo_classes.size());
+  for (const SelectorPart& parent : parsed.parents) {
+    count_compound(parent.base, parent.id, parent.classes.size(),
+                   parent.attributes.size());
+  }
+  parsed.specificity = MakeSpecificity(ids, classes, types);
+
   return parsed;
 }
 

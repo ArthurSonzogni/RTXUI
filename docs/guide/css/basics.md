@@ -96,6 +96,49 @@ Built-in components that expose parts document them alongside their other
 attributes — see the [`<textarea>`](/guide/forms) guide for the
 line-number gutter and current-line highlight parts.
 
+## The Cascade
+
+When more than one rule sets the same property on an element, the winner is the
+one with the highest **specificity** — the same rule CSS uses. Specificity
+counts three things across the whole selector, ancestors included:
+
+| Weight | Counts | Example |
+| :--- | :--- | :--- |
+| highest | id selectors | `#sidebar` |
+| middle | classes, attributes, pseudo-classes | `.card`, `[open]`, `:hover` |
+| lowest | element names | `div` |
+
+A single id outranks any number of classes, and a single class outranks any
+number of element names:
+
+```css
+#panel      { color: red; }   /* wins */
+.a.b.c      { color: blue; }
+section div { color: green; }
+```
+
+Because the count runs over the entire selector, rules that look similar still
+rank correctly:
+
+```css
+.a.b        { color: red; }   /* wins over .a  — two classes beat one */
+div.a       { color: red; }   /* wins over .a  — same classes, one more type */
+.wrap .a    { color: red; }   /* wins over .a  — same classes, plus an ancestor */
+```
+
+`*` contributes nothing, and `self` selects the component's own root rather
+than an element name, so neither adds weight.
+
+Between two rules of **equal** specificity, the later one wins:
+
+```css
+.a { color: red; }
+.b { color: blue; }   /* an element with class="a b" is blue */
+```
+
+The `style` attribute is applied after every selector, so it always wins, and
+`!important` overrides even that — see [`!important`](#important) below.
+
 ## Inline Styles
 
 The `style` attribute applies declarations to a single element, taking
@@ -135,6 +178,22 @@ self { --accent: rgb(59, 130, 246); }
 Appending `!important` to a declaration makes it win over normal
 declarations from later rules and over inline styles, as in standard CSS.
 Reach for it rarely; more specific selectors usually express intent better.
+
+::: warning Known limitation
+An `!important` declaration does not currently survive a matching
+pseudo-class rule on the same element: given
+
+```css
+.row       { color: green !important; }
+.row:focus { color: blue; }
+```
+
+a focused `.row` renders blue, where CSS would keep it green. Interactive
+state is resolved in a second pass layered on top of the resting style, and
+that pass applies its normal declarations after the first pass has already
+applied its important ones. Avoid combining `!important` with pseudo-class
+rules for the same property.
+:::
 
 The [CSS property reference](/css_reference) lists every supported property
 with its accepted values.
