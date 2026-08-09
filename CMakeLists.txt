@@ -47,6 +47,32 @@ if(CCACHE_PROGRAM)
 endif()
 
 
+# Warnings. The library built with none at all, which is how a fragment's
+# x/y ended up being read while uninitialised. -Wall -Wextra is on for the
+# library itself; the categories below are the ones the existing code trips
+# over and are staged for cleanup rather than silently tolerated:
+#
+#   missing-field-initializers  61   aggregate init leaving trailing members
+#   unused-local-typedefs       40
+#   unused-but-set-variable     33
+#   unused-parameter            17
+#   sign-compare                13   audited: all guarded, none reachable
+#   unused-variable              4
+#   unused-function              3
+#
+# No -Werror: this has to keep building on compilers whose warning sets differ.
+set(RTXUI_WARNING_FLAGS
+  -Wall
+  -Wextra
+  -Wno-missing-field-initializers
+  -Wno-unused-local-typedefs
+  -Wno-unused-but-set-variable
+  -Wno-unused-parameter
+  -Wno-sign-compare
+  -Wno-unused-variable
+  -Wno-unused-function
+)
+
 add_library(rtxui_lib STATIC
   "src/rtxui/terminal/terminal_input_parser.cpp"
   "src/rtxui/terminal/terminal_input_parser.hpp"
@@ -147,6 +173,8 @@ add_library(rtxui_lib STATIC
 )
 
 target_compile_features(rtxui_lib PUBLIC cxx_std_26)
+# PRIVATE: consumers get RTXUI's headers, not its warning policy.
+target_compile_options(rtxui_lib PRIVATE ${RTXUI_WARNING_FLAGS})
 target_include_directories(rtxui_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>

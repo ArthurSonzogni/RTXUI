@@ -389,7 +389,10 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
 
   Nodes children;
   while (true) {
-    int check_pos = pos_;
+    // size_t, not int: pos_ is a size_t, and narrowing it here would make the
+    // bounds checks below compare a possibly-negative int against a size_t,
+    // converting it to a huge value that passes the check.
+    size_t check_pos = pos_;
     while (check_pos < xml_.size() && IsWhitespace(xml_[check_pos])) {
       check_pos++;
     }
