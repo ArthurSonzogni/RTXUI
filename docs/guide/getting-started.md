@@ -5,11 +5,13 @@ project, and how to build the repository itself.
 
 ## Requirements
 
-- **A C++26 compiler.** The project's continuous integration builds with GCC
-  14; recent Clang releases work as well. C++26 *reflection* support is
-  optional — when the compiler provides it, RTXUI uses it to read struct
-  fields in bound collections without manual mappers, and falls back
-  gracefully when it does not.
+- **A C++23 compiler.** That is the requirement, for building RTXUI and for
+  consuming it: the installed CMake package asks for `cxx_std_23`, so an
+  ordinary distribution compiler is enough. C++26 *reflection* is optional —
+  when the compiler provides it, RTXUI raises its own targets to C++26 and
+  uses it to read struct fields in bound collections without manual mappers,
+  falling back gracefully when it does not. Continuous integration builds with
+  GCC 14 and Clang 20.
 - **Linux or macOS.** The terminal backend is POSIX (termios, `SIGWINCH`).
   Windows is not supported yet — there is no ConPTY backend, and CMake fails
   early with that message rather than part-way through the build. RTXUI also

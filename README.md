@@ -99,11 +99,12 @@ Run your compiled application. If you make changes to the `view` template in you
 RTXUI runs on **Linux and macOS** (the terminal backend is POSIX), and in the
 browser via **WebAssembly**. Windows is not supported yet.
 
-#### 1. Install a C++26 compiler
+#### 1. Install a C++23 compiler
 
-The project builds as C++26 (`CMAKE_CXX_STANDARD 26`). CI uses GCC 14; recent
-Clang releases work too — see [Getting Started](docs/guide/getting-started.md)
-for the C++26 reflection notes.
+RTXUI requires **C++23**. C++26 is optional: when the compiler provides
+reflection, RTXUI uses it to read struct fields in bound collections without a
+manual mapper, and falls back cleanly when it does not. Consuming the library
+needs only C++23 — see [Getting Started](docs/guide/getting-started.md).
 
 On Debian or Ubuntu:
 
