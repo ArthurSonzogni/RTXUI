@@ -1,5 +1,7 @@
 #include "rtxui/paint/paint.hpp"
 
+#include "rtxui/layout/sticky.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -937,33 +939,27 @@ void PaintImpl(const PhysicalFragment* frag,
       child_off_y -= scroll_y_offset;
 
       if (is_sticky) {
-        if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
-          int top_val = child.fragment->dom_node->style.top.Resolve(0);
-          int active_viewport_y = frag->clips_descendants ? next_viewport_y : viewport_y;
-          int min_y = active_viewport_y + top_val;
-          child_off_y = std::max(child_off_y, min_y);
-
-          if (!frag->clips_descendants) {
-            int parent_scrolled_bottom =
-                abs_y + h - border_b - padding_b;
-            int max_y = parent_scrolled_bottom - child.fragment->height;
-            child_off_y = std::min(child_off_y, max_y);
-          }
-        }
-
-        if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
-          int left_val = child.fragment->dom_node->style.left.Resolve(0);
-          int active_viewport_x = frag->clips_descendants ? next_viewport_x : viewport_x;
-          int min_x = active_viewport_x + left_val;
-          child_off_x = std::max(child_off_x, min_x);
-
-          if (!frag->clips_descendants) {
-            int parent_scrolled_right =
-                abs_x + w - border_r - padding_r;
-            int max_x = parent_scrolled_right - child.fragment->width;
-            child_off_x = std::min(child_off_x, max_x);
-          }
-        }
+        StickyContext sticky;
+        sticky.parent_clips = frag->clips_descendants;
+        sticky.viewport_x =
+            frag->clips_descendants ? next_viewport_x : viewport_x;
+        sticky.viewport_y =
+            frag->clips_descendants ? next_viewport_y : viewport_y;
+        sticky.parent_x = abs_x;
+        sticky.parent_y = abs_y;
+        sticky.parent_width = w;
+        sticky.parent_height = h;
+        sticky.parent_border_left = border_l;
+        sticky.parent_border_top = border_t;
+        sticky.parent_border_right = border_r;
+        sticky.parent_border_bottom = border_b;
+        sticky.parent_padding_left = padding_l;
+        sticky.parent_padding_top = padding_t;
+        sticky.parent_padding_right = padding_r;
+        sticky.parent_padding_bottom = padding_b;
+        ApplyStickyOffset(child.fragment->dom_node->style,
+                          child.fragment->width, child.fragment->height, sticky,
+                          child_off_x, child_off_y);
       }
     }
 
