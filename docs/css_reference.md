@@ -172,7 +172,7 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 ## 7. Transitions and Positioning
 
 <CssProperty name="transition" values="property duration timing-function" shorthand description="Shorthand (e.g. transition: background-color 0.2s linear)." />
-<CssProperty name="position" values="static | relative | absolute | fixed" description="Selects positioning flow model." />
+<CssProperty name="position" values="static | relative | absolute | fixed | sticky" description="Selects positioning flow model. `sticky` honours `top` and `left` only; see the Positioning guide." />
 <CssProperty name="inset" values="1-4 <length> values" shorthand description="Shorthand setting top/right/bottom/left (same expansion as margin)." />
 <CssProperty name="aspect-ratio" values="<w> / <h> | <number> | auto" description="Derives an element's auto dimension from whichever of width/height is definite: height-from-width in block, flex, and grid contexts (items and containers), and width-from-height in block contexts and on flex items/containers (grid containers only derive height from width). Ratios are in cells — terminal cells are ~2:1 tall, so 2 / 1 looks square. Content larger than the ratio overflows." />
 <CssProperty name="top" values="<length>" description="Offset relative to top boundary." />
