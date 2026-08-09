@@ -138,6 +138,18 @@ Element* ComponentBase::Root() const {
   return root_.get();
 }
 
+ComponentBase* ComponentBase::QueryComponent(std::string_view selector) {
+  Element* root = root_.get();
+  if (!root) {
+    return nullptr;
+  }
+  Element* match = root->QuerySelector(selector);
+  if (!match) {
+    return nullptr;
+  }
+  return const_cast<ComponentBase*>(match->component());
+}
+
 bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
   if (arg.empty()) {
     auto it = callbacks_.find(name);

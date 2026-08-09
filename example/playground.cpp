@@ -8,7 +8,6 @@
 // powers every RTXUI app, which is also why this is the docs homepage demo.
 #include <string>
 
-#include "rtxui/dom/element.hpp"
 #include "rtxui/rtxui.hpp"
 #include "rtxui/xml/xml.hpp"
 
@@ -229,14 +228,8 @@ class Playground : public Component<Playground> {
     }
     status = "OK";
 
-    if (Element* root = Root()) {
-      if (Element* preview_root = root->QuerySelector("#preview")) {
-        auto* preview = dynamic_cast<LivePreview*>(
-            const_cast<ComponentBase*>(preview_root->component()));
-        if (preview) {
-          preview->HotReload(code);
-        }
-      }
+    if (auto* preview = dynamic_cast<LivePreview*>(QueryComponent("#preview"))) {
+      preview->HotReload(code);
     }
     return true;
   }
