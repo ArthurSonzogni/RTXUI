@@ -1,7 +1,12 @@
-#include <iostream>
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+//
+// A kitchen-sink dashboard combining most of the library in one program.
+//
+// For a smaller, more readable application see app_dashboard.cpp.
 #include <memory>
 #include <rtxui/rtxui.hpp>
-#include <rtxui/component/default_components_internal.hpp>
 #include <string>
 #include <vector>
 #include "rtxui/base/task_runner.hpp"
@@ -24,12 +29,14 @@ class Header : public Component<Header> {
     </div>
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         padding: 1;
-        background-color: rgb(18, 18, 18);
+        background-color: var(--bg);
         color: #f8fafc;            /* Light gray text */
         border-bottom: hkey;
         border-color: #00c8ff;     /* Very bright blue bottom border */
@@ -55,10 +62,8 @@ class Sidebar : public Component<Sidebar> {
     int count = 0;
   } props;
 
-  Sidebar() = default;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  Sidebar() {
     Bind(props.count);
   }
 
@@ -75,7 +80,7 @@ class Sidebar : public Component<Sidebar> {
     </div>
     <style>
       self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         position: sticky;
         top: 4;
         width: 16;
@@ -134,10 +139,8 @@ class SectionTransitions : public Component<SectionTransitions> {
     bool show_secret = false;
   } props;
 
-  SectionTransitions() = default;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  SectionTransitions() {
     Bind(props.count);
     Bind(props.show_secret);
   }
@@ -161,7 +164,7 @@ class SectionTransitions : public Component<SectionTransitions> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -226,10 +229,8 @@ class SectionBoxModel : public Component<SectionBoxModel> {
     int slider_val = 0;
   } props;
 
-  SectionBoxModel() = default;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  SectionBoxModel() {
     Bind(props.slider_val);
   }
 
@@ -248,7 +249,7 @@ class SectionBoxModel : public Component<SectionBoxModel> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -285,10 +286,8 @@ class SectionInputs : public Component<SectionInputs> {
     std::string textarea_input = "";
   } props;
 
-  SectionInputs() = default;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  SectionInputs() {
     Bind(props.text_input);
     Bind(props.textarea_input);
   }
@@ -310,7 +309,7 @@ class SectionInputs : public Component<SectionInputs> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -401,7 +400,7 @@ class SectionColors : public Component<SectionColors> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -517,7 +516,7 @@ class SectionBorders : public Component<SectionBorders> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -590,7 +589,7 @@ class SectionAlign : public Component<SectionAlign> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -638,7 +637,7 @@ class SectionLoop : public Component<SectionLoop> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -760,13 +759,10 @@ class SectionMarkdown : public Component<SectionMarkdown> {
     )css";
   } props;
 
-  SectionMarkdown() = default;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  SectionMarkdown() {
     Bind(props.markdown_content);
     Bind(props.custom_css);
-    Import<rtxui::markdown>();
   }
 
   std::string_view view = R"html(
@@ -787,7 +783,7 @@ class SectionMarkdown : public Component<SectionMarkdown> {
     </div>
     <style>
         self {
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
 
       .card {
@@ -859,7 +855,7 @@ class Footer : public Component<Footer> {
         left: 0;
         right: 0;
         padding: 1;
-        background-color: rgb(18, 18, 18);
+        background-color: var(--bg);
         color: #94a3b8;            /* Grayish blue text */
         border-top: hkey;
         border-color: #00c8ff;     /* Very bright blue top border */
@@ -959,8 +955,7 @@ int main() {
     }
   }
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  App() {
     Bind(count);
     Bind(slider_val);
     Bind(show_secret);
@@ -1054,7 +1049,7 @@ int main() {
           width: 100%;
           height: 100%;
           color: #e2e8f0;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           overflow-y: scroll;
           scroll-behavior: smooth;
         }

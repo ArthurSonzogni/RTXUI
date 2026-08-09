@@ -1,6 +1,13 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// Anchor navigation.
+//
+// An <a href="#id"> scrolls its target into view inside the nearest scroll
+// container.
+//
+// Try it: click the links in the index to jump between sections.
 #include <rtxui/rtxui.hpp>
 #include <string>
 
@@ -92,10 +99,17 @@ class AnchorDemo : public Component<AnchorDemo> {
 
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+        --border: rgb(48, 54, 61);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent: rgb(88, 166, 255);
+        --accent-bright: rgb(121, 192, 255);
+
         display: block;
         padding: 1 2;
-        background-color: rgb(18, 18, 18); /* Deep dark slate background */
-        color: rgb(241, 245, 249);
+        background-color: var(--bg); /* Deep dark slate background */
+        color: var(--text);
       }
       .container {
         display: block;
@@ -109,11 +123,11 @@ class AnchorDemo : public Component<AnchorDemo> {
         margin-bottom: 1;
       }
       h2 {
-        color: rgb(59, 130, 246); /* Bright blue */
+        color: var(--accent); /* Bright blue */
         margin-bottom: 0;
       }
       .description {
-        color: rgb(148, 163, 184); /* Muted gray text */
+        color: var(--muted); /* Muted gray text */
       }
       .workspace {
         display: flex;
@@ -129,14 +143,14 @@ class AnchorDemo : public Component<AnchorDemo> {
         flex-direction: column;
         width: 18;
         border: tall;
-        border-color: rgb(71, 85, 105);
+        border-color: var(--border);
         background-color: rgb(30, 41, 59, 0.4);
         padding: 1;
         flex-shrink: 0;
         z-index: 10;
       }
       .nav-title {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
         font-weight: bold;
         margin-bottom: 1;
       }
@@ -155,7 +169,7 @@ class AnchorDemo : public Component<AnchorDemo> {
         display: block;
         height: 18;
         border: tall;
-        border-color: rgb(71, 85, 105);
+        border-color: var(--border);
         overflow-y: scroll;
         scroll-speed: 1;
         scroll-behavior: smooth;
@@ -177,7 +191,7 @@ class AnchorDemo : public Component<AnchorDemo> {
         background-color: rgba(14, 165, 233, 0.15); /* Modern cyan sky blue */
       }
       .sec-odd .section-title {
-        color: rgb(96, 165, 250); /* Bright royal blue text */
+        color: var(--accent-bright); /* Bright royal blue text */
       }
       .sec-even .section-title {
         color: rgb(56, 189, 248); /* Bright sky blue text */

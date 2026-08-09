@@ -1,6 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// position: relative, absolute and fixed, plus z-index stacking.
 #include <rtxui/rtxui.hpp>
 #include <string>
 
@@ -110,10 +112,19 @@ class PositioningApp : public Component<PositioningApp> {
 
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+        --surface: rgb(22, 27, 34);
+        --border: rgb(48, 54, 61);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent: rgb(88, 166, 255);
+        --accent-bright: rgb(121, 192, 255);
+        --danger: rgb(248, 81, 73);
+
         display: block;
         padding: 1 2;
-        background-color: rgb(18, 18, 18);
-        color: rgb(241, 245, 249);
+        background-color: var(--bg);
+        color: var(--text);
         width: 100%;
         height: 100%;
         overflow-y: scroll;
@@ -127,15 +138,15 @@ class PositioningApp : public Component<PositioningApp> {
         margin-bottom: 2;
       }
       h1 {
-        color: rgb(59, 130, 246);
+        color: var(--accent);
         font-weight: bold;
       }
       h3 {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
         margin-bottom: 1;
       }
       p {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
       }
       .row {
         display: flex;
@@ -145,7 +156,7 @@ class PositioningApp : public Component<PositioningApp> {
       .controls {
         display: block;
         border: tall;
-        border-color: rgb(71, 85, 105);
+        border-color: var(--border);
         padding: 1 2;
         width: 25;
         height: 12;
@@ -162,16 +173,16 @@ class PositioningApp : public Component<PositioningApp> {
         gap: 1;
       }
       button {
-        background-color: rgb(30, 41, 59);
+        background-color: var(--surface);
         color: white;
         border: solid;
-        border-color: rgb(71, 85, 105);
+        border-color: var(--border);
         padding: 0 1;
         text-align: center;
       }
       button:hover {
-        background-color: rgb(59, 130, 246);
-        border-color: rgb(96, 165, 250);
+        background-color: var(--accent);
+        border-color: var(--accent-bright);
       }
       .info-panel {
         color: rgb(56, 189, 248);
@@ -185,12 +196,12 @@ class PositioningApp : public Component<PositioningApp> {
         width: 60;
         height: 15;
         border: solid;
-        border-color: rgb(59, 130, 246);
-        background-color: rgb(30, 41, 59);
+        border-color: var(--accent);
+        background-color: var(--surface);
       }
       .background-desc {
         display: block;
-        color: rgb(148, 163, 184);
+        color: var(--muted);
         padding: 1;
       }
       .midground-card {
@@ -201,12 +212,12 @@ class PositioningApp : public Component<PositioningApp> {
         height: 6;
         background-color: rgb(15, 23, 42);
         border: double;
-        border-color: rgb(96, 165, 250);
+        border-color: var(--accent-bright);
         z-index: 5;
         padding: 1;
       }
       .card-label {
-        color: rgb(96, 165, 250);
+        color: var(--accent-bright);
       }
       
       /* Target of our absolute moving coordinate state variables */
@@ -218,7 +229,7 @@ class PositioningApp : public Component<PositioningApp> {
         height: 4;
         background-color: rgb(220, 38, 38);
         border: double;
-        border-color: rgb(248, 113, 113);
+        border-color: var(--danger);
         z-index: 10;
         padding: 0 1;
         display: block;

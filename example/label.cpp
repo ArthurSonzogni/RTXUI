@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// <label> delegating clicks and focus to the control it names.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -41,9 +42,15 @@ class LabelDemo : public Component<LabelDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+          --success: rgb(63, 185, 80);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
         }
         .container {
@@ -57,7 +64,7 @@ class LabelDemo : public Component<LabelDemo> {
         }
         .desc {
           display: block;
-          color: rgb(156, 163, 175);
+          color: var(--muted);
           margin-bottom: 2;
         }
         .section {
@@ -79,25 +86,25 @@ class LabelDemo : public Component<LabelDemo> {
           gap: 4;
         }
         .btn-label {
-          background-color: rgb(30, 41, 59);
+          background-color: var(--surface);
           padding-left: 1;
           padding-right: 1;
           border: solid;
-          border-color: rgb(59, 130, 246);
+          border-color: var(--accent);
         }
         .nest-label {
           display: flex;
           align-items: center;
           gap: 2;
-          background-color: rgb(30, 41, 59);
+          background-color: var(--surface);
           padding: 1;
           border: dashed;
-          border-color: rgb(16, 185, 129);
+          border-color: var(--success);
         }
         .state-label {
           display: block;
           margin-top: 1;
-          color: rgb(156, 163, 175);
+          color: var(--muted);
         }
         .value {
           font-weight: bold;

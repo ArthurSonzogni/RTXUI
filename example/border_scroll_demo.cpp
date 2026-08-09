@@ -1,7 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Borders and scrollbars sharing an edge.
+//
+// A scrollbar is laid out inside the border box, so it has to coexist with the
+// border. Switch border styles to see each combination.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -146,9 +150,17 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
+          --text: rgb(230, 237, 243);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
           width: 100%;
           height: 100%;
@@ -164,7 +176,7 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           width: 48;
           flex-shrink: 0;
           border: solid;
-          border-color: rgb(71, 85, 105);
+          border-color: var(--border);
           padding: 1;
         }
         h2 {
@@ -176,11 +188,11 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           display: block;
           flex-grow: 1;
           border: solid;
-          border-color: rgb(71, 85, 105);
+          border-color: var(--border);
           padding: 1;
         }
         .instruction {
-          color: rgb(148, 163, 184);
+          color: var(--muted);
           margin-bottom: 2;
         }
         .scroll-container-wrapper {
@@ -196,7 +208,7 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           height: 13;
           border: {border_style};
           border-color: rgb(244, 63, 94);
-          background-color: rgb(30, 41, 59);
+          background-color: var(--surface);
           overflow-y: {overflow_y_val};
           overflow-x: {overflow_x_val};
         }
@@ -211,7 +223,7 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           display: block;
           padding: 0 1;
           margin-bottom: 1;
-          color: rgb(226, 232, 240);
+          color: var(--text);
         }
         .header-line {
           font-weight: bold;
@@ -229,7 +241,7 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           display: block;
           font-weight: bold;
           margin-bottom: 1;
-          color: rgb(148, 163, 184);
+          color: var(--muted);
         }
         .buttons-grid {
           display: flex;
@@ -245,16 +257,16 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
         }
         button {
           width: 13;
-          background-color: rgb(30, 41, 59);
+          background-color: var(--surface);
           color: rgb(203, 213, 225);
           border: solid;
-          border-color: rgb(71, 85, 105);
+          border-color: var(--border);
           padding: 0 1;
           cursor: pointer;
         }
         button:hover {
-          background-color: rgb(59, 130, 246);
-          border-color: rgb(96, 165, 250);
+          background-color: var(--accent);
+          border-color: var(--accent-bright);
           color: white;
         }
         button.active {
@@ -269,7 +281,7 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           border: dashed;
           border-color: rgb(100, 116, 139);
           padding: 1;
-          color: rgb(148, 163, 184);
+          color: var(--muted);
         }
         .highlight {
           color: rgb(244, 63, 94);

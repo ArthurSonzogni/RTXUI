@@ -1,7 +1,10 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// scroll-behavior: smooth versus auto.
+//
+// Try it: click the jump buttons and compare how each column travels.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -60,11 +63,18 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
 
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+        --surface: rgb(22, 27, 34);
+        --border: rgb(48, 54, 61);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent-bright: rgb(121, 192, 255);
+
         display: block;
         width: 80;
         margin: 0 auto;
-        background-color: rgb(18, 18, 18);
-        color: rgb(241, 245, 249);
+        background-color: var(--bg);
+        color: var(--text);
       }
       .container {
         display: block;
@@ -75,12 +85,12 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         margin-bottom: 2;
       }
       h1 {
-        color: rgb(147, 197, 253);
+        color: var(--accent-bright);
         font-weight: bold;
         margin-bottom: 1;
       }
       .desc {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
       }
       .row {
         display: flex;
@@ -99,7 +109,7 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         margin-bottom: 1;
       }
       .subtitle {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
         margin-bottom: 1;
         height: 2;
       }
@@ -108,8 +118,8 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         height: 10;
         overflow-y: scroll;
         border: tall;
-        border-color: rgb(51, 65, 85);
-        background-color: rgb(30, 41, 59);
+        border-color: var(--border);
+        background-color: var(--surface);
         padding: 1;
       }
       #scroll-auto {
@@ -122,7 +132,7 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         display: block;
         height: 2;
         margin-bottom: 1;
-        background-color: rgb(71, 85, 105);
+        background-color: var(--border);
         color: rgb(255, 255, 255);
         padding-left: 1;
       }

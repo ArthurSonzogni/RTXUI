@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// The <hr> separator, and how border styles apply to it.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -24,9 +25,12 @@ class HrDemo : public Component<HrDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --muted: rgb(139, 148, 158);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
         }
         .container {
@@ -40,7 +44,7 @@ class HrDemo : public Component<HrDemo> {
         }
         .desc {
           display: block;
-          color: rgb(156, 163, 175);
+          color: var(--muted);
           margin-bottom: 2;
         }
         .section-title {

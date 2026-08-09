@@ -1,7 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Flexbox basics.
+//
+// A flex row distributing three child components, each its own component with
+// bound props.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -20,7 +24,11 @@ class Box : public Component<Box> {
 
       <style>
         self {
-          background-color: rgb(18, 18, 18);
+          --bg: rgb(13, 17, 23);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+
+          background-color: var(--bg);
           display: block;
           flex-grow: 1;
         }
@@ -48,8 +56,8 @@ class LayoutDemo : public Component<LayoutDemo> {
         <p>This layout uses nested custom Box components inside a flex row container.</p>
         
         <div class="flex-row">
-          <Box text="Blue-300" color="rgb(147, 197, 253)"></Box>
-          <Box text="Blue-500" color="rgb(59, 130, 246)"></Box>
+          <Box text="Blue-300" color="var(--accent-bright)"></Box>
+          <Box text="Blue-500" color="var(--accent)"></Box>
           <Box text="Blue-700" color="rgb(29, 78, 216)"></Box>
         </div>
       </div>
@@ -58,11 +66,11 @@ class LayoutDemo : public Component<LayoutDemo> {
         self {
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
         }
         h1 {
-          color: rgb(59, 130, 246);
+          color: var(--accent);
           font-weight: bold;
         }
         p {

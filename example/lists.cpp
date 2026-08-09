@@ -1,7 +1,9 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// <ul>, <ol> and <li>, including nesting, `start`/`reversed`, per-item `value`,
+// and the list-style-type property.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -70,9 +72,13 @@ class ListsDemo : public Component<ListsDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
           width: 100%;
           height: 100%;
@@ -92,7 +98,7 @@ class ListsDemo : public Component<ListsDemo> {
         }
         .desc {
           display: block;
-          color: rgb(148, 163, 184);
+          color: var(--muted);
         }
         .demo-grid {
           display: flex;
@@ -103,7 +109,7 @@ class ListsDemo : public Component<ListsDemo> {
           display: block;
           width: 30;
           border-right: solid;
-          border-color: rgb(51, 65, 85);
+          border-color: var(--border);
           padding-right: 2;
         }
         .preview {

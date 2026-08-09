@@ -1,7 +1,10 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// @media queries reacting to terminal size.
+//
+// Try it: resize the terminal and watch the layout change breakpoint.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -34,17 +37,24 @@ class MediaQueriesDemo : public Component<MediaQueriesDemo> {
 
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent: rgb(88, 166, 255);
+        --danger: rgb(248, 81, 73);
+        --success: rgb(63, 185, 80);
+
         display: block;
         padding: 1 2;
-        background-color: rgb(18, 18, 18); /* Slate 900 */
-        color: rgb(241, 245, 249);
+        background-color: var(--bg); /* Slate 900 */
+        color: var(--text);
       }
       .title {
-        color: rgb(59, 130, 246); /* Blue 500 */
+        color: var(--accent); /* Blue 500 */
         margin-bottom: 0;
       }
       .desc {
-        color: rgb(148, 163, 184); /* Slate 400 */
+        color: var(--muted); /* Slate 400 */
         margin-bottom: 1;
       }
       .badge {
@@ -55,10 +65,10 @@ class MediaQueriesDemo : public Component<MediaQueriesDemo> {
         color: white;
       }
       .emerald {
-        background-color: rgb(16, 185, 129);
+        background-color: var(--success);
       }
       .rose {
-        background-color: rgb(239, 68, 68);
+        background-color: var(--danger);
       }
 
       /* Desktop / Wide Screen rules */
@@ -66,7 +76,7 @@ class MediaQueriesDemo : public Component<MediaQueriesDemo> {
         .card-large {
           display: block;
           border: tall;
-          border-color: rgb(16, 185, 129);
+          border-color: var(--success);
           padding: 1 2;
           width: 50;
         }
@@ -83,7 +93,7 @@ class MediaQueriesDemo : public Component<MediaQueriesDemo> {
         .card-small {
           display: block;
           border: tall;
-          border-color: rgb(239, 68, 68);
+          border-color: var(--danger);
           padding: 1 2;
           width: 35;
         }

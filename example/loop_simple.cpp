@@ -1,3 +1,13 @@
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+//
+// Looping over a std::vector<std::string> with <for>.
+//
+// {$index} gives the current position, which is how a row passes its identity to
+// a parameterized callback.
+//
+// Try it: add a fruit, then remove one.
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
@@ -40,9 +50,15 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+          --danger: rgb(248, 81, 73);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
         }
         .container {
@@ -75,27 +91,27 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
         }
         .item-row button {
           border: tall;
-          border-color: rgb(239, 68, 68);
-          color: rgb(239, 68, 68);
+          border-color: var(--danger);
+          color: var(--danger);
           background-color: transparent;
           padding: 0 1;
           margin: 0;
         }
-        .item-row button:hover { background-color: rgb(239, 68, 68);
+        .item-row button:hover { background-color: var(--danger);
           color: white;
-          border-color: rgb(248, 113, 113);
+          border-color: var(--danger);
         }
 
         button {
-          background-color: rgb(30, 41, 59);
+          background-color: var(--surface);
           color: white;
           padding: 0 1;
           transition: all 1s;
         }
 
         button:hover {
-          background-color: rgb(59, 130, 246);
-          border-color: rgb(96, 165, 250);
+          background-color: var(--accent);
+          border-color: var(--accent-bright);
         }
 
       </style>

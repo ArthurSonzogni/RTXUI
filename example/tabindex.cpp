@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Controlling focus order with tabindex.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -47,17 +48,26 @@ class TabIndexDemo : public Component<TabIndexDemo> {
 
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+        --surface: rgb(22, 27, 34);
+        --border: rgb(48, 54, 61);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent: rgb(88, 166, 255);
+        --danger: rgb(248, 81, 73);
+        --success: rgb(63, 185, 80);
+
         display: block;
         padding: 1 2;
-        background-color: rgb(18, 18, 18); /* Deep dark slate background */
-        color: rgb(241, 245, 249);
+        background-color: var(--bg); /* Deep dark slate background */
+        color: var(--text);
       }
       h2 {
-        color: rgb(59, 130, 246); /* Bright blue */
+        color: var(--accent); /* Bright blue */
         margin-bottom: 0;
       }
       .description {
-        color: rgb(148, 163, 184); /* Muted gray text */
+        color: var(--muted); /* Muted gray text */
         margin-bottom: 1;
       }
       .list {
@@ -69,7 +79,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
       .item {
         display: block;
         border: tall;
-        border-color: rgb(30, 41, 59); /* Dark slate border */
+        border-color: var(--surface); /* Dark slate border */
         background-color: rgb(30, 41, 59, 0.4);
         padding: 0 1;
         margin-bottom: 0;
@@ -77,10 +87,10 @@ class TabIndexDemo : public Component<TabIndexDemo> {
       }
       .item:hover {
         background-color: rgb(30, 41, 59, 0.8);
-        border-color: rgb(71, 85, 105);
+        border-color: var(--border);
       }
       .item:focus {
-        border-color: rgb(59, 130, 246); /* Focus highlight */
+        border-color: var(--accent); /* Focus highlight */
         background-color: rgb(30, 58, 138, 0.5); /* Deep slate blue on focus */
       }
       .badge {
@@ -90,7 +100,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
         width: 18;
       }
       .badge-pos {
-        background-color: rgb(16, 185, 129); /* Emerald Green */
+        background-color: var(--success); /* Emerald Green */
         color: rgb(255, 255, 255);
       }
       .badge-zero {
@@ -98,7 +108,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
         color: rgb(255, 255, 255);
       }
       .badge-neg {
-        background-color: rgb(239, 68, 68); /* Rose Red */
+        background-color: var(--danger); /* Rose Red */
         color: rgb(255, 255, 255);
       }
       .badge-implicit {
@@ -108,7 +118,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
       .label {
         display: inline;
         margin-left: 2;
-        color: rgb(226, 232, 240);
+        color: var(--text);
       }
       .item:focus .label {
         color: rgb(255, 255, 255);

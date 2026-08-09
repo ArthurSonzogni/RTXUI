@@ -1,6 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// Recipe: tabs built by hand.
+//
+// The same result as the built-in <tabs>, assembled from plain elements and a
+// bound string -- useful when you want full control of the markup.
 #include <rtxui/rtxui.hpp>
 
 #include <string>
