@@ -257,6 +257,94 @@ TEST_CASE("Layout: visibility hides the whole subtree",
   CHECK(GetTextLayer(texture) == CheckGrid({"  ", "cd"}));
 }
 
+// Box model conformance. box-sizing and auto margins are the two places a
+// stylesheet author's CSS intuition most often meets a layout engine, so pin
+// the behaviour rather than infer it from feature tests.
+TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
+  SECTION("border-box counts padding inside the declared width") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .b { display: block; box-sizing: border-box; width: 6;
+               padding-left: 2; }
+        </style>
+        <div class="b">XXXXXXXX</div>)html";
+    };
+    // width 6 = 2 padding + 4 content.
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
+          == CheckGrid({"  XXXX  "}));
+  }
+
+  SECTION("content-box adds padding outside the declared width") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .b { display: block; box-sizing: content-box; width: 4;
+               padding-left: 2; }
+        </style>
+        <div class="b">XXXXXXXX</div>)html";
+    };
+    // 4 content + 2 padding occupies the same six columns.
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
+          == CheckGrid({"  XXXX  "}));
+  }
+
+  SECTION("two auto margins centre a fixed-width block") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .p { display: block; }
+          .b { display: block; width: 2; margin: 0 auto; }
+        </style>
+        <div class="p"><div class="b">XX</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
+          == CheckGrid({"  XX  "}));
+  }
+
+  SECTION("the longhand form centres too") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .p { display: block; }
+          .b { display: block; width: 2; margin-left: auto;
+               margin-right: auto; }
+        </style>
+        <div class="p"><div class="b">XX</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
+          == CheckGrid({"  XX  "}));
+  }
+
+  SECTION("a single auto margin pushes the block to the other edge") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .p { display: block; }
+          .b { display: block; width: 2; margin-left: auto; }
+        </style>
+        <div class="p"><div class="b">XX</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
+          == CheckGrid({"    XX"}));
+  }
+
+  SECTION("vertical margins do not collapse") {
+    // A deliberate divergence from CSS, documented in the box model guide:
+    // adjacent margins add rather than collapsing to the larger of the two.
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .a { display: block; margin-bottom: 1; }
+          .b { display: block; margin-top: 1; }
+        </style>
+        <div class="a">A</div><div class="b">B</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 1, 4))
+          == CheckGrid({"A", " ", " ", "B"}));
+  }
+}
+
 TEST_CASE("Layout: Padding and Box Model", "[layout]") {
   struct BoxModelTest : Component<BoxModelTest> {
     std::string_view Setup() {
