@@ -331,6 +331,62 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
     return MakeErrorExpected(">");
   }
   Advance();  // Skip '>'.
+
+  // <style> holds CSS, not markup. Per HTML's raw-text element rules its
+  // content runs verbatim to the matching </style>: parsing it as markup made
+  // any '<' inside a CSS comment or selector look like the start of a tag,
+  // which aborted the whole template. CSS carries no XML entities either, so
+  // the content is kept exactly as written rather than unescaped.
+  if (tag_opening.value() == "style") {
+    const size_t content_start = pos_;
+    const size_t close = xml_.find("</style", content_start);
+    if (close == std::string_view::npos) {
+      pos_ = xml_.size();
+      return MakeErrorExpected("</style>");
+    }
+    std::string_view raw = xml_.substr(content_start, close - content_start);
+    pos_ = close;
+
+    Nodes style_children;
+    if (!TrimWhitespaceWithNewlines(raw).empty()) {
+      style_children.push_back(Node{
+          .type = Node::kText,
+          .text = std::string(raw),
+          .attributes = {},
+          .children = {},
+      });
+    }
+
+    Advance();  // Skip '<'.
+    Advance();  // Skip '/'.
+    ParseWhiteSpaces();
+    auto style_closing = ParseTag();
+    if (!style_closing) {
+      return style_closing.error();
+    }
+    ParseWhiteSpaces();
+    if (Get() != '>') {
+      return MakeErrorExpected(">");
+    }
+    Advance();  // Skip '>'.
+
+    // The scan above looks for the "</style" prefix, so a longer tag name
+    // beginning with it -- </stylesheet> -- lands here and has to be rejected
+    // exactly as the general path rejects a mismatched closing tag.
+    if (style_closing.value() != tag_opening.value()) {
+      return MakeError("Expected closing tag to match opening tag, got " +
+                       std::string(style_closing.value()) + " instead of " +
+                       std::string(tag_opening.value()));
+    }
+
+    return Node{
+        .type = Node::kElement,
+        .tag = std::string(tag_opening.value()),
+        .attributes = attributes.value(),
+        .children = style_children,
+    };
+  }
+
   Nodes children;
   while (true) {
     int check_pos = pos_;

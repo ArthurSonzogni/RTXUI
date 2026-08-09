@@ -262,3 +262,50 @@ TEST_CASE("XML.EmbeddedNulByteIsRejectedNotMisreadAsEndOfFile", "[xml]") {
   REQUIRE_FALSE(nodes.has_value());
   CHECK(nodes.error().message == "Invalid NUL character in input");
 }
+
+TEST_CASE("XML.StyleContentIsRawText", "[xml]") {
+  // <style> holds CSS, not markup. The parser used to descend into it looking
+  // for tags, so any '<' in a CSS comment or selector was mistaken for an
+  // element and aborted the parse -- e.g. mentioning a tag name in a comment.
+  SECTION("a tag name inside a CSS comment") {
+    auto nodes = xml::Parse(
+        "<div><style>/* like the <dialog> root */ .a { color: red; }"
+        "</style></div>");
+    REQUIRE(nodes.has_value());
+    REQUIRE(nodes.value().size() == 1);
+
+    const auto& style = nodes.value()[0].children.at(0);
+    REQUIRE(style.tag == "style");
+    REQUIRE(style.children.size() == 1);
+    CHECK(style.children[0].type == xml::Node::kText);
+    CHECK(style.children[0].text ==
+          "/* like the <dialog> root */ .a { color: red; }");
+  }
+
+  SECTION("a child combinator in a selector") {
+    auto nodes = xml::Parse("<style>.a > .b { color: red; }</style>");
+    REQUIRE(nodes.has_value());
+    REQUIRE(nodes.value().size() == 1);
+    REQUIRE(nodes.value()[0].children.size() == 1);
+    CHECK(nodes.value()[0].children[0].text == ".a > .b { color: red; }");
+  }
+
+  SECTION("CSS is not entity-unescaped") {
+    auto nodes = xml::Parse("<style>.a::before { content: \"&amp;\"; }</style>");
+    REQUIRE(nodes.has_value());
+    CHECK(nodes.value()[0].children[0].text ==
+          ".a::before { content: \"&amp;\"; }");
+  }
+
+  SECTION("an unterminated style block is an error, not a truncated parse") {
+    auto nodes = xml::Parse("<div><style>.a { color: red; }</div>");
+    CHECK_FALSE(nodes.has_value());
+  }
+
+  SECTION("a mismatched closing tag is still an error") {
+    // The scan for the end of the raw text looks for the "</style" prefix, so
+    // a longer tag name starting with it must not be mistaken for the close.
+    auto nodes = xml::Parse("<style>.a { color: red; }</stylesheet>");
+    CHECK_FALSE(nodes.has_value());
+  }
+}
