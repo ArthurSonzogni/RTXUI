@@ -10,8 +10,9 @@
 #include <string_view>
 #include <variant>  // for variant
 #include <vector>
+#include <rtxui/rtxui_export.hpp>
 
-struct Event {
+struct RTXUI_EXPORT Event {
   struct Modifier {
     bool alt : 1 = false;
     bool ctrl : 1 = false;

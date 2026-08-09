@@ -7,13 +7,14 @@
 #include <concepts>
 #include <cstdint>
 #include <utility>
+#include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
 
 template <typename T>
 class Ref;
 
-class RefCounted {
+class RTXUI_EXPORT RefCounted {
  public:
   RefCounted() = default;
   virtual ~RefCounted();
