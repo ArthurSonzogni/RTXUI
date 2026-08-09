@@ -1010,7 +1010,10 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
             // grapheme; only col_start moves to just past the space, so
             // cur_col - col_start keeps counting the characters typed
             // between the space and here instead of discarding them.
-            col_start = last_space_col + 1;
+            // last_space_col is relative to the line start while col_start is
+            // absolute, so advance rather than assign (see the grapheme path
+            // below for the same correction).
+            col_start += last_space_col + 1;
             have_last_space = false;
             commit_line();
             byte_end = i + 1;
@@ -1083,7 +1086,12 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           // grapheme; only col_start moves to just past the space, so
           // cur_col - col_start keeps counting the characters typed
           // between the space and here instead of discarding them.
-          col_start = last_space_col + 1;
+          // last_space_col is measured relative to the line start, while
+          // col_start is an absolute column, so it has to be advanced from
+          // the current col_start rather than assigned outright -- the two
+          // only coincide while col_start is still 0, which is why getting
+          // this wrong left the first two lines looking correct.
+          col_start += last_space_col + 1;
           // letter-spacing inserts NBSP padding between every grapheme
           // pair, including around the space just broken at. Drop any such
           // padding immediately after the space so the next line doesn't
