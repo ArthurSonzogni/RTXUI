@@ -22,6 +22,38 @@ Spacing properties accept positive integer values representing the number of cha
 
 ---
 
+## Differences from CSS
+
+Two box-model behaviours differ from a browser and are worth knowing before
+you port a stylesheet:
+
+**Vertical margins do not collapse.** In CSS, a `margin-bottom: 1` above a
+`margin-top: 1` collapse into a single cell of space. Here they add up to two.
+Set the margin on one side only when you want a predictable gap, or use `gap`
+on a flex container:
+
+```css
+.a { margin-bottom: 1; }
+.b { margin-top: 1; }   /* two blank rows between them, not one */
+```
+
+**Auto margins centre inside a parent, not at the component root.**
+`margin: 0 auto` (and the `margin-left`/`margin-right` longhands) centre a
+fixed-width block within its containing block, and a single `auto` pushes the
+block to the opposite edge. A block that is the component's own root element
+has no containing block to centre within, so wrap it:
+
+```html
+<div><div class="card">centred</div></div>
+```
+
+```css
+.card { width: 40; margin: 0 auto; }
+```
+
+For centring a whole screen, `display: flex` with `justify-content: center` on
+the root is usually clearer than auto margins.
+
 ## Dimension Units
 
 Sizing attributes `width` and `height` accept two types of length units:
