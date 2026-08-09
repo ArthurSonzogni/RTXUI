@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "rtxui/base/expected.hpp"
+#include <rtxui/rtxui_export.hpp>
 
 namespace xml {
 
@@ -54,7 +55,7 @@ struct Error {
 
 /// Parse the given XML string and return the nodes.
 /// If the XML is invalid, return an error.
-auto Parse(std::string_view xml) -> Expected<Nodes, Error>;
+RTXUI_EXPORT auto Parse(std::string_view xml) -> Expected<Nodes, Error>;
 
 /// Print the XML node with the given indentation level.
 auto Print(const Node& node, int level = 0) -> std::string;

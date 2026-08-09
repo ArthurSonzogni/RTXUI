@@ -9,6 +9,7 @@
 
 #include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/style.hpp"
+#include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
 
@@ -128,7 +129,7 @@ class ActiveTransitionsMap {
   std::unique_ptr<std::map<std::string, ActiveTransition>> map_;
 };
 
-class Element : public RefCounted {
+class RTXUI_EXPORT Element : public RefCounted {
  public:
   Element();
   Element(const ComponentBase* component);

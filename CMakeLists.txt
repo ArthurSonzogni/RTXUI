@@ -74,7 +74,10 @@ set(RTXUI_WARNING_FLAGS
   -Wno-unused-function
 )
 
-add_library(rtxui_lib STATIC
+# No explicit STATIC: the kind follows BUILD_SHARED_LIBS so a consumer or a
+# distro can ask for a shared build. See the visibility settings and the
+# generated export header below -- a shared build only exports what is marked.
+add_library(rtxui_lib
   "src/rtxui/terminal/terminal_input_parser.cpp"
   "src/rtxui/terminal/terminal_input_parser.hpp"
   "src/rtxui/terminal/event.cpp"
@@ -176,6 +179,24 @@ add_library(rtxui_lib STATIC
 target_compile_features(rtxui_lib PUBLIC cxx_std_26)
 # PRIVATE: consumers get RTXUI's headers, not its warning policy.
 target_compile_options(rtxui_lib PRIVATE ${RTXUI_WARNING_FLAGS})
+
+# Everything is hidden unless marked RTXUI_EXPORT, so the shared library's ABI
+# surface is the public API rather than every symbol that happens to be
+# external. generate_export_header also defines RTXUI_STATIC_DEFINE for the
+# static build, where the macro expands to nothing.
+include(GenerateExportHeader)
+set_target_properties(rtxui_lib PROPERTIES
+  CXX_VISIBILITY_PRESET hidden
+  VISIBILITY_INLINES_HIDDEN ON
+)
+generate_export_header(rtxui_lib
+  BASE_NAME RTXUI
+  EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/generated/rtxui/rtxui_export.hpp"
+)
+target_include_directories(rtxui_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
+  $<INSTALL_INTERFACE:include>
+)
 target_include_directories(rtxui_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
@@ -235,7 +256,13 @@ add_library(rtxui "src/rtxui/dummy.cpp")
 # degraded to a raw -lrtxui_lib and rtxui_lib's include directories never
 # propagated -- consumers got "rtxui/rtxui.hpp: No such file or directory".
 add_library(rtxui::rtxui_lib ALIAS rtxui_lib)
-target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui::rtxui_lib>")
+if(BUILD_SHARED_LIBS)
+  # A shared object runs its static initialisers on load, so the built-in
+  # components register themselves without the archive trick below.
+  target_link_libraries(rtxui PUBLIC rtxui::rtxui_lib)
+else()
+  target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui::rtxui_lib>")
+endif()
 
 if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_demo example/demo.cpp)
@@ -418,6 +445,35 @@ install(DIRECTORY include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/generated/rtxui/rtxui_export.hpp"
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui
+)
+
+# The task runner is public API in practice: the async cookbook recipe posts
+# work back to the UI thread through it. It lives under src/ for historical
+# reasons, so install just that closure -- without these an installed consumer
+# following the documented recipe cannot compile.
+install(FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/base/task.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/base/task_queue.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/base/task_runner.hpp"
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/base
+)
+
+# ComponentBase::Root() hands back an Element, and QuerySelector() on it is how
+# an application reaches into its own DOM -- so the definition has to ship, not
+# just the forward declaration in component.hpp. style.hpp and color.hpp come
+# along because Element embeds a ComputedStyle.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/dom/element.hpp"
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/dom
+)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/layout/style.hpp"
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/layout
+)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/paint/color.hpp"
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/paint
+)
+
 install(EXPORT rtxui-targets
   FILE rtxui-targets.cmake
   NAMESPACE rtxui::
@@ -506,7 +562,26 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/xml/xml_test.cpp"
     "src/rtxui/markdown/markdown_test.cpp"
   )
-  target_link_libraries(rtxui_test PRIVATE rtxui_lib)
+  # The unit tests exercise internals that hidden visibility deliberately keeps
+  # out of the shared library's ABI. Link the objects straight into the test
+  # binary rather than the shared object: linking both would give the process
+  # two copies of the global component registry.
+  if(BUILD_SHARED_LIBS)
+    target_sources(rtxui_test PRIVATE $<TARGET_OBJECTS:rtxui_lib>)
+    target_include_directories(rtxui_test PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}/include"
+      "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    )
+    target_compile_features(rtxui_test PRIVATE cxx_std_26)
+    target_compile_definitions(rtxui_test PRIVATE RTXUI_STATIC_DEFINE)
+    if(HAS_REFLECTION_CLANG)
+      target_compile_options(rtxui_test PRIVATE "-freflection-latest")
+    elseif(HAS_REFLECTION_GCC)
+      target_compile_options(rtxui_test PRIVATE "-freflection")
+    endif()
+  else()
+    target_link_libraries(rtxui_test PRIVATE rtxui_lib)
+  endif()
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
   target_include_directories(rtxui_test PRIVATE "src")
   list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)

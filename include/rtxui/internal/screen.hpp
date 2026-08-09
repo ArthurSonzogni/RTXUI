@@ -8,13 +8,14 @@
 
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/event.hpp"
+#include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
 
 class ScreenImpl;
 class TerminalDevice;
 
-class Screen {
+class RTXUI_EXPORT Screen {
  public:
   explicit Screen(Ref<ComponentBase> component,
                   std::shared_ptr<TerminalDevice> device = nullptr);
