@@ -12,6 +12,12 @@ project, and how to build the repository itself.
   uses it to read struct fields in bound collections without manual mappers,
   falling back gracefully when it does not. Continuous integration builds with
   GCC 14 and Clang 20.
+
+  Building RTXUI itself needs GCC 14 or a recent Clang, because the
+  implementation uses `<print>`, which libstdc++ only shipped in GCC 14.
+  *Consuming* it needs only GCC 13 — the public headers avoid `<print>`
+  deliberately, and the shared-library workflow builds its consumer with the
+  runner's default compiler to keep that true.
 - **Linux or macOS.** The terminal backend is POSIX (termios, `SIGWINCH`).
   Windows is not supported yet — there is no ConPTY backend, and CMake fails
   early with that message rather than part-way through the build. RTXUI also
