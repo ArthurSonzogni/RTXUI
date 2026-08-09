@@ -25,6 +25,12 @@ For elements configured with `position: absolute`, `position: fixed`, or `positi
 *   `top`: Spacing from the container's top edge.
 *   `bottom`: Spacing from the container's bottom edge.
 
+::: warning `sticky` pins to the top and left only
+`position: sticky` currently honours `top` and `left`. `bottom` and `right`
+are accepted but have no effect on a sticky element, which will simply scroll
+away as if it were `relative`. `absolute` and `fixed` support all four.
+:::
+
 ```html
 <div class="modal-box">Centered Overlay</div>
 
