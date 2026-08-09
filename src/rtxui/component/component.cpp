@@ -240,6 +240,18 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
 }
 }  // namespace
 
+void ReportDuplicateImport(std::string_view name) {
+  std::println("Error: Component '{}' is already imported.", name);
+  std::exit(1);
+}
+
+void ReportDuplicateImportAlias(std::string_view class_name,
+                                std::string_view alias) {
+  std::println("Error: Can't import '{}' as '{}`, since it is already imported.",
+               class_name, alias);
+  std::exit(1);
+}
+
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory) {
   GetGlobalRegistry()[std::string(name)] = std::move(factory);
 }
