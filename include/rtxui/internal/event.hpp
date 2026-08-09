@@ -14,10 +14,16 @@
 
 struct RTXUI_EXPORT Event {
   struct Modifier {
-    bool alt : 1 = false;
-    bool ctrl : 1 = false;
-    bool meta : 1 = false;
-    bool shift : 1 = false;
+    // Plain bools rather than one-bit fields: GCC 13 cannot instantiate a
+    // defaulted operator<=> for a class whose bit-fields carry default member
+    // initialisers, and reports the initialiser as "required before the end of
+    // its enclosing class". The code is valid C++20 and later GCC and Clang
+    // accept it, but Ubuntu 24.04 LTS ships GCC 13 and three bytes is a cheap
+    // price for compiling there.
+    bool alt = false;
+    bool ctrl = false;
+    bool meta = false;
+    bool shift = false;
     std::string Print() const;
     std::strong_ordering operator<=>(const Modifier&) const = default;
   };
