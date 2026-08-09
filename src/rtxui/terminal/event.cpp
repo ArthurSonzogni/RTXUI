@@ -37,7 +37,7 @@ Event::Keyboard Event::Keyboard::From(std::string_view str) {
   return From(cp);
 }
 
-std::string Event::Modifier::Print() const {
+std::string EventModifier::Print() const {
   std::string out;
   if (alt) {
     out += "alt";

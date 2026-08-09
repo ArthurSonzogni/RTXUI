@@ -12,15 +12,24 @@
 #include <vector>
 #include <rtxui/rtxui_export.hpp>
 
+// Hoisted out of Event deliberately. GCC 13 will not evaluate a nested class's
+// default member initialisers while the enclosing class is still incomplete,
+// and Event's std::variant member forces exactly that: the variant needs its
+// alternatives complete, one alternative (Keyboard) holds a Modifier, and
+// Modifier's initialisers are then required "before the end of its enclosing
+// class". At namespace scope there is no enclosing class to be incomplete.
+// Event::Modifier remains valid through the alias below.
+struct RTXUI_EXPORT EventModifier {
+  bool alt : 1 = false;
+  bool ctrl : 1 = false;
+  bool meta : 1 = false;
+  bool shift : 1 = false;
+  std::string Print() const;
+  std::strong_ordering operator<=>(const EventModifier&) const = default;
+};
+
 struct RTXUI_EXPORT Event {
-  struct Modifier {
-    bool alt : 1 = false;
-    bool ctrl : 1 = false;
-    bool meta : 1 = false;
-    bool shift : 1 = false;
-    std::string Print() const;
-    std::strong_ordering operator<=>(const Modifier&) const = default;
-  };
+  using Modifier = EventModifier;
   struct Keyboard {
     static Keyboard From(std::uint32_t cp);
     static Keyboard From(char c);
