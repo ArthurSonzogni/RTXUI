@@ -29,6 +29,7 @@
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/import.hpp"
 #include "rtxui/internal/refcounted.hpp"
+#include <rtxui/rtxui_export.hpp>
 
 namespace css {
 struct Ruleset;
@@ -47,13 +48,13 @@ using Nodes = std::vector<Node>;
 namespace rtxui {
 struct CategorizedRules;
 
-class StructVisitor {
+class RTXUI_EXPORT StructVisitor {
  public:
   virtual ~StructVisitor() = default;
   virtual std::string GetFieldValue(std::string_view field_name) const = 0;
 };
 
-class TypeErasedRange {
+class RTXUI_EXPORT TypeErasedRange {
  public:
   virtual ~TypeErasedRange() = default;
   virtual size_t Size() const = 0;
@@ -80,7 +81,7 @@ struct LocalScope {
   }
 };
 
-class ComponentBase : public RefCounted, public Bindings {
+class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
  public:
   ComponentBase();
   virtual ~ComponentBase();
@@ -177,7 +178,7 @@ class ComponentBase : public RefCounted, public Bindings {
 };
 
 namespace reflection {
-int ParseInt(std::string_view str);
+RTXUI_EXPORT int ParseInt(std::string_view str);
 
 template <typename T>
 std::string to_string(const T& value) {
@@ -280,7 +281,7 @@ class ReflectedStructVisitor : public StructVisitor {
 };
 #endif
 
-class ManualStructVisitor : public StructVisitor {
+class RTXUI_EXPORT ManualStructVisitor : public StructVisitor {
   std::map<std::string, std::string, std::less<>> fields_;
 
  public:
@@ -580,8 +581,9 @@ class Component : public ComponentBase {
 // BindCollection(name, x) registers a collection with an explicit name.
 #define BindCollection(name, ...) this->Import(name, ##__VA_ARGS__)
 
-void RegisterGlobalComponent(std::string_view name, ComponentFactory factory);
-ComponentFactory GetGlobalComponentFactory(std::string_view name);
+RTXUI_EXPORT void RegisterGlobalComponent(std::string_view name,
+                                          ComponentFactory factory);
+RTXUI_EXPORT ComponentFactory GetGlobalComponentFactory(std::string_view name);
 
 /// Reported when a <style> block fails to parse.
 struct CssError {
@@ -603,7 +605,7 @@ struct CssError {
 /// terminal in raw mode -- apps that render arbitrary/live-edited CSS (e.g.
 /// a playground) should install their own handler to surface the error
 /// through their own UI instead. Pass nullptr to restore the default.
-void SetCssErrorHandler(std::function<void(const CssError&)> handler);
+RTXUI_EXPORT void SetCssErrorHandler(std::function<void(const CssError&)> handler);
 
 /// Reported when XML/HTML content generated from live-edited or bound state
 /// fails to parse (e.g. the <markdown> component's rendered body plus its
@@ -628,11 +630,12 @@ struct XmlError {
 /// handler to surface the error through their own UI instead, the same way
 /// SetCssErrorHandler works for <style> blocks. Pass nullptr to restore the
 /// default.
-void SetXmlErrorHandler(std::function<void(const XmlError&)> handler);
+RTXUI_EXPORT void SetXmlErrorHandler(std::function<void(const XmlError&)> handler);
 
 /// Routes an XML/HTML parse error to the handler installed via
 /// SetXmlErrorHandler, or prints it to stderr if none was installed.
-void ReportXmlError(const XmlError& error, std::string_view xml_string);
+RTXUI_EXPORT void ReportXmlError(const XmlError& error,
+                                 std::string_view xml_string);
 
 struct HotReloadInfo {
   ComponentBase* component;

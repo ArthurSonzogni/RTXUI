@@ -9,10 +9,11 @@
 
 #include "rtxui/base/task.hpp"
 #include "rtxui/base/task_queue.hpp"
+#include <rtxui/rtxui_export.hpp>
 
 namespace task {
 
-class TaskRunner {
+class RTXUI_EXPORT TaskRunner {
  public:
   TaskRunner();
   ~TaskRunner();

@@ -12,6 +12,7 @@
 
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/refcounted.hpp"
+#include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
 
@@ -28,7 +29,7 @@ using ParameterizedCallbackImportMap =
 
 /// Bindings is a structure that allows you to import components and callbacks
 /// into a component.
-class Bindings {
+class RTXUI_EXPORT Bindings {
  protected:
   CallbackImportMap callbacks_;
   ParameterizedCallbackImportMap parameterized_callbacks_;

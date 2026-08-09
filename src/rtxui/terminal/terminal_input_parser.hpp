@@ -10,9 +10,10 @@
 #include <vector>    // for vector
 
 #include "rtxui/internal/event.hpp"  // for Event
+#include <rtxui/rtxui_export.hpp>
 
 // Parse a sequence of |char| across |time|. Produces |Event|.
-class TerminalInputParser {
+class RTXUI_EXPORT TerminalInputParser {
  public:
   explicit TerminalInputParser() = default;
   void Timeout(int time);
