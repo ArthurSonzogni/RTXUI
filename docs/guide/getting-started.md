@@ -10,6 +10,10 @@ project, and how to build the repository itself.
   optional — when the compiler provides it, RTXUI uses it to read struct
   fields in bound collections without manual mappers, and falls back
   gracefully when it does not.
+- **Linux or macOS.** The terminal backend is POSIX (termios, `SIGWINCH`).
+  Windows is not supported yet — there is no ConPTY backend, and CMake fails
+  early with that message rather than part-way through the build. RTXUI also
+  targets the browser through Emscripten.
 - **CMake 3.24 or newer.**
 - **Ninja** (optional, faster builds than Make).
 

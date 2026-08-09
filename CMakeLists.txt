@@ -16,6 +16,17 @@ if(RTXUI_SANITIZE)
   add_link_options(-fsanitize=address,undefined)
 endif()
 
+# The terminal layer is POSIX: termios for raw mode, SIGWINCH for resize,
+# pipe()/fcntl() for the wakeup channel. None of that exists on Windows, and
+# there is no ConPTY backend yet, so fail here with an explanation rather than
+# part-way through compiling with a wall of missing-header errors.
+if(WIN32)
+  message(FATAL_ERROR
+    "RTXUI does not support Windows yet: the terminal backend requires POSIX "
+    "termios/SIGWINCH and has no ConPTY implementation. Linux and macOS are "
+    "supported, as is WebAssembly via Emscripten.")
+endif()
+
 include(FetchContent)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -187,7 +198,15 @@ set(CMAKE_REQUIRED_FLAGS "${SAFE_CMAKE_REQUIRED_FLAGS}")
 
 # See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
 add_library(rtxui "src/rtxui/dummy.cpp")
-target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui_lib>")
+
+# The namespaced alias matters for the installed package: install(EXPORT)
+# rewrites plain target names in INTERFACE_LINK_LIBRARIES to their namespaced
+# form, but not names sitting inside a $<LINK_LIBRARY:...> expression. Exported
+# as bare `rtxui_lib` it resolved to no target in a consumer's project, so it
+# degraded to a raw -lrtxui_lib and rtxui_lib's include directories never
+# propagated -- consumers got "rtxui/rtxui.hpp: No such file or directory".
+add_library(rtxui::rtxui_lib ALIAS rtxui_lib)
+target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui::rtxui_lib>")
 
 if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_demo example/demo.cpp)
@@ -219,9 +238,6 @@ if(RTXUI_BUILD_EXAMPLES)
 
   add_executable(rtxui_example_helloworld example/helloworld.cpp)
   target_link_libraries(rtxui_example_helloworld PRIVATE rtxui)
-
-  add_executable(rtxui_example_loop example/loop.cpp)
-  target_link_libraries(rtxui_example_loop PRIVATE rtxui)
 
   add_executable(rtxui_example_loop_simple example/loop_simple.cpp)
   target_link_libraries(rtxui_example_loop_simple PRIVATE rtxui)
@@ -343,6 +359,12 @@ if(RTXUI_BUILD_EXAMPLES)
   add_executable(rtxui_example_cookbook_dialog example/cookbook_dialog.cpp)
   target_link_libraries(rtxui_example_cookbook_dialog PRIVATE rtxui)
 
+  add_executable(rtxui_example_app_filebrowser example/app_filebrowser.cpp)
+  target_link_libraries(rtxui_example_app_filebrowser PRIVATE rtxui)
+
+  add_executable(rtxui_example_app_dashboard example/app_dashboard.cpp)
+  target_link_libraries(rtxui_example_app_dashboard PRIVATE rtxui)
+
   add_executable(rtxui_example_playground example/playground.cpp)
   target_link_libraries(rtxui_example_playground PRIVATE rtxui)
 endif()
@@ -350,10 +372,16 @@ endif()
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
+# A debug build gets a `d` suffix so Debug and Release can share one install
+# prefix. The alternative -- a per-config subdirectory -- keeps them apart too,
+# but puts the archives in lib/<Config>/ instead of lib/, which vcpkg, distro
+# packagers and a plain find_package() from a normal prefix do not expect.
+set_target_properties(rtxui rtxui_lib PROPERTIES DEBUG_POSTFIX d)
+
 install(TARGETS rtxui rtxui_lib
   EXPORT rtxui-targets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<CONFIG>
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/$<CONFIG>
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
@@ -385,7 +413,7 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rtxui
 )
 
-option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" ON)
+option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" OFF)
 if(RTXUI_BUILD_BENCHMARKS)
   add_executable(rtxui_benchmark benchmarks/rtxui_benchmark.cpp)
   target_link_libraries(rtxui_benchmark PRIVATE rtxui)
@@ -411,6 +439,11 @@ if(RTXUI_BUILD_TESTS)
     add_test(NAME verify_css_docs
       COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_docs.py"
     )
+
+    # Verify that examples, their build targets and the docs stay in sync
+    add_test(NAME verify_examples
+      COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_examples.py"
+    )
   endif()
 
   # Catch2
@@ -429,7 +462,10 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/component/interpolation_test.cpp"
     "src/rtxui/base/expected_test.cpp"
     "src/rtxui/base/refcounted_test.cpp"
+    "src/rtxui/dom/element_test.cpp"
     "src/rtxui/base/task_test.cpp"
+    "src/rtxui/base/task_queue_test.cpp"
+    "src/rtxui/base/task_runner_test.cpp"
     "src/rtxui/base/unicode_test.cpp"
     "src/rtxui/layout/layout_test.cpp"
     "src/rtxui/layout/rowspan_paint_test.cpp"
