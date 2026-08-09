@@ -505,6 +505,55 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
 
 }
 
+// position: sticky had no unit test, and its offset maths lives in one shared
+// helper used by painting, hit testing and scroll-into-view -- so this is the
+// guard for all of them.
+TEST_CASE("Layout: position sticky pins to the top edge",
+          "[layout][sticky]") {
+  struct T : Component<T> {
+    std::string_view view = R"html(
+      <style>
+        .scroller { display: block; overflow-y: scroll; height: 4; width: 6;
+                    scrollbar-width: none; }
+        .head { position: sticky; top: 0; }
+        .row { display: block; }
+      </style>
+      <div class="scroller" id="sc">
+        <div class="head">HEAD</div>
+        <div class="row">r1</div>
+        <div class="row">r2</div>
+        <div class="row">r3</div>
+        <div class="row">r4</div>
+        <div class="row">r5</div>
+      </div>)html";
+  };
+
+  auto render_at = [](int scroll_y) {
+    auto component = Ref<T>::New();
+    component->Mount();
+    if (auto* scroller = component->Root()->QuerySelector("#sc")) {
+      scroller->set_scroll_y(scroll_y);
+    }
+    auto layout_box = LayoutTreeBuilder::Build(component->Root());
+    Texture texture(6, 4);
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {6, MeasureMode::Exactly};
+      constraints.height = {4, MeasureMode::Exactly};
+      Paint(RunLayout({layout_box.get()}, constraints).get(), texture);
+    }
+    return GetTextLayer(texture);
+  };
+
+  SECTION("unscrolled, the header sits in flow") {
+    CHECK(render_at(0) == CheckGrid({"HEAD  ", "r1    ", "r2    ", "r3    "}));
+  }
+
+  SECTION("scrolled, the header stays pinned while rows move under it") {
+    CHECK(render_at(2) == CheckGrid({"HEAD  ", "r3    ", "r4    ", "r5    "}));
+  }
+}
+
 TEST_CASE("Layout: Padding and Box Model", "[layout]") {
   struct BoxModelTest : Component<BoxModelTest> {
     std::string_view Setup() {
