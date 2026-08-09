@@ -53,19 +53,34 @@ jobs:
           CC: gcc-14
           CXX: g++-14
         run: |
+          # Build the real shared library rather than synthesising one from the
+          # static archive. The library is compiled with hidden visibility, and
+          # generate_export_header expands RTXUI_EXPORT to nothing for a static
+          # target -- whole-archiving that produced a .so with almost none of
+          # the actual ABI in it, so the comparison was measuring noise.
           build() { # <source-dir> <build-dir> <output.so>
             cmake -S "$1" -B "$2" -G Ninja \
+              -DBUILD_SHARED_LIBS=ON \
               -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
               -DRTXUI_BUILD_TESTS=OFF \
               -DRTXUI_BUILD_EXAMPLES=OFF \
               -DRTXUI_BUILD_BENCHMARKS=OFF
             cmake --build "$2" --target rtxui_lib
-            g++-14 -shared -o "$3" \
-              -Wl,--whole-archive "$2/librtxui_lib.a" -Wl,--no-whole-archive
+            # Prefer the versioned file the SONAME points at.
+            lib=$(ls "$2"/librtxui_lib*.so.*.*.* "$2"/librtxui_lib*.so 2>/dev/null | head -1)
+            if [ -z "$lib" ]; then
+              echo "No shared rtxui_lib in $2 (baseline predates shared support)."
+              return 1
+            fi
+            cp "$lib" "$3"
           }
           git worktree add abi-baseline "${{ steps.baseline.outputs.sha }}"
-          build abi-baseline build-baseline librtxui-baseline.so
+          # A baseline from before shared-library support cannot be measured;
+          # skip rather than report a bogus difference.
+          if ! build abi-baseline build-baseline librtxui-baseline.so; then
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           build . build-head librtxui-head.so
 
       - name: Compare ABI
