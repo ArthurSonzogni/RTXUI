@@ -24,9 +24,12 @@ struct StickyContext {
   /// within the containing fragment's box.
   bool parent_clips = false;
 
-  /// Content-box origin of the scrolling viewport the child pins against.
+  /// Content-box origin and size of the scrolling viewport the child pins
+  /// against. The size is what `bottom`/`right` measure back from.
   int viewport_x = 0;
   int viewport_y = 0;
+  int viewport_width = 0;
+  int viewport_height = 0;
 
   /// The containing fragment's absolute origin and size.
   int parent_x = 0;
@@ -35,9 +38,8 @@ struct StickyContext {
   int parent_height = 0;
 
   /// The containing fragment's border and padding, used to keep the child
-  /// inside its box. Only the trailing edges are read today; the leading ones
-  /// are what `bottom`/`right` support will need, and carrying them keeps the
-  /// context complete at every call site rather than in the helper's caller.
+  /// inside its box: the trailing edges bound a `top`/`left` pin, the leading
+  /// ones bound a `bottom`/`right` pin.
   int parent_border_left = 0;
   int parent_border_top = 0;
   int parent_border_right = 0;
@@ -51,14 +53,29 @@ struct StickyContext {
 /// Adjusts a sticky child's absolute position in place.
 ///
 /// `style` is the child's computed style, `child_width`/`child_height` its
-/// fragment size. Only `top` and `left` are honoured; `bottom` and `right` are
-/// accepted by the parser but have no effect yet (see the Positioning guide).
+/// fragment size. All four offsets are honoured. When both edges of an axis
+/// are set the leading one is applied last and therefore wins, matching how a
+/// browser resolves an over-constrained sticky box.
 inline void ApplyStickyOffset(const ComputedStyle& style,
                               int child_width,
                               int child_height,
                               const StickyContext& context,
                               int& child_x,
                               int& child_y) {
+  if (style.bottom.unit != Unit::Auto) {
+    // Pin when the box would otherwise sit below the viewport's bottom edge.
+    const int viewport_bottom = context.viewport_y + context.viewport_height;
+    const int max_y = viewport_bottom - style.bottom.Resolve(0) - child_height;
+    child_y = std::min(child_y, max_y);
+
+    if (!context.parent_clips) {
+      const int parent_content_top = context.parent_y +
+                                     context.parent_border_top +
+                                     context.parent_padding_top;
+      child_y = std::max(child_y, parent_content_top);
+    }
+  }
+
   if (style.top.unit != Unit::Auto) {
     const int min_y = context.viewport_y + style.top.Resolve(0);
     child_y = std::max(child_y, min_y);
@@ -68,6 +85,19 @@ inline void ApplyStickyOffset(const ComputedStyle& style,
           context.parent_y + context.parent_height - context.parent_border_bottom -
           context.parent_padding_bottom;
       child_y = std::min(child_y, parent_content_bottom - child_height);
+    }
+  }
+
+  if (style.right.unit != Unit::Auto) {
+    const int viewport_right = context.viewport_x + context.viewport_width;
+    const int max_x = viewport_right - style.right.Resolve(0) - child_width;
+    child_x = std::min(child_x, max_x);
+
+    if (!context.parent_clips) {
+      const int parent_content_left = context.parent_x +
+                                      context.parent_border_left +
+                                      context.parent_padding_left;
+      child_x = std::max(child_x, parent_content_left);
     }
   }
 

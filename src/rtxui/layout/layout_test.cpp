@@ -554,6 +554,86 @@ TEST_CASE("Layout: position sticky pins to the top edge",
   }
 }
 
+TEST_CASE("Layout: position sticky pins to the bottom edge",
+          "[layout][sticky]") {
+  struct T : Component<T> {
+    std::string_view view = R"html(
+      <style>
+        .scroller { display: block; overflow-y: scroll; height: 4; width: 6;
+                    scrollbar-width: none; }
+        .foot { position: sticky; bottom: 0; }
+        .row { display: block; }
+      </style>
+      <div class="scroller" id="sc">
+        <div class="row">r1</div>
+        <div class="row">r2</div>
+        <div class="row">r3</div>
+        <div class="row">r4</div>
+        <div class="row">r5</div>
+        <div class="foot">FOOT</div>
+      </div>)html";
+  };
+
+  auto render_at = [](int scroll_y) {
+    auto component = Ref<T>::New();
+    component->Mount();
+    if (auto* scroller = component->Root()->QuerySelector("#sc")) {
+      scroller->set_scroll_y(scroll_y);
+    }
+    auto layout_box = LayoutTreeBuilder::Build(component->Root());
+    Texture texture(6, 4);
+    if (layout_box) {
+      LayoutConstraints constraints;
+      constraints.width = {6, MeasureMode::Exactly};
+      constraints.height = {4, MeasureMode::Exactly};
+      Paint(RunLayout({layout_box.get()}, constraints).get(), texture);
+    }
+    return GetTextLayer(texture);
+  };
+
+  SECTION("the footer is pulled up to the viewport bottom") {
+    // Its natural position is below r5 and off-screen; sticky brings it back.
+    CHECK(render_at(0) == CheckGrid({"r1    ", "r2    ", "r3    ", "FOOT  "}));
+  }
+
+  SECTION("it stays pinned as the rows scroll under it") {
+    CHECK(render_at(2) == CheckGrid({"r3    ", "r4    ", "r5    ", "FOOT  "}));
+  }
+}
+
+TEST_CASE("Layout: position sticky pins to the right edge",
+          "[layout][sticky]") {
+  struct T : Component<T> {
+    std::string_view view = R"html(
+      <style>
+        .scroller { display: flex; overflow-x: scroll; width: 6; height: 1;
+                    scrollbar-width: none; }
+        .cell { width: 2; }
+        .end { position: sticky; right: 0; width: 2; }
+      </style>
+      <div class="scroller" id="sc">
+        <div class="cell">ab</div>
+        <div class="cell">cd</div>
+        <div class="cell">ef</div>
+        <div class="cell">gh</div>
+        <div class="end">ZZ</div>
+      </div>)html";
+  };
+
+  auto component = Ref<T>::New();
+  component->Mount();
+  auto layout_box = LayoutTreeBuilder::Build(component->Root());
+  Texture texture(6, 1);
+  if (layout_box) {
+    LayoutConstraints constraints;
+    constraints.width = {6, MeasureMode::Exactly};
+    constraints.height = {1, MeasureMode::Exactly};
+    Paint(RunLayout({layout_box.get()}, constraints).get(), texture);
+  }
+  // ZZ sits past the right edge in flow; sticky pulls it to the last column.
+  CHECK(GetTextLayer(texture) == CheckGrid({"abcdZZ"}));
+}
+
 TEST_CASE("Layout: Padding and Box Model", "[layout]") {
   struct BoxModelTest : Component<BoxModelTest> {
     std::string_view Setup() {

@@ -123,6 +123,8 @@ void CollectFocusableFragments(
     int abs_y,
     int viewport_x,
     int viewport_y,
+    int viewport_w,
+    int viewport_h,
     std::vector<FocusableFragment>& focusable_fragments) {
   if (!fragment) {
     return;
@@ -140,17 +142,21 @@ void CollectFocusableFragments(
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  // Only the leading edges are needed: they position the content-box origin
-  // that descendants are laid against.
-  int border_l = 0, border_t = 0;
-  int padding_l = 0, padding_t = 0;
+  int next_viewport_w = viewport_w;
+  int next_viewport_h = viewport_h;
+  int border_l = 0, border_t = 0, border_r = 0, border_b = 0;
+  int padding_l = 0, padding_t = 0, padding_r = 0, padding_b = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
     padding_t = fragment->dom_node->style.padding.top;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
     border_t = 1;
+    border_r = 1;
+    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -158,6 +164,10 @@ void CollectFocusableFragments(
     scroll_y_offset = fragment->scroll_y;
     next_viewport_x = abs_x + border_l + padding_l;
     next_viewport_y = abs_y + border_t + padding_t;
+    next_viewport_w =
+        fragment->width - border_l - border_r - padding_l - padding_r;
+    next_viewport_h =
+        fragment->height - border_t - border_b - padding_t - padding_b;
   }
 
   for (const auto& child : fragment->children) {
@@ -193,7 +203,11 @@ void CollectFocusableFragments(
           fragment->clips_descendants ? next_viewport_x : viewport_x;
       sticky.viewport_y =
           fragment->clips_descendants ? next_viewport_y : viewport_y;
-      sticky.parent_x = abs_x;
+      sticky.viewport_width =
+        fragment->clips_descendants ? next_viewport_w : viewport_w;
+    sticky.viewport_height =
+        fragment->clips_descendants ? next_viewport_h : viewport_h;
+    sticky.parent_x = abs_x;
       sticky.parent_y = abs_y;
       sticky.parent_width = fragment->width;
       sticky.parent_height = fragment->height;
@@ -210,7 +224,8 @@ void CollectFocusableFragments(
     }
 
     CollectFocusableFragments(child.fragment, child_abs_x, child_abs_y,
-                              next_viewport_x, next_viewport_y,
+                              next_viewport_x, next_viewport_y, next_viewport_w,
+                              next_viewport_h,
                               focusable_fragments);
   }
 }
@@ -223,7 +238,9 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
                            int accum_scroll_x = 0,
                            int accum_scroll_y = 0,
                            int viewport_x = 0,
-                           int viewport_y = 0) {
+                           int viewport_y = 0,
+                           int viewport_w = 0,
+                           int viewport_h = 0) {
   if (!fragment) {
     return nullptr;
   }
@@ -236,17 +253,21 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  // Only the leading edges are needed: they position the content-box origin
-  // that descendants are laid against.
-  int border_l = 0, border_t = 0;
-  int padding_l = 0, padding_t = 0;
+  int next_viewport_w = viewport_w;
+  int next_viewport_h = viewport_h;
+  int border_l = 0, border_t = 0, border_r = 0, border_b = 0;
+  int padding_l = 0, padding_t = 0, padding_r = 0, padding_b = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
     padding_t = fragment->dom_node->style.padding.top;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
     border_t = 1;
+    border_r = 1;
+    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -254,6 +275,10 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
     scroll_y_offset = fragment->scroll_y;
     next_viewport_x = abs_x + border_l + padding_l;
     next_viewport_y = abs_y + border_t + padding_t;
+    next_viewport_w =
+        fragment->width - border_l - border_r - padding_l - padding_r;
+    next_viewport_h =
+        fragment->height - border_t - border_b - padding_t - padding_b;
   }
 
   int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
@@ -324,7 +349,11 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
             fragment->clips_descendants ? next_viewport_x : viewport_x;
         sticky.viewport_y =
             fragment->clips_descendants ? next_viewport_y : viewport_y;
-        sticky.parent_x = abs_x;
+        sticky.viewport_width =
+        fragment->clips_descendants ? next_viewport_w : viewport_w;
+    sticky.viewport_height =
+        fragment->clips_descendants ? next_viewport_h : viewport_h;
+    sticky.parent_x = abs_x;
         sticky.parent_y = abs_y;
         sticky.parent_width = fragment->width;
         sticky.parent_height = fragment->height;
@@ -346,7 +375,8 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
             FindElementAtImpl(it->fragment, target_x, target_y,
                               child_abs_x, child_abs_y,
                               child_accum_scroll_x, child_accum_scroll_y,
-                              next_viewport_x, next_viewport_y)) {
+                              next_viewport_x, next_viewport_y,
+                              next_viewport_w, next_viewport_h)) {
       return found;
     }
   }
@@ -403,13 +433,17 @@ Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
                    });
 
   for (const FixedFragment& candidate : fixed) {
-    if (auto* found = FindElementAtImpl(candidate.fragment, target_x, target_y,
-                                        candidate.x, candidate.y, 0, 0, 0, 0)) {
+    if (auto* found = FindElementAtImpl(
+            candidate.fragment, target_x, target_y, candidate.x, candidate.y,
+            0, 0, 0, 0, fragment ? fragment->width : 0,
+            fragment ? fragment->height : 0)) {
       return found;
     }
   }
 
-  return FindElementAtImpl(fragment, target_x, target_y, 0, 0, 0, 0, 0, 0);
+  return FindElementAtImpl(fragment, target_x, target_y, 0, 0, 0, 0, 0, 0,
+                           fragment ? fragment->width : 0,
+                           fragment ? fragment->height : 0);
 }
 
 std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
@@ -419,7 +453,9 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
     int abs_x = 0,
     int abs_y = 0,
     int viewport_x = 0,
-    int viewport_y = 0) {
+    int viewport_y = 0,
+    int viewport_w = 0,
+    int viewport_h = 0) {
   if (!fragment) {
     return nullptr;
   }
@@ -432,17 +468,21 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  // Only the leading edges are needed: they position the content-box origin
-  // that descendants are laid against.
-  int border_l = 0, border_t = 0;
-  int padding_l = 0, padding_t = 0;
+  int next_viewport_w = viewport_w;
+  int next_viewport_h = viewport_h;
+  int border_l = 0, border_t = 0, border_r = 0, border_b = 0;
+  int padding_l = 0, padding_t = 0, padding_r = 0, padding_b = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
     padding_t = fragment->dom_node->style.padding.top;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
     border_t = 1;
+    border_r = 1;
+    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -450,6 +490,10 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
     scroll_y_offset = fragment->scroll_y;
     next_viewport_x = abs_x + border_l + padding_l;
     next_viewport_y = abs_y + border_t + padding_t;
+    next_viewport_w =
+        fragment->width - border_l - border_r - padding_l - padding_r;
+    next_viewport_h =
+        fragment->height - border_t - border_b - padding_t - padding_b;
   }
 
   auto sorted_children = fragment->children;
@@ -510,7 +554,11 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
           fragment->clips_descendants ? next_viewport_x : viewport_x;
       sticky.viewport_y =
           fragment->clips_descendants ? next_viewport_y : viewport_y;
-      sticky.parent_x = abs_x;
+      sticky.viewport_width =
+        fragment->clips_descendants ? next_viewport_w : viewport_w;
+    sticky.viewport_height =
+        fragment->clips_descendants ? next_viewport_h : viewport_h;
+    sticky.parent_x = abs_x;
       sticky.parent_y = abs_y;
       sticky.parent_width = fragment->width;
       sticky.parent_height = fragment->height;
@@ -528,7 +576,8 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
 
     if (auto found = FindScrollableFragmentAtImpl(it->fragment, target_x, target_y,
                                                   child_abs_x, child_abs_y,
-                                                  next_viewport_x, next_viewport_y)) {
+                                                  next_viewport_x, next_viewport_y,
+                              next_viewport_w, next_viewport_h)) {
       return found;
     }
   }
@@ -545,7 +594,9 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAt(
     const std::shared_ptr<PhysicalFragment>& fragment,
     int target_x,
     int target_y) {
-  return FindScrollableFragmentAtImpl(fragment, target_x, target_y, 0, 0, 0, 0);
+  return FindScrollableFragmentAtImpl(fragment, target_x, target_y, 0, 0, 0, 0,
+                                      fragment ? fragment->width : 0,
+                                      fragment ? fragment->height : 0);
 }
 
 std::shared_ptr<PhysicalFragment> FindFragmentForElement(
@@ -597,7 +648,9 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
     int accum_scroll_x = 0,
     int accum_scroll_y = 0,
     int viewport_x = 0,
-    int viewport_y = 0) {
+    int viewport_y = 0,
+    int viewport_w = 0,
+    int viewport_h = 0) {
   if (!fragment) {
     return std::nullopt;
   }
@@ -609,17 +662,21 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  // Only the leading edges are needed: they position the content-box origin
-  // that descendants are laid against.
-  int border_l = 0, border_t = 0;
-  int padding_l = 0, padding_t = 0;
+  int next_viewport_w = viewport_w;
+  int next_viewport_h = viewport_h;
+  int border_l = 0, border_t = 0, border_r = 0, border_b = 0;
+  int padding_l = 0, padding_t = 0, padding_r = 0, padding_b = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
     padding_t = fragment->dom_node->style.padding.top;
+    padding_r = fragment->dom_node->style.padding.right;
+    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
     border_t = 1;
+    border_r = 1;
+    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -627,6 +684,10 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
     scroll_y_offset = fragment->scroll_y;
     next_viewport_x = abs_x + border_l + padding_l;
     next_viewport_y = abs_y + border_t + padding_t;
+    next_viewport_w =
+        fragment->width - border_l - border_r - padding_l - padding_r;
+    next_viewport_h =
+        fragment->height - border_t - border_b - padding_t - padding_b;
   }
 
   int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
@@ -671,7 +732,11 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
             fragment->clips_descendants ? next_viewport_x : viewport_x;
         sticky.viewport_y =
             fragment->clips_descendants ? next_viewport_y : viewport_y;
-        sticky.parent_x = abs_x;
+        sticky.viewport_width =
+        fragment->clips_descendants ? next_viewport_w : viewport_w;
+    sticky.viewport_height =
+        fragment->clips_descendants ? next_viewport_h : viewport_h;
+    sticky.parent_x = abs_x;
         sticky.parent_y = abs_y;
         sticky.parent_width = fragment->width;
         sticky.parent_height = fragment->height;
@@ -691,7 +756,8 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
     if (auto found = FindFragmentForElementWithPos(
             child.fragment, element, child_abs_x, child_abs_y,
             child_accum_scroll_x, child_accum_scroll_y,
-            next_viewport_x, next_viewport_y)) {
+            next_viewport_x, next_viewport_y,
+                              next_viewport_w, next_viewport_h)) {
       return found;
     }
   }
@@ -2246,7 +2312,9 @@ bool ScreenImpl::SpatialNavigate(Event event) {
   }
 
   std::vector<FocusableFragment> focusable_fragments;
-  CollectFocusableFragments(root_fragment_, 0, 0, 0, 0, focusable_fragments);
+  // The root viewport is the screen itself.
+  CollectFocusableFragments(root_fragment_, 0, 0, 0, 0, width_, height_,
+                            focusable_fragments);
 
   if (focusable_fragments.empty()) {
     return false;
