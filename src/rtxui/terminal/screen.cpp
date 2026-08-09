@@ -381,16 +381,24 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
 // click -- an overlay whose parent is a zero-height wrapper, say, which is
 // exactly the shape of the built-in <dialog>. Collect them up front so they
 // can be tested against the viewport directly.
-void CollectFixedFragments(
-    const std::shared_ptr<PhysicalFragment>& fragment,
-    std::vector<std::shared_ptr<PhysicalFragment>>& out) {
+struct FixedFragment {
+  std::shared_ptr<PhysicalFragment> fragment;
+  // Viewport coordinates. A fragment does not know its own position -- that
+  // lives in the parent's ChildLink -- and PhysicalFragment::x/y are never
+  // assigned by layout, so they must not be read here.
+  int x = 0;
+  int y = 0;
+};
+
+void CollectFixedFragments(const std::shared_ptr<PhysicalFragment>& fragment,
+                           std::vector<FixedFragment>& out) {
   if (!fragment) {
     return;
   }
   for (const auto& child : fragment->children) {
     if (child.fragment && child.fragment->dom_node &&
         child.fragment->dom_node->style.position == PositionType::Fixed) {
-      out.push_back(child.fragment);
+      out.push_back({child.fragment, child.x, child.y});
     }
     CollectFixedFragments(child.fragment, out);
   }
@@ -399,24 +407,21 @@ void CollectFixedFragments(
 Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
                        int target_x,
                        int target_y) {
-  std::vector<std::shared_ptr<PhysicalFragment>> fixed;
+  std::vector<FixedFragment> fixed;
   CollectFixedFragments(fragment, fixed);
 
   // Topmost first, matching paint order. `display: none` subtrees never reach
   // layout, so a closed overlay contributes no fragment here and cannot
   // swallow clicks meant for the interface underneath it.
   std::stable_sort(fixed.begin(), fixed.end(),
-                   [](const std::shared_ptr<PhysicalFragment>& a,
-                      const std::shared_ptr<PhysicalFragment>& b) {
-                     return a->dom_node->style.z_index.value_or(0) >
-                            b->dom_node->style.z_index.value_or(0);
+                   [](const FixedFragment& a, const FixedFragment& b) {
+                     return a.fragment->dom_node->style.z_index.value_or(0) >
+                            b.fragment->dom_node->style.z_index.value_or(0);
                    });
 
-  for (const auto& candidate : fixed) {
-    // Fixed fragments already carry viewport coordinates in their own x/y.
-    if (auto* found =
-            FindElementAtImpl(candidate, target_x, target_y, candidate->x,
-                              candidate->y, 0, 0, 0, 0)) {
+  for (const FixedFragment& candidate : fixed) {
+    if (auto* found = FindElementAtImpl(candidate.fragment, target_x, target_y,
+                                        candidate.x, candidate.y, 0, 0, 0, 0)) {
       return found;
     }
   }
