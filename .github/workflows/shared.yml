@@ -84,12 +84,10 @@ jobs:
       # what catches a public symbol that was never marked RTXUI_EXPORT.
       - name: Consume the installed package
         shell: bash
-        # The exported target requires cxx_std_26, so the consumer has to build
-        # with the same compiler as the library -- not the runner's default,
-        # which on ubuntu-latest is GCC 13 and does not know C++26.
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
+        # Deliberately built with the runner's *default* compiler, not the one
+        # the library was built with: RTXUI requires C++23 of its consumers, so
+        # an ordinary distribution compiler has to be enough. This step failing
+        # would mean the interface requirement had crept back up.
         run: |
           mkdir -p consumer && cd consumer
           cat > CMakeLists.txt <<'EOF'
