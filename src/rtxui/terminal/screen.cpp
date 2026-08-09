@@ -26,6 +26,7 @@
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
+#include "rtxui/layout/sticky.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/style/style.hpp"
@@ -139,19 +140,17 @@ void CollectFocusableFragments(
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  // Only the leading edges are needed: they position the content-box origin
+  // that descendants are laid against.
+  int border_l = 0, border_t = 0;
+  int padding_l = 0, padding_t = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
-    padding_r = fragment->dom_node->style.padding.right;
     padding_t = fragment->dom_node->style.padding.top;
-    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
-    border_r = 1;
     border_t = 1;
-    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -188,33 +187,26 @@ void CollectFocusableFragments(
         c_border_b = 1;
       }
 
-      if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
-        int top_val = child.fragment->dom_node->style.top.Resolve(0);
-        int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
-        int min_y = active_viewport_y + top_val;
-        child_abs_y = std::max(child_abs_y, min_y);
-
-        if (!fragment->clips_descendants) {
-          int parent_scrolled_bottom =
-              abs_y + fragment->height - c_border_b - c_padding_b;
-          int max_y = parent_scrolled_bottom - child.fragment->height;
-          child_abs_y = std::min(child_abs_y, max_y);
-        }
-      }
-
-      if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
-        int left_val = child.fragment->dom_node->style.left.Resolve(0);
-        int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
-        int min_x = active_viewport_x + left_val;
-        child_abs_x = std::max(child_abs_x, min_x);
-
-        if (!fragment->clips_descendants) {
-          int parent_scrolled_right =
-              abs_x + fragment->width - c_border_r - c_padding_r;
-          int max_x = parent_scrolled_right - child.fragment->width;
-          child_abs_x = std::min(child_abs_x, max_x);
-        }
-      }
+      StickyContext sticky;
+      sticky.parent_clips = fragment->clips_descendants;
+      sticky.viewport_x =
+          fragment->clips_descendants ? next_viewport_x : viewport_x;
+      sticky.viewport_y =
+          fragment->clips_descendants ? next_viewport_y : viewport_y;
+      sticky.parent_x = abs_x;
+      sticky.parent_y = abs_y;
+      sticky.parent_width = fragment->width;
+      sticky.parent_height = fragment->height;
+      sticky.parent_border_left = c_border_l;
+      sticky.parent_border_top = c_border_t;
+      sticky.parent_border_right = c_border_r;
+      sticky.parent_border_bottom = c_border_b;
+      sticky.parent_padding_left = c_padding_l;
+      sticky.parent_padding_top = c_padding_t;
+      sticky.parent_padding_right = c_padding_r;
+      sticky.parent_padding_bottom = c_padding_b;
+      ApplyStickyOffset(child.fragment->dom_node->style, child.fragment->width,
+                        child.fragment->height, sticky, child_abs_x, child_abs_y);
     }
 
     CollectFocusableFragments(child.fragment, child_abs_x, child_abs_y,
@@ -244,19 +236,17 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  // Only the leading edges are needed: they position the content-box origin
+  // that descendants are laid against.
+  int border_l = 0, border_t = 0;
+  int padding_l = 0, padding_t = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
-    padding_r = fragment->dom_node->style.padding.right;
     padding_t = fragment->dom_node->style.padding.top;
-    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
-    border_r = 1;
     border_t = 1;
-    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -328,33 +318,26 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
           c_border_b = 1;
         }
 
-        if (it->fragment->dom_node->style.top.unit != Unit::Auto) {
-          int top_val = it->fragment->dom_node->style.top.Resolve(0);
-          int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
-          int min_y = active_viewport_y + top_val;
-          child_abs_y = std::max(child_abs_y, min_y);
-
-          if (!fragment->clips_descendants) {
-            int parent_scrolled_bottom =
-                abs_y + fragment->height - c_border_b - c_padding_b;
-            int max_y = parent_scrolled_bottom - it->fragment->height;
-            child_abs_y = std::min(child_abs_y, max_y);
-          }
-        }
-
-        if (it->fragment->dom_node->style.left.unit != Unit::Auto) {
-          int left_val = it->fragment->dom_node->style.left.Resolve(0);
-          int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
-          int min_x = active_viewport_x + left_val;
-          child_abs_x = std::max(child_abs_x, min_x);
-
-          if (!fragment->clips_descendants) {
-            int parent_scrolled_right =
-                abs_x + fragment->width - c_border_r - c_padding_r;
-            int max_x = parent_scrolled_right - it->fragment->width;
-            child_abs_x = std::min(child_abs_x, max_x);
-          }
-        }
+        StickyContext sticky;
+        sticky.parent_clips = fragment->clips_descendants;
+        sticky.viewport_x =
+            fragment->clips_descendants ? next_viewport_x : viewport_x;
+        sticky.viewport_y =
+            fragment->clips_descendants ? next_viewport_y : viewport_y;
+        sticky.parent_x = abs_x;
+        sticky.parent_y = abs_y;
+        sticky.parent_width = fragment->width;
+        sticky.parent_height = fragment->height;
+        sticky.parent_border_left = c_border_l;
+        sticky.parent_border_top = c_border_t;
+        sticky.parent_border_right = c_border_r;
+        sticky.parent_border_bottom = c_border_b;
+        sticky.parent_padding_left = c_padding_l;
+        sticky.parent_padding_top = c_padding_t;
+        sticky.parent_padding_right = c_padding_r;
+        sticky.parent_padding_bottom = c_padding_b;
+        ApplyStickyOffset(it->fragment->dom_node->style, it->fragment->width,
+                          it->fragment->height, sticky, child_abs_x, child_abs_y);
       }
     }
 
@@ -449,19 +432,17 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  // Only the leading edges are needed: they position the content-box origin
+  // that descendants are laid against.
+  int border_l = 0, border_t = 0;
+  int padding_l = 0, padding_t = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
-    padding_r = fragment->dom_node->style.padding.right;
     padding_t = fragment->dom_node->style.padding.top;
-    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
-    border_r = 1;
     border_t = 1;
-    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -523,33 +504,26 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
         c_border_b = 1;
       }
 
-      if (it->fragment->dom_node->style.top.unit != Unit::Auto) {
-        int top_val = it->fragment->dom_node->style.top.Resolve(0);
-        int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
-        int min_y = active_viewport_y + top_val;
-        child_abs_y = std::max(child_abs_y, min_y);
-
-        if (!fragment->clips_descendants) {
-          int parent_scrolled_bottom =
-              abs_y + fragment->height - c_border_b - c_padding_b;
-          int max_y = parent_scrolled_bottom - it->fragment->height;
-          child_abs_y = std::min(child_abs_y, max_y);
-        }
-      }
-
-      if (it->fragment->dom_node->style.left.unit != Unit::Auto) {
-        int left_val = it->fragment->dom_node->style.left.Resolve(0);
-        int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
-        int min_x = active_viewport_x + left_val;
-        child_abs_x = std::max(child_abs_x, min_x);
-
-        if (!fragment->clips_descendants) {
-          int parent_scrolled_right =
-              abs_x + fragment->width - c_border_r - c_padding_r;
-          int max_x = parent_scrolled_right - it->fragment->width;
-          child_abs_x = std::min(child_abs_x, max_x);
-        }
-      }
+      StickyContext sticky;
+      sticky.parent_clips = fragment->clips_descendants;
+      sticky.viewport_x =
+          fragment->clips_descendants ? next_viewport_x : viewport_x;
+      sticky.viewport_y =
+          fragment->clips_descendants ? next_viewport_y : viewport_y;
+      sticky.parent_x = abs_x;
+      sticky.parent_y = abs_y;
+      sticky.parent_width = fragment->width;
+      sticky.parent_height = fragment->height;
+      sticky.parent_border_left = c_border_l;
+      sticky.parent_border_top = c_border_t;
+      sticky.parent_border_right = c_border_r;
+      sticky.parent_border_bottom = c_border_b;
+      sticky.parent_padding_left = c_padding_l;
+      sticky.parent_padding_top = c_padding_t;
+      sticky.parent_padding_right = c_padding_r;
+      sticky.parent_padding_bottom = c_padding_b;
+      ApplyStickyOffset(it->fragment->dom_node->style, it->fragment->width,
+                        it->fragment->height, sticky, child_abs_x, child_abs_y);
     }
 
     if (auto found = FindScrollableFragmentAtImpl(it->fragment, target_x, target_y,
@@ -635,19 +609,17 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
   int scroll_y_offset = 0;
   int next_viewport_x = viewport_x;
   int next_viewport_y = viewport_y;
-  int border_l = 0, border_r = 0, border_t = 0, border_b = 0;
-  int padding_l = 0, padding_r = 0, padding_t = 0, padding_b = 0;
+  // Only the leading edges are needed: they position the content-box origin
+  // that descendants are laid against.
+  int border_l = 0, border_t = 0;
+  int padding_l = 0, padding_t = 0;
   if (fragment->dom_node) {
     padding_l = fragment->dom_node->style.padding.left;
-    padding_r = fragment->dom_node->style.padding.right;
     padding_t = fragment->dom_node->style.padding.top;
-    padding_b = fragment->dom_node->style.padding.bottom;
   }
   if (fragment->has_border && fragment->border_style != BorderStyle::None) {
     border_l = 1;
-    border_r = 1;
     border_t = 1;
-    border_b = 1;
   }
 
   if (fragment->clips_descendants) {
@@ -693,33 +665,26 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
           c_border_b = 1;
         }
 
-        if (child.fragment->dom_node->style.top.unit != Unit::Auto) {
-          int top_val = child.fragment->dom_node->style.top.Resolve(0);
-          int active_viewport_y = fragment->clips_descendants ? next_viewport_y : viewport_y;
-          int min_y = active_viewport_y + top_val;
-          child_abs_y = std::max(child_abs_y, min_y);
-
-          if (!fragment->clips_descendants) {
-            int parent_scrolled_bottom =
-                abs_y + fragment->height - c_border_b - c_padding_b;
-            int max_y = parent_scrolled_bottom - child.fragment->height;
-            child_abs_y = std::min(child_abs_y, max_y);
-          }
-        }
-
-        if (child.fragment->dom_node->style.left.unit != Unit::Auto) {
-          int left_val = child.fragment->dom_node->style.left.Resolve(0);
-          int active_viewport_x = fragment->clips_descendants ? next_viewport_x : viewport_x;
-          int min_x = active_viewport_x + left_val;
-          child_abs_x = std::max(child_abs_x, min_x);
-
-          if (!fragment->clips_descendants) {
-            int parent_scrolled_right =
-                abs_x + fragment->width - c_border_r - c_padding_r;
-            int max_x = parent_scrolled_right - child.fragment->width;
-            child_abs_x = std::min(child_abs_x, max_x);
-          }
-        }
+        StickyContext sticky;
+        sticky.parent_clips = fragment->clips_descendants;
+        sticky.viewport_x =
+            fragment->clips_descendants ? next_viewport_x : viewport_x;
+        sticky.viewport_y =
+            fragment->clips_descendants ? next_viewport_y : viewport_y;
+        sticky.parent_x = abs_x;
+        sticky.parent_y = abs_y;
+        sticky.parent_width = fragment->width;
+        sticky.parent_height = fragment->height;
+        sticky.parent_border_left = c_border_l;
+        sticky.parent_border_top = c_border_t;
+        sticky.parent_border_right = c_border_r;
+        sticky.parent_border_bottom = c_border_b;
+        sticky.parent_padding_left = c_padding_l;
+        sticky.parent_padding_top = c_padding_t;
+        sticky.parent_padding_right = c_padding_r;
+        sticky.parent_padding_bottom = c_padding_b;
+        ApplyStickyOffset(child.fragment->dom_node->style, child.fragment->width,
+                          child.fragment->height, sticky, child_abs_x, child_abs_y);
       }
     }
 
@@ -1588,7 +1553,6 @@ void ScreenImpl::HandleEvent(Event event) {
             }
 
             if (!action.empty()) {
-              std::string_view action_view = action;
               std::string callback_name = action;
               std::string callback_arg = "";
 

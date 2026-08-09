@@ -54,11 +54,13 @@ endif()
 #
 #   missing-field-initializers  61   aggregate init leaving trailing members
 #   unused-local-typedefs       40
-#   unused-but-set-variable     33
 #   unused-parameter            17
 #   sign-compare                13   audited: all guarded, none reachable
 #   unused-variable              4
 #   unused-function              3
+#
+# unused-but-set-variable is no longer suppressed: all 33 were dead locals and
+# have been removed.
 #
 # No -Werror: this has to keep building on compilers whose warning sets differ.
 set(RTXUI_WARNING_FLAGS
@@ -66,7 +68,6 @@ set(RTXUI_WARNING_FLAGS
   -Wextra
   -Wno-missing-field-initializers
   -Wno-unused-local-typedefs
-  -Wno-unused-but-set-variable
   -Wno-unused-parameter
   -Wno-sign-compare
   -Wno-unused-variable
