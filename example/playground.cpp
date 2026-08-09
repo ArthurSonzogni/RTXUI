@@ -1,9 +1,13 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// A live HTML/CSS editor and preview, side by side.
+//
+// The preview re-parses on every keystroke using the same template engine that
+// powers every RTXUI app, which is also why this is the docs homepage demo.
 #include <string>
 
-#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/rtxui.hpp"
 #include "rtxui/xml/xml.hpp"
@@ -35,7 +39,7 @@ constexpr std::string_view kDefaultCode = R"html(
   <style>
     .card {
       display: block;
-      border: round;
+      border: tall;
       border-color: rgb(129, 140, 248);
       padding: 1;
       background-color: rgb(30, 41, 59);
@@ -85,41 +89,6 @@ constexpr std::string_view kDefaultCode = R"html(
 class LivePreview : public Component<LivePreview> {
  public:
   std::string_view view = kDefaultCode;
-
-  void InitReflection() override {
-    Import<rtxui::b>();
-    Import<rtxui::button>();
-    Import<rtxui::checkbox>();
-    Import<rtxui::code>();
-    Import<rtxui::details>();
-    Import<rtxui::div>();
-    Import<rtxui::fieldset>();
-    Import<rtxui::h1>();
-    Import<rtxui::hr>();
-    Import<rtxui::i>();
-    Import<rtxui::input>();
-    Import<rtxui::label>();
-    Import<rtxui::legend>();
-    Import<rtxui::li>();
-    Import<rtxui::ol>();
-    Import<rtxui::option>();
-    Import<rtxui::p>();
-    Import<rtxui::pre>();
-    Import<rtxui::progress>();
-    Import<rtxui::radio>();
-    Import<rtxui::s>();
-    Import<rtxui::select>();
-    Import<rtxui::slider>();
-    Import<rtxui::span>();
-    Import<rtxui::strong>();
-    Import<rtxui::summary>();
-    Import<rtxui::tab_pane>();
-    Import<rtxui::tabs>();
-    Import<rtxui::tooltip>();
-    Import<rtxui::u>();
-    Import<rtxui::ul>();
-    Component<LivePreview>::InitReflection();
-  }
 };
 
 // The left-hand editor shell. It owns the raw template text and, on every
@@ -155,6 +124,13 @@ class Playground : public Component<Playground> {
 
     <style>
       self {
+        --surface: rgb(22, 27, 34);
+        --border: rgb(48, 54, 61);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent: rgb(88, 166, 255);
+        --danger: rgb(248, 81, 73);
+
         display: block;
         width: 100%;
         height: 100%;
@@ -176,7 +152,7 @@ class Playground : public Component<Playground> {
       }
       .editor-pane {
         border-right: solid;
-        border-color: rgb(51, 65, 85);
+        border-color: var(--border);
       }
       .pane-title {
         font-weight: bold;
@@ -185,7 +161,7 @@ class Playground : public Component<Playground> {
       }
       .hint {
         font-weight: normal;
-        color: rgb(148, 163, 184);
+        color: var(--muted);
       }
       .editor {
         flex-grow: 1;
@@ -195,11 +171,11 @@ class Playground : public Component<Playground> {
         overflow-y: scroll;
         margin-bottom: 1;
       }
-      /* Themes the gutter/current-line, which live inside the textarea's
-         own template and so aren't reachable by an ordinary .editor .gutter
+      /* Themes the gutter/current-line, which live inside <textarea>'s own
+         template and so aren't reachable by an ordinary .editor .gutter
          selector -- see docs/guide/css/basics.md. */
       .editor::part(gutter) {
-        color: rgb(71, 85, 105);
+        color: var(--border);
       }
       .editor::part(active) {
         color: rgb(129, 140, 248);
@@ -211,16 +187,16 @@ class Playground : public Component<Playground> {
         background-color: rgb(67, 56, 202);
       }
       .editor::part(cursor) {
-        color: rgb(226, 232, 240);
+        color: var(--text);
       }
       .editor::part(placeholder) {
         color: rgb(100, 116, 139);
       }
       .status {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
       }
       .status.error {
-        color: rgb(248, 113, 113);
+        color: var(--danger);
       }
       .preview-frame {
         flex-grow: 1;
@@ -230,15 +206,11 @@ class Playground : public Component<Playground> {
     </style>
   )html";
 
-  void InitReflection() override {
+  Playground() {
     Bind(code);
     Bind(status);
     BindComputed(status_class);
     Import<LivePreview>();
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::textarea>();
-    Component<Playground>::InitReflection();
   }
 
   bool Digest() override {

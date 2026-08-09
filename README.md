@@ -2,6 +2,47 @@
 
 **RTXUI** is a modern, high-performance C++ library for building beautiful, reactive Terminal User Interfaces (TUIs) utilizing web-inspired paradigms (HTML templates, CSS layouts, and live data binding).
 
+<p align="center">
+  <img src="docs/public/img/dashboard.svg" alt="An RTXUI service-health dashboard running in a terminal" width="100%">
+</p>
+
+<p align="center">
+  <em>
+    <a href="example/app_dashboard.cpp">example/app_dashboard.cpp</a> —
+    flexbox, a bound collection, computed values, conditional rendering and
+    transitions, in one file.
+    Regenerate with <code>tools/ansi_to_svg.py</code>.
+  </em>
+</p>
+
+---
+
+## RTXUI or FTXUI?
+
+Both are terminal UI libraries by the same author, and RTXUI is not a
+replacement for [FTXUI](https://github.com/ArthurSonzogni/FTXUI) — they take
+different bets.
+
+**FTXUI** composes an interface from C++ elements: `hbox`, `vbox`, `border`,
+and a `Renderer`/`Component` pair. Layout is expressed by nesting those calls,
+which is direct and type-checked, and the library is mature, widely used, and
+supported on Windows.
+
+**RTXUI** runs a browser-style pipeline instead. Structure is an HTML template
+in a string literal, styling is real CSS in a `<style>` block — a cascade with
+selectors, specificity, pseudo-classes, custom properties, media queries and
+transitions — and layout is block/inline/flex/grid producing physical
+fragments. State is plain C++ members: mutate one and the DOM is diffed and
+repainted.
+
+Pick **FTXUI** when you want a mature, portable library with a compact C++ API,
+need Windows, or your UI is simple enough that a layout engine is overhead.
+
+Pick **RTXUI** when you already think in HTML and CSS, want to restyle without
+touching C++ (including [hot reload](#-live-htmlcss-hot-reloading) of templates
+in a running program), need real flexbox or grid, or want the same code to run
+in a browser through WebAssembly. It is younger, and Linux/macOS only.
+
 ---
 
 ## 🌟 Key Features
@@ -17,7 +58,7 @@
 
 ## 🚀 Live HTML/CSS Hot-Reloading
 
-RTXUI leverages modern **C++20 `std::source_location`** to offer instantaneous hot-reloading of HTML/CSS templates during local development.
+RTXUI leverages **`std::source_location`** to offer instantaneous hot-reloading of HTML/CSS templates during local development.
 
 ### How to use it:
 Simply call `EnableHotReload()` in your component's constructor:
@@ -55,15 +96,30 @@ Run your compiled application. If you make changes to the `view` template in you
 
 ### Prerequisites
 
-#### 1. Install Clang 18 (C++20 Support)
+RTXUI runs on **Linux and macOS** (the terminal backend is POSIX), and in the
+browser via **WebAssembly**. Windows is not supported yet.
+
+#### 1. Install a C++26 compiler
+
+The project builds as C++26 (`CMAKE_CXX_STANDARD 26`). CI uses GCC 14; recent
+Clang releases work too — see [Getting Started](docs/guide/getting-started.md)
+for the C++26 reflection notes.
+
+On Debian or Ubuntu:
+
 ```bash
-# Download and install Clang 18
-wget https://apt.llvm.org/llvm.sh
-chmod +x llvm.sh
-sudo ./llvm.sh 18
-sudo ln -sf /usr/bin/clang-18 /usr/bin/clang
-sudo ln -sf /usr/bin/clang++-18 /usr/bin/clang++
+sudo apt install g++-14
 ```
+
+Select the compiler per build rather than changing system defaults:
+
+```bash
+CC=gcc-14 CXX=g++-14 cmake -B build -G Ninja
+```
+
+For Clang, install a recent release from your distribution or
+[apt.llvm.org](https://apt.llvm.org) and set `CC=clang CXX=clang++` the same
+way.
 
 #### 2. Install Ninja Build System
 ```bash

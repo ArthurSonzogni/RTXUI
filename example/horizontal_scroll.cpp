@@ -1,7 +1,13 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Horizontal overflow.
+//
+// overflow-x on a container that is narrower than its content produces a
+// horizontal scrollbar.
+//
+// Try it: scroll with Shift+wheel, or drag the scrollbar.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -60,14 +66,23 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
+          --text: rgb(230, 237, 243);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+          --danger: rgb(248, 81, 73);
+
           display: flex;
           flex-direction: row;
           width: 100%;
           height: 100%;
           overflow-x: scroll;
           scroll-speed-x: 2;
-          background-color: rgb(18, 18, 18);
-          color: rgb(241, 245, 249);
+          background-color: var(--bg);
+          color: var(--text);
           padding: 1;
         }
         .header {
@@ -77,16 +92,16 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           flex-shrink: 0;
           margin-right: 2;
           border: tall;
-          border-color: rgb(30, 41, 59);
+          border-color: var(--surface);
           padding: 1;
         }
         h1 {
-          color: rgb(147, 197, 253);
+          color: var(--accent-bright);
           font-weight: bold;
           margin-bottom: 1;
         }
         .desc {
-          color: rgb(148, 163, 184);
+          color: var(--muted);
           margin-bottom: 1;
         }
         .item {
@@ -94,10 +109,10 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           width: 25;
           height: 8;
           margin-right: 2;
-          background-color: rgb(30, 41, 59);
+          background-color: var(--surface);
           color: rgb(219, 234, 254);
           border: tall;
-          border-color: rgb(71, 85, 105);
+          border-color: var(--border);
           padding: 1;
         }
         .nested-container {
@@ -121,29 +136,29 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
         }
         .box-a {
           border: tall;
-          border-color: rgb(147, 197, 253);
-          background-color: rgb(30, 41, 59);
+          border-color: var(--accent-bright);
+          background-color: var(--surface);
         }
         .box-b {
           border: tall;
-          border-color: rgb(59, 130, 246);
-          background-color: rgb(30, 41, 59);
+          border-color: var(--accent);
+          background-color: var(--surface);
         }
         .inner-item {
           display: block;
           width: 10;
           margin-right: 1;
           background-color: rgb(15, 23, 42);
-          color: rgb(147, 197, 253);
+          color: var(--accent-bright);
           border: tall;
-          border-color: rgb(51, 65, 85);
+          border-color: var(--border);
           padding: 0 1;
         }
         .first {
           color: rgb(74, 222, 128);
         }
         .last {
-          color: rgb(248, 113, 113);
+          color: var(--danger);
         }
       </style>
     )html";

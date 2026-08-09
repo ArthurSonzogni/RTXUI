@@ -1,3 +1,13 @@
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+//
+// Looping over a collection of structs.
+//
+// A mapper exposes each struct's fields to the template, which reads them with
+// dot notation on the loop variable.
+//
+// Try it: toggle a task to see only that row re-render.
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
@@ -48,22 +58,29 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
       </div>
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+          --danger: rgb(248, 81, 73);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
         }
         .container { padding: 1; }
         .input-row { display: flex; gap: 1; margin-bottom: 1; }
         input { width: 25; padding: 0 1; }
-        .list { display: flex; flex-direction: column; gap: 0; border: tall; border-color: rgb(51, 65, 85); }
+        .list { display: flex; flex-direction: column; gap: 0; border: tall; border-color: var(--border); }
         .item { display: flex; gap: 2; padding: 0 1; align-items: center; }
         .status { width: 10; color: rgb(56, 189, 248); }
         .name { flex-grow: 1; color: white; }
-        .remove-btn { color: rgb(239, 68, 68); border: none; padding: 0 1; background-color: transparent; }
-        .remove-btn:hover { color: white; background-color: rgb(239, 68, 68); }
-        button { background-color: rgb(30, 41, 59); color: white; border: tall; border-color: rgb(71, 85, 105); padding: 0 1; }
-        button:hover { background-color: rgb(59, 130, 246); border-color: rgb(96, 165, 250); }
+        .remove-btn { color: var(--danger); border: none; padding: 0 1; background-color: transparent; }
+        .remove-btn:hover { color: white; background-color: var(--danger); }
+        button { background-color: var(--surface); color: white; border: tall; border-color: var(--border); padding: 0 1; }
+        button:hover { background-color: var(--accent); border-color: var(--accent-bright); }
       </style>
     )html";
 

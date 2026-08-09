@@ -23,6 +23,24 @@ features:
 ---
 
 <div class="demo-section">
+  <h2>A Real Application</h2>
+  <p class="demo-desc">
+    A service-health dashboard in a single file — a bound <code>std::vector</code> of structs,
+    computed values, conditional rendering, flex layout and transitions. Click a row to select it,
+    filter the list, and restart an unhealthy service.
+  </p>
+
+<ExampleTabs src="/wasm/rtxui_example_app_dashboard.js" :cols="100" :rows="28">
+<template #source>
+
+<<< @/../example/app_dashboard.cpp
+
+</template>
+</ExampleTabs>
+
+</div>
+
+<div class="demo-section">
   <h2>Try RTXUI in your Browser</h2>
   <p class="demo-desc">
     This live playground compiles RTXUI to WebAssembly and runs it right here. Edit the HTML and CSS
@@ -42,7 +60,7 @@ features:
 
 <style>
 .demo-section {
-  max-width: 860px;
+  max-width: 1120px;
   margin: 4rem auto 0 auto;
   padding: 0 1.5rem;
 }

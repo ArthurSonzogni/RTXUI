@@ -34,10 +34,26 @@ To lay out children inside a container using flex rules, set the display propert
 ```
 ## Live Demo
 
+A row of boxes laid out with `justify-content` and `align-items`:
+
 <ExampleTabs src="/wasm/rtxui_example_layout.js">
 <template #source>
 
 <<< @/../example/layout.cpp
+
+</template>
+</ExampleTabs>
+
+## Live Demo - Interactive Flex Playground
+
+The same properties, driven from the UI. Change `flex-direction`,
+`justify-content`, `align-items` and the per-item `flex-grow`/`flex-shrink`
+/`flex-basis`, and watch the boxes redistribute:
+
+<ExampleTabs src="/wasm/rtxui_example_layout_flex.js" :cols="100">
+<template #source>
+
+<<< @/../example/layout_flex.cpp
 
 </template>
 </ExampleTabs>

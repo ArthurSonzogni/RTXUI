@@ -1,7 +1,14 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// CSS transitions.
+//
+// `transition` interpolates a property between its old and new computed value
+// whenever a rule stops or starts matching -- here, when :hover applies. Each
+// property can carry its own duration and easing function.
+//
+// Try it: hover each card and watch them settle at different speeds.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -9,52 +16,91 @@ using namespace rtxui;
 class TransitionsDemo : public Component<TransitionsDemo> {
  public:
   std::string_view view = R"html(
-      <div class="container">
-        <h3>CSS Transitions</h3>
-        <p>Hover over the box to trigger a smooth color transition:</p>
-        <div class="box">Hover Me</div>
+      <div class="card">
+        <h1>Transitions</h1>
+        <p>Hover a tile. Each one eases on a different curve.</p>
+
+        <div class="row">
+          <div class="tile linear">
+            <span class="name">linear</span>
+            <span class="time">0.2s</span>
+          </div>
+          <div class="tile ease">
+            <span class="name">ease-in-out</span>
+            <span class="time">0.5s</span>
+          </div>
+          <div class="tile slow">
+            <span class="name">ease-out</span>
+            <span class="time">1.0s</span>
+          </div>
+        </div>
       </div>
 
       <style>
         self {
-          display: block;
-          padding: 1 2;
-          background-color: rgb(18, 18, 18); /* Deep dark slate */
-          color: rgb(241, 245, 249);
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
+          --text: rgb(230, 237, 243);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: var(--bg);
+          color: var(--text);
         }
-        h3 {
-          color: rgb(59, 130, 246); /* Bright blue */
-          margin-bottom: 0;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: var(--surface);
+          padding: 1 3;
+        }
+        h1 {
+          color: var(--accent);
+          font-weight: bold;
         }
         p {
-          color: rgb(148, 163, 184); /* Muted slate */
+          color: var(--muted);
           margin-bottom: 1;
         }
-        .box {
-          display: block;
-          border: solid;
-          border-color: rgb(30, 58, 138); /* Slate Blue border */
-          background-color: rgb(17, 24, 39); /* Very dark blue-gray */
-          color: rgb(191, 219, 254); /* Light blue text */
-          padding: 1 3;
+        .row {
+          display: flex;
+          gap: 2;
+        }
+        .tile {
+          display: flex;
+          flex-direction: column;
+          border: tall;
+          border-color: var(--border);
+          background-color: var(--bg);
+          color: var(--muted);
+          padding: 1 2;
+          width: 18;
           text-align: center;
-          width: 24;
-          transition: background-color 0.4s ease-in-out, border-color 0.3s ease-out, color 0.3s ease;
         }
-        .box:hover {
-          background-color: rgb(29, 78, 216); /* Bright Blue on hover */
-          border-color: rgb(96, 165, 250); /* Light Blue border */
-          color: rgb(255, 255, 255);
+        .tile:hover {
+          background-color: var(--accent);
+          border-color: var(--accent);
+          color: var(--bg);
         }
-        .box:active {
-          background-color: rgb(30, 58, 138); /* Slate Blue on click */
-          border-color: rgb(59, 130, 246); /* Bright Blue border */
-          color: rgb(255, 255, 255);
+        .name {
+          font-weight: bold;
         }
-        .box:focus {
-          background-color: rgb(30, 58, 138); /* Slate Blue on focus */
-          border-color: rgb(59, 130, 246); /* Bright Blue border */
-          color: rgb(255, 255, 255);
+        .linear {
+          transition: background-color 0.2s linear, border-color 0.2s linear,
+                      color 0.2s linear;
+        }
+        .ease {
+          transition: background-color 0.5s ease-in-out,
+                      border-color 0.5s ease-in-out, color 0.5s ease-in-out;
+        }
+        .slow {
+          transition: background-color 1.0s ease-out,
+                      border-color 1.0s ease-out, color 1.0s ease-out;
         }
       </style>
     )html";

@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// The <tooltip> component, shown on hover in each of four directions.
 #include <rtxui/rtxui.hpp>
 #include <string>
 
@@ -87,18 +88,24 @@ class TooltipDemo : public Component<TooltipDemo> {
 
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+        --surface: rgb(22, 27, 34);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent: rgb(88, 166, 255);
+
         display: block;
         padding: 2;
-        background-color: rgb(18, 18, 18);
-        color: rgb(241, 245, 249);
+        background-color: var(--bg);
+        color: var(--text);
       }
       h2 {
-        color: rgb(59, 130, 246);
+        color: var(--accent);
         font-weight: bold;
         margin-bottom: 0;
       }
       .desc {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
         margin-bottom: 2;
       }
       .showcase {
@@ -110,7 +117,7 @@ class TooltipDemo : public Component<TooltipDemo> {
         width: 76;
       }
       .section-title {
-        color: rgb(59, 130, 246);
+        color: var(--accent);
         font-weight: bold;
         margin-top: 1;
         margin-bottom: 0;
@@ -124,13 +131,13 @@ class TooltipDemo : public Component<TooltipDemo> {
         margin-bottom: 1;
       }
       .btn {
-        background-color: rgb(30, 41, 59);
+        background-color: var(--surface);
         color: white;
         cursor: pointer;
         padding: 0 1;
       }
       .btn:hover {
-        background-color: rgb(59, 130, 246);
+        background-color: var(--accent);
       }
       .tall-btn {
         height: 3;
@@ -148,7 +155,7 @@ class TooltipDemo : public Component<TooltipDemo> {
         padding-top: 1;
       }
       .input-section p {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
         margin-bottom: 1;
       }
       input {

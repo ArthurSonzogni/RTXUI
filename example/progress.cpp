@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// The <progress> component driven by bound state.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -13,10 +14,7 @@ class ProgressDemo : public Component<ProgressDemo> {
   std::string_view view = R"html(
       <div class="container">
         <p class="title">Interactive Progress Bar Element</p>
-        <p class="desc">
-          The progress bar below is bound to the same value as the slider.
-          Use the slider to change the progress bar level in real-time.
-        </p>
+        <p class="desc">A determinate progress bar driven by bound state.</p>
         
         <div class="slider-wrapper">
           <span class="label">Control:</span>
@@ -36,43 +34,73 @@ class ProgressDemo : public Component<ProgressDemo> {
 
       <style>
         self {
-          display: block;
-          padding: 1;
-          background-color: rgb(18, 18, 18);
-          color: white;
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
+          --text: rgb(230, 237, 243);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: var(--bg);
+          color: var(--text);
         }
         .container {
           display: block;
+          border: tall;
+          border-color: var(--border);
+          background-color: var(--surface);
+          padding: 1 3;
+          width: 62;
         }
         .title {
-          display: block;
+          color: var(--accent);
           font-weight: bold;
-          color: rgb(56, 189, 248);
-          margin-bottom: 1;
         }
         .desc {
-          display: block;
-          color: rgb(156, 163, 175);
-          margin-bottom: 2;
+          color: var(--muted);
+          margin-bottom: 1;
+        }
+        .output-box {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          border-top: solid;
+          border-color: var(--border);
+          margin-top: 1;
+          padding-top: 1;
+        }
+        .label {
+          color: var(--muted);
+        }
+        .value {
+          color: var(--accent);
+          font-weight: bold;
         }
         .slider-wrapper, .progress-wrapper {
           display: flex;
           gap: 2;
-          margin-bottom: 2;
           align-items: center;
         }
-        .output-box {
-          display: flex;
-          gap: 2;
-          margin-top: 2;
+        .stats {
+          color: var(--muted);
+          margin-top: 1;
         }
-        .label {
-          color: rgb(56, 189, 248);
-          width: 12;
+        input, textarea, select, .styled-input, .editor {
+          border: tall;
+          border-color: var(--border);
+          background-color: var(--bg);
+          color: var(--text);
+          padding: 0 1;
+          width: 100%;
         }
-        .value {
-          font-weight: bold;
-          color: rgb(56, 189, 248);
+        input:focus, textarea:focus, select:focus,
+        .styled-input:focus, .editor:focus {
+          border-color: var(--accent);
         }
       </style>
     )html";

@@ -1,9 +1,12 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Content projection with <slot>.
+//
+// A reusable Card component places its caller's markup into named slots, which is
+// how every built-in tag is implemented too.
 #include <rtxui/rtxui.hpp>
-#include "rtxui/component/default_components_internal.hpp"
 
 using namespace rtxui;
 
@@ -24,7 +27,9 @@ class Card : public Component<Card> {
     </div>
     <style>
       self {
-          background-color: rgb(18, 18, 18);
+        --bg: rgb(13, 17, 23);
+
+          background-color: var(--bg);
         display: block;
         margin: 1;
       }
@@ -86,7 +91,7 @@ class SlotsDemo : public Component<SlotsDemo> {
       self {
         display: block;
         padding: 1;
-        background-color: rgb(18, 18, 18);
+        background-color: var(--bg);
         color: white;
         width: 100%;
         height: 100%;
@@ -106,13 +111,8 @@ class SlotsDemo : public Component<SlotsDemo> {
     </style>
   )html";
 
-  void InitReflection() override {
+  SlotsDemo() {
     Import<Card>();
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::h1>();
-    Import<rtxui::p>();
-    Component<SlotsDemo>::InitReflection();
   }
 };
 

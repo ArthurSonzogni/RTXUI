@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// text-align: left, center and right.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -31,9 +32,14 @@ class TextAlignDemo : public Component<TextAlignDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent-bright: rgb(121, 192, 255);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
           width: 50;
           height: 18;
@@ -46,7 +52,7 @@ class TextAlignDemo : public Component<TextAlignDemo> {
         }
         p {
           margin-bottom: 1;
-          color: rgb(148, 163, 184);
+          color: var(--muted);
           text-align: center;
         }
         .card {
@@ -54,11 +60,11 @@ class TextAlignDemo : public Component<TextAlignDemo> {
           margin-top: 1;
           padding: 1;
           border: tall;
-          border-color: rgb(71, 85, 105);
+          border-color: var(--border);
         }
         .title {
           font-weight: bold;
-          color: rgb(96, 165, 250);
+          color: var(--accent-bright);
           margin-bottom: 1;
         }
         .left-align {

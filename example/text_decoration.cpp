@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Text decoration: bold, dim, italic, underline and strikethrough.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -41,9 +42,11 @@ class TextDecorationDemo : public Component<TextDecorationDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
           overflow-y: scroll;
         }

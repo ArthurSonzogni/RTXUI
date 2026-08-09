@@ -283,6 +283,19 @@ Example:
 </details>
 ```
 
+
+### Live Demo
+
+Two independent disclosure widgets, one driven by a bound boolean and one left to its own internal state:
+
+<ExampleTabs src="/wasm/rtxui_example_details.js">
+<template #source>
+
+<<< @/../example/details.cpp
+
+</template>
+</ExampleTabs>
+
 ---
 
 ## 10. Grouping & Layout (`<fieldset>`, `<legend>`)
@@ -303,6 +316,19 @@ Example:
 </fieldset>
 ```
 
+
+### Live Demo
+
+Two `<fieldset>` groups, each captioned by a `<legend>` nested into the top border:
+
+<ExampleTabs src="/wasm/rtxui_example_fieldset.js">
+<template #source>
+
+<<< @/../example/fieldset.cpp
+
+</template>
+</ExampleTabs>
+
 ---
 
 ## 11. Radio Buttons (`<radio>`)
@@ -318,6 +344,19 @@ Example:
 <radio name="gender" checked="{is_male}">Male</radio>
 <radio name="gender" checked="{is_female}">Female</radio>
 ```
+
+
+### Live Demo
+
+A radio group sharing one `name`, with the selection mirrored into a bound C++ string:
+
+<ExampleTabs src="/wasm/rtxui_example_radio.js">
+<template #source>
+
+<<< @/../example/radio.cpp
+
+</template>
+</ExampleTabs>
 
 ---
 
@@ -343,6 +382,19 @@ Example:
 </tabs>
 ```
 
+
+### Live Demo
+
+Three `<tab-pane>` children switched by the `value` attribute bound to a C++ string:
+
+<ExampleTabs src="/wasm/rtxui_example_tabs.js">
+<template #source>
+
+<<< @/../example/tabs.cpp
+
+</template>
+</ExampleTabs>
+
 ---
 
 ## 13. Overlays & Dialogs (`<dialog>`)
@@ -362,6 +414,19 @@ Example:
   <button onclick="ConfirmExit">Exit</button>
 </dialog>
 ```
+
+
+### Live Demo
+
+A modal opened by flipping a bound boolean, dismissed with either button or the Escape key:
+
+<ExampleTabs src="/wasm/rtxui_example_dialog.js">
+<template #source>
+
+<<< @/../example/dialog.cpp
+
+</template>
+</ExampleTabs>
 
 ---
 

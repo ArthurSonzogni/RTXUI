@@ -1,9 +1,10 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// The <markdown> component: a live editor and rendered preview, side by side.
 #include <string>
 
-#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/rtxui.hpp"
 
 using namespace rtxui;
@@ -103,16 +104,11 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
 
   std::string status_class() const { return status == "OK" ? "ok" : "error"; }
 
-  void InitReflection() override {
+  MarkdownPlayground() {
     Bind(markdown_source);
     Bind(stylesheet);
     Bind(status);
     BindComputed(status_class);
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::textarea>();
-    Import<rtxui::markdown>();
-    Component<MarkdownPlayground>::InitReflection();
   }
 
   // Resets `status` to "OK" right before the reactive re-render triggered by
@@ -161,6 +157,11 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
 
     <style>
       self {
+        --border: rgb(48, 54, 61);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --danger: rgb(248, 81, 73);
+
         display: block;
         width: 100%;
         height: 100%;
@@ -182,7 +183,7 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
       }
       .editor-pane {
         border-right: solid;
-        border-color: rgb(51, 65, 85);
+        border-color: var(--border);
       }
       .pane-title {
         font-weight: bold;
@@ -191,7 +192,7 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
       }
       .hint {
         font-weight: normal;
-        color: rgb(148, 163, 184);
+        color: var(--muted);
       }
       .editor {
         flex-grow: 1;
@@ -205,7 +206,7 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
          own template and so aren't reachable by an ordinary .editor .gutter
          selector -- see docs/guide/css/basics.md. */
       .editor::part(gutter) {
-        color: rgb(71, 85, 105);
+        color: var(--border);
       }
       .editor::part(active) {
         color: rgb(129, 140, 248);
@@ -217,13 +218,13 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
         background-color: rgb(67, 56, 202);
       }
       .editor::part(cursor) {
-        color: rgb(226, 232, 240);
+        color: var(--text);
       }
       .status {
-        color: rgb(148, 163, 184);
+        color: var(--muted);
       }
       .status.error {
-        color: rgb(248, 113, 113);
+        color: var(--danger);
       }
       .preview-frame {
         flex-grow: 1;

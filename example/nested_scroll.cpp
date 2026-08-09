@@ -1,7 +1,11 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Nested scroll containers and scroll chaining.
+//
+// An inner container consumes wheel events until it reaches its end, then the
+// event propagates to its parent.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -71,22 +75,29 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --text: rgb(230, 237, 243);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+
           display: block;
           width: 100%;
           height: 100%;
           overflow-y: scroll;
           scroll-speed: 1;
-          background-color: rgb(18, 18, 18);
-          color: rgb(241, 245, 249);
+          background-color: var(--bg);
+          color: var(--text);
           padding: 1;
         }
         h1 {
-          color: rgb(147, 197, 253);
+          color: var(--accent-bright);
           font-weight: bold;
           margin-bottom: 1;
         }
         .desc {
-          color: rgb(148, 163, 184);
+          color: var(--muted);
           margin-bottom: 1;
         }
         .inner-scroll {
@@ -99,16 +110,16 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
         }
         .box-a {
           border: tall;
-          border-color: rgb(147, 197, 253);
-          background-color: rgb(30, 41, 59);
+          border-color: var(--accent-bright);
+          background-color: var(--surface);
         }
         .box-b {
           border: tall;
-          border-color: rgb(59, 130, 246);
-          background-color: rgb(30, 41, 59);
+          border-color: var(--accent);
+          background-color: var(--surface);
         }
         .section-title {
-          color: rgb(96, 165, 250);
+          color: var(--accent-bright);
           font-weight: bold;
           margin-top: 1;
           margin-bottom: 1;

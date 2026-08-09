@@ -1,7 +1,8 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// Opacity and alpha blending, including how nested opacity compounds.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -50,9 +51,15 @@ class OpacityDemo : public Component<OpacityDemo> {
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --surface: rgb(22, 27, 34);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
+          --accent-bright: rgb(121, 192, 255);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
           color: white;
         }
         .container {
@@ -66,7 +73,7 @@ class OpacityDemo : public Component<OpacityDemo> {
         }
         .desc {
           display: block;
-          color: rgb(156, 163, 175);
+          color: var(--muted);
           margin-bottom: 2;
         }
         .control-row {
@@ -93,17 +100,17 @@ class OpacityDemo : public Component<OpacityDemo> {
           flex: 1;
           display: block;
           border: tall;
-          border-color: rgb(30, 41, 59);
+          border-color: var(--surface);
           padding: 1 2;
           height: 12;
         }
         h3 {
-          color: rgb(96, 165, 250);
+          color: var(--accent-bright);
           font-weight: bold;
           margin-bottom: 1;
         }
         .sub-desc {
-          color: rgb(148, 163, 184);
+          color: var(--muted);
           margin-bottom: 2;
         }
 
@@ -111,7 +118,7 @@ class OpacityDemo : public Component<OpacityDemo> {
         .parent-box {
           display: block;
           border: solid;
-          border-color: rgb(59, 130, 246);
+          border-color: var(--accent);
           background-color: rgb(30, 58, 138);
           padding: 1;
         }
@@ -123,19 +130,19 @@ class OpacityDemo : public Component<OpacityDemo> {
           display: block;
           margin-top: 1;
           border: dashed;
-          border-color: rgb(147, 197, 253);
-          background-color: rgb(30, 41, 59);
+          border-color: var(--accent-bright);
+          background-color: var(--surface);
           padding: 1;
         }
         .child-label {
-          color: rgb(147, 197, 253);
+          color: var(--accent-bright);
         }
 
         /* 2. Interactive Button Styling */
         .hover-btn {
           display: block;
           border: tall;
-          border-color: rgb(59, 130, 246);
+          border-color: var(--accent);
           background-color: rgb(30, 58, 138);
           color: rgb(191, 219, 254);
           padding: 1 3;
@@ -151,7 +158,7 @@ class OpacityDemo : public Component<OpacityDemo> {
           color: white;
         }
         .hover-btn:focus {
-          border-color: rgb(147, 197, 253);
+          border-color: var(--accent-bright);
         }
       </style>
     )html";

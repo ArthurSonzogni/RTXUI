@@ -1,9 +1,12 @@
-// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// The built-in <tabs>/<tab-pane> components.
+//
+// The active pane is selected by the `value` attribute bound to a C++ string.
 #include <rtxui/rtxui.hpp>
 
-#include "rtxui/component/default_components_internal.hpp"
 
 using namespace rtxui;
 
@@ -23,39 +26,38 @@ class TabsDemo : public Component<TabsDemo> {
             <p class="tab-body">System preferences and visual theme modifications.</p>
           </tab-pane>
           <tab-pane label="About" name="about">
-            <p class="tab-body">RTXUI Version 1.2.0 - Created by Arthur Sonzogni.</p>
+            <p class="tab-body">RTXUI Version 5.0.0 - Created by Arthur Sonzogni.</p>
           </tab-pane>
         </tabs>
       </div>
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+          --border: rgb(48, 54, 61);
+          --text: rgb(230, 237, 243);
+          --accent: rgb(88, 166, 255);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
         h1 {
-          color: rgb(59, 130, 246);
+          color: var(--accent);
           margin-bottom: 2;
         }
         .tab-body {
           border: solid;
-          border-color: rgb(74, 85, 104);
+          border-color: var(--border);
           padding: 1;
           margin-top: 1;
-          color: rgb(226, 232, 240);
+          color: var(--text);
         }
       </style>
     )html";
 
-  void InitReflection() override {
+  TabsDemo() {
     Bind(current_tab);
-    Import<rtxui::tabs>();
-    Import<rtxui::tab_pane>();
-    Import<rtxui::div>();
-    Import<rtxui::p>();
-    Import<rtxui::h1>();
-    Component<TabsDemo>::InitReflection();
   }
 };
 

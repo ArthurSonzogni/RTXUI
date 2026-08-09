@@ -1,4 +1,11 @@
-#include <iostream>
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+//
+// position: sticky.
+//
+// Section headers pin to the top of the scroll container while their section is
+// on screen.
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
@@ -9,7 +16,7 @@ class MonthSection : public Component<MonthSection> {
  public:
   std::string month_index;
   std::string name;
-  std::string header_bg = "rgb(59, 130, 246)";
+  std::string header_bg = "var(--accent)";
   std::vector<std::string> days;
 
   std::string_view view = R"html(
@@ -22,6 +29,13 @@ class MonthSection : public Component<MonthSection> {
 
     <style>
       self {
+        --bg: rgb(13, 17, 23);
+        --text: rgb(230, 237, 243);
+        --muted: rgb(139, 148, 158);
+        --accent: rgb(88, 166, 255);
+        --danger: rgb(248, 81, 73);
+        --success: rgb(63, 185, 80);
+
         display: block;
       }
       .month-container {
@@ -55,13 +69,13 @@ class MonthSection : public Component<MonthSection> {
         "July", "August", "September", "October", "November", "December"
     };
     std::vector<std::string> colors = {
-        "rgb(239, 68, 68)",   // Jan: Red
+        "var(--danger)",   // Jan: Red
         "rgb(249, 115, 22)",  // Feb: Orange
         "rgb(245, 158, 11)",  // Mar: Amber
-        "rgb(16, 185, 129)",  // Apr: Emerald
+        "var(--success)",  // Apr: Emerald
         "rgb(20, 184, 166)",  // May: Teal
         "rgb(6, 182, 212)",   // Jun: Cyan
-        "rgb(59, 130, 246)",  // Jul: Blue
+        "var(--accent)",  // Jul: Blue
         "rgb(99, 102, 241)",  // Aug: Indigo
         "rgb(139, 92, 246)",  // Sep: Violet
         "rgb(168, 85, 247)",  // Oct: Purple
@@ -81,7 +95,9 @@ class MonthSection : public Component<MonthSection> {
     }
   }
 
-  void InitReflection() override {
+  // Registers a template variable by hand rather than through Bind(), which
+  // is what you drop to when a value needs custom read/write plumbing.
+  MonthSection() {
     EnableHotReload();
     auto get_value = [this]() { return month_index; };
     auto set_value = [this](std::string_view val) {
@@ -100,7 +116,6 @@ class MonthSection : public Component<MonthSection> {
     Bind(name);
     Bind(header_bg);
     Bind(days);
-    Component<MonthSection>::InitReflection();
   }
 };
 
@@ -129,15 +144,15 @@ class StickyDemo : public Component<StickyDemo> {
       self {
         display: block;
         padding: 1 2;
-        background-color: rgb(18, 18, 18); /* Deep dark slate background */
-        color: rgb(241, 245, 249);
+        background-color: var(--bg); /* Deep dark slate background */
+        color: var(--text);
       }
       h2 {
-        color: rgb(59, 130, 246); /* Bright blue */
+        color: var(--accent); /* Bright blue */
         margin-bottom: 0;
       }
       .description {
-        color: rgb(148, 163, 184); /* Muted gray text */
+        color: var(--muted); /* Muted gray text */
         margin-bottom: 2;
       }
       .scroll-window {

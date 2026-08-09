@@ -1,9 +1,12 @@
-// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+//
+// <fieldset> and <legend> grouping.
+//
+// The legend is nested into the top border of the group it captions.
 #include <rtxui/rtxui.hpp>
 
-#include "rtxui/component/default_components_internal.hpp"
 
 using namespace rtxui;
 
@@ -20,15 +23,17 @@ class FieldsetDemo : public Component<FieldsetDemo> {
         <fieldset>
           <legend>Project Metadata</legend>
           <p>Repository: RTXUI (Reactive Terminal User Interface)</p>
-          <p>Language: C++23</p>
+          <p>Language: C++26</p>
         </fieldset>
       </div>
 
       <style>
         self {
+          --bg: rgb(13, 17, 23);
+
           display: block;
           padding: 1;
-          background-color: rgb(18, 18, 18);
+          background-color: var(--bg);
         }
         .content {
           display: flex;
@@ -40,14 +45,6 @@ class FieldsetDemo : public Component<FieldsetDemo> {
         }
       </style>
     )html";
-
-  void InitReflection() override {
-    Import<rtxui::fieldset>();
-    Import<rtxui::legend>();
-    Import<rtxui::div>();
-    Import<rtxui::p>();
-    Component<FieldsetDemo>::InitReflection();
-  }
 };
 
 int main() {

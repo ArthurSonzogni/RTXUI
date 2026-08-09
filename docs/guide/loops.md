@@ -33,6 +33,17 @@ Inside the loop body:
 When the collection changes — items added, removed, or mutated — the loop's
 rendered children are reconciled on the next digest.
 
+This demo loops over a `std::vector<std::string>`, appending with a bound
+`<input>` and removing by `{$index}`:
+
+<ExampleTabs src="/wasm/rtxui_example_loop_simple.js">
+<template #source>
+
+<<< @/../example/loop_simple.cpp
+
+</template>
+</ExampleTabs>
+
 ## Collections of structs
 
 A collection of plain values stringifies each item directly. For a collection
@@ -69,25 +80,8 @@ The template reads the mapped fields with dot notation on the loop variable:
 `BindCollection("name", &collection, mapper)` is equivalent when you want the
 template name to differ from the member name.
 
-## Examples
-
-<ExampleTabs src="/wasm/rtxui_example_loop_simple.js">
-<template #source>
-
-<<< @/../example/loop_simple.cpp
-
-</template>
-</ExampleTabs>
-
-<ExampleTabs src="/wasm/rtxui_example_loop.js">
-<template #source>
-
-<<< @/../example/loop.cpp
-
-</template>
-</ExampleTabs>
-
-A larger interactive list with add/remove:
+This demo loops over a `std::vector<Task>` through a mapper, toggling each
+item's `completed` field from the template:
 
 <ExampleTabs src="/wasm/rtxui_example_loop_complex.js">
 <template #source>

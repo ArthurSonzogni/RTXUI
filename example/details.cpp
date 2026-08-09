@@ -1,10 +1,12 @@
-// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <iostream>
+//
+// The <details>/<summary> disclosure widget.
+//
+// Try it: click a summary row, or focus it and press Enter.
 #include <memory>
 
-#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/screen.hpp"
 
@@ -20,12 +22,11 @@ class DetailsDemo : public rtxui::Component<DetailsDemo> {
     return checkbox_state ? "DEBUG ENABLED" : "DEBUG DISABLED";
   }
 
-  void InitReflection() override {
+  DetailsDemo() {
     Bind(open1);
     Bind(open2);
     Bind(checkbox_state);
     Bind(status_text);
-    rtxui::Component<DetailsDemo>::InitReflection();
   }
 
   std::string_view Setup() override {
@@ -64,7 +65,9 @@ class DetailsDemo : public rtxui::Component<DetailsDemo> {
 
       <style>
         self {
-          background-color: rgb(18, 18, 18);
+          --bg: rgb(13, 17, 23);
+
+          background-color: var(--bg);
           display: block;
           padding: 1;
         }
