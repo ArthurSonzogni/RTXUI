@@ -2,6 +2,22 @@
 
 Once templates are parsed, components build an underlying tree of `rtxui::Element` nodes.
 
+DOM access is opt-in, so that programs which never need it don't pay for the
+header:
+
+```cpp
+#include <rtxui/dom/element.hpp>
+```
+
+If all you want is the component rendered at a selector — rather than the
+element itself — `QueryComponent` avoids the DOM header entirely:
+
+```cpp
+if (auto* preview = dynamic_cast<Preview*>(QueryComponent("#preview"))) {
+  preview->Reload(text);
+}
+```
+
 ## Query Selector Queries
 
 Elements are found with CSS-style selectors (`#id`, `.class`, or a tag
@@ -33,3 +49,17 @@ void InspectFirstChild(rtxui::Element* parent) {
   }
 }
 ```
+
+## ABI note
+
+`Element` is the one public type whose *layout* is part of the ABI: it holds
+its computed styles and scroll state as members, so adding or reordering them
+changes the ABI even though the methods are unchanged. Everything else in the
+public API either hides its state behind a pointer (`Screen`) or is a value
+type.
+
+That means a program compiled against one release and run against another with
+a different `SOVERSION` must be rebuilt — which the versioned SONAME enforces
+rather than leaving to chance. Making `Element` layout-stable is tracked work;
+until then, treat `rtxui/dom/element.hpp` as the part of the API most likely
+to require a rebuild.
