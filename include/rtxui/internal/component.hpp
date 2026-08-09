@@ -121,6 +121,15 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   static std::optional<std::string> TakePendingClipboardWrite();
 
   Element* Root() const;
+
+  /// Finds the component rendered at `selector` (`#id`, `.class` or a tag),
+  /// or nullptr.
+  ///
+  /// This exists so an application can reach a child component without the
+  /// Element definition: Element carries the whole computed style and layout
+  /// state, and exposing it would freeze all of that into the ABI. `Element`
+  /// stays an opaque forward declaration here.
+  ComponentBase* QueryComponent(std::string_view selector);
   Ref<Element> Slot(std::string_view name);
   const std::map<std::string, Ref<Element>, std::less<>>& slots() const { return slots_; }
   void SetProperty(std::string_view name, std::string_view value);

@@ -434,6 +434,16 @@ include(GNUInstallDirs)
 # packagers and a plain find_package() from a normal prefix do not expect.
 set_target_properties(rtxui rtxui_lib PROPERTIES DEBUG_POSTFIX d)
 
+# SOVERSION is what lets an ABI break be expressed at all: without it the
+# SONAME is a bare librtxui_lib.so, two incompatible builds cannot coexist,
+# and a consumer linked against the old one loads the new one silently. The
+# major version is the ABI generation, matching the inline namespace in the
+# headers.
+set_target_properties(rtxui rtxui_lib PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
 install(TARGETS rtxui rtxui_lib
   EXPORT rtxui-targets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -460,19 +470,6 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/base
 )
 
-# ComponentBase::Root() hands back an Element, and QuerySelector() on it is how
-# an application reaches into its own DOM -- so the definition has to ship, not
-# just the forward declaration in component.hpp. style.hpp and color.hpp come
-# along because Element embeds a ComputedStyle.
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/dom/element.hpp"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/dom
-)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/layout/style.hpp"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/layout
-)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/paint/color.hpp"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/paint
-)
 
 install(EXPORT rtxui-targets
   FILE rtxui-targets.cmake
@@ -594,7 +591,19 @@ if(RTXUI_BUILD_TESTS)
   add_executable(rtxui_terminal_input_parser
     "src/rtxui/terminal/terminal_input_parser_main.cpp"
   )
-  target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui_lib)
+  # A development tool driving an internal class: give it the objects rather
+  # than exporting TerminalInputParser and widening the library's ABI for it.
+  if(BUILD_SHARED_LIBS)
+    target_sources(rtxui_terminal_input_parser PRIVATE $<TARGET_OBJECTS:rtxui_lib>)
+    target_include_directories(rtxui_terminal_input_parser PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}/include"
+      "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    )
+    target_compile_features(rtxui_terminal_input_parser PRIVATE cxx_std_26)
+    target_compile_definitions(rtxui_terminal_input_parser PRIVATE RTXUI_STATIC_DEFINE)
+  else()
+    target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui_lib)
+  endif()
   target_include_directories(rtxui_terminal_input_parser PRIVATE "src")
 
 endif()
