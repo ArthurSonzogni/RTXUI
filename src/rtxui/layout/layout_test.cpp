@@ -142,6 +142,121 @@ TEST_CASE("Layout: Inline-level wrapping", "[layout]") {
                                  }));
 }
 
+// Regression test: wrapping stayed correct for the first two lines and then
+// collapsed into near-empty lines broken mid-word. `last_space_col` is measured
+// relative to the current line start, but was assigned straight into the
+// absolute `col_start`; while col_start was still 0 the two coincided, so the
+// damage only showed from the third line onwards.
+TEST_CASE("Layout: Inline wrapping past the second line", "[layout]") {
+  struct LongTextWrapTest : Component<LongTextWrapTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(<div>aaa bbb ccc ddd eee fff ggg hhh</div>)html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<LongTextWrapTest>::New(), 8, 4);
+
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "aaa bbb ",
+                                     "ccc ddd ",
+                                     "eee fff ",
+                                     "ggg hhh ",
+                                 }));
+}
+
+// Inherited properties are resolved while the layout tree is built, so a
+// descendant that sets nothing picks up its ancestor's text styling. These pin
+// which properties inherit and which deliberately do not.
+TEST_CASE("Layout: inherited text properties", "[layout][inheritance]") {
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+
+  SECTION("color inherits into descendants") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; color: rgb(255,0,0); }
+        </style>
+        <div class="outer"><div><div>ab</div></div></div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"RR"}));
+  }
+
+  SECTION("a descendant overrides the inherited colour") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; color: rgb(255,0,0); }
+          .inner { color: rgb(0,255,0); }
+        </style>
+        <div class="outer"><span class="inner">ab</span></div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"GG"}));
+  }
+
+  SECTION("background-color does not inherit") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; background-color: rgb(255,0,0); }
+          .inner { display: block; }
+        </style>
+        <div class="outer"><div class="inner">ab</div></div>)html";
+    };
+    // The child paints no background of its own; the red comes from the
+    // ancestor's own box painting beneath it, not from inheritance.
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetColorLayer(texture, true, colors) == CheckGrid({"RR"}));
+  }
+
+  SECTION("text-align inherits") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; text-align: right; }
+          .inner { display: block; }
+        </style>
+        <div class="outer"><div class="inner">ab</div></div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 4, 1);
+    CHECK(GetTextLayer(texture) == CheckGrid({"  ab"}));
+  }
+
+  SECTION("text-transform inherits") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; text-transform: uppercase; }
+        </style>
+        <div class="outer"><div>ab</div></div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetTextLayer(texture) == CheckGrid({"AB"}));
+  }
+}
+
+TEST_CASE("Layout: visibility hides the whole subtree",
+          "[layout][inheritance]") {
+  // CSS inherits `visibility`, and paint skips a hidden fragment together with
+  // everything under it, so a hidden ancestor takes its descendants with it
+  // while still occupying its layout size.
+  struct T : Component<T> {
+    std::string_view view = R"html(
+      <style>
+        .outer { display: block; visibility: hidden; }
+      </style>
+      <div class="outer"><div>ab</div></div>
+      <div>cd</div>)html";
+  };
+  auto texture = RenderComponent(Ref<T>::New(), 2, 2);
+  CHECK(GetTextLayer(texture) == CheckGrid({"  ", "cd"}));
+}
+
 TEST_CASE("Layout: Padding and Box Model", "[layout]") {
   struct BoxModelTest : Component<BoxModelTest> {
     std::string_view Setup() {
