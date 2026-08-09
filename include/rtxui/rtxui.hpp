@@ -4,7 +4,6 @@
 #ifndef RTXUI_RTXUI_HPP_
 #define RTXUI_RTXUI_HPP_
 
-#include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/refcounted.hpp"

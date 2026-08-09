@@ -110,10 +110,11 @@ jobs:
           int main() {
             auto app = Ref<App>::New();
             app->Mount();
-            // Touches the DOM and the task runner, both of which a real
-            // application uses and neither of which lives in rtxui.hpp.
-            if (!app->Root()->QuerySelector(".c")) return 1;
-            return 0;
+            // QueryComponent is the public way to reach a child component;
+            // Element itself is deliberately not part of the installed API.
+            (void)app->QueryComponent("#nothing");
+            app->Bump();
+            return app->count == 1 ? 0 : 1;
           }
           EOF
           cmake -B build -G Ninja \
