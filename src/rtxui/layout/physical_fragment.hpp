@@ -16,7 +16,12 @@ class Element;
 
 struct PhysicalFragment {
   Element* dom_node = nullptr;
-  int x, y, width, height;
+  // A fragment's position lives in its parent's ChildLink, not here: layout
+  // never assigns x/y. They are zero-initialised so that reading them yields
+  // something predictable rather than indeterminate memory, but callers that
+  // need a position must take it from the ChildLink.
+  int x = 0, y = 0;
+  int width, height;
   int scroll_x = 0;
   int scroll_y = 0;
   float visual_scroll_x = 0.0f;

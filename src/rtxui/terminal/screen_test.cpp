@@ -4244,14 +4244,16 @@ TEST_CASE("Screen.ClickFixedPositionOverlay", "[terminal][mouse][dialog]") {
    public:
     bool open = false;
     int overlay_clicks = 0;
+    int page_clicks = 0;
 
     void Open() { open = true; }
     void ClickOverlay() { overlay_clicks++; }
+    void ClickPage() { page_clicks++; }
 
     std::string overlay_class() const { return open ? "" : "closed"; }
 
     std::string_view view =
-        R"(<div id="page"><div id="open" onclick="Open">open</div><div class="dialog-wrapper"><div id="overlay" class="{overlay_class}" onclick="ClickOverlay">overlay</div></div></div>
+        R"(<div id="page" onclick="ClickPage"><div id="open" onclick="Open">open</div><div class="dialog-wrapper"><div id="overlay" class="{overlay_class}" onclick="ClickOverlay">overlay</div></div></div>
       <style>
         #page { display: block; width: 100%; height: 100%; }
         /* Contributes no height of its own, like the dialog root. */
@@ -4273,35 +4275,46 @@ TEST_CASE("Screen.ClickFixedPositionOverlay", "[terminal][mouse][dialog]") {
       Bind(overlay_class);
       Bind(Open);
       Bind(ClickOverlay);
+      Bind(ClickPage);
     }
   };
+
+  // Layout reads the viewport from these globals and other tests leave them at
+  // whatever size they rendered at, so pin them rather than depend on order.
+  css::g_terminal_width = 80;
+  css::g_terminal_height = 24;
 
   auto component = Ref<OverlayComponent>::New();
   Screen screen(component, device);
 
-  auto click_at = [&](int x, int y) {
+  // Mouse coordinates are 1-based: screen.cpp maps them with `mouse.x - 1`.
+  auto click_cell = [&](int column, int row) {
     Event::Mouse mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Pressed;
-    mouse.x = x;
-    mouse.y = y;
+    mouse.x = column + 1;
+    mouse.y = row + 1;
     Event event = mouse;
     screen.Dispatch(event);
   };
 
-  // Closed: `display: none` keeps the overlay out of layout, so row 1 reaches
-  // the page underneath rather than the overlay.
-  click_at(1, 1);
-  CHECK(component->overlay_clicks == 0);
+  // Row 10 is well below the trigger on row 0 and far outside the wrapper's
+  // own zero-height box, but inside #page and inside the viewport-sized
+  // overlay once it opens.
+  SECTION("closed, the click falls through to the page") {
+    click_cell(5, 10);
+    CHECK(component->overlay_clicks == 0);
+    CHECK(component->page_clicks == 1);
+  }
 
-  // Open it through its trigger on row 0.
-  click_at(1, 0);
-  REQUIRE(component->open);
+  SECTION("open, the click reaches the fixed overlay") {
+    click_cell(0, 0);  // the trigger
+    REQUIRE(component->open);
 
-  // Row 1 lies inside #page but outside the zero-height wrapper that owns the
-  // overlay -- the case that used to be culled.
-  click_at(1, 1);
-  CHECK(component->overlay_clicks == 1);
+    click_cell(5, 10);
+    CHECK(component->overlay_clicks == 1);
+    CHECK(component->page_clicks == 0);
+  }
 }
 
 }  // namespace
