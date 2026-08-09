@@ -1086,17 +1086,21 @@ void ResolveStylesRecursive(Element* element,
         match_and_apply(it_tag->second, false);
       }
 
-      if (!element->id.empty()) {
-        auto it_id = categorized->by_id.find(element->id);
-        if (it_id != categorized->by_id.end()) {
-          match_and_apply(it_id->second, false);
-        }
-      }
-
+      // Buckets are visited in ascending specificity, because a later
+      // declaration overwrites an earlier one: tag, then class, then id. Class
+      // used to be visited last, which let `.c` override `#t` whichever order
+      // the two rules were written in -- the opposite of the CSS cascade.
       for (const auto& cls : element->classes) {
         auto it_class = categorized->by_class.find(cls);
         if (it_class != categorized->by_class.end()) {
           match_and_apply(it_class->second, false);
+        }
+      }
+
+      if (!element->id.empty()) {
+        auto it_id = categorized->by_id.find(element->id);
+        if (it_id != categorized->by_id.end()) {
+          match_and_apply(it_id->second, false);
         }
       }
     }
@@ -1124,6 +1128,31 @@ void ResolveStylesRecursive(Element* element,
           }
         }
       }
+    }
+
+    // Order the cascade. Declarations are applied in sequence and a later one
+    // overwrites an earlier one, so sorting ascending by specificity leaves the
+    // most specific rule applied last. Ties break on source order, which is
+    // pointer order: every ruleset here points into the same contiguous
+    // `stylesheet_` vector.
+    //
+    // The buckets above exist to find candidates quickly, not to rank them.
+    // Ranking by which bucket a rule came from cannot express `.a.b` over `.a`,
+    // or `.card .title` over `.title`, because those live in the same bucket.
+    if (matched.size() > 1) {
+      auto precedes = [](const css::Ruleset* a, const css::Ruleset* b) {
+        const int specificity_a = a->parsed_selector.specificity;
+        const int specificity_b = b->parsed_selector.specificity;
+        if (specificity_a != specificity_b) {
+          return specificity_a < specificity_b;
+        }
+        return a < b;
+      };
+      // Measured: an is_sorted() pre-check does not pay for itself here. The
+      // buckets hand rules back grouped by selector kind, which is rarely
+      // already specificity order, so the check almost always scans and then
+      // sorts anyway.
+      std::sort(matched.begin(), matched.end(), precedes);
     }
 
     // Inline style attribute parsing. The declarations are string_views into
@@ -1228,9 +1257,18 @@ void ResolveStylesRecursive(Element* element,
           }
         }
       }
-      for (const auto& declaration : inline_declarations) {
-        if (declaration.important == important) {
-          apply_with_vars(declaration);
+      // Style resolution runs twice per element: once for rules without a
+      // pseudo-class, then once for those with. The inline style has to be
+      // re-applied in the pseudo pass so it still outranks, say, a matching
+      // `.a:hover` rule -- but only when that pass actually matched something.
+      // Re-applying it unconditionally clobbered anything the base pass had
+      // set from an `!important` declaration, since the base pass's important
+      // round runs before the pseudo pass begins.
+      if (!check_pseudos || !matched.empty()) {
+        for (const auto& declaration : inline_declarations) {
+          if (declaration.important == important) {
+            apply_with_vars(declaration);
+          }
         }
       }
     };

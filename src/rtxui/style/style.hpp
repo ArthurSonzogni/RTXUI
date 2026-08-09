@@ -51,7 +51,23 @@ struct ParsedSelector {
   // another component's own template to select an element it has marked
   // with a matching `part="..."` attribute (see docs/guide/css/basics.md).
   std::string part;
+
+  /// CSS specificity, packed so it compares as a single integer: ids weigh
+  /// most, then classes/attributes/pseudo-classes, then element names. It is
+  /// summed over the whole selector, ancestors included, so `.card .title`
+  /// outranks `.title` and `.a.b` outranks `.a` -- which a scheme that only
+  /// looked at the selector's rightmost part, or only at its "kind", cannot
+  /// express. The `style` attribute outranks every selector and is applied
+  /// separately, so it needs no value here.
+  int specificity = 0;
 };
+
+/// Packs the CSS (id, class, type) counts into one comparable integer. The
+/// per-bucket range is deliberately wide: a selector would need 1024 classes
+/// before it could borrow from the id column.
+constexpr int MakeSpecificity(int ids, int classes, int types) {
+  return (ids << 20) | (classes << 10) | types;
+}
 
 /// A CSS ruleset (selector { declarations }).
 struct Ruleset {
