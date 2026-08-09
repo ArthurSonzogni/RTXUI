@@ -14,16 +14,10 @@
 
 struct RTXUI_EXPORT Event {
   struct Modifier {
-    // Plain bools rather than one-bit fields: GCC 13 cannot instantiate a
-    // defaulted operator<=> for a class whose bit-fields carry default member
-    // initialisers, and reports the initialiser as "required before the end of
-    // its enclosing class". The code is valid C++20 and later GCC and Clang
-    // accept it, but Ubuntu 24.04 LTS ships GCC 13 and three bytes is a cheap
-    // price for compiling there.
-    bool alt = false;
-    bool ctrl = false;
-    bool meta = false;
-    bool shift = false;
+    bool alt : 1 = false;
+    bool ctrl : 1 = false;
+    bool meta : 1 = false;
+    bool shift : 1 = false;
     std::string Print() const;
     std::strong_ordering operator<=>(const Modifier&) const = default;
   };
@@ -126,15 +120,20 @@ struct RTXUI_EXPORT Event {
   Event& operator=(const Event& other) = default;
   Event& operator=(Event&& other) = default;
 
-  template <typename T,
-            typename = std::enable_if_t<
-                !std::is_same_v<std::decay_t<T>, Event> &&
-                std::is_constructible_v<std::variant<Keyboard,
-                                                     Mouse,
-                                                     Resized,
-                                                     CursorShape,
-                                                     CursorPosition>,
-                                         T>>>
+  // Constrained with a requires-clause rather than a default template
+  // argument. The argument form is instantiated while Event is still an
+  // incomplete type, and GCC 13 will not evaluate the nested structs' default
+  // member initialisers in that context -- it reports them as "required before
+  // the end of its enclosing class". A requires-clause is checked during
+  // overload resolution instead, by which point Event is complete.
+  template <typename T>
+    requires(!std::is_same_v<std::decay_t<T>, Event> &&
+             std::is_constructible_v<std::variant<Keyboard,
+                                                  Mouse,
+                                                  Resized,
+                                                  CursorShape,
+                                                  CursorPosition>,
+                                     T>)
   Event(T&& value) : data_(std::forward<T>(value)) {}
 
   // --- Singleton Events ---
