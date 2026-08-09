@@ -8,30 +8,43 @@ on:
 jobs:
   test:
     name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: GCC Release
+            os: ubuntu-latest
             build_type: Release
             sanitize: "OFF"
             cc: gcc-14
             cxx: g++-14
           - name: Clang Release
+            os: ubuntu-latest
             build_type: Release
             sanitize: "OFF"
             cc: clang-20
             cxx: clang++-20
           - name: ASAN+UBSAN Debug
+            os: ubuntu-latest
             build_type: Debug
             sanitize: "ON"
             cc: gcc-14
             cxx: g++-14
+          # The terminal layer is POSIX (termios, SIGWINCH, pipe, fcntl) with
+          # no Linux-specific calls, so macOS is a supported target and worth
+          # proving on every push rather than assuming.
+          - name: macOS AppleClang Release
+            os: macos-latest
+            build_type: Release
+            sanitize: "OFF"
+            cc: clang
+            cxx: clang++
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install toolchain
+      - name: Install toolchain (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update && sudo apt-get install -y ninja-build
           if [[ "${{ matrix.cc }}" == clang* ]]; then
@@ -41,6 +54,10 @@ jobs:
           else
             sudo apt-get install -y g++-14
           fi
+
+      - name: Install toolchain (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
 
       - name: Configure
         env:

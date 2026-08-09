@@ -42,12 +42,27 @@ jobs:
         with:
           version: latest
 
+      # The WASM step rebuilds every example on each push and dominates this
+      # job's runtime. CMake picks ccache up automatically (see CMakeLists),
+      # so caching its directory turns most of that into cache hits.
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: docs-wasm-ccache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            docs-wasm-ccache-${{ runner.os }}-
+
       - name: Configure and build WebAssembly
         run: |
           mkdir -p build_wasm
           cd build_wasm
-          emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON
-          cmake --build .
+          emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build . --parallel
 
       - name: Copy WASM artifacts to docs
         run: |
@@ -68,8 +83,11 @@ jobs:
         with:
           path: docs/.vitepress/dist
 
-  # Deployment job
+  # Deployment job. Skipped while the repository is private: GitHub Pages
+  # cannot publish a private repo, and the deploy API returns 404. The build
+  # job above still runs, so a broken docs build is caught either way.
   deploy:
+    if: ${{ !github.event.repository.private }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
