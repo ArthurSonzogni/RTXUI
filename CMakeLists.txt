@@ -31,7 +31,11 @@ include(FetchContent)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 26)
+# C++23 is the requirement. C++26 is optional: when the compiler offers
+# reflection, RTXUI uses it to read struct fields in bound collections without
+# a manual mapper, and the targets that need it are raised to 26 below. The
+# interface requirement stays at 23 so consumers are not dragged along.
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set the default build type to 'Release'
@@ -176,7 +180,7 @@ add_library(rtxui_lib
   "src/rtxui/markdown/markdown.hpp"
 )
 
-target_compile_features(rtxui_lib PUBLIC cxx_std_26)
+target_compile_features(rtxui_lib PUBLIC cxx_std_23)
 # PRIVATE: consumers get RTXUI's headers, not its warning policy.
 target_compile_options(rtxui_lib PRIVATE ${RTXUI_WARNING_FLAGS})
 
@@ -226,6 +230,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   if(HAS_REFLECTION_CLANG)
     target_compile_options(rtxui_lib PUBLIC "-freflection-latest")
     add_definitions(-DRTXUI_HAS_REFLECTION)
+    # Reflection is a C++26 feature: compiling it under -std=c++23 would not
+    # work, so raise the standard for the targets that use it.
+    set(RTXUI_REFLECTION_STANDARD 26)
     message(STATUS "RTXUI: C++26 Reflection enabled (-freflection-latest)")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -241,10 +248,16 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(HAS_REFLECTION_GCC)
     target_compile_options(rtxui_lib PUBLIC "-freflection")
     add_definitions(-DRTXUI_HAS_REFLECTION)
+    set(RTXUI_REFLECTION_STANDARD 26)
     message(STATUS "RTXUI: C++26 Reflection enabled (-freflection)")
   endif()
 endif()
 set(CMAKE_REQUIRED_FLAGS "${SAFE_CMAKE_REQUIRED_FLAGS}")
+
+if(RTXUI_REFLECTION_STANDARD)
+  set(CMAKE_CXX_STANDARD ${RTXUI_REFLECTION_STANDARD})
+  set_target_properties(rtxui_lib PROPERTIES CXX_STANDARD ${RTXUI_REFLECTION_STANDARD})
+endif()
 
 # See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
 add_library(rtxui "src/rtxui/dummy.cpp")
@@ -583,7 +596,7 @@ if(RTXUI_BUILD_TESTS)
       "${CMAKE_CURRENT_SOURCE_DIR}/include"
       "${CMAKE_CURRENT_BINARY_DIR}/generated"
     )
-    target_compile_features(rtxui_test PRIVATE cxx_std_26)
+    target_compile_features(rtxui_test PRIVATE cxx_std_23)
     target_compile_definitions(rtxui_test PRIVATE RTXUI_STATIC_DEFINE)
     if(HAS_REFLECTION_CLANG)
       target_compile_options(rtxui_test PRIVATE "-freflection-latest")
@@ -613,7 +626,7 @@ if(RTXUI_BUILD_TESTS)
       "${CMAKE_CURRENT_SOURCE_DIR}/include"
       "${CMAKE_CURRENT_BINARY_DIR}/generated"
     )
-    target_compile_features(rtxui_terminal_input_parser PRIVATE cxx_std_26)
+    target_compile_features(rtxui_terminal_input_parser PRIVATE cxx_std_23)
     target_compile_definitions(rtxui_terminal_input_parser PRIVATE RTXUI_STATIC_DEFINE)
   else()
     target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui_lib)

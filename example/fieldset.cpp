@@ -23,7 +23,7 @@ class FieldsetDemo : public Component<FieldsetDemo> {
         <fieldset>
           <legend>Project Metadata</legend>
           <p>Repository: RTXUI (Reactive Terminal User Interface)</p>
-          <p>Language: C++26</p>
+          <p>Language: C++23</p>
         </fieldset>
       </div>
 
