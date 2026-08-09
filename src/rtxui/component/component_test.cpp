@@ -4364,16 +4364,348 @@ TEST_CASE(
   rtxui::SetXmlErrorHandler(
       [&](const rtxui::XmlError& error) { reported_error = error; });
 
-  // A literal tag-like sequence inside a CSS comment breaks the XML parse
-  // of the generated document -- same bug class as the one fixed for
-  // playground.cpp by commit 40b3be1.
-  container->stylesheet = "/* <textarea> */ h1 { color: red; }";
+  // A stylesheet that closes its own <style> element leaves the rest of the
+  // generated document unbalanced, so xml::Parse() fails and markdown must
+  // surface that rather than silently keeping stale content.
+  container->stylesheet = "h1 { color: red; } </style> <unclosed>";
   container->Digest();
 
   rtxui::SetXmlErrorHandler(nullptr);
 
   REQUIRE(reported_error.has_value());
   CHECK_FALSE(reported_error->message.empty());
+}
+
+TEST_CASE("Markdown Component accepts tag-like sequences in its stylesheet",
+          "[component][markdown]") {
+  // <style> is raw text, so a tag name written inside a CSS comment is just
+  // CSS. This used to abort the XML parse of the generated document, which is
+  // why playground.cpp once needed a workaround for it.
+  auto container = rtxui::Ref<MarkdownStylesheetErrorTestContainer>::New();
+  container->Mount();
+  container->Digest();
+
+  std::optional<rtxui::XmlError> reported_error;
+  rtxui::SetXmlErrorHandler(
+      [&](const rtxui::XmlError& error) { reported_error = error; });
+
+  container->stylesheet = "/* <textarea> */ h1 { color: red; }";
+  container->Digest();
+
+  rtxui::SetXmlErrorHandler(nullptr);
+
+  CHECK_FALSE(reported_error.has_value());
+}
+
+// The cascade orders simple selectors by specificity, not by the order the
+// engine happens to visit its selector buckets: an id selector outranks a
+// class selector whichever way round they are written.
+TEST_CASE("CSS cascade orders id above class", "[component][style][cascade]") {
+  auto color_of = [](std::string_view view_text) {
+    struct Probe : rtxui::Component<Probe> {
+      std::string_view view;
+    };
+    auto probe = rtxui::Ref<Probe>::New();
+    probe->view = view_text;
+    probe->Mount();
+    auto* el = probe->Root()->QuerySelector("#t");
+    REQUIRE(el != nullptr);
+    REQUIRE(el->style.foreground_color.has_value());
+    return el->style.foreground_color.value();
+  };
+
+  const Color kFromId = Color::RGB(1, 0, 0);
+  const Color kFromClass = Color::RGB(0, 2, 0);
+  const Color kFromTag = Color::RGB(0, 0, 3);
+
+  SECTION("id beats class when the id rule comes first") {
+    CHECK(color_of(R"html(
+        <style>
+          #t { color: rgb(1,0,0); }
+          .c { color: rgb(0,2,0); }
+        </style>
+        <div id="t" class="c">x</div>)html") == kFromId);
+  }
+
+  SECTION("id beats class when the class rule comes first") {
+    CHECK(color_of(R"html(
+        <style>
+          .c { color: rgb(0,2,0); }
+          #t { color: rgb(1,0,0); }
+        </style>
+        <div id="t" class="c">x</div>)html") == kFromId);
+  }
+
+  SECTION("class beats a tag selector") {
+    CHECK(color_of(R"html(
+        <style>
+          .c { color: rgb(0,2,0); }
+          div { color: rgb(0,0,3); }
+        </style>
+        <div id="t" class="c">x</div>)html") == kFromClass);
+  }
+
+  SECTION("id beats a tag selector") {
+    CHECK(color_of(R"html(
+        <style>
+          #t { color: rgb(1,0,0); }
+          div { color: rgb(0,0,3); }
+        </style>
+        <div id="t" class="c">x</div>)html") == kFromId);
+  }
+
+  SECTION("between equal-specificity classes, the later rule wins") {
+    CHECK(color_of(R"html(
+        <style>
+          .a { color: rgb(1,0,0); }
+          .b { color: rgb(0,2,0); }
+        </style>
+        <div id="t" class="a b">x</div>)html") == kFromClass);
+  }
+
+  SECTION("an inline style beats every selector") {
+    CHECK(color_of(R"html(
+        <style>
+          #t { color: rgb(1,0,0); }
+          .c { color: rgb(0,0,3); }
+        </style>
+        <div id="t" class="c" style="color: rgb(0,2,0);">x</div>)html")
+          == kFromClass);
+  }
+
+  (void)kFromTag;
+}
+
+// Specificity is summed across the whole selector, so rules living in the same
+// selector bucket still rank against each other correctly.
+TEST_CASE("CSS cascade scores compound and descendant selectors",
+          "[component][style][cascade]") {
+  auto color_of = [](std::string_view view_text) {
+    struct Probe : rtxui::Component<Probe> {
+      std::string_view view;
+    };
+    auto probe = rtxui::Ref<Probe>::New();
+    probe->view = view_text;
+    probe->Mount();
+    auto* el = probe->Root()->QuerySelector("#t");
+    REQUIRE(el != nullptr);
+    REQUIRE(el->style.foreground_color.has_value());
+    return el->style.foreground_color.value();
+  };
+
+  const Color kWinner = Color::RGB(0, 2, 0);
+  const Color kLoser = Color::RGB(1, 0, 0);
+
+  SECTION("two classes outrank one, written in the losing order") {
+    CHECK(color_of(R"html(
+        <style>
+          .a.b { color: rgb(0,2,0); }
+          .a { color: rgb(1,0,0); }
+        </style>
+        <div id="t" class="a b">x</div>)html") == kWinner);
+  }
+
+  SECTION("a tag qualifier outranks the bare class") {
+    CHECK(color_of(R"html(
+        <style>
+          div.a { color: rgb(0,2,0); }
+          .a { color: rgb(1,0,0); }
+        </style>
+        <div id="t" class="a">x</div>)html") == kWinner);
+  }
+
+  SECTION("a descendant selector outranks the bare class") {
+    CHECK(color_of(R"html(
+        <style>
+          .wrap .a { color: rgb(0,2,0); }
+          .a { color: rgb(1,0,0); }
+        </style>
+        <div class="wrap"><div id="t" class="a">x</div></div>)html") == kWinner);
+  }
+
+  SECTION("a class outranks two tag names") {
+    CHECK(color_of(R"html(
+        <style>
+          .a { color: rgb(0,2,0); }
+          section div { color: rgb(1,0,0); }
+        </style>
+        <section><div id="t" class="a">x</div></section>)html") == kWinner);
+  }
+
+  SECTION("an id outranks any number of classes") {
+    CHECK(color_of(R"html(
+        <style>
+          #t { color: rgb(0,2,0); }
+          .a.b.c { color: rgb(1,0,0); }
+        </style>
+        <div id="t" class="a b c">x</div>)html") == kWinner);
+  }
+
+  SECTION("a pseudo-class weighs the same as a class") {
+    // .a:hover is (0,2,0) against .a.b at (0,2,0): equal, so source order
+    // decides and the later rule wins.
+    CHECK(color_of(R"html(
+        <style>
+          .a.b { color: rgb(1,0,0); }
+          .a.b { color: rgb(0,2,0); }
+        </style>
+        <div id="t" class="a b">x</div>)html") == kWinner);
+  }
+
+  (void)kLoser;
+}
+
+// !important is resolved in a second pass over the same matched rules, so it
+// sits above specificity while still being ordered by specificity internally.
+TEST_CASE("CSS cascade resolves !important above specificity",
+          "[component][style][cascade]") {
+  auto color_of = [](std::string_view view_text) {
+    struct Probe : rtxui::Component<Probe> {
+      std::string_view view;
+    };
+    auto probe = rtxui::Ref<Probe>::New();
+    probe->view = view_text;
+    probe->Mount();
+    auto* el = probe->Root()->QuerySelector("#t");
+    REQUIRE(el != nullptr);
+    REQUIRE(el->style.foreground_color.has_value());
+    return el->style.foreground_color.value();
+  };
+
+  const Color kWinner = Color::RGB(0, 2, 0);
+
+  SECTION("an important class beats a plain id") {
+    CHECK(color_of(R"html(
+        <style>
+          .a { color: rgb(0,2,0) !important; }
+          #t { color: rgb(1,0,0); }
+        </style>
+        <div id="t" class="a">x</div>)html") == kWinner);
+  }
+
+  SECTION("an important rule beats a plain inline style") {
+    CHECK(color_of(R"html(
+        <style>
+          .a { color: rgb(0,2,0) !important; }
+        </style>
+        <div id="t" class="a" style="color: rgb(1,0,0);">x</div>)html")
+          == kWinner);
+  }
+
+  SECTION("between two important rules, specificity still decides") {
+    CHECK(color_of(R"html(
+        <style>
+          #t { color: rgb(0,2,0) !important; }
+          .a { color: rgb(1,0,0) !important; }
+        </style>
+        <div id="t" class="a">x</div>)html") == kWinner);
+  }
+
+  SECTION("an important rule loses to nothing else that is important") {
+    CHECK(color_of(R"html(
+        <style>
+          .a { color: rgb(1,0,0) !important; }
+          .b { color: rgb(0,2,0) !important; }
+        </style>
+        <div id="t" class="a b">x</div>)html") == kWinner);
+  }
+}
+
+// A conformance sweep over selector matching and specificity. These are the
+// semantics a stylesheet author assumes without thinking about them, so they
+// are worth pinning explicitly rather than inferring from feature tests.
+TEST_CASE("CSS selector and specificity conformance",
+          "[component][style][cascade]") {
+  // Resolved foreground colour of #t, or nullopt when nothing set it.
+  auto color_of = [](std::string_view view_text) -> std::optional<Color> {
+    struct Probe : rtxui::Component<Probe> {
+      std::string_view view;
+    };
+    auto probe = rtxui::Ref<Probe>::New();
+    probe->view = view_text;
+    probe->Mount();
+    auto* el = probe->Root()->QuerySelector("#t");
+    REQUIRE(el != nullptr);
+    return el->style.foreground_color;
+  };
+
+  const Color kWinner = Color::RGB(0, 2, 0);
+  const Color kLoser = Color::RGB(1, 0, 0);
+
+  SECTION("child combinator matches only a direct child") {
+    CHECK(color_of(R"(<style>.p > .c { color: rgb(0,2,0); }</style>
+        <div class="p"><div id="t" class="c">x</div></div>)") == kWinner);
+    CHECK_FALSE(color_of(R"(<style>.p > .c { color: rgb(0,2,0); }</style>
+        <div class="p"><div><div id="t" class="c">x</div></div></div>)")
+                    .has_value());
+  }
+
+  SECTION("descendant combinator reaches any depth") {
+    CHECK(color_of(R"(<style>.p .c { color: rgb(0,2,0); }</style>
+        <div class="p"><div><div id="t" class="c">x</div></div></div>)")
+          == kWinner);
+  }
+
+  SECTION("attribute selectors match on presence and on value") {
+    CHECK(color_of(R"(<style>[data-x] { color: rgb(0,2,0); }</style>
+        <div id="t" data-x="1">x</div>)") == kWinner);
+    CHECK(color_of(R"(<style>[data-x="a"] { color: rgb(0,2,0); }</style>
+        <div id="t" data-x="a">x</div>)") == kWinner);
+    CHECK_FALSE(color_of(R"(<style>[data-x="a"] { color: rgb(0,2,0); }</style>
+        <div id="t" data-x="b">x</div>)").has_value());
+  }
+
+  SECTION("an attribute selector weighs as a class, so it beats a tag") {
+    CHECK(color_of(R"(<style>
+          [data-x] { color: rgb(0,2,0); }
+          div { color: rgb(1,0,0); }
+        </style>
+        <div id="t" data-x="1">x</div>)") == kWinner);
+  }
+
+  SECTION("the universal selector carries no weight") {
+    CHECK(color_of(R"(<style>
+          * { color: rgb(1,0,0); }
+          div { color: rgb(0,2,0); }
+        </style>
+        <div id="t">x</div>)") == kWinner);
+    // `* .a` and `.b` are both one class, so source order decides.
+    CHECK(color_of(R"(<style>
+          * .a { color: rgb(0,2,0); }
+          .b { color: rgb(1,0,0); }
+        </style>
+        <div><div id="t" class="a b">x</div></div>)") == kLoser);
+  }
+
+  SECTION("an id in an ancestor position still counts as an id") {
+    CHECK(color_of(R"(<style>
+          #p .a { color: rgb(0,2,0); }
+          .q .a { color: rgb(1,0,0); }
+        </style>
+        <div id="p" class="q"><div id="t" class="a">x</div></div>)")
+          == kWinner);
+  }
+
+  SECTION("any number of tag names loses to a single class") {
+    CHECK(color_of(R"(<style>
+          .a { color: rgb(0,2,0); }
+          div div div { color: rgb(1,0,0); }
+        </style>
+        <div><div><div id="t" class="a">x</div></div></div>)") == kWinner);
+  }
+
+  SECTION("a selector list applies to each of its members") {
+    CHECK(color_of(R"(<style>.x, .a { color: rgb(0,2,0); }</style>
+        <div id="t" class="a">x</div>)") == kWinner);
+  }
+
+  SECTION("the later of two identical selectors wins") {
+    CHECK(color_of(R"(<style>
+          .a { color: rgb(1,0,0); }
+          .a { color: rgb(0,2,0); }
+        </style>
+        <div id="t" class="a">x</div>)") == kWinner);
+  }
 }
 
 TEST_CASE("Default Components Registration", "[component]") {
