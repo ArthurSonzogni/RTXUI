@@ -64,7 +64,7 @@ class TabbedApp : public Component<TabbedApp> {
 
     <style>
       .container { display: flex; flex-direction: column; width: 50; }
-      .tabs-header { display: flex; flex-direction: row; border-bottom: solid; border-color: #334155; }
+      .tabs-header { display: flex; flex-direction: row; width: 100%; border-bottom: solid; border-color: #334155; }
       .tab-btn { padding: 0 2; cursor: pointer; background-color: transparent; }
       .tab-btn.active { background-color: #1e3a8a; color: #fff; font-weight: bold; }
       .tab-content { padding: 1; min-height: 5; }

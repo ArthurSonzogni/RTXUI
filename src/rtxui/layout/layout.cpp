@@ -1583,7 +1583,31 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   int resolved_gap =
       ResolveSize(is_row ? box->style.column_gap : box->style.row_gap,
                   is_row ? content_w : content_h);
-  for (auto& child : box->children) {
+
+  // CSS `order` lays items out in order-modified document order without
+  // touching the DOM. Items sharing a value keep document order, hence the
+  // stable sort. Building the reordered list is skipped entirely when every
+  // item leaves `order` at 0, which is the common case.
+  const std::vector<std::shared_ptr<LayoutBox>>* flex_children = &box->children;
+  std::vector<std::shared_ptr<LayoutBox>> ordered_children;
+  bool has_order = false;
+  for (const auto& child : box->children) {
+    if (child->style.order != 0) {
+      has_order = true;
+      break;
+    }
+  }
+  if (has_order) {
+    ordered_children = box->children;
+    std::stable_sort(ordered_children.begin(), ordered_children.end(),
+                     [](const std::shared_ptr<LayoutBox>& a,
+                        const std::shared_ptr<LayoutBox>& b) {
+                       return a->style.order < b->style.order;
+                     });
+    flex_children = &ordered_children;
+  }
+
+  for (auto& child : *flex_children) {
     if (child->style.position == PositionType::Absolute ||
         child->style.position == PositionType::Fixed) {
       continue;
