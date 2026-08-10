@@ -3208,6 +3208,22 @@ TEST_CASE("Horizontal Rule Component", "[component][hr]") {
   CHECK(hr_ptr->line_chars.substr(0, 3) == "─");
 }
 
+TEST_CASE("Horizontal Rule paints on the first frame", "[component][hr]") {
+  // Regression: hr computes its length from the laid-out width, so the first
+  // digest runs before any layout. It used to return early on that change
+  // without running the base digest, so the rule reached the DOM only on some
+  // later digest and the first frame painted nothing at all.
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(20, 3);
+
+  auto container = rtxui::Ref<HrTestComponent>::New();
+  rtxui::Screen screen(container, device);
+
+  // The Screen constructor mounts, digests and draws once: that is frame one.
+  std::string output = device->GetOutput();
+  CHECK(output.find("─") != std::string::npos);
+}
+
 class BoldTestComponent : public rtxui::Component<BoldTestComponent> {
  public:
   void InitReflection() override {
@@ -7037,6 +7053,69 @@ TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
   screen.Dispatch(Event::Escape());
   CHECK(dialog_ptr->open == false);
   CHECK(dialog_ptr->overlay_class == "closed");
+}
+
+class DialogClickTestComponent
+    : public rtxui::Component<DialogClickTestComponent> {
+ public:
+  bool dialog_open = true;
+  int confirmed = 0;
+
+  void Confirm() { confirmed++; }
+
+  void InitReflection() override {
+    Bind(dialog_open);
+    Bind(Confirm);
+    Import<rtxui::dialog>();
+    Import<rtxui::button>();
+    rtxui::Component<DialogClickTestComponent>::InitReflection();
+  }
+  // The wrapper matters: it offsets the dialog's parent away from the
+  // viewport origin, which is what made the overlay's contents hit-test in
+  // the wrong place.
+  std::string_view view = R"(
+    <div class="main">
+      <div>filler</div>
+      <dialog open="{dialog_open}" title="Confirm">
+        <button id="ok" onclick="Confirm">Confirm</button>
+      </dialog>
+    </div>
+    <style>
+      .main { padding: 1; width: 40; height: 6; }
+    </style>
+  )";
+};
+
+TEST_CASE("Dialog: a button inside an open dialog is clickable",
+          "[component][dialog]") {
+  // Regression: the overlay is `position: fixed`, so hit testing has to reach
+  // it through a separate path. Clicks on controls inside the dialog were
+  // landing nowhere, leaving the dialog unusable once opened.
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+
+  auto container = rtxui::Ref<DialogClickTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  container->Digest();
+  screen.Draw();
+
+  auto* btn_el = container->Root()->QuerySelector("#ok");
+  REQUIRE(btn_el != nullptr);
+  // The button must actually have been laid out somewhere on screen.
+  REQUIRE(btn_el->layout_width() > 0);
+
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  // Dispatch coordinates are 1-based; aim at the middle of the button.
+  mouse.x = btn_el->absolute_x() + btn_el->layout_width() / 2 + 1;
+  mouse.y = btn_el->absolute_y() + 1;
+
+  screen.Dispatch(Event(mouse));
+  mouse.motion = Event::Mouse::Motion::Released;
+  screen.Dispatch(Event(mouse));
+
+  CHECK(container->confirmed == 1);
 }
 
 TEST_CASE("Dialog Component Layout Centering", "[component][dialog][layout]") {

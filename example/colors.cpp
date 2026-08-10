@@ -29,7 +29,11 @@ class ColorBox : public Component<ColorBox> {
 
           background-color: var(--bg);
           display: block;
-          flex-grow: 1;
+          /* `flex: 1` (grow 1, shrink 1, basis 0) rather than flex-grow alone:
+             with the default `flex-basis: auto` each swatch would start at its
+             label's width and only share the leftover space, so the swatches
+             came out all different sizes. */
+          flex: 1;
         }
         .box-content {
           padding-left: 2;

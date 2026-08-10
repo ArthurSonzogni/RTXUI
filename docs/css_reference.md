@@ -30,10 +30,10 @@ This reference lists all CSS-like styling properties supported by the RTXUI layo
 
 <CssProperty name="border" values="<border-style> | <integer>" shorthand description="Shorthand to configure borders on all sides." />
 <CssProperty name="border-width" values="<integer>" description="Border frame cell thickness on all sides." />
-<CssProperty name="border-top" values="<integer>" description="Top border frame thickness." />
-<CssProperty name="border-bottom" values="<integer>" description="Bottom border frame thickness." />
-<CssProperty name="border-left" values="<integer>" description="Left border frame thickness." />
-<CssProperty name="border-right" values="<integer>" description="Right border frame thickness." />
+<CssProperty name="border-top" values="<border-style> | <integer>" description="Top border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
+<CssProperty name="border-bottom" values="<border-style> | <integer>" description="Bottom border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
+<CssProperty name="border-left" values="<border-style> | <integer>" description="Left border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
+<CssProperty name="border-right" values="<border-style> | <integer>" description="Right border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
 <CssProperty name="border-style" values="<border-style>" description="Character set mapping style of the frame." />
 <CssProperty name="border-color" values="<color>" animatable description="Color of all border frame lines." />
 <CssProperty name="border-color-top" values="<color>" animatable description="Color of the top border line." />
@@ -126,6 +126,7 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 <CssProperty name="flex-shrink" values="<number>" animatable description="Factor determining how much item shrinks." />
 <CssProperty name="flex-basis" values="<length>" description="Initial size of flex item before free space is distributed." />
 <CssProperty name="flex" values="shorthand" shorthand description="Shorthand for flex-grow, flex-shrink, and flex-basis." />
+<CssProperty name="order" values="<integer>" description="Lays a flex item out earlier or later than its document position. May be negative; items sharing a value keep document order." />
 <CssProperty name="justify-items" values="stretch | start | center | end" description="Inline-axis alignment of items inside their grid cell." />
 <CssProperty name="justify-self" values="auto | stretch | start | center | end" description="Per-item override of justify-items." />
 <CssProperty name="place-items" values="<align-items> <justify-items>?" shorthand description="Shorthand for align-items + justify-items." />

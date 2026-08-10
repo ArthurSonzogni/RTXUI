@@ -403,17 +403,48 @@ struct FixedFragment {
   int y = 0;
 };
 
+// Walks the fragment tree accumulating each fragment's absolute origin, so a
+// fixed fragment's parent-relative ChildLink offset can be turned into the
+// viewport position it actually paints at. This mirrors PaintFragment: a
+// fixed child sits at `parent_origin + link + accumulated_scroll`. Taking the
+// raw link offset instead put the whole subtree at the wrong place whenever
+// the fixed element's parent was not itself at the viewport origin -- e.g.
+// the built-in <dialog> inside a padded wrapper, whose contents then hit-test
+// several cells away from where they are drawn.
 void CollectFixedFragments(const std::shared_ptr<PhysicalFragment>& fragment,
-                           std::vector<FixedFragment>& out) {
+                           std::vector<FixedFragment>& out,
+                           int abs_x = 0,
+                           int abs_y = 0,
+                           int accum_scroll_x = 0,
+                           int accum_scroll_y = 0) {
   if (!fragment) {
     return;
   }
+  int scroll_x_offset = fragment->clips_descendants ? fragment->scroll_x : 0;
+  int scroll_y_offset = fragment->clips_descendants ? fragment->scroll_y : 0;
+  int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
+  int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
+
   for (const auto& child : fragment->children) {
-    if (child.fragment && child.fragment->dom_node &&
-        child.fragment->dom_node->style.position == PositionType::Fixed) {
-      out.push_back({child.fragment, child.x, child.y});
+    bool is_fixed = child.fragment && child.fragment->dom_node &&
+                    child.fragment->dom_node->style.position ==
+                        PositionType::Fixed;
+    int child_abs_x = abs_x + child.x;
+    int child_abs_y = abs_y + child.y;
+    int child_accum_scroll_x = next_accum_scroll_x;
+    int child_accum_scroll_y = next_accum_scroll_y;
+    if (is_fixed) {
+      child_abs_x += accum_scroll_x;
+      child_abs_y += accum_scroll_y;
+      child_accum_scroll_x = 0;
+      child_accum_scroll_y = 0;
+      out.push_back({child.fragment, child_abs_x, child_abs_y});
+    } else {
+      child_abs_x -= scroll_x_offset;
+      child_abs_y -= scroll_y_offset;
     }
-    CollectFixedFragments(child.fragment, out);
+    CollectFixedFragments(child.fragment, out, child_abs_x, child_abs_y,
+                          child_accum_scroll_x, child_accum_scroll_y);
   }
 }
 
@@ -1062,15 +1093,22 @@ void ScreenImpl::Step() {
 #endif
 
   if (input_available) {
-    char c;
-    int bytes_read = device_->Read(&c, 1);
-    if (bytes_read == 1) {
+    // Read everything already buffered, not one byte per wakeup. With
+    // any-event mouse tracking on, moving the mouse produces a dozen bytes
+    // per motion event; draining them a byte at a time meant each motion was
+    // decoded and repainted on its own, so a drag across a complex interface
+    // built up a backlog and hover feedback lagged far behind the cursor.
+    char buffer[4096];
+    int bytes_read = device_->Read(buffer, sizeof(buffer));
+    if (bytes_read > 0) {
       UpdateSize();
-      parser_->Add(c);
-      // A single byte can complete several already-queued events at once
-      // (e.g. the last byte of a paste's end marker synthesizes one
-      // keyboard event per pasted character): suppress intermediate draws
-      // so the whole batch applies as a single redraw.
+      for (int i = 0; i < bytes_read; ++i) {
+        parser_->Add(buffer[i]);
+      }
+      // Several events commonly complete together (a burst of mouse motion,
+      // or the last byte of a paste's end marker synthesizing one keyboard
+      // event per pasted character): suppress intermediate draws so the
+      // whole batch applies as a single redraw.
       while (auto event = parser_->GetEvent()) {
         suppress_draw_ = parser_->HasPendingEvents();
         HandleEvent(*event);
@@ -1349,7 +1387,11 @@ void ScreenImpl::HandleEvent(Event event) {
     if (state_changed) {
       component_->Digest();
       component_->ResolveTargetStyles();
-      Draw();
+      // Honour the batch flag, like DigestAndDraw does: when more input is
+      // already queued, only the last event of the burst needs to paint.
+      if (!suppress_draw_) {
+        Draw();
+      }
     }
 
     if (!ComponentBase::GetMouseCapturer() &&

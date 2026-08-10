@@ -715,6 +715,114 @@ TEST_CASE("Layout: Flexbox Row with Grow", "[layout]") {
                                  }));
 }
 
+TEST_CASE("Layout: Flexbox order", "[layout][order]") {
+  SECTION("Lower order is laid out first") {
+    struct OrderTest : Component<OrderTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .row { display: flex; flex-direction: row; }
+            .item { flex-grow: 1; height: 1; }
+            .a { order: 2; }
+            .b { order: 1; }
+            .c { order: 3; }
+          </style>
+          <div class="row">
+            <div class="item a">1</div>
+            <div class="item b">2</div>
+            <div class="item c">3</div>
+          </div>
+        )html";
+      }
+    };
+
+    auto texture = RenderComponent(Ref<OrderTest>::New(), 12, 1);
+    CHECK(GetTextLayer(texture) == CheckGrid({
+                                       "2   1   3   ",
+                                   }));
+  }
+
+  SECTION("Negative order comes before the default of 0") {
+    struct NegativeOrderTest : Component<NegativeOrderTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .row { display: flex; flex-direction: row; }
+            .item { flex-grow: 1; height: 1; }
+            .last { order: -1; }
+          </style>
+          <div class="row">
+            <div class="item">1</div>
+            <div class="item">2</div>
+            <div class="item last">3</div>
+          </div>
+        )html";
+      }
+    };
+
+    auto texture = RenderComponent(Ref<NegativeOrderTest>::New(), 12, 1);
+    CHECK(GetTextLayer(texture) == CheckGrid({
+                                       "3   1   2   ",
+                                   }));
+  }
+
+  SECTION("Items sharing an order value keep document order") {
+    struct StableOrderTest : Component<StableOrderTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .row { display: flex; flex-direction: row; }
+            .item { flex-grow: 1; height: 1; }
+            .late { order: 1; }
+          </style>
+          <div class="row">
+            <div class="item late">1</div>
+            <div class="item late">2</div>
+            <div class="item">3</div>
+            <div class="item">4</div>
+          </div>
+        )html";
+      }
+    };
+
+    // 3 and 4 (order 0) come first, each pair keeping its document order.
+    auto texture = RenderComponent(Ref<StableOrderTest>::New(), 12, 1);
+    CHECK(GetTextLayer(texture) == CheckGrid({
+                                       "3  4  1  2  ",
+                                   }));
+  }
+
+  SECTION("Order applies to a column flex container too") {
+    struct ColumnOrderTest : Component<ColumnOrderTest> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .col { display: flex; flex-direction: column; }
+            .item { height: 1; }
+            .first { order: -1; }
+          </style>
+          <div class="col">
+            <div class="item">1</div>
+            <div class="item">2</div>
+            <div class="item first">3</div>
+          </div>
+        )html";
+      }
+    };
+
+    auto texture = RenderComponent(Ref<ColumnOrderTest>::New(), 1, 3);
+    CHECK(GetTextLayer(texture) == CheckGrid({
+                                       "3",
+                                       "1",
+                                       "2",
+                                   }));
+  }
+}
+
 TEST_CASE("Layout: Borders", "[layout]") {
   SECTION("Simple ASCII Border") {
     struct BorderTest : Component<BorderTest> {

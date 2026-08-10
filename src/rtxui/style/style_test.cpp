@@ -1273,6 +1273,45 @@ TEST_CASE("CSS style parsing handles invalid values robustly", "[style][robustne
   }
 }
 
+TEST_CASE("border-<side> accepts a style keyword as well as a thickness",
+          "[style][border]") {
+  // Regression: only the `border` shorthand parsed a style keyword, so
+  // `border-bottom: solid` fell through to the integer parse, yielded 0 and
+  // silently drew nothing.
+  rtxui::ComputedStyle style;
+
+  SECTION("A keyword sets the style and a one-cell thickness") {
+    rtxui::ApplyStyle(style, {"border-bottom", "solid"});
+    CHECK(style.border.bottom == 1);
+    CHECK(style.border_style == rtxui::BorderStyle::Solid);
+    // Only the named side is affected.
+    CHECK(style.border.top == 0);
+    CHECK(style.border.left == 0);
+    CHECK(style.border.right == 0);
+  }
+
+  SECTION("Each side is settable by keyword") {
+    rtxui::ApplyStyle(style, {"border-top", "dashed"});
+    CHECK(style.border.top == 1);
+    rtxui::ApplyStyle(style, {"border-left", "solid"});
+    CHECK(style.border.left == 1);
+    rtxui::ApplyStyle(style, {"border-right", "solid"});
+    CHECK(style.border.right == 1);
+  }
+
+  SECTION("An explicit thickness still wins") {
+    rtxui::ApplyStyle(style, {"border-top", "3"});
+    CHECK(style.border.top == 3);
+  }
+
+  SECTION("none clears the side") {
+    rtxui::ApplyStyle(style, {"border-bottom", "solid"});
+    REQUIRE(style.border.bottom == 1);
+    rtxui::ApplyStyle(style, {"border-bottom", "none"});
+    CHECK(style.border.bottom == 0);
+  }
+}
+
 TEST_CASE("CSS ::part() selector parsing", "[css][part]") {
   SECTION("tag base") {
     auto stylesheet = css::Parse("textarea::part(gutter) { color: red; }");
