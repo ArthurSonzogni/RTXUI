@@ -189,14 +189,14 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
         "0111111100111111100111111110011111111000",
         "0000000000000000000000000000000000000000",
         "0000000000000000000000000000000000000000",
-        "0111111001111111000000000001111111000000",
-        "0111111001111111000111110001111111000000",
-        "0111111001111111000000000001111111000000",
+        "0111111001111111001111111001111111000000",
+        "0111111001111111001111111001111111000000",
+        "0111111001111111001111111001111111000000",
         "0000000000000000000000000000000000000000",
         "0000000000000000000000000000000000000000",
-        "0211111000111111100111111100211110000000",
-        "0211111000111111100111111100211110000000",
-        "0211111000111111100111111100211110000000",
+        "0111111100111111100111111100111111000000",
+        "0111111100111111100111111100111111000000",
+        "0111111100111111100111111100111111000000",
         "0000000000000000000000000000000000000000",
     };
 
@@ -304,9 +304,9 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
 
     std::vector<std::string> expected = {
         "00000000000000000000000000000000000000000000000000",
-        "01111111001111110000000000111100111111110000000000",
-        "01111111001111110011111200000000111111110000000000",
-        "01111111001111110000000000000000111111110000000000",
+        "01111111001111110011111100111100111111110000000000",
+        "01111111001111110011111100000000111111110000000000",
+        "01111111001111110011111100000000111111110000000000",
         "00000000000000000000000000000000000000000000000000",
         "00000000000000000000000000000000000000000000000000",
         "01111111110011111111100111111110011111110000000000",
@@ -564,16 +564,18 @@ TEST_CASE("Paint: Tall Border Parent Background Propagation") {
 
   auto texture = RenderComponent(Ref<TallBorderParentBgTest>::New(), 6, 3);
   Color expected_bg = Color::RGB(15, 23, 42);
+  Color border = Color::RGB(30, 41, 59);
 
-  // Right border uses mode Parent -> background should be expected_bg
-  CHECK(texture[5, 0].background_color == expected_bg);
-  CHECK(texture[5, 1].background_color == expected_bg);
-  CHECK(texture[5, 2].background_color == expected_bg);
-
-  // Left border uses mode ReverseOuter -> foreground should be expected_bg
-  CHECK(texture[0, 0].foreground_color == expected_bg);
-  CHECK(texture[0, 1].foreground_color == expected_bg);
-  CHECK(texture[0, 2].foreground_color == expected_bg);
+  // The box has no background of its own, so the ancestor's shows through the
+  // whole border box: it is the ground of both side columns, with only the
+  // half-block glyph itself in the border color.
+  for (int y = 0; y < 3; ++y) {
+    INFO("row " << y);
+    CHECK(texture[5, y].background_color == expected_bg);
+    CHECK(texture[5, y].foreground_color == border);
+    CHECK(texture[0, y].background_color == expected_bg);
+    CHECK(texture[0, y].foreground_color == border);
+  }
 }
 
 TEST_CASE("Paint: Transparent Overlay Blending on Tall Border") {
@@ -609,10 +611,138 @@ TEST_CASE("Paint: Transparent Overlay Blending on Tall Border") {
   };
 
   auto texture = RenderComponent(Ref<OverlayTest>::New(), 6, 3);
-  Color expected_blended = Blend(Color::RGBA(0, 0, 255, 127), Color::RGB(0, 0, 0));
+  Color overlay = Color::RGBA(0, 0, 255, 127);
 
-  // The left border's foreground color should be correctly blended with the semi-transparent overlay
-  CHECK(texture[0, 1].foreground_color == expected_blended);
+  // `tall`'s left cell is drawn in reverse video, so painting over it first
+  // flattens it back to the equivalent upright cell (the overlay cannot be
+  // composited onto colors the terminal has not swapped yet). Both halves --
+  // the parent's black showing through the glyph, and the border's red behind
+  // it -- then blend with the semi-transparent overlay.
+  CHECK_FALSE(texture[0, 1].inverted);
+  CHECK(texture[0, 1].foreground_color == Blend(overlay, Color::RGB(0, 0, 0)));
+  CHECK(texture[0, 1].background_color == Blend(overlay, Color::RGB(255, 0, 0)));
+}
+
+// Regression: the half-block styles used to fill the sides of a box from the
+// *parent's* background while the top and bottom kept the box's own, so a box
+// with a background of its own grew a mismatched column down each side (and,
+// for `wide`, a mismatched row top and bottom).
+TEST_CASE("Paint: Half-block borders keep the element's own background",
+          "[paint][border]") {
+  const Color kParent = Color::RGB(0, 0, 0);
+  const Color kOwn = Color::RGB(0, 0, 128);
+  const Color kBorder = Color::RGB(255, 0, 0);
+
+  struct HalfBlockTest : Component<HalfBlockTest> {
+    std::string style_name;
+    std::string_view Setup() {
+      Import<div>();
+      Bind(style_name);
+      return R"html(
+          <style>
+            self { display: block; background-color: rgb(0, 0, 0); }
+            .box {
+              display: block;
+              width: 8;
+              height: 3;
+              background-color: rgb(0, 0, 128);
+              border: {style_name};
+              border-color: rgb(255, 0, 0);
+            }
+          </style>
+          <div class="box">hi</div>
+        )html";
+    }
+  };
+
+  // Every cell of the border ring is split between the border color and the
+  // box's own background; the parent's black must not appear anywhere inside.
+  auto check_ring = [&](const std::string& style_name) {
+    INFO("border: " << style_name);
+    auto component = Ref<HalfBlockTest>::New();
+    component->style_name = style_name;
+    auto texture = RenderComponent(component, 8, 3);
+
+    for (int y = 0; y < 3; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        if (x > 0 && x < 7 && y == 1) {
+          continue;  // Content, not border.
+        }
+        INFO("cell " << x << "," << y);
+        const Cell& cell = texture[x, y];
+        CHECK(cell.foreground_color != kParent);
+        CHECK(cell.background_color != kParent);
+        CHECK((cell.foreground_color == kOwn || cell.foreground_color == kBorder));
+        CHECK((cell.background_color == kOwn || cell.background_color == kBorder));
+      }
+    }
+  };
+
+  check_ring("tall");
+  check_ring("panel");
+  check_ring("wide");
+  check_ring("inner");
+}
+
+// Regression: the half-block styles used to swap the two colors themselves to
+// put a strip on the right of a cell -- border color into the background, the
+// field into the *foreground*. A box with no background of its own has a
+// transparent field, and a transparent foreground is emitted as ESC[39m, the
+// terminal's default *foreground*, so `border: tall` painted a white block
+// down the left of the box. The swap is now left to the terminal (SGR 7),
+// which performs it against its own default background.
+TEST_CASE("Paint: Half-block borders never render the default foreground",
+          "[paint][border]") {
+  struct NoBackgroundTest : Component<NoBackgroundTest> {
+    std::string style_name;
+    std::string_view Setup() {
+      Import<div>();
+      Bind(style_name);
+      return R"html(
+          <style>
+            self { display: block; }
+            .box {
+              display: block;
+              width: 8;
+              height: 3;
+              border: {style_name};
+              border-color: rgb(255, 0, 0);
+            }
+          </style>
+          <div class="box">hi</div>
+        )html";
+    }
+  };
+
+  // Nothing anywhere has a background, so every border cell is the opaque
+  // border color against a transparent field -- in that order, whether or not
+  // the cell is reversed. The transparent one has to be the *background*: on a
+  // background ESC[49m means the terminal's own background, which is what a
+  // reversed cell then swaps into the glyph; on a foreground ESC[39m would
+  // mean its default foreground, the white block this guards against.
+  auto check_ring = [](const std::string& style_name) {
+    INFO("border: " << style_name);
+    auto component = Ref<NoBackgroundTest>::New();
+    component->style_name = style_name;
+    auto texture = RenderComponent(component, 8, 3);
+
+    for (int y = 0; y < 3; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        if (x > 0 && x < 7 && y == 1) {
+          continue;  // Content, not border.
+        }
+        INFO("cell " << x << "," << y);
+        const Cell& cell = texture[x, y];
+        CHECK(cell.foreground_color == Color::RGB(255, 0, 0));
+        CHECK(cell.background_color.a == 0);
+      }
+    }
+  };
+
+  check_ring("tall");
+  check_ring("panel");
+  check_ring("wide");
+  check_ring("inner");
 }
 
 }  // namespace rtxui
