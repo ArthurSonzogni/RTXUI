@@ -22,14 +22,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DIR = ROOT / "example"
-CMAKELISTS = ROOT / "CMakeLists.txt"
+CMAKELISTS = EXAMPLE_DIR / "CMakeLists.txt"
 DOCS = ROOT / "docs"
 INDEX = DOCS / "guide" / "examples.md"
 
-# `add_executable(rtxui_example_foo example/foo.cpp)`
-TARGET_RE = re.compile(
-    r"add_executable\(\s*rtxui_example_(\w+)\s+example/([\w.]+)\s*\)"
-)
+# `add_executable(rtxui_example_foo foo.cpp)`, in example/CMakeLists.txt, where
+# the source paths are relative to that directory.
+TARGET_RE = re.compile(r"add_executable\(\s*rtxui_example_(\w+)\s+([\w.]+)\s*\)")
 # `<<< @/../example/foo.cpp`
 TRANSCLUDE_RE = re.compile(r"<<<\s*@/\.\./example/([\w.]+)")
 # `src="/wasm/rtxui_example_foo.js"`
@@ -51,7 +50,7 @@ def main() -> int:
     # 1. Every example has a build target, and every target has a source.
     for source in sorted(on_disk - target_sources):
         errors.append(
-            f"example/{source} has no add_executable() in CMakeLists.txt"
+            f"example/{source} has no add_executable() in example/CMakeLists.txt"
         )
     for name, source in sorted(targets.items()):
         if source not in on_disk:
