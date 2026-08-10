@@ -26,6 +26,7 @@ class TabbedApp : public Component<TabbedApp> {
 
   bool is_home() const { return active_tab == "home"; }
   bool is_settings() const { return active_tab == "settings"; }
+  bool is_about() const { return active_tab == "about"; }
 
   std::string home_class() const { return TabClass("home"); }
   std::string settings_class() const { return TabClass("settings"); }
@@ -36,6 +37,7 @@ class TabbedApp : public Component<TabbedApp> {
     Bind(Select);
     Bind(is_home);
     Bind(is_settings);
+    Bind(is_about);
     Bind(home_class);
     Bind(settings_class);
     Bind(about_class);
@@ -43,6 +45,7 @@ class TabbedApp : public Component<TabbedApp> {
 
   std::string_view view = R"html(
     <div class="container">
+
       <div class="tabs-header">
         <button class="{home_class}" onclick="Select(home)">Home</button>
         <button class="{settings_class}" onclick="Select(settings)">Settings</button>
@@ -50,24 +53,39 @@ class TabbedApp : public Component<TabbedApp> {
       </div>
 
       <div class="tab-content">
-        <if condition="{is_home}">
-          <div>Welcome to the home screen.</div>
-        </if>
-        <elif condition="{is_settings}">
-          <div>Settings go here.</div>
-        </elif>
-        <else>
-          <div>About this application.</div>
-        </else>
+        <div if="{is_home}">Welcome to the home screen.</div>
+        <div if="{is_settings}">Settings go here.</div>
+        <div if="{is_about}">About this application.</div>
       </div>
     </div>
 
     <style>
-      .container { display: flex; flex-direction: column; width: 50; }
-      .tabs-header { display: flex; flex-direction: row; width: 100%; border-bottom: solid; border-color: #334155; }
-      .tab-btn { padding: 0 2; cursor: pointer; background-color: transparent; }
-      .tab-btn.active { background-color: #1e3a8a; color: #fff; font-weight: bold; }
-      .tab-content { padding: 1; min-height: 5; }
+      .container {
+        display: flex;
+        flex-direction: column;
+        max-width: 50;
+      }
+      .tabs-header {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        border-bottom: solid;
+        border-color: #334155;
+      }
+      .tab-btn {
+        padding: 0 2;
+        cursor: pointer;
+        background-color: black;
+      }
+      .tab-btn.active {
+        background-color: #1e3a8a;
+        color: #fff;
+        font-weight: bold;
+      }
+      .tab-content {
+        padding: 1;
+        min-height: 5;
+      }
     </style>
   )html";
 
