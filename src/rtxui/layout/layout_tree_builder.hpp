@@ -24,6 +24,7 @@ struct InheritedTextStyle {
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;
   std::optional<bool> strikethrough;
+  std::optional<bool> overlined;
   std::optional<bool> blink;
   int letter_spacing = 0;
   int line_height = 1;

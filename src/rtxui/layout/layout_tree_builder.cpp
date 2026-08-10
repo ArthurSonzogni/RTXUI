@@ -176,6 +176,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
   resolved.strikethrough = dom_node->style.strikethrough.has_value() ? dom_node->style.strikethrough : parent.strikethrough;
   box->style.strikethrough = resolved.strikethrough;
+  resolved.overlined = dom_node->style.overlined.has_value() ? dom_node->style.overlined : parent.overlined;
+  box->style.overlined = resolved.overlined;
 
   resolved.blink = dom_node->style.blink.has_value() ? dom_node->style.blink : parent.blink;
   box->style.blink = resolved.blink;
@@ -222,6 +224,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       slot.underlined = slot_style.underlined.has_value() ? slot_style.underlined : resolved.underlined;
       slot.underlined_double = slot_style.underlined_double.has_value() ? slot_style.underlined_double : resolved.underlined_double;
       slot.strikethrough = slot_style.strikethrough.has_value() ? slot_style.strikethrough : resolved.strikethrough;
+      slot.overlined = slot_style.overlined.has_value() ? slot_style.overlined : resolved.overlined;
       slot.blink = slot_style.blink.has_value() ? slot_style.blink : resolved.blink;
       slot.letter_spacing =
           slot_style.letter_spacing.value_or(resolved.letter_spacing);

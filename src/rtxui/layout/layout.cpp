@@ -564,6 +564,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   fragment->underlined = box->style.underlined;
   fragment->underlined_double = box->style.underlined_double;
   fragment->strikethrough = box->style.strikethrough;
+  fragment->overlined = box->style.overlined;
   fragment->blink = box->style.blink;
   fragment->border_style = box->style.border_style;
   fragment->border_color_top = box->style.border_color_top;
@@ -811,6 +812,7 @@ struct TextStyle {
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;
   std::optional<bool> strikethrough;
+  std::optional<bool> overlined;
   std::optional<bool> blink;
 };
 
@@ -860,6 +862,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   container_frag->underlined = box->style.underlined;
   container_frag->underlined_double = box->style.underlined_double;
   container_frag->strikethrough = box->style.strikethrough;
+  container_frag->overlined = box->style.overlined;
   container_frag->blink = box->style.blink;
   container_frag->border_style = box->style.border_style;
   container_frag->border_color_top = box->style.border_color_top;
@@ -948,6 +951,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       text_frag->underlined = style.underlined;
       text_frag->underlined_double = style.underlined_double;
       text_frag->strikethrough = style.strikethrough;
+      text_frag->overlined = style.overlined;
       text_frag->blink = style.blink;
 
       container_frag->children.push_back(
@@ -1245,7 +1249,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           {child->style.background_color, child->style.foreground_color,
            child->style.bold, child->style.dim, child->style.italic,
            child->style.underlined, child->style.underlined_double,
-           child->style.strikethrough, child->style.blink});
+           child->style.strikethrough, child->style.overlined,
+           child->style.blink});
     } else if (is_br(child.get())) {
       commit_line(/*hard_break=*/true);
     } else if (child->style.display_outside == DisplayOutside::Inline &&
@@ -1271,7 +1276,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
                grandchild->style.dim, grandchild->style.italic,
                grandchild->style.underlined,
                grandchild->style.underlined_double,
-               grandchild->style.strikethrough, grandchild->style.blink});
+               grandchild->style.strikethrough, grandchild->style.overlined,
+               grandchild->style.blink});
         } else if (is_br(grandchild.get())) {
           commit_line(/*hard_break=*/true);
         } else {
@@ -1960,6 +1966,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   fragment->underlined = box->style.underlined;
   fragment->underlined_double = box->style.underlined_double;
   fragment->strikethrough = box->style.strikethrough;
+  fragment->overlined = box->style.overlined;
   fragment->blink = box->style.blink;
   fragment->border_style = box->style.border_style;
   fragment->border_color_top = box->style.border_color_top;
@@ -3160,6 +3167,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(
   container_frag->underlined = box->style.underlined;
   container_frag->underlined_double = box->style.underlined_double;
   container_frag->strikethrough = box->style.strikethrough;
+  container_frag->overlined = box->style.overlined;
   container_frag->blink = box->style.blink;
   container_frag->border_style = box->style.border_style;
   container_frag->border_color_top = box->style.border_color_top;
