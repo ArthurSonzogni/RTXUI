@@ -20,17 +20,31 @@ namespace {
 const Color kDefaultScrollbarThumbColor = Color::RGBA(200, 200, 200, 200);
 const Color kDefaultScrollbarTrackColor = Color::RGBA(80, 80, 80, 120);
 
-struct BorderData {
-  const char* charset[3][3];
-  uint8_t locations[3][3];
+// Which cells of a charset are drawn in reverse video. Unicode has left-side
+// partial blocks in every width but only one right-side one (`▕`, one eighth),
+// so a strip that must sit against the *right* of its cell at any other width
+// is spelled as the complementary left block drawn reversed: `▊` (LEFT THREE
+// QUARTERS) reversed leaves a quarter-cell strip on the right, mirroring the
+// `▎` (LEFT ONE QUARTER) strip the opposite side draws directly.
+using ReverseMap = const bool (*)[3];
+constexpr bool kReverseLeftColumn[3][3] = {
+    {true, false, false},
+    {true, false, false},
+    {true, false, false},
+};
+constexpr bool kReverseRightSide[3][3] = {
+    {false, false, false},
+    {false, false, true},
+    {false, false, false},
 };
 
-// Map BorderStyle to its character set and location mapping based on Textual.
-// Location Modes:
-// 0: Widget (normal)
-// 1: Parent (background of parent)
-// 2: ReverseOuter (outer.bg, inner.fg, reverse=true)
-// 3: ReverseInner (inner.bg, outer.fg, reverse=true)
+struct BorderData {
+  const char* charset[3][3];
+  // Null when the style has no reversed cell, which is all but three of them.
+  ReverseMap reversed = nullptr;
+};
+
+// Map BorderStyle to its character set and reverse map, based on Textual.
 const BorderData& GetBorderData(BorderStyle style) {
   static const BorderData border_styles[] = {
       /* Ascii */
@@ -40,11 +54,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"|", " ", "|"},
               {"+", "-", "+"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* Blank */
       {
@@ -52,11 +61,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {" ", " ", " "},
               {" ", " ", " "},
               {" ", " ", " "},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* Dashed */
@@ -66,11 +70,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"╏", " ", "╏"},
               {"┗", "╍", "┛"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* Double */
       {
@@ -78,11 +77,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"╔", "═", "╗"},
               {"║", " ", "║"},
               {"╚", "═", "╝"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* HKey */
@@ -92,11 +86,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {" ", " ", " "},
               {"▁", "▁", "▁"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* Heavy */
       {
@@ -104,11 +93,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"┏", "━", "┓"},
               {"┃", " ", "┃"},
               {"┗", "━", "┛"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* Inner */
@@ -118,11 +102,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▐", " ", "▌"},
               {"▝", "▀", "▘"},
           },
-          {
-              {1, 1, 1},
-              {1, 1, 1},
-              {1, 1, 1},
-          },
       },
       /* None */
       {
@@ -130,11 +109,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {" ", " ", " "},
               {" ", " ", " "},
               {" ", " ", " "},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* Outer */
@@ -144,11 +118,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▌", " ", "▐"},
               {"▙", "▄", "▟"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* Panel */
       {
@@ -157,11 +126,7 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▊", " ", "▎"},
               {"▊", "▁", "▎"},
           },
-          {
-              {2, 0, 1},
-              {2, 0, 1},
-              {2, 0, 1},
-          },
+          kReverseLeftColumn,
       },
       /* Round */
       {
@@ -169,11 +134,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"╭", "─", "╮"},
               {"│", " ", "│"},
               {"╰", "─", "╯"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* Solid */
@@ -183,11 +143,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"│", " ", "│"},
               {"└", "─", "┘"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* Tall */
       {
@@ -196,11 +151,7 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▊", " ", "▎"},
               {"▊", "▁", "▎"},
           },
-          {
-              {2, 0, 1},
-              {2, 0, 1},
-              {2, 0, 1},
-          },
+          kReverseLeftColumn,
       },
       /* Thick */
       {
@@ -208,11 +159,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"█", "▀", "█"},
               {"█", " ", "█"},
               {"█", "▄", "█"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* VKey */
@@ -222,11 +168,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▏", " ", "▕"},
               {"▏", " ", "▕"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* Wide */
       {
@@ -235,11 +176,7 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▎", " ", "▊"},
               {"▔", "▔", "▔"},
           },
-          {
-              {1, 1, 1},
-              {0, 1, 3},
-              {1, 1, 1},
-          },
+          kReverseRightSide,
       },
       /* Dotted */
       {
@@ -247,11 +184,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"·", "·", "·"},
               {"·", " ", "·"},
               {"·", "·", "·"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* DoubleHorizontal */
@@ -261,11 +193,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"│", " ", "│"},
               {"╘", "═", "╛"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* DoubleVertical */
       {
@@ -273,11 +200,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"╓", "─", "╖"},
               {"║", " ", "║"},
               {"╙", "─", "╜"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* Shadow */
@@ -287,11 +209,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"░", " ", "▓"},
               {"░", "▓", "▓"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* ShadeLight */
       {
@@ -299,11 +216,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"░", "░", "░"},
               {"░", " ", "░"},
               {"░", "░", "░"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
       /* ShadeMedium */
@@ -313,11 +225,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▒", " ", "▒"},
               {"▒", "▒", "▒"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* ShadeDark */
       {
@@ -326,11 +233,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▓", " ", "▓"},
               {"▓", "▓", "▓"},
           },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
-          },
       },
       /* Squiggle */
       {
@@ -338,11 +240,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"~", "~", "~"},
               {"~", " ", "~"},
               {"~", "~", "~"},
-          },
-          {
-              {0, 0, 0},
-              {0, 0, 0},
-              {0, 0, 0},
           },
       },
   };
@@ -468,8 +365,20 @@ void PaintImpl(const PhysicalFragment* frag,
     left_border_color.a =
         static_cast<uint8_t>(left_border_color.a * current_opacity);
 
-    auto set_char = [&](int x, int y, const char* c, uint8_t mode,
-                        const Color& border_color) {
+    const auto& data = GetBorderData(frag->border_style);
+
+    // One cell of the charset: the glyph, and whether it is drawn reversed.
+    struct Glyph {
+      const char* c;
+      bool reversed;
+    };
+    auto glyph = [&data](int row, int col) -> Glyph {
+      return {data.charset[row][col],
+              data.reversed && data.reversed[row][col]};
+    };
+
+    auto set_char = [&](int x, int y, Glyph g, const Color& border_color) {
+      const char* c = g.c;
       if (c == nullptr || *c == '\0' || *c == ' ') {
         return;
       }
@@ -479,30 +388,26 @@ void PaintImpl(const PhysicalFragment* frag,
         resolve_cell(cell);
         cell.character = c;
 
-        Color inner_bg = current_background_color;
-        Color outer_bg = parent_background_color;
-
-        switch (mode) {
-          case 0:  // Widget
-            cell.foreground_color = Blend(border_color, cell.background_color);
-            break;
-          case 1:  // Parent
-            cell.foreground_color = Blend(border_color, outer_bg);
-            cell.background_color = outer_bg;
-            break;
-          case 2:  // ReverseOuter
-            cell.foreground_color = outer_bg;
-            cell.background_color = Blend(border_color, inner_bg);
-            break;
-          case 3:  // ReverseInner
-            cell.foreground_color = inner_bg;
-            cell.background_color = Blend(border_color, outer_bg);
-            break;
-        }
+        // The glyph carries the border color; whatever the glyph does not
+        // cover keeps the background already in the cell. That is the
+        // element's own background, laid down over the whole border box by
+        // step 0: like CSS, background-color is clipped to the border box, so
+        // a bordered element with its own background must not leak its
+        // parent's background into its border ring.
+        //
+        // A reversed cell wants the opposite -- field as the glyph, border
+        // color behind it -- which is left to the terminal via SGR 7 rather
+        // than swapping the two colors here. The field is often transparent
+        // (an element with no background of its own, over a screen with none),
+        // and transparency has no foreground spelling: ESC[39m is the default
+        // *foreground*, so swapping here painted a white block down the left
+        // of every uncolored `tall` box. Under SGR 7 the terminal does the
+        // swap itself, against its own default background, which is the color
+        // we cannot name.
+        cell.foreground_color = Blend(border_color, cell.background_color);
+        cell.inverted = g.reversed;
       }
     };
-
-    const auto& data = GetBorderData(frag->border_style);
 
     bool has_top = frag->border_width.top > 0;
     bool has_right = frag->border_width.right > 0;
@@ -518,58 +423,49 @@ void PaintImpl(const PhysicalFragment* frag,
     // behavior for ordinary 4-sided borders (verified by "Individual Border
     // Colors": corners take the color of the vertical border).
     auto draw_corner = [&](int x, int y, bool side_a, bool side_b,
-                           const char* corner_char, uint8_t corner_loc,
-                           const char* a_char, uint8_t a_loc,
-                           const Color& a_color, const char* b_char,
-                           uint8_t b_loc, const Color& b_color) {
+                           Glyph corner, Glyph a, const Color& a_color,
+                           Glyph b, const Color& b_color) {
       if (side_a && side_b) {
-        set_char(x, y, corner_char, corner_loc, b_color);
+        set_char(x, y, corner, b_color);
       } else if (side_a) {
-        set_char(x, y, a_char, a_loc, a_color);
+        set_char(x, y, a, a_color);
       } else if (side_b) {
-        set_char(x, y, b_char, b_loc, b_color);
+        set_char(x, y, b, b_color);
       }
     };
 
     // Corners
-    draw_corner(abs_x, abs_y, has_top, has_left, data.charset[0][0],
-               data.locations[0][0], data.charset[0][1], data.locations[0][1],
-               top_border_color, data.charset[1][0], data.locations[1][0],
-               left_border_color);  // tl
-    draw_corner(abs_x + w - 1, abs_y, has_top, has_right, data.charset[0][2],
-               data.locations[0][2], data.charset[0][1], data.locations[0][1],
-               top_border_color, data.charset[1][2], data.locations[1][2],
-               right_border_color);  // tr
-    draw_corner(abs_x, abs_y + h - 1, has_bottom, has_left, data.charset[2][0],
-               data.locations[2][0], data.charset[2][1], data.locations[2][1],
-               bottom_border_color, data.charset[1][0], data.locations[1][0],
-               left_border_color);  // bl
+    draw_corner(abs_x, abs_y, has_top, has_left, glyph(0, 0), glyph(0, 1),
+                top_border_color, glyph(1, 0), left_border_color);  // tl
+    draw_corner(abs_x + w - 1, abs_y, has_top, has_right, glyph(0, 2),
+                glyph(0, 1), top_border_color, glyph(1, 2),
+                right_border_color);  // tr
+    draw_corner(abs_x, abs_y + h - 1, has_bottom, has_left, glyph(2, 0),
+                glyph(2, 1), bottom_border_color, glyph(1, 0),
+                left_border_color);  // bl
     draw_corner(abs_x + w - 1, abs_y + h - 1, has_bottom, has_right,
-               data.charset[2][2], data.locations[2][2], data.charset[2][1],
-               data.locations[2][1], bottom_border_color, data.charset[1][2],
-               data.locations[1][2], right_border_color);  // br
+                glyph(2, 2), glyph(2, 1), bottom_border_color, glyph(1, 2),
+                right_border_color);  // br
 
     // Top/Bottom
     for (int i = 1; i < w - 1; ++i) {
       if (has_top) {
-        set_char(abs_x + i, abs_y, data.charset[0][1], data.locations[0][1],
-                 top_border_color);  // t
+        set_char(abs_x + i, abs_y, glyph(0, 1), top_border_color);  // t
       }
       if (has_bottom) {
-        set_char(abs_x + i, abs_y + h - 1, data.charset[2][1],
-                 data.locations[2][1], bottom_border_color);  // b
+        set_char(abs_x + i, abs_y + h - 1, glyph(2, 1),
+                 bottom_border_color);  // b
       }
     }
 
     // Left/Right
     for (int i = 1; i < h - 1; ++i) {
       if (has_left) {
-        set_char(abs_x, abs_y + i, data.charset[1][0], data.locations[1][0],
-                 left_border_color);  // l
+        set_char(abs_x, abs_y + i, glyph(1, 0), left_border_color);  // l
       }
       if (has_right) {
-        set_char(abs_x + w - 1, abs_y + i, data.charset[1][2],
-                 data.locations[1][2], right_border_color);  // r
+        set_char(abs_x + w - 1, abs_y + i, glyph(1, 2),
+                 right_border_color);  // r
       }
     }
   }
