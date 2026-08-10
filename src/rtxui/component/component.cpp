@@ -691,6 +691,84 @@ bool MatchPartSelector(const Element* element,
   return true;
 }
 
+// The siblings a structural pseudo-class counts. `<style>` blocks and text
+// nodes are not elements for selector purposes, so neither can be the
+// first-child, nor make an only-child stop being one.
+std::vector<const Element*> StructuralSiblings(const Element* parent) {
+  std::vector<const Element*> siblings;
+  for (const auto& child : parent->children()) {
+    if (child->tag() != "style" && !child->is_text()) {
+      siblings.push_back(child.get());
+    }
+  }
+  return siblings;
+}
+
+// The argument of :nth-child()/:nth-last-child(): `even`, `odd`, or a literal
+// 1-based index. An+B forms are not supported and match nothing.
+bool MatchNth(std::string_view arg, int index) {
+  if (arg == "even") {
+    return index % 2 == 0;
+  }
+  if (arg == "odd") {
+    return index % 2 != 0;
+  }
+  int target = 0;
+  auto [ptr, ec] = std::from_chars(arg.data(), arg.data() + arg.size(), target);
+  // Requiring the whole argument to be consumed keeps `nth-child(2junk)` from
+  // matching index 2.
+  return ec == std::errc{} && ptr == arg.data() + arg.size() && target == index;
+}
+
+// Whether an element has any authored content, for :empty.
+//
+// Every tag is a component, so an element's own children are the component's
+// rendered internals -- typically a single <slot> -- and the content the
+// author wrote between the tags is projected into that slot. Looking at
+// children() directly would make every element non-empty. Slots are therefore
+// transparent here, and everything else counts as content.
+bool HasAuthoredContent(const Element* element) {
+  for (const auto& child : element->children()) {
+    if (child->tag() == "style") {
+      continue;
+    }
+    if (child->is_text()) {
+      // CSS counts any text node as content, which would make :empty useless
+      // in a template where every tag sits indented on its own line. Only
+      // non-whitespace text counts.
+      const auto* text = static_cast<const TextElement*>(child.get());
+      if (text->text().find_first_not_of(" \t\r\n") != std::string::npos) {
+        return true;
+      }
+      continue;
+    }
+    if (child->is_slot()) {
+      if (HasAuthoredContent(child.get())) {
+        return true;
+      }
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+// The 1-based position of `element` among its structural siblings, counting
+// from the start or (for :nth-last-child) the end. 0 when it is not there.
+int StructuralIndex(const Element* element, bool from_end) {
+  const Element* parent = element->Parent();
+  if (!parent) {
+    return 0;
+  }
+  std::vector<const Element*> siblings = StructuralSiblings(parent);
+  for (size_t i = 0; i < siblings.size(); ++i) {
+    if (siblings[i] == element) {
+      return static_cast<int>(from_end ? siblings.size() - i : i + 1);
+    }
+  }
+  return 0;
+}
+
 bool MatchPseudos(const Element* element,
                   const std::vector<std::string>& pseudo_classes) {
   for (const auto& pseudo : pseudo_classes) {
@@ -724,61 +802,36 @@ bool MatchPseudos(const Element* element,
       return false;
     }
     if (pseudo == "first-child") {
-      const Element* parent = element->Parent();
-      if (!parent) return false;
-      std::vector<const Element*> siblings;
-      for (const auto& child : parent->children()) {
-        if (child->tag() != "style" && !child->is_text()) {
-          siblings.push_back(child.get());
-        }
-      }
-      if (siblings.empty() || siblings[0] != element) {
+      if (StructuralIndex(element, /*from_end=*/false) != 1) {
         return false;
       }
     }
     if (pseudo == "last-child") {
-      const Element* parent = element->Parent();
-      if (!parent) return false;
-      std::vector<const Element*> siblings;
-      for (const auto& child : parent->children()) {
-        if (child->tag() != "style" && !child->is_text()) {
-          siblings.push_back(child.get());
-        }
-      }
-      if (siblings.empty() || siblings.back() != element) {
+      if (StructuralIndex(element, /*from_end=*/true) != 1) {
         return false;
       }
     }
-    if (pseudo.starts_with("nth-child(")) {
-      if (!pseudo.ends_with(")")) return false;
-      std::string_view arg = std::string_view(pseudo).substr(10, pseudo.size() - 11);
+    if (pseudo == "only-child") {
       const Element* parent = element->Parent();
       if (!parent) return false;
-      std::vector<const Element*> siblings;
-      for (const auto& child : parent->children()) {
-        if (child->tag() != "style" && !child->is_text()) {
-          siblings.push_back(child.get());
-        }
+      std::vector<const Element*> siblings = StructuralSiblings(parent);
+      if (siblings.size() != 1 || siblings[0] != element) {
+        return false;
       }
-      int index = -1;
-      for (size_t i = 0; i < siblings.size(); ++i) {
-        if (siblings[i] == element) {
-          index = static_cast<int>(i) + 1;
-          break;
-        }
-      }
-      if (index == -1) return false;
-
-      if (arg == "even") {
-        if (index % 2 != 0) return false;
-      } else if (arg == "odd") {
-        if (index % 2 == 0) return false;
-      } else {
-        int target = 0;
-        auto [ptr, ec] = std::from_chars(arg.data(), arg.data() + arg.size(), target);
-        if (ec != std::errc{} || target != index) {
-          return false;
-        }
+    }
+    if (pseudo == "empty" && HasAuthoredContent(element)) {
+      return false;
+    }
+    if (pseudo.starts_with("nth-child(") ||
+        pseudo.starts_with("nth-last-child(")) {
+      if (!pseudo.ends_with(")")) return false;
+      bool from_end = pseudo.starts_with("nth-last-child(");
+      size_t open = pseudo.find('(') + 1;
+      std::string_view arg =
+          std::string_view(pseudo).substr(open, pseudo.size() - open - 1);
+      int index = StructuralIndex(element, from_end);
+      if (index == 0 || !MatchNth(arg, index)) {
+        return false;
       }
     }
   }

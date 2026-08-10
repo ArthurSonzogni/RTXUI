@@ -36,6 +36,19 @@ The CSS parser supports a wide range of standard selectors and combinators:
     *   `:last-child`: Matches the last element among its siblings.
     *   `:nth-child(even)`/`:nth-child(odd)`: Matches even or odd siblings.
     *   `:nth-child(N)`: Matches the 1-based N-th sibling (e.g., `:nth-child(3)`).
+    *   `:nth-last-child(N)`/`:nth-last-child(even)`/`:nth-last-child(odd)`: The same, counted from the last sibling backwards.
+    *   `:only-child`: Matches an element that is its parent's only child.
+    *   `:empty`: Matches an element with no content between its tags.
+
+    `<style>` blocks and text do not count as siblings, so they never displace a
+    `:first-child` nor stop an element being an `:only-child`. `An+B` arguments
+    (`:nth-child(2n+1)`) are not supported and match nothing; use `even`/`odd`.
+
+    `:empty` departs from CSS in one way: CSS counts any text node as content,
+    which would mean nothing is ever empty in a template where tags sit
+    indented on their own lines. Whitespace-only text is ignored here, so
+    `<div></div>` and a `<div>` spanning two lines with nothing between them
+    both match.
 *   **Combinators**:
     *   **Descendant combinator (space)**: Matches nested elements (e.g., `div span` targets any `span` inside a `div`).
     *   **Child combinator (`>`)**: Matches direct children (e.g., `div > span` targets `span` elements immediately nested under `div`).
