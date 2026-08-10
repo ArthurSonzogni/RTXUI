@@ -355,6 +355,9 @@ struct ComputedStyleCore {
   float flex_grow = 0.0f;
   float flex_shrink = 1.0f;
   Length flex_basis = Length::Auto();
+  // Flex item ordering. Lower values are laid out first; items sharing a
+  // value keep document order. May be negative.
+  int order = 0;
   Length row_gap = Length::Cells(0.0f);
   Length column_gap = Length::Cells(0.0f);
   JustifyContent justify_content = JustifyContent::FlexStart;

@@ -68,6 +68,10 @@ std::string_view tabs::Setup() {
       .tabs-headers {
         display: flex;
         flex-direction: row;
+        /* An auto-width flex box shrinks to fit its items, which would stop
+           the bottom rule right after the last tab instead of running the
+           full width of the tab strip. */
+        width: 100%;
         border-bottom: 1;
         border-style: solid;
         border-color: rgb(74, 85, 104);

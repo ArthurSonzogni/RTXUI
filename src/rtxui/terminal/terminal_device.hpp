@@ -48,6 +48,72 @@ namespace rtxui {
 // SystemTerminalDevice below.
 #endif
 
+#ifndef __EMSCRIPTEN__
+namespace internal {
+
+// Undoes everything EnterRawMode() turns on. Kept as a literal so the signal
+// handler can write() it without allocating.
+inline constexpr char kExitRawModeSequence[] =
+    "\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h\x1b[?1049l";
+
+// Signals that would otherwise kill the process while the terminal is in raw
+// mode, leaving the user's shell with no echo, no line editing and mouse
+// reporting still on (which makes every mouse move spew escape sequences).
+inline constexpr int kFatalSignals[] = {
+    SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGTERM, SIGBUS,
+};
+inline constexpr int kFatalSignalCount =
+    sizeof(kFatalSignals) / sizeof(kFatalSignals[0]);
+
+// A signal handler may only touch async-signal-safe state, so this is plain
+// data: no allocation, no locks, no destructors.
+inline termios g_saved_termios;
+inline struct sigaction g_saved_signal_handlers[kFatalSignalCount];
+inline volatile sig_atomic_t g_raw_mode_active = 0;
+
+// write()/tcsetattr() are both async-signal-safe, so this is legal from a
+// handler as well as from the normal teardown path.
+inline void RestoreTerminalFromSignal() {
+  if (g_raw_mode_active == 0) {
+    return;
+  }
+  g_raw_mode_active = 0;
+  ssize_t ignored = write(STDOUT_FILENO, kExitRawModeSequence,
+                          sizeof(kExitRawModeSequence) - 1);
+  (void)ignored;
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_saved_termios);
+}
+
+inline void FatalSignalHandler(int sig) {
+  RestoreTerminalFromSignal();
+  // SA_RESETHAND already put the default disposition back, so re-raising
+  // kills the process the way it was going to die anyway: the exit status
+  // stays correct and the crash signals still dump core. The signal is
+  // blocked for the duration of the handler, so it lands on return.
+  raise(sig);
+}
+
+inline void InstallFatalSignalHandlers() {
+  struct sigaction sa;
+  sa.sa_handler = FatalSignalHandler;
+  sigemptyset(&sa.sa_mask);
+  // SA_RESETHAND: restore the default disposition on delivery, so a second
+  // fatal signal (a crash inside the handler, say) cannot recurse.
+  sa.sa_flags = SA_RESETHAND;
+  for (int i = 0; i < kFatalSignalCount; ++i) {
+    sigaction(kFatalSignals[i], &sa, &g_saved_signal_handlers[i]);
+  }
+}
+
+inline void RemoveFatalSignalHandlers() {
+  for (int i = 0; i < kFatalSignalCount; ++i) {
+    sigaction(kFatalSignals[i], &g_saved_signal_handlers[i], nullptr);
+  }
+}
+
+}  // namespace internal
+#endif
+
 class TerminalDevice {
  public:
   virtual ~TerminalDevice() = default;
@@ -161,6 +227,12 @@ class SystemTerminalDevice : public TerminalDevice {
     terminal.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &terminal);
 
+    // From here on a signal death would strand the terminal in raw mode with
+    // mouse reporting on, so arm the restore path before writing the modes.
+    internal::g_saved_termios = previous_termios_;
+    internal::g_raw_mode_active = 1;
+    internal::InstallFatalSignalHandlers();
+
     struct sigaction sa;
     sa.sa_handler = sigwinch_handler;
     sigemptyset(&sa.sa_mask);
@@ -181,6 +253,8 @@ class SystemTerminalDevice : public TerminalDevice {
     Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
 #else
     Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    internal::g_raw_mode_active = 0;
+    internal::RemoveFatalSignalHandlers();
     sigaction(SIGWINCH, &previous_sigaction_, nullptr);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &previous_termios_);
 #endif

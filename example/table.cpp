@@ -83,7 +83,7 @@ class TableDemo : public Component<TableDemo> {
               <td class="status disabled">Inactive</td>
             </tr>
             <tr>
-              <td rowspan="7" class="border">rowspan=4</td>
+              <td rowspan="4" class="border">rowspan=4</td>
               <td>Mouse H</td>
               <td>Accessories</td>
               <td>$25.50</td>

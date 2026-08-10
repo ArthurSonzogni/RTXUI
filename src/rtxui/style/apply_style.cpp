@@ -1234,27 +1234,36 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  // Like the `border` shorthand above, a single side also accepts a
+  // border-style keyword: it selects the frame's character set and gives that
+  // side a thickness of one cell. Without this, `border-bottom: solid` parsed
+  // as the integer 0 and silently drew nothing.
+  auto ApplyBorderSide = [&style, &v](int& side) {
+    if (auto style_opt = ParseBorderStyle(v)) {
+      style.border_style = *style_opt;
+      side = (*style_opt == BorderStyle::None) ? 0 : 1;
+      return;
+    }
+    side = StoI(v);
+  };
+
   if (p == "border-top") {
-    int bw = StoI(v);
-    style.border.top = bw;
+    ApplyBorderSide(style.border.top);
     return;
   }
 
   if (p == "border-bottom") {
-    int bw = StoI(v);
-    style.border.bottom = bw;
+    ApplyBorderSide(style.border.bottom);
     return;
   }
 
   if (p == "border-left") {
-    int bw = StoI(v);
-    style.border.left = bw;
+    ApplyBorderSide(style.border.left);
     return;
   }
 
   if (p == "border-right") {
-    int bw = StoI(v);
-    style.border.right = bw;
+    ApplyBorderSide(style.border.right);
     return;
   }
 
@@ -1311,6 +1320,11 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "flex-basis") {
     style.flex_basis = ParseLength(v);
+    return;
+  }
+
+  if (p == "order") {
+    style.order = StoI(v);
     return;
   }
 

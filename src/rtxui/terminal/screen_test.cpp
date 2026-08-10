@@ -82,16 +82,17 @@ TEST_CASE("Screen.StepExecution", "[terminal]") {
   auto component = Ref<EventTrackerComponent>::New();
   Screen screen(component, device);
 
-  // Push 'a' and 'b' to input
+  // Step() drains everything buffered when it runs, so a batch of queued
+  // bytes is decoded and dispatched in order within a single Step -- 'a'
+  // first, leaving 'b' as the last event seen.
   device->PushInput("ab");
-
-  // First Step() should process 'a'
-  screen.Step();
-  REQUIRE(component->last_event == "key:a");
-
-  // Second Step() should process 'b'
   screen.Step();
   REQUIRE(component->last_event == "key:b");
+
+  // A key arriving on its own is still dispatched by the next Step().
+  device->PushInput("c");
+  screen.Step();
+  REQUIRE(component->last_event == "key:c");
 
   // Push Ctrl-C to input and check if it terminates running_
   device->PushInput("\x03");
