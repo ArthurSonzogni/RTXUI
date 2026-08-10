@@ -7988,6 +7988,84 @@ class OverlineTestComponent : public rtxui::Component<OverlineTestComponent> {
 };
 }  // namespace
 
+namespace {
+class StructuralPseudoTestApp : public Component<StructuralPseudoTestApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    Component<StructuralPseudoTestApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div id="many">
+        <span id="a">A</span>
+        <span id="b">B</span>
+        <span id="c">C</span>
+      </div>
+      <div id="solo">
+        <span id="only">Only</span>
+      </div>
+      <div id="blank"></div>
+      <div id="ws">
+      </div>
+      <div id="filled">text</div>
+    </div>
+    <style>
+      span:only-child { background-color: rgb(1, 2, 3); }
+      span:nth-last-child(1) { color: rgb(4, 5, 6); }
+      span:nth-last-child(odd) { margin-left: 7; }
+      div:empty { background-color: rgb(9, 9, 9); }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("Structural pseudo-classes: only-child, empty, nth-last-child",
+          "[component][css]") {
+  auto app = Ref<StructuralPseudoTestApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+  rtxui::Screen screen(app, device);
+  auto* root = app->Root();
+  REQUIRE(root != nullptr);
+
+  auto at = [&](const char* sel) {
+    auto* e = root->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION(":only-child needs to be the sole structural sibling") {
+    CHECK(at("#only")->style.background_color.value() == Color::RGB(1, 2, 3));
+    CHECK_FALSE(at("#a")->style.background_color.has_value());
+    CHECK_FALSE(at("#b")->style.background_color.has_value());
+    CHECK_FALSE(at("#c")->style.background_color.has_value());
+  }
+
+  SECTION(":nth-last-child counts from the end") {
+    // C is last, so nth-last-child(1); A is third from the end.
+    CHECK(at("#c")->style.foreground_color.value() == Color::RGB(4, 5, 6));
+    CHECK_FALSE(at("#a")->style.foreground_color.has_value());
+    CHECK_FALSE(at("#b")->style.foreground_color.has_value());
+    // Positions from the end: C=1, B=2, A=3 -> the odd ones are C and A.
+    CHECK(at("#c")->style.margin.left == 7);
+    CHECK(at("#a")->style.margin.left == 7);
+    CHECK(at("#b")->style.margin.left == 0);
+  }
+
+  SECTION(":empty ignores whitespace-only content") {
+    CHECK(at("#blank")->style.background_color.value() == Color::RGB(9, 9, 9));
+    // Indentation alone must not make an element non-empty, or :empty would
+    // never match anything written across multiple lines.
+    CHECK(at("#ws")->style.background_color.value() == Color::RGB(9, 9, 9));
+    CHECK_FALSE(at("#filled")->style.background_color.has_value());
+    // An element with element children is not empty either.
+    CHECK_FALSE(at("#many")->style.background_color.has_value());
+  }
+}
+
+
 TEST_CASE("text-decoration: overline reaches the cells and inherits",
           "[component][style][paint][decoration]") {
   auto container = rtxui::Ref<OverlineTestComponent>::New();
