@@ -1675,19 +1675,34 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  // `start`/`end` are accepted alongside `flex-start`/`flex-end`, matching
+  // parse_align_items below: CSS box alignment renamed them when it outgrew
+  // flexbox, and both spellings are in current use.
+  auto parse_justify_content =
+      [](std::string_view kw) -> std::optional<JustifyContent> {
+    if (kw == "flex-start" || kw == "start") return JustifyContent::FlexStart;
+    if (kw == "flex-end" || kw == "end") return JustifyContent::FlexEnd;
+    if (kw == "center") return JustifyContent::Center;
+    if (kw == "space-between") return JustifyContent::SpaceBetween;
+    if (kw == "space-around") return JustifyContent::SpaceAround;
+    if (kw == "space-evenly") return JustifyContent::SpaceEvenly;
+    return std::nullopt;
+  };
+  auto parse_align_content =
+      [](std::string_view kw) -> std::optional<AlignContent> {
+    if (kw == "stretch") return AlignContent::Stretch;
+    if (kw == "flex-start" || kw == "start") return AlignContent::FlexStart;
+    if (kw == "flex-end" || kw == "end") return AlignContent::FlexEnd;
+    if (kw == "center") return AlignContent::Center;
+    if (kw == "space-between") return AlignContent::SpaceBetween;
+    if (kw == "space-around") return AlignContent::SpaceAround;
+    if (kw == "space-evenly") return AlignContent::SpaceEvenly;
+    return std::nullopt;
+  };
+
   if (p == "justify-content") {
-    if (v == "flex-start") {
-      style.justify_content = JustifyContent::FlexStart;
-    } else if (v == "flex-end") {
-      style.justify_content = JustifyContent::FlexEnd;
-    } else if (v == "center") {
-      style.justify_content = JustifyContent::Center;
-    } else if (v == "space-between") {
-      style.justify_content = JustifyContent::SpaceBetween;
-    } else if (v == "space-around") {
-      style.justify_content = JustifyContent::SpaceAround;
-    } else if (v == "space-evenly") {
-      style.justify_content = JustifyContent::SpaceEvenly;
+    if (auto parsed = parse_justify_content(v)) {
+      style.justify_content = *parsed;
     }
     return;
   }
@@ -1775,20 +1790,25 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "align-content") {
-    if (v == "stretch") {
-      style.align_content = AlignContent::Stretch;
-    } else if (v == "flex-start") {
-      style.align_content = AlignContent::FlexStart;
-    } else if (v == "flex-end") {
-      style.align_content = AlignContent::FlexEnd;
-    } else if (v == "center") {
-      style.align_content = AlignContent::Center;
-    } else if (v == "space-between") {
-      style.align_content = AlignContent::SpaceBetween;
-    } else if (v == "space-around") {
-      style.align_content = AlignContent::SpaceAround;
-    } else if (v == "space-evenly") {
-      style.align_content = AlignContent::SpaceEvenly;
+    if (auto parsed = parse_align_content(v)) {
+      style.align_content = *parsed;
+    }
+    return;
+  }
+
+  // place-content: <align-content> <justify-content>?, the block-axis value
+  // first. A single value sets both axes, as with place-items/place-self.
+  if (p == "place-content") {
+    auto parts = SplitWords(v);
+    if (parts.empty()) {
+      return;
+    }
+    if (auto parsed = parse_align_content(parts[0])) {
+      style.align_content = *parsed;
+    }
+    std::string_view justify = parts.size() >= 2 ? parts[1] : parts[0];
+    if (auto parsed = parse_justify_content(justify)) {
+      style.justify_content = *parsed;
     }
     return;
   }

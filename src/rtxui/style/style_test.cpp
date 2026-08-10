@@ -1350,3 +1350,66 @@ TEST_CASE("CSS ::part() selector parsing", "[css][part]") {
 }
 
 
+
+TEST_CASE("place-content sets both content-distribution axes",
+          "[style][flex][grid]") {
+  // place-items and place-self existed, and both of place-content's longhands
+  // did, but the shorthand itself fell through to the unknown-property path
+  // and silently did nothing.
+  rtxui::ComputedStyle style;
+
+  SECTION("One value sets both axes") {
+    rtxui::ApplyStyle(style, {"place-content", "center"});
+    CHECK(style.align_content == rtxui::AlignContent::Center);
+    CHECK(style.justify_content == rtxui::JustifyContent::Center);
+  }
+
+  SECTION("Two values are block axis then inline axis") {
+    rtxui::ApplyStyle(style, {"place-content", "flex-end space-between"});
+    CHECK(style.align_content == rtxui::AlignContent::FlexEnd);
+    CHECK(style.justify_content == rtxui::JustifyContent::SpaceBetween);
+  }
+
+  SECTION("A value valid on only one axis leaves the other alone") {
+    // `stretch` is an align-content value with no justify-content counterpart.
+    rtxui::ApplyStyle(style, {"justify-content", "center"});
+    rtxui::ApplyStyle(style, {"place-content", "stretch"});
+    CHECK(style.align_content == rtxui::AlignContent::Stretch);
+    CHECK(style.justify_content == rtxui::JustifyContent::Center);
+  }
+
+  SECTION("An unknown keyword changes nothing") {
+    rtxui::ApplyStyle(style, {"place-content", "nonsense"});
+    CHECK(style.align_content == rtxui::AlignContent::Stretch);
+    CHECK(style.justify_content == rtxui::JustifyContent::FlexStart);
+  }
+}
+
+TEST_CASE("justify-content and align-content accept start/end",
+          "[style][flex]") {
+  // align-items/align-self took the CSS box-alignment spellings `start`/`end`
+  // but the content-distribution properties only took `flex-start`/`flex-end`,
+  // so `justify-content: start` parsed to nothing and left the default.
+  rtxui::ComputedStyle style;
+
+  SECTION("justify-content") {
+    rtxui::ApplyStyle(style, {"justify-content", "end"});
+    CHECK(style.justify_content == rtxui::JustifyContent::FlexEnd);
+    rtxui::ApplyStyle(style, {"justify-content", "start"});
+    CHECK(style.justify_content == rtxui::JustifyContent::FlexStart);
+  }
+
+  SECTION("align-content") {
+    rtxui::ApplyStyle(style, {"align-content", "end"});
+    CHECK(style.align_content == rtxui::AlignContent::FlexEnd);
+    rtxui::ApplyStyle(style, {"align-content", "start"});
+    CHECK(style.align_content == rtxui::AlignContent::FlexStart);
+  }
+
+  SECTION("The flex- spellings still work") {
+    rtxui::ApplyStyle(style, {"justify-content", "flex-end"});
+    CHECK(style.justify_content == rtxui::JustifyContent::FlexEnd);
+    rtxui::ApplyStyle(style, {"align-content", "space-evenly"});
+    CHECK(style.align_content == rtxui::AlignContent::SpaceEvenly);
+  }
+}

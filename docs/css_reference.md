@@ -133,8 +133,9 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 <CssProperty name="place-self" values="<align-self> <justify-self>?" shorthand description="Shorthand for align-self + justify-self." />
 <CssProperty name="align-items" values="stretch | flex-start | flex-end | center | baseline" description="Alignment of items along the cross axis." />
 <CssProperty name="align-self" values="auto | stretch | flex-start | flex-end | center | baseline" description="Alignment of individual flex item along the cross axis." />
-<CssProperty name="align-content" values="stretch | flex-start | flex-end | center | space-between | space-around | space-evenly" description="Alignment of flex lines in multi-line flex container." />
-<CssProperty name="justify-content" values="flex-start | flex-end | center | space-between | space-around | space-evenly" description="Alignment of items along the main axis." />
+<CssProperty name="align-content" values="stretch | flex-start (start) | flex-end (end) | center | space-between | space-around | space-evenly" description="Alignment of flex lines in multi-line flex container. `start` and `end` are accepted as aliases of `flex-start` and `flex-end`." />
+<CssProperty name="justify-content" values="flex-start (start) | flex-end (end) | center | space-between | space-around | space-evenly" description="Alignment of items along the main axis. `start` and `end` are accepted as aliases of `flex-start` and `flex-end`." />
+<CssProperty name="place-content" values="<align-content> <justify-content>?" shorthand description="Shorthand for align-content + justify-content. One value sets both axes; a value valid on only one axis (e.g. `stretch`) leaves the other unchanged." />
 <CssProperty name="gap" values="<length>" shorthand description="Spacing between flex items." />
 <CssProperty name="row-gap" values="<length>" description="Spacing between flex rows/lines." />
 <CssProperty name="column-gap" values="<length>" description="Spacing between flex columns/items." />
@@ -208,4 +209,79 @@ A declaration referencing an undefined variable without a fallback is ignored. F
     *   `alpha(<amount>)`: Sets the alpha transparency of the current resolved color to the specified amount (e.g., `alpha(50%)` or `alpha(0.5)`).
 
 ### Border Styles
-*   `none`, `solid`, `dashed`, `dotted`, `heavy`, `double`, `round`, `wide`, `tall`, `ascii`, `blank`, `shadow`, `shade-light` (`░`), `shade-medium` (`▒`), `shade-dark` (`▓`), `squiggle`, `double-horizontal`, `double-vertical`, `hkey`, `vkey`, `inner`, `outer`, `panel`.
+
+Values for `border` and `border-style`. Each draws the one-cell ring around the
+element; `border-color` sets the color the glyphs are drawn in (defaulting to
+the element's `color`).
+
+```
+  ascii      blank      dashed     double
+  +-------+             ┏╍╍╍╍╍╍╍┓  ╔═══════╗
+  |       |             ╏       ╏  ║       ║
+  +-------+             ┗╍╍╍╍╍╍╍┛  ╚═══════╝
+
+  hkey       heavy      inner      none
+  ▔▔▔▔▔▔▔▔▔  ┏━━━━━━━┓  ▗▄▄▄▄▄▄▄▖
+             ┃       ┃  ▐       ▌
+  ▁▁▁▁▁▁▁▁▁  ┗━━━━━━━┛  ▝▀▀▀▀▀▀▀▘
+
+  outer      panel      round      solid
+  ▛▀▀▀▀▀▀▀▜  ▊███████▎  ╭───────╮  ┌───────┐
+  ▌       ▐  ▊       ▎  │       │  │       │
+  ▙▄▄▄▄▄▄▄▟  ▊▁▁▁▁▁▁▁▎  ╰───────╯  └───────┘
+
+  tall       thick      vkey       wide
+  ▊▔▔▔▔▔▔▔▎  █▀▀▀▀▀▀▀█  ▏       ▕  ▁▁▁▁▁▁▁▁▁
+  ▊       ▎  █       █  ▏       ▕  ▎       ▊
+  ▊▁▁▁▁▁▁▁▎  █▄▄▄▄▄▄▄█  ▏       ▕  ▔▔▔▔▔▔▔▔▔
+
+  dotted     double-horizontal  double-vertical  shadow
+  ·········  ╒═══════╕          ╓───────╖        ░░░░░░░░▓
+  ·       ·  │       │          ║       ║        ░       ▓
+  ·········  ╘═══════╛          ╙───────╜        ░▓▓▓▓▓▓▓▓
+
+  shade-light  shade-medium  shade-dark  squiggle
+  ░░░░░░░░░    ▒▒▒▒▒▒▒▒▒     ▓▓▓▓▓▓▓▓▓   ~~~~~~~~~
+  ░       ░    ▒       ▒     ▓       ▓   ~       ~
+  ░░░░░░░░░    ▒▒▒▒▒▒▒▒▒     ▓▓▓▓▓▓▓▓▓   ~~~~~~~~~
+```
+
+| Keyword | Alias | Notes |
+| --- | --- | --- |
+| `none` | | No ring, and no cell reserved for one. |
+| `blank` | | Reserves the ring but draws nothing, so the element's own background shows through it. |
+| `ascii` | | `+ - \|` only — for terminals or fonts without box-drawing glyphs. |
+| `solid` | | Light box-drawing lines. |
+| `round` | `rounded` | `solid` with rounded corners. |
+| `heavy` | | Heavy box-drawing lines. |
+| `double` | | Double lines on all four sides. |
+| `double-horizontal` | | Double lines top and bottom, single at the sides. |
+| `double-vertical` | | Double lines at the sides, single top and bottom. |
+| `dashed` | | Dashed heavy lines. |
+| `dotted` | | A ring of `·`. |
+| `squiggle` | `wave` | A ring of `~`. |
+| `thick` | | Full blocks at the sides, half blocks top and bottom. |
+| `outer` | | Half-cell bars hugging the outside of the ring. |
+| `inner` | | Half-cell bars hugging the inside of the ring. |
+| `tall` | | Quarter-cell bars at the sides, eighth-cell lines top and bottom. |
+| `wide` | | Quarter-cell bars at the sides, eighth-cell lines inset top and bottom. |
+| `panel` | | `tall` with a solid bar across the top, for a title bar. |
+| `hkey` | | Eighth-cell lines top and bottom only; no sides. |
+| `vkey` | | Eighth-cell lines at the sides only; no top or bottom. |
+| `shade-light` | | A ring of `░`. |
+| `shade-medium` | | A ring of `▒`. |
+| `shade-dark` | | A ring of `▓`. |
+| `shadow` | `3d` | Light on the top and left, dark on the bottom and right, for a raised look. |
+
+The partial-block styles (`tall`, `panel`, `wide`, `inner`, `outer`, `thick`)
+split each border cell between the border color and the element's own
+background — like CSS, `background-color` is clipped to the border box, so the
+element's background fills the ring rather than its parent's showing through.
+Where a strip has to sit against the right of its cell, the cell is drawn in
+reverse video (`ESC[7m`) rather than by swapping the two colors, so that an
+element with no background of its own still resolves against the terminal's
+default background instead of its default foreground.
+
+Single sides can be set independently with `border-top`, `border-right`,
+`border-bottom` and `border-left`; a lone side renders as a plain line rather
+than a partial box.
