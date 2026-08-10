@@ -26,6 +26,7 @@ struct Cell {
   bool underlined : 1 = false;
   bool underlined_double : 1 = false;
   bool strikethrough : 1 = false;
+  bool overlined : 1 = false;
   bool automerge : 1 = false;
   // True for the second cell of a double-width (e.g. CJK) grapheme.
   // The terminal cursor is already past this cell; nothing should be printed.
@@ -47,6 +48,7 @@ inline bool operator==(const Cell& lhs, const Cell& rhs) noexcept {
          lhs.underlined == rhs.underlined &&
          lhs.underlined_double == rhs.underlined_double &&
          lhs.strikethrough == rhs.strikethrough &&
+         lhs.overlined == rhs.overlined &&
          lhs.is_continuation == rhs.is_continuation &&
          lhs.character == rhs.character;
 }

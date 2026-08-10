@@ -454,11 +454,28 @@ TEST_CASE("Text decoration parsing in ApplyStyle", "[style][text-decoration]") {
     CHECK(style.blink.value() == true);
   }
 
+  SECTION("overline") {
+    rtxui::ApplyStyle(style, {"text-decoration", "overline"});
+    CHECK(style.overlined.has_value());
+    CHECK(style.overlined.value() == true);
+    // "overline" and "underline" are not substrings of one another, so the
+    // one must not switch the other on.
+    CHECK(style.underlined.value_or(false) == false);
+    CHECK(style.underlined_double.value_or(false) == false);
+  }
+
+  SECTION("overline combines with other decorations") {
+    rtxui::ApplyStyle(style, {"text-decoration", "overline underline"});
+    CHECK(style.overlined.value_or(false) == true);
+    CHECK(style.underlined.value_or(false) == true);
+  }
+
   SECTION("none") {
     rtxui::ApplyStyle(style, {"text-decoration", "none"});
     CHECK(style.underlined.value_or(true) == false);
     CHECK(style.underlined_double.value_or(true) == false);
     CHECK(style.strikethrough.value_or(true) == false);
+    CHECK(style.overlined.value_or(true) == false);
     CHECK(style.blink.value_or(true) == false);
   }
 }

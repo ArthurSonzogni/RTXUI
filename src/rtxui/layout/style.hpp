@@ -387,6 +387,7 @@ struct ComputedStyleCore {
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;
   std::optional<bool> strikethrough;
+  std::optional<bool> overlined;
   std::optional<bool> blink;
 
   Overflow overflow_x = Overflow::Visible;
