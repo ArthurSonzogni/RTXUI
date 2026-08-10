@@ -7970,3 +7970,50 @@ TEST_CASE("disabled=\"\" blocks interaction on checkbox/radio/select/slider/"
 
 
 
+
+namespace {
+class OverlineTestComponent : public rtxui::Component<OverlineTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<OverlineTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div class="over">ab<div class="plain">cd</div></div>
+    <style>
+      .over { display: block; text-decoration: overline; }
+      .plain { display: inline; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("text-decoration: overline reaches the cells and inherits",
+          "[component][style][paint][decoration]") {
+  auto container = rtxui::Ref<OverlineTestComponent>::New();
+  container->Mount();
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  auto root_fragment = rtxui::RunLayout(
+      {root_box.get()}, {{20, rtxui::MeasureMode::Exactly},
+                         {4, rtxui::MeasureMode::Exactly}});
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(20, 4);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  int found = 0;
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      const auto& cell = texture[x, y];
+      // "ab" is styled directly; "cd" only inherits it from the parent.
+      if (cell.character == "a" || cell.character == "b" ||
+          cell.character == "c" || cell.character == "d") {
+        INFO("cell " << x << "," << y << " = " << cell.character);
+        CHECK(cell.overlined);
+        ++found;
+      }
+    }
+  }
+  CHECK(found == 4);
+}

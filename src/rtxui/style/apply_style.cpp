@@ -1006,6 +1006,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.underlined = false;
       style.underlined_double = false;
       style.strikethrough = false;
+      style.overlined = false;
       style.blink = false;
       return;
     }
@@ -1020,6 +1021,9 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
           v.find("double") != std::string_view::npos));
     style.strikethrough = (v.find("line-through") != std::string_view::npos ||
                            v.find("strikethrough") != std::string_view::npos);
+    // "overline" must not also match the "underline" tests above; it does not,
+    // since neither word is a substring of the other.
+    style.overlined = (v.find("overline") != std::string_view::npos);
     style.blink = (v.find("blink") != std::string_view::npos);
     return;
   }

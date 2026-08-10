@@ -284,6 +284,7 @@ void PaintImpl(const PhysicalFragment* frag,
                bool inherited_underlined,
                bool inherited_underlined_double,
                bool inherited_strikethrough,
+               bool inherited_overlined,
                bool inherited_blink,
                ClipRect clip,
                float inherited_opacity) {
@@ -322,6 +323,7 @@ void PaintImpl(const PhysicalFragment* frag,
       frag->underlined_double.value_or(inherited_underlined_double);
   bool current_strikethrough =
       frag->strikethrough.value_or(inherited_strikethrough);
+  bool current_overlined = frag->overlined.value_or(inherited_overlined);
   bool current_blink = frag->blink.value_or(inherited_blink);
 
   // 0. Draw Background
@@ -503,6 +505,7 @@ void PaintImpl(const PhysicalFragment* frag,
         cell.underlined = current_underlined;
         cell.underlined_double = current_underlined_double;
         cell.strikethrough = current_strikethrough;
+        cell.overlined = current_overlined;
         cell.blink = current_blink;
       }
       // For double-width graphemes, mark the continuation cell so the renderer
@@ -877,7 +880,7 @@ void PaintImpl(const PhysicalFragment* frag,
               is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
               current_background_color, current_bold, current_dim,
               current_italic, current_underlined, current_underlined_double,
-              current_strikethrough, current_blink,
+              current_strikethrough, current_overlined, current_blink,
               child_clip_to_pass, current_opacity);
   }
 }
@@ -890,7 +893,7 @@ void Paint(const PhysicalFragment* frag,
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y,
             texture.width(), texture.height(),
             Color::RGB(255, 255, 255), Color(), false, false, false, false,
-            false, false, false,
+            false, false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
 }
 

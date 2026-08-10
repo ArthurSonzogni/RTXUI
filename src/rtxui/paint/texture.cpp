@@ -50,6 +50,12 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
                                : "\x1B[29m");  // CROSSED_OUT_RESET
   }
 
+  // Overline
+  if (UNLIKELY(next->overlined != prev->overlined)) {
+    ss << (next->overlined ? "\x1B[53m"     // OVERLINED
+                           : "\x1B[55m");  // OVERLINED_RESET
+  }
+
   if (UNLIKELY(next->foreground_color != prev->foreground_color)) {
     if (next->foreground_color.a == 0) {
       ss << "\x1B[39m";

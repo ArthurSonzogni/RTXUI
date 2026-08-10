@@ -49,6 +49,7 @@ struct PhysicalFragment {
   std::optional<bool> underlined;
   std::optional<bool> underlined_double;
   std::optional<bool> strikethrough;
+  std::optional<bool> overlined;
   std::optional<bool> blink;
   Visibility visibility = Visibility::Visible;
 

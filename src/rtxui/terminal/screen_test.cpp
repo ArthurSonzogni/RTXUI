@@ -4319,4 +4319,35 @@ TEST_CASE("Screen.ClickFixedPositionOverlay", "[terminal][mouse][dialog]") {
 }
 
 }  // namespace
+
+namespace {
+class OverlineScreenComponent : public Component<OverlineScreenComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Component<OverlineScreenComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div><div class="o">over</div><div>plain</div></div>
+    <style>
+      .o { text-decoration: overline; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("Overlined cells emit SGR 53 and reset it with SGR 55",
+          "[terminal][decoration]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  Screen screen(Ref<OverlineScreenComponent>::New(), device);
+
+  // Screen's constructor mounts, digests and draws once, so this is frame one.
+  std::string output = device->GetOutput();
+  REQUIRE(output.find("over") != std::string::npos);
+  CHECK(output.find("\x1b[53m") != std::string::npos);
+  // The attribute must be turned back off, or every later cell inherits it.
+  CHECK(output.find("\x1b[55m") != std::string::npos);
+  CHECK(output.find("\x1b[53m") < output.find("over"));
+}
+
 }  // namespace rtxui
