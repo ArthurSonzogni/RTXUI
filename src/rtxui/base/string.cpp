@@ -1172,22 +1172,6 @@ bool Bisearch(uint32_t ucs, const std::array<C, N>& table, C* out) {
   return false;
 }
 
-int codepoint_width(uint32_t ucs) {
-  if (IsControl(ucs)) {
-    return -1;
-  }
-
-  if (IsCombining(ucs)) {
-    return 0;
-  }
-
-  if (IsFullWidth(ucs)) {
-    return 2;
-  }
-
-  return 1;
-}
-
 }  // namespace
 
 // Split a string by a delimiter, return a vector of string views.
@@ -1399,10 +1383,6 @@ WordBreakProperty CodepointToWordBreakProperty(uint32_t codepoint) {
   WordBreakPropertyInterval interval = {0, 0, WBP::ALetter};
   std::ignore = Bisearch(codepoint, g_word_break_intervals, &interval);
   return interval.property;
-}
-
-int wchar_width(wchar_t ucs) {
-  return codepoint_width(uint32_t(ucs));
 }
 
 int string_width(std::string_view input) {
