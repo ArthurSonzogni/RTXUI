@@ -356,6 +356,8 @@ TerminalInputParser::Output TerminalInputParser::ParseESC() {
   switch (Current()) {
     case 'P':
       return ParseDCS();
+    case ']':
+      return ParseOSC();
     case '[':
       return ParseCSI();
     case 'O': {
@@ -376,6 +378,33 @@ TerminalInputParser::Output TerminalInputParser::ParseESC() {
       }
   }
 }
+// Operating System Command: ESC ] ... terminated by BEL or by ST (ESC \).
+//
+// These are replies to queries the application made -- the terminal's
+// background color, the clipboard, the window title. Nothing consumes one
+// today, but they have to be recognised regardless: without this they fell
+// through to the "some escape sequence we do not know" path and were handed to
+// the application one byte at a time, so a terminal answering a question
+// typed its answer into whatever had focus.
+TerminalInputParser::Output TerminalInputParser::ParseOSC() {
+  while (true) {
+    if (!Eat()) {
+      return UNCOMPLETED;
+    }
+    if (Current() == '\x07') {  // BEL
+      return DROP;
+    }
+    if (Current() == '\x1B') {
+      if (!Eat()) {
+        return UNCOMPLETED;
+      }
+      if (Current() == '\\') {  // ST
+        return DROP;
+      }
+    }
+  }
+}
+
 TerminalInputParser::Output TerminalInputParser::ParseDCS() {
   while (true) {
     if (!Eat()) {
