@@ -208,6 +208,20 @@ if(RTXUI_BUILD_TESTS)
       COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_examples.py"
     )
 
+    # Start every built example and check it draws a frame. The unit tests
+    # never link an example nor run main(), so nothing else noticed when one
+    # stopped starting.
+    if(RTXUI_BUILD_EXAMPLES)
+      add_test(NAME smoke_examples
+        COMMAND Python3::Interpreter
+                "${CMAKE_CURRENT_SOURCE_DIR}/scripts/smoke_examples.py"
+                "$<TARGET_FILE_DIR:rtxui_example_demo>"
+      )
+      # Each example gets a PTY and a second to draw; the default 1500s is far
+      # more than the sweep needs, but the per-example cost adds up.
+      set_tests_properties(smoke_examples PROPERTIES TIMEOUT 300)
+    endif()
+
     # Verify each public header compiles on its own. Most valuable where the
     # standard library differs from the one used day to day.
     add_test(NAME verify_headers
