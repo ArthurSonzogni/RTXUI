@@ -4350,4 +4350,98 @@ TEST_CASE("Overlined cells emit SGR 53 and reset it with SGR 55",
   CHECK(output.find("\x1b[53m") < output.find("over"));
 }
 
+
+namespace {
+class TabsClickApp : public Component<TabsClickApp> {
+ public:
+  std::string current_tab = "home";
+  std::string_view view = R"html(
+      <div class="content">
+        <h1>Title</h1>
+        <tabs value="{current_tab}">
+          <tab-pane label="Dashboard" name="home"><p>a</p></tab-pane>
+          <tab-pane label="Settings" name="settings"><p>b</p></tab-pane>
+        </tabs>
+      </div>
+      <style>
+        self { display: block; padding: 1; background-color: rgb(13, 17, 23); }
+      </style>
+    )html";
+  TabsClickApp() { Bind(current_tab); }
+};
+}  // namespace
+
+TEST_CASE("Switching tab keeps the header buttons styled", "[tabs][mouse][css]") {
+  // Regression: tabs::Digest() rebuilt its header buttons whenever the set of
+  // panes "changed", but compared panes by Element*. Selecting a tab changes
+  // the host's bound state, which re-renders it and hands out fresh pane
+  // elements, so every tab switch looked like a pane-set change. The rebuilt
+  // buttons were created inside Digest(), which runs after Render() resolved
+  // styles, so they kept an empty base_style: the whole header strip lost its
+  // padding and its background, active tab included.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(90, 24);
+  auto app = Ref<TabsClickApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto headers = [&] {
+    std::vector<Element*> found;
+    app->Root()->Visit([&](Element& el) {
+      for (const auto& c : el.classes) {
+        if (c == "tab-header-btn") {
+          found.push_back(&el);
+        }
+      }
+    });
+    return found;
+  };
+
+  auto has_class = [](Element* el, std::string_view name) {
+    return std::find(el->classes.begin(), el->classes.end(), name) !=
+           el->classes.end();
+  };
+
+  REQUIRE(headers().size() == 2);
+  REQUIRE(headers()[0]->style.padding.left == 2);
+  REQUIRE(headers()[0]->style.background_color.has_value());
+  REQUIRE(has_class(headers()[0], "active-tab"));
+
+  // Click the second header ("Settings"), addressed by where it was laid out
+  // rather than by a guessed coordinate. Mouse coordinates are 1-based.
+  Element* settings = headers()[1];
+  const int click_x = settings->absolute_x() + 2;
+  const int click_y = settings->absolute_y() + 1;
+  auto send = [&](Event::Mouse::Button b, Event::Mouse::Motion m) {
+    Event::Mouse e;
+    e.button = b;
+    e.motion = m;
+    e.x = click_x;
+    e.y = click_y;
+    screen.Dispatch(e);
+  };
+  send(Event::Mouse::Button::None, Event::Mouse::Motion::Moved);
+  send(Event::Mouse::Button::Left, Event::Mouse::Motion::Pressed);
+  send(Event::Mouse::Button::Left, Event::Mouse::Motion::Released);
+  app->Digest();
+  app->ResolveTargetStyles();
+
+  REQUIRE(app->current_tab == "settings");
+  auto after = headers();
+  REQUIRE(after.size() == 2);
+
+  // The selection moved...
+  CHECK_FALSE(has_class(after[0], "active-tab"));
+  CHECK(has_class(after[1], "active-tab"));
+
+  // ...and both buttons still carry the styles from the tabs component's own
+  // stylesheet, which is what used to be dropped.
+  for (Element* btn : after) {
+    INFO("header " << btn->Print(0));
+    CHECK(btn->style.padding.left == 2);
+    CHECK(btn->style.padding.right == 2);
+    CHECK(btn->style.background_color.has_value());
+  }
+}
+
 }  // namespace rtxui
