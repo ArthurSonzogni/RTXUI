@@ -271,6 +271,11 @@ struct CategorizedRules {
   // Matched separately (see MatchPartSelector): unlike every other bucket
   // above, these can apply to elements this component doesn't itself own.
   std::vector<const css::Ruleset*> part_rules;
+  // True when every ruleset is a bare `self { ... }`, so this component can
+  // only ever style its own root. Because each HTML tag is itself a component,
+  // most components in a tree are of this shape, and without this they still
+  // walk every descendant matching nothing.
+  bool only_self_rules = true;
 };
 
 ComponentBase::ComponentBase() = default;
@@ -1091,6 +1096,15 @@ void ResolveStylesRecursive(Element* element,
       }
     }
 
+    // Nothing below this point can match: every rule this component owns is a
+    // bare `self` rule and this element is not its root. The reset above still
+    // runs, so the memo and base_style bookkeeping are unchanged - only the
+    // matching, sorting and applying are skipped.
+    if (categorized_for_parts && categorized_for_parts->only_self_rules &&
+        element != component->Root()) {
+      goto recurse;
+    }
+
     {
     // Matching rulesets are collected first (in bucket order), so that all
     // --* declarations are known before var() substitution happens.
@@ -1576,10 +1590,20 @@ void ComponentBase::Render() {
           }
           if (!ruleset.parsed_selector.part.empty()) {
             categorized_rules_->part_rules.push_back(&ruleset);
+            categorized_rules_->only_self_rules = false;
             continue;
           }
           std::string_view selector_base = ruleset.parsed_selector.base;
           std::string_view selector_id = ruleset.parsed_selector.id;
+
+          const bool is_bare_self =
+              selector_id.empty() && ruleset.parsed_selector.classes.empty() &&
+              selector_base == "self" &&
+              ruleset.parsed_selector.attributes.empty() &&
+              ruleset.parsed_selector.parents.empty();
+          if (!is_bare_self) {
+            categorized_rules_->only_self_rules = false;
+          }
 
           if (!selector_id.empty()) {
             categorized_rules_->by_id[selector_id].push_back(&ruleset);
