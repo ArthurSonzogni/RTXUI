@@ -8318,3 +8318,70 @@ TEST_CASE("The :not() selector", "[component][css][selector]") {
     CHECK_FALSE(at("#b")->style.foreground_color.has_value());
   }
 }
+
+namespace {
+class OfTypeSelectorApp : public rtxui::Component<OfTypeSelectorApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    Import<rtxui::p>();
+    rtxui::Component<OfTypeSelectorApp>::InitReflection();
+  }
+  // The interleaving matters: span #s1 is the parent's 1st child but so is
+  // nothing else of its type, and #p1 is the 2nd child yet the 1st <p>.
+  std::string_view view = R"(
+    <div>
+      <span id="s1">1</span>
+      <p id="p1">2</p>
+      <span id="s2">3</span>
+      <p id="p2">4</p>
+      <p id="p3">5</p>
+    </div>
+    <div id="lonely-parent"><span id="only-span">x</span></div>
+    <style>
+      p:first-of-type { color: rgb(1, 1, 1); }
+      p:last-of-type { color: rgb(2, 2, 2); }
+      p:nth-of-type(2) { margin-left: 5; }
+      span:only-of-type { padding-left: 6; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("The -of-type structural pseudo-classes",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<OfTypeSelectorApp>::New();
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("first-of-type counts only same-tag siblings") {
+    // #p1 is the parent's second child, but its first <p>.
+    CHECK(at("#p1")->style.foreground_color == Color::RGB(1, 1, 1));
+    CHECK_FALSE(at("#p2")->style.foreground_color == Color::RGB(1, 1, 1));
+  }
+
+  SECTION("last-of-type") {
+    CHECK(at("#p3")->style.foreground_color == Color::RGB(2, 2, 2));
+  }
+
+  SECTION("nth-of-type") {
+    // Second <p>, even though it is the fourth child.
+    CHECK(at("#p2")->style.margin.left == 5);
+    CHECK(at("#p1")->style.margin.left == 0);
+    CHECK(at("#p3")->style.margin.left == 0);
+  }
+
+  SECTION("only-of-type ignores siblings of other tags") {
+    // #only-span is its parent's only child at all.
+    CHECK(at("#only-span")->style.padding.left == 6);
+    // #s1 has another <span> sibling, so it is not the only one of its type,
+    // even though it has non-span siblings too.
+    CHECK(at("#s1")->style.padding.left == 0);
+  }
+}
