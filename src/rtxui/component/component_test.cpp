@@ -8385,3 +8385,81 @@ TEST_CASE("The -of-type structural pseudo-classes",
     CHECK(at("#s1")->style.padding.left == 0);
   }
 }
+
+namespace {
+class HostStyledButtonsApp : public rtxui::Component<HostStyledButtonsApp> {
+ public:
+  int mode = 0;
+  std::string a_class() const { return mode == 0 ? "active" : ""; }
+  std::string b_class() const { return mode == 1 ? "active" : ""; }
+  void InitReflection() override {
+    Import<rtxui::button>();
+    rtxui::Component<HostStyledButtonsApp>::InitReflection();
+  }
+  // `self { button { … } }` compiles to the descendant selector `self button`,
+  // so matching it needs the button to still be reachable from this root.
+  std::string_view view = R"(
+    <div>
+      <button id="a" class="{a_class}">A</button>
+      <button id="b" class="{b_class}">B</button>
+      <button id="c">C</button>
+    </div>
+    <style>
+      self {
+        button {
+          border: vkey;
+          padding: 0 1;
+        }
+      }
+      .active { font-weight: bold; }
+    </style>
+  )";
+  HostStyledButtonsApp() { Bind(mode); Bind(a_class); Bind(b_class); }
+};
+}  // namespace
+
+TEST_CASE("A nested component keeps its host's rules when it re-renders",
+          "[component][style][css]") {
+  // Regression: Render() detaches its root from the parent tree while it
+  // collects and restores element state by path, and styles were resolved
+  // during that window. A host styling this component with a descendant
+  // selector -- which is what CSS nesting compiles to -- then matched nothing,
+  // because an orphaned root has no ancestors. Changing a bound class made the
+  // button component re-render, and it came back stripped of every rule its
+  // host had aimed at it: in example/conditional.cpp the tab buttons lost
+  // their borders and collapsed from three rows to one on the first click.
+  auto app = rtxui::Ref<HostStyledButtonsApp>::New();
+  app->Mount();
+
+  auto border_of = [&](const char* id) {
+    auto* element = app->Root()->QuerySelector(id);
+    REQUIRE(element != nullptr);
+    return element->style.border.left;
+  };
+  auto padding_of = [&](const char* id) {
+    auto* element = app->Root()->QuerySelector(id);
+    REQUIRE(element != nullptr);
+    return element->style.padding.left;
+  };
+
+  REQUIRE(border_of("#a") == 1);
+  REQUIRE(border_of("#b") == 1);
+
+  // Moving the active class re-renders both #a and #b, but not #c.
+  app->mode = 1;
+  app->Digest();
+  app->ResolveStyles();
+
+  CHECK(border_of("#a") == 1);
+  CHECK(border_of("#b") == 1);
+  CHECK(border_of("#c") == 1);
+  CHECK(padding_of("#a") == 1);
+  CHECK(padding_of("#b") == 1);
+
+  // And back again, since the bug only showed after a re-render.
+  app->mode = 0;
+  app->Digest();
+  app->ResolveStyles();
+  CHECK(border_of("#a") == 1);
+  CHECK(border_of("#b") == 1);
+}
