@@ -23,14 +23,12 @@ class BorderBox : public Component<BorderBox> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-
-          background-color: var(--bg);
           display: block;
           flex-grow: 1;
         }
         .box-wrapper {
           border: {border_class};
+          background-color:red;
           border-color: rgb(100, 200, 255);
           padding: 1;
           margin: 1;
