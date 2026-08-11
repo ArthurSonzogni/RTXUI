@@ -1,4 +1,6 @@
 #include "rtxui/layout/layout.hpp"
+#include "rtxui/layout/layout_arena.hpp"
+#include <algorithm>
 
 #include <catch2/catch_test_macros.hpp>
 #include <map>
@@ -4111,6 +4113,41 @@ TEST_CASE("Layout: <blockquote> is a registered, block-level, indented "
   // The left border must actually render (session's earlier single-side
   // border fix makes this a clean line, not a stray corner glyph).
   CHECK(layout_text.find("\xe2\x94\x82") != std::string::npos);  // "│"
+}
+
+
+TEST_CASE("The layout arena is double buffered", "[layout][arena]") {
+  // Regression (1302018f, 257893e4): fragments and boxes are allocate_shared'd
+  // into a bump arena that Draw() resets each frame, control block included.
+  // A shared_ptr copy that outlived the frame -- a local held across Draw() in
+  // an event handler was the case that bit -- released into memory the new
+  // tree had already claimed, corrupting its control blocks into "pure virtual
+  // method called" aborts.
+  //
+  // The fix was to give ResetLayoutArena() two arenas to flip between, so a
+  // frame never builds on the memory the previous frame is still holding. That
+  // is what this pins: it is invisible in normal rendering and only shows up
+  // as a crash under ASAN, so nothing else would notice it being reverted.
+  ResetLayoutArena();
+  auto* first = static_cast<unsigned char*>(
+      ActiveLayoutArena().Allocate(256, alignof(std::max_align_t)));
+  REQUIRE(first != nullptr);
+  std::fill_n(first, 256, 0xAB);
+
+  // One frame later, the new tree must not be handed the bytes the old one is
+  // still using.
+  ResetLayoutArena();
+  auto* second = static_cast<unsigned char*>(
+      ActiveLayoutArena().Allocate(256, alignof(std::max_align_t)));
+  REQUIRE(second != nullptr);
+  CHECK(second != first);
+
+  // Disjoint, not merely different: writing the new frame's block must leave
+  // the block the previous frame still owns untouched.
+  std::fill_n(second, 256, 0xCD);
+  bool previous_intact = std::all_of(first, first + 256,
+                                     [](unsigned char b) { return b == 0xAB; });
+  CHECK(previous_intact);
 }
 
 }  // namespace rtxui
