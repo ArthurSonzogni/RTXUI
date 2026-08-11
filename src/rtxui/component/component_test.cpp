@@ -7777,6 +7777,88 @@ TEST_CASE("PrintCompilerStyleError Formatting", "[component][error]") {
   CHECK(output.find("      5 │ line 5") != std::string::npos);
 }
 
+namespace {
+class MalformedTemplateApp : public Component<MalformedTemplateApp> {
+ public:
+  // Unterminated tag: xml::Parse rejects this.
+  std::string_view view = R"(<div class=)";
+};
+}  // namespace
+
+TEST_CASE("A malformed template reaches the XML error handler instead of exiting",
+          "[component][error]") {
+  // Regression: the template parse path called std::exit(1) unconditionally,
+  // ignoring the handler SetXmlErrorHandler installs -- so an app that had
+  // asked to surface XML errors through its own UI was killed instead. Found
+  // by the layout fuzzer, which could not survive its own first malformed
+  // input.
+  std::vector<rtxui::XmlError> seen;
+  rtxui::SetXmlErrorHandler(
+      [&](const rtxui::XmlError& e) { seen.push_back(e); });
+
+  auto app = Ref<MalformedTemplateApp>::New();
+  app->Mount();  // Must return rather than terminate the process.
+
+  rtxui::SetXmlErrorHandler(nullptr);
+
+  REQUIRE(seen.size() == 1);
+  CHECK_FALSE(seen[0].message.empty());
+  // Mount must not go on to read the parse result it does not have; the
+  // component simply renders nothing.
+  CHECK(app->Root() != nullptr);
+}
+
+namespace {
+class ControlFlowNoAttrApp : public Component<ControlFlowNoAttrApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Component<ControlFlowNoAttrApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <if><div>a</div></if>
+      <for><div>b</div></for>
+    </div>
+  )";
+};
+
+class ElifNoAttrApp : public Component<ElifNoAttrApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Component<ElifNoAttrApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <if condition="false"><div>a</div></if>
+      <elif><div>b</div></elif>
+    </div>
+  )";
+};
+}  // namespace
+
+TEST_CASE("Control-flow tags without their attribute render nothing",
+          "[component][template]") {
+  // Regression: <if>/<elif> read attributes.at("condition") and <for> read
+  // attributes.at("each") with no presence check, so a template that omitted
+  // the attribute threw std::out_of_range ("map::at") out of Render() -- an
+  // opaque crash for what is a plain template typo. Found by the layout
+  // fuzzer.
+  SECTION("<if> and <for> without their attribute") {
+    auto app = Ref<ControlFlowNoAttrApp>::New();
+    REQUIRE_NOTHROW(app->Mount());
+    // A condition that is not "true" renders nothing, and so does a missing
+    // one; neither branch's content should appear.
+    CHECK(app->Root()->QuerySelector("div") != nullptr);
+  }
+
+  SECTION("<elif> without a condition, reached because the <if> was false") {
+    auto app = Ref<ElifNoAttrApp>::New();
+    REQUIRE_NOTHROW(app->Mount());
+  }
+}
+
 class AdvancedCSSFeaturesTestApp : public Component<AdvancedCSSFeaturesTestApp> {
  public:
   void InitReflection() override {
