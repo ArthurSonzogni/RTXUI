@@ -8255,3 +8255,66 @@ TEST_CASE("Importing the same component twice is not fatal",
   REQUIRE(el != nullptr);
   CHECK(el->tag() == "div");
 }
+
+namespace {
+class NotSelectorApp : public rtxui::Component<NotSelectorApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<NotSelectorApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <span id="a" class="keep">a</span>
+      <span id="b" class="skip">b</span>
+      <span id="c">c</span>
+      <div id="d" class="skip">d</div>
+    </div>
+    <style>
+      span:not(.skip) { color: rgb(1, 1, 1); }
+      span:not(#b) { margin-left: 3; }
+      :not(span) { padding-left: 4; }
+      /* Malformed arguments must parse, match nothing, and not crash. */
+      span:not() { color: rgb(9, 9, 9); }
+      span:not(   ) { color: rgb(9, 9, 9); }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("The :not() selector", "[component][css][selector]") {
+  auto app = rtxui::Ref<NotSelectorApp>::New();
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("negating a class") {
+    CHECK(at("#a")->style.foreground_color == Color::RGB(1, 1, 1));
+    CHECK(at("#c")->style.foreground_color == Color::RGB(1, 1, 1));
+    CHECK_FALSE(at("#b")->style.foreground_color.has_value());
+  }
+
+  SECTION("negating an id") {
+    CHECK(at("#a")->style.margin.left == 3);
+    CHECK(at("#c")->style.margin.left == 3);
+    CHECK(at("#b")->style.margin.left == 0);
+  }
+
+  SECTION("negating a tag") {
+    CHECK(at("#d")->style.padding.left == 4);
+    CHECK(at("#a")->style.padding.left == 0);
+  }
+
+  SECTION("an empty or malformed argument matches nothing and does not crash") {
+    // The stylesheet above carries `span:not()` and `span:not(   )`. They must
+    // match nothing rather than everything -- an empty negation that matched
+    // would recolour every span here.
+    CHECK(at("#a")->style.foreground_color == Color::RGB(1, 1, 1));
+    CHECK_FALSE(at("#b")->style.foreground_color.has_value());
+  }
+}

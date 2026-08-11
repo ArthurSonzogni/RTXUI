@@ -236,6 +236,17 @@ class RTXUI_EXPORT Element : public RefCounted {
     return true;
   }
 
+  /// Records that `comp` has resolved this element, so the next pass can skip
+  /// it.
+  ///
+  /// Only two components are remembered. An element can in principle be styled
+  /// by more -- its own component, its owner, and an outer one reaching it
+  /// through `::part()` -- and the third evicts the second, which then
+  /// re-resolves on every pass. That is a cost, not a wrong answer: a
+  /// re-resolve re-applies the same declarations over a base style that
+  /// already holds them. Measured at one eviction across the whole test suite
+  /// and none in the layout benchmark's 4009 elements, so two slots stay
+  /// cheaper than anything that would hold more.
   void MarkStyleResolvedFor(const ComponentBase* comp) {
     resolved_classes_hash_ = ClassesHash();
     if (styled_by_1 == comp || styled_by_2 == comp) {
