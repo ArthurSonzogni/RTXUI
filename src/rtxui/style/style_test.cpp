@@ -1430,3 +1430,36 @@ TEST_CASE("justify-content and align-content accept start/end",
     CHECK(style.align_content == rtxui::AlignContent::SpaceEvenly);
   }
 }
+
+TEST_CASE("Numeric values tolerate surrounding whitespace",
+          "[style][robustness]") {
+  // Regression (786b9835): std::from_chars refuses a leading space rather
+  // than skipping it, so any declaration whose value arrived with whitespace
+  // still attached parsed as 0 and silently became "no padding", "no width".
+  // Multi-value shorthands are where this bites, since splitting `1 2` leaves
+  // the separator on one side.
+  rtxui::ComputedStyle style;
+
+  SECTION("a single value padded on both sides") {
+    rtxui::ApplyStyle(style, {"padding-top", "  5  "});
+    CHECK(style.padding.top == 5);
+  }
+
+  SECTION("a shorthand whose parts carry the separator") {
+    rtxui::ApplyStyle(style, {"padding", " 1  2   3 4 "});
+    CHECK(style.padding.top == 1);
+    CHECK(style.padding.right == 2);
+    CHECK(style.padding.bottom == 3);
+    CHECK(style.padding.left == 4);
+  }
+
+  SECTION("floats too") {
+    rtxui::ApplyStyle(style, {"flex-grow", "  2.5 "});
+    CHECK(style.flex_grow == 2.5f);
+  }
+
+  SECTION("whitespace alone is not a number") {
+    rtxui::ApplyStyle(style, {"padding-left", "   "});
+    CHECK(style.padding.left == 0);
+  }
+}
