@@ -181,18 +181,27 @@ bool tabs::Digest() {
 
   auto headers_slot = Slot("headers");
   if (headers_slot) {
-    std::vector<Element*> pane_elements;
-    pane_elements.reserve(panes.size());
+    std::vector<std::pair<std::string, std::string>> pane_ids;
+    pane_ids.reserve(panes.size());
     for (auto& pane : panes) {
-      pane_elements.push_back(pane.element);
+      pane_ids.emplace_back(pane.name, pane.label);
     }
 
     // Only recreate the header buttons when the set of panes actually
     // changed. Rebuilding them on every Digest() (even a value-only change
     // from switching tabs) would replace a keyboard-focused button with a
     // fresh, unfocused Element - silently swallowing the next Enter/Space
-    // keypress if any unrelated Digest() runs in between.
-    if (pane_elements != last_pane_elements_) {
+    // keypress if any unrelated Digest() runs in between. It also hands back
+    // elements that no style pass has seen: Digest() runs after Render()
+    // resolved styles, so a button built here keeps an empty base_style and
+    // renders with no padding and no background until something else forces a
+    // full re-render.
+    //
+    // Identify the panes by name and label, not by Element*. The host
+    // component re-renders whenever its state changes -- which is exactly what
+    // selecting a tab does -- and hands out fresh pane elements each time, so
+    // an address comparison called every tab switch a change of pane set.
+    if (pane_ids != last_pane_ids_) {
       headers_slot->RemoveChildren();
       for (size_t i = 0; i < panes.size(); ++i) {
         auto btn = Ref<Element>::New();
@@ -207,7 +216,7 @@ bool tabs::Digest() {
         btn->AddChild(text_el);
         headers_slot->AddChild(btn);
       }
-      last_pane_elements_ = std::move(pane_elements);
+      last_pane_ids_ = std::move(pane_ids);
     }
 
     // Update active-tab styling in place, regardless of whether the

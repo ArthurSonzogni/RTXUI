@@ -5,6 +5,7 @@
 #define RTXUI_COMPONENT_DEFAULT_TABS_HPP_
 
 #include <string>
+#include <utility>
 #include <string_view>
 #include <vector>
 
@@ -36,7 +37,11 @@ class tabs : public Component<tabs> {
   // the buttons only when this changes, so a keyboard-focused header button
   // survives an unrelated Digest() instead of losing focus to a freshly
   // recreated Element.
-  std::vector<Element*> last_pane_elements_;
+  // The panes the header buttons were last built for, identified by name and
+  // label rather than by Element*: the host component re-renders on any state
+  // change, which hands out fresh pane elements every time, so comparing
+  // addresses reported "the panes changed" on every tab switch.
+  std::vector<std::pair<std::string, std::string>> last_pane_ids_;
 };
 
 }  // namespace rtxui
