@@ -167,15 +167,35 @@ bool tabs::Digest() {
     PropagateBinding("value", value);
   }
 
+  // Whether anything below actually altered the DOM. Style resolution runs at
+  // the end of Render(), which has already happened by the time Digest() is
+  // called, so a class or inline style set here reaches no computed style
+  // until something re-resolves. Mutating `classes` in place does not even
+  // invalidate the per-element "already resolved by this component" memo the
+  // way SetAttribute does, so the re-resolve has to be asked for explicitly --
+  // the same dance <select> does after it re-tags its options.
+  bool dom_changed = false;
+  auto invalidate = [](Element* el) {
+    el->Visit([](Element& e) { e.ClearResolvedStyles(); });
+  };
+
   for (size_t i = 0; i < panes.size(); ++i) {
     auto* pane_el = panes[i].element;
-    pane_el->classes.clear();
-    if (panes[i].name == value) {
-      pane_el->classes.push_back("active");
-      pane_el->SetAttribute("style", "display: block;");
-    } else {
-      pane_el->classes.push_back("inactive");
-      pane_el->SetAttribute("style", "display: none;");
+    const bool active = panes[i].name == value;
+    const std::vector<std::string> want_classes = {active ? "active"
+                                                          : "inactive"};
+    const std::string want_style =
+        active ? "display: block;" : "display: none;";
+
+    if (pane_el->classes != want_classes) {
+      pane_el->classes = want_classes;
+      invalidate(pane_el);
+      dom_changed = true;
+    }
+    const std::string* style_attr = pane_el->GetAttribute("style");
+    if (!style_attr || *style_attr != want_style) {
+      pane_el->SetAttribute("style", want_style);
+      dom_changed = true;
     }
   }
 
@@ -226,13 +246,25 @@ bool tabs::Digest() {
          ++i) {
       auto* btn = headers_slot->ChildAt(i);
       bool active = panes[i].name == value;
-      btn->classes = {"tab-header-btn"};
+      std::vector<std::string> want = {"tab-header-btn"};
       if (active) {
-        btn->classes.push_back("active-tab");
+        want.push_back("active-tab");
+      }
+      if (btn->classes != want) {
+        btn->classes = std::move(want);
+        invalidate(btn);
+        dom_changed = true;
       }
       btn->SetAttribute("part", active ? "tab-header-btn active-tab"
                                         : "tab-header-btn");
     }
+  }
+
+  // Re-render so the mutations above go through style resolution. Without it
+  // the non-selected panes keep their old computed style and every pane stays
+  // on screen at once.
+  if (dom_changed) {
+    Render();
   }
 
   return Component<tabs>::Digest();
