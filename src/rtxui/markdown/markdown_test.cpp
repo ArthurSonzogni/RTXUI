@@ -51,8 +51,10 @@ TEST_CASE("Markdown: Setext headings", "[markdown]") {
 TEST_CASE("Markdown: Paragraphs and line breaks", "[markdown]") {
   REQUIRE(MarkdownToHtml("Hello world") == "<p>Hello world</p>\n");
 
-  // Consecutive lines are merged into one paragraph
-  REQUIRE(MarkdownToHtml("Line 1\nLine 2") == "<p>Line 1 Line 2</p>\n");
+  // Consecutive lines are one paragraph, but the newline between them is a
+  // line break rather than a space: a terminal document is read as it was
+  // written, and there is no viewport to rewrap it against.
+  REQUIRE(MarkdownToHtml("Line 1\nLine 2") == "<p>Line 1<br />Line 2</p>\n");
 
   // Double newlines split paragraphs
   REQUIRE(MarkdownToHtml("Line 1\n\nLine 2") ==
@@ -98,7 +100,7 @@ TEST_CASE("Markdown: Blockquotes", "[markdown]") {
   const std::string input = R"(> Hello blockquote
 > Second line of blockquote)";
   const std::string expected = R"(<blockquote>
-<p>Hello blockquote Second line of blockquote</p>
+<p>Hello blockquote<br />Second line of blockquote</p>
 </blockquote>
 )";
   REQUIRE(MarkdownToHtml(input) == expected);
@@ -262,5 +264,31 @@ TEST_CASE("Markdown: Tables", "[markdown]") {
   REQUIRE(MarkdownToHtml(escaped_input) == expected_escaped);
 }
 
-}  // namespace rtxui
 
+TEST_CASE("Markdown: hard line breaks", "[markdown]") {
+  // CommonMark's two hard-break spellings. Both were being dropped: the
+  // trailing spaces survived into the text and the backslash rendered
+  // literally, and neither produced a break.
+  CHECK(MarkdownToHtml("Line 1  \nLine 2") == "<p>Line 1<br />Line 2</p>\n");
+  CHECK(MarkdownToHtml("Line 1\\\nLine 2") == "<p>Line 1<br />Line 2</p>\n");
+
+  // An escaped backslash is content, not a break marker, and keeps its pair.
+  CHECK(MarkdownToHtml("Line 1\\\\\nLine 2") ==
+        "<p>Line 1\\\\<br />Line 2</p>\n");
+}
+
+TEST_CASE("Markdown: a heading spans its source lines as one line",
+          "[markdown]") {
+  // A setext heading is a single line of text however it was written, so its
+  // newlines join with a space instead of becoming breaks.
+  CHECK(MarkdownToHtml("line 1\nline 2\n=====") == "<h1>line 1 line 2</h1>\n");
+}
+
+TEST_CASE("Markdown: inline formatting survives a line break", "[markdown]") {
+  // The break is applied after inline parsing, so emphasis opened on one
+  // line and closed on the next still resolves.
+  CHECK(MarkdownToHtml("**bold\ntext**") ==
+        "<p><strong>bold<br />text</strong></p>\n");
+}
+
+}  // namespace rtxui
