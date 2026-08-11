@@ -166,6 +166,46 @@ std::string ParseInline(std::string_view text) {
   return ProcessInlineMixed(EscapeHtml(text));
 }
 
+// Drops the trailing whitespace a line carries into a paragraph, and the
+// trailing backslash of CommonMark's other hard-break spelling. Both exist
+// only to request the break that the newline itself now always produces, so
+// neither should survive into the text.
+std::string_view TrimLineBreakMarkers(std::string_view line) {
+  while (!line.empty() && (line.back() == ' ' || line.back() == '\t')) {
+    line.remove_suffix(1);
+  }
+  size_t backslashes = 0;
+  while (backslashes < line.size() &&
+         line[line.size() - 1 - backslashes] == '\\') {
+    ++backslashes;
+  }
+  // An odd count means the last one is a break marker rather than an escaped
+  // backslash of its own.
+  if (backslashes % 2 == 1) {
+    line.remove_suffix(1);
+  }
+  return line;
+}
+
+// Turns the newlines inside one paragraph's text into line breaks.
+//
+// CommonMark renders a soft break as a space and leaves rewrapping to the
+// viewport. A terminal document is written to be read as it was laid out --
+// and a hard break, which CommonMark does honour, was being dropped here
+// entirely -- so every newline inside a paragraph becomes a break.
+std::string BreakLines(std::string html) {
+  std::string result;
+  result.reserve(html.size());
+  for (char c : html) {
+    if (c == '\n') {
+      result += "<br />";
+    } else {
+      result += c;
+    }
+  }
+  return result;
+}
+
 std::vector<std::string_view> SplitLines(std::string_view text) {
   std::vector<std::string_view> lines;
   size_t start = 0;
@@ -318,7 +358,7 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
 
   auto close_paragraph = [&]() {
     if (in_paragraph) {
-      html += "<p>" + ParseInline(current_paragraph) + "</p>\n";
+      html += "<p>" + BreakLines(ParseInline(current_paragraph)) + "</p>\n";
       current_paragraph.clear();
       in_paragraph = false;
     }
@@ -528,8 +568,12 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
       bool is_h2_underline = !is_h1_underline && IsSetextUnderline(line, '-');
       if (is_h1_underline || is_h2_underline) {
         std::string tag = is_h1_underline ? "h1" : "h2";
-        html += "<" + tag + ">" + ParseInline(current_paragraph) + "</" +
-                tag + ">\n";
+        // A heading is one line of text however many source lines it was
+        // written across, so its newlines join with a space rather than
+        // becoming breaks the way a paragraph's do.
+        std::string text = current_paragraph;
+        std::replace(text.begin(), text.end(), '\n', ' ');
+        html += "<" + tag + ">" + ParseInline(text) + "</" + tag + ">\n";
         current_paragraph.clear();
         in_paragraph = false;
         continue;
@@ -540,10 +584,10 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
     close_list();
     close_table();
     if (in_paragraph) {
-      current_paragraph += " ";
-      current_paragraph += line;
+      current_paragraph += "\n";
+      current_paragraph += TrimLineBreakMarkers(line);
     } else {
-      current_paragraph = line;
+      current_paragraph = TrimLineBreakMarkers(line);
       in_paragraph = true;
     }
   }
