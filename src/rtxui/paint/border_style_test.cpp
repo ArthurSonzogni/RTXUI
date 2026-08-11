@@ -194,9 +194,9 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
         "0111111001111111000000000001111111000000",
         "0000000000000000000000000000000000000000",
         "0000000000000000000000000000000000000000",
-        "0011111000111111100111111100011110000000",
-        "0011111000111111100111111100011110000000",
-        "0011111000111111100111111100011110000000",
+        "0211111000111111100111111100211110000000",
+        "0211111000111111100111111100211110000000",
+        "0211111000111111100111111100211110000000",
         "0000000000000000000000000000000000000000",
     };
 
@@ -305,7 +305,7 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
     std::vector<std::string> expected = {
         "00000000000000000000000000000000000000000000000000",
         "01111111001111110000000000111100111111110000000000",
-        "01111111001111110011111100000000111111110000000000",
+        "01111111001111110011111200000000111111110000000000",
         "01111111001111110000000000000000111111110000000000",
         "00000000000000000000000000000000000000000000000000",
         "00000000000000000000000000000000000000000000000000",
@@ -568,13 +568,18 @@ TEST_CASE("Paint: Tall Border Parent Background Propagation") {
 
   // The box has no background of its own, so the ancestor's shows through the
   // whole border box: it is the ground of both side columns, with only the
-  // half-block glyph itself in the border color.
+  // half-block glyph itself in the border color. The left column is reversed,
+  // and the ancestor's background is opaque, so it is stored pre-swapped
+  // rather than left for the terminal.
   for (int y = 0; y < 3; ++y) {
     INFO("row " << y);
     CHECK(texture[5, y].background_color == expected_bg);
     CHECK(texture[5, y].foreground_color == border);
-    CHECK(texture[0, y].background_color == expected_bg);
-    CHECK(texture[0, y].foreground_color == border);
+    CHECK_FALSE(texture[5, y].inverted);
+
+    CHECK(texture[0, y].foreground_color == expected_bg);
+    CHECK(texture[0, y].background_color == border);
+    CHECK_FALSE(texture[0, y].inverted);
   }
 }
 
@@ -671,10 +676,18 @@ TEST_CASE("Half-block borders follow Textual's location table",
       INFO("cell " << x << "," << y);
       const Cell& cell = texture[x, y];
       const bool outer = loc == Out || loc == RevOut;
-      // The glyph always carries the border color; only the ground varies.
-      CHECK(cell.foreground_color == kBorder);
-      CHECK(cell.background_color == (outer ? kParent : kOwn));
-      CHECK(cell.inverted == (loc == RevOut || loc == RevIn));
+      const bool reversed = loc == RevOut || loc == RevIn;
+      const Color field = outer ? kParent : kOwn;
+
+      // Compare what gets drawn, not how. A reversed cell may be stored either
+      // pre-swapped or with the reverse-video bit set, depending on whether
+      // the field is a real color, and both must look the same.
+      const Color glyph =
+          cell.inverted ? cell.background_color : cell.foreground_color;
+      const Color ground =
+          cell.inverted ? cell.foreground_color : cell.background_color;
+      CHECK(glyph == (reversed ? field : kBorder));
+      CHECK(ground == (reversed ? kBorder : field));
     };
 
     expect(0, 0, top_left);
