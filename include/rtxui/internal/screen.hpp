@@ -8,6 +8,7 @@
 
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/event.hpp"
+#include "rtxui/paint/color.hpp"
 #include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
@@ -36,6 +37,19 @@ class RTXUI_EXPORT Screen {
   // Enable or disable smooth scrolling animations
   void SetSmoothScrollEnabled(bool enabled);
   bool smooth_scroll_enabled() const;
+
+  /// Declares what is behind the interface, which is what every
+  /// partially-transparent color composites against.
+  ///
+  /// The default is transparent: the terminal's own background shows through
+  /// wherever nothing paints over it, which is what lets an app sit in a
+  /// themed or translucent terminal instead of stamping a rectangle onto it.
+  /// The cost is that the color is unknown, so anything that needs to blend
+  /// against it -- a semi-transparent overlay, a reversed border cell -- has to
+  /// approximate. Naming it here makes all of that exact, at the price of no
+  /// longer inheriting the terminal's background.
+  void SetBackgroundColor(Color color);
+  Color background_color() const;
 
  private:
   std::unique_ptr<ScreenImpl> impl_;

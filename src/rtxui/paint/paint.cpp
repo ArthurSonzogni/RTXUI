@@ -440,15 +440,27 @@ void PaintImpl(const PhysicalFragment* frag,
         cell.foreground_color = Blend(border_color, field);
         cell.background_color = field;
 
-        // Reversing is left to the terminal (SGR 7) rather than swapping the
-        // two colors here. The field is often transparent -- an element with
-        // no background of its own, over a screen with none -- and
-        // transparency has no foreground spelling: ESC[39m is the default
-        // *foreground*, so swapping here painted a white block down the left
-        // of every uncolored `tall` box. Under SGR 7 the terminal performs the
-        // swap against its own default background, the color we cannot name.
-        cell.inverted = g.location == Location::ReverseOuter ||
-                        g.location == Location::ReverseInner;
+        const bool reversed = g.location == Location::ReverseOuter ||
+                              g.location == Location::ReverseInner;
+        if (reversed) {
+          // Swap here when the field is a real color, exactly as Textual does.
+          // Anything painted over this cell later then composites against the
+          // colors it will actually be drawn in, and terminals that render
+          // reverse video with a palette of their own are kept out of it.
+          //
+          // A transparent field cannot be swapped here: it has no foreground
+          // spelling. ESC[39m is the default *foreground*, so putting it in
+          // the glyph's slot painted a white block down the left of every
+          // uncolored `tall` box. Ask the terminal to do the swap instead, and
+          // it performs it against its own background -- the color we cannot
+          // name. Setting a screen background is what makes this branch the
+          // rare one.
+          if (field.a == 255) {
+            std::swap(cell.foreground_color, cell.background_color);
+          } else {
+            cell.inverted = true;
+          }
+        }
       }
     };
 
@@ -930,11 +942,12 @@ void PaintImpl(const PhysicalFragment* frag,
 void Paint(const PhysicalFragment* frag,
            Texture& texture,
            int off_x,
-           int off_y) {
+           int off_y,
+           Color screen_background) {
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y,
             texture.width(), texture.height(),
-            Color::RGB(255, 255, 255), Color(), false, false, false, false,
-            false, false, false, false,
+            Color::RGB(255, 255, 255), screen_background, false, false, false,
+            false, false, false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
 }
 
