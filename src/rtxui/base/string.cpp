@@ -1204,30 +1204,6 @@ auto Split(std::string_view text, std::string_view delimiter)
   return result;
 }
 
-auto Join(const std::vector<std::string_view>& parts,
-          std::string_view delimiter) -> std::string {
-  std::string result;
-  for (size_t i = 0; i < parts.size(); ++i) {
-    result += parts[i];
-    if (i + 1 != parts.size()) {
-      result += delimiter;
-    }
-  }
-  return result;
-}
-
-auto Join(const std::vector<std::string>& parts, std::string_view delimiter)
-    -> std::string {
-  std::string result;
-  for (size_t i = 0; i < parts.size(); ++i) {
-    result += parts[i];
-    if (i + 1 != parts.size()) {
-      result += delimiter;
-    }
-  }
-  return result;
-}
-
 // Strip the maximum indentation on a string. Every line should have the same
 // amount of leading spaces removed.
 std::string StripIndent(const std::string_view& text) {
