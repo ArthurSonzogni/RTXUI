@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include <catch2/catch_test_macros.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "rtxui/base/string.hpp"
@@ -362,4 +363,82 @@ TEST_CASE("Base64Encode", "[base64]") {
   // Bytes with the high bit set must round-trip correctly (not sign-extend).
   std::string binary("\xFF\x00\x80", 3);
   CHECK(Base64Encode(binary) == "/wCA");
+}
+
+// --- Emoji sequences ---
+//
+// The width of a cluster is what layout reserves and what the cursor advances
+// by, so a cluster measured differently from how the terminal draws it shifts
+// everything after it on the line.
+
+namespace {
+// Sums the widths the renderer will actually use, and counts the clusters
+// that text wrapping and truncation are allowed to break between.
+std::pair<int, int> ClustersAndWidth(std::string_view text) {
+  int clusters = 0;
+  int width = 0;
+  for (const Grapheme& grapheme : Graphemes(text)) {
+    ++clusters;
+    width += grapheme.width;
+  }
+  return {clusters, width};
+}
+}  // namespace
+
+TEST_CASE("Grapheme.VariationSelector", "[unicode][emoji]") {
+  // U+2600 is one cell as text. U+FE0F asks for the emoji presentation, which
+  // terminals draw in two -- the selector clusters either way, but it used to
+  // leave the width at one.
+  CHECK(ClustersAndWidth("\xe2\x98\x80") == std::pair{1, 1});          // ☀
+  CHECK(ClustersAndWidth("\xe2\x98\x80\xef\xb8\x8f") == std::pair{1, 2});  // ☀️
+
+  // VS15 asks for text presentation, taking a default-emoji character back
+  // down to one cell.
+  CHECK(ClustersAndWidth("\xe2\x9d\xa4\xef\xb8\x8e") == std::pair{1, 1});  // ❤︎
+}
+
+TEST_CASE("Grapheme.RegionalIndicatorFlags", "[unicode][emoji]") {
+  const std::string fr = "\xf0\x9f\x87\xab\xf0\x9f\x87\xb7";  // 🇫🇷
+  const std::string de = "\xf0\x9f\x87\xa9\xf0\x9f\x87\xaa";  // 🇩🇪
+
+  // One cluster, two cells. Two clusters would let wrapping split the flag in
+  // half and truncation cut it to a lone letter.
+  CHECK(ClustersAndWidth(fr) == std::pair{1, 2});
+
+  // Adjacent flags stay separate rather than merging into one run.
+  CHECK(ClustersAndWidth(fr + de) == std::pair{2, 4});
+
+  // An odd one out is its own cluster: three indicators are a flag plus the
+  // start of another, not a flag and a half.
+  CHECK(ClustersAndWidth(fr + "\xf0\x9f\x87\xa9") == std::pair{2, 3});
+
+  // A lone indicator is just a letter.
+  CHECK(ClustersAndWidth("\xf0\x9f\x87\xab") == std::pair{1, 1});
+}
+
+TEST_CASE("Grapheme.ZeroWidthJoinerAndModifiers", "[unicode][emoji]") {
+  // A ZWJ sequence is one cluster occupying the cells of one emoji.
+  CHECK(ClustersAndWidth(
+            "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d"
+            "\xf0\x9f\x91\xa7") == std::pair{1, 2});  // 👨‍👩‍👧
+
+  // A skin-tone modifier joins the emoji it follows.
+  CHECK(ClustersAndWidth("\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd") ==
+        std::pair{1, 2});  // 👍🏽
+}
+
+TEST_CASE("string_width agrees with the grapheme widths", "[unicode][emoji]") {
+  // string_width used to count codepoints, so it reported eight cells for a
+  // family emoji that occupies two. Nothing in the library called it, which
+  // is the only reason that never showed up on screen.
+  for (std::string_view text : {
+           "Hello",
+           "\xe6\xbc\xa2\xe5\xad\x97",                       // 漢字
+           "\xe2\x98\x80\xef\xb8\x8f",                       // ☀️
+           "\xf0\x9f\x87\xab\xf0\x9f\x87\xb7",               // 🇫🇷
+           "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7",
+       }) {
+    INFO("text: " << text);
+    CHECK(string_width(text) == ClustersAndWidth(text).second);
+  }
 }

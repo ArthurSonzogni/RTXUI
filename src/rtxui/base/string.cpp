@@ -1406,28 +1406,13 @@ int wchar_width(wchar_t ucs) {
 }
 
 int string_width(std::string_view input) {
+  // Summed over grapheme clusters, not codepoints. Layout and painting both
+  // measure with Graphemes(), so anything measuring differently here would be
+  // measuring something the renderer never draws: counting codepoints made a
+  // ZWJ family emoji eight cells wide instead of the two it occupies.
   int width = 0;
-  size_t start = 0;
-  while (start < input.size()) {
-    uint32_t codepoint = 0;
-    if (!EatCodePoint(input, start, &start, &codepoint)) {
-      continue;
-    }
-
-    if (IsControl(codepoint)) {
-      continue;
-    }
-
-    if (IsCombining(codepoint)) {
-      continue;
-    }
-
-    if (IsFullWidth(codepoint)) {
-      width += 2;
-      continue;
-    }
-
-    width += 1;
+  for (const Grapheme& grapheme : Graphemes(input)) {
+    width += grapheme.width;
   }
   return width;
 }
@@ -1710,6 +1695,14 @@ auto Base64Encode(std::string_view input) -> std::string {
   return result;
 }
 
+namespace {
+// The two halves of a flag. Cheap enough as a range check that it does not
+// belong in a table.
+bool IsRegionalIndicator(uint32_t codepoint) {
+  return codepoint >= 0x1F1E6 && codepoint <= 0x1F1FF;
+}
+}  // namespace
+
 void GraphemeIterator::NextSlow() {
   size_t start = pos_;
   size_t end = start;
@@ -1731,6 +1724,18 @@ void GraphemeIterator::NextSlow() {
     width = 1;
   }
 
+  // A flag is exactly two regional indicators and occupies two cells. Only
+  // two: a third one starts the next flag rather than joining this one.
+  if (IsRegionalIndicator(codepoint) && end < text_.size()) {
+    size_t pair_end = end;
+    uint32_t pair_codepoint = 0;
+    if (EatCodePoint(text_, end, &pair_end, &pair_codepoint) &&
+        IsRegionalIndicator(pair_codepoint)) {
+      end = pair_end;
+      width = 2;
+    }
+  }
+
   if (codepoint == 0x000D && end < text_.size()) {
     size_t next_end = end;
     uint32_t next_cp = 0;
@@ -1749,6 +1754,16 @@ void GraphemeIterator::NextSlow() {
 
     if (IsCombining(next_cp)) {
       end = next_end;
+      // A variation selector chooses the presentation, and the presentation
+      // decides the width. VS16 asks for emoji, which terminals draw in two
+      // cells; VS15 asks for text, drawn in one. Both are Extend, so they
+      // already cluster -- only the width was being missed, which left `☀️`
+      // measured one cell wide and drawn two, shifting the rest of the line.
+      if (next_cp == 0xFE0F && width == 1) {
+        width = 2;
+      } else if (next_cp == 0xFE0E && width == 2) {
+        width = 1;
+      }
     } else if (next_cp == 0x200D) {
       end = next_end;
       if (end < text_.size()) {
