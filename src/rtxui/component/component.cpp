@@ -1635,15 +1635,21 @@ void ComponentBase::Render() {
     RestoreElementFocusHoverActive(root_.get(), saved_states);
   }
 
+  // Reattach before resolving, not after. The root is detached for the stretch
+  // above because element state is collected and restored by path from it --
+  // but a selector can reach above it. A host styling this component with a
+  // descendant selector, which is what CSS nesting compiles to (`self { button
+  // { … } }` becomes `self button`), matches nothing while the root is an
+  // orphan, so re-rendering a nested component silently dropped every rule its
+  // host had aimed at it.
+  if (root_ && saved_parent) {
+    root_->set_parent(saved_parent);
+  }
+
   ResolveStyles();
 
-  if (root_) {
-    if (!saved_states.empty()) {
-      RestoreElementStates(root_.get(), saved_states);
-    }
-    if (saved_parent) {
-      root_->set_parent(saved_parent);
-    }
+  if (root_ && !saved_states.empty()) {
+    RestoreElementStates(root_.get(), saved_states);
   }
 
   ResolveTargetStyles();
