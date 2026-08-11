@@ -421,7 +421,7 @@ void Element::TruncateChildren(size_t count) {
   }
 }
 
-void Element::Visit(std::function<void(Element&)> f) {
+void Element::Visit(const std::function<void(Element&)>& f) {
   f(*this);
   for (auto& child : children_) {
     child->Visit(f);

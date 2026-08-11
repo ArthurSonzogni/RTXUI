@@ -146,7 +146,9 @@ class RTXUI_EXPORT Element : public RefCounted {
   void ReplaceChild(size_t index, Ref<Element> new_child);
   void MoveChild(size_t from, size_t to);
   void TruncateChildren(size_t count);
-  void Visit(std::function<void(Element&)> f);
+  // By reference: taking it by value copied the std::function -- often a
+  // heap allocation -- once per node of the subtree.
+  void Visit(const std::function<void(Element&)>& f);
 
   // Hierarchical accessors.
   Element* Parent() { return parent_; }
@@ -198,11 +200,44 @@ class RTXUI_EXPORT Element : public RefCounted {
   ActiveTransitionsMap active_transitions;
   const ComponentBase* styled_by_1 = nullptr;
   const ComponentBase* styled_by_2 = nullptr;
+  /// Set when a resolution pass recomputed `base_style`, cleared once
+  /// `target_style` and `style` have been seeded from it. Seeding is what
+  /// makes a new base style visible, but it also overwrites the
+  /// transition-blended `style`, so it must happen only for the elements that
+  /// actually changed -- not for every element on every pass.
+  bool needs_style_seed = true;
+
+  /// Whether a base style pass still has work to do here. False once a pass
+  /// has visited the element, true again as soon as anything invalidates it.
+  /// Lets a frame ask "is any of this stale?" with a walk and a hash, instead
+  /// of paying for a full resolution pass to discover there was nothing to do.
+  bool needs_style_resolve = true;
 
   bool IsStyleResolvedFor(const ComponentBase* comp) const {
     return styled_by_1 == comp || styled_by_2 == comp;
   }
+
+  /// Drops the resolved-style memo if `classes` no longer matches the list it
+  /// was built from, and reports whether it did.
+  ///
+  /// `classes` is a plain public vector, so assigning or push_back-ing to it
+  /// cannot invalidate anything by itself the way SetAttribute() does. Every
+  /// caller was expected to follow a mutation with ClearResolvedStyles(), and
+  /// a caller that forgot got styles that silently never applied -- the bug
+  /// behind both tabs regressions. Checking the content instead of trusting
+  /// the callers makes that impossible to get wrong.
+  bool RevalidateStyleMemo() {
+    const uint64_t hash = ClassesHash();
+    if (hash == resolved_classes_hash_) {
+      return false;
+    }
+    resolved_classes_hash_ = hash;
+    ClearResolvedStyles();
+    return true;
+  }
+
   void MarkStyleResolvedFor(const ComponentBase* comp) {
+    resolved_classes_hash_ = ClassesHash();
     if (styled_by_1 == comp || styled_by_2 == comp) {
       return;
     }
@@ -215,7 +250,27 @@ class RTXUI_EXPORT Element : public RefCounted {
   void ClearResolvedStyles() {
     styled_by_1 = nullptr;
     styled_by_2 = nullptr;
+    needs_style_resolve = true;
   }
+
+ private:
+  /// FNV-1a over the class list. Only ever compared against itself, so the
+  /// choice of hash matters only for collisions, and a collision costs a
+  /// skipped restyle rather than anything unsafe.
+  uint64_t ClassesHash() const {
+    uint64_t hash = 1469598103934665603ull;
+    for (const std::string& name : classes) {
+      for (unsigned char c : name) {
+        hash = (hash ^ c) * 1099511628211ull;
+      }
+      hash = (hash ^ 0xff) * 1099511628211ull;  // separator
+    }
+    return hash;
+  }
+
+  uint64_t resolved_classes_hash_ = ClassesHash();
+
+ public:
 
   // Rendering.
   virtual std::string Print(int depth = 0) const;

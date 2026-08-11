@@ -972,6 +972,15 @@ void ResolveStylesRecursive(Element* element,
   // computed and immediately discarded. Skipping it here avoids copying
   // (and reallocating tree nodes for) the custom-properties map twice per
   // element per frame, the common case for any styled element.
+  // Classes can be mutated in place without invalidating anything, so verify
+  // the memo against them before consulting it. Doing it once per element per
+  // base pass, before the recursion below, means the first component to reach
+  // the element drops the stale memo and every later pass sees a memo that
+  // agrees with the current classes.
+  if (!check_pseudos) {
+    element->needs_style_resolve = false;
+  }
+
   bool will_recompute_custom_properties =
       !check_pseudos && (is_styled || has_part_rules) &&
       !element->IsStyleResolvedFor(component);
@@ -1291,6 +1300,7 @@ void ResolveStylesRecursive(Element* element,
 
     if (!check_pseudos) {
       element->MarkStyleResolvedFor(component);
+      element->needs_style_seed = true;
     }
   }
 
@@ -1341,6 +1351,64 @@ void ComponentBase::Mount() {
   }
   xml_nodes_ = std::move(nodes.value());
   Render();
+}
+
+namespace {
+
+// Every element is visited, never short-circuited: the revalidation below is
+// also what refreshes each element's recorded class hash, so skipping the rest
+// of the tree once an answer is known would leave stale hashes behind. Written
+// as a plain recursion rather than Element::Visit to keep a std::function call
+// out of a per-frame walk.
+bool AnyStyleStale(Element* element) {
+  if (!element) {
+    return false;
+  }
+  // Mutating `classes` cannot invalidate anything by itself, so the memo is
+  // checked against the list it was built from rather than trusted.
+  element->RevalidateStyleMemo();
+  bool stale = element->needs_style_resolve;
+  for (size_t i = 0; i < element->ChildCount(); ++i) {
+    stale = AnyStyleStale(element->ChildAt(i)) || stale;
+  }
+  return stale;
+}
+
+}  // namespace
+
+bool ComponentBase::StylesNeedResolve() {
+  return AnyStyleStale(root_.get());
+}
+
+void ComponentBase::ResolveStyles() {
+  // Nothing stale means nothing to do, and saying so costs a walk rather than
+  // a full pass. This is the common case on a frame that only re-animates.
+  if (!StylesNeedResolve()) {
+    return;
+  }
+
+  ResolveStylesRecursive(root_.get(), this, false);
+  if (root_ && root_->owner_component() && root_->owner_component() != this) {
+    ResolveStylesRecursive(root_.get(), root_->owner_component(), false);
+  }
+
+  auto CopyBaseStyles = [&](auto& self, Element* element) -> void {
+    if (element) {
+      // Only elements whose base style was just recomputed. Seeding the rest
+      // would overwrite a transition-blended `style` with its unanimated
+      // value, and would copy two ~100-field structs per element per pass for
+      // nothing.
+      if (element->needs_style_seed) {
+        element->target_style = element->base_style;
+        element->style = element->base_style;
+        element->needs_style_seed = false;
+      }
+      for (size_t i = 0; i < element->ChildCount(); ++i) {
+        self(self, element->ChildAt(i));
+      }
+    }
+  };
+  CopyBaseStyles(CopyBaseStyles, root_.get());
 }
 
 void ComponentBase::Render() {
@@ -1493,23 +1561,7 @@ void ComponentBase::Render() {
     RestoreElementFocusHoverActive(root_.get(), saved_states);
   }
 
-  ResolveStylesRecursive(root_.get(), this, false);
-  if (root_ && root_->owner_component() && root_->owner_component() != this) {
-    ResolveStylesRecursive(root_.get(), root_->owner_component(), false);
-  }
-
-  auto CopyBaseStyles = [&](auto& self, Element* element) -> void {
-    if (element) {
-      if (IsStyledByComponent(element, this)) {
-        element->target_style = element->base_style;
-        element->style = element->base_style;
-      }
-      for (size_t i = 0; i < element->ChildCount(); ++i) {
-        self(self, element->ChildAt(i));
-      }
-    }
-  };
-  CopyBaseStyles(CopyBaseStyles, root_.get());
+  ResolveStyles();
 
   if (root_) {
     if (!saved_states.empty()) {
