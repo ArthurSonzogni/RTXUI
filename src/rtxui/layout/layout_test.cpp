@@ -3019,13 +3019,13 @@ TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
                          << " g=" << (int)left_cell.foreground_color.g 
                          << " b=" << (int)left_cell.foreground_color.b 
                          << " a=" << (int)left_cell.foreground_color.a);
-  // The item's own background fills its whole border box, so the part of a
-  // side cell the glyph does not cover shows the item's green -- not the grid
-  // container's transparent background.
+  // Both side cells of `tall` draw on the *parent's* background -- here the
+  // grid container's, which is transparent. The glyph carries the border
+  // color; the left cell is reversed, so the terminal swaps the pair for it.
   CHECK(left_cell.character == "▊");
-  CHECK(left_cell.inverted);  // drawn in reverse video
+  CHECK(left_cell.inverted);
   CHECK(left_cell.foreground_color == Color::RGB(255, 0, 0));
-  CHECK(left_cell.background_color == Color::RGB(0, 255, 0));
+  CHECK(left_cell.background_color.a == 0);
 
   const auto& right_cell = texture[7, 0];
   INFO("right_cell bg: r=" << (int)right_cell.background_color.r
@@ -3033,8 +3033,9 @@ TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
                           << " b=" << (int)right_cell.background_color.b
                           << " a=" << (int)right_cell.background_color.a);
   CHECK(right_cell.character == "▎");
-  CHECK(right_cell.background_color == Color::RGB(0, 255, 0));
   CHECK(right_cell.foreground_color == Color::RGB(255, 0, 0));
+  CHECK(right_cell.background_color.a == 0);
+  CHECK_FALSE(right_cell.inverted);
 }
 
 TEST_CASE("Layout: position sticky pushing calendar test",

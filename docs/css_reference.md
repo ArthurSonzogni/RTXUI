@@ -244,6 +244,11 @@ the element's `color`).
   ░░░░░░░░░    ▒▒▒▒▒▒▒▒▒     ▓▓▓▓▓▓▓▓▓   ~~~~~~~~~
   ░       ░    ▒       ▒     ▓       ▓   ~       ~
   ░░░░░░░░░    ▒▒▒▒▒▒▒▒▒     ▓▓▓▓▓▓▓▓▓   ~~~~~~~~~
+
+  block      tab
+  ▄▄▄▄▄▄▄▄▄  ▁▁▁▁▁▁▁▁▁
+  █       █  ▎       ▊
+  ▀▀▀▀▀▀▀▀▀  ▔▔▔▔▔▔▔▔▔
 ```
 
 | Keyword | Alias | Notes |
@@ -272,15 +277,24 @@ the element's `color`).
 | `shade-medium` | | A ring of `▒`. |
 | `shade-dark` | | A ring of `▓`. |
 | `shadow` | `3d` | Light on the top and left, dark on the bottom and right, for a raised look. |
+| `block` | | Full blocks at the sides, half blocks top and bottom, drawn on the parent's background. |
+| `tab` | | Identical to `wide`; the name Textual uses when the border is a tab strip. |
+| `hidden` | | Accepted as a synonym of `none`, matching Textual. |
 
-The partial-block styles (`tall`, `panel`, `wide`, `inner`, `outer`, `thick`)
-split each border cell between the border color and the element's own
-background — like CSS, `background-color` is clipped to the border box, so the
-element's background fills the ring rather than its parent's showing through.
-Where a strip has to sit against the right of its cell, the cell is drawn in
-reverse video (`ESC[7m`) rather than by swapping the two colors, so that an
-element with no background of its own still resolves against the terminal's
-default background instead of its default foreground.
+The partial-block styles (`tall`, `panel`, `wide`, `block`, `tab`, `inner`,
+`outer`, `thick`) draw a glyph that sits astride the boundary between the
+element and its parent, so each border cell has to pick which of the two
+backgrounds fills the part the glyph does not cover. RTXUI follows Textual's
+table exactly: `inner`, and the sides of `tall` and `panel`, sit on the
+*parent's* background, which is what makes them read as drawn outside the
+element; the top and bottom of `tall` and `panel` sit on the element's own.
+
+Some cells are drawn in reverse video (`ESC[7m`) so the strip lands on the far
+side of the cell — Unicode has left-side partial blocks in every width but only
+one right-side one. The swap is left to the terminal rather than done by
+exchanging the two colors, so that an element with no background of its own
+still resolves against the terminal's default *background* rather than its
+default foreground.
 
 Single sides can be set independently with `border-top`, `border-right`,
 `border-bottom` and `border-left`; a lone side renders as a plain line rather
