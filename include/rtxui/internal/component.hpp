@@ -101,6 +101,28 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
 
   void Mount();
   void Render();
+
+  /// Recomputes `base_style` for this component's element tree, then seeds
+  /// `target_style`/`style` from it. Render() ends by doing exactly this, so
+  /// a component that mutates its own DOM *after* rendering -- the usual case
+  /// being a Digest() override that re-tags elements -- can call this instead
+  /// of re-rendering, which would churn element identity and cost a full
+  /// reconciliation. Elements whose resolved styles are still valid are
+  /// skipped, so the cost is proportional to what actually changed.
+  /// Whether any element under this component still needs a base style pass.
+  /// Cheap: a tree walk and a hash per element, no rule matching. Also drops
+  /// any resolved-style memo that no longer matches its element's classes.
+  bool StylesNeedResolve();
+
+  /// Recomputes `base_style` for the elements that need it, then seeds
+  /// `target_style`/`style` from those. Returns immediately when nothing is
+  /// stale, so it is safe to call once per frame.
+  ///
+  /// Render() ends with this, and drawing begins with it, so a component that
+  /// mutates its own DOM after rendering -- a Digest() override that re-tags
+  /// elements, say -- does not need to ask for anything.
+  void ResolveStyles();
+
   void ResolveTargetStyles();
   void ResolveTargetStyles(double current_time_ms);
   const css::StyleSheet* stylesheet() const;

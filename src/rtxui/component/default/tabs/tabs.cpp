@@ -167,18 +167,6 @@ bool tabs::Digest() {
     PropagateBinding("value", value);
   }
 
-  // Whether anything below actually altered the DOM. Style resolution runs at
-  // the end of Render(), which has already happened by the time Digest() is
-  // called, so a class or inline style set here reaches no computed style
-  // until something re-resolves. Mutating `classes` in place does not even
-  // invalidate the per-element "already resolved by this component" memo the
-  // way SetAttribute does, so the re-resolve has to be asked for explicitly --
-  // the same dance <select> does after it re-tags its options.
-  bool dom_changed = false;
-  auto invalidate = [](Element* el) {
-    el->Visit([](Element& e) { e.ClearResolvedStyles(); });
-  };
-
   for (size_t i = 0; i < panes.size(); ++i) {
     auto* pane_el = panes[i].element;
     const bool active = panes[i].name == value;
@@ -189,13 +177,10 @@ bool tabs::Digest() {
 
     if (pane_el->classes != want_classes) {
       pane_el->classes = want_classes;
-      invalidate(pane_el);
-      dom_changed = true;
     }
     const std::string* style_attr = pane_el->GetAttribute("style");
     if (!style_attr || *style_attr != want_style) {
       pane_el->SetAttribute("style", want_style);
-      dom_changed = true;
     }
   }
 
@@ -252,21 +237,15 @@ bool tabs::Digest() {
       }
       if (btn->classes != want) {
         btn->classes = std::move(want);
-        invalidate(btn);
-        dom_changed = true;
       }
       btn->SetAttribute("part", active ? "tab-header-btn active-tab"
                                         : "tab-header-btn");
     }
   }
 
-  // Re-render so the mutations above go through style resolution. Without it
-  // the non-selected panes keep their old computed style and every pane stays
-  // on screen at once.
-  if (dom_changed) {
-    Render();
-  }
-
+  // The mutations above happen after Render() resolved styles, but the
+  // caller re-resolves once Digest() returns, and mutating `classes` drops the
+  // element's resolved-style memo on its own, so nothing more is needed here.
   return Component<tabs>::Digest();
 }
 

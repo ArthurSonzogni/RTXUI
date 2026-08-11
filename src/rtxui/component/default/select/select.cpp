@@ -365,8 +365,6 @@ bool select::Digest() {
         root_cls.erase(it_root);
       }
     }
-    root->Visit([](Element& el) { el.ClearResolvedStyles(); });
-
     auto options = GetOptions();
     selected_label = "Select...";
     for (size_t i = 0; i < options.size(); ++i) {
@@ -391,9 +389,10 @@ bool select::Digest() {
           cls.push_back("hovered");
         }
       }
-      opt.element->Visit([](Element& el) { el.ClearResolvedStyles(); });
     }
-    this->Render();
+    // No explicit invalidation and no re-render: mutating `classes` above
+    // drops each element's resolved-style memo by itself, and the caller
+    // re-resolves once Digest() returns.
   }
 
   bool parent_digest = Component<select>::Digest();

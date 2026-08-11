@@ -2023,6 +2023,16 @@ void ScreenImpl::HandleEvent(Event event) {
 void ScreenImpl::Draw() {
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
+
+  // Anything that changed the DOM since the last frame gets its styles
+  // resolved here, rather than at each of the places that can change it. A
+  // Digest() override is the awkward case -- <tabs> and <select> re-tag
+  // elements from theirs, which runs after Render() already resolved styles --
+  // but drawing is the one thing every path has in common, so this is the
+  // point where nothing can bypass it. Elements whose resolved styles are
+  // still valid are skipped, so an unchanged tree costs a single walk.
+  component_->ResolveStyles();
+
   auto root = component_->Root();
 
   focused_element_ = nullptr;
