@@ -189,14 +189,14 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
         "0111111100111111100111111110011111111000",
         "0000000000000000000000000000000000000000",
         "0000000000000000000000000000000000000000",
-        "0111111001111111001111111001111111000000",
-        "0111111001111111001111111001111111000000",
-        "0111111001111111001111111001111111000000",
+        "0111111001111111000000000001111111000000",
+        "0111111001111111000111110001111111000000",
+        "0111111001111111000000000001111111000000",
         "0000000000000000000000000000000000000000",
         "0000000000000000000000000000000000000000",
-        "0111111100111111100111111100111111000000",
-        "0111111100111111100111111100111111000000",
-        "0111111100111111100111111100111111000000",
+        "0011111000111111100111111100011110000000",
+        "0011111000111111100111111100011110000000",
+        "0011111000111111100111111100011110000000",
         "0000000000000000000000000000000000000000",
     };
 
@@ -304,9 +304,9 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
 
     std::vector<std::string> expected = {
         "00000000000000000000000000000000000000000000000000",
-        "01111111001111110011111100111100111111110000000000",
+        "01111111001111110000000000111100111111110000000000",
         "01111111001111110011111100000000111111110000000000",
-        "01111111001111110011111100000000111111110000000000",
+        "01111111001111110000000000000000111111110000000000",
         "00000000000000000000000000000000000000000000000000",
         "00000000000000000000000000000000000000000000000000",
         "01111111110011111111100111111110011111110000000000",
@@ -623,17 +623,17 @@ TEST_CASE("Paint: Transparent Overlay Blending on Tall Border") {
   CHECK(texture[0, 1].background_color == Blend(overlay, Color::RGB(255, 0, 0)));
 }
 
-// Regression: the half-block styles used to fill the sides of a box from the
-// *parent's* background while the top and bottom kept the box's own, so a box
-// with a background of its own grew a mismatched column down each side (and,
-// for `wide`, a mismatched row top and bottom).
-TEST_CASE("Paint: Half-block borders keep the element's own background",
+// Pins Textual's BORDER_LOCATIONS: which of the two backgrounds fills each
+// border cell, and which cells are reversed. This is the whole visual identity
+// of the half-block styles -- get a cell's location wrong and the border reads
+// as sitting on the wrong side of the boundary.
+TEST_CASE("Half-block borders follow Textual's location table",
           "[paint][border]") {
   const Color kParent = Color::RGB(0, 0, 0);
   const Color kOwn = Color::RGB(0, 0, 128);
   const Color kBorder = Color::RGB(255, 0, 0);
 
-  struct HalfBlockTest : Component<HalfBlockTest> {
+  struct LocationTest : Component<LocationTest> {
     std::string style_name;
     std::string_view Setup() {
       Import<div>();
@@ -655,33 +655,41 @@ TEST_CASE("Paint: Half-block borders keep the element's own background",
     }
   };
 
-  // Every cell of the border ring is split between the border color and the
-  // box's own background; the parent's black must not appear anywhere inside.
-  auto check_ring = [&](const std::string& style_name) {
+  // Inner  -> the element's own background, upright.
+  // Outer  -> the parent's background, upright.
+  // The Reverse variants are the same two grounds, drawn in reverse video.
+  enum Loc { In, Out, RevOut, RevIn };
+
+  auto check = [&](const std::string& style_name, Loc top_left, Loc top,
+                   Loc top_right, Loc left, Loc right, Loc bottom) {
     INFO("border: " << style_name);
-    auto component = Ref<HalfBlockTest>::New();
+    auto component = Ref<LocationTest>::New();
     component->style_name = style_name;
     auto texture = RenderComponent(component, 8, 3);
 
-    for (int y = 0; y < 3; ++y) {
-      for (int x = 0; x < 8; ++x) {
-        if (x > 0 && x < 7 && y == 1) {
-          continue;  // Content, not border.
-        }
-        INFO("cell " << x << "," << y);
-        const Cell& cell = texture[x, y];
-        CHECK(cell.foreground_color != kParent);
-        CHECK(cell.background_color != kParent);
-        CHECK((cell.foreground_color == kOwn || cell.foreground_color == kBorder));
-        CHECK((cell.background_color == kOwn || cell.background_color == kBorder));
-      }
-    }
+    auto expect = [&](int x, int y, Loc loc) {
+      INFO("cell " << x << "," << y);
+      const Cell& cell = texture[x, y];
+      const bool outer = loc == Out || loc == RevOut;
+      // The glyph always carries the border color; only the ground varies.
+      CHECK(cell.foreground_color == kBorder);
+      CHECK(cell.background_color == (outer ? kParent : kOwn));
+      CHECK(cell.inverted == (loc == RevOut || loc == RevIn));
+    };
+
+    expect(0, 0, top_left);
+    expect(4, 0, top);
+    expect(7, 0, top_right);
+    expect(0, 1, left);
+    expect(7, 1, right);
+    expect(4, 2, bottom);
   };
 
-  check_ring("tall");
-  check_ring("panel");
-  check_ring("wide");
-  check_ring("inner");
+  //          style     tl      top   tr    left    right  bottom
+  check("tall",  RevOut, In,   Out,  RevOut, Out,   In);
+  check("panel", RevOut, In,   Out,  RevOut, Out,   In);
+  check("wide",  Out,    Out,  Out,  In,     RevIn, Out);
+  check("inner", Out,    Out,  Out,  Out,    Out,   Out);
 }
 
 // Regression: the half-block styles used to swap the two colors themselves to
