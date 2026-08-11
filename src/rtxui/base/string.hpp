@@ -29,13 +29,6 @@ auto IsCombining(uint32_t ucs) -> bool;
 auto IsFullWidth(uint32_t ucs) -> bool;
 auto IsControl(uint32_t ucs) -> bool;
 auto string_width(std::string_view input) -> int;
-auto Utf8ToGlyphs(std::string_view input) -> std::vector<std::string>;
-auto GlyphPrevious(std::string_view input, size_t start) -> size_t;
-auto GlyphNext(std::string_view input, size_t start) -> size_t;
-auto GlyphIterate(std::string_view input, int glyph_offset, size_t start = 0)
-    -> size_t;
-auto CellToGlyphIndex(std::string_view input) -> std::vector<int>;
-auto GlyphCount(std::string_view input) -> int;
 
 struct Grapheme {
   std::string_view text;
