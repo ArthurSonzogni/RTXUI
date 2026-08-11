@@ -1799,7 +1799,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                                     ComponentBase* import_source,
                                     const LocalScope* scope,
                                     size_t& child_idx,
-                                    bool preserve_newlines) {
+                                    bool preserve_newlines,
+                                    const SlotFilter* filter) {
   Ref<Element> slot_keep_alive(slot);
   auto Interpolate = [&](std::string_view text) -> std::string {
     return rtxui::Interpolate(text, import_source, scope);
@@ -1808,6 +1809,28 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
   bool last_condition_chain_met = false;
 
   for (const auto& child_node : node.children) {
+    if (filter && child_node.type == xml::Node::Type::kElement) {
+      // Control flow is not content: let it through so the filter can be
+      // applied to whatever it yields, which is how a <legend> inside an
+      // <if> still reaches its select-slot.
+      const bool is_control_flow =
+          child_node.tag == "if" || child_node.tag == "elif" ||
+          child_node.tag == "else" || child_node.tag == "for";
+      if (!is_control_flow) {
+        if (filter->only) {
+          if (child_node.tag != *filter->only) {
+            continue;
+          }
+        } else if (filter->claimed &&
+                   std::find(filter->claimed->begin(), filter->claimed->end(),
+                             child_node.tag) != filter->claimed->end()) {
+          continue;
+        }
+      }
+    } else if (filter && filter->only) {
+      // A select-slot takes tagged elements only; text has no tag to match.
+      continue;
+    }
     switch (child_node.type) {
       case xml::Node::Type::kComment:
         break;
@@ -1967,7 +1990,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           last_condition_chain_met = (cond == "true" || cond == "1");
           if (last_condition_chain_met) {
             RenderReconcile(child_node, slot, import_source, scope, child_idx,
-                            preserve_newlines);
+                            preserve_newlines, filter);
           }
           break;
         }
@@ -1987,7 +2010,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             if (cond == "true" || cond == "1") {
               last_condition_chain_met = true;
               RenderReconcile(child_node, slot, import_source, scope, child_idx,
-                              preserve_newlines);
+                              preserve_newlines, filter);
             }
           }
           break;
@@ -1996,7 +2019,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         if (child_node.tag == "else") {
           if (!last_condition_chain_met) {
             RenderReconcile(child_node, slot, import_source, scope, child_idx,
-                            preserve_newlines);
+                            preserve_newlines, filter);
           }
           last_condition_chain_met = true;
           break;
@@ -2058,13 +2081,13 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               if (visitor) {
                 item_scope.value = visitor;
                 RenderReconcile(child_node, slot, import_source, &item_scope,
-                                child_idx, preserve_newlines);
+                                child_idx, preserve_newlines, filter);
               } else {
                 std::string fallback_storage;
                 item_scope.value =
                     range->GetItemStringView(i, fallback_storage);
                 RenderReconcile(child_node, slot, import_source, &item_scope,
-                                child_idx, preserve_newlines);
+                                child_idx, preserve_newlines, filter);
               }
             }
           }
@@ -2101,6 +2124,13 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                 slot->AddChild(slot_element);
               }
             }
+          }
+          // `<slot.name select="tag">` routes projected children by tag; the
+          // criterion is kept on the element so the projection site below can
+          // read it without a parallel map.
+          auto select_it = child_node.attributes.find("select");
+          if (select_it != child_node.attributes.end()) {
+            slot_element->SetAttribute("select", select_it->second);
           }
           import_source->slots_[slot_name] = slot_element;
           child_idx++;
@@ -2352,10 +2382,38 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
             }
 
+            // Fill each `<slot.name select="tag">` from the projected content
+            // first, then let the default slot take what is left. Doing the
+            // split here - inside the reconcile that owns these children - is
+            // what keeps a select-slot consistent when the consumer stops
+            // providing a matching child: the slot is reconciled and truncated
+            // every frame like any other.
+            std::vector<std::string> claimed;
+            for (const auto& [selected_name, slot_el] : child->slots()) {
+              if (selected_name.empty() || !slot_el) {
+                continue;
+              }
+              const std::string* select = slot_el->GetAttribute("select");
+              if (!select || select->empty()) {
+                continue;
+              }
+              claimed.push_back(*select);
+              SlotFilter only_filter;
+              only_filter.only = select;
+              size_t selected_idx = 0;
+              child->RenderReconcile(child_node, slot_el.get(), import_source,
+                                     scope, selected_idx, preserve_newlines,
+                                     &only_filter);
+              slot_el->TruncateChildren(selected_idx);
+            }
+
+            SlotFilter default_filter;
+            default_filter.claimed = &claimed;
             size_t sub_child_idx = 0;
             child->RenderReconcile(child_node, default_slot.get(),
                                    import_source, scope, sub_child_idx,
-                                   preserve_newlines);
+                                   preserve_newlines,
+                                   claimed.empty() ? nullptr : &default_filter);
             default_slot->TruncateChildren(sub_child_idx);
 
             if (!needs_render) {

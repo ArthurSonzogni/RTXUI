@@ -18,6 +18,7 @@ void details::InitReflection() {
   Bind(open);
   Bind(arrow_char);
   Bind(content_class);
+  Bind(no_summary);
   Bind(Toggle);
   Component<details>::InitReflection();
 }
@@ -27,7 +28,8 @@ std::string_view details::Setup() {
     <div class="details-container" part="details-container">
       <div class="summary-line" part="summary-line" tabindex="0" onclick="Toggle()">
         <span class="arrow" part="arrow">{arrow_char}</span>
-        <slot.summary></slot.summary>
+        <slot.summary select="summary"></slot.summary>
+        <if condition="{no_summary}"><span>Details</span></if>
       </div>
       <div class="details-content {content_class}" part="details-content">
         <slot></slot>
@@ -88,33 +90,13 @@ bool details::OnEvent(Event event) {
 }
 
 bool details::Digest() {
-  arrow_char = open ? "▼" : "▶";
+  arrow_char = open ? "\u25bc" : "\u25b6";
   content_class = open ? "open" : "closed";
 
-  auto default_slot = Slot("");
+  // The <summary> is routed into the summary slot by `select`; only the
+  // fallback label is left to decide.
   auto summary_slot = Slot("summary");
-  if (default_slot && summary_slot) {
-    auto& default_children = const_cast<std::vector<Ref<Element>>&>(default_slot->children());
-    for (auto it = default_children.begin(); it != default_children.end(); ) {
-      if ((*it)->tag() == "summary") {
-        auto summary_el = *it;
-        it = default_children.erase(it);
-        // Manually detached from the default slot above; clear the stale
-        // parent before re-attaching (AddChild requires an orphan).
-        summary_el->set_parent(nullptr);
-
-        summary_slot->RemoveChildren();
-        summary_slot->AddChild(summary_el);
-      } else {
-        ++it;
-      }
-    }
-
-    if (summary_slot->ChildCount() == 0) {
-      auto default_text = Ref<TextElement>::New("Details");
-      summary_slot->AddChild(default_text);
-    }
-  }
+  no_summary = !summary_slot || summary_slot->ChildCount() == 0;
 
   return Component<details>::Digest();
 }
