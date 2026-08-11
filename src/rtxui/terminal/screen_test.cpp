@@ -4727,6 +4727,112 @@ class FieldsetApp : public Component<FieldsetApp> {
 };
 }  // namespace
 
+namespace {
+class ConditionalLegendApp : public Component<ConditionalLegendApp> {
+ public:
+  bool show = true;
+  std::string_view view = R"html(
+    <fieldset>
+      <if condition="{show}"><legend>Group title</legend></if>
+      <div id="inner">body</div>
+    </fieldset>
+  )html";
+  ConditionalLegendApp() { Bind(show); }
+};
+}  // namespace
+
+TEST_CASE("A slot-selected child follows the consumer that stopped providing it",
+          "[fieldset][details][slot]") {
+  // Regression: fieldset and details used to hoist the <legend>/<summary> out
+  // of the default slot in Digest(), by const_cast-ing the children vector and
+  // re-parenting the element. That destroyed the only record of where the
+  // element came from, so once the consumer stopped rendering it the component
+  // could not tell "the consumer removed it" from "I already took it". The
+  // stale element stayed in the named slot after the reconciler had dropped
+  // it, and style resolution then walked freed memory -- a segfault, not a
+  // cosmetic bug. Routing by `select` puts the split inside the reconcile that
+  // owns those children, so the slot is truncated like any other.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<ConditionalLegendApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto count = [&](const char* tag) {
+    int n = 0;
+    app->Root()->Visit([&](Element& e) {
+      if (e.tag() == tag) {
+        ++n;
+      }
+    });
+    return n;
+  };
+
+  REQUIRE(count("legend") == 1);
+  // Routed into the legend slot even though it came out of an <if>, and the
+  // has-legend styling lands on the first frame rather than a frame late.
+  REQUIRE(app->Root()->QuerySelector(".has-legend") != nullptr);
+
+  app->show = false;
+  app->Digest();
+  screen.Draw();
+  CHECK(count("legend") == 0);
+  CHECK(app->Root()->QuerySelector(".no-legend") != nullptr);
+
+  app->show = true;
+  app->Digest();
+  screen.Draw();
+  CHECK(count("legend") == 1);
+}
+
+namespace {
+class ConditionalSummaryApp : public Component<ConditionalSummaryApp> {
+ public:
+  bool show = true;
+  std::string_view view = R"html(
+    <details>
+      <if condition="{show}"><summary>Sum</summary></if>
+      <div id="inner">body</div>
+    </details>
+  )html";
+  ConditionalSummaryApp() { Bind(show); }
+};
+}  // namespace
+
+TEST_CASE("A details drops a summary its consumer stopped providing",
+          "[details][slot]") {
+  // Same defect as the fieldset case above: details hoisted <summary> out of
+  // the default slot destructively, so a conditional summary left a freed
+  // element behind and crashed in style resolution.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<ConditionalSummaryApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto count = [&] {
+    int n = 0;
+    app->Root()->Visit([&](Element& e) {
+      if (e.tag() == "summary") {
+        ++n;
+      }
+    });
+    return n;
+  };
+
+  REQUIRE(count() == 1);
+
+  app->show = false;
+  app->Digest();
+  screen.Draw();
+  CHECK(count() == 0);
+
+  app->show = true;
+  app->Digest();
+  screen.Draw();
+  CHECK(count() == 1);
+}
+
 TEST_CASE("A fieldset projects its legend and styles itself accordingly",
           "[fieldset]") {
   // fieldset::Digest() moves the <legend> out of the default slot into the

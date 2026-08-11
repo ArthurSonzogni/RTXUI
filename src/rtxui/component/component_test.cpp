@@ -6544,14 +6544,19 @@ TEST_CASE("Details Component Default Summary", "[component][details]") {
   auto* details_ptr = dynamic_cast<rtxui::details*>(details_comp);
   REQUIRE(details_ptr != nullptr);
 
-  // The summary slot should dynamically contain a TextElement with text "Details"
-  auto summary_slot = details_ptr->Slot("summary");
-  REQUIRE(summary_slot != nullptr);
-  REQUIRE(summary_slot->ChildCount() > 0);
-
-  auto* text_el = dynamic_cast<rtxui::TextElement*>(summary_slot->ChildAt(0));
-  REQUIRE(text_el != nullptr);
-  CHECK(text_el->text() == "Details");
+  // With no <summary> projected, the summary line falls back to the label
+  // "Details". It used to be an imperatively-added TextElement parked inside
+  // the summary slot; it is now declared in the template next to the slot, so
+  // assert what the user sees rather than where the node lives.
+  auto* summary_line = container->Root()->QuerySelector(".summary-line");
+  REQUIRE(summary_line != nullptr);
+  std::string label;
+  summary_line->Visit([&](rtxui::Element& e) {
+    if (auto* text = dynamic_cast<rtxui::TextElement*>(&e)) {
+      label += text->text();
+    }
+  });
+  CHECK(label.find("Details") != std::string::npos);
 }
 
 TEST_CASE("Details Component Exposes Part Attributes For External "

@@ -16,6 +16,7 @@ class details : public Component<details> {
   bool open = false;
   std::string arrow_char = "▶";
   std::string content_class = "closed";
+  bool no_summary = true;
 
   void Toggle();
 

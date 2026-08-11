@@ -182,12 +182,22 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
               Element* element,
               ComponentBase* source,
               const LocalScope* scope = nullptr);
+  /// Restricts which of a node's children a reconcile pass consumes, so that
+  /// content projected into a component can be split across several slots by
+  /// tag. See `<slot.name select="tag">` in RenderReconcile.
+  struct SlotFilter {
+    /// Tags claimed by a sibling select-slot; skipped by the default slot.
+    const std::vector<std::string>* claimed = nullptr;
+    /// When set, only children carrying this tag are consumed.
+    const std::string* only = nullptr;
+  };
   void RenderReconcile(const xml::Node& node,
                        Element* element,
                        ComponentBase* source,
                        const LocalScope* scope,
                        size_t& child_idx,
-                       bool preserve_newlines = false);
+                       bool preserve_newlines = false,
+                       const SlotFilter* filter = nullptr);
   std::string template_;
   std::string xml_string_;
   xml::Nodes xml_nodes_;
