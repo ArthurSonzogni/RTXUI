@@ -4833,6 +4833,125 @@ TEST_CASE("A details drops a summary its consumer stopped providing",
   CHECK(count() == 1);
 }
 
+namespace {
+// Built-ins that inspect what their consumer projected into them. The
+// fieldset/details crash fixed in this area came from projected content
+// disappearing, so pin the behaviour for the others too.
+#define RTXUI_COND_CHILD_APP(NAME, MARKUP)                     \
+  class NAME : public Component<NAME> {                        \
+   public:                                                     \
+    bool show = true;                                          \
+    std::string_view view = MARKUP;                            \
+    NAME() { Bind(show); }                                     \
+  };
+
+RTXUI_COND_CHILD_APP(CondTabsApp, R"html(<tabs value="t1">
+  <tab-pane label="One" name="t1">C1</tab-pane>
+  <if condition="{show}"><tab-pane label="Two" name="t2">C2</tab-pane></if>
+</tabs>)html")
+RTXUI_COND_CHILD_APP(CondSelectApp, R"html(<select value="a">
+  <option value="a">A</option>
+  <if condition="{show}"><option value="b">B</option></if>
+</select>)html")
+RTXUI_COND_CHILD_APP(CondListApp, R"html(<ul>
+  <li>one</li>
+  <if condition="{show}"><li>two</li></if>
+</ul>)html")
+RTXUI_COND_CHILD_APP(CondTableApp, R"html(<table>
+  <tr><td>a</td></tr>
+  <if condition="{show}"><tr><td>b</td></tr></if>
+</table>)html")
+
+class ForTabsApp : public Component<ForTabsApp> {
+ public:
+  std::vector<std::string> names{"a", "b", "c"};
+  std::string_view view = R"html(<tabs value="a">
+  <for each="{names}" as="n">
+    <tab-pane label="{n}" name="{n}">body</tab-pane>
+  </for>
+</tabs>)html";
+  ForTabsApp() { RegisterCollection("names", &names); }
+};
+
+// Counts elements carrying `cls`, or with tag `tag` when `cls` is null.
+int CountMatching(Element* root, const char* cls, const char* tag) {
+  int n = 0;
+  root->Visit([&](Element& e) {
+    if (tag) {
+      if (e.tag() == tag) {
+        ++n;
+      }
+      return;
+    }
+    for (const auto& c : e.classes) {
+      if (c == cls) {
+        ++n;
+        return;
+      }
+    }
+  });
+  return n;
+}
+}  // namespace
+
+TEST_CASE("Built-ins follow conditional projected children",
+          "[slot][tabs][select][table]") {
+  auto run = [](auto app, const char* cls, const char* tag) {
+    auto device = std::make_shared<MockTerminalDevice>();
+    device->TriggerResize(60, 20);
+    Screen screen(app, device);
+    screen.Draw();
+    Element* root = app->Root();
+
+    CHECK(CountMatching(root, cls, tag) == 2);
+    app->show = false;
+    app->Digest();
+    screen.Draw();
+    CHECK(CountMatching(root, cls, tag) == 1);
+    app->show = true;
+    app->Digest();
+    screen.Draw();
+    CHECK(CountMatching(root, cls, tag) == 2);
+  };
+
+  SECTION("tabs rebuilds its header strip") {
+    run(Ref<CondTabsApp>::New(), "tab-header-btn", nullptr);
+  }
+  SECTION("select drops the option") {
+    run(Ref<CondSelectApp>::New(), nullptr, "option");
+  }
+  SECTION("ul drops the item") {
+    run(Ref<CondListApp>::New(), nullptr, "li");
+  }
+  SECTION("table drops the row") {
+    run(Ref<CondTableApp>::New(), nullptr, "tr");
+  }
+}
+
+TEST_CASE("tabs follows a collection that grows and shrinks",
+          "[slot][tabs]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<ForTabsApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto headers = [&] {
+    return CountMatching(app->Root(), "tab-header-btn", nullptr);
+  };
+  CHECK(headers() == 3);
+
+  app->names.pop_back();
+  app->Digest();
+  screen.Draw();
+  CHECK(headers() == 2);
+
+  app->names.push_back("d");
+  app->Digest();
+  screen.Draw();
+  CHECK(headers() == 3);
+}
+
 TEST_CASE("A fieldset projects its legend and styles itself accordingly",
           "[fieldset]") {
   // fieldset::Digest() moves the <legend> out of the default slot into the
