@@ -293,6 +293,27 @@ std::optional<Color> ParseColor(std::string_view value) {
   return std::nullopt;
 }
 
+// Mixes `amount` of `target` into `base`, which is what both lighten() and
+// darken() mean: `color-mix(in srgb, target amount, base)`.
+//
+// With no base color there is nothing to mix into yet, so the mix is deferred
+// to paint time as `target` at `amount` alpha. Compositing that over whatever
+// ends up behind gives the same result, which is why the two branches agree.
+Color MixToward(const std::optional<Color>& base, Color target, float amount) {
+  amount = std::clamp(amount, 0.0f, 1.0f);
+  if (!base.has_value()) {
+    return Color::RGBA(target.r, target.g, target.b,
+                       static_cast<uint8_t>(amount * 255.0f));
+  }
+  const Color c = *base;
+  auto mix = [&](uint8_t from, uint8_t to) {
+    return static_cast<uint8_t>(from + amount * (static_cast<float>(to) -
+                                                 static_cast<float>(from)));
+  };
+  return Color::RGBA(mix(c.r, target.r), mix(c.g, target.g),
+                     mix(c.b, target.b), c.a);
+}
+
 std::optional<Color> TransformColor(std::optional<Color> current,
                                     std::string_view v) {
   while (!v.empty() && std::isspace(static_cast<unsigned char>(v.front()))) {
@@ -310,16 +331,13 @@ std::optional<Color> TransformColor(std::optional<Color> current,
     } else {
       amount = StoF(amount_str);
     }
-    if (current.has_value()) {
-      Color c = *current;
-      uint8_t new_r = std::min(255.0f, c.r + 255.0f * amount);
-      uint8_t new_g = std::min(255.0f, c.g + 255.0f * amount);
-      uint8_t new_b = std::min(255.0f, c.b + 255.0f * amount);
-      return Color::RGBA(new_r, new_g, new_b, c.a);
-    } else {
-      uint8_t alpha = std::clamp(amount * 255.0f, 0.0f, 255.0f);
-      return Color::RGBA(255, 255, 255, alpha);
-    }
+    // Mix `amount` of white in, rather than adding a flat `255 * amount` to
+    // each channel. The two differ -- the flat form shifts a bright color as
+    // far as a dark one and clips -- and the no-base branch has always been
+    // the mixing kind, since compositing white at `amount` alpha over the
+    // backdrop *is* the mix. Using the flat form whenever a color happened to
+    // resolve meant one declaration produced two different results.
+    return MixToward(current, Color::RGB(255, 255, 255), amount);
   }
 
   if (v.starts_with("darken(") && v.back() == ')') {
@@ -330,16 +348,7 @@ std::optional<Color> TransformColor(std::optional<Color> current,
     } else {
       amount = StoF(amount_str);
     }
-    if (current.has_value()) {
-      Color c = *current;
-      uint8_t new_r = std::max(0.0f, c.r - 255.0f * amount);
-      uint8_t new_g = std::max(0.0f, c.g - 255.0f * amount);
-      uint8_t new_b = std::max(0.0f, c.b - 255.0f * amount);
-      return Color::RGBA(new_r, new_g, new_b, c.a);
-    } else {
-      uint8_t alpha = std::clamp(amount * 255.0f, 0.0f, 255.0f);
-      return Color::RGBA(0, 0, 0, alpha);
-    }
+    return MixToward(current, Color::RGB(0, 0, 0), amount);
   }
 
   if (v.starts_with("alpha(") && v.back() == ')') {

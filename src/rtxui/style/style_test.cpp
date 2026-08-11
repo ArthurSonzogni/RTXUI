@@ -3,7 +3,10 @@
 // the LICENSE file.
 #include "rtxui/style/style.hpp"
 
+#include <iostream>
 #include <catch2/catch_test_macros.hpp>
+#include "rtxui/paint/color.hpp"
+#include <cmath>
 #include <string>
 
 #include "rtxui/base/string.hpp"
@@ -975,9 +978,12 @@ TEST_CASE("Color transformations in ApplyStyle", "[style][color]") {
     style.background_color = Color::RGB(100, 150, 200);
     rtxui::ApplyStyle(style, {"background-color", "lighten(0.1)"});
     REQUIRE(style.background_color.has_value());
-    CHECK(style.background_color->r == 125);  // 100 + 25.5 -> 125
-    CHECK(style.background_color->g == 175);
-    CHECK(style.background_color->b == 225);
+    // A tenth of the way to white, per channel: 100 + 0.1 * (255 - 100).
+    // Not a flat +25.5 on every channel, which moved the already-bright blue
+    // as far as the dark red and clipped anything above 230.
+    CHECK(style.background_color->r == 115);
+    CHECK(style.background_color->g == 160);
+    CHECK(style.background_color->b == 205);
   }
 
   SECTION("darken() color transformation") {
@@ -993,9 +999,10 @@ TEST_CASE("Color transformations in ApplyStyle", "[style][color]") {
     style.foreground_color = Color::RGB(100, 150, 200);
     rtxui::ApplyStyle(style, {"color", "darken(0.2)"});
     REQUIRE(style.foreground_color.has_value());
-    CHECK(style.foreground_color->r == 49);  // 100 - 51
-    CHECK(style.foreground_color->g == 99);
-    CHECK(style.foreground_color->b == 149);
+    // A fifth of the way to black: 100 - 0.2 * 100.
+    CHECK(style.foreground_color->r == 80);
+    CHECK(style.foreground_color->g == 120);
+    CHECK(style.foreground_color->b == 160);
   }
 
   SECTION("alpha() color transformation") {
@@ -1461,5 +1468,65 @@ TEST_CASE("Numeric values tolerate surrounding whitespace",
   SECTION("whitespace alone is not a number") {
     rtxui::ApplyStyle(style, {"padding-left", "   "});
     CHECK(style.padding.left == 0);
+  }
+}
+
+TEST_CASE("lighten() and darken() mix toward a color", "[style][color]") {
+  // Regression: the two code paths computed different things. With a base
+  // color resolved it added a flat `255 * amount` to each channel; with none
+  // it deferred to paint time as an alpha overlay, which composites to
+  // `c + amount * (target - c)`. So the same declaration produced one color or
+  // another depending on whether something upstream happened to set one.
+  //
+  // Mixing is the right one of the two: it is what `color-mix(in srgb, ...)`
+  // means, it cannot clip, and it is what the deferred form has always done.
+  auto resolved = [](std::string_view base, std::string_view transform) {
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"background-color", base});
+    rtxui::ApplyStyle(style, {"background-color", transform});
+    REQUIRE(style.background_color.has_value());
+    return *style.background_color;
+  };
+  auto deferred = [](std::string_view transform) {
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"background-color", transform});
+    REQUIRE(style.background_color.has_value());
+    return *style.background_color;
+  };
+
+  SECTION("halfway to white, not a flat shift") {
+    // 100 + 0.5 * (255 - 100) = 177. The old formula gave 100 + 127 = 227.
+    CHECK(resolved("rgb(100, 100, 100)", "lighten(50%)") ==
+          Color::RGB(177, 177, 177));
+    // A bright color moves less, and cannot clip. The old formula saturated
+    // everything above 128 to pure white.
+    CHECK(resolved("rgb(200, 200, 200)", "lighten(50%)") ==
+          Color::RGB(227, 227, 227));
+  }
+
+  SECTION("halfway to black") {
+    CHECK(resolved("rgb(100, 100, 100)", "darken(50%)") ==
+          Color::RGB(50, 50, 50));
+  }
+
+  SECTION("both paths agree") {
+    // With no base the result is deferred as an overlay; compositing it over
+    // the base has to land where resolving against that base directly does.
+    const Color base = Color::RGB(100, 100, 100);
+    const Color direct = resolved("rgb(100, 100, 100)", "lighten(50%)");
+    const Color composited = Blend(deferred("lighten(50%)"), base);
+    // One unit of slack for the two roundings, which happen in different orders.
+    CHECK(std::abs(int(direct.r) - int(composited.r)) <= 1);
+    CHECK(std::abs(int(direct.g) - int(composited.g)) <= 1);
+    CHECK(std::abs(int(direct.b) - int(composited.b)) <= 1);
+  }
+
+  SECTION("0% and 100% are the endpoints") {
+    CHECK(resolved("rgb(60, 70, 80)", "lighten(0%)") ==
+          Color::RGB(60, 70, 80));
+    CHECK(resolved("rgb(60, 70, 80)", "lighten(100%)") ==
+          Color::RGB(255, 255, 255));
+    CHECK(resolved("rgb(60, 70, 80)", "darken(100%)") ==
+          Color::RGB(0, 0, 0));
   }
 }
