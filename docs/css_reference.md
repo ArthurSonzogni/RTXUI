@@ -204,8 +204,8 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 *   **RGB/RGBA**: `rgb(R, G, B)` and `rgba(R, G, B, A)` where color channels range from 0-255, and Alpha ranges 0.0-1.0.
 *   **Keywords**: `black`, `silver`, `gray`, `white`, `maroon`, `red`, `purple`, `fuchsia`, `green`, `lime`, `olive`, `yellow`, `navy`, `blue`, `teal`, `aqua`.
 *   **Transformations**:
-    *   `lighten(<amount>)`: Lightens the current resolved color (e.g., `lighten(10%)` or `lighten(0.1)`). If no color has been resolved for the element, falls back to a transparent white overlay (`rgba(255, 255, 255, amount)`).
-    *   `darken(<amount>)`: Darkens the current resolved color (e.g., `darken(15%)` or `darken(0.15)`). If no color has been resolved, falls back to a transparent black overlay (`rgba(0, 0, 0, amount)`).
+    *   `lighten(<amount>)`: Mixes `amount` of white into the current resolved color (e.g., `lighten(10%)` or `lighten(0.1)`), equivalent to CSS `color-mix(in srgb, white <amount>, <current>)`. Each channel moves that fraction of its remaining distance to 255, so a bright color moves less than a dark one and the result cannot clip. If no color has been resolved for the element, the mix is deferred to paint time as a white overlay at `amount` alpha, which composites to the same result over whatever ends up behind.
+    *   `darken(<amount>)`: The same, mixing toward black.
     *   `alpha(<amount>)`: Sets the alpha transparency of the current resolved color to the specified amount (e.g., `alpha(50%)` or `alpha(0.5)`).
 
 ### Border Styles
