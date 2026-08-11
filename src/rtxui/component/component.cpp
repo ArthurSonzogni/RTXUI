@@ -171,8 +171,8 @@ bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
 void Bindings::Import(std::string_view name, std::function<void()> callback) {
   if (callbacks_.count(name) ||
       parameterized_callbacks_.count(name)) {
-    std::println("Error: Callback '{}' is already imported.", name);
-    std::exit(1);
+    std::cerr << "Error: Callback '" << name << "' is already imported.\n";
+    return;
   }
 
   callbacks_[std::string(name)] = std::move(callback);
@@ -182,8 +182,8 @@ void Bindings::Import(std::string_view name,
                       std::function<void(std::string)> callback) {
   if (callbacks_.count(name) ||
       parameterized_callbacks_.count(name)) {
-    std::println("Error: Callback '{}' is already imported.", name);
-    std::exit(1);
+    std::cerr << "Error: Callback '" << name << "' is already imported.\n";
+    return;
   }
 
   parameterized_callbacks_[std::string(name)] = std::move(callback);
@@ -191,8 +191,8 @@ void Bindings::Import(std::string_view name,
 
 void Bindings::Import(std::string_view name, ComponentFactory factory) {
   if (imports_.count(name)) {
-    std::println("Error: Component '{}' is already imported.", name);
-    std::exit(1);
+    std::cerr << "Error: Component '" << name << "' is already imported.\n";
+    return;
   }
 
   imports_[std::string(name)] = std::move(factory);
@@ -241,15 +241,13 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
 }  // namespace
 
 void ReportDuplicateImport(std::string_view name) {
-  std::println("Error: Component '{}' is already imported.", name);
-  std::exit(1);
+  std::cerr << "Error: Component '" << name << "' is already imported.\n";
 }
 
 void ReportDuplicateImportAlias(std::string_view class_name,
                                 std::string_view alias) {
-  std::println("Error: Can't import '{}' as '{}`, since it is already imported.",
-               class_name, alias);
-  std::exit(1);
+  std::cerr << "Error: Can't import '" << class_name << "' as '" << alias
+            << "', since it is already imported.\n";
 }
 
 void RegisterGlobalComponent(std::string_view name, ComponentFactory factory) {
