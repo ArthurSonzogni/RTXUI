@@ -8177,3 +8177,46 @@ TEST_CASE("text-decoration: overline reaches the cells and inherits",
   }
   CHECK(found == 4);
 }
+
+namespace {
+class ClassMutationApp : public rtxui::Component<ClassMutationApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<ClassMutationApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div id="box">x</div>
+    <style>
+      div { color: rgb(1, 1, 1); }
+      .lit { color: rgb(2, 2, 2); }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("Mutating classes in place restyles without an explicit invalidation",
+          "[component][style]") {
+  // Regression: an element remembers which components have resolved it, and
+  // resolution skips it while that memo stands. SetAttribute() drops the memo,
+  // but `classes` is a plain public vector, so assigning to it left the memo
+  // in place and the new classes silently never applied. Callers were expected
+  // to call ClearResolvedStyles() themselves; <tabs> did not, twice.
+  auto app = rtxui::Ref<ClassMutationApp>::New();
+  app->Mount();
+
+  auto* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+  CHECK(box->style.foreground_color == Color::RGB(1, 1, 1));
+
+  // Deliberately mutate the vector directly, with no invalidation call.
+  box->classes.push_back("lit");
+  app->ResolveStyles();
+  CHECK(box->style.foreground_color == Color::RGB(2, 2, 2));
+
+  // Removing it again must take the style away, not just add on top: the
+  // element has to be resolved from scratch, not incrementally.
+  box->classes.clear();
+  app->ResolveStyles();
+  CHECK(box->style.foreground_color == Color::RGB(1, 1, 1));
+}
