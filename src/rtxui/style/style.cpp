@@ -180,7 +180,8 @@ auto Parser::ParseDeclaration() -> Expected<Declaration, Error> {
   return Declaration{property, val, important};
 }
 
-namespace {
+}  // namespace
+
 SelectorPart ParseSinglePart(std::string_view current) {
   SelectorPart part;
   std::string working(current);
@@ -243,7 +244,8 @@ SelectorPart ParseSinglePart(std::string_view current) {
   }
   return part;
 }
-} // namespace
+
+namespace {
 
 auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   while (!current.empty() && IsWhiteSpace(current.front())) {

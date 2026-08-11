@@ -37,6 +37,11 @@ struct SelectorPart {
   char combinator = ' '; // ' ' or '>'
 };
 
+/// Parses one compound selector (`div.card#id[attr]`) with no combinators and
+/// no pseudo-classes. Exposed for `:not()`, which has to match a selector from
+/// inside the matcher.
+SelectorPart ParseSinglePart(std::string_view text);
+
 struct ParsedSelector {
   std::string base;
   std::string id;

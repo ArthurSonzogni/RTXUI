@@ -778,6 +778,12 @@ int StructuralIndex(const Element* element, bool from_end) {
   return 0;
 }
 
+// Defined below; :not() has to match a selector from inside the pseudo-class
+// matcher, and that matcher is itself what MatchSelectorPart calls into.
+bool MatchSelectorPart(const Element* element,
+                       const Element* root,
+                       const css::SelectorPart& part);
+
 bool MatchPseudos(const Element* element,
                   const std::vector<std::string>& pseudo_classes) {
   for (const auto& pseudo : pseudo_classes) {
@@ -831,6 +837,28 @@ bool MatchPseudos(const Element* element,
     if (pseudo == "empty" && HasAuthoredContent(element)) {
       return false;
     }
+    if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
+      // A single compound selector only: `:not(.a, .b)` selector lists and
+      // nested combinators are not supported, and match nothing.
+      std::string_view inner =
+          std::string_view(pseudo).substr(4, pseudo.size() - 5);
+      while (!inner.empty() && std::isspace(static_cast<unsigned char>(inner.front()))) {
+        inner.remove_prefix(1);
+      }
+      while (!inner.empty() && std::isspace(static_cast<unsigned char>(inner.back()))) {
+        inner.remove_suffix(1);
+      }
+      if (inner.empty()) {
+        return false;
+      }
+      // `root` is only needed by the `self` base, which is meaningless inside
+      // :not() -- an element either is the component root or is not, and
+      // negating that is not something a stylesheet can usefully say.
+      if (MatchSelectorPart(element, nullptr, css::ParseSinglePart(inner))) {
+        return false;
+      }
+    }
+
     if (pseudo.starts_with("nth-child(") ||
         pseudo.starts_with("nth-last-child(")) {
       if (!pseudo.ends_with(")")) return false;
