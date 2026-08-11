@@ -8,6 +8,7 @@
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
+#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -4764,5 +4765,84 @@ TEST_CASE("A fieldset projects its legend and styles itself accordingly",
   // The legend text actually reaches the frame.
   std::string frame = device->GetOutput();
   CHECK(frame.find("Group title") != std::string::npos);
+}
+
+namespace {
+class ScreenBackgroundApp : public Component<ScreenBackgroundApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Component<ScreenBackgroundApp>::InitReflection();
+  }
+  // No background anywhere: whatever is behind the interface shows through.
+  std::string_view view = R"html(
+    <div class="box">hi</div>
+    <style>
+      .box {
+        display: block;
+        width: 6;
+        height: 3;
+        border: tall;
+        border-color: rgb(255, 0, 0);
+      }
+    </style>
+  )html";
+};
+}  // namespace
+
+TEST_CASE("Declaring a screen background makes reversal exact",
+          "[terminal][paint][border]") {
+  // `tall`'s left column is reversed. With nothing behind the interface, the
+  // ground it reverses onto is the terminal's own background -- a color that
+  // cannot be written into an escape sequence -- so the swap has to be handed
+  // to the terminal with SGR 7. Naming the color removes the guess: the swap
+  // happens here, and anything drawn over the cell later composites against
+  // the colors it will really be drawn in.
+  auto left_cell = [](Color screen_background) {
+    auto app = Ref<ScreenBackgroundApp>::New();
+    app->Mount();
+    auto box = LayoutTreeBuilder::Build(app->Root());
+    REQUIRE(box != nullptr);
+    auto fragment = RunLayout({box.get()}, {{6, MeasureMode::Exactly},
+                                            {3, MeasureMode::Exactly}});
+    REQUIRE(fragment != nullptr);
+    Texture texture(6, 3);
+    Paint(fragment.get(), texture, 0, 0, screen_background);
+    return texture[0, 1];
+  };
+
+  SECTION("unknown background: the terminal is asked to swap") {
+    const Cell cell = left_cell(Color());
+    CHECK(cell.inverted);
+    // The border color still goes in the opaque slot -- putting the unknown
+    // color there is what used to render as the terminal's default
+    // *foreground*, a white block down the side of the box.
+    CHECK(cell.foreground_color == Color::RGB(255, 0, 0));
+    CHECK(cell.background_color.a == 0);
+  }
+
+  SECTION("declared background: swapped here, nothing left to the terminal") {
+    const Color screen = Color::RGB(0, 0, 128);
+    const Cell cell = left_cell(screen);
+    CHECK_FALSE(cell.inverted);
+    CHECK(cell.foreground_color == screen);
+    CHECK(cell.background_color == Color::RGB(255, 0, 0));
+  }
+
+  SECTION("both spellings draw the same thing") {
+    const Cell unknown = left_cell(Color());
+    const Cell declared = left_cell(Color::RGB(0, 0, 128));
+    auto glyph = [](const Cell& c) {
+      return c.inverted ? c.background_color : c.foreground_color;
+    };
+    auto ground = [](const Cell& c) {
+      return c.inverted ? c.foreground_color : c.background_color;
+    };
+    // The glyph shows the ground behind the border in both; only one of them
+    // knows what color that is.
+    CHECK(glyph(unknown).a == 0);
+    CHECK(glyph(declared) == Color::RGB(0, 0, 128));
+    CHECK(ground(unknown) == ground(declared));
+  }
 }
 }  // namespace rtxui

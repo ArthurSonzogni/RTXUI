@@ -939,6 +939,9 @@ class ScreenImpl {
   bool SpatialNavigate(Event event);
   void SimulateClick(Element* element);
 
+  void SetBackgroundColor(Color color) { background_color_ = color; }
+  Color background_color() const { return background_color_; }
+
   void SetSmoothScrollEnabled(bool enabled) {
     smooth_scroll_enabled_ = enabled;
   }
@@ -964,6 +967,8 @@ class ScreenImpl {
   std::unique_ptr<TerminalInputParser> parser_;
   Element* focused_element_ = nullptr;
   bool smooth_scroll_enabled_ = true;
+  // Transparent: the terminal's own background shows through.
+  Color background_color_;
   bool drag_active_ = false;
   Element* drag_element_ = nullptr;
   bool drag_vertical_ = false;
@@ -2075,7 +2080,7 @@ void ScreenImpl::Draw() {
 
   Texture texture(width_, height_);
   if (root_fragment) {
-    Paint(root_fragment.get(), texture);
+    Paint(root_fragment.get(), texture, 0, 0, background_color_);
   }
 
   std::string new_output;
@@ -2570,6 +2575,14 @@ void Screen::SetSmoothScrollEnabled(bool enabled) {
 
 bool Screen::smooth_scroll_enabled() const {
   return impl_->smooth_scroll_enabled();
+}
+
+void Screen::SetBackgroundColor(Color color) {
+  impl_->SetBackgroundColor(color);
+}
+
+Color Screen::background_color() const {
+  return impl_->background_color();
 }
 
 }  // namespace rtxui
