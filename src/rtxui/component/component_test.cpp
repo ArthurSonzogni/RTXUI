@@ -8486,3 +8486,75 @@ TEST_CASE("A nested component keeps its host's rules when it re-renders",
   CHECK(border_of("#a") == 1);
   CHECK(border_of("#b") == 1);
 }
+
+namespace {
+// A component whose stylesheet mixes a bare `self` rule with rules that reach
+// past its own root. The bare rule must not be taken as proof that the whole
+// stylesheet stops at the root.
+class SelfAndDescendantRulesApp
+    : public rtxui::Component<SelfAndDescendantRulesApp> {
+ public:
+  std::string_view view = R"(
+    <div id="root">
+      <div id="child" class="tagged">
+        <span id="grandchild">x</span>
+      </div>
+    </div>
+    <style>
+      self { padding: 3; }
+      self .tagged { margin: 4; }
+      span { padding: 5; }
+    </style>
+  )";
+};
+
+// Every rule here stops at the root, which is what lets the walk skip
+// descendants. The root must still be styled.
+class OnlySelfRulesApp : public rtxui::Component<OnlySelfRulesApp> {
+ public:
+  std::string_view view = R"(
+    <div id="root">
+      <div id="child">x</div>
+    </div>
+    <style>
+      self { padding: 7; }
+      self:hover { margin: 9; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A bare `self` rule does not stop a stylesheet reaching descendants",
+          "[component][style][css]") {
+  // ResolveStylesRecursive skips the whole matching pass for a component whose
+  // every rule is a bare `self { … }`, because such a component can only ever
+  // style its own root -- and since every HTML tag is itself a component, that
+  // describes most components in a tree. The skip is only sound if "bare self"
+  // is judged precisely: a descendant, tag or ::part() rule sitting next to a
+  // `self` rule has to disqualify the whole component, or its descendants
+  // silently lose every style.
+  SECTION("descendant and tag rules still apply") {
+    auto app = rtxui::Ref<SelfAndDescendantRulesApp>::New();
+    app->Mount();
+    auto at = [&](const char* id) {
+      auto* element = app->Root()->QuerySelector(id);
+      REQUIRE(element != nullptr);
+      return element;
+    };
+    // `self` names the component's own root, not the template's outermost tag.
+    CHECK(app->Root()->style.padding.left == 3);
+    CHECK(at("#child")->style.margin.left == 4);
+    CHECK(at("#grandchild")->style.padding.left == 5);
+  }
+
+  SECTION("a component that really is self-only still styles its own root") {
+    auto app = rtxui::Ref<OnlySelfRulesApp>::New();
+    app->Mount();
+    CHECK(app->Root()->style.padding.left == 7);
+    // Descendants are untouched, which is the whole point: no rule can reach
+    // them, which is what makes skipping the walk sound.
+    auto* child = app->Root()->QuerySelector("#child");
+    REQUIRE(child != nullptr);
+    CHECK(child->style.padding.left == 0);
+  }
+}
