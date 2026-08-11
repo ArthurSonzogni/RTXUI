@@ -578,7 +578,18 @@ void ReportXmlError(const XmlError& error, std::string_view xml_string) {
 
 namespace {
 
+// A component's own template is normally a compile-time literal, so a parse
+// failure is a programmer error and exiting is the most useful default: the
+// message is the last thing on the terminal instead of scrolling past. An app
+// that installed an XML error handler has said otherwise, though -- that is
+// what SetXmlErrorHandler is for -- and killing its process would defeat the
+// point of letting it surface the error through its own UI. Mount() returns
+// without nodes in that case, so the component renders empty.
 void XmlParseError(const xml::Error& error, std::string_view xml_string) {
+  if (const auto& handler = GetXmlErrorHandler()) {
+    handler(XmlError{error.message, error.line, error.column});
+    return;
+  }
   PrintCompilerStyleError(xml_string, error.line, error.column, error.message, "DOM");
   std::exit(1);
 }
@@ -1322,6 +1333,11 @@ void ComponentBase::Mount() {
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
   if (!nodes) {
     XmlParseError(nodes.error(), xml_string_);
+    // Only reached when a handler chose not to exit. Falling through would
+    // read nodes.value() on an empty optional.
+    xml_nodes_ = {};
+    Render();
+    return;
   }
   xml_nodes_ = std::move(nodes.value());
   Render();
@@ -1778,6 +1794,13 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         if (child_node.tag == "if") {
+          // A missing attribute is a template typo, not a reason to abort the
+          // process: an absent condition is simply never met, exactly like a
+          // condition that evaluates to anything other than true/1.
+          if (!child_node.attributes.contains("condition")) {
+            last_condition_chain_met = false;
+            break;
+          }
           const auto& cond_attr = child_node.attributes.at("condition");
           std::string cond;
           if (cond_attr.find('{') == std::string::npos) {
@@ -1795,6 +1818,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
         if (child_node.tag == "elif") {
           if (!last_condition_chain_met) {
+            if (!child_node.attributes.contains("condition")) {
+              break;
+            }
             const auto& cond_attr = child_node.attributes.at("condition");
             std::string cond;
             if (cond_attr.find('{') == std::string::npos) {
@@ -1836,6 +1862,11 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         if (child_node.tag == "for") {
+          // Same for a <for> with nothing to iterate: render no items rather
+          // than throwing out of Render().
+          if (!child_node.attributes.contains("each")) {
+            break;
+          }
           const auto& each_attr = child_node.attributes.at("each");
           // Strip {} if present
           std::string_view range_name = each_attr;
