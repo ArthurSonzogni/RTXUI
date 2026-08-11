@@ -17,7 +17,7 @@ std::string_view fieldset::Setup() {
   return R"html(
     <div class="fieldset-wrapper" part="fieldset-wrapper">
       <div class="legend-line {legend_class}" part="legend-line">
-        <slot.legend></slot.legend>
+        <slot.legend select="legend"></slot.legend>
       </div>
       <div class="fieldset-body" part="fieldset-body">
         <slot></slot>
@@ -55,27 +55,11 @@ std::string_view fieldset::Setup() {
 }
 
 bool fieldset::Digest() {
-  auto default_slot = Slot("");
+  // The <legend> is routed into the legend slot by `select`, so all that is
+  // left is to report whether one arrived.
   auto legend_slot = Slot("legend");
-  if (default_slot && legend_slot) {
-    auto& default_children = const_cast<std::vector<Ref<Element>>&>(default_slot->children());
-    for (auto it = default_children.begin(); it != default_children.end(); ) {
-      if ((*it)->tag() == "legend") {
-        auto legend_el = *it;
-        it = default_children.erase(it);
-        // Manually detached from the default slot above; clear the stale
-        // parent before re-attaching (AddChild requires an orphan).
-        legend_el->set_parent(nullptr);
-
-        legend_slot->RemoveChildren();
-        legend_slot->AddChild(legend_el);
-      } else {
-        ++it;
-      }
-    }
-  }
-
-  legend_class = (legend_slot && legend_slot->ChildCount() > 0) ? "has-legend" : "no-legend";
+  legend_class =
+      (legend_slot && legend_slot->ChildCount() > 0) ? "has-legend" : "no-legend";
 
   return Component<fieldset>::Digest();
 }

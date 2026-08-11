@@ -79,6 +79,40 @@ When consuming a component with named slots, wrap the projected elements inside 
 </PageLayout>
 ```
 
+### Selecting Projected Content by Tag (`select`)
+
+`<template.name>` asks the consumer to say where content goes. Sometimes the
+component should decide instead, from the tag the consumer wrote. Give the slot
+a `select` attribute and it claims projected children with that tag, wherever
+they appear in the projected content:
+
+```html
+<!-- Inside the component's own template -->
+<div class="legend-line">
+  <slot.legend select="legend"></slot.legend>
+</div>
+<div class="body">
+  <slot></slot>
+</div>
+```
+
+```html
+<!-- What the consumer writes: no <template.legend> ceremony -->
+<fieldset>
+  <legend>Group title</legend>
+  <div>body</div>
+</fieldset>
+```
+
+The `<legend>` is routed into the legend slot; everything else falls through to
+the default slot. This is how the built-in `<fieldset>` and `<details>` pick up
+`<legend>` and `<summary>`.
+
+Selection looks through `<if>`, `<elif>`, `<else>` and `<for>`, so a
+conditionally rendered `<legend>` still reaches its slot, and the slot empties
+again when the condition turns off. Only elements are matched -- bare text has
+no tag and always lands in the default slot.
+
 ---
 
 ## Interactive Demo
