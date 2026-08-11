@@ -764,18 +764,36 @@ bool HasAuthoredContent(const Element* element) {
 
 // The 1-based position of `element` among its structural siblings, counting
 // from the start or (for :nth-last-child) the end. 0 when it is not there.
-int StructuralIndex(const Element* element, bool from_end) {
+int StructuralIndex(const Element* element, bool from_end, bool same_tag_only) {
   const Element* parent = element->Parent();
   if (!parent) {
     return 0;
   }
   std::vector<const Element*> siblings = StructuralSiblings(parent);
+  if (same_tag_only) {
+    std::erase_if(siblings, [element](const Element* sibling) {
+      return sibling->tag() != element->tag();
+    });
+  }
   for (size_t i = 0; i < siblings.size(); ++i) {
     if (siblings[i] == element) {
       return static_cast<int>(from_end ? siblings.size() - i : i + 1);
     }
   }
   return 0;
+}
+
+// How many structural siblings share `element`'s tag, itself included.
+size_t TypeSiblingCount(const Element* element) {
+  const Element* parent = element->Parent();
+  if (!parent) {
+    return 0;
+  }
+  std::vector<const Element*> siblings = StructuralSiblings(parent);
+  return static_cast<size_t>(std::count_if(
+      siblings.begin(), siblings.end(), [element](const Element* sibling) {
+        return sibling->tag() == element->tag();
+      }));
 }
 
 // Defined below; :not() has to match a selector from inside the pseudo-class
@@ -817,12 +835,12 @@ bool MatchPseudos(const Element* element,
       return false;
     }
     if (pseudo == "first-child") {
-      if (StructuralIndex(element, /*from_end=*/false) != 1) {
+      if (StructuralIndex(element, /*from_end=*/false, /*same_tag_only=*/false) != 1) {
         return false;
       }
     }
     if (pseudo == "last-child") {
-      if (StructuralIndex(element, /*from_end=*/true) != 1) {
+      if (StructuralIndex(element, /*from_end=*/true, /*same_tag_only=*/false) != 1) {
         return false;
       }
     }
@@ -837,6 +855,36 @@ bool MatchPseudos(const Element* element,
     if (pseudo == "empty" && HasAuthoredContent(element)) {
       return false;
     }
+    if (pseudo == "first-of-type") {
+      if (StructuralIndex(element, /*from_end=*/false, /*same_tag_only=*/true) !=
+          1) {
+        return false;
+      }
+    }
+    if (pseudo == "last-of-type") {
+      if (StructuralIndex(element, /*from_end=*/true, /*same_tag_only=*/true) !=
+          1) {
+        return false;
+      }
+    }
+    if (pseudo == "only-of-type") {
+      if (TypeSiblingCount(element) != 1) {
+        return false;
+      }
+    }
+    if (pseudo.starts_with("nth-of-type(") ||
+        pseudo.starts_with("nth-last-of-type(")) {
+      if (!pseudo.ends_with(")")) return false;
+      bool from_end = pseudo.starts_with("nth-last-of-type(");
+      size_t open = pseudo.find('(') + 1;
+      std::string_view arg =
+          std::string_view(pseudo).substr(open, pseudo.size() - open - 1);
+      int index = StructuralIndex(element, from_end, /*same_tag_only=*/true);
+      if (index == 0 || !MatchNth(arg, index)) {
+        return false;
+      }
+    }
+
     if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
       // A single compound selector only: `:not(.a, .b)` selector lists and
       // nested combinators are not supported, and match nothing.
@@ -866,7 +914,7 @@ bool MatchPseudos(const Element* element,
       size_t open = pseudo.find('(') + 1;
       std::string_view arg =
           std::string_view(pseudo).substr(open, pseudo.size() - open - 1);
-      int index = StructuralIndex(element, from_end);
+      int index = StructuralIndex(element, from_end, /*same_tag_only=*/false);
       if (index == 0 || !MatchNth(arg, index)) {
         return false;
       }
