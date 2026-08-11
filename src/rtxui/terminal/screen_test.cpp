@@ -4551,4 +4551,218 @@ TEST_CASE("Switching tab keeps the header buttons styled", "[tabs][mouse][css]")
   }
 }
 
+
+namespace {
+class DetailsApp : public Component<DetailsApp> {
+ public:
+  std::string_view view = R"html(
+    <details>
+      <summary>Click me</summary>
+      <div id="body">hidden content</div>
+    </details>
+  )html";
+};
+}  // namespace
+
+TEST_CASE("Clicking a summary toggles the details content", "[details][mouse]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<DetailsApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto* content = app->Root()->QuerySelector(".details-content");
+  auto* summary_line = app->Root()->QuerySelector(".summary-line");
+  REQUIRE(content != nullptr);
+  REQUIRE(summary_line != nullptr);
+
+  // Closed to begin with: the content is display:none.
+  CHECK(content->style.display_none);
+
+  auto click = [&] {
+    for (auto motion : {Event::Mouse::Motion::Pressed,
+                        Event::Mouse::Motion::Released}) {
+      Event::Mouse e;
+      e.button = Event::Mouse::Button::Left;
+      e.motion = motion;
+      e.x = summary_line->absolute_x() + 2;
+      e.y = summary_line->absolute_y() + 1;
+      screen.Dispatch(e);
+    }
+    app->Digest();
+    // Draw() is where a frame resolves styles, so going through it is what
+    // makes this test cover the real path rather than a hand-built one.
+    screen.Draw();
+  };
+
+  click();
+  auto* opened = app->Root()->QuerySelector(".details-content");
+  REQUIRE(opened != nullptr);
+  CHECK_FALSE(opened->style.display_none);
+
+  click();
+  auto* closed = app->Root()->QuerySelector(".details-content");
+  REQUIRE(closed != nullptr);
+  CHECK(closed->style.display_none);
+}
+
+namespace {
+class RadioGroupApp : public Component<RadioGroupApp> {
+ public:
+  std::string_view view = R"html(
+    <div>
+      <radio id="r1" name="pick" checked="true">One</radio>
+      <radio id="r2" name="pick">Two</radio>
+      <radio id="r3" name="other">Unrelated</radio>
+    </div>
+  )html";
+};
+
+class CheckboxApp : public Component<CheckboxApp> {
+ public:
+  std::string_view view = R"html(<checkbox id="c">Check me</checkbox>)html";
+};
+}  // namespace
+
+TEST_CASE("Checking a radio unchecks only its own group", "[radio][mouse]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<RadioGroupApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  // The marker glyph is how checked-ness actually reaches the user. Take just
+  // the glyph, not the label after it.
+  auto marker_of = [&](const char* id) {
+    auto* el = app->Root()->QuerySelector(id);
+    REQUIRE(el != nullptr);
+    std::string text;
+    el->Visit([&](Element& e) {
+      if (e.is_text()) {
+        text += static_cast<const TextElement&>(e).text();
+      }
+    });
+    for (const Grapheme& g : Graphemes(text)) {
+      return std::string(g.text);
+    }
+    return std::string();
+  };
+
+  const std::string checked = marker_of("#r1");
+  const std::string unchecked = marker_of("#r2");
+  REQUIRE(checked != unchecked);
+
+  auto* r2 = app->Root()->QuerySelector("#r2");
+  REQUIRE(r2 != nullptr);
+  for (auto motion : {Event::Mouse::Motion::Pressed,
+                      Event::Mouse::Motion::Released}) {
+    Event::Mouse e;
+    e.button = Event::Mouse::Button::Left;
+    e.motion = motion;
+    e.x = r2->absolute_x() + 1;
+    e.y = r2->absolute_y() + 1;
+    screen.Dispatch(e);
+  }
+  app->Digest();
+  screen.Draw();
+
+  // r2 is now the checked one, r1 is not, and the other group is untouched.
+  CHECK(marker_of("#r2") == checked);
+  CHECK(marker_of("#r1") == unchecked);
+  CHECK(marker_of("#r3") == unchecked);
+}
+
+TEST_CASE("Clicking a checkbox toggles its glyph", "[checkbox][mouse]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<CheckboxApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto* box = app->Root()->QuerySelector("#c");
+  REQUIRE(box != nullptr);
+  auto glyph = [&] {
+    std::string text;
+    box->Visit([&](Element& e) {
+      if (e.is_text()) {
+        text += static_cast<const TextElement&>(e).text();
+      }
+    });
+    return text;
+  };
+
+  const std::string before = glyph();
+  auto click = [&] {
+    for (auto motion : {Event::Mouse::Motion::Pressed,
+                        Event::Mouse::Motion::Released}) {
+      Event::Mouse e;
+      e.button = Event::Mouse::Button::Left;
+      e.motion = motion;
+      e.x = box->absolute_x() + 1;
+      e.y = box->absolute_y() + 1;
+      screen.Dispatch(e);
+    }
+    app->Digest();
+    screen.Draw();
+  };
+
+  click();
+  const std::string after = glyph();
+  CHECK(after != before);
+
+  click();
+  CHECK(glyph() == before);
+}
+
+namespace {
+class FieldsetApp : public Component<FieldsetApp> {
+ public:
+  std::string_view view = R"html(
+    <fieldset>
+      <legend>Group title</legend>
+      <div id="inner">body</div>
+    </fieldset>
+  )html";
+};
+}  // namespace
+
+TEST_CASE("A fieldset projects its legend and styles itself accordingly",
+          "[fieldset]") {
+  // fieldset::Digest() moves the <legend> out of the default slot into the
+  // legend slot, and picks a class from whether it found one -- both after
+  // Render() has already resolved styles. Nothing covered it.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<FieldsetApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  // The legend ends up under the legend slot, not left in the body.
+  Element* legend = nullptr;
+  app->Root()->Visit([&](Element& e) {
+    if (e.tag() == "legend") {
+      legend = &e;
+    }
+  });
+  REQUIRE(legend != nullptr);
+  CHECK(legend->Parent() != nullptr);
+
+  // It is rendered exactly once -- the move must not leave a copy behind.
+  int legend_count = 0;
+  app->Root()->Visit([&](Element& e) {
+    if (e.tag() == "legend") {
+      ++legend_count;
+    }
+  });
+  CHECK(legend_count == 1);
+
+  // And the container picked the has-legend styling, which only takes effect
+  // if the class set during Digest() reached a computed style.
+  Element* container = app->Root()->QuerySelector(".has-legend");
+  CHECK(container != nullptr);
+
+  // The legend text actually reaches the frame.
+  std::string frame = device->GetOutput();
+  CHECK(frame.find("Group title") != std::string::npos);
+}
 }  // namespace rtxui
