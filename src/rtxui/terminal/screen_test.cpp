@@ -4371,6 +4371,113 @@ class TabsClickApp : public Component<TabsClickApp> {
 };
 }  // namespace
 
+TEST_CASE("Switching tab shows only the selected pane", "[tabs][mouse][css]") {
+  // Regression: tabs::Digest() marks the non-selected panes `display: none`,
+  // but Digest() runs after Render() resolved styles and nothing re-resolved
+  // afterwards, so the inline style never reached the computed style. Every
+  // pane stayed visible and the panes stacked up down the screen.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(90, 24);
+  auto app = Ref<TabsClickApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto panes = [&] {
+    std::vector<Element*> found;
+    app->Root()->Visit([&](Element& el) {
+      if (el.tag() == "tab-pane" || el.tag() == "tab_pane") {
+        found.push_back(&el);
+      }
+    });
+    return found;
+  };
+  auto visible = [&] {
+    int n = 0;
+    for (Element* p : panes()) {
+      if (!p->style.display_none) {
+        ++n;
+      }
+    }
+    return n;
+  };
+
+  REQUIRE(panes().size() == 2);
+  REQUIRE(visible() == 1);
+  REQUIRE_FALSE(panes()[0]->style.display_none);
+
+  std::vector<Element*> headers;
+  app->Root()->Visit([&](Element& el) {
+    for (const auto& c : el.classes) {
+      if (c == "tab-header-btn") {
+        headers.push_back(&el);
+      }
+    }
+  });
+  REQUIRE(headers.size() == 2);
+
+  auto send = [&](Event::Mouse::Button b, Event::Mouse::Motion m) {
+    Event::Mouse e;
+    e.button = b;
+    e.motion = m;
+    e.x = headers[1]->absolute_x() + 2;
+    e.y = headers[1]->absolute_y() + 1;
+    screen.Dispatch(e);
+  };
+  send(Event::Mouse::Button::None, Event::Mouse::Motion::Moved);
+  send(Event::Mouse::Button::Left, Event::Mouse::Motion::Pressed);
+  send(Event::Mouse::Button::Left, Event::Mouse::Motion::Released);
+  app->Digest();
+  app->ResolveTargetStyles();
+  REQUIRE(app->current_tab == "settings");
+
+  // Exactly one pane is shown, and it is the one that was selected.
+  CHECK(visible() == 1);
+  CHECK(panes()[0]->style.display_none);
+  CHECK_FALSE(panes()[1]->style.display_none);
+}
+
+TEST_CASE("Selecting a tab by keyboard keeps focus on the headers",
+          "[tabs][focus]") {
+  // tabs::Digest() avoids rebuilding its header buttons precisely so a
+  // keyboard-focused button is not replaced by a fresh, unfocused Element,
+  // which would swallow the next Enter/Space. Selecting a tab now re-renders
+  // to get the mutated DOM re-styled, so that guarantee is worth pinning:
+  // Render() saves and restores focus, but only as long as it keeps doing so.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(90, 24);
+  auto app = Ref<TabsClickApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto headers = [&] {
+    std::vector<Element*> found;
+    app->Root()->Visit([&](Element& el) {
+      for (const auto& c : el.classes) {
+        if (c == "tab-header-btn") {
+          found.push_back(&el);
+        }
+      }
+    });
+    return found;
+  };
+  REQUIRE(headers().size() == 2);
+
+  // Tab to the second header, then activate it with Space.
+  screen.Dispatch(Event::Tab());
+  screen.Dispatch(Event::Tab());
+  REQUIRE(headers()[1]->focused());
+
+  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  app->Digest();
+  app->ResolveTargetStyles();
+
+  CHECK(app->current_tab == "settings");
+  // Focus must survive the re-render, or the next keypress goes nowhere.
+  auto after = headers();
+  REQUIRE(after.size() == 2);
+  CHECK(after[1]->focused());
+}
+
 TEST_CASE("Switching tab keeps the header buttons styled", "[tabs][mouse][css]") {
   // Regression: tabs::Digest() rebuilt its header buttons whenever the set of
   // panes "changed", but compared panes by Element*. Selecting a tab changes
