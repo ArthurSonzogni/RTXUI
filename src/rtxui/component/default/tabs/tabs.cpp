@@ -46,6 +46,18 @@ void tabs::SelectTab(std::string index_str) {
 void tabs::InitReflection() {
   Bind(value);
   Bind(SelectTab);
+  BindCollection("headers", &headers_, [](const TabHeader& header) {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"label", header.label},
+            {"active_class", header.active_class},
+            // `part` mirrors the class list, so a host can still reach the
+            // selected header with `tabs::part(active-tab)`.
+            {"part", header.active_class.empty()
+                         ? std::string("tab-header-btn")
+                         : "tab-header-btn " + header.active_class},
+        });
+  });
   Component<tabs>::InitReflection();
 }
 
@@ -53,7 +65,12 @@ std::string_view tabs::Setup() {
   return R"html(
     <div class="tabs-container" part="tabs-container">
       <div class="tabs-headers" part="tabs-headers">
-        <slot.headers></slot.headers>
+        <for each="{headers}" as="header">
+          <div class="tab-header-btn {header.active_class}"
+               part="{header.part}"
+               tabindex="0"
+               onclick="SelectTab({$index})">{header.label}</div>
+        </for>
       </div>
       <div class="tabs-content" part="tabs-content">
         <slot></slot>
@@ -131,6 +148,21 @@ std::vector<TabPaneInfo> tabs::GetTabPanes() {
   return panes;
 }
 
+// The header buttons the template's <for> produced, in pane order.
+std::vector<Element*> tabs::HeaderButtons() {
+  std::vector<Element*> buttons;
+  if (Element* root = Root()) {
+    root->Visit([&](Element& element) {
+      for (const std::string& name : element.classes) {
+        if (name == "tab-header-btn") {
+          buttons.push_back(&element);
+        }
+      }
+    });
+  }
+  return buttons;
+}
+
 bool tabs::OnEvent(Event event) {
   auto* root = Root();
   if (!root) {
@@ -141,10 +173,10 @@ bool tabs::OnEvent(Event event) {
     auto kb = event.get<Event::Keyboard>();
     if (kb.motion == Event::Keyboard::Motion::Pressed ||
         kb.motion == Event::Keyboard::Motion::Repeat) {
-      auto headers_slot = Slot("headers");
-      if (headers_slot) {
-        for (size_t i = 0; i < headers_slot->ChildCount(); ++i) {
-          auto* btn = headers_slot->ChildAt(i);
+      std::vector<Element*> buttons = HeaderButtons();
+      {
+        for (size_t i = 0; i < buttons.size(); ++i) {
+          auto* btn = buttons[i];
           if (btn && btn->focused()) {
             if (kb.special == Event::Keyboard::Special::Return ||
                 (kb.special == Event::Keyboard::Special::None && kb.codepoint == 32)) {
@@ -184,68 +216,17 @@ bool tabs::Digest() {
     }
   }
 
-  auto headers_slot = Slot("headers");
-  if (headers_slot) {
-    std::vector<std::pair<std::string, std::string>> pane_ids;
-    pane_ids.reserve(panes.size());
-    for (auto& pane : panes) {
-      pane_ids.emplace_back(pane.name, pane.label);
-    }
-
-    // Only recreate the header buttons when the set of panes actually
-    // changed. Rebuilding them on every Digest() (even a value-only change
-    // from switching tabs) would replace a keyboard-focused button with a
-    // fresh, unfocused Element - silently swallowing the next Enter/Space
-    // keypress if any unrelated Digest() runs in between. It also hands back
-    // elements that no style pass has seen: Digest() runs after Render()
-    // resolved styles, so a button built here keeps an empty base_style and
-    // renders with no padding and no background until something else forces a
-    // full re-render.
-    //
-    // Identify the panes by name and label, not by Element*. The host
-    // component re-renders whenever its state changes -- which is exactly what
-    // selecting a tab does -- and hands out fresh pane elements each time, so
-    // an address comparison called every tab switch a change of pane set.
-    if (pane_ids != last_pane_ids_) {
-      headers_slot->RemoveChildren();
-      for (size_t i = 0; i < panes.size(); ++i) {
-        auto btn = Ref<Element>::New();
-        btn->set_owner_component(this);
-        btn->SetTag("div");
-        btn->classes = {"tab-header-btn"};
-        btn->SetAttribute("onclick", "SelectTab(" + std::to_string(i) + ")");
-        btn->SetAttribute("tabindex", "0");
-
-        auto text_el = Ref<TextElement>::New(panes[i].label);
-        text_el->set_owner_component(this);
-        btn->AddChild(text_el);
-        headers_slot->AddChild(btn);
-      }
-      last_pane_ids_ = std::move(pane_ids);
-    }
-
-    // Update active-tab styling in place, regardless of whether the
-    // buttons were just rebuilt - this is what needs to happen on every
-    // value change, without touching element identity.
-    for (size_t i = 0; i < panes.size() && i < headers_slot->ChildCount();
-         ++i) {
-      auto* btn = headers_slot->ChildAt(i);
-      bool active = panes[i].name == value;
-      std::vector<std::string> want = {"tab-header-btn"};
-      if (active) {
-        want.push_back("active-tab");
-      }
-      if (btn->classes != want) {
-        btn->classes = std::move(want);
-      }
-      btn->SetAttribute("part", active ? "tab-header-btn active-tab"
-                                        : "tab-header-btn");
-    }
+  // Publish the header strip as data and let the template's <for> turn it
+  // into buttons. Reconciliation then owns their identity -- it reuses them
+  // across a value change rather than rebuilding, which is what the
+  // hand-rolled version needed a guard for -- and their styles are resolved
+  // by the normal pass instead of being assigned after it had already run.
+  headers_.clear();
+  headers_.reserve(panes.size());
+  for (const TabPaneInfo& pane : panes) {
+    headers_.push_back({pane.label, pane.name == value ? "active-tab" : ""});
   }
 
-  // The mutations above happen after Render() resolved styles, but the
-  // caller re-resolves once Digest() returns, and mutating `classes` drops the
-  // element's resolved-style memo on its own, so nothing more is needed here.
   return Component<tabs>::Digest();
 }
 

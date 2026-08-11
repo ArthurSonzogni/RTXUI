@@ -32,16 +32,21 @@ class tabs : public Component<tabs> {
 
  private:
   std::vector<TabPaneInfo> GetTabPanes();
+  std::vector<Element*> HeaderButtons();
 
-  // Identity of the panes the header buttons were last built from. Rebuild
-  // the buttons only when this changes, so a keyboard-focused header button
-  // survives an unrelated Digest() instead of losing focus to a freshly
-  // recreated Element.
-  // The panes the header buttons were last built for, identified by name and
-  // label rather than by Element*: the host component re-renders on any state
-  // change, which hands out fresh pane elements every time, so comparing
-  // addresses reported "the panes changed" on every tab switch.
-  std::vector<std::pair<std::string, std::string>> last_pane_ids_;
+  // One entry per pane, in pane order. The header strip is a <for> over this
+  // in the template rather than Elements built by hand in Digest(), so
+  // reconciliation owns the buttons' identity, styling and focus -- all three
+  // of which this component previously got wrong on its own.
+  struct TabHeader {
+    std::string label;
+    // Empty, or "active-tab". Interpolated into the button's class list.
+    std::string active_class;
+
+    // Change detection for the bound collection compares elements.
+    bool operator==(const TabHeader&) const = default;
+  };
+  std::vector<TabHeader> headers_;
 };
 
 }  // namespace rtxui
