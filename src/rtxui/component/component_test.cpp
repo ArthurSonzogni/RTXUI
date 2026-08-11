@@ -8220,3 +8220,38 @@ TEST_CASE("Mutating classes in place restyles without an explicit invalidation",
   app->ResolveStyles();
   CHECK(box->style.foreground_color == Color::RGB(1, 1, 1));
 }
+
+namespace {
+class TwiceImportingApp : public rtxui::Component<TwiceImportingApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::div>();  // Same component again.
+    rtxui::Component<TwiceImportingApp>::InitReflection();
+  }
+  std::string_view view = R"(<div id="a">hello</div>)";
+};
+}  // namespace
+
+TEST_CASE("Importing the same component twice is not fatal",
+          "[component][import]") {
+  // Regression: a duplicate import printed a diagnostic and called
+  // std::exit(1), taking the host process with it. A library has no business
+  // ending someone else's program over a setup mistake -- and in a TUI the
+  // diagnostic went to stdout, i.e. straight into the frame being drawn.
+  // The first registration stands and the duplicate is ignored.
+  std::stringstream captured;
+  std::streambuf* previous = std::cerr.rdbuf(captured.rdbuf());
+
+  auto app = rtxui::Ref<TwiceImportingApp>::New();
+  app->Mount();
+
+  std::cerr.rdbuf(previous);
+
+  // It still says something, on stderr rather than stdout.
+  CHECK(captured.str().find("already imported") != std::string::npos);
+  // ...and the component still works.
+  auto* el = app->Root()->QuerySelector("#a");
+  REQUIRE(el != nullptr);
+  CHECK(el->tag() == "div");
+}

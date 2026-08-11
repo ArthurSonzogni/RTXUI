@@ -21,8 +21,10 @@ class ComponentBase;
 // Defined out of line so that this header does not need <print>: libstdc++
 // only shipped it in GCC 14, and requiring that of every consumer for an
 // error message is a poor trade. Both terminate the process.
-[[noreturn]] RTXUI_EXPORT void ReportDuplicateImport(std::string_view name);
-[[noreturn]] RTXUI_EXPORT void ReportDuplicateImportAlias(
+/// Reports an import that names something already imported. Not fatal: the
+/// first registration stands and the duplicate is ignored.
+RTXUI_EXPORT void ReportDuplicateImport(std::string_view name);
+RTXUI_EXPORT void ReportDuplicateImportAlias(
     std::string_view class_name, std::string_view alias);
 
 using ComponentFactory = std::function<Ref<ComponentBase>()>;
@@ -73,7 +75,10 @@ class RTXUI_EXPORT Bindings {
   void Import() {
     std::string name(T::StaticTag());
     if (imports_.count(name)) {
+      // Keep the first registration rather than silently replacing it: these
+      // used to be fatal, so no caller can be relying on last-one-wins.
       ReportDuplicateImport(name);
+      return;
     }
 
     imports_[name] = []() { return Ref<ComponentBase>(new T()); };
@@ -90,6 +95,7 @@ class RTXUI_EXPORT Bindings {
   void Import(std::string_view alias) {
     if (imports_.count(alias)) {
       ReportDuplicateImportAlias(ClassName<T>(), alias);
+      return;
     }
 
     imports_[std::string(alias)] = [] { return Ref<T>::New(); };
