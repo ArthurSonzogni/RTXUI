@@ -6758,6 +6758,25 @@ class TabsTestComponent : public rtxui::Component<TabsTestComponent> {
   )";
 };
 
+namespace {
+// The header buttons the <tabs> template renders, in pane order. They used to
+// be Elements the component built by hand into a named slot; they are a <for>
+// over a bound collection now, so reach them by class rather than by slot.
+std::vector<rtxui::Element*> TabHeaderButtons(rtxui::Element* root) {
+  std::vector<rtxui::Element*> buttons;
+  if (root) {
+    root->Visit([&](rtxui::Element& element) {
+      for (const std::string& name : element.classes) {
+        if (name == "tab-header-btn") {
+          buttons.push_back(&element);
+        }
+      }
+    });
+  }
+  return buttons;
+}
+}  // namespace
+
 TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   auto container = rtxui::Ref<TabsTestComponent>::New();
   rtxui::Screen screen(container);
@@ -6772,12 +6791,11 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   CHECK(tabs_ptr->value == "tab1");
 
   // Verify headers slot
-  auto headers_slot = tabs_ptr->Slot("headers");
-  REQUIRE(headers_slot != nullptr);
-  REQUIRE(headers_slot->ChildCount() == 2);
+  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  REQUIRE(headers.size() == 2);
 
-  auto* tab1_header = headers_slot->ChildAt(0);
-  auto* tab2_header = headers_slot->ChildAt(1);
+  auto* tab1_header = headers[0];
+  auto* tab2_header = headers[1];
   CHECK(tab1_header->classes[1] == "active-tab");
 
   // Find pane elements initially
@@ -6877,11 +6895,10 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   // Initial tab: tab1
   CHECK(tabs_ptr->value == "tab1");
 
-  auto headers_slot = tabs_ptr->Slot("headers");
-  REQUIRE(headers_slot != nullptr);
-  REQUIRE(headers_slot->ChildCount() == 2);
+  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  REQUIRE(headers.size() == 2);
 
-  auto* tab2_header = headers_slot->ChildAt(1);
+  auto* tab2_header = headers[1];
   REQUIRE(tab2_header != nullptr);
 
   // Click on the second tab header (tab2_header)
@@ -6901,7 +6918,7 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   CHECK(container->active_tab == "tab2");
 
   // Verify keyboard interaction: focus the first tab header (tab1_header)
-  auto* tab1_header = headers_slot->ChildAt(0);
+  auto* tab1_header = headers[0];
   REQUIRE(tab1_header != nullptr);
 
   container->Root()->Visit([](Element& el) { el.set_focused(false); });
@@ -6935,8 +6952,9 @@ TEST_CASE("Tabs Component keyboard focus survives an intervening Digest",
   auto* tabs_el = container->Root()->QuerySelector("tabs");
   auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(
       const_cast<rtxui::ComponentBase*>(tabs_el->component()));
-  auto headers_slot = tabs_ptr->Slot("headers");
-  auto* tab2_header = headers_slot->ChildAt(1);
+  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  REQUIRE(headers.size() == 2);
+  auto* tab2_header = headers[1];
 
   container->Root()->Visit([](Element& el) { el.set_focused(false); });
   tab2_header->set_focused(true);
@@ -6945,8 +6963,14 @@ TEST_CASE("Tabs Component keyboard focus survives an intervening Digest",
   // unrelated prop change elsewhere in the app).
   container->Digest();
 
-  CHECK(tab2_header->focused());
-  CHECK(tabs_ptr->Slot("headers")->ChildAt(1) == tab2_header);
+  // Focus is what has to survive, not the Element identity. Reconciliation is
+  // free to hand back a different object for the same button -- so re-read it
+  // rather than holding the old pointer, which is what the component used to
+  // do and how it lost focus in the first place.
+  headers = TabHeaderButtons(tabs_ptr->Root());
+  REQUIRE(headers.size() == 2);
+  CHECK(headers[1]->focused());
+  CHECK_FALSE(headers[0]->focused());
 
   Event return_event = Event::Keyboard({
       Event::Keyboard::Motion::Pressed,
@@ -6989,14 +7013,13 @@ TEST_CASE("Tabs Component Exposes Part Attributes For External "
   REQUIRE(content_part != nullptr);
   CHECK(*content_part == "tabs-content");
 
-  auto headers_slot = tabs_ptr->Slot("headers");
-  REQUIRE(headers_slot != nullptr);
-  REQUIRE(headers_slot->ChildCount() == 2);
-  auto* tab1_header = headers_slot->ChildAt(0);
+  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  REQUIRE(headers.size() == 2);
+  auto* tab1_header = headers[0];
   const std::string* tab1_header_part = tab1_header->GetAttribute("part");
   REQUIRE(tab1_header_part != nullptr);
   CHECK(*tab1_header_part == "tab-header-btn active-tab");
-  auto* tab2_header = headers_slot->ChildAt(1);
+  auto* tab2_header = headers[1];
   const std::string* tab2_header_part = tab2_header->GetAttribute("part");
   REQUIRE(tab2_header_part != nullptr);
   CHECK(*tab2_header_part == "tab-header-btn");
