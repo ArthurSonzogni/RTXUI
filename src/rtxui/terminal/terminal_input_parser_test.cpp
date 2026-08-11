@@ -4,6 +4,8 @@
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
 #include <optional>  // for std::optional
+#include <string>
+#include <type_traits>
 #include <vector>    // for vector
 
 #include "catch2/catch_test_macros.hpp"  // for TEST_CASE, REQUIRE, CHECK, CHECK_FALSE
@@ -587,6 +589,57 @@ TEST_CASE("Event.OSCRepliesAreSwallowed", "[terminal][osc]") {
   SECTION("an unterminated reply consumes the rest rather than emitting it") {
     CHECK(events_for("\x1B]11;rgb:0d0d").empty());
   }
+}
+
+// --- Event construction ---
+
+TEST_CASE("Event's converting constructor accepts only its alternatives",
+          "[event]") {
+  // Regression (09a5eed3): the constraint lived in a default template
+  // argument, which is instantiated while Event is still incomplete -- GCC 13
+  // refuses to evaluate the nested structs' default member initialisers there
+  // and the header stopped compiling. Moving it to a requires-clause defers
+  // the check to overload resolution, once Event is complete.
+  //
+  // Widening the clause does not actually reach these assertions -- the
+  // library stops compiling first, on its own conversions -- so what is
+  // pinned here is the rest of the contract, which nothing else checks: that
+  // Event has no default constructor, that the converting constructor does
+  // not hijack copy or move, and that Modifier's bit-fields stay comparable,
+  // which is the construct GCC 13 was misdiagnosed as rejecting.
+
+  // Every alternative converts.
+  static_assert(std::is_constructible_v<Event, Event::Keyboard>);
+  static_assert(std::is_constructible_v<Event, Event::Mouse>);
+  static_assert(std::is_constructible_v<Event, Event::Resized>);
+  static_assert(std::is_constructible_v<Event, Event::CursorShape>);
+
+  // Things that are not an alternative do not, rather than failing somewhere
+  // deeper with a variant error.
+  static_assert(!std::is_constructible_v<Event, int>);
+  static_assert(!std::is_constructible_v<Event, const char*>);
+  static_assert(!std::is_constructible_v<Event, std::string>);
+
+  // Event stays copyable and movable, and the constraint must not hijack
+  // those: `!is_same_v<decay_t<T>, Event>` is what keeps the converting
+  // constructor from competing with the copy constructor.
+  static_assert(std::is_copy_constructible_v<Event>);
+  static_assert(std::is_move_constructible_v<Event>);
+  static_assert(!std::is_default_constructible_v<Event>);
+
+  // The modifier flags are bit-fields carrying default member initialisers,
+  // which is the construct GCC 13 was misdiagnosed as choking on; keep them
+  // comparable so a defaulted operator<=> is still instantiable.
+  Event::Modifier a;
+  Event::Modifier b;
+  CHECK(a == b);
+  b.ctrl = true;
+  CHECK_FALSE(a == b);
+
+  Event event = Event::Keyboard{.codepoint = 'x'};
+  REQUIRE(event.get_if<Event::Keyboard>() != nullptr);
+  CHECK(event.get_if<Event::Keyboard>()->codepoint == 'x');
+  CHECK(event.get_if<Event::Mouse>() == nullptr);
 }
 
 // NOLINTEND
