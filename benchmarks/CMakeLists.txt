@@ -13,3 +13,6 @@ target_link_libraries(rtxui_steady_state_benchmark PRIVATE rtxui)
 
 add_executable(rtxui_xml_benchmark rtxui_xml_benchmark.cpp)
 target_link_libraries(rtxui_xml_benchmark PRIVATE rtxui)
+
+add_executable(rtxui_transition_benchmark rtxui_transition_benchmark.cpp)
+target_link_libraries(rtxui_transition_benchmark PRIVATE rtxui)
