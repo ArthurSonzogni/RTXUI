@@ -20,31 +20,46 @@ namespace {
 const Color kDefaultScrollbarThumbColor = Color::RGBA(200, 200, 200, 200);
 const Color kDefaultScrollbarTrackColor = Color::RGBA(80, 80, 80, 120);
 
-// Which cells of a charset are drawn in reverse video. Unicode has left-side
-// partial blocks in every width but only one right-side one (`▕`, one eighth),
-// so a strip that must sit against the *right* of its cell at any other width
-// is spelled as the complementary left block drawn reversed: `▊` (LEFT THREE
-// QUARTERS) reversed leaves a quarter-cell strip on the right, mirroring the
-// `▎` (LEFT ONE QUARTER) strip the opposite side draws directly.
-using ReverseMap = const bool (*)[3];
-constexpr bool kReverseLeftColumn[3][3] = {
-    {true, false, false},
-    {true, false, false},
-    {true, false, false},
+// Where each cell of a charset draws its ground, matching Textual's
+// BORDER_LOCATIONS exactly. A half-block glyph sits astride the boundary
+// between an element and its parent, so which of the two backgrounds fills the
+// part the glyph does not cover is what makes the border read as inside the
+// element or outside it -- and reversing swaps the strip to the far side of
+// the cell, which is how a left-side block draws a right-side strip.
+//
+//   0 Inner        border color over the element's own background
+//   1 Outer        border color over the parent's background
+//   2 ReverseOuter reversed, so the parent's background becomes the glyph
+//   3 ReverseInner reversed, so the element's background becomes the glyph
+enum class Location : uint8_t {
+  Inner = 0,
+  Outer = 1,
+  ReverseOuter = 2,
+  ReverseInner = 3,
 };
-constexpr bool kReverseRightSide[3][3] = {
-    {false, false, false},
-    {false, false, true},
-    {false, false, false},
-};
+
+using LocationMap = const Location (*)[3];
+
+constexpr Location I = Location::Inner;
+constexpr Location O = Location::Outer;
+constexpr Location RO = Location::ReverseOuter;
+constexpr Location RI = Location::ReverseInner;
+
+constexpr Location kAllOuter[3][3] = {{O, O, O}, {O, O, O}, {O, O, O}};
+// tall and panel: the left column reversed, the right on the parent.
+constexpr Location kTall[3][3] = {{RO, I, O}, {RO, I, O}, {RO, I, O}};
+// wide and tab: top and bottom on the parent, the right side reversed.
+constexpr Location kWide[3][3] = {{O, O, O}, {I, O, RI}, {O, O, O}};
+// block: top and bottom on the parent, the sides on the element.
+constexpr Location kBlock[3][3] = {{O, O, O}, {I, I, I}, {O, O, O}};
 
 struct BorderData {
   const char* charset[3][3];
-  // Null when the style has no reversed cell, which is all but three of them.
-  ReverseMap reversed = nullptr;
+  // Null means every cell is Location::Inner, which is all but a few styles.
+  LocationMap locations = nullptr;
 };
 
-// Map BorderStyle to its character set and reverse map, based on Textual.
+// Map BorderStyle to its character set and locations, from Textual.
 const BorderData& GetBorderData(BorderStyle style) {
   static const BorderData border_styles[] = {
       /* Ascii */
@@ -102,6 +117,7 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▐", " ", "▌"},
               {"▝", "▀", "▘"},
           },
+          kAllOuter,
       },
       /* None */
       {
@@ -126,7 +142,7 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▊", " ", "▎"},
               {"▊", "▁", "▎"},
           },
-          kReverseLeftColumn,
+          kTall,
       },
       /* Round */
       {
@@ -151,7 +167,7 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▊", " ", "▎"},
               {"▊", "▁", "▎"},
           },
-          kReverseLeftColumn,
+          kTall,
       },
       /* Thick */
       {
@@ -176,7 +192,7 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▎", " ", "▊"},
               {"▔", "▔", "▔"},
           },
-          kReverseRightSide,
+          kWide,
       },
       /* Dotted */
       {
@@ -241,6 +257,24 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"~", " ", "~"},
               {"~", "~", "~"},
           },
+      },
+      /* Block */
+      {
+          {
+              {"▄", "▄", "▄"},
+              {"█", " ", "█"},
+              {"▀", "▀", "▀"},
+          },
+          kBlock,
+      },
+      /* Tab */
+      {
+          {
+              {"▁", "▁", "▁"},
+              {"▎", " ", "▊"},
+              {"▔", "▔", "▔"},
+          },
+          kWide,
       },
   };
   return border_styles[static_cast<size_t>(style)];
@@ -369,14 +403,14 @@ void PaintImpl(const PhysicalFragment* frag,
 
     const auto& data = GetBorderData(frag->border_style);
 
-    // One cell of the charset: the glyph, and whether it is drawn reversed.
+    // One cell of the charset: the glyph and where it draws its ground.
     struct Glyph {
       const char* c;
-      bool reversed;
+      Location location;
     };
     auto glyph = [&data](int row, int col) -> Glyph {
       return {data.charset[row][col],
-              data.reversed && data.reversed[row][col]};
+              data.locations ? data.locations[row][col] : Location::Inner};
     };
 
     auto set_char = [&](int x, int y, Glyph g, const Color& border_color) {
@@ -390,24 +424,31 @@ void PaintImpl(const PhysicalFragment* frag,
         resolve_cell(cell);
         cell.character = c;
 
-        // The glyph carries the border color; whatever the glyph does not
-        // cover keeps the background already in the cell. That is the
-        // element's own background, laid down over the whole border box by
-        // step 0: like CSS, background-color is clipped to the border box, so
-        // a bordered element with its own background must not leak its
-        // parent's background into its border ring.
+        // The glyph is always drawn in the border color. What varies is which
+        // background fills the rest of the cell -- the element's own, or its
+        // parent's -- and whether the two are swapped.
         //
-        // A reversed cell wants the opposite -- field as the glyph, border
-        // color behind it -- which is left to the terminal via SGR 7 rather
-        // than swapping the two colors here. The field is often transparent
-        // (an element with no background of its own, over a screen with none),
-        // and transparency has no foreground spelling: ESC[39m is the default
+        // Inner keeps whatever step 0 laid down, which is the element's own
+        // background composited over everything beneath it. Outer replaces it
+        // with the parent's, which is what makes `tall`'s right edge and
+        // `inner`'s whole ring read as sitting outside the element.
+        const bool outer = g.location == Location::Outer ||
+                           g.location == Location::ReverseOuter;
+        const Color field =
+            outer ? parent_background_color : cell.background_color;
+
+        cell.foreground_color = Blend(border_color, field);
+        cell.background_color = field;
+
+        // Reversing is left to the terminal (SGR 7) rather than swapping the
+        // two colors here. The field is often transparent -- an element with
+        // no background of its own, over a screen with none -- and
+        // transparency has no foreground spelling: ESC[39m is the default
         // *foreground*, so swapping here painted a white block down the left
-        // of every uncolored `tall` box. Under SGR 7 the terminal does the
-        // swap itself, against its own default background, which is the color
-        // we cannot name.
-        cell.foreground_color = Blend(border_color, cell.background_color);
-        cell.inverted = g.reversed;
+        // of every uncolored `tall` box. Under SGR 7 the terminal performs the
+        // swap against its own default background, the color we cannot name.
+        cell.inverted = g.location == Location::ReverseOuter ||
+                        g.location == Location::ReverseInner;
       }
     };
 

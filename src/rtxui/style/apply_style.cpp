@@ -822,6 +822,16 @@ std::optional<BorderStyle> ParseBorderStyle(std::string_view v) {
   if (v == "squiggle" || v == "wave") {
     return BorderStyle::Squiggle;
   }
+  if (v == "block") {
+    return BorderStyle::Block;
+  }
+  if (v == "tab") {
+    return BorderStyle::Tab;
+  }
+  // Textual spells "no border" three ways; they all mean the same here.
+  if (v == "hidden") {
+    return BorderStyle::None;
+  }
   return std::nullopt;
 }
 
