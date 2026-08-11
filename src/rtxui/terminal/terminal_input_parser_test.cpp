@@ -551,4 +551,42 @@ TEST_CASE("Event.BracketedPasteUtf8", "[terminal][paste]") {
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
+TEST_CASE("Event.OSCRepliesAreSwallowed", "[terminal][osc]") {
+  // Regression: ESC ] had no handler, so a terminal replying to a query --
+  // its background color, the clipboard, the window title -- fell through to
+  // the unknown-escape path and was delivered to the application one
+  // character at a time. Asking a terminal a question typed the answer into
+  // whatever had focus.
+  auto events_for = [](std::string_view sequence) {
+    TerminalInputParser parser;
+    for (char c : sequence) {
+      parser.Add(c);
+    }
+    std::vector<Event> events;
+    while (auto event = parser.GetEvent()) {
+      events.push_back(std::move(*event));
+    }
+    return events;
+  };
+
+  SECTION("terminated by ST") {
+    // A reply to the OSC 11 background-color query.
+    CHECK(events_for("\x1B]11;rgb:0d0d/1111/1717\x1B\\").empty());
+  }
+
+  SECTION("terminated by BEL") {
+    CHECK(events_for("\x1B]11;rgb:0000/0000/0000\x07").empty());
+  }
+
+  SECTION("the keypress after a reply still arrives") {
+    auto events = events_for("\x1B]11;rgb:0d0d/1111/1717\x07x");
+    REQUIRE(events.size() == 1);
+    CHECK(events[0].get_if<Event::Keyboard>()->codepoint == 'x');
+  }
+
+  SECTION("an unterminated reply consumes the rest rather than emitting it") {
+    CHECK(events_for("\x1B]11;rgb:0d0d").empty());
+  }
+}
+
 // NOLINTEND
