@@ -56,6 +56,10 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<elif>` | Control Flow | N/A | `condition` | Alternative branch. Must follow `<if>` or `<elif>`. |
 | `<else>` | Control Flow | N/A | None | Fallback branch. Must follow `<if>` or `<elif>`. |
 
+An `<if>` or `<elif>` with no `condition`, or a `<for>` with no `each`, renders
+nothing: a missing attribute counts as a condition that was never met, rather
+than being an error.
+
 ---
 
 ## 2. Global Attributes
