@@ -39,6 +39,7 @@ The CSS parser supports a wide range of standard selectors and combinators:
     *   `:nth-last-child(N)`/`:nth-last-child(even)`/`:nth-last-child(odd)`: The same, counted from the last sibling backwards.
     *   `:only-child`: Matches an element that is its parent's only child.
     *   `:empty`: Matches an element with no content between its tags.
+    *   `:first-of-type` / `:last-of-type` / `:only-of-type` / `:nth-of-type(N|even|odd)` / `:nth-last-of-type(...)`: The same as the `-child` family, but counting only siblings with the same tag.
     *   `:not(<selector>)`: Matches an element that the inner selector does not. Takes a single compound selector -- a tag, `.class`, `#id`, `[attribute]`, or a combination such as `:not(div.card)`. Selector lists (`:not(.a, .b)`) and combinators inside the negation are not supported and match nothing, as does an empty `:not()`.
 
     `<style>` blocks and text do not count as siblings, so they never displace a
