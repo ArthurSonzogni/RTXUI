@@ -197,6 +197,15 @@ class RTXUI_EXPORT Element : public RefCounted {
   // The --* declarations matching this element itself, accumulated across
   // the components styling it in the current frame.
   std::map<std::string, std::string, std::less<>> own_custom_properties;
+  /// Identity stamped by `<for key="...">`: which item of the collection
+  /// produced this element. Reconciliation matches on it instead of position,
+  /// so reordering a collection carries focus, scroll and in-flight
+  /// transitions along with the item rather than leaving them at the index.
+  /// Empty for an unkeyed loop, which stays position-matched.
+  std::string for_key;
+  /// How many consecutive siblings that iteration produced, counting this
+  /// one. Lets a keyed match move a whole multi-element loop body.
+  uint16_t for_run = 0;
   ActiveTransitionsMap active_transitions;
   const ComponentBase* styled_by_1 = nullptr;
   const ComponentBase* styled_by_2 = nullptr;

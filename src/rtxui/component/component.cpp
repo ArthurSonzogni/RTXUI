@@ -339,6 +339,11 @@ struct ElementState {
   bool scrollbar_thumb_active = false;
   ComputedStyle style;
   ActiveTransitionsMap active_transitions;
+  /// Identity of the <for> item that produced the element, when it had one.
+  /// State is then restored onto the element carrying this key rather than
+  /// onto whatever now sits at the recorded path, so reordering a keyed
+  /// collection carries focus, scroll and running transitions with the item.
+  std::string for_key;
 };
 
 void CollectElementStates(
@@ -360,7 +365,7 @@ void CollectElementStates(
          {el->scroll_x(), el->scroll_y(), el->focused(), el->hovered(),
           el->active(), el->scrollbar_hovered(), el->scrollbar_active(),
           el->scrollbar_thumb_hovered(), el->scrollbar_thumb_active(),
-          el->style, el->active_transitions}});
+          el->style, el->active_transitions, el->for_key}});
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     path.push_back(static_cast<int>(i));
@@ -382,11 +387,31 @@ Element* FindElementByPath(Element* root, const ElementPath& path) {
   return el;
 }
 
+// Where a saved state belongs now. A keyed element is found by its key
+// wherever reconciliation moved it to; everything else falls back to the
+// recorded path, which is position-based.
+Element* FindStateTarget(Element* root,
+                         const ElementPath& path,
+                         const std::string& for_key) {
+  if (!for_key.empty() && root) {
+    Element* found = nullptr;
+    root->Visit([&](Element& candidate) {
+      if (!found && candidate.for_key == for_key) {
+        found = &candidate;
+      }
+    });
+    if (found) {
+      return found;
+    }
+  }
+  return FindElementByPath(root, path);
+}
+
 void RestoreElementStates(
     Element* root,
     const std::vector<std::pair<ElementPath, ElementState>>& states) {
   for (const auto& pair : states) {
-    Element* el = FindElementByPath(root, pair.first);
+    Element* el = FindStateTarget(root, pair.first, pair.second.for_key);
     if (el) {
       el->set_scroll_x(pair.second.scroll_x);
       el->set_scroll_y(pair.second.scroll_y);
@@ -407,7 +432,7 @@ void RestoreElementFocusHoverActive(
     Element* root,
     const std::vector<std::pair<ElementPath, ElementState>>& states) {
   for (const auto& pair : states) {
-    Element* el = FindElementByPath(root, pair.first);
+    Element* el = FindStateTarget(root, pair.first, pair.second.for_key);
     if (el) {
       el->set_focused(pair.second.focused);
       el->set_hovered(pair.second.hovered);
@@ -1800,7 +1825,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                                     const LocalScope* scope,
                                     size_t& child_idx,
                                     bool preserve_newlines,
-                                    const SlotFilter* filter) {
+                                    const SlotFilter* filter,
+                                    const std::string* item_key) {
   Ref<Element> slot_keep_alive(slot);
   auto Interpolate = [&](std::string_view text) -> std::string {
     return rtxui::Interpolate(text, import_source, scope);
@@ -1990,7 +2016,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           last_condition_chain_met = (cond == "true" || cond == "1");
           if (last_condition_chain_met) {
             RenderReconcile(child_node, slot, import_source, scope, child_idx,
-                            preserve_newlines, filter);
+                            preserve_newlines, filter, item_key);
           }
           break;
         }
@@ -2010,7 +2036,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             if (cond == "true" || cond == "1") {
               last_condition_chain_met = true;
               RenderReconcile(child_node, slot, import_source, scope, child_idx,
-                              preserve_newlines, filter);
+                              preserve_newlines, filter, item_key);
             }
           }
           break;
@@ -2019,7 +2045,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         if (child_node.tag == "else") {
           if (!last_condition_chain_met) {
             RenderReconcile(child_node, slot, import_source, scope, child_idx,
-                            preserve_newlines, filter);
+                            preserve_newlines, filter, item_key);
           }
           last_condition_chain_met = true;
           break;
@@ -2058,6 +2084,16 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             as_attr = child_node.attributes.at("as");
           }
 
+          // `key` makes an iteration's elements identifiable across frames, so
+          // a reordered collection moves its elements rather than rewriting
+          // them in place. Without it the loop stays position-matched, which
+          // leaves focus, scroll and running transitions on whatever item
+          // lands at that index.
+          std::string_view key_attr;
+          if (child_node.attributes.contains("key")) {
+            key_attr = child_node.attributes.at("key");
+          }
+
           std::shared_ptr<TypeErasedRange> range;
           for (const auto& entry : import_source->range_entries_) {
             if (entry.name == range_name) {
@@ -2078,16 +2114,49 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               item_scope.name = as_attr;
 
               auto visitor = range->GetItemVisitor(i);
+              std::string fallback_storage;
               if (visitor) {
                 item_scope.value = visitor;
-                RenderReconcile(child_node, slot, import_source, &item_scope,
-                                child_idx, preserve_newlines, filter);
               } else {
-                std::string fallback_storage;
                 item_scope.value =
                     range->GetItemStringView(i, fallback_storage);
-                RenderReconcile(child_node, slot, import_source, &item_scope,
-                                child_idx, preserve_newlines, filter);
+              }
+
+              // Bring this item's existing elements to the current
+              // position before reconciling, so the reconcile below reuses
+              // them instead of rewriting whatever sits here.
+              std::string item_key;
+              if (!key_attr.empty()) {
+                item_key =
+                    rtxui::Interpolate(key_attr, import_source, &item_scope);
+                for (size_t p = child_idx; p < slot->ChildCount(); ++p) {
+                  Element* candidate = slot->ChildAt(p);
+                  if (!candidate || candidate->for_key != item_key) {
+                    continue;
+                  }
+                  const size_t run =
+                      candidate->for_run ? candidate->for_run : 1;
+                  for (size_t j = 0; j < run && p + j < slot->ChildCount();
+                       ++j) {
+                    slot->MoveChild(p + j, child_idx + j);
+                  }
+                  break;
+                }
+              }
+
+              const size_t run_start = child_idx;
+              RenderReconcile(child_node, slot, import_source, &item_scope,
+                              child_idx, preserve_newlines, filter,
+                              item_key.empty() ? nullptr : &item_key);
+
+              // Stamp the identity on what this iteration produced, so the
+              // next frame can find it again.
+              if (!key_attr.empty() && child_idx > run_start) {
+                if (Element* first = slot->ChildAt(run_start)) {
+                  first->for_key = item_key;
+                  first->for_run =
+                      static_cast<uint16_t>(child_idx - run_start);
+                }
               }
             }
           }
@@ -2159,12 +2228,29 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
         if (factory) {
           Ref<ComponentBase> child;
-          for (auto it_old = old_children_.begin();
-               it_old != old_children_.end(); ++it_old) {
-            if ((*it_old)->Tag() == child_node.tag) {
-              child = *it_old;
-              old_children_.erase(it_old);
-              break;
+          // In a keyed loop, reuse the instance that belongs to this item.
+          // Instances are otherwise handed out in encounter order, which
+          // re-imposes the old ordering on the DOM and undoes the keyed move
+          // above: the element is put back and merely rewritten in place.
+          if (item_key && !item_key->empty()) {
+            for (auto it_old = old_children_.begin();
+                 it_old != old_children_.end(); ++it_old) {
+              if ((*it_old)->Tag() == child_node.tag && (*it_old)->Root() &&
+                  (*it_old)->Root()->for_key == *item_key) {
+                child = *it_old;
+                old_children_.erase(it_old);
+                break;
+              }
+            }
+          }
+          if (!child) {
+            for (auto it_old = old_children_.begin();
+                 it_old != old_children_.end(); ++it_old) {
+              if ((*it_old)->Tag() == child_node.tag) {
+                child = *it_old;
+                old_children_.erase(it_old);
+                break;
+              }
             }
           }
 
