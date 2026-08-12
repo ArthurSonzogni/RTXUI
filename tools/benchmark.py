@@ -38,8 +38,34 @@ def run_benchmark():
         print(e)
         sys.exit(1)
 
+def nesting_rows(data):
+    """Returns [(variant, depth, ms, layouts)] from a nesting benchmark run."""
+    rows = []
+    for key, value in data.items():
+        if not key.endswith("_ms"):
+            continue
+        variant, _, depth = key[: -len("_ms")].rpartition("_depth_")
+        if not variant:
+            continue
+        rows.append((variant, int(depth),
+                     value, data.get(f"{variant}_depth_{depth}_layouts", 0)))
+    return sorted(rows)
+
 def print_metrics(data, title="Benchmark Results"):
     """Prints benchmark metrics in a clean readable layout."""
+    if data.get("kind") == "nesting":
+        print("=" * 55)
+        print(f" {title.upper()} (NESTING DEPTH)")
+        print("=" * 55)
+        print(f"Leaf items: {data.get('leaf_items')}")
+        print("-" * 55)
+        print(f"{'Wrapper':<10} | {'Depth':<6} | {'Median (ms)':<12} | {'Layout runs':<12}")
+        print("-" * 55)
+        for variant, depth, ms, layouts in nesting_rows(data):
+            print(f"{variant:<10} | {depth:<6} | {ms:<12.4f} | {layouts:<12}")
+        print("=" * 55)
+        return
+
     if "avg_parse_us" in data:
         print("=" * 55)
         print(f" {title.upper()} (XML PARSE)")
@@ -103,6 +129,28 @@ def compare_results(baseline_path, current_data, threshold=5.0):
         sys.exit(1)
 
     any_regression = False
+
+    if current_data.get("kind") == "nesting":
+        print("=" * 72)
+        print(f" PERFORMANCE COMPARISON VS: {os.path.basename(baseline_path)}")
+        print(f" (threshold: {threshold:.1f}%)")
+        print("=" * 72)
+        print(f"{'Metric':<18} | {'Baseline (ms)':<14} | {'Current (ms)':<13} | {'Change':<10} | {'Layouts':<12}")
+        print("-" * 72)
+        for variant, depth, ms, layouts in nesting_rows(current_data):
+            key = f"{variant}_depth_{depth:02d}"
+            b_val = baseline.get(f"{key}_ms", 0.0)
+            diff_str, regressed = format_diff(b_val, ms, threshold)
+            b_layouts = baseline.get(f"{key}_layouts", 0)
+            # Layout runs are deterministic, so any growth is a real change in
+            # how much work the engine does -- worth flagging on its own.
+            if layouts > b_layouts:
+                regressed = True
+            any_regression = any_regression or regressed
+            layout_str = f"{b_layouts} -> {layouts}"
+            print(f"{key:<18} | {b_val:<14.4f} | {ms:<13.4f} | {diff_str:<10} | {layout_str:<12}")
+        print("=" * 72)
+        return any_regression
 
     if "avg_parse_us" in current_data:
         print("=" * 65)
@@ -187,6 +235,7 @@ def main():
     parser.add_argument("--layout", action="store_true", help="Use rtxui_layout_benchmark instead of rtxui_benchmark")
     parser.add_argument("--steady", action="store_true", help="Use rtxui_steady_state_benchmark instead of rtxui_benchmark")
     parser.add_argument("--xml", action="store_true", help="Use rtxui_xml_benchmark instead of rtxui_benchmark")
+    parser.add_argument("--nesting", action="store_true", help="Use rtxui_nesting_benchmark instead of rtxui_benchmark")
 
     args = parser.parse_args()
 
@@ -196,6 +245,8 @@ def main():
         BENCHMARK_BIN = "./build/rtxui_steady_state_benchmark"
     elif args.xml:
         BENCHMARK_BIN = "./build/rtxui_xml_benchmark"
+    elif args.nesting:
+        BENCHMARK_BIN = "./build/rtxui_nesting_benchmark"
 
     if args.profile:
         run_profiler()

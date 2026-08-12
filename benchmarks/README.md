@@ -9,6 +9,7 @@ stdout consumed by [`tools/benchmark.py`](../tools/benchmark.py).
 | `rtxui_steady_state_benchmark`  | 500-item grid, nothing mutating (early-out / idle cost).    |
 | `rtxui_layout_benchmark`        | 500-item grid, one item mutated per frame (reconciliation). |
 | `rtxui_xml_benchmark`           | XML template parse throughput.                              |
+| `rtxui_nesting_benchmark`       | Fixed leaf under N levels of block/flex/grid: nesting cost. |
 
 Shared code (timing, stats, JSON format, the stress component) lives in
 [`benchmark_common.hpp`](benchmark_common.hpp).
@@ -19,7 +20,7 @@ Build with benchmarks enabled (on by default), then from the repo root:
 
 ```bash
 python3 tools/benchmark.py                 # main benchmark, pretty table
-python3 tools/benchmark.py --layout        # --layout / --steady / --xml select a binary
+python3 tools/benchmark.py --layout        # --layout / --steady / --xml / --nesting select a binary
 python3 tools/benchmark.py --profile       # run under `perf` and show hot spots
 ```
 
@@ -35,6 +36,11 @@ Comparison uses the **median** (robust to both scheduler-outlier highs and
 trivial early-out frames), and only flags changes beyond `--threshold` percent
 (default 5%). `--compare` exits non-zero when any metric regresses past the
 threshold.
+
+The nesting benchmark also reports **layout runs** — how many times a layout
+algorithm executed for one frame. That number is deterministic, so unlike the
+timings it is a portable regression signal: `--compare` flags any growth in it
+regardless of the threshold.
 
 ## About the committed baselines
 
