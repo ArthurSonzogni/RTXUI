@@ -22,7 +22,16 @@ namespace rtxui {
 namespace {
 thread_local LayoutArena g_layout_arenas[2];
 thread_local int g_active_layout_arena = 0;
+thread_local int g_layout_run_count = 0;
 }  // namespace
+
+int LayoutRunCount() {
+  return g_layout_run_count;
+}
+
+void ResetLayoutRunCount() {
+  g_layout_run_count = 0;
+}
 
 // Grid cell alignment: justify-items/justify-self control the inline axis,
 // align-items/align-self the block axis. Stretch (the default) fills the
@@ -287,14 +296,12 @@ void ApplyScrollExtent(LayoutBox* box,
 }
 
 // --- Dispatcher ---
-std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
-                                            LayoutConstraints constraints,
-                                            LayoutContext context) {
+std::shared_ptr<PhysicalFragment> RunLayoutUncached(
+    LayoutInputNode node,
+    LayoutConstraints constraints,
+    LayoutContext context) {
   auto* box = node.box;
-  if (!box) {
-    std::cerr << "LayoutInputNode has null LayoutBox.\n";
-    std::abort();
-  }
+  g_layout_run_count++;
 
   if (box->algorithm == LayoutBox::Algorithm::Text) {
     auto wrapper_box =
@@ -330,6 +337,38 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
       std::abort();
   }
   return nullptr;
+}
+
+std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
+                                            LayoutConstraints constraints,
+                                            LayoutContext context) {
+  auto* box = node.box;
+  if (!box) {
+    std::cerr << "LayoutInputNode has null LayoutBox.\n";
+    std::abort();
+  }
+
+  // Measurement passes ask for the same box under the same constraints over
+  // and over -- flex measures every child, and each of those measurements
+  // measures its own children in turn -- so without this the cost of a
+  // measurement multiplies with every level of nesting. See the comment on
+  // LayoutBox::measure_cache for why measurement passes, and only they, may
+  // reuse a fragment.
+  const bool cacheable = context.is_measurement && !box->has_out_of_flow;
+  if (cacheable) {
+    for (const auto& entry : box->measure_cache) {
+      if (entry.constraints == constraints) {
+        return entry.fragment;
+      }
+    }
+  }
+
+  auto fragment = RunLayoutUncached(node, constraints, context);
+
+  if (cacheable) {
+    box->measure_cache.push_back({constraints, fragment});
+  }
+  return fragment;
 }
 
 LayoutContext CreateChildContext(LayoutBox* parent,
@@ -404,18 +443,6 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
 
       // Temporary layout fragment to calculate child width/height
       LayoutInputNode child_input = {child_box.get()};
-      std::shared_ptr<LayoutBox> wrapper_box = nullptr;
-      if (child_box->algorithm == LayoutBox::Algorithm::Text) {
-        wrapper_box =
-            std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-                LayoutArenaAllocator<LayoutBox>());
-        wrapper_box->is_anonymous = true;
-        wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-        wrapper_box->children.push_back(child_box);
-        wrapper_box->style = child_box->style;
-        wrapper_box->style.display_outside = DisplayOutside::Inline;
-        child_input.box = wrapper_box.get();
-      }
 
       // We run layout using a temporary child_context which we'll refine below
       LayoutContext child_context = parent_context;
@@ -650,18 +677,6 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     LayoutContext child_context =
         CreateChildContext(box, width, 0, cx, cy, context);
     LayoutInputNode child_input = {child_box.get()};
-    std::shared_ptr<LayoutBox> wrapper_box = nullptr;
-    if (child_box->algorithm == LayoutBox::Algorithm::Text) {
-      wrapper_box =
-          std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-              LayoutArenaAllocator<LayoutBox>());
-      wrapper_box->is_anonymous = true;
-      wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-      wrapper_box->children.push_back(child_box);
-      wrapper_box->style = child_box->style;
-      wrapper_box->style.display_outside = DisplayOutside::Inline;
-      child_input.box = wrapper_box.get();
-    }
     auto child_frag = RunLayout(child_input, child_c, child_context);
 
     int rx = cx;
@@ -1189,19 +1204,6 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutContext child_context =
         CreateChildContext(box, width, 0, cx, cy, context);
     LayoutInputNode child_input = {elem};
-    std::shared_ptr<LayoutBox> wrapper_box = nullptr;
-    if (elem->algorithm == LayoutBox::Algorithm::Text) {
-      wrapper_box =
-          std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-              LayoutArenaAllocator<LayoutBox>());
-      wrapper_box->is_anonymous = true;
-      wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-      wrapper_box->children.push_back(
-          std::shared_ptr<LayoutBox>(elem, [](LayoutBox*) {}));
-      wrapper_box->style = elem->style;
-      wrapper_box->style.display_outside = DisplayOutside::Inline;
-      child_input.box = wrapper_box.get();
-    }
     auto child_frag = RunLayout(child_input, child_c, child_context);
 
 
@@ -1669,18 +1671,6 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     }
 
     LayoutInputNode child_input = {child.get()};
-    std::shared_ptr<LayoutBox> wrapper_box = nullptr;
-    if (child->algorithm == LayoutBox::Algorithm::Text) {
-      wrapper_box =
-          std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-              LayoutArenaAllocator<LayoutBox>());
-      wrapper_box->is_anonymous = true;
-      wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-      wrapper_box->children.push_back(child);
-      wrapper_box->style = child->style;
-      wrapper_box->style.display_outside = DisplayOutside::Inline;
-      child_input.box = wrapper_box.get();
-    }
 
     LayoutContext child_context = context;
     child_context.is_measurement = true;
@@ -1844,18 +1834,6 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       LayoutContext child_context = context;
       child_context.is_measurement = true;
       LayoutInputNode child_input = {item.child_ptr.get()};
-      std::shared_ptr<LayoutBox> wrapper_box = nullptr;
-      if (item.child_ptr->algorithm == LayoutBox::Algorithm::Text) {
-        wrapper_box =
-            std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-                LayoutArenaAllocator<LayoutBox>());
-        wrapper_box->is_anonymous = true;
-        wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-        wrapper_box->children.push_back(item.child_ptr);
-        wrapper_box->style = item.child_ptr->style;
-        wrapper_box->style.display_outside = DisplayOutside::Inline;
-        child_input.box = wrapper_box.get();
-      }
 
       item.fragment = RunLayout(child_input, final_c, child_context);
       item.cross_size = is_row ? (item.fragment->height + m_vert)
@@ -2225,18 +2203,6 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       LayoutContext child_context = CreateChildContext(
           box, resolved_width, resolved_height, x, y, context);
       LayoutInputNode child_input = {item.child_ptr.get()};
-      std::shared_ptr<LayoutBox> wrapper_box = nullptr;
-      if (item.child_ptr->algorithm == LayoutBox::Algorithm::Text) {
-        wrapper_box =
-            std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-                LayoutArenaAllocator<LayoutBox>());
-        wrapper_box->is_anonymous = true;
-        wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-        wrapper_box->children.push_back(item.child_ptr);
-        wrapper_box->style = item.child_ptr->style;
-        wrapper_box->style.display_outside = DisplayOutside::Inline;
-        child_input.box = wrapper_box.get();
-      }
 
       item.fragment = RunLayout(child_input, final_c, child_context);
 

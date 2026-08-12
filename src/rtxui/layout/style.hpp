@@ -146,11 +146,13 @@ struct Spacing {
 struct Constraint {
   int value = 0;
   MeasureMode mode = MeasureMode::Undefined;
+  bool operator==(const Constraint&) const = default;
 };
 
 struct LayoutConstraints {
   Constraint width;
   Constraint height;
+  bool operator==(const LayoutConstraints&) const = default;
 };
 
 enum class BorderStyle {
