@@ -4247,4 +4247,97 @@ TEST_CASE("Layout: an absolutely positioned box nested in flex is placed "
                                  }));
 }
 
+TEST_CASE("Layout: an auto-sized absolute box shrinks to fit its content",
+          "[layout][position][bug]") {
+  // Regression: `right`/`bottom` placed nothing at all. An auto width was
+  // laid out with AtMost(available), and a block fills whatever it is
+  // offered, so the box came back as wide as the whole viewport. `right`
+  // subtracts that width from the container edge, which put the box at a
+  // negative coordinate -- off screen, painting nothing. CSS shrink-to-fit
+  // is the max-content width capped by what is available.
+  struct ShrinkToFitAbs : Component<ShrinkToFitAbs> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <div class="anchor">
+          <div class="abs">X</div>
+        </div>
+        <style>
+          .anchor { display: block; position: relative; width: 8; height: 4; }
+          .abs { position: absolute; right: 0; bottom: 0; }
+        </style>
+      )html";
+    }
+  };
+
+  auto container = Ref<ShrinkToFitAbs>::New();
+  auto texture = RenderComponent(container, 10, 5);
+
+  auto* abs_el = container->Root()->QuerySelector(".abs");
+  REQUIRE(abs_el != nullptr);
+  CHECK(abs_el->layout_width() == 1);
+  CHECK(abs_el->layout_height() == 1);
+
+  // Bottom-right corner of the 8x4 anchor.
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "          ",
+                                     "          ",
+                                     "          ",
+                                     "       X  ",
+                                     "          ",
+                                 }));
+}
+
+TEST_CASE("Layout: an absolute box pinned to both edges stretches between them",
+          "[layout][position]") {
+  // The other half of the auto-size rule: pinned on both sides, an auto size
+  // spans the gap -- `top/left/right/bottom: 0` is how you fill a positioned
+  // ancestor. Auto margins opt back out, because centering a box between two
+  // edges only means something if it may be narrower than they are; that is
+  // how <tooltip> centers its popup over its anchor.
+  struct StretchAbs : Component<StretchAbs> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <div class="anchor">
+          <div class="fill">Z</div>
+          <div class="centered">ab</div>
+        </div>
+        <style>
+          .anchor { display: block; position: relative; width: 8; height: 4; }
+          .fill { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+          .centered {
+            position: absolute;
+            top: 1;
+            left: 0;
+            right: 0;
+            margin-left: auto;
+            margin-right: auto;
+          }
+        </style>
+      )html";
+    }
+  };
+
+  auto container = Ref<StretchAbs>::New();
+  auto texture = RenderComponent(container, 10, 5);
+
+  auto* fill_el = container->Root()->QuerySelector(".fill");
+  REQUIRE(fill_el != nullptr);
+  CHECK(fill_el->layout_width() == 8);
+  CHECK(fill_el->layout_height() == 4);
+
+  auto* centered_el = container->Root()->QuerySelector(".centered");
+  REQUIRE(centered_el != nullptr);
+  CHECK(centered_el->layout_width() == 2);
+
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "Z         ",
+                                     "   ab     ",
+                                     "          ",
+                                     "          ",
+                                     "          ",
+                                 }));
+}
+
 }  // namespace rtxui
