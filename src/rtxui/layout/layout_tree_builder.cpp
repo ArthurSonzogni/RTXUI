@@ -249,6 +249,16 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     }
   }
 
+  // Whether anything in this subtree is positioned out of flow, which is what
+  // decides in layout.cpp whether the subtree's fragments may be cached
+  // across measurement passes.
+  box->has_out_of_flow =
+      box->style.position == PositionType::Absolute ||
+      box->style.position == PositionType::Fixed;
+  for (const auto& child_box : raw_children) {
+    box->has_out_of_flow |= child_box->has_out_of_flow;
+  }
+
   // --- Algorithm Selection & Tree Refinement ---
   if (dom_node->tag() == "table") {
     box->children = raw_children;
@@ -299,6 +309,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);
+        anonymous_box->has_out_of_flow |= child_box->has_out_of_flow;
       } else {
         anonymous_box = nullptr;
         refined_children.push_back(child_box);

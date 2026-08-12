@@ -31,6 +31,13 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
                                             LayoutContext context = {});
 
 void ResetLayoutArena();
+
+// Number of layout algorithm executions since ResetLayoutRunCount(); calls
+// served from the measurement cache are not counted. Unlike wall-clock time
+// this is deterministic, which is what makes it worth asserting on: it pins
+// how layout cost scales with the shape of the tree.
+int LayoutRunCount();
+void ResetLayoutRunCount();
 }  // namespace rtxui
 
 #endif  // RTXUI_LAYOUT_LAYOUT_HPP
