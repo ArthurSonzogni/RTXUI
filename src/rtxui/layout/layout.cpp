@@ -422,14 +422,37 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
       int child_w = ResolveBoxWidth(child_box->style, child_box->style.width, container_w);
       int child_h = ResolveBoxHeight(child_box->style, child_box->style.height, container_h);
 
-      int max_avail_w = container_w;
-      if (child_w == -1 && (child_box->style.left.unit == Unit::Auto || child_box->style.right.unit == Unit::Auto)) {
-        max_avail_w = parent_context.viewport_w;
+      const auto& child_style = child_box->style;
+      const bool left_auto = child_style.left.unit == Unit::Auto;
+      const bool right_auto = child_style.right.unit == Unit::Auto;
+      const bool top_auto = child_style.top.unit == Unit::Auto;
+      const bool bottom_auto = child_style.bottom.unit == Unit::Auto;
+
+      // An auto size pinned to both of its edges stretches to span them --
+      // this is what `top: 0; bottom: 0; left: 0; right: 0` means. Auto
+      // margins are the exception: they ask for the box to be centered
+      // between the edges, which only means anything if it is free to be
+      // narrower than the gap, so those keep the shrink-to-fit below.
+      // (<tooltip> centers itself over its anchor exactly that way.)
+      if (child_w == -1 && !left_auto && !right_auto &&
+          !(child_style.margin_left_auto && child_style.margin_right_auto)) {
+        child_w = std::max(0, container_w - child_style.left.Resolve(container_w) -
+                                  child_style.right.Resolve(container_w) -
+                                  child_style.margin.Horiz());
       }
-      int max_avail_h = container_h;
-      if (child_h == -1 && (child_box->style.top.unit == Unit::Auto || child_box->style.bottom.unit == Unit::Auto)) {
-        max_avail_h = parent_context.viewport_h;
+      if (child_h == -1 && !top_auto && !bottom_auto &&
+          !(child_style.margin_top_auto && child_style.margin_bottom_auto)) {
+        child_h = std::max(0, container_h - child_style.top.Resolve(container_h) -
+                                  child_style.bottom.Resolve(container_h) -
+                                  child_style.margin.Vert());
       }
+
+      // What is left for a box that still has an auto size. An out-of-flow
+      // box is allowed to be wider than the element it is anchored to -- a
+      // tooltip on a narrow button is the case that matters -- so the space
+      // it may take is the viewport, not the containing block.
+      int max_avail_w = child_w == -1 ? parent_context.viewport_w : container_w;
+      int max_avail_h = child_h == -1 ? parent_context.viewport_h : container_h;
 
       child_c.width = {
           child_w != -1 ? child_w : max_avail_w,
@@ -443,6 +466,22 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
 
       // Temporary layout fragment to calculate child width/height
       LayoutInputNode child_input = {child_box.get()};
+
+      // An auto width shrinks to fit: the box takes its max-content width,
+      // capped by the space available to it. AtMost does not do that -- a
+      // block fills whatever it is offered -- which left `right` and `bottom`
+      // positioning a box that was as wide as the whole viewport, computing a
+      // negative coordinate and painting it off screen entirely.
+      if (child_w == -1) {
+        LayoutContext measure_context = parent_context;
+        measure_context.is_measurement = true;
+        LayoutConstraints measure_c = child_c;
+        measure_c.width = {max_avail_w, MeasureMode::Undefined};
+        const int max_content_w =
+            RunLayout(child_input, measure_c, measure_context)->width;
+        child_c.width = {std::min(max_content_w, max_avail_w),
+                         MeasureMode::Exactly};
+      }
 
       // We run layout using a temporary child_context which we'll refine below
       LayoutContext child_context = parent_context;

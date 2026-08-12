@@ -174,7 +174,7 @@ A declaration referencing an undefined variable without a fallback is ignored. F
 ## 7. Transitions and Positioning
 
 <CssProperty name="transition" values="property duration timing-function" shorthand description="Shorthand (e.g. transition: background-color 0.2s linear)." />
-<CssProperty name="position" values="static | relative | absolute | fixed | sticky" description="Selects positioning flow model." />
+<CssProperty name="position" values="static | relative | absolute | fixed | sticky" description="Selects positioning flow model. An absolute/fixed box with an auto width or height sizes itself from its content, capped by the space available to it — it is free to be wider than the element it is anchored to, which is what lets a tooltip overhang a narrow trigger. Pinning both opposite edges (top and bottom, or left and right) stretches it between them instead, so inset: 0 fills the nearest positioned ancestor; auto margins on that axis opt back out, keeping the box content-sized and centering it between the edges." />
 <CssProperty name="inset" values="1-4 <length> values" shorthand description="Shorthand setting top/right/bottom/left (same expansion as margin)." />
 <CssProperty name="aspect-ratio" values="<w> / <h> | <number> | auto" description="Derives an element's auto dimension from whichever of width/height is definite: height-from-width in block, flex, and grid contexts (items and containers), and width-from-height in block contexts and on flex items/containers (grid containers only derive height from width). Ratios are in cells — terminal cells are ~2:1 tall, so 2 / 1 looks square. Content larger than the ratio overflows." />
 <CssProperty name="top" values="<length>" description="Offset relative to top boundary." />
