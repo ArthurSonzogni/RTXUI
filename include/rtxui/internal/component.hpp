@@ -197,7 +197,8 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
                        const LocalScope* scope,
                        size_t& child_idx,
                        bool preserve_newlines = false,
-                       const SlotFilter* filter = nullptr);
+                       const SlotFilter* filter = nullptr,
+                       const std::string* item_key = nullptr);
   std::string template_;
   std::string xml_string_;
   xml::Nodes xml_nodes_;
