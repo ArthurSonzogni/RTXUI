@@ -4150,4 +4150,101 @@ TEST_CASE("The layout arena is double buffered", "[layout][arena]") {
   CHECK(previous_intact);
 }
 
+// Builds `depth` nested flex containers around a fixed leaf and reports how
+// many layout algorithm runs a single frame took.
+int LayoutRunsForNestedFlex(int depth) {
+  std::string html;
+  for (int i = 0; i < depth; ++i) {
+    html += "<div style=\"display: flex; flex-direction: column\">";
+  }
+  html += "<div>leaf</div>";
+  for (int i = 0; i < depth; ++i) {
+    html += "</div>";
+  }
+  html += "<style>div { display: block; }</style>";
+
+  struct NestedFlexTest : Component<NestedFlexTest> {
+    std::string html_;
+    explicit NestedFlexTest(std::string html) : html_(std::move(html)) {}
+    std::string_view Setup() {
+      Import<div>();
+      return html_;
+    }
+  };
+
+  auto container = Ref<NestedFlexTest>::New(html);
+  ResetLayoutRunCount();
+  RenderComponent(container, 20, 6);
+  return LayoutRunCount();
+}
+
+TEST_CASE("Layout: nesting cost stays linear in depth", "[layout][flex][perf]") {
+  // Flex lays each child out three times -- measure, again with the resolved
+  // main size, and finally in place -- and each of those runs re-measures its
+  // own children, so the cost of a subtree used to multiply by ~3 with every
+  // level of nesting. Ten levels of nested flex took 637ms per frame.
+  //
+  // LayoutBox::measure_cache makes a measurement pass reuse the fragment an
+  // earlier pass already computed for the same constraints, which flattens
+  // that to a constant number of extra runs per level. Wall-clock time is too
+  // noisy to assert on; the run count is exact.
+  const int shallow = LayoutRunsForNestedFlex(2);
+  const int deep = LayoutRunsForNestedFlex(10);
+
+  // Eight more levels of nesting may cost a constant each. Without the cache
+  // they cost a factor of ~3 each, so this bound is not close to tight -- it
+  // only has to sit below anything exponential.
+  const int per_level = (deep - shallow) / 8;
+  INFO("layout runs: depth 2 = " << shallow << ", depth 10 = " << deep);
+  CHECK(per_level <= 8);
+}
+
+TEST_CASE("Layout: an absolutely positioned box nested in flex is placed "
+          "against its containing block",
+          "[layout][flex][position]") {
+  // The measurement cache keys on constraints alone, which is only sound
+  // because nothing else in LayoutContext -- the nearest positioned ancestor's
+  // size and the offsets accumulated down to it -- is read by anything except
+  // out-of-flow positioning. Subtrees containing an absolute or fixed element
+  // are therefore excluded from the cache (LayoutBox::has_out_of_flow); this
+  // pins that they still land where the context says, rather than reusing a
+  // fragment measured under a different one.
+  struct AbsInFlexTest : Component<AbsInFlexTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+        <div class="outer">
+          <div class="spacer">--</div>
+          <div class="inner">
+            <div class="anchor">
+              <div class="abs">X</div>
+            </div>
+          </div>
+        </div>
+        <style>
+          .outer { display: flex; flex-direction: column; }
+          .inner { display: flex; flex-direction: column; }
+          .spacer { display: block; height: 2; }
+          .anchor { display: block; position: relative; width: 6; height: 3; }
+          .abs { position: absolute; top: 1; left: 1; }
+        </style>
+      )html";
+    }
+  };
+
+  auto container = Ref<AbsInFlexTest>::New();
+  auto texture = RenderComponent(container, 8, 6);
+
+  // The spacer pushes the anchor to row 2; the absolute child sits one cell
+  // into it, not at the flex container's own origin.
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "--      ",
+                                     "        ",
+                                     "        ",
+                                     " X      ",
+                                     "        ",
+                                     "        ",
+                                 }));
+}
+
 }  // namespace rtxui
