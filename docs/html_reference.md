@@ -55,6 +55,7 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 | `<if>` | Control Flow | N/A | `condition` | Dynamic conditional branch renderer. |
 | `<elif>` | Control Flow | N/A | `condition` | Alternative branch. Must follow `<if>` or `<elif>`. |
 | `<else>` | Control Flow | N/A | None | Fallback branch. Must follow `<if>` or `<elif>`. |
+| `<for>` | Control Flow | N/A | `each`, `as`, `key` | Repeats its children once per item of a bound collection. `each` names the collection, `as` names the loop variable, and the optional `key` identifies items so a reordered collection moves its elements (with their focus, scroll and running transitions) instead of rewriting them in place. |
 
 An `<if>` or `<elif>` with no `condition`, or a `<for>` with no `each`, renders
 nothing: a missing attribute counts as a condition that was never met, rather
