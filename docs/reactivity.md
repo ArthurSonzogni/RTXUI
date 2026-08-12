@@ -73,6 +73,9 @@ the screen dispatches it and then runs a **digest**:
    changed, that component re-renders: its template is re-evaluated and
    **reconciled** against the existing element tree, reusing and patching
    elements rather than rebuilding them. Child components digest recursively.
+   Elements are matched by position, so a `<for>` over a collection that
+   *reorders* needs a [`key`](/guide/loops#keyed-loops) for an item's element
+   state — focus, scroll offset, running transitions — to travel with it.
 3. **Layout and paint.** The (possibly updated) element tree is laid out,
    painted into a cell buffer, and diffed against the previous frame so only
    changed cells are written to the terminal.

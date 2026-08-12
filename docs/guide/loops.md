@@ -44,6 +44,35 @@ This demo loops over a `std::vector<std::string>`, appending with a bound
 </template>
 </ExampleTabs>
 
+## Keyed loops
+
+By default a loop's children are matched by **position**: the element at index
+0 is reused for whatever item is now first. That is what you want while a list
+is only being appended to or edited in place, but it is wrong as soon as items
+move. Reordering the collection leaves each element where it was and rewrites
+its content, so anything the *element* was holding — keyboard focus, a scroll
+offset, a running transition — stays at the index instead of following the item
+it belonged to.
+
+Give the loop a `key` to identify items instead:
+
+```html
+<for each="{tasks}" as="task" key="{task.id}">
+  <div tabindex="0">{task.name}</div>
+</for>
+```
+
+The key is interpolated per item, exactly like the loop body, so it can be any
+expression that names the item — an id field is the usual choice. On the next
+digest each item's existing elements are moved to the item's new position and
+reused there, carrying their state with them. Focus stays on the task the user
+had focused, even if it is now three rows further down.
+
+Keys must be unique within the loop, and stable across frames: keying by
+`{$index}` is the same as not keying at all. A loop without `key` keeps the
+position matching described above, which stays the cheaper option for a list
+that never reorders.
+
 ## Collections of structs
 
 A collection of plain values stringifies each item directly. For a collection
