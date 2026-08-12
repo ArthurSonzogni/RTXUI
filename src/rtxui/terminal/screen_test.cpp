@@ -4952,6 +4952,102 @@ TEST_CASE("tabs follows a collection that grows and shrinks",
   CHECK(headers() == 3);
 }
 
+namespace {
+class KeyedListApp : public Component<KeyedListApp> {
+ public:
+  std::vector<std::string> names{"alpha", "beta", "gamma"};
+  std::string_view view = R"html(<div>
+  <for each="{names}" as="n" key="{n}">
+    <div id="{n}">{n}</div>
+  </for>
+</div>)html";
+  KeyedListApp() { RegisterCollection("names", &names); }
+};
+
+class UnkeyedListApp : public Component<UnkeyedListApp> {
+ public:
+  std::vector<std::string> names{"alpha", "beta", "gamma"};
+  std::string_view view = R"html(<div>
+  <for each="{names}" as="n">
+    <input id="{n}" value="{n}"/>
+  </for>
+</div>)html";
+  UnkeyedListApp() { RegisterCollection("names", &names); }
+};
+
+std::vector<Element*> InputsOf(Element* root) {
+  std::vector<Element*> inputs;
+  root->Visit([&](Element& e) {
+    if (e.tag() == "input" || (e.tag() == "div" && !e.id.empty())) {
+      inputs.push_back(&e);
+    }
+  });
+  return inputs;
+}
+}  // namespace
+
+TEST_CASE("A keyed <for> moves element state with the item", "[for][key]") {
+  // Without a key, reconciliation matches loop children by position, so
+  // reordering a collection leaves focus (and scroll, and any in-flight
+  // transition) sitting on whatever item now occupies that index. `key`
+  // identifies the item that produced an element so the reconciler moves it.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<KeyedListApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto inputs = InputsOf(app->Root());
+  REQUIRE(inputs.size() == 3);
+  Element* beta = inputs[1];
+  REQUIRE(beta->id == "beta");
+  beta->set_focused(true);
+  screen.Draw();
+
+  // Rotate beta to the front: {beta, gamma, alpha}.
+  std::rotate(app->names.begin(), app->names.begin() + 1, app->names.end());
+  app->Digest();
+  screen.Draw();
+
+  auto after = InputsOf(app->Root());
+  REQUIRE(after.size() == 3);
+  CHECK(after[0]->id == "beta");
+  CHECK(after[1]->id == "gamma");
+  CHECK(after[2]->id == "alpha");
+
+  // The focused element is beta, and it is the same element as before -- its
+  // state travelled with the item rather than staying at index 1.
+  CHECK(after[0] == beta);
+  CHECK(after[0]->focused());
+  CHECK_FALSE(after[1]->focused());
+  CHECK_FALSE(after[2]->focused());
+}
+
+TEST_CASE("An unkeyed <for> still reconciles by position", "[for][key]") {
+  // The keyed path must not change what an unkeyed loop does: elements are
+  // reused in place and only their content is rewritten.
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto app = Ref<UnkeyedListApp>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto inputs = InputsOf(app->Root());
+  REQUIRE(inputs.size() == 3);
+  Element* at_index_1 = inputs[1];
+
+  std::rotate(app->names.begin(), app->names.begin() + 1, app->names.end());
+  app->Digest();
+  screen.Draw();
+
+  auto after = InputsOf(app->Root());
+  REQUIRE(after.size() == 3);
+  CHECK(after[0]->id == "beta");
+  CHECK(after[1]->id == "gamma");
+  // Same element object, rewritten to hold a different item.
+  CHECK(after[1] == at_index_1);
+}
+
 TEST_CASE("A fieldset projects its legend and styles itself accordingly",
           "[fieldset]") {
   // fieldset::Digest() moves the <legend> out of the default slot into the
