@@ -103,13 +103,14 @@ jobs:
           cmake --build build
           --target rtxui_benchmark rtxui_layout_benchmark
           rtxui_steady_state_benchmark rtxui_xml_benchmark
+          rtxui_nesting_benchmark
 
       # Smoke-run each benchmark: catches compile/runtime breakage. We do NOT
       # gate on timing — wall-clock numbers vary too much across shared CI
       # runners to be a reliable regression signal (see benchmarks/README.md).
       - name: Run benchmarks
         run: |
-          for bench in rtxui_benchmark rtxui_layout_benchmark rtxui_steady_state_benchmark rtxui_xml_benchmark; do
+          for bench in rtxui_benchmark rtxui_layout_benchmark rtxui_steady_state_benchmark rtxui_xml_benchmark rtxui_nesting_benchmark; do
             echo "=== $bench ==="
             ./build/$bench
           done
