@@ -22,34 +22,28 @@ class HelloWorldApp : public Component<HelloWorldApp> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --surface: rgb(22, 27, 34);
-          --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
-          --muted: rgb(139, 148, 158);
-          --accent: rgb(88, 166, 255);
 
           display: flex;
           align-items: center;
           justify-content: center;
           width: 100%;
           height: 100%;
-          background-color: var(--bg);
-          color: var(--text);
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
         .card {
           border: tall;
-          border-color: var(--border);
-          background-color: var(--surface);
+          border-color: rgb(48, 54, 61);
+          background-color: rgb(22, 27, 34);
           padding: 1 3;
           text-align: center;
         }
         h1 {
-          color: var(--accent);
+          color: rgb(88, 166, 255);
           font-weight: bold;
         }
         p {
-          color: var(--muted);
+          color: rgb(139, 148, 158);
           margin-top: 1;
         }
       </style>

@@ -51,7 +51,6 @@ class OpacityDemo : public Component<OpacityDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --surface: rgb(22, 27, 34);
           --muted: rgb(139, 148, 158);
           --accent: rgb(88, 166, 255);
@@ -59,7 +58,7 @@ class OpacityDemo : public Component<OpacityDemo> {
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
         }
         .container {

@@ -25,12 +25,10 @@ class HrDemo : public Component<HrDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --muted: rgb(139, 148, 158);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
         }
         .container {
@@ -44,7 +42,7 @@ class HrDemo : public Component<HrDemo> {
         }
         .desc {
           display: block;
-          color: var(--muted);
+          color: rgb(139, 148, 158);
           margin-bottom: 2;
         }
         .section-title {

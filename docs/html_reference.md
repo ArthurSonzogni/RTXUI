@@ -4,62 +4,56 @@ This reference documents all built-in XML/HTML tags supported by the RTXUI parse
 
 ---
 
-## 1. Tag Reference Table
+### 1. Tag Reference
 
-| Tag | Category | Default CSS Style | Key Attributes | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `<div>` | Container | `display: block;` | None | General block layout wrapper. Stacks children vertically. |
-| `<span>` | Container | `display: inline;` | None | General inline layout wrapper. Flows children horizontally. |
-| `<a>` | Typography | `display: inline; text-decoration: underline; color: #3b82f6; cursor: pointer;` | `href` | Hyperlink. `href="#id"` scrolls the matching element into view on click. |
-| `<h1>` | Typography | `display: block; font-weight: bold; text-decoration: underlined; margin-bottom: 1;` | None | Major section heading with bottom spacing. |
-| `<h2>`, `<h3>` | Typography | `display: block; font-weight: bold; margin-bottom: 1;` | None | Section heading with bottom spacing. |
-| `<h4>`, `<h5>`, `<h6>` | Typography | `display: block; font-weight: bold;` | None | Minor section heading. |
-| `<p>` | Typography | `display: block; margin-top: 1; margin-bottom: 1;` | None | Paragraph layout text block. |
-| `<b>` | Typography | `display: inline; font-weight: bold;` | None | Renders inline text in bold. |
-| `<strong>` | Typography | `display: inline; font-weight: bold;` | None | Highlights inline text in bold. |
-| `<i>` | Typography | `display: inline; font-style: italic;` | None | Renders inline text in italics. |
-| `<em>` | Typography | `display: inline; font-style: italic;` | None | Emphasizes inline text in italics. |
-| `<u>` | Typography | `display: inline; text-decoration: underline;` | None | Underlines inline text. |
-| `<s>`, `<strike>`, `<del>` | Typography | `display: inline; text-decoration: line-through;` | None | Strikes through inline text. |
-| `<code>` | Typography | `display: inline; background-color: rgba(255, 255, 255, 0.1); padding-left: 1; padding-right: 1;` | None | Inline code snippet with subtle background. |
-| `<pre>` | Typography | `display: block; white-space: pre; margin-top: 1; margin-bottom: 1;` | None | Preformatted text block preserving whitespace. |
-| `<blockquote>` | Typography | `display: block; margin-top: 1; margin-bottom: 1; padding-left: 1; border-left: 1; border-style: solid; border-color: #555;` | None | Quoted block, indented with a left border line. |
-| `<markdown>` | Display | `display: block;` | `content`, `stylesheet` | Renders a Markdown string as rich TUI content. |
-| `<ul>` | List | `display: block; padding-left: 2;` | None | Unordered list block. |
-| `<ol>` | List | `display: block; padding-left: 3;` | None | Ordered list block. |
-| `<li>` | List | `display: block;` | None | Individual list item. |
-| `<button>` | Interactive | `display: inline-block; border: tall; padding-left: 1; padding-right: 1;` | `onclick` / `@click`, `oncontextmenu` / `@click.right`, `disabled` | Interactive clickable button widget. |
-| `<input>` | Interactive | `display: inline flex; flex-direction: row; border: solid; border-color: #555; padding-left: 1; padding-right: 1; overflow-x: scroll; scrollbar-width: none; white-space: nowrap;` | `value` | Interactive single-line text entry field. |
-| `<textarea>` | Interactive | `display: block; border: solid; border-color: #555; padding-left: 1; padding-right: 1; overflow-y: scroll;` | `value` | Interactive multi-line scrollable text field. |
-| `<checkbox>` | Interactive | `display: inline-block; cursor: pointer;` | `checked`, `onchange`, `disabled` | Interactive boolean check toggle. |
-| `<label>` | Interactive | `display: inline-flex; cursor: pointer;` | `for` | Click delegation and target-focus association. |
-| `<tooltip>` | Interactive | `display: inline-block;` | `content`, `placement` | Context popup helper displayed on trigger hover. |
-| `<slider>` | Interactive | `display: inline-block; cursor: pointer;` | `value`, `min`, `max`, `step`, `width`, `onchange`, `disabled` | Interactive range slider control. |
-| `<progress>` | Display | `display: inline-block;` | `value`, `max`, `width` | Non-interactive progress bar tracker. |
-| `<select>` | Interactive | `display: inline flex; flex-direction: column;` | `value`, `onchange`, `disabled` | Dropdown picker list menu. |
-| `<option>` | Interactive | `display: block;` | `value`, `disabled` | Pickable choice element inside `<select>`. |
-| `<hr>` | Display | `display: block; margin-top: 1; margin-bottom: 1; overflow: hidden; white-space: nowrap;` | None | Horizontal rule/divider line. |
-| `<br />` | Display | `display: inline;` | None | Forces a line break inside inline flow content. |
-| `<table>` | Container | `display: block;` | None | Table container element. Organizes child row elements in a grid. |
-| `<tr>` | Container | `display: block;` | None | Table row element. Groups cell elements. |
-| `<td>` | Container | `display: block;` | None | Table data cell element. Fits slot content. |
-| `<th>` | Container | `display: block;` | None | Table header cell element. Fits slot content. |
-| `<details>` | Interactive | `display: block;` | `open` | Collapsible section widget. |
-| `<summary>` | Interactive | `display: inline;` | None | Clickable summary header for `<details>`. |
-| `<fieldset>` | Container | `display: block;` | None | Grouping wrapper with border and optional legend. |
-| `<legend>` | Container | `display: inline;` | None | Group label nested inside `<fieldset>` top border. |
-| `<radio>` | Interactive | `display: inline-block;` | `checked`, `name`, `onchange`, `disabled` | Multi-choice radio button toggle. |
-| `<tabs>` | Container | `display: flex;` | `value`, `onchange` | Tabbed section switcher. |
-| `<tab-pane>` | Container | `display: block;` | `label`, `name` | Individual tabbed panel item. |
-| `<dialog>` | Container | `display: block;` | `open`, `title` | Floating modal overlay dialog window. Pressing `Escape` closes an open dialog. |
-| `<if>` | Control Flow | N/A | `condition` | Dynamic conditional branch renderer. |
-| `<elif>` | Control Flow | N/A | `condition` | Alternative branch. Must follow `<if>` or `<elif>`. |
-| `<else>` | Control Flow | N/A | None | Fallback branch. Must follow `<if>` or `<elif>`. |
-| `<for>` | Control Flow | N/A | `each`, `as`, `key` | Repeats its children once per item of a bound collection. `each` names the collection, `as` names the loop variable, and the optional `key` identifies items so a reordered collection moves its elements (with their focus, scroll and running transitions) instead of rewriting them in place. |
+RTXUI supports built-in XML/HTML tags categorized by their visual and layout function:
 
-An `<if>` or `<elif>` with no `condition`, or a `<for>` with no `each`, renders
-nothing: a missing attribute counts as a condition that was never met, rather
-than being an error.
+### Containers & Layout
+* **`<div>`** — Block layout container (`display: block`).
+* **`<span>`** — Inline layout container (`display: inline`).
+* **`<table>`**, **`<tr>`**, **`<th>`**, **`<td>`** — Grid table structure (`display: block`).
+* **`<fieldset>`**, **`<legend>`** — Grouping box with border-nested legend label.
+* **`<tabs>`**, **`<tab-pane>`** — Tabbed section switcher (`value`, `onchange`).
+* **`<dialog>`** — Floating modal overlay window (`open`, `title`). Pressing Escape closes an open dialog.
+
+### Typography & Content
+* **`<h1>`** to **`<h6>`** — Heading elements with bold weight and section margins.
+* **`<p>`** — Paragraph text block with top and bottom margin (`display: block`).
+* **`<a>`** — Hyperlink (`href="#id"` scrolls matching element into view on click).
+* **`<b>`**, **`<strong>`** — Bold text formatting (`font-weight: bold`).
+* **`<i>`**, **`<em>`** — Italic text formatting (`font-style: italic`).
+* **`<u>`** — Underlined text formatting (`text-decoration: underline`).
+* **`<s>`**, **`<strike>`**, **`<del>`** — Strikethrough text formatting (`text-decoration: line-through`).
+* **`<code>`** — Inline code snippet with subtle background styling.
+* **`<pre>`** — Preformatted text block preserving whitespace (`white-space: pre`).
+* **`<blockquote>`** — Indented quote block with a left border line.
+* **`<markdown>`** — Renders Markdown text as rich TUI content (`content`, `stylesheet`).
+* **`<hr>`** — Horizontal rule / divider line.
+* **`<br />`** — Line break within inline flow content.
+
+### Interactive & Form Elements
+* **`<button>`** — Clickable button widget (`onclick` / `@click`, `disabled`).
+* **`<input>`** — Single-line text entry field (`value`).
+* **`<textarea>`** — Multi-line scrollable text editor field (`value`).
+* **`<checkbox>`** — Boolean toggle checkbox (`checked`, `onchange`, `disabled`).
+* **`<radio>`** — Multi-choice radio button toggle (`checked`, `name`, `onchange`, `disabled`).
+* **`<label>`** — Delegate click and focus to a target control element (`for`).
+* **`<select>`**, **`<option>`** — Dropdown picker menu (`value`, `onchange`, `disabled`).
+* **`<slider>`** — Numeric range slider control (`value`, `min`, `max`, `step`, `onchange`).
+* **`<progress>`** — Progress bar tracker (`value`, `max`, `width`).
+* **`<tooltip>`** — Hover context popup helper (`content`, `placement`).
+* **`<details>`**, **`<summary>`** — Collapsible disclosure section widget (`open`).
+
+### Lists
+* **`<ul>`** — Unordered list container (bullet markers).
+* **`<ol>`** — Ordered list container (numbered markers, `start`, `reversed`).
+* **`<li>`** — List item element (`value`).
+
+### Control Flow
+* **`<if>`**, **`<elif>`**, **`<else>`** — Dynamic conditional branch rendering (`condition`).
+* **`<for>`** — Repeats children for each item of a bound collection (`each`, `as`, `key`).
+
+An `<if>` or `<elif>` with no `condition`, or a `<for>` with no `each`, renders nothing.
 
 ---
 

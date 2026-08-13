@@ -75,11 +75,7 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --surface: rgb(22, 27, 34);
-          --text: rgb(230, 237, 243);
-          --muted: rgb(139, 148, 158);
-          --accent: rgb(88, 166, 255);
           --accent-bright: rgb(121, 192, 255);
 
           display: block;
@@ -87,8 +83,8 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           height: 100%;
           overflow-y: scroll;
           scroll-speed: 1;
-          background-color: var(--bg);
-          color: var(--text);
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
           padding: 1;
         }
         h1 {
@@ -97,7 +93,7 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
           margin-bottom: 1;
         }
         .desc {
-          color: var(--muted);
+          color: rgb(139, 148, 158);
           margin-bottom: 1;
         }
         .inner-scroll {
@@ -115,7 +111,7 @@ class NestedScrollDemo : public Component<NestedScrollDemo> {
         }
         .box-b {
           border: tall;
-          border-color: var(--accent);
+          border-color: rgb(88, 166, 255);
           background-color: var(--surface);
         }
         .section-title {

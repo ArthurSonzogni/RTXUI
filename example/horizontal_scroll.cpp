@@ -66,14 +66,9 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
-          --muted: rgb(139, 148, 158);
-          --accent: rgb(88, 166, 255);
           --accent-bright: rgb(121, 192, 255);
-          --danger: rgb(248, 81, 73);
 
           display: flex;
           flex-direction: row;
@@ -81,8 +76,8 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           height: 100%;
           overflow-x: scroll;
           scroll-speed-x: 2;
-          background-color: var(--bg);
-          color: var(--text);
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
           padding: 1;
         }
         .header {
@@ -101,7 +96,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           margin-bottom: 1;
         }
         .desc {
-          color: var(--muted);
+          color: rgb(139, 148, 158);
           margin-bottom: 1;
         }
         .item {
@@ -141,7 +136,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
         }
         .box-b {
           border: tall;
-          border-color: var(--accent);
+          border-color: rgb(88, 166, 255);
           background-color: var(--surface);
         }
         .inner-item {
@@ -158,7 +153,7 @@ class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
           color: rgb(74, 222, 128);
         }
         .last {
-          color: var(--danger);
+          color: rgb(248, 81, 73);
         }
       </style>
     )html";

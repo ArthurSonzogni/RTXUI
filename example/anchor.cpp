@@ -99,17 +99,13 @@ class AnchorDemo : public Component<AnchorDemo> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
         --border: rgb(48, 54, 61);
-        --text: rgb(230, 237, 243);
         --muted: rgb(139, 148, 158);
-        --accent: rgb(88, 166, 255);
-        --accent-bright: rgb(121, 192, 255);
 
         display: block;
         padding: 1 2;
-        background-color: var(--bg); /* Deep dark slate background */
-        color: var(--text);
+        background-color: rgb(13, 17, 23); /* Deep dark slate background */
+        color: rgb(230, 237, 243);
       }
       .container {
         display: block;
@@ -123,7 +119,7 @@ class AnchorDemo : public Component<AnchorDemo> {
         margin-bottom: 1;
       }
       h2 {
-        color: var(--accent); /* Bright blue */
+        color: rgb(88, 166, 255); /* Bright blue */
         margin-bottom: 0;
       }
       .description {
@@ -191,7 +187,7 @@ class AnchorDemo : public Component<AnchorDemo> {
         background-color: rgba(14, 165, 233, 0.15); /* Modern cyan sky blue */
       }
       .sec-odd .section-title {
-        color: var(--accent-bright); /* Bright royal blue text */
+        color: rgb(121, 192, 255); /* Bright royal blue text */
       }
       .sec-even .section-title {
         color: rgb(56, 189, 248); /* Bright sky blue text */

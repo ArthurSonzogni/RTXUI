@@ -37,24 +37,20 @@ class MediaQueriesDemo : public Component<MediaQueriesDemo> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
-        --text: rgb(230, 237, 243);
-        --muted: rgb(139, 148, 158);
-        --accent: rgb(88, 166, 255);
         --danger: rgb(248, 81, 73);
         --success: rgb(63, 185, 80);
 
         display: block;
         padding: 1 2;
-        background-color: var(--bg); /* Slate 900 */
-        color: var(--text);
+        background-color: rgb(13, 17, 23); /* Slate 900 */
+        color: rgb(230, 237, 243);
       }
       .title {
-        color: var(--accent); /* Blue 500 */
+        color: rgb(88, 166, 255); /* Blue 500 */
         margin-bottom: 0;
       }
       .desc {
-        color: var(--muted); /* Slate 400 */
+        color: rgb(139, 148, 158); /* Slate 400 */
         margin-bottom: 1;
       }
       .badge {

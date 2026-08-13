@@ -58,16 +58,12 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
       </div>
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --accent: rgb(88, 166, 255);
-          --accent-bright: rgb(121, 192, 255);
           --danger: rgb(248, 81, 73);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
         }
         .container { padding: 1; }
@@ -79,8 +75,8 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
         .name { flex-grow: 1; color: white; }
         .remove-btn { color: var(--danger); border: none; padding: 0 1; background-color: transparent; }
         .remove-btn:hover { color: white; background-color: var(--danger); }
-        button { background-color: var(--surface); color: white; border: tall; border-color: var(--border); padding: 0 1; }
-        button:hover { background-color: var(--accent); border-color: var(--accent-bright); }
+        button { background-color: rgb(22, 27, 34); color: white; border: tall; border-color: var(--border); padding: 0 1; }
+        button:hover { background-color: rgb(88, 166, 255); border-color: rgb(121, 192, 255); }
       </style>
     )html";
 

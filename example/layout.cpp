@@ -26,7 +26,6 @@ class Box : public Component<Box> {
         self {
           --bg: rgb(13, 17, 23);
           --accent: rgb(88, 166, 255);
-          --accent-bright: rgb(121, 192, 255);
 
           background-color: var(--bg);
           display: block;
@@ -56,7 +55,7 @@ class LayoutDemo : public Component<LayoutDemo> {
         <p>This layout uses nested custom Box components inside a flex row container.</p>
         
         <div class="flex-row">
-          <Box text="Blue-300" color="var(--accent-bright)"></Box>
+          <Box text="Blue-300" color="rgb(121, 192, 255)"></Box>
           <Box text="Blue-500" color="var(--accent)"></Box>
           <Box text="Blue-700" color="rgb(29, 78, 216)"></Box>
         </div>

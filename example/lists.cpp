@@ -72,13 +72,10 @@ class ListsDemo : public Component<ListsDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --border: rgb(48, 54, 61);
-          --muted: rgb(139, 148, 158);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
           width: 100%;
           height: 100%;
@@ -98,7 +95,7 @@ class ListsDemo : public Component<ListsDemo> {
         }
         .desc {
           display: block;
-          color: var(--muted);
+          color: rgb(139, 148, 158);
         }
         .demo-grid {
           display: flex;
@@ -109,7 +106,7 @@ class ListsDemo : public Component<ListsDemo> {
           display: block;
           width: 30;
           border-right: solid;
-          border-color: var(--border);
+          border-color: rgb(48, 54, 61);
           padding-right: 2;
         }
         .preview {

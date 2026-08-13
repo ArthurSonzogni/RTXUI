@@ -56,11 +56,10 @@ class CJKDemo : public Component<CJKDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
 
           display: block;
           padding: 2;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: #eee;
           overflow-y: scroll;
         }

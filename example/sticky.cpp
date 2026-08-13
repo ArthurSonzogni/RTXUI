@@ -29,12 +29,7 @@ class MonthSection : public Component<MonthSection> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
-        --text: rgb(230, 237, 243);
-        --muted: rgb(139, 148, 158);
         --accent: rgb(88, 166, 255);
-        --danger: rgb(248, 81, 73);
-        --success: rgb(63, 185, 80);
 
         display: block;
       }
@@ -69,10 +64,10 @@ class MonthSection : public Component<MonthSection> {
         "July", "August", "September", "October", "November", "December"
     };
     std::vector<std::string> colors = {
-        "var(--danger)",   // Jan: Red
+        "rgb(248, 81, 73)",   // Jan: Red
         "rgb(249, 115, 22)",  // Feb: Orange
         "rgb(245, 158, 11)",  // Mar: Amber
-        "var(--success)",  // Apr: Emerald
+        "rgb(63, 185, 80)",  // Apr: Emerald
         "rgb(20, 184, 166)",  // May: Teal
         "rgb(6, 182, 212)",   // Jun: Cyan
         "var(--accent)",  // Jul: Blue
@@ -144,15 +139,15 @@ class StickyDemo : public Component<StickyDemo> {
       self {
         display: block;
         padding: 1 2;
-        background-color: var(--bg); /* Deep dark slate background */
-        color: var(--text);
+        background-color: rgb(13, 17, 23); /* Deep dark slate background */
+        color: rgb(230, 237, 243);
       }
       h2 {
         color: var(--accent); /* Bright blue */
         margin-bottom: 0;
       }
       .description {
-        color: var(--muted); /* Muted gray text */
+        color: rgb(139, 148, 158); /* Muted gray text */
         margin-bottom: 2;
       }
       .scroll-window {

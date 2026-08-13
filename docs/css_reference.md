@@ -214,42 +214,13 @@ Values for `border` and `border-style`. Each draws the one-cell ring around the
 element; `border-color` sets the color the glyphs are drawn in (defaulting to
 the element's `color`).
 
-```
-  ascii      blank      dashed     double
-  +-------+             ┏╍╍╍╍╍╍╍┓  ╔═══════╗
-  |       |             ╏       ╏  ║       ║
-  +-------+             ┗╍╍╍╍╍╍╍┛  ╚═══════╝
+<ExampleTabs src="/wasm/rtxui_example_borders.js">
+<template #source>
 
-  hkey       heavy      inner      none
-  ▔▔▔▔▔▔▔▔▔  ┏━━━━━━━┓  ▗▄▄▄▄▄▄▄▖
-             ┃       ┃  ▐       ▌
-  ▁▁▁▁▁▁▁▁▁  ┗━━━━━━━┛  ▝▀▀▀▀▀▀▀▘
+<<< @/../example/borders.cpp
 
-  outer      panel      round      solid
-  ▛▀▀▀▀▀▀▀▜  ▊███████▎  ╭───────╮  ┌───────┐
-  ▌       ▐  ▊       ▎  │       │  │       │
-  ▙▄▄▄▄▄▄▄▟  ▊▁▁▁▁▁▁▁▎  ╰───────╯  └───────┘
-
-  tall       thick      vkey       wide
-  ▊▔▔▔▔▔▔▔▎  █▀▀▀▀▀▀▀█  ▏       ▕  ▁▁▁▁▁▁▁▁▁
-  ▊       ▎  █       █  ▏       ▕  ▎       ▊
-  ▊▁▁▁▁▁▁▁▎  █▄▄▄▄▄▄▄█  ▏       ▕  ▔▔▔▔▔▔▔▔▔
-
-  dotted     double-horizontal  double-vertical  shadow
-  ·········  ╒═══════╕          ╓───────╖        ░░░░░░░░▓
-  ·       ·  │       │          ║       ║        ░       ▓
-  ·········  ╘═══════╛          ╙───────╜        ░▓▓▓▓▓▓▓▓
-
-  shade-light  shade-medium  shade-dark  squiggle
-  ░░░░░░░░░    ▒▒▒▒▒▒▒▒▒     ▓▓▓▓▓▓▓▓▓   ~~~~~~~~~
-  ░       ░    ▒       ▒     ▓       ▓   ~       ~
-  ░░░░░░░░░    ▒▒▒▒▒▒▒▒▒     ▓▓▓▓▓▓▓▓▓   ~~~~~~~~~
-
-  block      tab
-  ▄▄▄▄▄▄▄▄▄  ▁▁▁▁▁▁▁▁▁
-  █       █  ▎       ▊
-  ▀▀▀▀▀▀▀▀▀  ▔▔▔▔▔▔▔▔▔
-```
+</template>
+</ExampleTabs>
 
 | Keyword | Alias | Notes |
 | --- | --- | --- |
@@ -280,21 +251,6 @@ the element's `color`).
 | `block` | | Full blocks at the sides, half blocks top and bottom, drawn on the parent's background. |
 | `tab` | | Identical to `wide`; the name Textual uses when the border is a tab strip. |
 | `hidden` | | Accepted as a synonym of `none`, matching Textual. |
-
-The partial-block styles (`tall`, `panel`, `wide`, `block`, `tab`, `inner`,
-`outer`, `thick`) draw a glyph that sits astride the boundary between the
-element and its parent, so each border cell has to pick which of the two
-backgrounds fills the part the glyph does not cover. RTXUI follows Textual's
-table exactly: `inner`, and the sides of `tall` and `panel`, sit on the
-*parent's* background, which is what makes them read as drawn outside the
-element; the top and bottom of `tall` and `panel` sit on the element's own.
-
-Some cells are drawn in reverse video (`ESC[7m`) so the strip lands on the far
-side of the cell — Unicode has left-side partial blocks in every width but only
-one right-side one. The swap is left to the terminal rather than done by
-exchanging the two colors, so that an element with no background of its own
-still resolves against the terminal's default *background* rather than its
-default foreground.
 
 Single sides can be set independently with `border-top`, `border-right`,
 `border-bottom` and `border-left`; a lone side renders as a plain line rather

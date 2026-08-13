@@ -39,9 +39,7 @@ class TransitionsDemo : public Component<TransitionsDemo> {
       <style>
         self {
           --bg: rgb(13, 17, 23);
-          --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
           --muted: rgb(139, 148, 158);
           --accent: rgb(88, 166, 255);
 
@@ -51,12 +49,12 @@ class TransitionsDemo : public Component<TransitionsDemo> {
           width: 100%;
           height: 100%;
           background-color: var(--bg);
-          color: var(--text);
+          color: rgb(230, 237, 243);
         }
         .card {
           border: tall;
           border-color: var(--border);
-          background-color: var(--surface);
+          background-color: rgb(22, 27, 34);
           padding: 1 3;
         }
         h1 {
