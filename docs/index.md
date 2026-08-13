@@ -48,11 +48,9 @@ class Counter : public rtxui::Component<Counter> {
   void Increment() { count++; }
 
   std::string_view view = R"html(
-    <div class="panel">
-      <span>{label}: {count}</span>
-      <span>Double: {double_count}</span>
-      <button onclick="Increment">Increment</button>
-    </div>
+    <span>{label}: {count}</span>
+    <span>Double: {double_count}</span>
+    <button onclick="Increment">Increment</button>
 
     <style>
       self {
