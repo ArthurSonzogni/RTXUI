@@ -2,9 +2,9 @@
 
 To make C++ member variables accessible inside your HTML templates, you must register them in the reflection system.
 
-## The `InitReflection` Method
+## Component Constructor & Binding
 
-Override the `InitReflection()` method in your component. Always call the parent class implementation `ComponentBase::InitReflection()` at the beginning of the override.
+Register members inside your component class constructor using `Bind()`.
 
 ### Binding Primitive Values
 Use `Bind()` to link scalar types (such as `std::string`, `int`, `double`, `bool`) to the template environment:
@@ -14,8 +14,7 @@ struct Profile : public rtxui::Component<Profile> {
   std::string username = "Alice";
   int level = 5;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  Profile() {
     Bind(username);
     Bind(level);
   }
@@ -32,14 +31,13 @@ struct Profile : public rtxui::Component<Profile> {
 ```
 
 ### Binding Standard Collections
-For rendering lists dynamically (using the template `<for>` or `for` attribute), use `BindCollection()`:
+For rendering lists dynamically (using the template `<for>` or `for` attribute), use `BindCollection()` or `Bind()`:
 
 ```cpp
 struct TodoList : public rtxui::Component<TodoList> {
   std::vector<std::string> items = {"Task 1", "Task 2"};
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  TodoList() {
     BindCollection("items", &items);
   }
 
