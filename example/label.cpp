@@ -42,15 +42,12 @@ class LabelDemo : public Component<LabelDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --surface: rgb(22, 27, 34);
           --muted: rgb(139, 148, 158);
-          --accent: rgb(88, 166, 255);
-          --success: rgb(63, 185, 80);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
         }
         .container {
@@ -90,7 +87,7 @@ class LabelDemo : public Component<LabelDemo> {
           padding-left: 1;
           padding-right: 1;
           border: solid;
-          border-color: var(--accent);
+          border-color: rgb(88, 166, 255);
         }
         .nest-label {
           display: flex;
@@ -99,7 +96,7 @@ class LabelDemo : public Component<LabelDemo> {
           background-color: var(--surface);
           padding: 1;
           border: dashed;
-          border-color: var(--success);
+          border-color: rgb(63, 185, 80);
         }
         .state-label {
           display: block;

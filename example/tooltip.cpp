@@ -88,16 +88,13 @@ class TooltipDemo : public Component<TooltipDemo> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
-        --surface: rgb(22, 27, 34);
-        --text: rgb(230, 237, 243);
         --muted: rgb(139, 148, 158);
         --accent: rgb(88, 166, 255);
 
         display: block;
         padding: 2;
-        background-color: var(--bg);
-        color: var(--text);
+        background-color: rgb(13, 17, 23);
+        color: rgb(230, 237, 243);
       }
       h2 {
         color: var(--accent);
@@ -131,7 +128,7 @@ class TooltipDemo : public Component<TooltipDemo> {
         margin-bottom: 1;
       }
       .btn {
-        background-color: var(--surface);
+        background-color: rgb(22, 27, 34);
         color: white;
         cursor: pointer;
         padding: 0 1;

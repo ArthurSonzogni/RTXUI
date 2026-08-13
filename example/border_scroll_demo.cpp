@@ -150,17 +150,13 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
           --muted: rgb(139, 148, 158);
-          --accent: rgb(88, 166, 255);
-          --accent-bright: rgb(121, 192, 255);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
           width: 100%;
           height: 100%;
@@ -223,7 +219,7 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           display: block;
           padding: 0 1;
           margin-bottom: 1;
-          color: var(--text);
+          color: rgb(230, 237, 243);
         }
         .header-line {
           font-weight: bold;
@@ -265,8 +261,8 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
           cursor: pointer;
         }
         button:hover {
-          background-color: var(--accent);
-          border-color: var(--accent-bright);
+          background-color: rgb(88, 166, 255);
+          border-color: rgb(121, 192, 255);
           color: white;
         }
         button.active {

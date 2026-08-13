@@ -38,31 +38,26 @@ class FocusScrollDemo : public Component<FocusScrollDemo> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
-        --surface: rgb(22, 27, 34);
-        --border: rgb(48, 54, 61);
-        --text: rgb(230, 237, 243);
-        --muted: rgb(139, 148, 158);
         --accent: rgb(88, 166, 255);
 
         display: block;
         padding: 1 2;
-        background-color: var(--bg); /* Deep dark slate background */
-        color: var(--text);
+        background-color: rgb(13, 17, 23); /* Deep dark slate background */
+        color: rgb(230, 237, 243);
       }
       h2 {
         color: var(--accent); /* Bright blue */
         margin-bottom: 0;
       }
       .description {
-        color: var(--muted); /* Muted gray text */
+        color: rgb(139, 148, 158); /* Muted gray text */
         margin-bottom: 2;
       }
       .scroll-window {
         display: block;
         height: 6;
         border: tall;
-        border-color: var(--border);
+        border-color: rgb(48, 54, 61);
         overflow-y: scroll;
         scroll-speed: 1;
         width: 40;
@@ -71,7 +66,7 @@ class FocusScrollDemo : public Component<FocusScrollDemo> {
         display: block;
         padding: 0 1;
         border: solid;
-        border-color: var(--surface);
+        border-color: rgb(22, 27, 34);
         background-color: rgb(30, 41, 59, 0.4);
         margin: 0;
       }

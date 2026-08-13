@@ -50,15 +50,11 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --surface: rgb(22, 27, 34);
-          --accent: rgb(88, 166, 255);
-          --accent-bright: rgb(121, 192, 255);
           --danger: rgb(248, 81, 73);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
         }
         .container {
@@ -103,15 +99,15 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
         }
 
         button {
-          background-color: var(--surface);
+          background-color: rgb(22, 27, 34);
           color: white;
           padding: 0 1;
           transition: all 1s;
         }
 
         button:hover {
-          background-color: var(--accent);
-          border-color: var(--accent-bright);
+          background-color: rgb(88, 166, 255);
+          border-color: rgb(121, 192, 255);
         }
 
       </style>

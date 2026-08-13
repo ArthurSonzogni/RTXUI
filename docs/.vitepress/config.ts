@@ -4,6 +4,10 @@ export default withMermaid({
   title: 'RTXUI',
   description: 'Terminal user interfaces built from HTML templates, CSS, and plain C++ state.',
   themeConfig: {
+    logo: {
+      light: '/logo-light.png',
+      dark: '/logo-dark.png'
+    },
     nav: [
       { text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/' },
       { text: 'Reference', link: '/html_reference', activeMatch: '/(cpp_api|html_reference|css_reference)' },

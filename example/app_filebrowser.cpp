@@ -196,7 +196,6 @@ class FileBrowser : public Component<FileBrowser> {
           --text: rgb(230, 237, 243);
           --muted: rgb(139, 148, 158);
           --accent: rgb(88, 166, 255);
-          --dir: rgb(210, 153, 34);
 
           display: block;
           width: 100%;
@@ -270,7 +269,7 @@ class FileBrowser : public Component<FileBrowser> {
           border-color: var(--accent);
         }
         .glyph.dir {
-          color: var(--dir);
+          color: rgb(210, 153, 34);
         }
         .glyph.file {
           color: var(--muted);

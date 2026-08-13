@@ -89,14 +89,12 @@ class ConditionalApp : public Component<ConditionalApp> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --muted: rgb(139, 148, 158);
 
           display: block;
           padding: 2;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: #eee;
           overflow-y: scroll;
 
@@ -144,7 +142,7 @@ class ConditionalApp : public Component<ConditionalApp> {
 
           .footer {
             margin-top: 2;
-            color: var(--muted);
+            color: rgb(139, 148, 158);
             font-style: italic;
           }
         }

@@ -34,13 +34,12 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
   std::string_view view = R"html(
     <style>
       self {
-        --bg: rgb(13, 17, 23);
 
         display: flex;
         flex-direction: column;
         padding: 1;
         gap: 1;
-        background-color: var(--bg);
+        background-color: rgb(13, 17, 23);
         color: #f1f5f9;
       }
       h1 {
