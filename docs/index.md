@@ -14,7 +14,7 @@ hero:
       link: /guide/getting-started
     - theme: alt
       text: Try Playground
-      link: /guide/examples/playground
+      link: '#interactive-playground'
 
 features:
   - title: A real layout engine
@@ -81,7 +81,7 @@ class Counter : public rtxui::Component<Counter> {
 </div>
 
 <div class="demo-section">
-  <h2>Interactive Playground</h2>
+  <h2 id="interactive-playground">Interactive Playground</h2>
   <p class="demo-desc">
     This live playground compiles RTXUI to WebAssembly and runs it right here in your browser. Edit the HTML and CSS
     in the left-hand editor — every keystroke reparses the template and re-renders the preview on the
