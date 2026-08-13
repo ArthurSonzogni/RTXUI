@@ -35,8 +35,7 @@ class MyCard : public rtxui::Component<MyCard> {
 
 ### Registration
 
-Members become visible to the template after registration, done in the
-constructor or in `InitReflection()`:
+Members become visible to the template after registration, done in the component constructor:
 
 | Call | Registers |
 | :--- | :--- |
@@ -50,7 +49,6 @@ constructor or in `InitReflection()`:
 
 | Method | Description |
 | :--- | :--- |
-| `void InitReflection()` *(virtual)* | Registration hook; call the base implementation when overriding. |
 | `bool OnEvent(Event)` *(virtual)* | Intercept input before built-in handling. Return `true` to consume the event. Events propagate to children via the base implementation. |
 | `bool Digest()` | Compares bound state against snapshots; re-renders on change. Called by the screen loop. |
 | `Element* Root() const` | The root of this component's element tree. |

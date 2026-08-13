@@ -9,7 +9,7 @@ Name the bound collection with `each`, and choose the loop variable's name
 with `as`:
 
 ```cpp
-// Bound in the constructor or InitReflection():
+// Bound in the constructor:
 std::vector<std::string> fruits = {"Apple", "Banana", "Cherry"};
 Bind(fruits);
 ```
@@ -87,7 +87,7 @@ struct Task {
 
 std::vector<Task> tasks;
 
-// In the constructor or InitReflection():
+// In the constructor:
 Bind(tasks, [](const Task& t) {
   return std::make_shared<ManualStructVisitor>(
       std::map<std::string, std::string, std::less<>>{

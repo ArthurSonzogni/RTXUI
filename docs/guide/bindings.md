@@ -6,7 +6,7 @@ RTXUI maps terminal interactions (such as mouse clicks, keyboard presses, or inp
 
 ## 1. Registering Callbacks in C++
 
-To bind a member function to template events, register it in `InitReflection()` using the `Bind()` method. To register lambda expressions or standalone functions, import them using the `Import()` method:
+To bind a member function to template events, register it in your component constructor using the `Bind()` method. To register lambda expressions or standalone functions, import them using the `Import()` method:
 
 ```cpp
 struct ClickApp : public rtxui::Component<ClickApp> {
@@ -14,8 +14,7 @@ struct ClickApp : public rtxui::Component<ClickApp> {
 
   void Increment() { clicks++; }
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  ClickApp() {
     Bind(clicks);
     
     // Bind member function callback
@@ -67,7 +66,7 @@ To intercept specific mouse behaviors (like context menu clicks), you can append
 Callbacks can accept arguments from templates. The arguments are received by the C++ lambda as `std::string` parameters. This is extremely useful for index tracking in loops:
 
 ```cpp
-// Registered in InitReflection
+// Registered in constructor
 Import("RemoveItem", [this](std::string index_str) {
   size_t index = std::stoull(index_str);
   items.erase(items.begin() + index);

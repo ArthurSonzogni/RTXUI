@@ -17,7 +17,7 @@ To project dynamic content into your text nodes, wrap the C++ variable or member
 
 ## 2. Binding Member Fields
 
-All public member variables inside a component class must be registered in the reflection system inside the `InitReflection()` method:
+All public member variables inside a component class are registered using the `Bind()` method in the constructor:
 
 ```cpp
 #include <rtxui/rtxui.hpp>
@@ -27,8 +27,7 @@ class ProfileApp : public rtxui::Component<ProfileApp> {
   std::string username = "Alice";
   int score = 42;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  ProfileApp() {
     Bind(username);
     Bind(score);
   }
@@ -57,8 +56,7 @@ class CounterApp : public rtxui::Component<CounterApp> {
 
   int double_count() const { return count * 2; }
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
+  CounterApp() {
     Bind(count);
     Bind(double_count);
   }
