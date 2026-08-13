@@ -17,64 +17,41 @@ namespace {
 
 constexpr std::string_view kDefaultCode = R"html(
   <div class="card">
-    <h1>Welcome to the RTXUI Playground</h1>
-    <p>Edit the HTML and CSS on the left. This preview re-parses on every
-    keystroke, using the same template engine that powers every RTXUI app.</p>
+    <h1>RTXUI Playground</h1>
+    <p>Edit the HTML &amp; CSS on the left to see instant updates.
+    Hover over the button below to see a CSS transition in action.</p>
 
-    <div class="row">
-      <button class="btn">Hover me</button>
-      <span class="badge">Live</span>
-    </div>
-
-    <progress value="65" max="100" width="30" />
-
-    <ul>
-      <li>Flexbox layout</li>
-      <li>CSS transitions</li>
-      <li>Borders &amp; colors</li>
-    </ul>
+    <button class="btn">Hover Me</button>
   </div>
 
   <style>
     .card {
-      display: block;
-      border: tall;
-      border-color: rgb(129, 140, 248);
-      padding: 1;
-      background-color: rgb(30, 41, 59);
-      color: rgb(226, 232, 240);
+      border: solid;
+      border-color: rgb(48, 54, 61);
+      background-color: rgb(22, 27, 34);
+      color: rgb(230, 237, 243);
+      padding: 1 2;
     }
     h1 {
-      color: rgb(234, 179, 8);
+      color: rgb(88, 166, 255);
       margin-bottom: 1;
     }
     p {
-      color: rgb(148, 163, 184);
-      margin-bottom: 1;
-    }
-    .row {
-      display: flex;
-      gap: 2;
+      color: rgb(139, 148, 158);
       margin-bottom: 1;
     }
     .btn {
-      background-color: rgb(59, 130, 246);
-      color: white;
-      padding-left: 2;
-      padding-right: 2;
-      transition: background-color 0.2s ease-in-out;
+      background-color: rgb(31, 38, 47);
+      border: solid;
+      border-color: rgb(48, 54, 61);
+      color: rgb(230, 237, 243);
+      padding: 0 2;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
     .btn:hover {
-      background-color: rgb(37, 99, 235);
-    }
-    .badge {
-      background-color: rgb(34, 197, 94);
-      color: black;
-      padding-left: 1;
-      padding-right: 1;
-    }
-    progress {
-      margin-bottom: 1;
+      background-color: rgb(88, 166, 255);
+      border-color: rgb(88, 166, 255);
+      color: rgb(13, 17, 23);
     }
   </style>
 )html";
