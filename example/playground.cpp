@@ -16,44 +16,56 @@ using namespace rtxui;
 namespace {
 
 constexpr std::string_view kDefaultCode = R"html(
-  <div class="card">
-    <h1>RTXUI Playground</h1>
-    <p>Edit the HTML &amp; CSS on the left to see instant updates.
-    Hover over the button below to see a CSS transition in action.</p>
 
-    <button class="btn">Hover Me</button>
-  </div>
+<h1>RTXUI Playground</h1>
+<p>
+  Edit the HTML &amp; CSS on the left to see instant updates.
+  Hover over the button below to see a CSS transition in action.
+</p>
 
-  <style>
-    .card {
-      border: solid;
-      border-color: rgb(48, 54, 61);
-      background-color: rgb(22, 27, 34);
-      color: rgb(230, 237, 243);
-      padding: 1 2;
-    }
-    h1 {
-      color: rgb(88, 166, 255);
-      margin-bottom: 1;
-    }
-    p {
-      color: rgb(139, 148, 158);
-      margin-bottom: 1;
-    }
-    .btn {
-      background-color: rgb(31, 38, 47);
-      border: solid;
-      border-color: rgb(48, 54, 61);
-      color: rgb(230, 237, 243);
-      padding: 0 2;
-      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-    }
-    .btn:hover {
-      background-color: rgb(88, 166, 255);
-      border-color: rgb(88, 166, 255);
-      color: rgb(13, 17, 23);
-    }
-  </style>
+<button>Click me</button>
+<button>Click me</button>
+<button>Click me</button>
+
+<style>
+  self {
+    border: tall;
+    border-color: rgb(48, 54, 61);
+    background-color: rgb(22, 27, 34);
+    color: rgb(230, 237, 243);
+    padding: 1 2;
+  }
+
+  h1 {
+    color: rgb(88, 166, 255);
+  }
+
+  p {
+    color: rgb(139, 148, 158);
+  }
+
+  button {
+    background-color: rgb(31, 38, 47);
+    border: tall;
+    border-color: rgb(48, 54, 61);
+    color: rgb(230, 237, 243);
+    padding: 0 2;
+    transition: all 0.3s ease;
+  }
+
+  button:hover {
+    background-color: rgb(88, 166, 255);
+    border-color: rgb(88, 166, 255);
+    color: rgb(13, 17, 23);
+  }
+
+  button:active {
+    background-color: rgb(67, 56, 202);
+    border-color: rgb(67, 56, 202);
+    color: rgb(230, 237, 243);
+    transition: all 0s;
+  }
+</style>
 )html";
 
 }  // namespace
