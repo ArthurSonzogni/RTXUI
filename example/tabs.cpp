@@ -33,25 +33,21 @@ class TabsDemo : public Component<TabsDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
-          --accent: rgb(88, 166, 255);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
         }
         h1 {
-          color: var(--accent);
+          color: rgb(88, 166, 255);
           margin-bottom: 2;
         }
         .tab-body {
           border: solid;
-          border-color: var(--border);
+          border-color: rgb(48, 54, 61);
           padding: 1;
           margin-top: 1;
-          color: var(--text);
+          color: rgb(230, 237, 243);
         }
       </style>
     )html";

@@ -164,7 +164,6 @@ class Dashboard : public Component<Dashboard> {
           --surface: rgb(22, 27, 34);
           --raised: rgb(31, 38, 47);
           --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
           --muted: rgb(139, 148, 158);
           --accent: rgb(88, 166, 255);
           --healthy: rgb(63, 185, 80);
@@ -175,7 +174,7 @@ class Dashboard : public Component<Dashboard> {
           width: 100%;
           height: 100%;
           background-color: var(--bg);
-          color: var(--text);
+          color: rgb(230, 237, 243);
         }
         .app {
           display: flex;

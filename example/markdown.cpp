@@ -158,9 +158,7 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
     <style>
       self {
         --border: rgb(48, 54, 61);
-        --text: rgb(230, 237, 243);
         --muted: rgb(139, 148, 158);
-        --danger: rgb(248, 81, 73);
 
         display: block;
         width: 100%;
@@ -218,13 +216,13 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
         background-color: rgb(67, 56, 202);
       }
       .editor::part(cursor) {
-        color: var(--text);
+        color: rgb(230, 237, 243);
       }
       .status {
         color: var(--muted);
       }
       .status.error {
-        color: var(--danger);
+        color: rgb(248, 81, 73);
       }
       .preview-frame {
         flex-grow: 1;

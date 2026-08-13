@@ -176,17 +176,11 @@ class TableDemo : public Component<TableDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --muted: rgb(139, 148, 158);
-          --accent: rgb(88, 166, 255);
-          --accent-bright: rgb(121, 192, 255);
-          --danger: rgb(248, 81, 73);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
           width: 100%;
           height: 100%;
@@ -200,11 +194,11 @@ class TableDemo : public Component<TableDemo> {
         h1 {
           font-weight: bold;
           margin-bottom: 1;
-          color: var(--accent);
+          color: rgb(88, 166, 255);
         }
         p {
           margin-bottom: 2;
-          color: var(--muted);
+          color: rgb(139, 148, 158);
         }
         table {
           display: block;
@@ -218,7 +212,7 @@ class TableDemo : public Component<TableDemo> {
         }
         th {
           font-weight: bold;
-          color: var(--accent-bright);
+          color: rgb(121, 192, 255);
           border-bottom: solid;
           border-color: var(--border);
           padding: 1;
@@ -233,7 +227,7 @@ class TableDemo : public Component<TableDemo> {
           color: rgb(74, 222, 128);
         }
         .status.disabled {
-          color: var(--danger);
+          color: rgb(248, 81, 73);
         }
         .border {
           border: tall;
@@ -242,7 +236,7 @@ class TableDemo : public Component<TableDemo> {
           padding: 0;
         }
         tr.alt-row {
-          background-color: var(--surface); 
+          background-color: rgb(22, 27, 34); 
         }
         .header-row {
           position: sticky;

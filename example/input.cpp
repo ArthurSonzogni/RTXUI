@@ -30,7 +30,6 @@ class InputDemo : public Component<InputDemo> {
       <style>
         self {
           --bg: rgb(13, 17, 23);
-          --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
           --text: rgb(230, 237, 243);
           --muted: rgb(139, 148, 158);
@@ -48,7 +47,7 @@ class InputDemo : public Component<InputDemo> {
           display: block;
           border: tall;
           border-color: var(--border);
-          background-color: var(--surface);
+          background-color: rgb(22, 27, 34);
           padding: 1 3;
           width: 62;
         }

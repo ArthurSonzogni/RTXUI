@@ -39,16 +39,13 @@ class RadioDemo : public Component<RadioDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --border: rgb(48, 54, 61);
-          --accent: rgb(88, 166, 255);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
         }
         h1 {
-          color: var(--accent);
+          color: rgb(88, 166, 255);
           margin-bottom: 1;
         }
         p {
@@ -60,7 +57,7 @@ class RadioDemo : public Component<RadioDemo> {
           gap: 1;
           margin-bottom: 1;
           border-left: solid;
-          border-color: var(--border);
+          border-color: rgb(48, 54, 61);
           padding-left: 2;
         }
         .status {

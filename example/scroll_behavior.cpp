@@ -63,18 +63,14 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
-        --surface: rgb(22, 27, 34);
         --border: rgb(48, 54, 61);
-        --text: rgb(230, 237, 243);
         --muted: rgb(139, 148, 158);
-        --accent-bright: rgb(121, 192, 255);
 
         display: block;
         width: 80;
         margin: 0 auto;
-        background-color: var(--bg);
-        color: var(--text);
+        background-color: rgb(13, 17, 23);
+        color: rgb(230, 237, 243);
       }
       .container {
         display: block;
@@ -85,7 +81,7 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         margin-bottom: 2;
       }
       h1 {
-        color: var(--accent-bright);
+        color: rgb(121, 192, 255);
         font-weight: bold;
         margin-bottom: 1;
       }
@@ -119,7 +115,7 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         overflow-y: scroll;
         border: tall;
         border-color: var(--border);
-        background-color: var(--surface);
+        background-color: rgb(22, 27, 34);
         padding: 1;
       }
       #scroll-auto {

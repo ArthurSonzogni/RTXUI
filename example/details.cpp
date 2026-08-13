@@ -65,9 +65,8 @@ class DetailsDemo : public rtxui::Component<DetailsDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
 
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           display: block;
           padding: 1;
         }

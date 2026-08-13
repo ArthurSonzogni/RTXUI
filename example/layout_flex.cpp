@@ -140,7 +140,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
   void AddItem() {
     item_counter++;
     std::string colors[] = {
-        "var(--danger)",  "var(--accent)", "var(--success)",
+        "var(--danger)",  "rgb(88, 166, 255)", "var(--success)",
         "rgb(245, 158, 11)", "rgb(139, 92, 246)",
     };
     std::string color = colors[(item_counter - 1) % 5];
@@ -276,19 +276,15 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
           --muted: rgb(139, 148, 158);
-          --accent: rgb(88, 166, 255);
-          --accent-bright: rgb(121, 192, 255);
           --danger: rgb(248, 81, 73);
           --success: rgb(63, 185, 80);
 
           display: block;
           padding: 1;
-          background-color: var(--bg);
+          background-color: rgb(13, 17, 23);
           color: white;
           width: 100%;
           height: 100%;
@@ -365,7 +361,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
           width: 100%;
           border: tall;
           border-color: var(--border);
-          color: var(--text);
+          color: rgb(230, 237, 243);
           background-color: transparent;
           padding-left: 1;
           padding-right: 1;
@@ -373,7 +369,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
         }
         button:hover {
           background-color: var(--surface);
-          border-color: var(--accent-bright);
+          border-color: rgb(121, 192, 255);
           color: white;
         }
         .btn-add {

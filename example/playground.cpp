@@ -125,10 +125,8 @@ class Playground : public Component<Playground> {
       self {
         --surface: rgb(22, 27, 34);
         --border: rgb(48, 54, 61);
-        --text: rgb(230, 237, 243);
         --muted: rgb(139, 148, 158);
         --accent: rgb(88, 166, 255);
-        --danger: rgb(248, 81, 73);
 
         display: block;
         width: 100%;
@@ -186,7 +184,7 @@ class Playground : public Component<Playground> {
         background-color: rgb(67, 56, 202);
       }
       .editor::part(cursor) {
-        color: var(--text);
+        color: rgb(230, 237, 243);
       }
       .editor::part(placeholder) {
         color: rgb(100, 116, 139);
@@ -195,7 +193,7 @@ class Playground : public Component<Playground> {
         color: var(--muted);
       }
       .status.error {
-        color: var(--danger);
+        color: rgb(248, 81, 73);
       }
       .preview-frame {
         flex-grow: 1;

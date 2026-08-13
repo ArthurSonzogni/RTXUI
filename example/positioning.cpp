@@ -112,19 +112,16 @@ class PositioningApp : public Component<PositioningApp> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
         --surface: rgb(22, 27, 34);
         --border: rgb(48, 54, 61);
-        --text: rgb(230, 237, 243);
         --muted: rgb(139, 148, 158);
         --accent: rgb(88, 166, 255);
         --accent-bright: rgb(121, 192, 255);
-        --danger: rgb(248, 81, 73);
 
         display: block;
         padding: 1 2;
-        background-color: var(--bg);
-        color: var(--text);
+        background-color: rgb(13, 17, 23);
+        color: rgb(230, 237, 243);
         width: 100%;
         height: 100%;
         overflow-y: scroll;
@@ -229,7 +226,7 @@ class PositioningApp : public Component<PositioningApp> {
         height: 4;
         background-color: rgb(220, 38, 38);
         border: double;
-        border-color: var(--danger);
+        border-color: rgb(248, 81, 73);
         z-index: 10;
         padding: 0 1;
         display: block;

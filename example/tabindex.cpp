@@ -48,18 +48,12 @@ class TabIndexDemo : public Component<TabIndexDemo> {
 
     <style>
       self {
-        --bg: rgb(13, 17, 23);
-        --surface: rgb(22, 27, 34);
-        --border: rgb(48, 54, 61);
         --text: rgb(230, 237, 243);
-        --muted: rgb(139, 148, 158);
         --accent: rgb(88, 166, 255);
-        --danger: rgb(248, 81, 73);
-        --success: rgb(63, 185, 80);
 
         display: block;
         padding: 1 2;
-        background-color: var(--bg); /* Deep dark slate background */
+        background-color: rgb(13, 17, 23); /* Deep dark slate background */
         color: var(--text);
       }
       h2 {
@@ -67,7 +61,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
         margin-bottom: 0;
       }
       .description {
-        color: var(--muted); /* Muted gray text */
+        color: rgb(139, 148, 158); /* Muted gray text */
         margin-bottom: 1;
       }
       .list {
@@ -79,7 +73,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
       .item {
         display: block;
         border: tall;
-        border-color: var(--surface); /* Dark slate border */
+        border-color: rgb(22, 27, 34); /* Dark slate border */
         background-color: rgb(30, 41, 59, 0.4);
         padding: 0 1;
         margin-bottom: 0;
@@ -87,7 +81,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
       }
       .item:hover {
         background-color: rgb(30, 41, 59, 0.8);
-        border-color: var(--border);
+        border-color: rgb(48, 54, 61);
       }
       .item:focus {
         border-color: var(--accent); /* Focus highlight */
@@ -100,7 +94,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
         width: 18;
       }
       .badge-pos {
-        background-color: var(--success); /* Emerald Green */
+        background-color: rgb(63, 185, 80); /* Emerald Green */
         color: rgb(255, 255, 255);
       }
       .badge-zero {
@@ -108,7 +102,7 @@ class TabIndexDemo : public Component<TabIndexDemo> {
         color: rgb(255, 255, 255);
       }
       .badge-neg {
-        background-color: var(--danger); /* Rose Red */
+        background-color: rgb(248, 81, 73); /* Rose Red */
         color: rgb(255, 255, 255);
       }
       .badge-implicit {
