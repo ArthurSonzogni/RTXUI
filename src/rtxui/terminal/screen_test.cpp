@@ -272,6 +272,67 @@ TEST_CASE("Screen.PasteAppliesAsOneRedrawNotOnePerCharacter",
   CHECK(redraw_count == 1);
 }
 
+namespace {
+// #hide removes #banner, which moves #bump up a row. Clicking both in one
+// burst is what exposes a stale fragment tree: the second click is hit-tested
+// against the layout the first one invalidated.
+class BurstClickComponent : public Component<BurstClickComponent> {
+ public:
+  bool shown = true;
+  int clicks = 0;
+  void Hide() { shown = false; }
+  void Bump() { ++clicks; }
+  void InitReflection() override {
+    Bind(shown);
+    Bind(clicks);
+    Bind(Hide);
+    Bind(Bump);
+    Import<rtxui::div>();
+    Component<BurstClickComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div id="hide" onclick="Hide">hide</div>
+      <if condition="{shown}"><div id="banner">banner</div></if>
+      <div id="bump" onclick="Bump">bump</div>
+    </div>
+  )";
+};
+
+// SGR left-button press at a 0-based cell.
+std::string PressAt(int x, int y) {
+  return "\x1b[<0;" + std::to_string(x + 1) + ";" + std::to_string(y + 1) + "M";
+}
+}  // namespace
+
+TEST_CASE("Screen.ClickBurstHitTestsTheCurrentLayout", "[terminal][mouse]") {
+  // Two presses arriving together. The first runs a handler that removes an
+  // element, so reconciliation destroys it -- and the batch flag would
+  // otherwise skip the redraw that rebuilds root_fragment_, leaving the
+  // fragment tree the second press is hit-tested against pointing at freed
+  // elements. Found by Events.TestEvents under ASan; this replays the shape so
+  // the project's ASan build keeps catching it. In a plain build the read is
+  // silent, so the assertions here check the routing rather than the memory.
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto app = Ref<BurstClickComponent>::New();
+  Screen screen(app, device);
+  screen.Draw();
+
+  SECTION("a single click routes by row") {
+    device->PushInput(PressAt(0, 2));
+    screen.Step();
+    CHECK(app->clicks == 1);
+    CHECK(app->shown == true);
+  }
+
+  SECTION("a burst whose first click reconciles the tree") {
+    device->PushInput(PressAt(0, 0) + PressAt(0, 1));
+    screen.Step();
+    CHECK(app->shown == false);
+    CHECK(app->clicks == 1);
+  }
+}
+
 TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
 

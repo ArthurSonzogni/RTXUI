@@ -928,6 +928,7 @@ class ScreenImpl {
   void Step();
   void Dispatch(Event event);
   void Draw();
+  void UpdateLayout();
 
   void UpdateSize();
   void DigestAndDraw();
@@ -1390,11 +1391,23 @@ void ScreenImpl::HandleEvent(Event event) {
     }
 
     if (state_changed) {
-      component_->Digest();
+      const bool tree_changed = component_->Digest();
       component_->ResolveTargetStyles();
-      // Honour the batch flag, like DigestAndDraw does: when more input is
-      // already queued, only the last event of the burst needs to paint.
-      if (!suppress_draw_) {
+      // When more input is already queued, only the last event of the burst
+      // needs to paint -- but only if the tree survived unchanged. Draw() is
+      // what rebuilds root_fragment_, and every later event in the burst
+      // hit-tests against it, so skipping it after reconciliation destroyed
+      // elements leaves those raw Element pointers dangling. The batching this
+      // gives up is the case it was never for: a burst is mouse motion, which
+      // changes hover state and no tree.
+      if (suppress_draw_) {
+        // Same rule as DigestAndDraw: the paint can wait for the end of the
+        // burst, the layout cannot, or the rest of the burst hit-tests against
+        // fragments pointing at destroyed elements.
+        if (tree_changed) {
+          UpdateLayout();
+        }
+      } else {
         Draw();
       }
     }
@@ -2025,7 +2038,12 @@ void ScreenImpl::HandleEvent(Event event) {
   }
 }
 
-void ScreenImpl::Draw() {
+// The half of Draw() that every event needs, including one whose paint is
+// batched away. Hit-testing reads raw Element pointers out of root_fragment_,
+// so letting it go stale across a reconciliation is a use-after-free rather
+// than merely a wrong answer -- reconciliation destroys the elements it
+// replaces, and the fragments still point at them.
+void ScreenImpl::UpdateLayout() {
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
 
@@ -2077,6 +2095,13 @@ void ScreenImpl::Draw() {
   }
   root_fragment_ = root_fragment;
   root_box_ = root_box;
+}
+
+void ScreenImpl::Draw() {
+  UpdateLayout();
+
+  auto root = component_->Root();
+  const auto& root_fragment = root_fragment_;
 
   Texture texture(width_, height_);
   if (root_fragment) {
@@ -2176,7 +2201,15 @@ void ScreenImpl::UpdateSize() {
 }
 
 void ScreenImpl::DigestAndDraw() {
-  if (component_->Digest() && !suppress_draw_) {
+  if (!component_->Digest()) {
+    return;
+  }
+  // Batching still skips the paint and the terminal write -- a pasted line
+  // must not repaint once per character -- but never the layout, because the
+  // next event of the burst is hit-tested against root_fragment_.
+  if (suppress_draw_) {
+    UpdateLayout();
+  } else {
     Draw();
   }
 }
