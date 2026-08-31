@@ -46,6 +46,11 @@ The CSS parser supports a wide range of standard selectors and combinators:
     `:first-child` nor stop an element being an `:only-child`. `An+B` arguments
     (`:nth-child(2n+1)`) are not supported and match nothing; use `even`/`odd`.
 
+    A pseudo-class outside the list above matches nothing, and one bad token
+    disqualifies the whole selector: a misspelled `span:hovr` styles no span
+    rather than every span. Rules that quietly stop applying are easier to
+    spot than rules that quietly apply everywhere.
+
     `:empty` departs from CSS in one way: CSS counts any text node as content,
     which would mean nothing is ever empty in a template where tags sit
     indented on their own lines. Whitespace-only text is ignored here, so
