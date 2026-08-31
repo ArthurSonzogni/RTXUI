@@ -8414,6 +8414,66 @@ TEST_CASE("A pseudo-class inside :not()", "[component][css][selector]") {
 }
 
 namespace {
+// Builds an element from Digest() rather than from its template, the way
+// <tabs> and <select> rebuild theirs. Digest() runs *after* Render() has
+// resolved styles, so the element misses that pass entirely.
+class LateElementApp : public rtxui::Component<LateElementApp> {
+ public:
+  bool add_late = false;
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Bind(add_late);
+    rtxui::Component<LateElementApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div id="host"></div>
+    <style>
+      .late { padding-left: 4; }
+    </style>
+  )";
+  bool Digest() override {
+    const bool changed = rtxui::Component<LateElementApp>::Digest();
+    if (add_late && !added_) {
+      auto* host = Root()->QuerySelector("#host");
+      REQUIRE(host != nullptr);
+      auto element = rtxui::Ref<rtxui::Element>::New(this);
+      element->classes.push_back("late");
+      host->AddChild(element);
+      added_ = true;
+    }
+    return changed;
+  }
+
+ private:
+  bool added_ = false;
+};
+}  // namespace
+
+TEST_CASE("An element created during Digest() still gets its base style",
+          "[component][css][digest]") {
+  auto app = rtxui::Ref<LateElementApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  rtxui::Screen screen(app, device);
+  screen.Draw();
+
+  app->add_late = true;
+  app->Digest();
+  auto* late = app->Root()->QuerySelector(".late");
+  REQUIRE(late != nullptr);
+
+  // Digest() alone cannot have styled it: the base pass already ran.
+  CHECK(late->base_style.padding.left == 0);
+
+  // Draw() is the choke point every path shares, so it resolves whatever the
+  // DOM gained since the last frame. Without that, an element built in
+  // Digest() renders with none of its component's stylesheet -- only
+  // :hover/:focus would land on it, which is the giveaway symptom.
+  screen.Draw();
+  CHECK(late->base_style.padding.left == 4);
+  CHECK(late->style.padding.left == 4);
+}
+
+namespace {
 class UnknownPseudoApp : public rtxui::Component<UnknownPseudoApp> {
  public:
   void InitReflection() override {
