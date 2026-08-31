@@ -911,7 +911,33 @@ bool MatchSelectorPart(const Element* element,
                        const css::SelectorPart& part);
 
 bool MatchPseudos(const Element* element,
-                  const std::vector<std::string>& pseudo_classes);
+                  const std::vector<std::string>& pseudo_classes,
+                  int depth);
+
+// How deep `:not()` may nest. The argument of a :not() is itself a compound
+// selector that may carry pseudo-classes, so `:not(:not(...))` recurses, and a
+// stylesheet is text -- hot reload and generated CSS both make it possible to
+// hand the matcher a selector of any depth. Left unbounded it segfaults: a
+// 32000-deep :not() overflows the stack, and because each level re-copies the
+// remaining selector text the cost is quadratic long before that (a 16000-deep
+// one peaked at 760MB). Real stylesheets nest a level or two, so this is far
+// past anything meaningful.
+constexpr int kMaxPseudoDepth = 32;
+
+// The deepest `(...)` nesting in a pseudo-class token, which bounds how far
+// matching it can recurse.
+int MaxParenDepth(std::string_view text) {
+  int depth = 0;
+  int deepest = 0;
+  for (const char c : text) {
+    if (c == '(') {
+      deepest = std::max(deepest, ++depth);
+    } else if (c == ')' && depth > 0) {
+      --depth;
+    }
+  }
+  return deepest;
+}
 
 // Whether `element` matches one pseudo-class token: the text after the ':',
 // argument included -- `hover`, `nth-child(2)`, `not(.x:first-child)`.
@@ -922,8 +948,16 @@ bool MatchPseudos(const Element* element,
 // instead would drop a constraint the author wrote and turn a narrow rule into
 // a broader one -- which is how `:not(:first-child)` came to match every
 // element before 59daa69, and how a plain typo like `:hovr` would style
-// everything rather than nothing.
-bool MatchOnePseudo(const Element* element, const std::string& pseudo) {
+// everything rather than nothing. A selector nested past kMaxPseudoDepth is
+// refused the same way, for the same reason.
+bool MatchOnePseudo(const Element* element,
+                    const std::string& pseudo,
+                    int depth) {
+  // Backstop. The real cut-off is made once, up front, in the :not() branch
+  // below -- nothing else here recurses.
+  if (depth > kMaxPseudoDepth) {
+    return false;
+  }
   if (pseudo == "hover") {
     return element->hovered();
   }
@@ -999,6 +1033,16 @@ bool MatchOnePseudo(const Element* element, const std::string& pseudo) {
   }
 
   if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
+    // Bound the recursion before entering it rather than cutting off part way
+    // down: every level negates, so a mid-way cut-off would leave the result
+    // depending on the parity of the nesting. Refusing the whole token up
+    // front means a selector nested past the cap matches nothing, like any
+    // other selector this matcher cannot evaluate. Checked only at the top
+    // level, and only for the one token kind that can recurse, so the scan
+    // does not land on every pseudo-class of every element.
+    if (depth == 0 && MaxParenDepth(pseudo) > kMaxPseudoDepth) {
+      return false;
+    }
     // A comma-separated list of compound selectors, pseudo-classes included
     // (`:not(.a:first-child, #b)`). Each entry must be a single compound:
     // combinators inside the negation are not supported and match nothing.
@@ -1046,7 +1090,7 @@ bool MatchOnePseudo(const Element* element, const std::string& pseudo) {
       const css::SelectorPart inner_part =
           css::ParseCompound(one, inner_pseudos);
       if (MatchSelectorPart(element, nullptr, inner_part) &&
-          MatchPseudos(element, inner_pseudos)) {
+          MatchPseudos(element, inner_pseudos, depth + 1)) {
         return false;
       }
       if (comma == std::string_view::npos) {
@@ -1060,9 +1104,10 @@ bool MatchOnePseudo(const Element* element, const std::string& pseudo) {
 }
 
 bool MatchPseudos(const Element* element,
-                  const std::vector<std::string>& pseudo_classes) {
+                  const std::vector<std::string>& pseudo_classes,
+                  int depth = 0) {
   for (const auto& pseudo : pseudo_classes) {
-    if (!MatchOnePseudo(element, pseudo)) {
+    if (!MatchOnePseudo(element, pseudo, depth)) {
       return false;
     }
   }

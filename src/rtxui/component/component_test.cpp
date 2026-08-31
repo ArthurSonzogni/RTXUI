@@ -8414,6 +8414,75 @@ TEST_CASE("A pseudo-class inside :not()", "[component][css][selector]") {
 }
 
 namespace {
+// The template is built at runtime, so the nesting depth can be a number
+// rather than a wall of literal text.
+class DeepNotApp : public rtxui::Component<DeepNotApp> {
+ public:
+  std::string source;
+  std::string_view view;
+};
+
+// `span:not(:not(...(inner)...))`, nested `depth` levels deep.
+std::string NestedNot(int depth, std::string_view inner) {
+  std::string selector = "span:not(";
+  for (int i = 1; i < depth; ++i) {
+    selector += ":not(";
+  }
+  selector += inner;
+  for (int i = 0; i < depth; ++i) {
+    selector += ")";
+  }
+  return selector;
+}
+}  // namespace
+
+TEST_CASE("Nested :not() is bounded", "[component][css][selector]") {
+  auto app = rtxui::Ref<DeepNotApp>::New();
+  app->source =
+      R"(<div><span id="d1" class="x">1</span><span id="d2">2</span></div>)"
+      "<style>" +
+      NestedNot(2, ".x") + " { padding-left: 1; }" +   //
+      NestedNot(3, ".x") + " { padding-bottom: 1; }" +  //
+      NestedNot(32, ".x") + " { padding-top: 1; }" +    //
+      NestedNot(33, ".x") + " { padding-right: 9; }" +  //
+      NestedNot(500, ".x") + " { margin-top: 9; }" +    //
+      "</style>";
+  app->view = app->source;
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("each level of nesting negates the one inside it") {
+    // Two levels: `:not(:not(.x))` is `.x` again.
+    CHECK(at("#d1")->style.padding.left == 1);
+    CHECK(at("#d2")->style.padding.left == 0);
+    // Three levels flips it back.
+    CHECK(at("#d1")->style.padding.bottom == 0);
+    CHECK(at("#d2")->style.padding.bottom == 1);
+  }
+
+  SECTION("nesting up to the cap is still evaluated") {
+    CHECK(at("#d1")->style.padding.top == 1);
+    CHECK(at("#d2")->style.padding.top == 0);
+  }
+
+  SECTION("nesting past the cap matches nothing") {
+    // Not "matches everything", and not something that depends on whether the
+    // depth is odd or even: refusing the token up front is what makes the
+    // answer the same for 33 and for 500. Left unbounded this recursed until
+    // it segfaulted, and the text copying made it quadratic long before that.
+    CHECK(at("#d1")->style.padding.right == 0);
+    CHECK(at("#d2")->style.padding.right == 0);
+    CHECK(at("#d1")->style.margin.top == 0);
+    CHECK(at("#d2")->style.margin.top == 0);
+  }
+}
+
+namespace {
 class NotListApp : public rtxui::Component<NotListApp> {
  public:
   void InitReflection() override {
