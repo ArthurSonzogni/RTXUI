@@ -106,6 +106,9 @@ FUZZ_TEST(Selector, TestSelector)
         {"span:not(.x:first-child)"},
         {"span:not(.x, #s2)"},
         {"span:not(:not(.x))"},
+        // Nested :not() recursed unbounded until b2b726f's successor capped
+        // it; keep a deep one in the corpus so a regression segfaults here.
+        {"span:not(:not(:not(:not(:not(:not(:not(:not(.x))))))))"},
         {"div:not(span):not(#root)"},
         {"span::part(inner)"},
         {"div.x span:nth-child(2n+1):not(.y)"},
