@@ -247,6 +247,61 @@ SelectorPart ParseSinglePart(std::string_view current) {
 
 namespace {
 
+// The offset of the first ':' that is not nested inside a `(...)` or `[...]`
+// group. Splitting on a raw ':' would tear `:not(:first-child)` into the two
+// meaningless tokens "not(" and "first-child)" -- neither of which matches any
+// branch of the pseudo-class matcher, so the negation silently degraded into
+// "matches everything".
+size_t FindTopLevelColon(std::string_view text) {
+  int depth = 0;
+  for (size_t i = 0; i < text.size(); ++i) {
+    const char c = text[i];
+    if (c == '(' || c == '[') {
+      ++depth;
+    } else if (c == ')' || c == ']') {
+      if (depth > 0) {
+        --depth;
+      }
+    } else if (c == ':' && depth == 0) {
+      return i;
+    }
+  }
+  return std::string_view::npos;
+}
+
+}  // namespace
+
+SelectorPart ParseCompound(std::string_view text,
+                           std::vector<std::string>& pseudo_classes) {
+  const size_t colon = FindTopLevelColon(text);
+  SelectorPart part = ParseSinglePart(
+      colon == std::string_view::npos ? text : text.substr(0, colon));
+  if (colon == std::string_view::npos) {
+    return part;
+  }
+
+  std::string_view rest = text.substr(colon);
+  while (!rest.empty() && rest.front() == ':') {
+    rest.remove_prefix(1);
+    const size_t next = FindTopLevelColon(rest);
+    std::string_view pseudo = rest.substr(0, next);
+    while (!pseudo.empty() && IsWhiteSpace(pseudo.front())) {
+      pseudo.remove_prefix(1);
+    }
+    while (!pseudo.empty() && IsWhiteSpace(pseudo.back())) {
+      pseudo.remove_suffix(1);
+    }
+    pseudo_classes.emplace_back(pseudo);
+    if (next == std::string_view::npos) {
+      break;
+    }
+    rest = rest.substr(next);
+  }
+  return part;
+}
+
+namespace {
+
 auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   while (!current.empty() && IsWhiteSpace(current.front())) {
     current.remove_prefix(1);
@@ -296,36 +351,13 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   if (parts.empty()) return parsed;
   
   std::string_view target_str = parts.back();
-  size_t colon = target_str.find(':');
-  std::string_view target_without_pseudos = target_str;
-  if (colon != std::string_view::npos) {
-    target_without_pseudos = target_str.substr(0, colon);
-  }
-  
-  SelectorPart target_part = ParseSinglePart(target_without_pseudos);
+  SelectorPart target_part = ParseCompound(target_str, parsed.pseudo_classes);
   parsed.base = std::move(target_part.base);
   parsed.id = std::move(target_part.id);
   parsed.classes = std::move(target_part.classes);
   parsed.attributes = std::move(target_part.attributes);
-  
-  if (colon != std::string_view::npos) {
-    std::string_view rest_pseudos = target_str.substr(colon);
-    while (!rest_pseudos.empty() && rest_pseudos.front() == ':') {
-      rest_pseudos.remove_prefix(1);
-      size_t next_colon = rest_pseudos.find(':');
-      std::string_view pseudo = rest_pseudos.substr(0, next_colon);
-      while (!pseudo.empty() && IsWhiteSpace(pseudo.front())) {
-        pseudo.remove_prefix(1);
-      }
-      while (!pseudo.empty() && IsWhiteSpace(pseudo.back())) {
-        pseudo.remove_suffix(1);
-      }
-      parsed.pseudo_classes.push_back(std::string(pseudo));
-      if (next_colon == std::string_view::npos) {
-        break;
-      }
-      rest_pseudos = rest_pseudos.substr(next_colon);
-    }
+
+  {
     // `::part(name)` is a double-colon pseudo-ELEMENT, not a pseudo-CLASS:
     // the loop above strips one leading ':' at a time, so "::part(name)"
     // yields two tokens -- a spurious "" from the doubled colon, then

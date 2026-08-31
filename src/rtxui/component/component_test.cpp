@@ -8348,6 +8348,72 @@ TEST_CASE("The :not() selector", "[component][css][selector]") {
 }
 
 namespace {
+class NotWithPseudoApp : public rtxui::Component<NotWithPseudoApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<NotWithPseudoApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <span id="i1" class="x" data-k="a:b">1</span>
+      <span id="i2" class="x">2</span>
+      <span id="i3">3</span>
+    </div>
+    <style>
+      span:not(:first-child) { padding-top: 2; }
+      span:not(:nth-child(2)) { padding-bottom: 3; }
+      /* The argument is one compound: both halves must match to negate. */
+      span:not(.x:first-child) { padding-left: 4; }
+      /* A ':' inside an attribute value is not a pseudo-class delimiter. */
+      span[data-k="a:b"] { padding-right: 5; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A pseudo-class inside :not()", "[component][css][selector]") {
+  auto app = rtxui::Ref<NotWithPseudoApp>::New();
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("negating a structural pseudo-class") {
+    // The `:not(:first-child)` spacing idiom. Splitting the selector on a raw
+    // ':' used to yield the two junk tokens "not(" and "first-child)", which
+    // matched no branch of the matcher -- so the rule silently applied to
+    // every span, #i1 included.
+    CHECK(at("#i1")->style.padding.top == 0);
+    CHECK(at("#i2")->style.padding.top == 2);
+    CHECK(at("#i3")->style.padding.top == 2);
+  }
+
+  SECTION("negating a pseudo-class that takes an argument") {
+    CHECK(at("#i1")->style.padding.bottom == 3);
+    CHECK(at("#i2")->style.padding.bottom == 0);
+    CHECK(at("#i3")->style.padding.bottom == 3);
+  }
+
+  SECTION("the argument's compound and pseudo-classes are ANDed") {
+    // #i2 carries .x but is not the first child, and #i3 is neither, so only
+    // #i1 -- which is both -- is negated away.
+    CHECK(at("#i1")->style.padding.left == 0);
+    CHECK(at("#i2")->style.padding.left == 4);
+    CHECK(at("#i3")->style.padding.left == 4);
+  }
+
+  SECTION("a colon inside an attribute value does not start a pseudo-class") {
+    CHECK(at("#i1")->style.padding.right == 5);
+    CHECK(at("#i2")->style.padding.right == 0);
+  }
+}
+
+namespace {
 class OfTypeSelectorApp : public rtxui::Component<OfTypeSelectorApp> {
  public:
   void InitReflection() override {
