@@ -42,6 +42,15 @@ struct SelectorPart {
 /// inside the matcher.
 SelectorPart ParseSinglePart(std::string_view text);
 
+/// Parses one compound selector that may carry pseudo-classes
+/// (`div.card:hover:not(.x)`), returning the non-pseudo part and appending each
+/// pseudo-class -- argument included, e.g. `not(.x)` -- to `pseudo_classes`.
+/// Colons nested inside `(...)` or `[...]` do not split a token, so
+/// `:not(:first-child)` stays whole. Exposed for `:not()`, whose argument is
+/// itself a compound selector with pseudo-classes.
+SelectorPart ParseCompound(std::string_view text,
+                           std::vector<std::string>& pseudo_classes);
+
 struct ParsedSelector {
   std::string base;
   std::string id;

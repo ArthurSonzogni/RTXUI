@@ -916,8 +916,9 @@ bool MatchPseudos(const Element* element,
     }
 
     if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
-      // A single compound selector only: `:not(.a, .b)` selector lists and
-      // nested combinators are not supported, and match nothing.
+      // A single compound selector only, pseudo-classes included
+      // (`:not(.a:first-child)`): `:not(.a, .b)` selector lists and nested
+      // combinators are not supported, and match nothing.
       std::string_view inner =
           std::string_view(pseudo).substr(4, pseudo.size() - 5);
       while (!inner.empty() && std::isspace(static_cast<unsigned char>(inner.front()))) {
@@ -932,7 +933,10 @@ bool MatchPseudos(const Element* element,
       // `root` is only needed by the `self` base, which is meaningless inside
       // :not() -- an element either is the component root or is not, and
       // negating that is not something a stylesheet can usefully say.
-      if (MatchSelectorPart(element, nullptr, css::ParseSinglePart(inner))) {
+      std::vector<std::string> inner_pseudos;
+      const css::SelectorPart inner_part = css::ParseCompound(inner, inner_pseudos);
+      if (MatchSelectorPart(element, nullptr, inner_part) &&
+          MatchPseudos(element, inner_pseudos)) {
         return false;
       }
     }
