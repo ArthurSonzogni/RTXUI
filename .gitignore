@@ -40,6 +40,8 @@ bazel-*
 /dump*.txt
 /build_wasm/
 /build_fuzz/
+# fuzz.sh writes each target's corpus, coverage and crashes here.
+/fuzz_coverage/
 /gcc-local/
 /Testing/
 /activate_gcc.sh

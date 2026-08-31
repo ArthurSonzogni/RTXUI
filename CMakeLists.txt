@@ -339,6 +339,7 @@ if (RTXUI_BUILD_FUZZERS)
   add_executable(rtxui_fuzzer
     "src/rtxui/layout/layout_fuzzer.cpp"
     "src/rtxui/markdown/markdown_fuzzer.cpp"
+    "src/rtxui/style/selector_fuzzer.cpp"
     "src/rtxui/style/style_fuzzer.cpp"
     "src/rtxui/terminal/terminal_input_parser_test_fuzzer.cpp"
     "src/rtxui/xml/xml_fuzzer.cpp"
