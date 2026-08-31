@@ -247,12 +247,14 @@ SelectorPart ParseSinglePart(std::string_view current) {
 
 namespace {
 
-// The offset of the first ':' that is not nested inside a `(...)` or `[...]`
-// group. Splitting on a raw ':' would tear `:not(:first-child)` into the two
-// meaningless tokens "not(" and "first-child)" -- neither of which matches any
-// branch of the pseudo-class matcher, so the negation silently degraded into
-// "matches everything".
-size_t FindTopLevelColon(std::string_view text) {
+// The offset of the first character of `delimiters` that is not nested inside
+// a `(...)` or `[...]` group. Selector punctuation loses its meaning inside
+// those: the ':' in `:not(:first-child)` does not start a second
+// pseudo-class, and the '+' in `:nth-child(2n+1)` is not a sibling
+// combinator. Splitting on them regardless tore the selector into tokens that
+// matched no branch of the matcher, which is how a negation silently
+// degraded into "matches everything".
+size_t FindTopLevel(std::string_view text, std::string_view delimiters) {
   int depth = 0;
   for (size_t i = 0; i < text.size(); ++i) {
     const char c = text[i];
@@ -262,11 +264,15 @@ size_t FindTopLevelColon(std::string_view text) {
       if (depth > 0) {
         --depth;
       }
-    } else if (c == ':' && depth == 0) {
+    } else if (depth == 0 && delimiters.find(c) != std::string_view::npos) {
       return i;
     }
   }
   return std::string_view::npos;
+}
+
+size_t FindTopLevelColon(std::string_view text) {
+  return FindTopLevel(text, ":");
 }
 
 }  // namespace
@@ -320,7 +326,9 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
     }
     if (rest.empty()) break;
     
-    size_t next_space = rest.find_first_of(" \n\r\t>+~");
+    // Nested, so the '+' in `:nth-child(2n+1)` and the space in
+    // `[title="a b"]` are not read as combinators.
+    size_t next_space = FindTopLevel(rest, " \n\r\t>+~");
     if (next_space == std::string_view::npos) {
       parts.push_back(rest);
       break;

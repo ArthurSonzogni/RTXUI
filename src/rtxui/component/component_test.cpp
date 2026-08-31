@@ -8414,6 +8414,95 @@ TEST_CASE("A pseudo-class inside :not()", "[component][css][selector]") {
 }
 
 namespace {
+class AnPlusBApp : public rtxui::Component<AnPlusBApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<AnPlusBApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <span id="n1">1</span>
+      <span id="n2">2</span>
+      <span id="n3">3</span>
+      <span id="n4">4</span>
+      <span id="n5">5</span>
+      <span id="n6">6</span>
+    </div>
+    <style>
+      span:nth-child(3n) { padding-top: 1; }
+      span:nth-child(n+3) { padding-bottom: 2; }
+      span:nth-child(-n+2) { padding-left: 3; }
+      /* Whitespace anywhere, and the `n` is case-insensitive. */
+      span:nth-child( 2N + 1 ) { padding-right: 4; }
+      span:nth-last-child(3n+1) { margin-left: 5; }
+      /* An offset must carry its own sign, and junk is still junk. */
+      span:nth-child(2n3) { margin-top: 9; }
+      span:nth-child(n+) { margin-top: 9; }
+      span:nth-child(2junk) { margin-top: 9; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("An+B arguments to :nth-child()", "[component][css][selector]") {
+  auto app = rtxui::Ref<AnPlusBApp>::New();
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("a bare step selects every Nth sibling") {
+    CHECK(at("#n3")->style.padding.top == 1);
+    CHECK(at("#n6")->style.padding.top == 1);
+    CHECK(at("#n1")->style.padding.top == 0);
+    CHECK(at("#n2")->style.padding.top == 0);
+    CHECK(at("#n4")->style.padding.top == 0);
+    CHECK(at("#n5")->style.padding.top == 0);
+  }
+
+  SECTION("a step of 1 with an offset selects everything from there on") {
+    CHECK(at("#n2")->style.padding.bottom == 0);
+    CHECK(at("#n3")->style.padding.bottom == 2);
+    CHECK(at("#n6")->style.padding.bottom == 2);
+  }
+
+  SECTION("a negative step counts back down to the first sibling") {
+    // `-n+2` is the "first two" idiom: k=0 gives 2, k=1 gives 1, and k=2
+    // gives 0, which is not a sibling position.
+    CHECK(at("#n1")->style.padding.left == 3);
+    CHECK(at("#n2")->style.padding.left == 3);
+    CHECK(at("#n3")->style.padding.left == 0);
+  }
+
+  SECTION("whitespace and capitalisation are allowed") {
+    // `2N + 1` is the odd siblings. The spaces around the '+' also prove the
+    // selector splitter no longer reads it as a sibling combinator.
+    CHECK(at("#n1")->style.padding.right == 4);
+    CHECK(at("#n3")->style.padding.right == 4);
+    CHECK(at("#n5")->style.padding.right == 4);
+    CHECK(at("#n2")->style.padding.right == 0);
+  }
+
+  SECTION("nth-last-child counts An+B from the end") {
+    // Positions from the end are 1 (#n6) and 4 (#n3).
+    CHECK(at("#n6")->style.margin.left == 5);
+    CHECK(at("#n3")->style.margin.left == 5);
+    CHECK(at("#n1")->style.margin.left == 0);
+  }
+
+  SECTION("a malformed argument matches nothing") {
+    for (const char* id : {"#n1", "#n2", "#n3", "#n4", "#n5", "#n6"}) {
+      CHECK(at(id)->style.margin.top == 0);
+    }
+  }
+}
+
+namespace {
 // Builds an element from Digest() rather than from its template, the way
 // <tabs> and <select> rebuild theirs. Digest() runs *after* Render() has
 // resolved styles, so the element misses that pass entirely.
