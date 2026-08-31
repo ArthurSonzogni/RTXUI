@@ -8414,6 +8414,84 @@ TEST_CASE("A pseudo-class inside :not()", "[component][css][selector]") {
 }
 
 namespace {
+class NotListApp : public rtxui::Component<NotListApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<NotListApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <span id="l1" class="a">1</span>
+      <span id="l2" class="b">2</span>
+      <span id="l3">3</span>
+      <span id="l4" class="a">4</span>
+    </div>
+    <style>
+      span:not(.a, .b) { padding-top: 1; }
+      /* Entries are full compounds, pseudo-classes included. */
+      span:not(#l1, .a:last-child) { padding-bottom: 2; }
+      /* A one-entry list is still the plain form. */
+      span:not(.a) { padding-left: 3; }
+      /* A stray or trailing comma makes the whole argument malformed. */
+      span:not(.a, ) { padding-right: 9; }
+      span:not(, .a) { padding-right: 9; }
+      /* A combinator inside the negation is still unsupported. */
+      span:not(div span) { margin-top: 9; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A selector list inside :not()", "[component][css][selector]") {
+  auto app = rtxui::Ref<NotListApp>::New();
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("an element must match no entry in the list") {
+    // Only #l3 carries neither class. The commas also prove the stylesheet
+    // parser no longer ends the selector at the first one.
+    CHECK(at("#l3")->style.padding.top == 1);
+    CHECK(at("#l1")->style.padding.top == 0);
+    CHECK(at("#l2")->style.padding.top == 0);
+    CHECK(at("#l4")->style.padding.top == 0);
+  }
+
+  SECTION("each entry is a compound that may carry pseudo-classes") {
+    // #l1 is excluded by the id, #l4 by being an `.a` that is last.
+    CHECK(at("#l1")->style.padding.bottom == 0);
+    CHECK(at("#l4")->style.padding.bottom == 0);
+    CHECK(at("#l2")->style.padding.bottom == 2);
+    CHECK(at("#l3")->style.padding.bottom == 2);
+  }
+
+  SECTION("a single-entry list behaves like the plain form") {
+    CHECK(at("#l2")->style.padding.left == 3);
+    CHECK(at("#l3")->style.padding.left == 3);
+    CHECK(at("#l1")->style.padding.left == 0);
+  }
+
+  SECTION("a stray or trailing comma matches nothing") {
+    // Ignoring the gap would let these two rules style every span.
+    for (const char* id : {"#l1", "#l2", "#l3", "#l4"}) {
+      CHECK(at(id)->style.padding.right == 0);
+    }
+  }
+
+  SECTION("a combinator inside the negation still matches nothing") {
+    for (const char* id : {"#l1", "#l2", "#l3", "#l4"}) {
+      CHECK(at(id)->style.margin.top == 0);
+    }
+  }
+}
+
+namespace {
 class AnPlusBApp : public rtxui::Component<AnPlusBApp> {
  public:
   void InitReflection() override {
