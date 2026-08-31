@@ -743,20 +743,98 @@ std::vector<const Element*> StructuralSiblings(const Element* parent) {
   return siblings;
 }
 
-// The argument of :nth-child()/:nth-last-child(): `even`, `odd`, or a literal
-// 1-based index. An+B forms are not supported and match nothing.
-bool MatchNth(std::string_view arg, int index) {
-  if (arg == "even") {
-    return index % 2 == 0;
+// A signed decimal integer filling the whole of `text`. std::from_chars
+// rejects a leading '+', which An+B allows, so the sign is peeled off first.
+bool ParseSignedInt(std::string_view text, int& out) {
+  bool negative = false;
+  if (!text.empty() && (text.front() == '+' || text.front() == '-')) {
+    negative = text.front() == '-';
+    text.remove_prefix(1);
   }
-  if (arg == "odd") {
-    return index % 2 != 0;
+  if (text.empty()) {
+    return false;
   }
-  int target = 0;
-  auto [ptr, ec] = std::from_chars(arg.data(), arg.data() + arg.size(), target);
-  // Requiring the whole argument to be consumed keeps `nth-child(2junk)` from
+  int value = 0;
+  const auto [ptr, ec] =
+      std::from_chars(text.data(), text.data() + text.size(), value);
+  // Requiring the whole token to be consumed keeps `nth-child(2junk)` from
   // matching index 2.
-  return ec == std::errc{} && ptr == arg.data() + arg.size() && target == index;
+  if (ec != std::errc{} || ptr != text.data() + text.size()) {
+    return false;
+  }
+  out = negative ? -value : value;
+  return true;
+}
+
+// The CSS An+B micro-syntax, as used by :nth-child() and friends: `even`,
+// `odd`, a bare `B` (`3`), or an `An+B` form (`2n`, `2n+1`, `n+3`, `-n+3`).
+// Whitespace is allowed anywhere and the keywords are case-insensitive, so
+// `2N + 1` parses. Returns false for anything else, which matches nothing.
+bool ParseAnPlusB(std::string_view arg, int& a, int& b) {
+  std::string text;
+  text.reserve(arg.size());
+  for (const char c : arg) {
+    if (!std::isspace(static_cast<unsigned char>(c))) {
+      text += static_cast<char>(
+          std::tolower(static_cast<unsigned char>(c)));
+    }
+  }
+  if (text == "even") {
+    a = 2;
+    b = 0;
+    return true;
+  }
+  if (text == "odd") {
+    a = 2;
+    b = 1;
+    return true;
+  }
+
+  const size_t n = text.find('n');
+  if (n == std::string::npos) {
+    a = 0;
+    return ParseSignedInt(text, b);
+  }
+
+  const std::string_view a_part = std::string_view(text).substr(0, n);
+  const std::string_view b_part = std::string_view(text).substr(n + 1);
+
+  // `n`, `+n` and `-n` carry an implicit coefficient of 1.
+  if (a_part.empty() || a_part == "+") {
+    a = 1;
+  } else if (a_part == "-") {
+    a = -1;
+  } else if (!ParseSignedInt(a_part, a)) {
+    return false;
+  }
+
+  if (b_part.empty()) {
+    b = 0;
+    return true;
+  }
+  // The offset must carry its own sign: `2n3` is not `2n+3`.
+  if (b_part.front() != '+' && b_part.front() != '-') {
+    return false;
+  }
+  return ParseSignedInt(b_part, b);
+}
+
+// Whether a 1-based `index` is selected by an An+B argument, i.e. whether
+// index == A*k + B for some whole k >= 0.
+bool MatchNth(std::string_view arg, int index) {
+  int a = 0;
+  int b = 0;
+  if (!ParseAnPlusB(arg, a, b)) {
+    return false;
+  }
+  if (a == 0) {
+    return index == b;
+  }
+  const int offset = index - b;
+  // Integer division truncates toward zero, but `offset % a == 0` means the
+  // division is exact, so no rounding is in play and the sign test is safe
+  // for a negative step (`-n+3`, which counts 3, 2, 1 downwards).
+  return offset % a == 0 && offset / a >= 0;
 }
 
 // Whether an element has any authored content, for :empty.
