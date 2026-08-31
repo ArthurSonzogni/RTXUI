@@ -833,125 +833,128 @@ bool MatchSelectorPart(const Element* element,
                        const css::SelectorPart& part);
 
 bool MatchPseudos(const Element* element,
+                  const std::vector<std::string>& pseudo_classes);
+
+// Whether `element` matches one pseudo-class token: the text after the ':',
+// argument included -- `hover`, `nth-child(2)`, `not(.x:first-child)`.
+//
+// An unrecognized token matches nothing. Failing closed matters here: these
+// tokens come straight out of the selector parser, so a token the matcher does
+// not understand means the selector was not understood either. Skipping it
+// instead would drop a constraint the author wrote and turn a narrow rule into
+// a broader one -- which is how `:not(:first-child)` came to match every
+// element before 59daa69, and how a plain typo like `:hovr` would style
+// everything rather than nothing.
+bool MatchOnePseudo(const Element* element, const std::string& pseudo) {
+  if (pseudo == "hover") {
+    return element->hovered();
+  }
+  if (pseudo == "focus") {
+    return element->focused();
+  }
+  if (pseudo == "active") {
+    return element->active();
+  }
+  if (pseudo == "scrollbar-hover") {
+    return element->scrollbar_hovered();
+  }
+  if (pseudo == "scrollbar-active") {
+    return element->scrollbar_active();
+  }
+  if (pseudo == "scrollbar-thumb-hover") {
+    return element->scrollbar_thumb_hovered();
+  }
+  if (pseudo == "scrollbar-thumb-active") {
+    return element->scrollbar_thumb_active();
+  }
+  if (pseudo == "disabled") {
+    return element->disabled();
+  }
+  if (pseudo == "read-only") {
+    return element->read_only();
+  }
+  if (pseudo == "first-child") {
+    return StructuralIndex(element, /*from_end=*/false,
+                           /*same_tag_only=*/false) == 1;
+  }
+  if (pseudo == "last-child") {
+    return StructuralIndex(element, /*from_end=*/true,
+                           /*same_tag_only=*/false) == 1;
+  }
+  if (pseudo == "only-child") {
+    const Element* parent = element->Parent();
+    if (!parent) {
+      return false;
+    }
+    std::vector<const Element*> siblings = StructuralSiblings(parent);
+    return siblings.size() == 1 && siblings[0] == element;
+  }
+  if (pseudo == "empty") {
+    return !HasAuthoredContent(element);
+  }
+  if (pseudo == "first-of-type") {
+    return StructuralIndex(element, /*from_end=*/false,
+                           /*same_tag_only=*/true) == 1;
+  }
+  if (pseudo == "last-of-type") {
+    return StructuralIndex(element, /*from_end=*/true,
+                           /*same_tag_only=*/true) == 1;
+  }
+  if (pseudo == "only-of-type") {
+    return TypeSiblingCount(element) == 1;
+  }
+
+  if (pseudo.starts_with("nth-child(") ||
+      pseudo.starts_with("nth-last-child(") ||
+      pseudo.starts_with("nth-of-type(") ||
+      pseudo.starts_with("nth-last-of-type(")) {
+    if (!pseudo.ends_with(")")) {
+      return false;
+    }
+    const bool from_end = pseudo.starts_with("nth-last-");
+    const bool same_tag_only = pseudo.find("-of-type(") != std::string::npos;
+    const size_t open = pseudo.find('(') + 1;
+    const std::string_view arg =
+        std::string_view(pseudo).substr(open, pseudo.size() - open - 1);
+    const int index = StructuralIndex(element, from_end, same_tag_only);
+    return index != 0 && MatchNth(arg, index);
+  }
+
+  if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
+    // A single compound selector only, pseudo-classes included
+    // (`:not(.a:first-child)`): `:not(.a, .b)` selector lists and nested
+    // combinators are not supported, and match nothing.
+    std::string_view inner =
+        std::string_view(pseudo).substr(4, pseudo.size() - 5);
+    while (!inner.empty() &&
+           std::isspace(static_cast<unsigned char>(inner.front()))) {
+      inner.remove_prefix(1);
+    }
+    while (!inner.empty() &&
+           std::isspace(static_cast<unsigned char>(inner.back()))) {
+      inner.remove_suffix(1);
+    }
+    if (inner.empty()) {
+      return false;
+    }
+    // `root` is only needed by the `self` base, which is meaningless inside
+    // :not() -- an element either is the component root or is not, and
+    // negating that is not something a stylesheet can usefully say.
+    std::vector<std::string> inner_pseudos;
+    const css::SelectorPart inner_part =
+        css::ParseCompound(inner, inner_pseudos);
+    return !(MatchSelectorPart(element, nullptr, inner_part) &&
+             MatchPseudos(element, inner_pseudos));
+  }
+
+  return false;
+}
+
+bool MatchPseudos(const Element* element,
                   const std::vector<std::string>& pseudo_classes) {
   for (const auto& pseudo : pseudo_classes) {
-    if (pseudo == "hover" && !element->hovered()) {
+    if (!MatchOnePseudo(element, pseudo)) {
       return false;
-    }
-    if (pseudo == "focus" && !element->focused()) {
-      return false;
-    }
-    if (pseudo == "active" && !element->active()) {
-      return false;
-    }
-    if (pseudo == "scrollbar-hover" && !element->scrollbar_hovered()) {
-      return false;
-    }
-    if (pseudo == "scrollbar-active" && !element->scrollbar_active()) {
-      return false;
-    }
-    if (pseudo == "scrollbar-thumb-hover" &&
-        !element->scrollbar_thumb_hovered()) {
-      return false;
-    }
-    if (pseudo == "scrollbar-thumb-active" &&
-        !element->scrollbar_thumb_active()) {
-      return false;
-    }
-    if (pseudo == "disabled" && !element->disabled()) {
-      return false;
-    }
-    if (pseudo == "read-only" && !element->read_only()) {
-      return false;
-    }
-    if (pseudo == "first-child") {
-      if (StructuralIndex(element, /*from_end=*/false, /*same_tag_only=*/false) != 1) {
-        return false;
-      }
-    }
-    if (pseudo == "last-child") {
-      if (StructuralIndex(element, /*from_end=*/true, /*same_tag_only=*/false) != 1) {
-        return false;
-      }
-    }
-    if (pseudo == "only-child") {
-      const Element* parent = element->Parent();
-      if (!parent) return false;
-      std::vector<const Element*> siblings = StructuralSiblings(parent);
-      if (siblings.size() != 1 || siblings[0] != element) {
-        return false;
-      }
-    }
-    if (pseudo == "empty" && HasAuthoredContent(element)) {
-      return false;
-    }
-    if (pseudo == "first-of-type") {
-      if (StructuralIndex(element, /*from_end=*/false, /*same_tag_only=*/true) !=
-          1) {
-        return false;
-      }
-    }
-    if (pseudo == "last-of-type") {
-      if (StructuralIndex(element, /*from_end=*/true, /*same_tag_only=*/true) !=
-          1) {
-        return false;
-      }
-    }
-    if (pseudo == "only-of-type") {
-      if (TypeSiblingCount(element) != 1) {
-        return false;
-      }
-    }
-    if (pseudo.starts_with("nth-of-type(") ||
-        pseudo.starts_with("nth-last-of-type(")) {
-      if (!pseudo.ends_with(")")) return false;
-      bool from_end = pseudo.starts_with("nth-last-of-type(");
-      size_t open = pseudo.find('(') + 1;
-      std::string_view arg =
-          std::string_view(pseudo).substr(open, pseudo.size() - open - 1);
-      int index = StructuralIndex(element, from_end, /*same_tag_only=*/true);
-      if (index == 0 || !MatchNth(arg, index)) {
-        return false;
-      }
-    }
-
-    if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
-      // A single compound selector only, pseudo-classes included
-      // (`:not(.a:first-child)`): `:not(.a, .b)` selector lists and nested
-      // combinators are not supported, and match nothing.
-      std::string_view inner =
-          std::string_view(pseudo).substr(4, pseudo.size() - 5);
-      while (!inner.empty() && std::isspace(static_cast<unsigned char>(inner.front()))) {
-        inner.remove_prefix(1);
-      }
-      while (!inner.empty() && std::isspace(static_cast<unsigned char>(inner.back()))) {
-        inner.remove_suffix(1);
-      }
-      if (inner.empty()) {
-        return false;
-      }
-      // `root` is only needed by the `self` base, which is meaningless inside
-      // :not() -- an element either is the component root or is not, and
-      // negating that is not something a stylesheet can usefully say.
-      std::vector<std::string> inner_pseudos;
-      const css::SelectorPart inner_part = css::ParseCompound(inner, inner_pseudos);
-      if (MatchSelectorPart(element, nullptr, inner_part) &&
-          MatchPseudos(element, inner_pseudos)) {
-        return false;
-      }
-    }
-
-    if (pseudo.starts_with("nth-child(") ||
-        pseudo.starts_with("nth-last-child(")) {
-      if (!pseudo.ends_with(")")) return false;
-      bool from_end = pseudo.starts_with("nth-last-child(");
-      size_t open = pseudo.find('(') + 1;
-      std::string_view arg =
-          std::string_view(pseudo).substr(open, pseudo.size() - open - 1);
-      int index = StructuralIndex(element, from_end, /*same_tag_only=*/false);
-      if (index == 0 || !MatchNth(arg, index)) {
-        return false;
-      }
     }
   }
   return true;

@@ -8414,6 +8414,63 @@ TEST_CASE("A pseudo-class inside :not()", "[component][css][selector]") {
 }
 
 namespace {
+class UnknownPseudoApp : public rtxui::Component<UnknownPseudoApp> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<UnknownPseudoApp>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <span id="u1">1</span>
+      <span id="u2">2</span>
+    </div>
+    <style>
+      span:hovr { padding-top: 7; }
+      span:first-child:hovr { padding-bottom: 7; }
+      span:nth-child(1 { padding-right: 7; }
+      span:first-child { padding-left: 6; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("An unrecognized pseudo-class matches nothing",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<UnknownPseudoApp>::New();
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("a misspelled pseudo-class styles nothing, not everything") {
+    // Skipping a token the matcher does not understand would drop the
+    // constraint the author wrote and apply the rule to every span.
+    CHECK(at("#u1")->style.padding.top == 0);
+    CHECK(at("#u2")->style.padding.top == 0);
+  }
+
+  SECTION("one bad token disqualifies the whole compound") {
+    // #u1 really is the first child, so only the unknown `:hovr` can keep
+    // this rule from applying.
+    CHECK(at("#u1")->style.padding.bottom == 0);
+  }
+
+  SECTION("an unterminated functional pseudo-class matches nothing") {
+    CHECK(at("#u1")->style.padding.right == 0);
+  }
+
+  SECTION("recognized pseudo-classes still match") {
+    CHECK(at("#u1")->style.padding.left == 6);
+    CHECK(at("#u2")->style.padding.left == 0);
+  }
+}
+
+namespace {
 class OfTypeSelectorApp : public rtxui::Component<OfTypeSelectorApp> {
  public:
   void InitReflection() override {
