@@ -42,6 +42,32 @@ algorithm executed for one frame. That number is deterministic, so unlike the
 timings it is a portable regression signal: `--compare` flags any growth in it
 regardless of the threshold.
 
+## Getting a number you can trust
+
+The **first run of a benchmark process after the machine has been idle reads
+about 40% high**, and stays high for that whole process. Measured on the
+layout benchmark: 11.4ms, then 8.9ms, then 8.3ms for three back-to-back runs
+after an idle gap, with nothing changed in between. The same shape repeats
+after every idle period, so a single run is not a measurement.
+
+In-process warmup does not fix it. Each benchmark already runs warmup frames
+before measuring, and raising the layout benchmark's from 10 to 100 (roughly
+80ms to 800ms of work) still produced 11.6ms on the first run after an idle
+gap. Whatever the CPU is ramping, it outlasts a warmup long enough to be
+worth paying for.
+
+So, to compare two builds:
+
+1. Build **both** binaries first and keep them side by side; do not rebuild
+   between measurements.
+2. Throw the first run of each away.
+3. Alternate them -- `A B A B A B` -- rather than running all of A then all of
+   B, so any drift during the session hits both equally.
+4. Compare medians, and treat anything under a few percent as noise.
+
+A difference that only shows up when the two builds are measured in separate
+batches is drift, not a change in the code.
+
 ## About the committed baselines
 
 `benchmarks/baseline/*.json` are **reference numbers captured on the maintainer's
