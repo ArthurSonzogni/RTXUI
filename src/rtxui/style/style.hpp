@@ -42,6 +42,17 @@ struct SelectorPart {
 /// inside the matcher.
 SelectorPart ParseSinglePart(std::string_view text);
 
+/// The offset of the first character of `delimiters` in `text` that is not
+/// nested inside a `(...)` or `[...]` group, or npos. Selector punctuation
+/// loses its meaning inside those: the ':' in `:not(:first-child)` does not
+/// start a second pseudo-class, the '+' in `:nth-child(2n+1)` is not a
+/// sibling combinator, and the ',' in `:not(.a, .b)` does not end the
+/// selector. Every scan over selector text goes through this -- splitting on
+/// a raw delimiter tore selectors into tokens that matched no branch of the
+/// matcher, which is how a negation silently degraded into "matches
+/// everything".
+size_t FindTopLevel(std::string_view text, std::string_view delimiters);
+
 /// Parses one compound selector that may carry pseudo-classes
 /// (`div.card:hover:not(.x)`), returning the non-pseudo part and appending each
 /// pseudo-class -- argument included, e.g. `not(.x)` -- to `pseudo_classes`.
