@@ -245,15 +245,6 @@ SelectorPart ParseSinglePart(std::string_view current) {
   return part;
 }
 
-namespace {
-
-// The offset of the first character of `delimiters` that is not nested inside
-// a `(...)` or `[...]` group. Selector punctuation loses its meaning inside
-// those: the ':' in `:not(:first-child)` does not start a second
-// pseudo-class, and the '+' in `:nth-child(2n+1)` is not a sibling
-// combinator. Splitting on them regardless tore the selector into tokens that
-// matched no branch of the matcher, which is how a negation silently
-// degraded into "matches everything".
 size_t FindTopLevel(std::string_view text, std::string_view delimiters) {
   int depth = 0;
   for (size_t i = 0; i < text.size(); ++i) {
@@ -270,6 +261,8 @@ size_t FindTopLevel(std::string_view text, std::string_view delimiters) {
   }
   return std::string_view::npos;
 }
+
+namespace {
 
 size_t FindTopLevelColon(std::string_view text) {
   return FindTopLevel(text, ":");
@@ -460,7 +453,8 @@ auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
   std::vector<std::string> current_selectors;
   std::string_view rest_selectors = selector_full.value();
   while (!rest_selectors.empty()) {
-    size_t comma = rest_selectors.find(',');
+    // Nested, so the commas in `:not(.a, .b)` do not end a selector.
+    size_t comma = FindTopLevel(rest_selectors, ",");
     std::string_view part = (comma == std::string_view::npos)
                                 ? rest_selectors
                                 : rest_selectors.substr(0, comma);
