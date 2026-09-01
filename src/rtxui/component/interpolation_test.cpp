@@ -7,6 +7,7 @@
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/dom/text_element.hpp"
 #include "rtxui/internal/component.hpp"
 
 namespace {
@@ -150,6 +151,104 @@ TEST_CASE("Struct Loop Interpolation", "[component][interpolation]") {
   std::string output = component->Root()->Print();
   CHECK(output.find("x") != std::string::npos);
   CHECK(output.find("y") != std::string::npos);
+}
+
+struct BoundRow {
+  std::string name;
+  std::string cls;
+  bool operator==(const BoundRow& other) const = default;
+};
+
+class ReactiveStructCollection
+    : public rtxui::Component<ReactiveStructCollection> {
+ public:
+  std::vector<BoundRow> rows = {{"one", "hot"}, {"two", "cold"}};
+
+  void InitReflection() override {
+    BindCollection("rows", &rows, [](const BoundRow& row) {
+      return std::make_shared<rtxui::ManualStructVisitor>(
+          std::map<std::string, std::string, std::less<>>{
+              {"name", row.name}, {"cls", row.cls}});
+    });
+    rtxui::Component<ReactiveStructCollection>::InitReflection();
+  }
+
+  // A field in text, a field in an attribute, $index alongside them, and a
+  // field the mapper does not publish.
+  std::string_view view = R"html(
+    <div>
+      <for each="{rows}" as="r">
+        <div class="row {r.cls}">{$index}:{r.name}/{r.missing}|</div>
+      </for>
+    </div>
+  )html";
+};
+
+TEST_CASE("A bound struct collection tracks its contents",
+          "[component][interpolation]") {
+  // The existing struct test checks that the first render shows the values.
+  // What was not covered is everything after that: whether a change inside a
+  // struct reaches the DOM at all, and whether adding, removing and reordering
+  // items land where they should.
+  auto component = rtxui::Ref<ReactiveStructCollection>::New();
+  component->Mount();
+  component->Digest();
+
+  auto text = [&]() {
+    std::string out;
+    component->Root()->Visit([&out](rtxui::Element& element) {
+      if (element.is_text()) {
+        out += static_cast<rtxui::TextElement&>(element).text();
+      }
+    });
+    return out;
+  };
+  auto classes = [&]() {
+    std::string out;
+    component->Root()->Visit([&out](rtxui::Element& element) {
+      for (const auto& name : element.classes) {
+        out += name;
+        out += ",";
+      }
+    });
+    return out;
+  };
+
+  SECTION("fields render, and an unpublished one is empty rather than fatal") {
+    CHECK(text() == "0:one/|1:two/|");
+  }
+
+  SECTION("a field reaches an attribute as well as text") {
+    CHECK(classes() == "row,hot,row,cold,");
+  }
+
+  SECTION("changing a field inside a struct updates the DOM") {
+    component->rows[0].name = "ONE";
+    component->Digest();
+    CHECK(text() == "0:ONE/|1:two/|");
+
+    component->rows[0].cls = "warm";
+    component->Digest();
+    CHECK(classes() == "row,warm,row,cold,");
+  }
+
+  SECTION("adding, removing and reordering items all land correctly") {
+    component->rows.push_back({"three", "mild"});
+    component->Digest();
+    CHECK(text() == "0:one/|1:two/|2:three/|");
+
+    component->rows.erase(component->rows.begin());
+    component->Digest();
+    CHECK(text() == "0:two/|1:three/|");
+
+    std::swap(component->rows[0], component->rows[1]);
+    component->Digest();
+    CHECK(text() == "0:three/|1:two/|");
+
+    component->rows.clear();
+    component->Digest();
+    CHECK(text().empty());
+  }
 }
 
 struct AutoItem {
