@@ -14,6 +14,18 @@
 namespace rtxui {
 namespace {
 
+// The largest magnitude any CSS number is allowed to reach.
+//
+// A terminal is a few hundred cells across, so nothing legitimate comes near
+// this -- but a stylesheet is text, and hot reload and the playground both let
+// one be edited at runtime. Left unbounded, a single large number was enough to
+// take an application out: `letter-spacing: 100000000` allocates a couple of
+// bytes per cell of spacing per character and never finishes, and layout's own
+// arithmetic overflowed -- signed overflow, so undefined behaviour rather than
+// merely a wrong size. Clamping at the point every value is parsed keeps sums
+// and differences of several of them far from the ends of int.
+constexpr int kMaxCssNumber = 100000;
+
 float StoF(std::string_view s) {
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
     s.remove_prefix(1);
@@ -27,7 +39,8 @@ float StoF(std::string_view s) {
   float value = 0.0f;
   auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
   if (ec == std::errc()) {
-    return value;
+    return std::clamp(value, static_cast<float>(-kMaxCssNumber),
+                      static_cast<float>(kMaxCssNumber));
   }
   return 0.0f;
 }
@@ -41,7 +54,13 @@ int StoI(std::string_view s) {
   int value = 0;
   auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
   if (ec == std::errc()) {
-    return value;
+    return std::clamp(value, -kMaxCssNumber, kMaxCssNumber);
+  }
+  // from_chars reports a value too large for int as out_of_range without
+  // writing one, so a number past INT_MAX must not fall through as 0 -- it is
+  // a very large number, and clamping says so.
+  if (ec == std::errc::result_out_of_range) {
+    return s.front() == '-' ? -kMaxCssNumber : kMaxCssNumber;
   }
   return 0;
 }
@@ -1912,7 +1931,15 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   if (p == "letter-spacing") {
     // Whole cells only; a terminal cannot render fractional or negative
     // spacing, so those clamp to zero.
-    style.letter_spacing = (v == "normal") ? 0 : std::max(0, StoI(v));
+    //
+    // Bounded far below kMaxCssNumber because this one multiplies: the spacing
+    // is materialised as blank cells between every grapheme, so the work is
+    // spacing x length rather than spacing. Wider than a terminal is already
+    // meaningless, and the general bound alone still let a long string ask for
+    // gigabytes.
+    constexpr int kMaxLetterSpacing = 1000;
+    style.letter_spacing =
+        (v == "normal") ? 0 : std::clamp(StoI(v), 0, kMaxLetterSpacing);
     return;
   }
 

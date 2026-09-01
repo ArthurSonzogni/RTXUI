@@ -115,22 +115,27 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
  * Supports Fixed and Percentage units. Returns -1 for 'Auto'.
  */
 int ResolveSize(const Length& length, int parent_size) {
+  // Every return here narrows a float to int, and a float that does not fit
+  // is undefined behaviour rather than a wrapped value -- Length::ToCells
+  // bounds it first. calc() reaches such floats easily: its operands are each
+  // clamped when parsed, but multiplying two of them is not.
   if (length.unit == Unit::Percent && parent_size >= 0) {
-    return (length.value * parent_size) / 100;
+    return Length::ToCells((length.value * parent_size) / 100);
   }
   if (length.unit == Unit::Cells) {
-    return length.value;
+    return Length::ToCells(length.value);
   }
   if (length.unit == Unit::Calc) {
     if (parent_size >= 0) {
-      return length.value + (length.calc_percent * parent_size) / 100;
+      return Length::ToCells(length.value +
+                             (length.calc_percent * parent_size) / 100);
     }
     if (length.calc_percent == 0) {
-      return length.value;  // Pure-cell calc() needs no basis.
+      return Length::ToCells(length.value);  // Pure-cell calc() needs no basis.
     }
   }
   if (length.unit == Unit::MinMax) {
-    MinMaxExpr expr = GetMinMaxExpr(static_cast<int>(length.value));
+    MinMaxExpr expr = GetMinMaxExpr(Length::ToCells(length.value));
     if (parent_size >= 0 || !expr.DependsOnBasis()) {
       return expr.Evaluate(std::max(parent_size, 0));
     }
