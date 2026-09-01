@@ -27,6 +27,8 @@ struct InheritedTextStyle {
   std::optional<bool> overlined;
   std::optional<bool> blink;
   int letter_spacing = 0;
+  // 8 is the tab stop every terminal and CSS itself default to.
+  int tab_size = 8;
   int line_height = 1;
   OverflowWrap overflow_wrap = OverflowWrap::Anywhere;
   WordBreak word_break = WordBreak::Normal;

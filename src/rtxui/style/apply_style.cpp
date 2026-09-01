@@ -1916,6 +1916,14 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "tab-size") {
+    // Zero is legal and means a tab advances nothing; negative is not, and
+    // clamps. `tab-size` in CSS also accepts a length, which here would be the
+    // same thing as a count of cells, so there is nothing extra to parse.
+    style.tab_size = std::max(0, StoI(v));
+    return;
+  }
+
   if (p == "line-height") {
     // Whole rows only: the value is the minimum height of each line box.
     style.line_height = (v == "normal") ? 1 : std::max(1, StoI(v));
