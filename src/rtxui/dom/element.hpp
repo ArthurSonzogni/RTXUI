@@ -256,6 +256,15 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// Records that `comp` has resolved this element, so the next pass can skip
   /// it.
   ///
+  /// This skips the ELEMENT, never its subtree, and it cannot be widened to do
+  /// the latter. Both shapes of that idea were tried and both break the same
+  /// way: a component's `Digest()` override can add elements after its walk has
+  /// run, and an ancestor marked as already covered stops the next walk from
+  /// ever descending to them. `<select>` and `<tabs>` build elements exactly
+  /// that way, and they are what fails. Skipping a subtree would need a dirty
+  /// flag that propagates up to the ancestors when a descendant changes; the
+  /// memo below carries no such promise.
+  ///
   /// Only two components are remembered. An element can in principle be styled
   /// by more -- its own component, its owner, and an outer one reaching it
   /// through `::part()` -- and the third evicts the second, which then
