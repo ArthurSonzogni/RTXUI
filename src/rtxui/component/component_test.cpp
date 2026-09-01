@@ -3781,6 +3781,65 @@ second</div>
   )";
 };
 
+class FlexMinWidthComponent : public rtxui::Component<FlexMinWidthComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<FlexMinWidthComponent>::InitReflection();
+  }
+  // The container is narrower than the two items together, so the flex
+  // distribution asks each to shrink to 4 -- and min-width refuses, leaving
+  // each 5 wide.
+  std::string_view view = R"(
+    <div class="f"><div id="a">AAAAAAAA</div><div id="b">BBBBBBBB</div></div>
+    <style>
+      .f { display: flex; width: 8; }
+      #a, #b { width: 6; min-width: 5; }
+    </style>
+  )";
+};
+
+TEST_CASE("A flex item that refuses to shrink is not overlapped",
+          "[component][flex][layout]") {
+  // The container positioned items by the size it asked for rather than the
+  // size they took, so an item held at its min-width had the next one drawn
+  // on top of its last cell.
+  auto container = rtxui::Ref<FlexMinWidthComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {16, rtxui::MeasureMode::Exactly},
+      {4, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+  Texture texture(16, 4);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto* first = container->Root()->QuerySelector("#a");
+  auto* second = container->Root()->QuerySelector("#b");
+  REQUIRE(first != nullptr);
+  REQUIRE(second != nullptr);
+
+  SECTION("min-width holds against the shrink") {
+    CHECK(first->layout_width() == 5);
+    CHECK(second->layout_width() == 5);
+  }
+
+  SECTION("and what is drawn matches those widths") {
+    // The failure was silent in the layout tree and visible only on screen:
+    // the widths were already right, and the second item was simply placed a
+    // cell too early.
+    std::string row;
+    for (int x = 0; x < 10; ++x) {
+      row += texture[x, 0].character;
+    }
+    CHECK(row == "AAAAABBBBB");
+  }
+}
+
 class BlockInInlineComponent : public rtxui::Component<BlockInInlineComponent> {
  public:
   void InitReflection() override {
