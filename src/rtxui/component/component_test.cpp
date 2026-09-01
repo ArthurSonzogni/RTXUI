@@ -3800,6 +3800,58 @@ class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
                           "</style>";
 };
 
+class TwoStyleBlocksComponent
+    : public rtxui::Component<TwoStyleBlocksComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<TwoStyleBlocksComponent>::InitReflection();
+  }
+  // Splitting a stylesheet in two, or putting an override below a base, is an
+  // ordinary thing to write. Each block used to overwrite the last, so only
+  // the final one survived.
+  std::string_view view = R"(
+    <div id="a">a</div>
+    <div id="b" class="c">b</div>
+    <style>
+      #a { padding-left: 3; }
+      .c { padding-top: 1; }
+    </style>
+    <div id="d">d</div>
+    <style>
+      #d { padding-left: 5; }
+      /* Same specificity as the .c rule above, and later, so this one wins. */
+      .c { padding-top: 7; }
+    </style>
+  )";
+};
+
+TEST_CASE("Every style block in a component applies", "[component][css]") {
+  auto app = rtxui::Ref<TwoStyleBlocksComponent>::New();
+  app->Mount();
+
+  auto at = [&](const char* selector) {
+    auto* element = app->Root()->QuerySelector(selector);
+    REQUIRE(element != nullptr);
+    return element;
+  };
+
+  SECTION("a rule in the first block still applies") {
+    CHECK(at("#a")->style.padding.left == 3);
+  }
+
+  SECTION("a rule in the last block applies too") {
+    CHECK(at("#d")->style.padding.left == 5);
+  }
+
+  SECTION("later blocks win ties, as document order decides") {
+    // Both rules are a single class, so specificity cannot separate them and
+    // the one written later takes it. Concatenating in order is what makes
+    // that true; the blocks are not independent stylesheets.
+    CHECK(at("#b")->style.padding.top == 7);
+  }
+}
+
 class ExtremeSizeComponent : public rtxui::Component<ExtremeSizeComponent> {
  public:
   void InitReflection() override {

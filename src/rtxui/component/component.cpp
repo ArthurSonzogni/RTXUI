@@ -1768,12 +1768,33 @@ void ComponentBase::Render() {
     css_strings_ = std::move(new_css_strings);
     stylesheet_ = nullptr;
     categorized_rules_ = nullptr;
+
+    // Every <style> block the component declares, concatenated in the order
+    // they appear. Each used to overwrite the last, so a component with two of
+    // them silently kept only the second -- and splitting a stylesheet in two,
+    // or putting an override below a base, is an ordinary thing to write.
+    // Document order is also what decides which of two equally specific rules
+    // wins, so appending is what makes the later one win.
+    //
+    // Built in full before anything is categorised: the categories below hold
+    // pointers into this vector, and appending to it afterwards could move
+    // every one of them.
+    auto combined = std::make_unique<css::StyleSheet>();
     for (const auto& css_str : css_strings_) {
       auto maybe_stylesheet = css::Parse(css_str);
       if (maybe_stylesheet) {
-        stylesheet_ = std::make_unique<css::StyleSheet>(
-            std::move(maybe_stylesheet.value()));
-        categorized_rules_ = std::make_unique<CategorizedRules>();
+        for (auto& ruleset : maybe_stylesheet.value()) {
+          combined->push_back(std::move(ruleset));
+        }
+      } else {
+        CssParseError(maybe_stylesheet.error(), css_str);
+      }
+    }
+
+    if (!combined->empty()) {
+      stylesheet_ = std::move(combined);
+      categorized_rules_ = std::make_unique<CategorizedRules>();
+      {
         for (const auto& ruleset : *stylesheet_) {
           if (!ruleset.parsed_selector.pseudo_classes.empty()) {
             categorized_rules_->has_pseudo_classes = true;
@@ -1807,8 +1828,6 @@ void ComponentBase::Render() {
             categorized_rules_->by_tag[selector_base].push_back(&ruleset);
           }
         }
-      } else {
-        CssParseError(maybe_stylesheet.error(), css_str);
       }
     }
   }
