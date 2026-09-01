@@ -40,6 +40,16 @@ Valid text is never touched, including the parts of Unicode that are easy to
 mistake for damage: wide characters, combining marks, zero-width characters and
 four-byte code points all pass through as written.
 
+## Zero-Width Characters
+
+Format characters occupy no cell, and are measured that way: the zero-width
+space and non-joiner, the bidi marks, embeddings, overrides and isolates, the
+word joiner and invisible operators, and the byte-order mark. These arrive in
+ordinary text -- a zero-width space pasted from a web page, a bidi mark inside a
+filename, a byte-order mark at the head of a file -- and counting one as a cell
+would put everything after it on that line a column to the left of where the
+layout expects it.
+
 Nothing is required of you to get any of this: it applies to every string a
 template interpolates, whatever its source.
 

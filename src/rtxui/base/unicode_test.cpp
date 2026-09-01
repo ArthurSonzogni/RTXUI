@@ -139,6 +139,36 @@ TEST_CASE("string_width.CombiningCharacters", "[unicode]") {
   CHECK(string_width(combining) == 1);
 }
 
+TEST_CASE("string_width.ZeroWidthFormatCharacters", "[unicode]") {
+  // A terminal draws none of these, so counting one as a cell puts everything
+  // after it a column to the left of where the layout believes it is, and the
+  // cell diff then describes a screen that is one column out per occurrence.
+  // They turn up in ordinary text: a zero-width space pasted from a web page,
+  // a bidi mark inside a filename, a byte-order mark at the head of a file.
+  const auto zero_width = [](uint32_t codepoint) {
+    return string_width("a" + CodePointToString(codepoint) + "b");
+  };
+  CHECK(zero_width(0x200B) == 2);  // zero-width space
+  // U+200D, the zero-width joiner, is deliberately absent: it joins the
+  // characters either side into a single cluster, so it changes the count for
+  // reasons of its own rather than by occupying a cell.
+  CHECK(zero_width(0x200E) == 2);  // left-to-right mark
+  CHECK(zero_width(0x202E) == 2);  // right-to-left override
+  CHECK(zero_width(0x2060) == 2);  // word joiner
+  CHECK(zero_width(0x2069) == 2);  // pop directional isolate
+  CHECK(zero_width(0xFEFF) == 2);  // byte-order mark
+  CHECK(zero_width(0xFFFB) == 2);  // interlinear annotation terminator
+
+  // The neighbours of those ranges are ordinary printable characters and must
+  // keep their cell -- the table is searched by bisection, so an interval that
+  // is too wide or out of order fails quietly.
+  CHECK(zero_width(0x200A) == 3);  // hair space
+  CHECK(zero_width(0x2010) == 3);  // hyphen
+  CHECK(zero_width(0x2065) == 3);  // unassigned, but not in the format set
+  CHECK(zero_width(0xFEFE) == 3);
+  CHECK(zero_width(0xFFFC) == 3);  // object replacement character
+}
+
 // --- Graphemes range ---
 
 TEST_CASE("Graphemes.ASCII", "[unicode]") {
