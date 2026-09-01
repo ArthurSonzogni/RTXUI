@@ -1896,6 +1896,15 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       LayoutInputNode child_input = {item.child_ptr.get()};
 
       item.fragment = RunLayout(child_input, final_c, child_context);
+      // An item can come back wider than it was asked for: its own min-width
+      // (min-height down a column) overrides the exact constraint the flex
+      // distribution handed it. Everything below advances by
+      // main_resolved_size, so leaving the requested size here placed the next
+      // item on top of this one -- two items with `width: 6; min-width: 5` in a
+      // container of 8 were laid out at 5 wide and positioned 4 apart.
+      const int measured_main = is_row ? item.fragment->width + m_horiz
+                                       : item.fragment->height + m_vert;
+      item.main_resolved_size = std::max(item.main_resolved_size, measured_main);
       item.cross_size = is_row ? (item.fragment->height + m_vert)
                                : (item.fragment->width + m_horiz);
       line.cross_size = std::max(line.cross_size, item.cross_size);
