@@ -408,6 +408,10 @@ struct ComputedStyleCore {
   std::optional<TextTransform> text_transform;
   // Extra cells inserted between grapheme clusters; inherited.
   std::optional<int> letter_spacing;
+  // Cells between tab stops; inherited. Tabs are expanded to spaces during
+  // layout, so this decides where they land rather than being handed to the
+  // terminal to interpret.
+  std::optional<int> tab_size;
   // Minimum rows each line box occupies; inherited. 1 means normal.
   std::optional<int> line_height;
   std::optional<OverflowWrap> overflow_wrap;

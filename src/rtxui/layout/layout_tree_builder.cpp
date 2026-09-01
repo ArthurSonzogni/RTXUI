@@ -45,9 +45,13 @@ void ApplyTextTransform(std::string& text, TextTransform transform) {
 
 // white-space: normal | nowrap render newlines as plain spaces. (Template
 // text keeps its newlines in the DOM; the conversion is style-driven here.)
-void ReplaceNewlinesWithSpaces(std::string& text) {
+// Tabs go the same way: CSS treats them as collapsible whitespace in these
+// modes, and a literal one must not reach the terminal in any mode -- see
+// ExpandTabs for why.
+void ReplaceSegmentBreaksAndTabsWithSpaces(std::string& text) {
   if (text.find('\n') == std::string::npos &&
-      text.find('\r') == std::string::npos) {
+      text.find('\r') == std::string::npos &&
+      text.find('\t') == std::string::npos) {
     return;
   }
   std::string result;
@@ -57,7 +61,48 @@ void ReplaceNewlinesWithSpaces(std::string& text) {
     if (c == '\r' && i + 1 < text.size() && text[i + 1] == '\n') {
       continue;  // CRLF collapses to a single space via the '\n'.
     }
-    result += (c == '\n' || c == '\r') ? ' ' : c;
+    // A tab is collapsible whitespace in these modes, exactly like a segment
+    // break, and must not survive as a literal either.
+    result += (c == '\n' || c == '\r' || c == '\t') ? ' ' : c;
+  }
+  text = std::move(result);
+}
+
+// Replaces each tab with spaces up to the next multiple of `tab_size`,
+// counting cells from the start of the line.
+//
+// No tab may reach the terminal. The engine measures one as a single cell,
+// while a terminal advances the cursor to its own next tab stop, so a lone tab
+// inside a <pre> shifts everything after it on that line and leaves the cell
+// diff describing a screen that does not exist. Expanding here is what the
+// terminal would have done anyway, except that now the engine's own accounting
+// is the one that decides -- which is the only way the diff can stay correct.
+void ExpandTabs(std::string& text, int tab_size) {
+  if (text.find('\t') == std::string::npos) {
+    return;
+  }
+  std::string result;
+  result.reserve(text.size());
+  int column = 0;
+  for (const Grapheme& grapheme : Graphemes(text)) {
+    if (grapheme.text == "\t") {
+      // A tab still has to occupy at least nothing rather than going through
+      // untouched, so tab-size: 0 simply deletes it.
+      const int next_stop =
+          tab_size > 0 ? ((column / tab_size) + 1) * tab_size : column;
+      result.append(static_cast<size_t>(next_stop - column), ' ');
+      column = next_stop;
+      continue;
+    }
+    if (grapheme.text == "\n" || grapheme.text == "\r") {
+      result += grapheme.text;
+      column = 0;
+      continue;
+    }
+    result += grapheme.text;
+    // Counted in cells, not bytes or codepoints, so a wide glyph moves the
+    // next tab stop by two.
+    column += grapheme.width;
   }
   text = std::move(result);
 }
@@ -144,6 +189,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   resolved.letter_spacing =
       dom_node->style.letter_spacing.value_or(parent.letter_spacing);
   box->style.letter_spacing = resolved.letter_spacing;
+  resolved.tab_size = dom_node->style.tab_size.value_or(parent.tab_size);
+  box->style.tab_size = resolved.tab_size;
 
   resolved.line_height =
       dom_node->style.line_height.value_or(parent.line_height);
@@ -192,14 +239,17 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     switch (resolved.white_space) {
       case WhiteSpace::Normal:
       case WhiteSpace::Nowrap:
-        ReplaceNewlinesWithSpaces(box->text_data);
+        ReplaceSegmentBreaksAndTabsWithSpaces(box->text_data);
         break;
       case WhiteSpace::PreLine:
         CollapseWhitespacePreLine(box->text_data);
         break;
       case WhiteSpace::Pre:
       case WhiteSpace::PreWrap:
-        break;  // Newlines are preserved and honored as hard breaks.
+        // Newlines are preserved and honored as hard breaks; tabs are the one
+        // thing that cannot be left as written.
+        ExpandTabs(box->text_data, resolved.tab_size);
+        break;
     }
     ApplyLetterSpacing(box->text_data, resolved.letter_spacing);
     box->algorithm = LayoutBox::Algorithm::Text;
@@ -228,6 +278,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       slot.blink = slot_style.blink.has_value() ? slot_style.blink : resolved.blink;
       slot.letter_spacing =
           slot_style.letter_spacing.value_or(resolved.letter_spacing);
+      slot.tab_size = slot_style.tab_size.value_or(resolved.tab_size);
       slot.line_height =
           slot_style.line_height.value_or(resolved.line_height);
       slot.overflow_wrap =
