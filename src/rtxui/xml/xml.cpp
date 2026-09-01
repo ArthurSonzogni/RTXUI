@@ -27,9 +27,32 @@ class Parser {
   auto MakeError(std::string message) -> Error;
   auto MakeErrorExpected(std::string expected) -> Error;
 
+  /// The deepest an element tree may nest.
+  ///
+  /// ParseNode recurses once per level, so without a cap a deeply nested
+  /// template overflows the stack instead of reporting an error -- and a
+  /// template is not always written by the developer: hot reload re-reads one
+  /// at runtime, and the playground lets one be typed. Documents people write
+  /// nest tens of levels, so this leaves hand-written markup untouched while
+  /// staying well inside the stack.
+  static constexpr int kMaxDepth = 256;
+
  private:
+  /// Counts ParseNode's recursion for kMaxDepth, and unwinds with it.
+  class DepthGuard {
+   public:
+    explicit DepthGuard(int& depth) : depth_(depth) { ++depth_; }
+    ~DepthGuard() { --depth_; }
+    DepthGuard(const DepthGuard&) = delete;
+    DepthGuard& operator=(const DepthGuard&) = delete;
+
+   private:
+    int& depth_;
+  };
+
   std::string_view xml_;
   size_t pos_ = 0;
+  int depth_ = 0;
 };
 
 // Optimization: Inline character checks to bypass std::vector allocation/destruction.
@@ -261,6 +284,12 @@ auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
 }
 
 auto Parser::ParseNode() -> Expected<Node, Error> {
+  if (depth_ >= kMaxDepth) {
+    return MakeError("nesting deeper than " + std::to_string(kMaxDepth) +
+                     " elements");
+  }
+  const DepthGuard guard(depth_);
+
   int ws_start = pos_;
   ParseWhiteSpaces();
   int ws_end = pos_;

@@ -31,6 +31,43 @@ TEST_CASE("XML parser works correctly", "[xml]") {
   CHECK(xml::Print(nodes.value()[0]) == StripIndent(input));
 }
 
+TEST_CASE("XML nesting is bounded", "[xml]") {
+  // The parser recurses once per level, so deep nesting used to overflow the
+  // stack rather than report an error. A template is not always written by the
+  // developer: hot reload re-reads one at runtime, and the playground lets one
+  // be typed.
+  const auto nested = [](int depth, bool close) {
+    std::string xml;
+    for (int i = 0; i < depth; ++i) {
+      xml += "<div>";
+    }
+    xml += "x";
+    if (close) {
+      for (int i = 0; i < depth; ++i) {
+        xml += "</div>";
+      }
+    }
+    return xml;
+  };
+
+  SECTION("ordinary nesting still parses") {
+    // Far deeper than anything hand-written, and still accepted.
+    auto result = xml::Parse(nested(200, true));
+    CHECK(result.has_value());
+  }
+
+  SECTION("excessive nesting is an error, not a crash") {
+    auto result = xml::Parse(nested(50000, true));
+    CHECK_FALSE(result.has_value());
+  }
+
+  SECTION("excessive unclosed nesting is an error too") {
+    // The unclosed form recurses just as deep before it can fail.
+    auto result = xml::Parse(nested(50000, false));
+    CHECK_FALSE(result.has_value());
+  }
+}
+
 TEST_CASE("XML with multiple roots", "[xml]") {
   const std::string input = R"(
     <root1>
