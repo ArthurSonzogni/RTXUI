@@ -34,9 +34,31 @@ class Parser {
   auto MakeError(std::string message) -> Error;
   auto MakeErrorExpected(std::string expected) -> Error;
 
+  /// The deepest CSS nesting may go.
+  ///
+  /// ParseRuleset recurses once per level of `&`-style nesting, so without a
+  /// cap a deeply nested stylesheet overflows the stack instead of reporting
+  /// an error -- and a stylesheet is not always written by the developer: hot
+  /// reload re-reads one at runtime, and the playground lets one be typed.
+  /// Stylesheets people write nest a handful of levels.
+  static constexpr int kMaxNesting = 256;
+
  private:
+  /// Counts ParseRuleset's recursion for kMaxNesting, and unwinds with it.
+  class NestingGuard {
+   public:
+    explicit NestingGuard(int& depth) : depth_(depth) { ++depth_; }
+    ~NestingGuard() { --depth_; }
+    NestingGuard(const NestingGuard&) = delete;
+    NestingGuard& operator=(const NestingGuard&) = delete;
+
+   private:
+    int& depth_;
+  };
+
   std::string_view css_;
   size_t pos_ = 0;
+  int nesting_ = 0;
 };
 
 bool Contains(char c, const std::vector<char>& chars) {
@@ -443,6 +465,12 @@ auto Parser::ParseRuleset() -> Expected<std::vector<Ruleset>, Error> {
 auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
                           std::string_view media_query)
     -> Expected<std::vector<Ruleset>, Error> {
+  if (nesting_ >= kMaxNesting) {
+    return MakeError("nesting deeper than " + std::to_string(kMaxNesting) +
+                     " rules");
+  }
+  const NestingGuard guard(nesting_);
+
   ParseWhiteSpaces();
   auto selector_full = ParseSelector();
   if (!selector_full) {

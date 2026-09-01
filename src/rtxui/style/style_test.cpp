@@ -607,6 +607,30 @@ TEST_CASE("CSS inset shorthand", "[style][inset]") {
   }
 }
 
+TEST_CASE("CSS nesting is bounded", "[style][limits]") {
+  // ParseRuleset recurses once per level of nesting, so a deeply nested
+  // stylesheet used to overflow the stack instead of reporting an error.
+  const auto nested = [](int depth) {
+    std::string css;
+    for (int i = 0; i < depth; ++i) {
+      css += "div { ";
+    }
+    css += "color: red;";
+    for (int i = 0; i < depth; ++i) {
+      css += "}";
+    }
+    return css;
+  };
+
+  SECTION("ordinary nesting still parses") {
+    CHECK(css::Parse(nested(100)).has_value());
+  }
+
+  SECTION("excessive nesting is an error, not a crash") {
+    CHECK_FALSE(css::Parse(nested(20000)).has_value());
+  }
+}
+
 TEST_CASE("Extreme CSS numbers are bounded", "[style][limits]") {
   // A stylesheet is text, and hot reload and the playground both let one be
   // edited while the application is running. Unbounded, a single large number
