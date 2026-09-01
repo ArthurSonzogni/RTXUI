@@ -482,6 +482,14 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           anonymous_box->style.line_height = resolved.line_height;
           anonymous_box->style.overflow_wrap = resolved.overflow_wrap;
           anonymous_box->style.word_break = resolved.word_break;
+          // Taken from the block rather than from `resolved`: text-overflow is
+          // not inherited, it belongs to the block container, and this box is
+          // that container's inline formatting context. Without it the
+          // ellipsis check in the inline flow reads a default of clip, so
+          // `text-overflow: ellipsis` did nothing at all on a plain block --
+          // which is every <div>, and every element that does not opt into
+          // being inline-block.
+          anonymous_box->style.text_overflow = box->style.text_overflow;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);

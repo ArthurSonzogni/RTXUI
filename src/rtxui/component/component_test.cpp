@@ -3781,6 +3781,107 @@ second</div>
   )";
 };
 
+class EllipsisTestComponent : public rtxui::Component<EllipsisTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<EllipsisTestComponent>::InitReflection();
+  }
+  // Plain blocks, which is what a <div> is and what the property did nothing
+  // on: the ellipsis check reads the style of the box running the inline flow,
+  // and a block's text sits in an anonymous wrapper that was not given it.
+  // Wrapped in a block parent on purpose: a component's own root is
+  // inline-level by default, and a block child with a definite width does not
+  // break the line there, so these would sit side by side.
+  std::string_view view = R"(
+    <div id="wrap">
+      <div class="e" id="over">abcdefghij</div>
+      <div class="e" id="exact">abcdef</div>
+      <div class="e" id="under">abc</div>
+      <div class="e" id="wide">你好你好</div>
+      <div class="e narrow" id="tiny">abcdef</div>
+      <div class="c" id="clipped">abcdefghij</div>
+    </div>
+    <style>
+      #wrap { display: block; }
+      .e { width: 6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .narrow { width: 2; }
+      .c { width: 6; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+    </style>
+  )";
+};
+
+TEST_CASE("text-overflow: ellipsis truncates a block", "[component][paint]") {
+  auto container = rtxui::Ref<EllipsisTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {30, rtxui::MeasureMode::Exactly},
+      {12, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+  Texture texture(30, 12);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto row_text = [&](int y) {
+    std::string row;
+    for (int x = 0; x < texture.width(); ++x) {
+      row += texture[x, y].character;
+    }
+    while (!row.empty() && row.back() == ' ') {
+      row.pop_back();
+    }
+    return row;
+  };
+  auto find_row = [&](std::string_view needle) {
+    for (int y = 0; y < texture.height(); ++y) {
+      if (row_text(y).find(needle) != std::string::npos) {
+        return y;
+      }
+    }
+    return -1;
+  };
+
+  SECTION("text too wide is truncated and marked") {
+    const int row = find_row("abc.");
+    REQUIRE(row != -1);
+    CHECK(row_text(row) == "abc...");
+  }
+
+  SECTION("text that fits is left alone") {
+    CHECK(find_row("abcdef") != -1);   // the exact-fit block, unmarked
+    CHECK(find_row("abc") != -1);      // and the short one
+  }
+
+  SECTION("truncation lands on a character boundary") {
+    // Three double-width glyphs do not fit in six cells alongside the marker,
+    // and half a glyph is not an option -- so one whole glyph and the marker.
+    const int row = find_row("\u4f60.");
+    REQUIRE(row != -1);
+    CHECK(row_text(row) == "\u4f60...");
+  }
+
+  SECTION("a container too narrow for the marker shows what fits") {
+    // Two cells cannot hold "..." let alone any text, so the marker itself is
+    // what gets truncated. Matched on the whole row, since "abc..." contains
+    // ".." too.
+    bool found = false;
+    for (int y = 0; y < texture.height(); ++y) {
+      found = found || row_text(y) == "..";
+    }
+    CHECK(found);
+  }
+
+  SECTION("clip is unaffected") {
+    CHECK(find_row("abcdefghij") == -1);  // clipped to the container
+    const int row = find_row("abcdef");
+    REQUIRE(row != -1);
+  }
+}
+
 class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
  public:
   void InitReflection() override {
