@@ -115,6 +115,61 @@ TEST_CASE("Event.MouseLeftClickPressed", "[terminal]") {
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
+TEST_CASE("Event.CsiParameterSaturatesInsteadOfOverflowing", "[terminal]") {
+  // Escape sequences arrive from outside the process -- a terminal reply, or
+  // anything else holding the tty open -- so a long enough run of digits must
+  // not be able to overflow the accumulator. Overflow here is undefined
+  // behaviour, not a wrapped coordinate.
+  const auto feed = [](std::string_view bytes) {
+    TerminalInputParser parser;
+    for (const char c : bytes) {
+      parser.Add(c);
+    }
+    return parser.GetEvent();
+  };
+
+  SECTION("a long coordinate is capped, and stays a coordinate") {
+    const std::string digits(40, '9');
+    auto event = feed("\x1b[<0;" + digits + ";" + digits + "M");
+    REQUIRE(event.has_value());
+    auto* mouse = event->get_if<Event::Mouse>();
+    REQUIRE(mouse);
+    // Whatever the cap is, the point is that it is a large positive number
+    // rather than a wrapped or negative one.
+    CHECK(mouse->x > 0);
+    CHECK(mouse->y > 0);
+  }
+
+  SECTION("a long button number does not wrap either") {
+    const std::string digits(40, '9');
+    auto event = feed("\x1b[<" + digits + ";10;10M");
+    // It need not be a mouse event at all -- an absurd button is free to be
+    // rejected. It must simply not have overflowed getting there.
+    if (event.has_value()) {
+      if (auto* mouse = event->get_if<Event::Mouse>()) {
+        CHECK(mouse->x == 10);
+        CHECK(mouse->y == 10);
+      }
+    }
+  }
+
+  SECTION("ordinary coordinates are unaffected") {
+    auto event = feed("\x1b[<0;12;42M");
+    REQUIRE(event.has_value());
+    auto* mouse = event->get_if<Event::Mouse>();
+    REQUIRE(mouse);
+    CHECK(mouse->x == 12);
+    CHECK(mouse->y == 42);
+  }
+
+  SECTION("a long run of digits in any CSI is survivable") {
+    // No event is expected; this is about the accumulator, not the sequence.
+    (void)feed("\x1b[" + std::string(10000, '9') + "m");
+    (void)feed("\x1b[" + std::string(10000, '9') + "A");
+    SUCCEED();
+  }
+}
+
 TEST_CASE("Event.MouseLeftMoved", "[terminal]") {
   TerminalInputParser parser;
   parser.Add('');
