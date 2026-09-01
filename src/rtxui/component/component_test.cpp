@@ -3800,6 +3800,56 @@ class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
                           "</style>";
 };
 
+class ExtremeSizeComponent : public rtxui::Component<ExtremeSizeComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<ExtremeSizeComponent>::InitReflection();
+  }
+  // calc() bounds each operand when it is parsed, but not their product, so
+  // this reaches layout as a float far too large for the int it is narrowed
+  // to. That narrowing is undefined behaviour and produced INT_MIN, which then
+  // poisoned every subtraction downstream.
+  std::string_view view = R"(
+    <div id="big">wide</div>
+    <div id="tall">tall</div>
+    <div id="neg">neg</div>
+    <style>
+      #big { width: calc(2000000000 * 2000000000); }
+      #tall { height: 2000000000; padding: 1000000000; }
+      #neg { margin: -2000000000; }
+    </style>
+  )";
+};
+
+TEST_CASE("Extreme sizes lay out without overflowing", "[component][limits]") {
+  // Reaching layout is the point: ResolveSize does its own narrowing, on a
+  // path Length::Resolve never sees, so a style-level test would not cover it.
+  // Under the sanitizer build this also fails outright rather than merely
+  // measuring wrong, which is what makes it a guard rather than a check of
+  // one number.
+  auto container = rtxui::Ref<ExtremeSizeComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {40, rtxui::MeasureMode::Exactly},
+      {12, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+  Texture texture(40, 12);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  // Whatever the engine settles on, it must be a size rather than a wrapped
+  // one: the failure this guards against produced INT_MIN.
+  auto* big = container->Root()->QuerySelector("#big");
+  REQUIRE(big != nullptr);
+  CHECK(big->layout_width() >= 0);
+  CHECK(big->layout_width() <= 1000000);
+}
+
 TEST_CASE("Tabs expand to tab stops", "[component][tab-size][paint]") {
   auto container = rtxui::Ref<TabStopTestComponent>::New();
   container->Mount();

@@ -5,8 +5,14 @@
 # subdirectory added after the include.
 
 if(RTXUI_SANITIZE)
-  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
-  add_link_options(-fsanitize=address,undefined)
+  # float-cast-overflow is named explicitly because GCC's `undefined` group
+  # leaves it out. Layout resolves lengths as floats and hands them to code
+  # that counts cells in ints, so narrowing one that does not fit is exactly
+  # the mistake this build should be catching -- and it went unreported until
+  # the check was asked for by name.
+  set(RTXUI_SANITIZERS address,undefined,float-cast-overflow)
+  add_compile_options(-fsanitize=${RTXUI_SANITIZERS} -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=${RTXUI_SANITIZERS})
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
