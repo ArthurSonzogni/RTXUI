@@ -39,18 +39,26 @@ class EventTargetApp : public rtxui::Component<EventTargetApp> {
  public:
   int clicks = 0;
   bool shown = true;
+  bool dialog_open = false;
   std::string text;
+  std::string tab = "one";
 
   void Toggle() { shown = !shown; }
   void Bump() { ++clicks; }
+  void OpenDialog() { dialog_open = true; }
+  void CloseDialog() { dialog_open = false; }
   std::string Count() const { return std::to_string(clicks); }
 
   void InitReflection() override {
     Bind(clicks);
     Bind(shown);
+    Bind(dialog_open);
     Bind(text);
+    Bind(tab);
     Bind(Toggle);
     Bind(Bump);
+    Bind(OpenDialog);
+    Bind(CloseDialog);
     Bind(Count);
     rtxui::Component<EventTargetApp>::InitReflection();
   }
@@ -73,7 +81,33 @@ class EventTargetApp : public rtxui::Component<EventTargetApp> {
         <option>alpha</option>
         <option>beta</option>
       </select>
+      <slider value="30" min="0" max="100" step="5" width="10" />
+      <!-- <details> and <fieldset> hoist their summary/legend out of the
+           projected content, which has crashed before when the hoisted child
+           was conditional. -->
+      <details>
+        <summary>more</summary>
+        <if condition="{shown}"><p>detail body</p></if>
+      </details>
+      <fieldset>
+        <if condition="{shown}"><legend>group</legend></if>
+        <p>grouped</p>
+      </fieldset>
+      <!-- <tabs> rebuilds its header strip from Digest(). -->
+      <tabs value="{tab}">
+        <tab-pane label="one" name="one"><p>pane one</p></tab-pane>
+        <tab-pane label="two" name="two"><p>pane two</p></tab-pane>
+      </tabs>
+      <a href="#anchor">jump</a>
+      <button onclick="OpenDialog">open</button>
       <if condition="{shown}"><p id="conditional">here</p></if>
+      <p id="anchor">anchor</p>
+      <!-- position: fixed, so it goes through CollectFixedFragments -- the
+           function the first use-after-free was found in. -->
+      <dialog open="{dialog_open}" title="confirm">
+        <p>are you sure</p>
+        <button onclick="CloseDialog">close</button>
+      </dialog>
     </div>
     <style>
       .root { display: flex; flex-direction: column; }
@@ -102,7 +136,10 @@ void TestEvents(const std::string& input) {
 
   auto app = rtxui::Ref<EventTargetApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
-  device->TriggerResize(40, 20);
+  // Big enough that the whole interface is on screen. At 40x20 most of it sat
+  // below the viewport, where nothing lays out and no click can reach it --
+  // the fuzzer then spends its budget on coordinates that hit nothing.
+  device->TriggerResize(60, 44);
   rtxui::Screen screen(app, device);
   screen.Draw();
 
@@ -143,6 +180,18 @@ FUZZ_TEST(Events, TestEvents)
         {"\x1b[<35;20;10M"},
         // A burst, which is what makes Step() suppress intermediate draws.
         {"\x1b[<32;10;5M\x1b[<32;11;5M\x1b[<32;12;5M\x1b[<32;13;5M"},
+        // A press on every row in one burst. Every control gets clicked, and
+        // each click reconciles under the batch flag -- which is the shape
+        // that dangled the fragment tree. Also saves the mutator from having
+        // to discover where the controls are.
+        {[] {
+          std::string s;
+          for (int row = 1; row <= 44; ++row) {
+            s += "\x1b[<0;3;" + std::to_string(row) + "M";
+            s += "\x1b[<0;3;" + std::to_string(row) + "m";
+          }
+          return s;
+        }()},
         // Bracketed paste.
         {"\x1b[200~pasted text\x1b[201~"},
         // Resize mid-stream, and a terminal reply the parser must swallow.
