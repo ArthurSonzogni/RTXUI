@@ -380,6 +380,14 @@ Element::Element(const ComponentBase* component)
 }
 
 Element::~Element() {
+  // A child can outlive its parent: reconciliation holds references to the
+  // elements it reuses, so a child's last reference is not always its parent's.
+  // Leaving parent_ pointing at freed memory means the next thing to attach
+  // that child dereferences it -- and `parent_ != nullptr` also makes it look
+  // attached to a tree that no longer exists.
+  for (auto& child : children_) {
+    child->parent_ = nullptr;
+  }
   g_elements_destroyed++;
 }
 

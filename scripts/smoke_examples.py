@@ -24,13 +24,16 @@ process survived, not what the frame contained.
 """
 import os
 import pty
+import random
 import select
 import signal
 import struct
 import sys
 import termios
+import tempfile
 import fcntl
 import time
+import zlib
 
 # Long enough for a first frame on a loaded machine, short enough that the
 # whole sweep stays under a minute.
@@ -176,15 +179,45 @@ def _reap(pid, fd):
         return None
 
 
-def run_one(program):
-    """Returns None if the example started and drew, else a failure reason."""
-    pid, fd = pty.fork()
+def _spawn(program, error_path):
+    """Starts `program` on a PTY, with its stderr going to `error_path`.
+
+    pty.fork() would put stderr on the PTY too, which loses the one thing worth
+    reading: an assertion or sanitizer report written after this side has
+    stopped draining is simply gone, and what arrives instead is a bare signal
+    number. A file always has it.
+    """
+    master, slave = pty.openpty()
+    pid = os.fork()
     if pid == 0:
+        os.setsid()
+        fcntl.ioctl(slave, termios.TIOCSCTTY, 0)
+        os.dup2(slave, 0)
+        os.dup2(slave, 1)
+        handle = os.open(error_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+        os.dup2(handle, 2)
+        os.close(master)
+        os.close(slave)
         os.environ["TERM"] = "xterm-256color"
         try:
             os.execv(program, [program])
         finally:
             os._exit(127)
+    os.close(slave)
+    return pid, master
+
+
+def _read_errors(error_path):
+    try:
+        with open(error_path, "rb") as handle:
+            return handle.read()
+    except OSError:
+        return b""
+
+
+def run_one(program, error_path):
+    """Returns None if the example started and drew, else a failure reason."""
+    pid, fd = _spawn(program, error_path)
 
     _set_size(fd, COLUMNS, ROWS)
 
@@ -256,7 +289,8 @@ def run_one(program):
     if status is None:
         return None
 
-    report = _sanitizer_report(output)
+    errors = _read_errors(error_path)
+    report = _sanitizer_report(output + errors)
     if report:
         return report
     if os.WIFSIGNALED(status):
@@ -265,8 +299,10 @@ def run_one(program):
             # Ours, from _reap. See EXIT_SECONDS.
             return None
         if received != signal.SIGINT:
-            return "killed by signal %d (%s)" % (
-                received, signal.Signals(received).name)
+            detail = errors.decode("utf-8", "replace").strip().splitlines()
+            return "killed by signal %d (%s)%s" % (
+                received, signal.Signals(received).name,
+                ": " + detail[-1] if detail else "")
     if len(first_frame) < MIN_FRAME_BYTES:
         return "drew no frame (%d bytes before exit)" % len(first_frame)
     return None
@@ -289,19 +325,159 @@ def expand(arguments):
     return programs
 
 
+def _chaos_size(rng):
+    """A terminal size, weighted hard toward the degenerate end.
+
+    That bias is the whole point. A roomy terminal mostly re-walks the path the
+    fixed sweep already covers; it is the sizes too small to hold the interface
+    that reach the clamping and division in scrollbars, flex and grid tracks.
+    A 1x1 resize landing mid-interaction is what turned up the last DOM bug.
+    """
+    if rng.random() < 0.6:
+        return rng.randint(1, 6), rng.randint(1, 5)
+    return rng.randint(1, 200), rng.randint(1, 80)
+
+
+def _chaos_chunk(rng):
+    """A slice of input: the fixed burst, typing, mouse, paste or navigation."""
+    pick = rng.random()
+    if pick < 0.35:
+        return _input_burst()
+    if pick < 0.5:
+        return bytes(rng.choice(b"\t\r ab\x7f") for _ in range(rng.randint(1, 8)))
+    if pick < 0.65:
+        return b"".join(
+            _mouse(rng.choice([0, 2, 32, 35, 64, 65]),
+                   rng.randint(1, 60), rng.randint(1, 40),
+                   pressed=rng.random() < 0.7)
+            for _ in range(rng.randint(1, 12)))
+    if pick < 0.8:
+        return b"\x1b[200~" + b"paste" * rng.randint(1, 20) + b"\x1b[201~"
+    return b"".join(
+        b"\x1b[" + rng.choice([b"A", b"B", b"C", b"D", b"Z", b"5~", b"6~"])
+        for _ in range(rng.randint(1, 6)))
+
+
+def chaos_one(program, error_path, seed, budget):
+    """Randomly resizes and drives one example. Returns a failure reason or None."""
+    rng = random.Random(seed)
+    pid, fd = _spawn(program, error_path)
+    _set_size(fd, COLUMNS, ROWS)
+
+    def drain(seconds):
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            readable, _, _ = select.select([fd], [], [], 0.02)
+            if not readable:
+                continue
+            try:
+                if not os.read(fd, 65536):
+                    return False
+            except OSError:
+                return False
+        return True
+
+    alive = drain(0.8)
+    deadline = time.time() + budget
+    while alive and time.time() < deadline:
+        try:
+            if rng.random() < 0.6:
+                _set_size(fd, *_chaos_size(rng))
+            os.write(fd, _chaos_chunk(rng))
+        except OSError:
+            break
+        # Deliberately short and uneven, so the next resize usually lands while
+        # the example is still working through the last chunk.
+        alive = drain(rng.uniform(0.02, 0.15))
+
+    status = _reap(pid, fd)
+    try:
+        os.close(fd)
+    except OSError:
+        pass
+    if status is None:
+        return None
+    errors = _read_errors(error_path)
+    report = _sanitizer_report(errors)
+    if report:
+        return report
+    if os.WIFSIGNALED(status):
+        received = os.WTERMSIG(status)
+        if received not in (signal.SIGINT, signal.SIGKILL):
+            detail = errors.decode("utf-8", "replace").strip().splitlines()
+            return "signal %d (%s)%s" % (
+                received, signal.Signals(received).name,
+                ": " + detail[-1] if detail else "")
+    return None
+
+
+USAGE = """usage: smoke_examples.py [--chaos] [--seed N] [--budget SECONDS] <dir|binary>...
+
+Default: start each example, drive a fixed burst of input and a couple of
+resizes at it, and check it survives. This is what CI runs.
+
+--chaos: instead, randomly resize and drive each example for --budget seconds.
+Nondeterministic by design, so it is not wired into CI -- run it by hand, and
+run it against a sanitizer build, which is the only way most of what it
+provokes becomes visible.
+
+A failure prints the seed that produced it. Re-running with --seed replays the
+same input, but not the same interleaving: the timing between what is written
+and what the example has processed is up to the scheduler, and the bugs worth
+finding here live in exactly that gap. Expect to re-run a failing seed several
+times, and treat a clean run as inconclusive rather than as a fix.
+"""
+
+
 def main(arguments):
-    programs = expand(arguments)
+    chaos = False
+    seed = int(time.time())
+    budget = 2.5
+    rest = []
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument == "--chaos":
+            chaos = True
+        elif argument == "--seed":
+            index += 1
+            seed = int(arguments[index])
+        elif argument == "--budget":
+            index += 1
+            budget = float(arguments[index])
+        elif argument in ("-h", "--help"):
+            print(USAGE)
+            return 0
+        else:
+            rest.append(argument)
+        index += 1
+
+    programs = expand(rest)
     if not programs:
         print("[SKIP] No examples built; nothing to smoke test.")
         return 0
 
+    error_path = os.path.join(
+        tempfile.gettempdir(), "rtxui_smoke_stderr_%d.log" % os.getpid())
     failures = []
     for program in sorted(programs):
-        reason = run_one(program)
         name = os.path.basename(program)
+        if chaos:
+            # Per-example seed, so one example's failure replays on its own.
+            example_seed = seed + (zlib.crc32(name.encode()) & 0xFFFF)
+            reason = chaos_one(program, error_path, example_seed, budget)
+            if reason:
+                reason = "%s (--seed %d)" % (reason, example_seed - (
+                    zlib.crc32(name.encode()) & 0xFFFF))
+        else:
+            reason = run_one(program, error_path)
         if reason:
             failures.append((name, reason))
             print("  FAIL %s: %s" % (name, reason))
+    try:
+        os.remove(error_path)
+    except OSError:
+        pass
 
     print("Checked %d examples, %d failed." % (len(programs), len(failures)))
     if failures:
@@ -309,7 +485,11 @@ def main(arguments):
         for name, reason in failures:
             print("  - %s: %s" % (name, reason), file=sys.stderr)
         return 1
-    print("[SUCCESS] Every example starts, draws, and survives input.")
+    if chaos:
+        print("[SUCCESS] Every example survived %.1fs of random input and "
+              "resizing (seed %d)." % (budget, seed))
+    else:
+        print("[SUCCESS] Every example starts, draws, and survives input.")
     return 0
 
 
