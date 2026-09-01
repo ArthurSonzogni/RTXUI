@@ -277,6 +277,27 @@ TEST_CASE("Adding an already-attached element moves it", "[dom][element]") {
   CHECK(first->ChildCount() == 0);
 }
 
+TEST_CASE("A child outliving its parent is left unattached", "[dom][element]") {
+  // Reconciliation keeps references to the elements it reuses, so a child's
+  // last reference is not always its parent's. If the parent goes first and
+  // leaves parent_ behind, the child both looks attached to a tree that no
+  // longer exists and dereferences freed memory the next time it is attached
+  // somewhere else.
+  auto child = MakeElement("code");
+  {
+    auto parent = MakeElement("div");
+    parent->AddChild(child);
+    REQUIRE(child->Parent() == parent.get());
+  }
+  CHECK(child->Parent() == nullptr);
+
+  // And it can still be attached somewhere else afterwards.
+  auto adopter = MakeElement("div");
+  adopter->AddChild(child);
+  CHECK(adopter->ChildCount() == 1);
+  CHECK(child->Parent() == adopter.get());
+}
+
 TEST_CASE("Detaching an element leaves both sides consistent", "[dom][element]") {
   auto parent = MakeElement("div");
   auto first = MakeElement("span");
