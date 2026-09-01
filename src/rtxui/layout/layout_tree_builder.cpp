@@ -43,6 +43,59 @@ void ApplyTextTransform(std::string& text, TextTransform transform) {
   }
 }
 
+// Folds CR and CRLF into LF, and replaces every other control character with
+// U+FFFD.
+//
+// Text reaching layout comes from the application, and an application displays
+// text it did not write: a filename, a log line, something off the network. A
+// raw ESC in there is not a character, it is a command -- it repaints, moves
+// the cursor, changes colours the engine believes it owns, and on some
+// terminals sets the window title. Everything after it on that line is then
+// somewhere other than where the layout thinks, and the cell diff goes on
+// describing a screen that never existed. BEL rings, BS and DEL walk the
+// cursor backwards, and NUL/VT/FF are equally unwelcome.
+//
+// Only LF and TAB come out the other side, because layout gives those a
+// meaning of its own -- hard breaks and tab stops. Everything else becomes one
+// visible replacement character, which keeps the byte from reaching the
+// terminal while still showing that something was there, and costs exactly the
+// one cell the layout counted.
+void SanitizeControlCharacters(std::string& text) {
+  bool needs_work = false;
+  for (const unsigned char c : text) {
+    if ((c < 0x20 && c != '\n' && c != '\t') || c == 0x7f) {
+      needs_work = true;
+      break;
+    }
+  }
+  if (!needs_work) {
+    return;
+  }
+  static constexpr std::string_view kReplacement = "\xef\xbf\xbd";  // U+FFFD
+  std::string result;
+  result.reserve(text.size());
+  for (size_t i = 0; i < text.size(); ++i) {
+    const unsigned char c = text[i];
+    if (c == '\r') {
+      // A segment break either way, as CSS has it; CRLF is one of them.
+      if (i + 1 < text.size() && text[i + 1] == '\n') {
+        ++i;
+      }
+      result += '\n';
+      continue;
+    }
+    // DEL sits just above the control block rather than inside it.
+    if (c < 0x20 || c == 0x7f) {
+      result += kReplacement;
+      continue;
+    }
+    // Bytes at or above 0x80 are part of a UTF-8 sequence and pass through
+    // untouched along with the rest of it.
+    result += static_cast<char>(c);
+  }
+  text = std::move(result);
+}
+
 // white-space: normal | nowrap render newlines as plain spaces. (Template
 // text keeps its newlines in the DOM; the conversion is style-driven here.)
 // Tabs go the same way: CSS treats them as collapsible whitespace in these
@@ -235,6 +288,9 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     auto text_node = static_cast<TextElement*>(dom_node);
     box->is_text = true;
     box->text_data = text_node->text();
+    // Before anything measures or transforms it: what follows counts cells,
+    // and a control character is not one.
+    SanitizeControlCharacters(box->text_data);
     ApplyTextTransform(box->text_data, resolved.text_transform);
     switch (resolved.white_space) {
       case WhiteSpace::Normal:
