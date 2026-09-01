@@ -685,6 +685,43 @@ TEST_CASE("Extreme CSS numbers are bounded", "[style][limits]") {
     CHECK(*style.letter_spacing > 0);
   }
 
+  SECTION("the shorthands that parse their own numbers clamp too") {
+    // `border` and the grid spans reach from_chars directly rather than going
+    // through StoI, so they used to keep values the rest of the engine bounds.
+    // A shorthand and its longhand disagreeing about the same number is the
+    // part that makes it a bug rather than a missing limit.
+    rtxui::ComputedStyle shorthand;
+    rtxui::ApplyStyle(shorthand, {"border", "1000000000"});
+    rtxui::ComputedStyle longhand;
+    rtxui::ApplyStyle(longhand, {"border-width", "1000000000"});
+    CHECK(shorthand.border.top == longhand.border.top);
+    CHECK(shorthand.border.top < 1000000000);
+
+    // Past INT_MAX it used to parse as nothing at all and leave the border
+    // untouched, which reads as "no border" rather than "a very thick one".
+    rtxui::ComputedStyle enormous;
+    rtxui::ApplyStyle(enormous, {"border", "99999999999999999999"});
+    CHECK(enormous.border.top == shorthand.border.top);
+
+    rtxui::ComputedStyle span;
+    rtxui::ApplyStyle(span, {"grid-column", "span 2000000000"});
+    CHECK(span.grid_column_span < 2000000000);
+  }
+
+  SECTION("the border shorthand still tells a keyword from a number") {
+    // The strictness is load-bearing: `border: solid` must not read as a
+    // width of zero, which is why the number is only accepted when it is the
+    // whole value.
+    rtxui::ComputedStyle keyword;
+    rtxui::ApplyStyle(keyword, {"border", "solid"});
+    CHECK(keyword.border.top == 1);
+    CHECK(keyword.border_style == rtxui::BorderStyle::Solid);
+
+    rtxui::ComputedStyle number;
+    rtxui::ApplyStyle(number, {"border", "2"});
+    CHECK(number.border.top == 2);
+  }
+
   SECTION("ordinary values are untouched") {
     CHECK(width_of("40") == 40);
     CHECK(width_of("0") == 0);
