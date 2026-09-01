@@ -1101,6 +1101,27 @@ constexpr std::array<WordBreakPropertyInterval, 993> g_word_break_intervals = {{
     {0xE0100, 0xE01EF, WBP::Extend},
 }};
 
+// Format characters a terminal draws in no cells at all.
+//
+// They are not Grapheme_Extend, so the combining table above does not cover
+// them, and each was counted as one cell -- a cell the terminal never draws.
+// Everything after one on the line then sits a column further left on the real
+// screen than the layout believes, and the cell diff goes on describing a
+// screen that is one column out for every occurrence. These arrive in ordinary
+// text: a zero-width space from a copied web page, a bidi mark in a filename,
+// a byte-order mark at the front of a file.
+//
+// The set is the one wcwidth uses. Kept in ascending order: Bisearch is a
+// binary search over it.
+constexpr std::array<Interval, 6> g_zero_width_format_characters = {{
+    {0x0200b, 0x0200f},  // zero-width space/non-joiner/joiner, LRM, RLM
+    {0x0202a, 0x0202e},  // bidi embeddings, overrides and pop
+    {0x02060, 0x02064},  // word joiner and the invisible operators
+    {0x02066, 0x02069},  // bidi isolates
+    {0x0feff, 0x0feff},  // zero-width no-break space, i.e. the BOM
+    {0x0fff9, 0x0fffb},  // interlinear annotation marks
+}};
+
 // Construct table of just WBP::Extend character intervals
 constexpr auto g_extend_characters{[]() constexpr {
   // Compute number of extend character intervals
@@ -1333,6 +1354,10 @@ bool IsCombining(uint32_t ucs) {
   return Bisearch(ucs, g_extend_characters);
 }
 
+bool IsZeroWidthFormat(uint32_t ucs) {
+  return Bisearch(ucs, g_zero_width_format_characters);
+}
+
 bool IsFullWidth(uint32_t ucs) {
   if (ucs < 0x0300) {  // Quick path: // NOLINT
     return false;
@@ -1497,6 +1522,8 @@ void GraphemeIterator::NextSlow() {
   if (IsControl(codepoint)) {
     width = 0;
   } else if (IsCombining(codepoint)) {
+    width = 0;
+  } else if (IsZeroWidthFormat(codepoint)) {
     width = 0;
   } else if (IsFullWidth(codepoint)) {
     width = 2;
