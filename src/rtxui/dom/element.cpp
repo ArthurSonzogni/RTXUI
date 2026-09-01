@@ -384,9 +384,31 @@ Element::~Element() {
 }
 
 void Element::AddChild(Ref<Element> child) {
-  assert(child->parent_ == nullptr);
+  // Reconciliation reuses elements, and one can still be attached where it was
+  // last frame: a nested component's root that moved between slots reaches
+  // here with a parent, because the caller only searched *this* slot for it
+  // before deciding it was unattached. Asserting caught that in a debug build
+  // and did nothing in a release one, where the element then sat in two
+  // parents' child lists at once -- rendered twice, and destroyed by whichever
+  // parent went first. `child` is held by value, so dropping the old parent's
+  // reference cannot destroy it here.
+  child->DetachFromParent();
   child->parent_ = this;
   children_.push_back(std::move(child));
+}
+
+void Element::DetachFromParent() {
+  if (!parent_) {
+    return;
+  }
+  auto& siblings = parent_->children_;
+  for (auto it = siblings.begin(); it != siblings.end(); ++it) {
+    if (it->get() == this) {
+      siblings.erase(it);
+      break;
+    }
+  }
+  parent_ = nullptr;
 }
 
 void Element::RemoveChildren() {

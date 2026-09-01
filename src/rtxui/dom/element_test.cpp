@@ -254,6 +254,47 @@ TEST_CASE("Element scroll offsets follow the documented clamping contract",
   }
 }
 
+TEST_CASE("Adding an already-attached element moves it", "[dom][element]") {
+  // Reconciliation reuses elements, and hands one back still attached where it
+  // was last frame -- a nested component's root that moved between slots is
+  // the case that turned up in practice, because the caller only searches the
+  // slot it is filling before deciding the element is unattached. An element
+  // in two parents' child lists is rendered twice and destroyed by whichever
+  // parent goes first, so attaching has to detach.
+  auto first = MakeElement("div");
+  auto second = MakeElement("div");
+  auto child = MakeElement("code");
+
+  first->AddChild(child);
+  REQUIRE(first->ChildCount() == 1);
+  REQUIRE(child->Parent() == first.get());
+
+  second->AddChild(child);
+  CHECK(second->ChildCount() == 1);
+  CHECK(second->ChildAt(0) == child.get());
+  CHECK(child->Parent() == second.get());
+  // And it is gone from where it was, rather than living in both.
+  CHECK(first->ChildCount() == 0);
+}
+
+TEST_CASE("Detaching an element leaves both sides consistent", "[dom][element]") {
+  auto parent = MakeElement("div");
+  auto first = MakeElement("span");
+  auto second = MakeElement("span");
+  parent->AddChild(first);
+  parent->AddChild(second);
+
+  first->DetachFromParent();
+  CHECK(first->Parent() == nullptr);
+  CHECK(parent->ChildCount() == 1);
+  CHECK(parent->ChildAt(0) == second.get());
+
+  // Detaching something already detached is a no-op, not a crash.
+  first->DetachFromParent();
+  CHECK(first->Parent() == nullptr);
+  CHECK(parent->ChildCount() == 1);
+}
+
 TEST_CASE("Element interaction flags default to false", "[dom][element]") {
   auto element = MakeElement("div");
   CHECK_FALSE(element->focused());
