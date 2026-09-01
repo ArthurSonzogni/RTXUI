@@ -141,7 +141,15 @@ class RTXUI_EXPORT Element : public RefCounted {
   Element(Element&&) = default;
   Element& operator=(Element&&) = default;
 
+  /// Attaches `child`, detaching it from its current parent first if it has
+  /// one. Reconciliation can hand back an element that is still where it was
+  /// last frame -- a nested component's root that moved from one slot to
+  /// another, say -- and the alternative to detaching is an element sitting in
+  /// two parents' child lists at once.
   void AddChild(Ref<Element> child);
+  /// Removes this element from its parent's child list, if it has a parent.
+  /// The caller must hold a reference: this can drop the parent's.
+  void DetachFromParent();
   void RemoveChildren();
   void ReplaceChild(size_t index, Ref<Element> new_child);
   void MoveChild(size_t from, size_t to);
