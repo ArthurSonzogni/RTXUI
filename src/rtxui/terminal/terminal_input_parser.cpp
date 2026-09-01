@@ -3,7 +3,8 @@
 // the LICENSE file.
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
-#include <cstdint>  // for uint32_t
+#include <algorithm>  // for std::min
+#include <cstdint>    // for uint32_t
 #include <map>
 #include <memory>    // for unique_ptr, allocator
 #include <optional>  // for std::optional
@@ -448,8 +449,16 @@ TerminalInputParser::Output TerminalInputParser::ParseCSI() {
       }
     }
     if (Current() >= '0' && Current() <= '9') {
-      argument *= 10;
-      argument += Current() - '0';
+      // Saturating. These bytes arrive from outside the process -- a terminal
+      // reply, or anything else with the tty open -- so a long enough run of
+      // digits must not be allowed to overflow, which is undefined behaviour
+      // rather than a wrapped parameter. A CSI parameter is a coordinate or a
+      // count, so the cap is already far outside any terminal.
+      constexpr int kMaxArgument = 1000000;
+      if (argument < kMaxArgument) {
+        argument = argument * 10 + (Current() - '0');
+        argument = std::min(argument, kMaxArgument);
+      }
       continue;
     }
     if (Current() == ';') {
