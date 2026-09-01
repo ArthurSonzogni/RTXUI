@@ -3800,6 +3800,68 @@ class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
                           "</style>";
 };
 
+class SharedSheetA : public rtxui::Component<SharedSheetA> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<SharedSheetA>::InitReflection();
+  }
+  std::string_view view = R"(<div id="x">x</div><style>#x { padding-left: 3; }</style>)";
+};
+
+class SharedSheetB : public rtxui::Component<SharedSheetB> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<SharedSheetB>::InitReflection();
+  }
+  // Deliberately a different stylesheet with the same selector, so a cache
+  // that keyed or shared wrongly would show up as B being styled like A.
+  std::string_view view = R"(<div id="x">x</div><style>#x { padding-left: 9; }</style>)";
+};
+
+TEST_CASE("Components sharing a stylesheet keep their own styles",
+          "[component][css]") {
+  // A component's parsed stylesheet is shared between every instance
+  // declaring the same text, since the built-in tags are components too and an
+  // interface repeats the same handful of them thousands of times. Sharing
+  // must not let one component's rules reach another's.
+  auto first = rtxui::Ref<SharedSheetA>::New();
+  auto other = rtxui::Ref<SharedSheetB>::New();
+  auto second = rtxui::Ref<SharedSheetA>::New();
+  first->Mount();
+  other->Mount();
+  second->Mount();
+
+  auto padding = [](auto& app) {
+    auto* element = app->Root()->QuerySelector("#x");
+    REQUIRE(element != nullptr);
+    return element->style.padding.left;
+  };
+
+  SECTION("two instances of the same component are both styled") {
+    CHECK(padding(first) == 3);
+    CHECK(padding(second) == 3);
+  }
+
+  SECTION("a different stylesheet is not confused with a shared one") {
+    CHECK(padding(other) == 9);
+  }
+
+  SECTION("a stylesheet with no live user is re-parsed correctly") {
+    // The cache holds its entries weakly, so the parsed sheet goes away with
+    // its last user, and the next instance builds it again from scratch.
+    {
+      auto only = rtxui::Ref<SharedSheetB>::New();
+      only->Mount();
+      CHECK(padding(only) == 9);
+    }
+    auto later = rtxui::Ref<SharedSheetB>::New();
+    later->Mount();
+    CHECK(padding(later) == 9);
+  }
+}
+
 class TwoStyleBlocksComponent
     : public rtxui::Component<TwoStyleBlocksComponent> {
  public:
