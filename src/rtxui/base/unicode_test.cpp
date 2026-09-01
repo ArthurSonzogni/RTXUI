@@ -113,6 +113,31 @@ TEST_CASE("IsFullWidth", "[unicode]") {
   CHECK_FALSE(IsFullWidth(0x00E9));
 }
 
+// --- StripIndent ---
+
+TEST_CASE("StripIndent is idempotent", "[unicode][string]") {
+  // Mount() relies on this: Template() strips the view once, and stripping the
+  // result again used to be done anyway -- two splits into lines and a rebuilt
+  // string, per component instance. Removing that second call is only correct
+  // because a second pass cannot change anything.
+  const auto twice = [](std::string_view text) {
+    return StripIndent(StripIndent(text));
+  };
+
+  const std::string_view indented =
+      "\n    <div>\n      <span>x</span>\n    </div>\n  ";
+  CHECK(StripIndent(indented) == twice(indented));
+
+  // The shapes that could make a second pass behave differently: an unindented
+  // first line, blank lines among indented ones, tabs, and nothing at all.
+  const std::string_view ragged = "top\n    indented\n\n        more\n";
+  CHECK(StripIndent(ragged) == twice(ragged));
+  const std::string_view blanks = "    a\n\n    \n    b\n";
+  CHECK(StripIndent(blanks) == twice(blanks));
+  CHECK(StripIndent("") == twice(""));
+  CHECK(StripIndent("one line") == twice("one line"));
+}
+
 // --- string_width ---
 
 TEST_CASE("string_width.ASCII", "[unicode]") {

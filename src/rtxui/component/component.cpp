@@ -1612,7 +1612,11 @@ std::string_view ComponentBase::Template() {
 void ComponentBase::Mount() {
   InitReflection();
   template_ = Template();
-  xml_string_ = StripIndent(template_);
+  // Template() has already stripped it. Running StripIndent again finds a
+  // minimum indent of zero and changes nothing, but still splits the text into
+  // lines twice and rebuilds it -- per component instance, so an interface
+  // made of many copies of the same component pays for it every time.
+  xml_string_ = template_;
 
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
   if (!nodes) {
@@ -2878,7 +2882,7 @@ void ComponentBase::EnableHotReload(std::string_view view_var_name, std::string_
 
 void ComponentBase::HotReload(std::string_view new_template) {
   template_ = StripIndent(std::string(new_template));
-  xml_string_ = StripIndent(template_);
+  xml_string_ = template_;  // Already stripped, see Mount().
 
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
   if (!nodes) {
