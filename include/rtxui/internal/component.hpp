@@ -172,8 +172,11 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   std::vector<RangeEntry> range_entries_;
 
  protected:
-  std::unique_ptr<css::StyleSheet> stylesheet_;
-  std::unique_ptr<CategorizedRules> categorized_rules_;
+  // Shared with every other instance declaring the same stylesheet text; see
+  // GetSharedStyle. Aliasing pointers into one StyleData, so both keep it
+  // alive and the index's pointers into the sheet stay valid.
+  std::shared_ptr<const css::StyleSheet> stylesheet_;
+  std::shared_ptr<const CategorizedRules> categorized_rules_;
   std::vector<std::string> css_strings_;
   std::vector<BindingLink> two_way_bindings_;
   int last_render_terminal_width_ = -1;
