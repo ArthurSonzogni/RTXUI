@@ -36,6 +36,15 @@ import time
 # whole sweep stays under a minute.
 STARTUP_SECONDS = 1.2
 COLUMNS, ROWS = 100, 30
+# Sizes to resize to part way through, in order, ending back at the size the
+# example started with. A terminal resize is the one input that invalidates the
+# whole layout rather than a corner of it, and it arrives asynchronously as
+# SIGWINCH, so it is worth doing while the example is mid-burst rather than
+# while it is idle. Degenerate first: the arithmetic that clamps and divides
+# for scrollbars, flex and grid tracks is where a viewport far too small to
+# hold the interface shows up. Kept to two steps because each one costs the
+# whole sweep a second per example.
+RESIZE_STEPS = ((1, 1), (100, 30))
 # A first frame is at minimum a few escape sequences plus content; anything
 # this small means the app died before drawing.
 MIN_FRAME_BYTES = 20
@@ -46,6 +55,10 @@ MIN_FRAME_BYTES = 20
 # they redraw the whole time, so silence is a far better signal that they are
 # done than any timeout picked in advance.
 QUIET_SECONDS = 0.4
+# How long to read between resize steps. Short on purpose -- the next step
+# should land while the example is still busy -- and kept to a minimum because
+# it is paid 53 times over, twice per resize step.
+STEP_SECONDS = 0.2
 # Ceiling on that wait, so an example that genuinely never settles still fails
 # rather than stalling the sweep.
 INPUT_SECONDS_MAX = 25.0
@@ -66,6 +79,12 @@ def _mouse(button, column, row, pressed=True):
     """One SGR mouse report. Coordinates are 1-based, as the protocol has them."""
     return b"\x1b[<%d;%d;%d%s" % (button, column, row,
                                   b"M" if pressed else b"m")
+
+
+def _set_size(fd, columns, rows):
+    """Resizes the PTY, which sends SIGWINCH to the example."""
+    fcntl.ioctl(fd, termios.TIOCSWINSZ,
+                struct.pack("HHHH", rows, columns, 0, 0))
 
 
 def _input_burst():
@@ -167,7 +186,7 @@ def run_one(program):
         finally:
             os._exit(127)
 
-    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", ROWS, COLUMNS, 0, 0))
+    _set_size(fd, COLUMNS, ROWS)
 
     def drain(seconds):
         collected = b""
@@ -207,11 +226,26 @@ def run_one(program):
 
     # An example that quits on its own input (or on a click) is not a failure,
     # so a write to a closed PTY is not either.
+    output = first_frame
     try:
         os.write(fd, _input_burst())
+        # Resize and re-drive without letting the example settle in between.
+        # Landing a resize on an interface that is still working through a
+        # burst is the whole point: it throws the layout away mid-interaction,
+        # with a drag in flight, which is what holds an element across frames.
+        # Waiting for quiet between steps hides exactly that -- it was tried,
+        # and the sweep stopped reproducing a DOM assertion that this ordering
+        # trips reliably.
+        for columns, rows in RESIZE_STEPS:
+            _set_size(fd, columns, rows)
+            output += drain(STEP_SECONDS)
+            os.write(fd, _input_burst())
+            output += drain(STEP_SECONDS)
     except OSError:
         pass
-    output = first_frame + drain_until_quiet()
+    # Settle only at the end, so a crash the sequence provoked has happened
+    # before the example is asked to quit.
+    output += drain_until_quiet()
 
     status = _reap(pid, fd)
     try:
