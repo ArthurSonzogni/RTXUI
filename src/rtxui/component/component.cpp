@@ -2773,6 +2773,28 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               slot_el->TruncateChildren(selected_idx);
             }
 
+            // A <template.x> that stopped being rendered -- one inside an
+            // <if> that turned false, say -- leaves its content behind in the
+            // slot it filled. Nothing else empties that slot: the pass below
+            // only writes the templates it actually finds, and truncates to
+            // what it wrote in the slot it wrote to. The components behind the
+            // abandoned content are released a few lines further down, so the
+            // stale elements were left pointing at freed memory.
+            //
+            // Emptying every named slot the loop above did not fill makes the
+            // pass below the only source of their content, so a template that
+            // disappears takes its content with it.
+            for (const auto& [named, named_slot] : child->slots()) {
+              if (named.empty() || !named_slot) {
+                continue;
+              }
+              const std::string* selected = named_slot->GetAttribute("select");
+              if (selected && !selected->empty()) {
+                continue;  // Already reconciled and truncated above.
+              }
+              named_slot->TruncateChildren(0);
+            }
+
             SlotFilter default_filter;
             default_filter.claimed = &claimed;
             size_t sub_child_idx = 0;

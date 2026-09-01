@@ -3800,6 +3800,95 @@ class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
                           "</style>";
 };
 
+class SlotCard : public rtxui::Component<SlotCard> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<SlotCard>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <div>H<slot.header></slot.header></div>
+      <div>B<slot></slot></div>
+      <div>F<slot.footer></slot.footer></div>
+    </div>
+  )";
+};
+
+class ConditionalTemplateComponent
+    : public rtxui::Component<ConditionalTemplateComponent> {
+ public:
+  bool with_header = true;
+  bool with_footer = false;
+  void InitReflection() override {
+    Bind(with_header);
+    Bind(with_footer);
+    Import<SlotCard>();
+    Import<rtxui::span>();
+    rtxui::Component<ConditionalTemplateComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <SlotCard>
+      <if condition="{with_header}">
+        <template.header><span>HEAD</span></template.header>
+      </if>
+      <span>BODY</span>
+      <if condition="{with_footer}">
+        <template.footer><span>FOOT</span></template.footer>
+      </if>
+    </SlotCard>
+  )";
+};
+
+TEST_CASE("A template that stops rendering takes its slot content with it",
+          "[component][slot]") {
+  // A <template.x> inside a condition that turns false used to leave its
+  // content in the slot: nothing emptied it, since the pass that fills slots
+  // only truncates the ones it writes to. The components behind that content
+  // are released in the same reconcile, so what stayed behind was pointing at
+  // freed memory -- a crash under a sanitizer, and silently stale otherwise.
+  auto app = rtxui::Ref<ConditionalTemplateComponent>::New();
+  app->Mount();
+  app->Digest();
+
+  auto text = [&]() {
+    std::string out;
+    app->Root()->Visit([&out](rtxui::Element& element) {
+      if (element.is_text()) {
+        out += static_cast<rtxui::TextElement&>(element).text();
+      }
+    });
+    return out;
+  };
+
+  SECTION("content appears in the named slot it targets") {
+    CHECK(text() == "HHEADBBODYF");
+  }
+
+  SECTION("a second named slot fills independently") {
+    app->with_footer = true;
+    app->Digest();
+    CHECK(text() == "HHEADBBODYFFOOT");
+  }
+
+  SECTION("a template that disappears removes its content") {
+    app->with_footer = true;
+    app->Digest();
+    app->with_header = false;
+    app->Digest();
+    CHECK(text() == "HBBODYFFOOT");
+  }
+
+  SECTION("and it comes back when the condition does") {
+    app->with_header = false;
+    app->Digest();
+    app->with_header = true;
+    app->with_footer = true;
+    app->Digest();
+    CHECK(text() == "HHEADBBODYFFOOT");
+  }
+}
+
 class NestedLoopComponent : public rtxui::Component<NestedLoopComponent> {
  public:
   std::vector<std::string> outer{"a", "b"};
