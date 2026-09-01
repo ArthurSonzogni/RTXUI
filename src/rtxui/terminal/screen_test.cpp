@@ -431,6 +431,84 @@ TEST_CASE("Malformed UTF-8 in text is replaced, not emitted",
   }
 }
 
+namespace {
+class HandlerArgComponent : public Component<HandlerArgComponent> {
+ public:
+  std::vector<std::string> items{"alpha", "beta", "gamma"};
+  std::string log;
+  void Pick(std::string which) { log += "[" + which + "]"; }
+  void Plain() { log += "(plain)"; }
+  void InitReflection() override {
+    Bind(items);
+    Bind(log);
+    Bind(Pick);
+    Bind(Plain);
+    Import<rtxui::div>();
+    Component<HandlerArgComponent>::InitReflection();
+  }
+  // A custom raw-string delimiter is needed: `onclick="Pick({$index})">`
+  // contains the )" that would end a plain R"( ... )".
+  std::string_view view = R"html(
+    <div>
+      <for each="{items}" as="it">
+        <div onclick="Pick({$index})">{it}</div>
+      </for>
+      <div onclick="Pick(literal)">lit</div>
+      <div onclick="Plain">plain</div>
+    </div>
+  )html";
+};
+}  // namespace
+
+TEST_CASE("A click handler receives its argument", "[terminal][mouse][for]") {
+  // `onclick="Fn({$index})"` is the documented way to tell rows of a loop
+  // apart, and what example/app_dashboard.cpp uses, but almost nothing
+  // exercised it.
+  auto app = Ref<HandlerArgComponent>::New();
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(40, 12);
+  Screen screen(app, device);
+  screen.Draw();
+
+  auto click_row = [&](int row) {
+    app->log.clear();
+    device->PushInput(PressAt(1, row));
+    screen.Step();
+    return app->log;
+  };
+
+  SECTION("each row of a loop passes its own index") {
+    CHECK(click_row(0) == "[0]");
+    CHECK(click_row(1) == "[1]");
+    CHECK(click_row(2) == "[2]");
+  }
+
+  SECTION("a literal argument arrives as written") {
+    CHECK(click_row(3) == "[literal]");
+  }
+
+  SECTION("a handler named without parentheses takes none") {
+    CHECK(click_row(4) == "(plain)");
+  }
+
+  SECTION("the indices follow the collection when it changes") {
+    // The interesting direction: an index interpolated into the handler when
+    // the row was built would go stale here, and the wrong item would be
+    // picked -- silently, since the click still lands on a row.
+    app->items = {"only"};
+    app->Digest();
+    screen.Draw();
+    CHECK(click_row(0) == "[0]");
+    CHECK(click_row(1) == "[literal]");  // The list shrank; rows moved up.
+
+    app->items = {"a", "b", "c", "d"};
+    app->Digest();
+    screen.Draw();
+    CHECK(click_row(3) == "[3]");
+    CHECK(click_row(4) == "[literal]");
+  }
+}
+
 TEST_CASE("Screen.ClickBurstHitTestsTheCurrentLayout", "[terminal][mouse]") {
   // Two presses arriving together. The first runs a handler that removes an
   // element, so reconciliation destroys it -- and the batch flag would
