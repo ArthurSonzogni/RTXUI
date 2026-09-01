@@ -217,9 +217,11 @@ if(RTXUI_BUILD_TESTS)
                 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/smoke_examples.py"
                 "$<TARGET_FILE_DIR:rtxui_example_demo>"
       )
-      # Each example gets a PTY and a second to draw; the default 1500s is far
-      # more than the sweep needs, but the per-example cost adds up.
-      set_tests_properties(smoke_examples PROPERTIES TIMEOUT 300)
+      # Each example gets a PTY, a second to draw, and a burst of input to
+      # survive. Release finishes in about a minute; the sanitizer build takes
+      # twice that, because the heaviest examples need ten seconds apiece just
+      # to work through the burst.
+      set_tests_properties(smoke_examples PROPERTIES TIMEOUT 600)
     endif()
 
     # Verify each public header compiles on its own. Most valuable where the
