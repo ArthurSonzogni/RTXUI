@@ -23,8 +23,25 @@ cell it is counted as. Newline and tab survive because layout gives them a
 meaning of its own -- a hard break and a [tab stop](/guide/css/typography). A
 carriage return becomes a line break, as CSS treats it.
 
-Nothing is required of you to get this: it applies to every string a template
-interpolates, whatever its source.
+## Malformed Text
+
+Byte sequences that are not valid UTF-8 are replaced the same way, one `U+FFFD`
+per bad byte. This is not pedantry about encodings: the engine and the terminal
+have to agree on how many cells a sequence occupies, and they can only agree
+about sequences that can actually be decoded.
+
+The sharpest case is a truncated one. A lead byte announces how many bytes
+follow it, so `E4 BD` at the end of a string claims a third byte that is not
+there and takes whatever comes next instead -- the character after it is
+absorbed and simply disappears from the display. Replacing per byte rather than
+per sequence is what keeps the following character intact.
+
+Valid text is never touched, including the parts of Unicode that are easy to
+mistake for damage: wide characters, combining marks, zero-width characters and
+four-byte code points all pass through as written.
+
+Nothing is required of you to get any of this: it applies to every string a
+template interpolates, whatever its source.
 
 ## Layout Alignment
 
