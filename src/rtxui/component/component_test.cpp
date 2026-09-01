@@ -3800,6 +3800,91 @@ class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
                           "</style>";
 };
 
+class NestedLoopComponent : public rtxui::Component<NestedLoopComponent> {
+ public:
+  std::vector<std::string> outer{"a", "b"};
+  std::vector<std::string> inner{"1", "2", "3"};
+  bool show = true;
+  void InitReflection() override {
+    Bind(outer);
+    Bind(inner);
+    Bind(show);
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<NestedLoopComponent>::InitReflection();
+  }
+  // The inner loop reads the outer loop's variable as well as its own, and
+  // both use $index -- so a $index that leaked between scopes, or an outer
+  // variable that did not reach the inner body, shows up in the text.
+  std::string_view view = R"(
+    <div id="root">
+      <for each="{outer}" as="o">
+        <span>[{o}:{$index}]</span>
+        <for each="{inner}" as="i">
+          <span>({o}-{i}-{$index})</span>
+        </for>
+      </for>
+      <if condition="{show}">
+        <for each="{inner}" as="k"><span>{k}</span></for>
+      </if>
+    </div>
+  )";
+};
+
+TEST_CASE("Nested loops keep their own variable and index",
+          "[component][for]") {
+  auto app = rtxui::Ref<NestedLoopComponent>::New();
+  app->Mount();
+  app->Digest();
+
+  auto text = [&]() {
+    std::string out;
+    app->Root()->Visit([&out](rtxui::Element& element) {
+      if (element.is_text()) {
+        out += static_cast<rtxui::TextElement&>(element).text();
+      }
+    });
+    return out;
+  };
+
+  SECTION("each loop indexes itself, from zero") {
+    CHECK(text() ==
+          "[a:0](a-1-0)(a-2-1)(a-3-2)[b:1](b-1-0)(b-2-1)(b-3-2)123");
+  }
+
+  SECTION("an empty collection yields nothing and leaves the rest alone") {
+    app->inner.clear();
+    app->Digest();
+    // Both the inner loops and the one inside the <if> go, the outer stays.
+    CHECK(text() == "[a:0][b:1]");
+  }
+
+  SECTION("a collection that empties and refills is rebuilt correctly") {
+    app->inner.clear();
+    app->Digest();
+    app->inner = {"9"};
+    app->Digest();
+    CHECK(text() == "[a:0](a-9-0)[b:1](b-9-0)9");
+
+    app->outer.clear();
+    app->Digest();
+    CHECK(text() == "9");
+
+    app->outer = {"x", "y", "z"};
+    app->inner = {"1", "2"};
+    app->Digest();
+    CHECK(text() ==
+          "[x:0](x-1-0)(x-2-1)[y:1](y-1-0)(y-2-1)[z:2](z-1-0)(z-2-1)12");
+  }
+
+  SECTION("a loop inside a condition disappears with it") {
+    app->show = false;
+    app->Digest();
+    CHECK(text() ==
+          "[a:0](a-1-0)(a-2-1)(a-3-2)[b:1](b-1-0)(b-2-1)(b-3-2)");
+  }
+}
+
 class SharedSheetA : public rtxui::Component<SharedSheetA> {
  public:
   void InitReflection() override {
