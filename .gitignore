@@ -54,3 +54,7 @@ bazel-*
 /docs/.vitepress/dist/
 /docs/.vitepress/cache/
 /docs/public/wasm/
+
+# Python bytecode from the helper scripts under scripts/.
+__pycache__/
+*.pyc
