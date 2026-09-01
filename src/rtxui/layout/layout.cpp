@@ -1330,6 +1330,22 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           place_opaque_box(grandchild.get());
         }
       }
+    } else if (child->style.display_outside == DisplayOutside::Block) {
+      // A block-level box in an inline formatting context takes a line of its
+      // own: the line before it is closed, and the next inline content starts
+      // below it. Without this it was placed like any atomic inline box and
+      // sat beside its siblings. Auto-width blocks hid that, because one fills
+      // the line and pushes the next onto a new one anyway -- it showed only
+      // once a block had a width narrow enough for two to fit side by side.
+      //
+      // Only display_outside == Block qualifies. The branch this splits off
+      // from also carries inline-block, tables, and inline boxes with padding
+      // or a border, all of which belong on the line they are on.
+      if (cursor_x > 0) {
+        commit_line();
+      }
+      place_opaque_box(child.get());
+      commit_line();
     } else {
       place_opaque_box(child.get());
     }

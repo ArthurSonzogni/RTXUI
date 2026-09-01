@@ -3781,6 +3781,96 @@ second</div>
   )";
 };
 
+class BlockInInlineComponent : public rtxui::Component<BlockInInlineComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    Import<rtxui::span>();
+    rtxui::Component<BlockInInlineComponent>::InitReflection();
+  }
+  // A component's own root is inline-level, so these sit in an inline
+  // formatting context -- which is the situation the widths expose. Each is
+  // narrow enough that two would fit side by side if nothing broke the line.
+  std::string_view view = R"(
+    <div class="ib">AA</div><div class="ib">BB</div>
+    <div class="blk">CC</div><div class="blk">DD</div>
+    <span class="pad">EE</span><span class="pad">FF</span>
+    <style>
+      .ib { display: inline-block; width: 4; }
+      .blk { display: block; width: 4; }
+      .pad { padding-left: 1; }
+    </style>
+  )";
+};
+
+TEST_CASE("A block in an inline context takes its own line",
+          "[component][layout]") {
+  // Block-level children were placed like atomic inline boxes, so two narrow
+  // ones shared a line. An auto-width block hid it: one fills the line and
+  // pushes the next down anyway, so it only showed once a block had a width
+  // small enough for two to fit.
+  auto container = rtxui::Ref<BlockInInlineComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {30, rtxui::MeasureMode::Exactly},
+      {10, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+  Texture texture(30, 10);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto row_text = [&](int y) {
+    std::string row;
+    for (int x = 0; x < texture.width(); ++x) {
+      row += texture[x, y].character;
+    }
+    while (!row.empty() && row.back() == ' ') {
+      row.pop_back();
+    }
+    while (!row.empty() && row.front() == ' ') {
+      row.erase(row.begin());
+    }
+    return row;
+  };
+  auto row_of = [&](std::string_view needle) {
+    for (int y = 0; y < texture.height(); ++y) {
+      if (row_text(y).find(needle) != std::string::npos) {
+        return y;
+      }
+    }
+    return -1;
+  };
+
+  SECTION("two block children never share a line") {
+    const int cc = row_of("CC");
+    const int dd = row_of("DD");
+    REQUIRE(cc != -1);
+    REQUIRE(dd != -1);
+    CHECK(cc != dd);
+  }
+
+  SECTION("inline-block children still do share one") {
+    CHECK(row_of("AA") == row_of("BB"));
+    CHECK(row_of("AA") != -1);
+  }
+
+  SECTION("inline children with padding still share one") {
+    CHECK(row_of("EE") == row_of("FF"));
+    CHECK(row_of("EE") != -1);
+  }
+
+  SECTION("a block breaks the line before it and after it") {
+    // The inline-blocks above it and the spans below it are on neither of the
+    // blocks' lines.
+    CHECK(row_of("AA") < row_of("CC"));
+    CHECK(row_of("DD") < row_of("EE"));
+  }
+}
+
 class EllipsisTestComponent : public rtxui::Component<EllipsisTestComponent> {
  public:
   void InitReflection() override {
@@ -3790,9 +3880,10 @@ class EllipsisTestComponent : public rtxui::Component<EllipsisTestComponent> {
   // Plain blocks, which is what a <div> is and what the property did nothing
   // on: the ellipsis check reads the style of the box running the inline flow,
   // and a block's text sits in an anonymous wrapper that was not given it.
-  // Wrapped in a block parent on purpose: a component's own root is
-  // inline-level by default, and a block child with a definite width does not
-  // break the line there, so these would sit side by side.
+  // Wrapped in a block parent so each block gets a row of its own to assert
+  // on. A component's own root is inline-level, and although a block child
+  // now breaks the line there too, reading rows is clearer with a real block
+  // container.
   std::string_view view = R"(
     <div id="wrap">
       <div class="e" id="over">abcdefghij</div>
