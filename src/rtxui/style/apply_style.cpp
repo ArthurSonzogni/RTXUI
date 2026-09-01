@@ -65,6 +65,37 @@ int StoI(std::string_view s) {
   return 0;
 }
 
+// An integer occupying the whole of `s`, or nothing.
+//
+// Unlike StoI this refuses trailing text, because the callers use that to tell
+// a number from a keyword: `border: solid` must not read as a width of zero.
+// It clamps exactly as StoI does -- these callers reach from_chars directly,
+// and the two must not disagree about what `border: 1000000000` and
+// `border-width: 1000000000` mean.
+std::optional<int> ParseWholeInt(std::string_view s) {
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+    s.remove_prefix(1);
+  }
+  while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
+    s.remove_suffix(1);
+  }
+  if (s.empty()) {
+    return std::nullopt;
+  }
+  int value = 0;
+  const auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+  if (ptr != s.data() + s.size()) {
+    return std::nullopt;  // Trailing text: a keyword, or a length with a unit.
+  }
+  if (ec == std::errc()) {
+    return std::clamp(value, -kMaxCssNumber, kMaxCssNumber);
+  }
+  if (ec == std::errc::result_out_of_range) {
+    return s.front() == '-' ? -kMaxCssNumber : kMaxCssNumber;
+  }
+  return std::nullopt;
+}
+
 std::vector<std::string_view> SplitWords(std::string_view s) {
   std::vector<std::string_view> words;
   while (!s.empty()) {
@@ -1256,22 +1287,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       }
       return;
     }
-    // Try to parse as a number for width
-    int bw = 0;
-    std::string_view s = v;
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
-      s.remove_prefix(1);
-    }
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
-      s.remove_suffix(1);
-    }
-    if (!s.empty()) {
-      auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), bw);
-      if (ec == std::errc() && ptr == s.data() + s.size()) {
-        style.border = {bw, bw, bw, bw};
-        style.border_style = BorderStyle::Solid;
-        return;
-      }
+    // Otherwise a width, if the value is a number and nothing else.
+    if (const auto bw = ParseWholeInt(v)) {
+      style.border = {*bw, *bw, *bw, *bw};
+      style.border_style = BorderStyle::Solid;
     }
     return;
   }
@@ -1653,11 +1672,8 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       auto parts = SplitWords(v);
       for (size_t i = 0; i < parts.size(); ++i) {
         if (parts[i] == "span" && i + 1 < parts.size()) {
-          std::string_view s = parts[i + 1];
-          int val = 1;
-          auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
-          if (ec == std::errc() && ptr == s.data() + s.size()) {
-            span = val;
+          if (const auto val = ParseWholeInt(parts[i + 1])) {
+            span = *val;
           }
           break;
         }
@@ -1688,11 +1704,8 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       auto parts = SplitWords(v);
       for (size_t i = 0; i < parts.size(); ++i) {
         if (parts[i] == "span" && i + 1 < parts.size()) {
-          std::string_view s = parts[i + 1];
-          int val = 1;
-          auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
-          if (ec == std::errc() && ptr == s.data() + s.size()) {
-            span = val;
+          if (const auto val = ParseWholeInt(parts[i + 1])) {
+            span = *val;
           }
           break;
         }
