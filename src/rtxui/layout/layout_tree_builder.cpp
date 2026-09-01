@@ -43,8 +43,64 @@ void ApplyTextTransform(std::string& text, TextTransform transform) {
   }
 }
 
-// Folds CR and CRLF into LF, and replaces every other control character with
-// U+FFFD.
+// The length of the well-formed UTF-8 sequence starting at `text[i]`, or 0 if
+// the bytes there are not one. The ranges are RFC 3629's, which is to say they
+// reject the encodings that are decodable but not legal: overlong forms, and
+// anything encoding a surrogate or a value past U+10FFFF.
+size_t Utf8SequenceLength(std::string_view text, size_t i) {
+  const auto byte = [&](size_t k) {
+    return static_cast<unsigned char>(text[k]);
+  };
+  const unsigned char lead = byte(i);
+  if (lead < 0x80) {
+    return 1;
+  }
+  const auto continuation = [&](size_t k, unsigned char low, unsigned char high) {
+    return i + k < text.size() && byte(i + k) >= low && byte(i + k) <= high;
+  };
+  if (lead >= 0xc2 && lead <= 0xdf) {
+    return continuation(1, 0x80, 0xbf) ? 2 : 0;
+  }
+  if (lead >= 0xe0 && lead <= 0xef) {
+    // E0 excludes overlong three-byte forms; ED excludes the surrogate range.
+    const unsigned char low = lead == 0xe0 ? 0xa0 : 0x80;
+    const unsigned char high = lead == 0xed ? 0x9f : 0xbf;
+    return (continuation(1, low, high) && continuation(2, 0x80, 0xbf)) ? 3 : 0;
+  }
+  if (lead >= 0xf0 && lead <= 0xf4) {
+    // F0 excludes overlong four-byte forms; F4 stops at U+10FFFF.
+    const unsigned char low = lead == 0xf0 ? 0x90 : 0x80;
+    const unsigned char high = lead == 0xf4 ? 0x8f : 0xbf;
+    return (continuation(1, low, high) && continuation(2, 0x80, 0xbf) &&
+            continuation(3, 0x80, 0xbf))
+               ? 4
+               : 0;
+  }
+  return 0;  // A lone continuation byte, C0/C1, or F5 and above.
+}
+
+// Whether `text` is something the terminal can be handed as it stands.
+bool IsTextSafeToEmit(std::string_view text) {
+  for (size_t i = 0; i < text.size();) {
+    const unsigned char c = static_cast<unsigned char>(text[i]);
+    if (c < 0x80) {
+      if ((c < 0x20 && c != '\n' && c != '\t') || c == 0x7f) {
+        return false;
+      }
+      ++i;
+      continue;
+    }
+    const size_t length = Utf8SequenceLength(text, i);
+    if (length == 0) {
+      return false;
+    }
+    i += length;
+  }
+  return true;
+}
+
+// Folds CR and CRLF into LF, and replaces every control character and every
+// malformed UTF-8 byte with U+FFFD.
 //
 // Text reaching layout comes from the application, and an application displays
 // text it did not write: a filename, a log line, something off the network. A
@@ -55,43 +111,56 @@ void ApplyTextTransform(std::string& text, TextTransform transform) {
 // describing a screen that never existed. BEL rings, BS and DEL walk the
 // cursor backwards, and NUL/VT/FF are equally unwelcome.
 //
+// Malformed UTF-8 is the same problem wearing different clothes. A truncated
+// lead byte makes the grapheme reader treat whatever follows as its
+// continuation, so `E4 BD` immediately before a `]` swallows the bracket and
+// the closing character simply disappears from the output. Beyond that, the
+// engine and the terminal have to agree on how many cells a byte sequence
+// occupies, and they can only agree about sequences that are actually valid.
+//
 // Only LF and TAB come out the other side, because layout gives those a
 // meaning of its own -- hard breaks and tab stops. Everything else becomes one
 // visible replacement character, which keeps the byte from reaching the
 // terminal while still showing that something was there, and costs exactly the
 // one cell the layout counted.
-void SanitizeControlCharacters(std::string& text) {
-  bool needs_work = false;
-  for (const unsigned char c : text) {
-    if ((c < 0x20 && c != '\n' && c != '\t') || c == 0x7f) {
-      needs_work = true;
-      break;
-    }
-  }
-  if (!needs_work) {
+void SanitizeText(std::string& text) {
+  if (IsTextSafeToEmit(text)) {
     return;
   }
   static constexpr std::string_view kReplacement = "\xef\xbf\xbd";  // U+FFFD
   std::string result;
   result.reserve(text.size());
-  for (size_t i = 0; i < text.size(); ++i) {
-    const unsigned char c = text[i];
+  for (size_t i = 0; i < text.size();) {
+    const unsigned char c = static_cast<unsigned char>(text[i]);
     if (c == '\r') {
       // A segment break either way, as CSS has it; CRLF is one of them.
       if (i + 1 < text.size() && text[i + 1] == '\n') {
         ++i;
       }
       result += '\n';
+      ++i;
       continue;
     }
-    // DEL sits just above the control block rather than inside it.
-    if (c < 0x20 || c == 0x7f) {
+    if (c < 0x80) {
+      // DEL sits just above the control block rather than inside it.
+      if (c < 0x20 ? (c != '\n' && c != '\t') : c == 0x7f) {
+        result += kReplacement;
+      } else {
+        result += static_cast<char>(c);
+      }
+      ++i;
+      continue;
+    }
+    const size_t length = Utf8SequenceLength(text, i);
+    if (length == 0) {
+      // One replacement per bad byte, and advance exactly one, so a truncated
+      // sequence cannot consume the character that follows it.
       result += kReplacement;
+      ++i;
       continue;
     }
-    // Bytes at or above 0x80 are part of a UTF-8 sequence and pass through
-    // untouched along with the rest of it.
-    result += static_cast<char>(c);
+    result.append(text, i, length);
+    i += length;
   }
   text = std::move(result);
 }
@@ -290,7 +359,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     box->text_data = text_node->text();
     // Before anything measures or transforms it: what follows counts cells,
     // and a control character is not one.
-    SanitizeControlCharacters(box->text_data);
+    SanitizeText(box->text_data);
     ApplyTextTransform(box->text_data, resolved.text_transform);
     switch (resolved.white_space) {
       case WhiteSpace::Normal:
