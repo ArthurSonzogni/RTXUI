@@ -6,6 +6,11 @@ RTXUI supports both **default slots** (for simple child wrapping) and **named sl
 
 ---
 
+Content written between a slot's own tags is its fallback: it is shown when the
+consumer projects nothing into that slot, and replaced as soon as they do. A
+slot that is filled and then emptied again -- because the content sat inside a
+condition that turned false, say -- goes back to showing its fallback.
+
 ## 1. Default Slots (`<slot>`)
 
 A default slot acts as a placeholder for any child element nested inside your custom component's tag.

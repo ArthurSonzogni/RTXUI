@@ -3800,6 +3800,85 @@ class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
                           "</style>";
 };
 
+class FallbackCard : public rtxui::Component<FallbackCard> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<FallbackCard>::InitReflection();
+  }
+  std::string_view view =
+      R"(<div><slot.header>DEFHEAD</slot.header>|<slot>DEFBODY</slot>|)"
+      R"(<slot.footer>DEFFOOT</slot.footer></div>)";
+};
+
+class NoProjection : public rtxui::Component<NoProjection> {
+ public:
+  void InitReflection() override {
+    Import<FallbackCard>();
+    rtxui::Component<NoProjection>::InitReflection();
+  }
+  std::string_view view = R"(<FallbackCard></FallbackCard>)";
+};
+
+class BodyProjection : public rtxui::Component<BodyProjection> {
+ public:
+  bool show = true;
+  void InitReflection() override {
+    Bind(show);
+    Import<FallbackCard>();
+    Import<rtxui::span>();
+    rtxui::Component<BodyProjection>::InitReflection();
+  }
+  std::string_view view =
+      R"(<FallbackCard><if condition="{show}"><span>BODY</span></if></FallbackCard>)";
+};
+
+TEST_CASE("A slot shows its own content when nothing is projected",
+          "[component][slot]") {
+  // The content between a slot's tags is its fallback. It was never rendered
+  // at all -- example/slots.cpp writes <slot.header>Default Header</slot.header>
+  // and that text never appeared.
+  auto text = [](auto& app) {
+    std::string out;
+    app->Root()->Visit([&out](rtxui::Element& element) {
+      if (element.is_text()) {
+        out += static_cast<rtxui::TextElement&>(element).text();
+      }
+    });
+    return out;
+  };
+
+  SECTION("a component used with no children shows every fallback") {
+    auto app = rtxui::Ref<NoProjection>::New();
+    app->Mount();
+    app->Digest();
+    CHECK(text(app) == "DEFHEAD|DEFBODY|DEFFOOT");
+  }
+
+  SECTION("projecting into one slot leaves the others' fallbacks alone") {
+    auto app = rtxui::Ref<BodyProjection>::New();
+    app->Mount();
+    app->Digest();
+    CHECK(text(app) == "DEFHEAD|BODY|DEFFOOT");
+  }
+
+  SECTION("content that goes away brings the fallback back") {
+    // The interesting direction: the slot has held projected content, so
+    // showing the fallback again means rendering it a second time rather than
+    // merely leaving it in place.
+    auto app = rtxui::Ref<BodyProjection>::New();
+    app->Mount();
+    app->Digest();
+    app->show = false;
+    app->Digest();
+    CHECK(text(app) == "DEFHEAD|DEFBODY|DEFFOOT");
+
+    app->show = true;
+    app->Digest();
+    CHECK(text(app) == "DEFHEAD|BODY|DEFFOOT");
+  }
+}
+
 class SlotCard : public rtxui::Component<SlotCard> {
  public:
   void InitReflection() override {

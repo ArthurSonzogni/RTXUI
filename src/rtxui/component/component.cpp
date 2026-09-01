@@ -2481,6 +2481,19 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           if (select_it != child_node.attributes.end()) {
             slot_element->SetAttribute("select", select_it->second);
           }
+          // The content between the slot's own tags is what shows when the
+          // consumer projects nothing. Rendered here so a component used with
+          // no children at all still shows it, and kept on the slot so the
+          // projection pass -- which runs later, and is the only place that
+          // knows whether anything was projected -- can put it back.
+          if (auto* as_slot = static_cast<SlotElement*>(slot_element.get());
+              !child_node.children.empty()) {
+            as_slot->set_fallback(child_node);
+            size_t fallback_idx = 0;
+            RenderReconcile(child_node, slot_element.get(), import_source,
+                            scope, fallback_idx, preserve_newlines);
+            slot_element->TruncateChildren(fallback_idx);
+          }
           import_source->slots_[slot_name] = slot_element;
           child_idx++;
           break;
@@ -2754,6 +2767,22 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             // what keeps a select-slot consistent when the consumer stops
             // providing a matching child: the slot is reconciled and truncated
             // every frame like any other.
+            // Puts a slot back to the content written between its own tags.
+            // Only the projection pass knows whether the consumer supplied
+            // anything, so this is where the fallback has to be decided; the
+            // copy on the slot is what makes it available this far from the
+            // template that declared it.
+            auto RestoreFallback = [&](const Ref<Element>& slot_el) {
+              auto* as_slot = static_cast<SlotElement*>(slot_el.get());
+              size_t fallback_idx = 0;
+              if (!as_slot->fallback().children.empty()) {
+                child->RenderReconcile(as_slot->fallback(), slot_el.get(),
+                                       child, nullptr, fallback_idx,
+                                       preserve_newlines);
+              }
+              slot_el->TruncateChildren(fallback_idx);
+            };
+
             std::vector<std::string> claimed;
             for (const auto& [selected_name, slot_el] : child->slots()) {
               if (selected_name.empty() || !slot_el) {
@@ -2770,7 +2799,11 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               child->RenderReconcile(child_node, slot_el.get(), import_source,
                                      scope, selected_idx, preserve_newlines,
                                      &only_filter);
-              slot_el->TruncateChildren(selected_idx);
+              if (selected_idx == 0) {
+                RestoreFallback(slot_el);
+              } else {
+                slot_el->TruncateChildren(selected_idx);
+              }
             }
 
             // A <template.x> that stopped being rendered -- one inside an
@@ -2792,7 +2825,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               if (selected && !selected->empty()) {
                 continue;  // Already reconciled and truncated above.
               }
-              named_slot->TruncateChildren(0);
+              RestoreFallback(named_slot);
             }
 
             SlotFilter default_filter;
@@ -2802,7 +2835,11 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                                    import_source, scope, sub_child_idx,
                                    preserve_newlines,
                                    claimed.empty() ? nullptr : &default_filter);
-            default_slot->TruncateChildren(sub_child_idx);
+            if (sub_child_idx == 0) {
+              RestoreFallback(default_slot);
+            } else {
+              default_slot->TruncateChildren(sub_child_idx);
+            }
 
             if (!needs_render) {
               child->old_children_.clear();
