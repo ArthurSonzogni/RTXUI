@@ -10,6 +10,8 @@
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <print>
 #include <string>
@@ -1602,6 +1604,123 @@ recurse:
 
 }  // namespace
 
+namespace {
+
+/// A component's parsed stylesheet and the index built over it.
+///
+/// The two travel together because the index holds `const Ruleset*` pointing
+/// into the vector: separating them would let one outlive the other.
+struct StyleData {
+  /// The CSS text the sheet is parsed from, owned here.
+  ///
+  /// A Declaration holds string_views into its source, so a parsed stylesheet
+  /// is only valid while that text lives. While each component owned its own
+  /// copy of both, their lifetimes matched by construction; sharing the sheet
+  /// broke that, and the sheet outlived the strings of whichever instance
+  /// happened to build it. Assigned once, before parsing, and never touched
+  /// again -- growing this vector would move the strings themselves, and a
+  /// short one keeps its characters inside the object rather than on the heap.
+  std::vector<std::string> sources;
+  css::StyleSheet sheet;
+  CategorizedRules rules;
+};
+
+/// Parses `css_strings` once per distinct stylesheet text, not once per
+/// component instance.
+///
+/// Every instance of a component declares the same `<style>` text, and the
+/// built-in tags are components too -- an interface of 50000 `<div>`s parsed
+/// `self { display: block; }` 50000 times, which showed up as ParseDeclaration
+/// and ParseRuleset in a profile of a template with no stylesheet of its own.
+///
+/// Held weakly, so the entry goes away with the last component using it rather
+/// than accumulating every stylesheet a hot-reloading session ever saw.
+std::shared_ptr<const StyleData> GetSharedStyle(
+    const std::vector<std::string>& css_strings) {
+  if (css_strings.empty()) {
+    return nullptr;
+  }
+
+  static std::mutex mutex;
+  static std::map<std::vector<std::string>, std::weak_ptr<const StyleData>>
+      cache;
+
+  const std::lock_guard<std::mutex> lock(mutex);
+  if (const auto it = cache.find(css_strings); it != cache.end()) {
+    if (auto existing = it->second.lock()) {
+      return existing;
+    }
+  }
+
+  auto data = std::make_shared<StyleData>();
+  data->sources = css_strings;
+  for (const auto& css_str : data->sources) {
+    auto parsed = css::Parse(css_str);
+    if (parsed) {
+      // Every block the component declares, concatenated in the order they
+      // appear. Each used to overwrite the last, so a component with two of
+      // them silently kept only the second. Document order is also what
+      // decides which of two equally specific rules wins.
+      for (auto& ruleset : parsed.value()) {
+        data->sheet.push_back(std::move(ruleset));
+      }
+    } else {
+      CssParseError(parsed.error(), css_str);
+    }
+  }
+  if (data->sheet.empty()) {
+    return nullptr;
+  }
+
+  // Categorised only once the vector is complete: the index below holds
+  // pointers into it, and appending afterwards could move every one of them.
+  {
+    const css::StyleSheet& sheet = data->sheet;
+    CategorizedRules& rules = data->rules;
+    for (const auto& ruleset : sheet) {
+      if (!ruleset.parsed_selector.pseudo_classes.empty()) {
+        rules.has_pseudo_classes = true;
+      }
+      if (!ruleset.parsed_selector.part.empty()) {
+        rules.part_rules.push_back(&ruleset);
+        rules.only_self_rules = false;
+        continue;
+      }
+      std::string_view selector_base = ruleset.parsed_selector.base;
+      std::string_view selector_id = ruleset.parsed_selector.id;
+
+      const bool is_bare_self =
+          selector_id.empty() && ruleset.parsed_selector.classes.empty() &&
+          selector_base == "self" &&
+          ruleset.parsed_selector.attributes.empty() &&
+          ruleset.parsed_selector.parents.empty();
+      if (!is_bare_self) {
+        rules.only_self_rules = false;
+      }
+
+      if (!selector_id.empty()) {
+        rules.by_id[selector_id].push_back(&ruleset);
+      } else if (!ruleset.parsed_selector.classes.empty()) {
+        rules.by_class[ruleset.parsed_selector.classes[0]].push_back(&ruleset);
+      } else if (selector_base == "self") {
+        rules.universal.push_back(&ruleset);
+      } else if (selector_base.empty()) {
+        rules.universal.push_back(&ruleset);
+      } else {
+        rules.by_tag[selector_base].push_back(&ruleset);
+      }
+    }
+
+  }
+
+  // Drop entries whose last user has gone before adding another.
+  std::erase_if(cache, [](const auto& entry) { return entry.second.expired(); });
+  cache[css_strings] = data;
+  return data;
+}
+
+}  // namespace
+
 std::string_view ComponentBase::Template() {
   if (template_.empty()) {
     template_ = StripIndent(std::string(GetView()));
@@ -1766,69 +1885,16 @@ void ComponentBase::Render() {
       root_->Visit([](Element& el) { el.ClearResolvedStyles(); });
     }
     css_strings_ = std::move(new_css_strings);
-    stylesheet_ = nullptr;
-    categorized_rules_ = nullptr;
-
-    // Every <style> block the component declares, concatenated in the order
-    // they appear. Each used to overwrite the last, so a component with two of
-    // them silently kept only the second -- and splitting a stylesheet in two,
-    // or putting an override below a base, is an ordinary thing to write.
-    // Document order is also what decides which of two equally specific rules
-    // wins, so appending is what makes the later one win.
-    //
-    // Built in full before anything is categorised: the categories below hold
-    // pointers into this vector, and appending to it afterwards could move
-    // every one of them.
-    auto combined = std::make_unique<css::StyleSheet>();
-    for (const auto& css_str : css_strings_) {
-      auto maybe_stylesheet = css::Parse(css_str);
-      if (maybe_stylesheet) {
-        for (auto& ruleset : maybe_stylesheet.value()) {
-          combined->push_back(std::move(ruleset));
-        }
-      } else {
-        CssParseError(maybe_stylesheet.error(), css_str);
-      }
-    }
-
-    if (!combined->empty()) {
-      stylesheet_ = std::move(combined);
-      categorized_rules_ = std::make_unique<CategorizedRules>();
-      {
-        for (const auto& ruleset : *stylesheet_) {
-          if (!ruleset.parsed_selector.pseudo_classes.empty()) {
-            categorized_rules_->has_pseudo_classes = true;
-          }
-          if (!ruleset.parsed_selector.part.empty()) {
-            categorized_rules_->part_rules.push_back(&ruleset);
-            categorized_rules_->only_self_rules = false;
-            continue;
-          }
-          std::string_view selector_base = ruleset.parsed_selector.base;
-          std::string_view selector_id = ruleset.parsed_selector.id;
-
-          const bool is_bare_self =
-              selector_id.empty() && ruleset.parsed_selector.classes.empty() &&
-              selector_base == "self" &&
-              ruleset.parsed_selector.attributes.empty() &&
-              ruleset.parsed_selector.parents.empty();
-          if (!is_bare_self) {
-            categorized_rules_->only_self_rules = false;
-          }
-
-          if (!selector_id.empty()) {
-            categorized_rules_->by_id[selector_id].push_back(&ruleset);
-          } else if (!ruleset.parsed_selector.classes.empty()) {
-            categorized_rules_->by_class[ruleset.parsed_selector.classes[0]].push_back(&ruleset);
-          } else if (selector_base == "self") {
-            categorized_rules_->universal.push_back(&ruleset);
-          } else if (selector_base.empty()) {
-            categorized_rules_->universal.push_back(&ruleset);
-          } else {
-            categorized_rules_->by_tag[selector_base].push_back(&ruleset);
-          }
-        }
-      }
+    const auto shared = GetSharedStyle(css_strings_);
+    if (shared) {
+      // Aliasing shared_ptrs: either one keeps the whole StyleData alive, so
+      // the raw Ruleset pointers inside `rules` cannot outlive the vector they
+      // point into.
+      stylesheet_ = {shared, &shared->sheet};
+      categorized_rules_ = {shared, &shared->rules};
+    } else {
+      stylesheet_ = nullptr;
+      categorized_rules_ = nullptr;
     }
   }
 
