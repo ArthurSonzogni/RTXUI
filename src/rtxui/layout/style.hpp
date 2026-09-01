@@ -40,6 +40,19 @@ enum class MeasureMode { Exactly, AtMost, Undefined };
 enum class Direction { Row, RowReverse, Column, ColumnReverse };
 enum class Unit { Auto, Cells, Percent, Fr, Calc, MinMax };
 
+/// Narrows a resolved length, in cells, to int.
+///
+/// Converting a float that does not fit in an int is undefined behaviour, not
+/// a wrapped value, and it produces INT_MIN on x86 -- which then poisons every
+/// subtraction downstream. calc() reaches such floats easily: its operands are
+/// each clamped when parsed, but multiplying two of them is not. The bound is
+/// far past any terminal, so nothing real is affected, and staying well inside
+/// int leaves room for the sums layout takes afterwards.
+inline int ClampToCells(float resolved) {
+  constexpr float kLimit = 1e6f;
+  return static_cast<int>(std::clamp(resolved, -kLimit, kLimit));
+}
+
 struct MinMaxExpr;
 /// Returns the interned expression for an id (see RegisterMinMaxExpr).
 MinMaxExpr GetMinMaxExpr(int id);
@@ -81,12 +94,14 @@ struct MinMaxExpr {
     float a = lin(a_cells, a_percent, a_ref, a_ref_coef);
     float b = lin(b_cells, b_percent, b_ref, b_ref_coef);
     switch (op) {
+      // Narrowed through the same bound as everywhere else: these are floats,
+      // and one that does not fit in an int is undefined behaviour.
       case Op::Min:
-        return static_cast<int>(std::min(a, b));
+        return ClampToCells(std::min(a, b));
       case Op::Max:
-        return static_cast<int>(std::max(a, b));
+        return ClampToCells(std::max(a, b));
       case Op::Clamp:
-        return static_cast<int>(
+        return ClampToCells(
             std::max(a, std::min(b, lin(c_cells, c_percent, c_ref, c_ref_coef))));
     }
     return 0;
@@ -119,18 +134,21 @@ struct Length {
     return {static_cast<float>(id), Unit::MinMax};
   }
 
+  /// Narrows a resolved length to int. See ClampToCells.
+  static int ToCells(float resolved) { return ClampToCells(resolved); }
+
   int Resolve(int basis) const {
     if (unit == Unit::Cells) {
-      return static_cast<int>(value);
+      return ToCells(value);
     }
     if (unit == Unit::Percent) {
-      return static_cast<int>(basis * (value / 100.0f));
+      return ToCells(static_cast<float>(basis) * (value / 100.0f));
     }
     if (unit == Unit::Calc) {
-      return static_cast<int>(value + basis * (calc_percent / 100.0f));
+      return ToCells(value + static_cast<float>(basis) * (calc_percent / 100.0f));
     }
     if (unit == Unit::MinMax) {
-      return GetMinMaxExpr(static_cast<int>(value)).Evaluate(basis);
+      return GetMinMaxExpr(ToCells(value)).Evaluate(basis);
     }
     return 0;  // Auto resolves to 0 or handled by logic
   }

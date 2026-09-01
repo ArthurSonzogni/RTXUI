@@ -607,6 +607,70 @@ TEST_CASE("CSS inset shorthand", "[style][inset]") {
   }
 }
 
+TEST_CASE("Extreme CSS numbers are bounded", "[style][limits]") {
+  // A stylesheet is text, and hot reload and the playground both let one be
+  // edited while the application is running. Unbounded, a single large number
+  // was enough to take one out: layout's arithmetic overflowed (signed
+  // overflow, so undefined behaviour rather than a wrong size) and
+  // letter-spacing allocated until it was killed.
+  auto width_of = [](std::string_view css_value) {
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"width", css_value});
+    return style.width.Resolve(0);
+  };
+
+  SECTION("a huge value is clamped rather than kept") {
+    const int clamped = width_of("2000000000");
+    CHECK(clamped > 0);
+    CHECK(clamped < 2000000000);
+    // Still far larger than any terminal, so nothing real is affected.
+    CHECK(clamped >= 10000);
+  }
+
+  SECTION("a value past INT_MAX is a large number, not zero") {
+    // from_chars reports out_of_range without writing a value, so falling
+    // through would silently read as 0 -- the opposite of what was written.
+    CHECK(width_of("99999999999999999999") == width_of("2000000000"));
+    CHECK(width_of("-99999999999999999999") == width_of("-2000000000"));
+  }
+
+  SECTION("multiplying two clamped operands still resolves") {
+    // Each operand is bounded when parsed; their product is not, and the
+    // float it produces does not fit in an int. Narrowing it is undefined
+    // behaviour, and produced INT_MIN, which then poisoned every subtraction
+    // downstream in layout.
+    const int product = width_of("calc(2000000000 * 2000000000)");
+    CHECK(product > 0);
+    CHECK(product <= 1000000);
+  }
+
+  SECTION("negative extremes clamp too") {
+    const int clamped = width_of("-2000000000");
+    CHECK(clamped < 0);
+    CHECK(clamped > -2000000000);
+  }
+
+  SECTION("letter-spacing is bounded more tightly than the rest") {
+    // It is materialised as blank cells between every grapheme, so the work is
+    // spacing x length. The general bound alone still let a long string ask
+    // for gigabytes.
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"letter-spacing", "100000000"});
+    REQUIRE(style.letter_spacing.has_value());
+    CHECK(*style.letter_spacing <= 1000);
+    CHECK(*style.letter_spacing > 0);
+  }
+
+  SECTION("ordinary values are untouched") {
+    CHECK(width_of("40") == 40);
+    CHECK(width_of("0") == 0);
+    CHECK(width_of("-3") == -3);
+    rtxui::ComputedStyle style;
+    rtxui::ApplyStyle(style, {"letter-spacing", "2"});
+    CHECK(*style.letter_spacing == 2);
+  }
+}
+
 TEST_CASE("CSS calc() parsing and resolution", "[style][calc]") {
   auto width_of = [](std::string_view css_value) {
     rtxui::ComputedStyle style;
