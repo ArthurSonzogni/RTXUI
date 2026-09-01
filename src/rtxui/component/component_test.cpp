@@ -4482,6 +4482,58 @@ class MarkdownTestContainer : public rtxui::Component<MarkdownTestContainer> {
   )";
 };
 
+namespace {
+class ChangingMarkdownComponent
+    : public rtxui::Component<ChangingMarkdownComponent> {
+ public:
+  std::string text = "# First";
+  void InitReflection() override {
+    Bind(text);
+    Import<rtxui::markdown>();
+    rtxui::Component<ChangingMarkdownComponent>::InitReflection();
+  }
+  std::string_view view = R"(<markdown id="md" content="{text}"></markdown>)";
+};
+}  // namespace
+
+TEST_CASE("A component whose view changes is not served a stale template",
+          "[component][markdown]") {
+  // Stripping a template's indentation is cached by its text, since every
+  // instance of a component shares one. <markdown> is the component that
+  // breaks the assumption behind that: it generates a fresh view from its
+  // content, so the same component asks for a different template on every
+  // keystroke and must get the new one back.
+  auto app = rtxui::Ref<ChangingMarkdownComponent>::New();
+  app->Mount();
+  app->Digest();  // The markdown component builds its view from Digest().
+
+  auto heading_text = [&]() -> std::string {
+    auto* md = app->Root()->QuerySelector("#md");
+    REQUIRE(md != nullptr);
+    std::string out;
+    md->Visit([&out](rtxui::Element& element) {
+      if (element.is_text()) {
+        out += static_cast<rtxui::TextElement&>(element).text();
+      }
+    });
+    return out;
+  };
+
+  CHECK(heading_text().find("First") != std::string::npos);
+
+  app->text = "# Second";
+  app->Digest();
+  CHECK(heading_text().find("Second") != std::string::npos);
+  CHECK(heading_text().find("First") == std::string::npos);
+
+  // Back to the original text, which the cache has seen before -- a stale
+  // entry would show here as well as a missing one.
+  app->text = "# First";
+  app->Digest();
+  CHECK(heading_text().find("First") != std::string::npos);
+  CHECK(heading_text().find("Second") == std::string::npos);
+}
+
 TEST_CASE("Markdown Component rendering", "[component][markdown]") {
   auto container = rtxui::Ref<MarkdownTestContainer>::New();
   container->Mount();

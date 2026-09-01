@@ -1721,9 +1721,39 @@ std::shared_ptr<const StyleData> GetSharedStyle(
 
 }  // namespace
 
+namespace {
+
+/// StripIndent(view), computed once per distinct template text.
+///
+/// Every instance of a component has the same view, and stripping is two
+/// splits into lines and a rebuilt string. An interface of 20000 elements
+/// stripped the same handful of templates 20000 times.
+///
+/// Bounded, and emptied wholesale when it fills: most views are string
+/// literals and there are as many as there are component classes, but
+/// <markdown> generates a fresh one on every keystroke, so an unbounded cache
+/// would grow with the length of an editing session. Overflowing costs a
+/// re-strip, which is what happened on every instance before this existed.
+const std::string& StrippedTemplate(std::string_view view) {
+  static constexpr size_t kMaxEntries = 512;
+  static std::mutex mutex;
+  static std::map<std::string, std::string, std::less<>> cache;
+
+  const std::lock_guard<std::mutex> lock(mutex);
+  if (const auto it = cache.find(view); it != cache.end()) {
+    return it->second;
+  }
+  if (cache.size() >= kMaxEntries) {
+    cache.clear();
+  }
+  return cache.emplace(std::string(view), StripIndent(view)).first->second;
+}
+
+}  // namespace
+
 std::string_view ComponentBase::Template() {
   if (template_.empty()) {
-    template_ = StripIndent(std::string(GetView()));
+    template_ = StrippedTemplate(GetView());
   }
   return template_;
 }
