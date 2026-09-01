@@ -152,7 +152,11 @@ text-decoration: double-underline strikethrough;
 
 The `<pre>` element sets `white-space: pre` for you; `<textarea>` uses
 `pre-wrap`. For text that must not wrap, pair `nowrap` with
-`text-overflow: ellipsis` to truncate with `…` instead of overflowing:
+`text-overflow: ellipsis` to truncate with `...` instead of overflowing. Three
+periods rather than `…`, because they are one cell each and every terminal has
+them; in a container too narrow for the text plus the marker, as many periods
+are shown as fit. Truncation lands on a character boundary, so a double-width
+glyph is dropped whole rather than halved:
 
 ```css
 .crumb {
