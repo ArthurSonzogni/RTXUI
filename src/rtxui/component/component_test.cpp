@@ -3781,6 +3781,98 @@ second</div>
   )";
 };
 
+class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
+ public:
+  void InitReflection() override {
+    Import<rtxui::div>();
+    rtxui::Component<TabStopTestComponent>::InitReflection();
+  }
+  // Each line starts at a different column so the tab lands on a different
+  // stop, which is what distinguishes real tab stops from a fixed run of
+  // spaces. The wide-glyph line checks the column is counted in cells.
+  std::string_view view = "<div class=\"t\">a\tb\nxy\tz\nabcdefgh\ti\n\u4f60\tw</div>"
+                          "<div class=\"t four\">a\tb</div>"
+                          "<div class=\"n\">a\tb</div>"
+                          "<style>"
+                          ".t { white-space: pre; }"
+                          ".four { tab-size: 4; }"
+                          ".n { white-space: normal; }"
+                          "</style>";
+};
+
+TEST_CASE("Tabs expand to tab stops", "[component][tab-size][paint]") {
+  auto container = rtxui::Ref<TabStopTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+  rtxui::LayoutConstraints viewport = {
+      {40, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+  Texture texture(40, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  auto row_text = [&](int y) {
+    std::string row;
+    for (int x = 0; x < texture.width(); ++x) {
+      row += texture[x, y].character;
+    }
+    while (!row.empty() && row.back() == ' ') {
+      row.pop_back();
+    }
+    return row;
+  };
+  auto find_row = [&](std::string_view needle) {
+    for (int y = 0; y < texture.height(); ++y) {
+      if (row_text(y).find(needle) != std::string::npos) {
+        return y;
+      }
+    }
+    return -1;
+  };
+
+  SECTION("a tab advances to the next multiple of tab-size") {
+    // Not a fixed number of spaces: 'a' sits at column 0 so its tab fills 7,
+    // while "abcdefgh" already ends on a stop so its tab fills a whole 8.
+    int row = find_row("a");
+    REQUIRE(row != -1);
+    CHECK(row_text(row) == "a       b");
+    CHECK(row_text(row + 1) == "xy      z");
+    CHECK(row_text(row + 2) == "abcdefgh        i");
+  }
+
+  SECTION("the column is counted in cells, not codepoints") {
+    // A full-width glyph occupies two cells, so the next stop is 6 away.
+    int row = find_row("\u4f60");
+    REQUIRE(row != -1);
+    CHECK(row_text(row) == "\u4f60      w");
+  }
+
+  SECTION("tab-size moves the stops") {
+    int row = find_row("a   b");
+    REQUIRE(row != -1);
+    CHECK(row_text(row) == "a   b");
+  }
+
+  SECTION("a tab is collapsible whitespace outside pre") {
+    int row = find_row("a b");
+    REQUIRE(row != -1);
+    CHECK(row_text(row) == "a b");
+  }
+
+  SECTION("no literal tab survives into the painted cells") {
+    // The engine measures a tab as one cell while a terminal advances to its
+    // own stop, so one reaching the screen would shift the rest of the line
+    // and leave the cell diff describing a screen that does not exist.
+    for (int y = 0; y < texture.height(); ++y) {
+      CHECK(row_text(y).find('\t') == std::string::npos);
+    }
+  }
+}
+
 TEST_CASE("Line height rendering", "[component][line-height][paint]") {
   auto container = rtxui::Ref<LineHeightTestComponent>::New();
   container->Mount();
