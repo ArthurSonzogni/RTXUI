@@ -381,6 +381,56 @@ TEST_CASE("Control characters in text never reach the terminal",
   }
 }
 
+TEST_CASE("Malformed UTF-8 in text is replaced, not emitted",
+          "[terminal][text][unicode]") {
+  // All payloads use split string literals: a hex escape in C++ swallows every
+  // hex digit after it, so "\xe4\xbdX" would not be the byte pair plus X.
+  static constexpr std::string_view kReplacement = "\xef\xbf\xbd";  // U+FFFD
+
+  SECTION("a truncated sequence does not swallow the next character") {
+    // The two bytes open a three-byte sequence. Left alone, the grapheme
+    // reader takes whatever follows as the missing continuation -- so the
+    // ']' was absorbed into the same cell and vanished from the output.
+    const std::string output = DrawWith("[\xe4\xbd" "]");
+    CHECK(output.find(']') != std::string::npos);
+    CHECK(output.find(kReplacement) != std::string::npos);
+    CHECK(output.find("\xe4\xbd" "]") == std::string::npos);
+  }
+
+  SECTION("every ill-formed encoding is replaced") {
+    for (const std::string payload : {
+             std::string("a\x80" "b"),              // lone continuation
+             std::string("a\xff" "b"),              // never valid
+             std::string("a\xc0\xaf" "b"),          // overlong '/'
+             std::string("a\xed\xa0\x80" "b"),      // encoded surrogate
+             std::string("a\xf5\x80\x80\x80" "b"),  // past U+10FFFF
+         }) {
+      const std::string output = DrawWith(payload);
+      CHECK(output.find(kReplacement) != std::string::npos);
+      // The characters either side survive: replacement is per bad byte, so
+      // nothing legitimate is consumed with it.
+      CHECK(output.find('a') != std::string::npos);
+      CHECK(output.find('b') != std::string::npos);
+    }
+  }
+
+  SECTION("well-formed text is left exactly as written") {
+    // Wide, combining and zero-width characters are all legitimate UTF-8 and
+    // must not be touched -- the point is to reject what cannot be decoded,
+    // not to narrow what can be displayed.
+    for (const std::string payload : {
+             std::string("\xe4\xbd\xa0\xe5\xa5\xbd"),  // CJK
+             std::string("e\xcc\x81"),                  // e + combining acute
+             std::string("a\xe2\x80\x8b" "b"),           // zero-width space
+             std::string("\xf0\x9f\x8e\x89"),           // four-byte codepoint
+         }) {
+      const std::string output = DrawWith(payload);
+      CHECK(output.find(payload) != std::string::npos);
+      CHECK(output.find(kReplacement) == std::string::npos);
+    }
+  }
+}
+
 TEST_CASE("Screen.ClickBurstHitTestsTheCurrentLayout", "[terminal][mouse]") {
   // Two presses arriving together. The first runs a handler that removes an
   // element, so reconciliation destroys it -- and the batch flag would
