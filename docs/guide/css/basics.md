@@ -22,6 +22,11 @@ Styles are written using standard CSS rulesets inside a `<style>` block in your 
 </style>
 ```
 
+A component may declare more than one `<style>` block. They are concatenated in
+the order they appear, so a later block can override an earlier one exactly as
+two rulesets in a single block would -- when neither selector is more specific,
+the one written later wins.
+
 ## Supported Selectors
 
 The CSS parser supports a wide range of standard selectors and combinators:
