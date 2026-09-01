@@ -305,6 +305,82 @@ std::string PressAt(int x, int y) {
 }
 }  // namespace
 
+namespace {
+class ControlCharComponent : public Component<ControlCharComponent> {
+ public:
+  std::string text;
+  void InitReflection() override {
+    Bind(text);
+    Import<rtxui::div>();
+    Component<ControlCharComponent>::InitReflection();
+  }
+  std::string_view view = R"(<div>{text}</div>)";
+};
+
+// The bytes the engine writes for its own colours and cursor moves are ESC
+// sequences too, so "did an ESC reach the terminal" is not the question. The
+// question is whether one the application supplied did.
+std::string DrawWith(const std::string& payload) {
+  auto app = Ref<ControlCharComponent>::New();
+  app->text = payload;
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(30, 3);
+  Screen screen(app, device);
+  screen.Draw();
+  return device->GetOutput();
+}
+}  // namespace
+
+TEST_CASE("Control characters in text never reach the terminal",
+          "[terminal][text][security]") {
+  SECTION("an escape sequence in application text is not executed") {
+    // An application displays text it did not write -- a filename, a log line,
+    // something off the network. Passed through, this would repaint, recolour
+    // and leave the cell diff describing a screen that never existed.
+    const std::string output = DrawWith("a\x1b" "[31mRED\x1b" "[0mb");
+    // The payload's own bytes survive as text, so the sequence is visible
+    // rather than obeyed...
+    CHECK(output.find("[31mRED") != std::string::npos);
+    // ...and no ESC introduces it.
+    CHECK(output.find("\x1b[31mRED") == std::string::npos);
+    CHECK(output.find("\x1b[0m") == std::string::npos);
+  }
+
+  SECTION("the other control characters are replaced too") {
+    // Split literals on purpose: a hex escape in C++ swallows every hex digit
+    // that follows it, so "a\x07b" is the single character 0x7B and tests
+    // nothing at all.
+    for (const std::string payload : {std::string("a\x07" "b"),   // BEL, rings
+                                      std::string("a\x08" "b"),   // BS
+                                      std::string("a\x0b" "b"),   // VT
+                                      std::string("a\x0c" "b"),   // FF
+                                      std::string("a\x7f" "b"),   // DEL
+                                      std::string("a\0b", 3)}) {  // NUL
+      const std::string output = DrawWith(payload);
+      for (const char control : {'\x07', '\x08', '\x0b', '\x0c', '\x7f', '\0'}) {
+        CHECK(output.find(control) == std::string::npos);
+      }
+      // Replaced, not dropped: something was there and the reader should see it.
+      CHECK(output.find("\xef\xbf\xbd") != std::string::npos);
+    }
+  }
+
+  SECTION("a carriage return is a line break, not a cursor move") {
+    // Left alone this would send the cursor to column 0 mid-line and overwrite
+    // what was already there. Folded to a segment break, white-space: normal
+    // then renders it as a space. (The frame's own cursor moves use CR too, so
+    // "no CR in the output" would be the wrong thing to ask.)
+    const std::string output = DrawWith("abc\rxyz");
+    CHECK(output.find("abc xyz") != std::string::npos);
+  }
+
+  SECTION("ordinary text is untouched") {
+    const std::string output = DrawWith("plain \u00e9\u4f60 text");
+    CHECK(output.find("plain \u00e9\u4f60 text") != std::string::npos);
+    CHECK(output.find("\xef\xbf\xbd") == std::string::npos);
+  }
+}
+
 TEST_CASE("Screen.ClickBurstHitTestsTheCurrentLayout", "[terminal][mouse]") {
   // Two presses arriving together. The first runs a handler that removes an
   // element, so reconciliation destroys it -- and the batch flag would
