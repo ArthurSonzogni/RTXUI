@@ -64,11 +64,12 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
         }
 
         .input-row {
-            display: flex;
-            gap: 1;
-            margin-bottom: 1;
-          }
+          display: flex;
+          gap: 1;
+          margin-bottom: 1;
+        }
         input {
+          border: tall;
           width: 20;
           padding: 0 1;
         }
@@ -101,7 +102,6 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
         button {
           background-color: rgb(22, 27, 34);
           color: white;
-          padding: 0 1;
           transition: all 1s;
         }
 
@@ -118,6 +118,7 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
     Bind(new_fruit);
     Bind(AddItem);
     Bind(RemoveItem);
+    EnableHotReload();
   }
 };
 
