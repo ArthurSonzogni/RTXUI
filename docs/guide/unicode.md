@@ -20,7 +20,7 @@ would end up somewhere other than where the layout put it.
 Every control character except newline and tab is therefore replaced with `U+FFFD`
 (the replacement character) before measurement, so it occupies exactly the one
 cell it is counted as. Newline and tab survive because layout gives them a
-meaning of its own -- a hard break and a [tab stop](/guide/css/typography). A
+meaning of its own -- a hard break and a [tab stop](/guide/typography). A
 carriage return becomes a line break, as CSS treats it.
 
 ## Malformed Text

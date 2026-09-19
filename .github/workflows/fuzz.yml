@@ -2,8 +2,7 @@
 #
 # Each parser-facing fuzz target (XML/template, CSS, terminal input,
 # markdown) runs for a bounded time on every push/PR. This is a smoke test
-# meant to catch crashes and regressions quickly, not a substitute for a
-# real fuzzing campaign — see fuzz.sh for that.
+# meant to catch crashes and regressions quickly.
 name: Fuzz
 
 on:

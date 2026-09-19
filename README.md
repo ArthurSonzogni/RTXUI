@@ -1,5 +1,11 @@
 # RTXUI — Reactive Terminal User Interfaces for C++
 
+[![Test](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml)
+[![Shared library](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml)
+[![Docs](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/deploy-docs.yml/badge.svg)](https://arthursonzogni.github.io/RTXUI/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
+
 **RTXUI** is a modern, high-performance C++ library for building beautiful, reactive Terminal User Interfaces (TUIs) utilizing web-inspired paradigms (HTML templates, CSS layouts, and live data binding).
 
 <p align="center">
@@ -129,13 +135,16 @@ sudo apt install ninja-build cmake
 
 ### Building the Project
 
-Configure and compile the project using the helper script:
+Configure and compile the project using CMake and Ninja:
 ```bash
-./build_project.sh
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON -DRTXUI_BUILD_TESTS=ON
+cmake --build build
 ```
 
 Run the unit tests:
 ```bash
+ctest --test-dir build --output-on-failure
+# or run the Catch2 test runner directly:
 ./build/rtxui_test
 ```
 
@@ -144,3 +153,38 @@ Run any of the examples:
 ./build/rtxui_example_checkbox
 ./build/rtxui_example_demo
 ```
+
+---
+
+## 📦 Adding RTXUI to Your Project
+
+### CMake FetchContent
+
+You can integrate RTXUI directly into your CMake project:
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+  rtxui
+  GIT_REPOSITORY https://github.com/ArthurSonzogni/RTXUI.git
+  GIT_TAG        main # Or pin a release tag / commit
+)
+FetchContent_MakeAvailable(rtxui)
+
+add_executable(my_app main.cpp)
+# Link against `rtxui` (not rtxui_lib) to preserve static element registrations
+target_link_libraries(my_app PRIVATE rtxui)
+```
+
+See [Getting Started](docs/guide/getting-started.md) for full instructions and a minimal complete example.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Check out the [Contributing Guide](CONTRIBUTING.md) for build instructions, coding standards, and testing guidelines.
+
+## 📄 License
+
+Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+
