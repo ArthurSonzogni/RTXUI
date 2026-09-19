@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   linux:
@@ -12,15 +13,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
       - name: Build & Install Debug
         run: |
-          cmake -B build_debug -DCMAKE_BUILD_TYPE=Debug
+          cmake -B build_debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
           cmake --build build_debug
           cmake --install build_debug --prefix install
 
       - name: Build & Install Release
         run: |
-          cmake -B build_release -DCMAKE_BUILD_TYPE=Release
+          cmake -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build_release
           cmake --install build_release --prefix install
 
@@ -39,9 +43,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Ninja
+        run: brew install ninja
+
       - name: Build & Install Debug
         run: |
-          cmake -B build_debug \
+          cmake -B build_debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           cmake --build build_debug
@@ -49,7 +56,7 @@ jobs:
 
       - name: Build & Install Release
         run: |
-          cmake -B build_release \
+          cmake -B build_release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           cmake --build build_release
@@ -77,6 +84,7 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          generate_release_notes: true
           files: |
             rtxui-linux-x64.tar.gz
             rtxui-macos-universal.tar.gz

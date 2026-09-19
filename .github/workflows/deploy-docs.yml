@@ -40,7 +40,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: docs/package-lock.json
 
@@ -55,13 +55,15 @@ jobs:
       - name: Install ccache
         run: sudo apt-get update && sudo apt-get install -y ccache
 
-      - name: Cache ccache
+      - name: Cache ccache and emscripten
         uses: actions/cache@v4
         with:
-          path: ~/.cache/ccache
-          key: docs-wasm-ccache-${{ runner.os }}-${{ github.run_id }}
+          path: |
+            ~/.cache/ccache
+            ~/.emscripten_cache
+          key: docs-wasm-cache-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
-            docs-wasm-ccache-${{ runner.os }}-
+            docs-wasm-cache-${{ runner.os }}-
 
       - name: Configure and build WebAssembly
         run: |

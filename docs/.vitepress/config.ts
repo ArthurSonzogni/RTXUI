@@ -87,5 +87,10 @@ export default withMermaid({
     socialLinks: [
       { icon: 'github', link: 'https://github.com/ArthurSonzogni/RTXUI' }
     ]
+  },
+  vite: {
+    build: {
+      chunkSizeWarningLimit: 1500
+    }
   }
 })
