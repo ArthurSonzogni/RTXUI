@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "rtxui",
-  "version-semver": "5.0.0",
+  "version-semver": "0.1.0",
   "description": "Reactive terminal user interfaces for C++ with HTML templates and CSS layout",
   "homepage": "https://github.com/ArthurSonzogni/RTXUI",
   "license": "MIT",

@@ -2,8 +2,7 @@
 # file needs no guard of its own.
 #
 # The binaries stay in the top of the build tree rather than build/example/:
-# build_wasm.sh copies rtxui_example_*.js out of the build root, and the docs
-# and CLAUDE.md both point at build/rtxui_example_<name>.
+# docs and examples both point at build/rtxui_example_<name>.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 add_executable(rtxui_example_demo demo.cpp)

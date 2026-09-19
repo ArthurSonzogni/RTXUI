@@ -1,6 +1,7 @@
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
 export default withMermaid({
+  base: '/RTXUI/',
   title: 'RTXUI',
   description: 'Terminal user interfaces built from HTML templates, CSS, and plain C++ state.',
   themeConfig: {

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(rtxui
   LANGUAGES CXX
-  VERSION 5.0.0
+  VERSION 0.1.0
   DESCRIPTION "C++ reactive terminal renderering"
 )
 
