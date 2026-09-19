@@ -4,12 +4,21 @@
 #
 # Overlay port for RTXUI.
 #
-# While the repository is private it cannot be published to the public vcpkg
-# registry: a registry port fetches a source tarball with no credentials, so
-# the source has to be publicly downloadable. This port therefore builds the
-# checkout it ships inside, which works today for anyone who already has the
-# repository. Going public changes only how the source is acquired -- see
-# `vcpkg_from_github` below -- and nothing else in this file or the manifest.
+# This overlay port builds the local checkout it ships inside, which works out
+# of the box for local consuming projects.
+#
+# To submit this port to the official microsoft/vcpkg curated registry, replace
+# the SOURCE_PATH block below with:
+#
+#   vcpkg_from_github(
+#     OUT_SOURCE_PATH SOURCE_PATH
+#     REPO ArthurSonzogni/RTXUI
+#     REF "v${VERSION}"
+#     SHA512 <sha512 of the release tarball>
+#     HEAD_REF main
+#   )
+#
+# and the same port can be submitted to microsoft/vcpkg unchanged otherwise.
 
 # The port lives at <repo>/packaging/vcpkg/rtxui, so the repository root is
 # three directories up.
@@ -21,17 +30,6 @@ if(NOT EXISTS "${SOURCE_PATH}/CMakeLists.txt")
     "the repository it is shipped inside; keep it at packaging/vcpkg/rtxui.")
 endif()
 
-# When the repository becomes public, replace the block above with:
-#
-#   vcpkg_from_github(
-#     OUT_SOURCE_PATH SOURCE_PATH
-#     REPO ArthurSonzogni/RTXUI
-#     REF "v${VERSION}"
-#     SHA512 <sha512 of the release tarball>
-#     HEAD_REF main
-#   )
-#
-# and the same port can be submitted to microsoft/vcpkg unchanged otherwise.
 
 vcpkg_cmake_configure(
   SOURCE_PATH "${SOURCE_PATH}"

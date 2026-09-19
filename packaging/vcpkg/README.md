@@ -1,10 +1,7 @@
 # Consuming RTXUI through vcpkg
 
-This directory holds an **overlay port**. It is not published anywhere: while
-the repository is private it cannot go to the public vcpkg registry, because a
-registry port fetches a source archive with no credentials. The port here
-builds the checkout it ships inside, so anyone who already has the repository
-can consume RTXUI by name today.
+This directory holds an **overlay port** for RTXUI. It builds the local checkout
+it ships inside, allowing projects to consume RTXUI directly through vcpkg.
 
 ## Using it
 
@@ -47,14 +44,24 @@ cmake -B build -DCMAKE_PREFIX_PATH=/your/prefix
 Debug and Release can share one prefix: debug artifacts carry a `d` suffix
 (`librtxuid.a`), so `find_package` selects the right one per configuration.
 
-## Publishing later
-
-When the repository becomes public, this port is what gets submitted to
-`microsoft/vcpkg` — the manifest and the build steps are already right. Only
-source acquisition changes: swap the local `SOURCE_PATH` block in
-`portfile.cmake` for the `vcpkg_from_github` call commented directly beneath
-it, filling in the release tag and its SHA512, and add a version entry under
-`versions/`.
+## Submitting to microsoft/vcpkg
+ 
+Now that RTXUI is public, this port is ready to be submitted to the official
+[`microsoft/vcpkg`](https://github.com/microsoft/vcpkg) curated registry:
+1. Replace the local `SOURCE_PATH` block in `portfile.cmake` with `vcpkg_from_github`:
+   ```cmake
+   vcpkg_from_github(
+     OUT_SOURCE_PATH SOURCE_PATH
+     REPO ArthurSonzogni/RTXUI
+     REF "v${VERSION}"
+     SHA512 <sha512 of release tarball>
+     HEAD_REF main
+   )
+   ```
+2. Copy `packaging/vcpkg/rtxui` to `ports/rtxui` in a `microsoft/vcpkg` clone.
+3. Register the version using `vcpkg x-add-version rtxui`.
+4. Open a pull request against `microsoft/vcpkg`.
 
 `supports` currently excludes Windows, matching the library: the terminal
 backend is POSIX and there is no ConPTY implementation yet.
+

@@ -3,6 +3,7 @@
 [![Test](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml)
 [![Shared library](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml)
 [![Docs](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/deploy-docs.yml/badge.svg)](https://arthursonzogni.github.io/RTXUI/)
+[![Live Demo](https://img.shields.io/badge/demo-interactive_wasm-brightgreen.svg)](https://arthursonzogni.github.io/RTXUI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
 
@@ -10,6 +11,12 @@
 
 <p align="center">
   <img src="docs/public/img/dashboard.svg" alt="An RTXUI service-health dashboard running in a terminal" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://arthursonzogni.github.io/RTXUI/">
+    <img src="https://img.shields.io/badge/🎮_Interactive_Demo-Try_in_Browser-success?style=for-the-badge&logo=webassembly" alt="Try Interactive Demo in Browser" />
+  </a>
 </p>
 
 <p align="center">
@@ -105,32 +112,35 @@ Run your compiled application. If you make changes to the `view` template in you
 RTXUI runs on **Linux and macOS** (the terminal backend is POSIX), and in the
 browser via **WebAssembly**. Windows is not supported yet.
 
-#### 1. Install a C++23 compiler
+#### 1. Install a C++23 compiler & build tools
 
-RTXUI requires **C++23**. C++26 is optional: when the compiler provides
-reflection, RTXUI uses it to read struct fields in bound collections without a
-manual mapper, and falls back cleanly when it does not. Consuming the library
-needs only C++23 — see [Getting Started](docs/guide/getting-started.md).
+RTXUI requires **C++23** (GCC 14+ or Clang 18+) and **CMake 3.24+** with **Ninja**. C++26 is optional: when the compiler provides reflection, RTXUI uses it to read struct fields in bound collections without a manual mapper, and falls back cleanly when it does not.
 
-On Debian or Ubuntu:
+* **Debian / Ubuntu**:
+  ```bash
+  sudo apt install g++-14 ninja-build cmake
+  ```
+* **Fedora**:
+  ```bash
+  sudo dnf install gcc-c++ ninja-build cmake
+  ```
+* **Arch Linux**:
+  ```bash
+  sudo pacman -S gcc ninja cmake
+  ```
+* **macOS** (Homebrew):
+  ```bash
+  brew install ninja cmake
+  # Uses Apple Clang (Xcode 16+) or GCC from Homebrew:
+  # brew install gcc
+  ```
 
-```bash
-sudo apt install g++-14
-```
-
-Select the compiler per build rather than changing system defaults:
+Select your compiler explicitly per build rather than changing system defaults:
 
 ```bash
 CC=gcc-14 CXX=g++-14 cmake -B build -G Ninja
-```
-
-For Clang, install a recent release from your distribution or
-[apt.llvm.org](https://apt.llvm.org) and set `CC=clang CXX=clang++` the same
-way.
-
-#### 2. Install Ninja Build System
-```bash
-sudo apt install ninja-build cmake
+# or with Clang:
+# CC=clang CXX=clang++ cmake -B build -G Ninja
 ```
 
 ### Building the Project
