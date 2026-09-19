@@ -1,53 +1,62 @@
-# Verifies the shared library on every supported platform.
-#
-# A shared build exercises things a static one cannot: symbol visibility (the
-# library is built with -fvisibility=hidden, so anything a consumer needs must
-# carry RTXUI_EXPORT), the self-registration of the built-in components from
-# static initialisers without the whole-archive trick, and whether the
-# installed package is actually consumable.
+# Verifies the shared library on supported platforms.
 name: Shared library
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  workflow_dispatch:
+
+concurrency:
+  group: shared-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  shared:
+  shared-linux:
     name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Linux GCC shared
-            os: ubuntu-latest
             cc: gcc-14
             cxx: g++-14
           - name: Linux Clang shared
-            os: ubuntu-latest
             cc: clang-20
             cxx: clang++-20
-          - name: macOS AppleClang shared
-            os: macos-latest
-            cc: clang
-            cxx: clang++
     steps:
       - uses: actions/checkout@v4
 
       - name: Install toolchain (Linux)
-        if: runner.os == 'Linux'
         run: |
-          sudo apt-get update && sudo apt-get install -y ninja-build
+          sudo apt-get update && sudo apt-get install -y ninja-build ccache
           if [[ "${{ matrix.cc }}" == clang* ]]; then
             wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
           else
             sudo apt-get install -y g++-14
           fi
 
-      - name: Install toolchain (macOS)
-        if: runner.os == 'macOS'
-        run: brew install ninja
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ matrix.name }}-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.name }}-${{ runner.os }}-
 
       - name: Configure (BUILD_SHARED_LIBS=ON)
         env:
@@ -60,6 +69,8 @@ jobs:
           -DRTXUI_BUILD_TESTS=ON
           -DRTXUI_BUILD_EXAMPLES=ON
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
       - name: Build
         run: cmake --build build
@@ -67,7 +78,6 @@ jobs:
       - name: Confirm a shared library was produced
         run: |
           ls build/librtxui_lib.* build/librtxui.*
-          # A static archive here would mean BUILD_SHARED_LIBS was ignored.
           if ls build/librtxui_lib.a >/dev/null 2>&1; then
             echo "::error::BUILD_SHARED_LIBS=ON still produced a static archive"
             exit 1
@@ -79,15 +89,8 @@ jobs:
       - name: Install
         run: cmake --install build
 
-      # The point of the whole job: a project that only has the installed
-      # package must compile, link and run against the shared library. This is
-      # what catches a public symbol that was never marked RTXUI_EXPORT.
       - name: Consume the installed package
         shell: bash
-        # Deliberately built with the runner's *default* compiler, not the one
-        # the library was built with: RTXUI requires C++23 of its consumers, so
-        # an ordinary distribution compiler has to be enough. This step failing
-        # would mean the interface requirement had crept back up.
         run: |
           mkdir -p consumer && cd consumer
           cat > CMakeLists.txt <<'EOF'
@@ -114,8 +117,6 @@ jobs:
           int main() {
             auto app = Ref<App>::New();
             app->Mount();
-            // QueryComponent is the public way to reach a child component;
-            // Element itself is deliberately not part of the installed API.
             (void)app->QueryComponent("#nothing");
             app->Bump();
             return app->count == 1 ? 0 : 1;
@@ -123,20 +124,110 @@ jobs:
           EOF
           cmake -B build -G Ninja \
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install" \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build
-          if [ "${{ runner.os }}" = "macOS" ]; then
-            DYLD_LIBRARY_PATH="${{ github.workspace }}/install/lib" ./build/consumer
-          else
-            LD_LIBRARY_PATH="${{ github.workspace }}/install/lib" ./build/consumer
-          fi
+          LD_LIBRARY_PATH="${{ github.workspace }}/install/lib" ./build/consumer
 
       - name: Confirm the consumer links the shared library
         shell: bash
         run: |
           cd consumer
-          if [ "${{ runner.os }}" = "macOS" ]; then
-            otool -L build/consumer | grep rtxui
-          else
-            ldd build/consumer | grep rtxui
+          ldd build/consumer | grep rtxui
+
+  # Gated to PRs and manual triggers to preserve private runner quota (10x multiplier on macOS)
+  shared-macos:
+    name: macOS AppleClang shared
+    runs-on: macos-latest
+    if: (github.event_name == 'pull_request' && !github.event.pull_request.draft) || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain (macOS)
+        run: brew install ninja ccache
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-shared-macos-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-shared-macos-${{ runner.os }}-
+
+      - name: Configure (BUILD_SHARED_LIBS=ON)
+        env:
+          CC: clang
+          CXX: clang++
+          CCACHE_DIR: /Users/runner/.cache/ccache
+        run: >
+          cmake -B build -G Ninja
+          -DBUILD_SHARED_LIBS=ON
+          -DCMAKE_BUILD_TYPE=Release
+          -DRTXUI_BUILD_TESTS=ON
+          -DRTXUI_BUILD_EXAMPLES=ON
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Confirm a shared library was produced
+        run: |
+          ls build/librtxui_lib.* build/librtxui.*
+          if ls build/librtxui_lib.a >/dev/null 2>&1; then
+            echo "::error::BUILD_SHARED_LIBS=ON still produced a static archive"
+            exit 1
           fi
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Consume the installed package
+        shell: bash
+        run: |
+          mkdir -p consumer && cd consumer
+          cat > CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.24)
+          project(consumer LANGUAGES CXX)
+          find_package(rtxui CONFIG REQUIRED)
+          add_executable(consumer main.cpp)
+          target_link_libraries(consumer PRIVATE rtxui::rtxui)
+          EOF
+          cat > main.cpp <<'EOF'
+          #include <rtxui/rtxui.hpp>
+          #include "rtxui/base/task_runner.hpp"
+          using namespace rtxui;
+          class App : public Component<App> {
+           public:
+            int count = 0;
+            void Bump() { count++; }
+            std::string_view view = R"html(
+              <div class="c"><h1>hi {count}</h1><button onclick="Bump">go</button></div>
+              <style>.c { display: block; color: rgb(1,2,3); }</style>
+            )html";
+            App() { Bind(count); Bind(Bump); }
+          };
+          int main() {
+            auto app = Ref<App>::New();
+            app->Mount();
+            (void)app->QueryComponent("#nothing");
+            app->Bump();
+            return app->count == 1 ? 0 : 1;
+          }
+          EOF
+          cmake -B build -G Ninja \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build
+          DYLD_LIBRARY_PATH="${{ github.workspace }}/install/lib" ./build/consumer
+
+      - name: Confirm the consumer links the shared library
+        shell: bash
+        run: |
+          cd consumer
+          otool -L build/consumer | grep rtxui
