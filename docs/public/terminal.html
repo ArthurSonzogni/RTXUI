@@ -155,7 +155,11 @@
           },
           locateFile: (path, prefix) => {
             if (path.endsWith('.wasm')) {
-              return '/wasm/' + path;
+              if (src) {
+                const baseDir = src.substring(0, src.lastIndexOf('/') + 1);
+                return baseDir + path;
+              }
+              return 'wasm/' + path;
             }
             return prefix + path;
           }
