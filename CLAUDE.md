@@ -11,12 +11,10 @@ RTXUI is a C++26 reactive terminal UI library with web-inspired paradigms: compo
 All paths relative to the repo root. The build directory is `build/` (Ninja, Release, tests + examples ON).
 
 ```bash
-./build_project.sh              # configure + full build (uses -j1 by design; slow)
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_TESTS=ON -DRTXUI_BUILD_EXAMPLES=ON
 ninja -C build                  # incremental rebuild after configuration
 ninja -C build rtxui_test       # build only the test binary
 ```
-
-Note: `build_project.sh` and `build_silent.sh` deliberately build with 1 job (thermal constraints on this machine). For incremental work prefer `ninja -C build <target>`.
 
 ### Tests (Catch2)
 
@@ -38,8 +36,8 @@ Every CSS property handled in `src/rtxui/style/apply_style.cpp` (each `p == "pro
 
 ### Other builds
 
-- `./fuzz.sh` — FuzzTest fuzzers (style, xml, terminal input parser) in `build_fuzz/`.
-- `./build_wasm.sh` — Emscripten/WASM build of examples into `docs/public/wasm/` (emsdk path is hardcoded in the script).
+- FuzzTest fuzzers: configure with `-DRTXUI_BUILD_FUZZERS=ON -DFUZZTEST_FUZZING_MODE=ON` and run `./build_fuzz/rtxui_fuzzer`.
+- Emscripten/WASM build of examples into `docs/public/wasm/` via `emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON`.
 - Examples build as `build/rtxui_example_<name>` (interactive TUIs — they take over the terminal).
 
 ## Architecture

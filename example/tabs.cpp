@@ -26,7 +26,7 @@ class TabsDemo : public Component<TabsDemo> {
             <p class="tab-body">System preferences and visual theme modifications.</p>
           </tab-pane>
           <tab-pane label="About" name="about">
-            <p class="tab-body">RTXUI Version 5.0.0 - Created by Arthur Sonzogni.</p>
+            <p class="tab-body">RTXUI Version 0.1.0 - Created by Arthur Sonzogni.</p>
           </tab-pane>
         </tabs>
       </div>
