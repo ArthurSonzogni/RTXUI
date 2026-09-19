@@ -14,12 +14,30 @@ name: ABI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  workflow_dispatch:
+
+concurrency:
+  group: abi-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   abidiff:
     name: abidiff vs baseline
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
         with:
