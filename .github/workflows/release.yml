@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   linux:
     name: Linux x64
@@ -13,18 +17,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ninja
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Install toolchain (Linux)
+        run: sudo apt-get update && sudo apt-get install -y ninja-build ccache g++-14
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-release-linux-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-release-linux-${{ runner.os }}-
 
       - name: Build & Install Debug
+        env:
+          CC: gcc-14
+          CXX: g++-14
         run: |
-          cmake -B build_debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          cmake -B build_debug -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache
           cmake --build build_debug
           cmake --install build_debug --prefix install
 
       - name: Build & Install Release
+        env:
+          CC: gcc-14
+          CXX: g++-14
         run: |
-          cmake -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -B build_release -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache
           cmake --build build_release
           cmake --install build_release --prefix install
 
@@ -43,22 +67,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ninja
-        run: brew install ninja
+      - name: Install toolchain (macOS)
+        run: brew install ninja ccache
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-release-macos-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-release-macos-${{ runner.os }}-
 
       - name: Build & Install Debug
+        env:
+          CC: clang
+          CXX: clang++
+          CCACHE_DIR: /Users/runner/.cache/ccache
         run: |
           cmake -B build_debug -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache
           cmake --build build_debug
           cmake --install build_debug --prefix install
 
       - name: Build & Install Release
+        env:
+          CC: clang
+          CXX: clang++
+          CCACHE_DIR: /Users/runner/.cache/ccache
         run: |
           cmake -B build_release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache
           cmake --build build_release
           cmake --install build_release --prefix install
 
