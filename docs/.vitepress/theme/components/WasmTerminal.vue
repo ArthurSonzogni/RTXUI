@@ -2,7 +2,7 @@
   <ClientOnly>
     <div class="wasm-terminal-container">
       <iframe
-        :src="`/terminal.html?src=${encodeURIComponent(src)}&cols=${cols}&rows=${rows}`"
+        :src="terminalUrl"
         class="terminal-iframe"
         :style="{ height: iframeHeight, width: iframeWidth }"
         frameborder="0"
@@ -13,7 +13,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { withBase } from 'vitepress'
 
 const props = defineProps({
   src: {
@@ -28,6 +29,12 @@ const props = defineProps({
     type: Number,
     default: 15
   }
+})
+
+const terminalUrl = computed(() => {
+  const resolvedSrc = withBase(props.src)
+  const resolvedTerminal = withBase('/terminal.html')
+  return `${resolvedTerminal}?src=${encodeURIComponent(resolvedSrc)}&cols=${props.cols}&rows=${props.rows}`
 })
 
 const iframeHeight = ref(`${props.rows * 19 + 24}px`)
