@@ -114,7 +114,11 @@ int GetCursorPositionFromColumn(const std::vector<Grapheme>& graphemes,
   int min_dist = std::abs(target_col);
   int current_col = 0;
   for (size_t i = 0; i < graphemes.size(); ++i) {
-    current_col += graphemes[i].width;
+    if (graphemes[i].text == "\t") {
+      current_col = ((current_col / 8) + 1) * 8;
+    } else {
+      current_col += graphemes[i].width;
+    }
     int dist = std::abs(current_col - target_col);
     if (dist < min_dist) {
       min_dist = dist;
@@ -137,6 +141,8 @@ Position2D GetCursor2D(const std::vector<Grapheme>& graphemes, int cursor_pos) {
         graphemes[i].text == "\r") {
       pos.line++;
       pos.column = 0;
+    } else if (graphemes[i].text == "\t") {
+      pos.column = ((pos.column / 8) + 1) * 8;
     } else {
       pos.column += graphemes[i].width;
     }
@@ -173,7 +179,11 @@ int GetCursorPosFrom2D(const std::vector<Grapheme>& graphemes,
         graphemes[i].text == "\r") {
       break;
     }
-    cur_col += graphemes[i].width;
+    if (graphemes[i].text == "\t") {
+      cur_col = ((cur_col / 8) + 1) * 8;
+    } else {
+      cur_col += graphemes[i].width;
+    }
     i++;
 
     int dist = std::abs(cur_col - target_col);
@@ -241,12 +251,15 @@ std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
       continue;
     }
 
+    int g_width =
+        (g.text == "\t") ? (8 - ((cur_col - col_start) % 8)) : g.width;
+
     if (IsSpace(g)) {
       last_space_index = i;
       last_space_col = cur_col - col_start;
     }
 
-    if (cur_col - col_start + g.width > content_width) {
+    if (cur_col - col_start + g_width > content_width) {
       if (last_space_index != -1) {
         // cur_col already measures up to the current (overflowing)
         // grapheme; only col_start moves to just past the space, so
@@ -255,24 +268,24 @@ std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
         // for the same bug in layout.cpp's LayoutInlineFlow).
         col_start += last_space_col + 1;
         commit_line(last_space_index + 1);
-        cur_col += g.width;
+        cur_col += g_width;
       } else if (overflow_wrap_normal) {
-        cur_col += g.width;  // Unbreakable word: let it overflow.
+        cur_col += g_width;  // Unbreakable word: let it overflow.
       } else if (cur_col > col_start) {
         // Emergency break before this grapheme, keeping the row within
         // content_width.
         col_start = cur_col;
         commit_line(i);
-        cur_col += g.width;
+        cur_col += g_width;
       } else {
         // A single grapheme wider than content_width: place it anyway so
         // this makes progress.
-        cur_col += g.width;
+        cur_col += g_width;
         col_start = cur_col;
         commit_line(i + 1);
       }
     } else {
-      cur_col += g.width;
+      cur_col += g_width;
     }
   }
   return row_starts;
@@ -287,7 +300,11 @@ int ColOfIndex(const std::vector<Grapheme>& graphemes, int row_start, int pos) {
   int col = 0;
   int n = static_cast<int>(graphemes.size());
   for (int i = row_start; i < pos && i < n; ++i) {
-    col += graphemes[i].width;
+    if (graphemes[i].text == "\t") {
+      col = ((col / 8) + 1) * 8;
+    } else {
+      col += graphemes[i].width;
+    }
   }
   return col;
 }
@@ -314,7 +331,11 @@ int RowColToIndex(const std::vector<Grapheme>& graphemes,
     if (IsLineBreak(graphemes[i])) {
       break;
     }
-    cur_col += graphemes[i].width;
+    if (graphemes[i].text == "\t") {
+      cur_col = ((cur_col / 8) + 1) * 8;
+    } else {
+      cur_col += graphemes[i].width;
+    }
     i++;
     int dist = std::abs(cur_col - target_col);
     if (dist < min_dist) {
@@ -574,9 +595,12 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
     cursor_col = pos2d.column;
   }
 
-  int cursor_width = (cursor_pos < static_cast<int>(current_graphemes.size()))
-                         ? std::max(1, current_graphemes[cursor_pos].width)
-                         : 1;
+  int cursor_width =
+      (cursor_pos < static_cast<int>(current_graphemes.size()))
+          ? (current_graphemes[cursor_pos].text == "\t"
+                 ? (8 - (cursor_col % 8))
+                 : std::max(1, current_graphemes[cursor_pos].width))
+          : 1;
 
   int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
 
@@ -689,12 +713,31 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
 
         if (click_x >= abs_x && click_x < abs_x + layout_w &&
             click_y >= abs_y && click_y < abs_y + layout_h) {
+          bool was_focused = is_focused_;
           FocusExclusive(root);
           self->CaptureMouse();
 
           auto graphemes = GetGraphemesList(value);
+          int n = static_cast<int>(graphemes.size());
           int click_pos =
               ClickToCursorPos(root, is_multiline, click_x, click_y, graphemes);
+
+          if (!was_focused && select_on_focus && n > 0) {
+            selection_start = 0;
+            cursor_pos = n;
+            selection_granularity_ = SelectionGranularity::kCharacter;
+            last_click_time_ = std::chrono::steady_clock::now();
+            last_click_pos_ = click_pos;
+            last_click_x_ = click_x;
+            last_click_y_ = click_y;
+            click_count_ = 1;
+
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
+            ideal_column_ = pos2d.column;
+
+            KeepCursorVisible(root, is_multiline);
+            return true;
+          }
 
           auto now = std::chrono::steady_clock::now();
           // last_click_time_ defaults to time_point::min() as a "no
@@ -892,6 +935,132 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
 
+      bool is_ctrl_d = kb.modifier.ctrl && !kb.modifier.alt &&
+                       !kb.modifier.shift && !kb.modifier.meta &&
+                       (kb.codepoint == 'd' || kb.codepoint == 'D');
+      bool is_shift_alt_down =
+          kb.modifier.shift && kb.modifier.alt && !kb.modifier.ctrl &&
+          !kb.modifier.meta &&
+          kb.special == Event::Keyboard::Special::ArrowDown;
+      if (is_ctrl_d || is_shift_alt_down) {
+        if (readonly) {
+          return true;
+        }
+        bool has_selection =
+            (selection_start != -1 && selection_start != cursor_pos);
+        if (has_selection) {
+          int sel_min = std::min(selection_start, cursor_pos);
+          int sel_max = std::max(selection_start, cursor_pos);
+          std::vector<Grapheme> dup(graphemes.begin() + sel_min,
+                                    graphemes.begin() + sel_max);
+          CapInsertionToMaxLength(dup, n, maxlength);
+          if (!dup.empty()) {
+            BeginEdit(EditKind::Other);
+            int dup_len = static_cast<int>(dup.size());
+            graphemes.insert(graphemes.begin() + sel_max, dup.begin(),
+                             dup.end());
+            selection_start = sel_max;
+            cursor_pos = sel_max + dup_len;
+            value = GraphemesToString(graphemes);
+            self->PropagateBinding("value", value);
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
+            ideal_column_ = pos2d.column;
+            KeepCursorVisible(root, is_multiline);
+          }
+          return true;
+        } else if (is_multiline) {
+          int line_start = FindLineStart(graphemes, cursor_pos);
+          int line_end = FindLineEnd(graphemes, cursor_pos);
+          int col = cursor_pos - line_start;
+          std::vector<Grapheme> line_dup(graphemes.begin() + line_start,
+                                         graphemes.begin() + line_end);
+          if (line_end < n) {
+            std::vector<Grapheme> to_insert = line_dup;
+            to_insert.push_back(graphemes[line_end]);
+            CapInsertionToMaxLength(to_insert, n, maxlength);
+            if (!to_insert.empty()) {
+              BeginEdit(EditKind::Other);
+              graphemes.insert(graphemes.begin() + line_end + 1,
+                               to_insert.begin(), to_insert.end());
+              cursor_pos = line_end + 1 + col;
+              selection_start = -1;
+              value = GraphemesToString(graphemes);
+              self->PropagateBinding("value", value);
+              auto pos2d = GetCursor2D(graphemes, cursor_pos);
+              ideal_column_ = pos2d.column;
+              KeepCursorVisible(root, is_multiline);
+            }
+          } else {
+            std::vector<Grapheme> to_insert;
+            auto nl = GetGraphemesList("\n");
+            to_insert.insert(to_insert.end(), nl.begin(), nl.end());
+            to_insert.insert(to_insert.end(), line_dup.begin(), line_dup.end());
+            CapInsertionToMaxLength(to_insert, n, maxlength);
+            if (!to_insert.empty()) {
+              BeginEdit(EditKind::Other);
+              graphemes.insert(graphemes.begin() + line_end, to_insert.begin(),
+                               to_insert.end());
+              cursor_pos = line_end + 1 + col;
+              selection_start = -1;
+              value = GraphemesToString(graphemes);
+              self->PropagateBinding("value", value);
+              auto pos2d = GetCursor2D(graphemes, cursor_pos);
+              ideal_column_ = pos2d.column;
+              KeepCursorVisible(root, is_multiline);
+            }
+          }
+          return true;
+        }
+      }
+
+      bool is_ctrl_shift_k = kb.modifier.ctrl && kb.modifier.shift &&
+                             !kb.modifier.alt && !kb.modifier.meta &&
+                             (kb.codepoint == 'k' || kb.codepoint == 'K');
+      if (is_ctrl_shift_k) {
+        if (readonly) {
+          return true;
+        }
+        if (!is_multiline) {
+          BeginEdit(EditKind::Delete);
+          graphemes.clear();
+          cursor_pos = 0;
+          selection_start = -1;
+          value.clear();
+          self->PropagateBinding("value", value);
+          ideal_column_ = 0;
+          KeepCursorVisible(root, is_multiline);
+          return true;
+        } else {
+          int line_start = FindLineStart(graphemes, cursor_pos);
+          int line_end = FindLineEnd(graphemes, cursor_pos);
+          int col = cursor_pos - line_start;
+          BeginEdit(EditKind::Delete);
+          if (line_end < n) {
+            graphemes.erase(graphemes.begin() + line_start,
+                            graphemes.begin() + line_end + 1);
+            int new_line_end = FindLineEnd(graphemes, line_start);
+            cursor_pos = std::min(line_start + col, new_line_end);
+            selection_start = -1;
+          } else if (line_start > 0) {
+            graphemes.erase(graphemes.begin() + line_start - 1,
+                            graphemes.begin() + line_end);
+            int prev_line_start = FindLineStart(graphemes, line_start - 1);
+            cursor_pos = std::min(prev_line_start + col, line_start - 1);
+            selection_start = -1;
+          } else {
+            graphemes.clear();
+            cursor_pos = 0;
+            selection_start = -1;
+          }
+          value = GraphemesToString(graphemes);
+          self->PropagateBinding("value", value);
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
+          ideal_column_ = pos2d.column;
+          KeepCursorVisible(root, is_multiline);
+          return true;
+        }
+      }
+
       if (kb.special == Event::Keyboard::Special::ArrowLeft) {
         if (kb.modifier.shift && selection_start == -1) {
           selection_start = cursor_pos;
@@ -940,6 +1109,93 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
+      if (is_multiline && kb.modifier.alt && !kb.modifier.ctrl &&
+          !kb.modifier.shift && !kb.modifier.meta &&
+          (kb.special == Event::Keyboard::Special::ArrowUp ||
+           kb.special == Event::Keyboard::Special::ArrowDown)) {
+        if (readonly) {
+          return true;
+        }
+        int sel_min = cursor_pos;
+        int sel_max = cursor_pos;
+        if (selection_start != -1 && selection_start != cursor_pos) {
+          sel_min = std::min(selection_start, cursor_pos);
+          sel_max = std::max(selection_start, cursor_pos);
+        }
+        int block_start = FindLineStart(graphemes, sel_min);
+        int last_pos = sel_max;
+        if (sel_max > sel_min && sel_max == FindLineStart(graphemes, sel_max)) {
+          last_pos = sel_max - 1;
+        }
+        int block_end = FindLineEnd(graphemes, last_pos);
+
+        if (kb.special == Event::Keyboard::Special::ArrowUp) {
+          if (block_start > 0) {
+            int delim_pos = block_start - 1;
+            int prev_line_start = FindLineStart(graphemes, delim_pos);
+            int prev_line_end = delim_pos;
+            int shift_amount = block_start - prev_line_start;
+
+            std::vector<Grapheme> new_slice;
+            new_slice.insert(new_slice.end(), graphemes.begin() + block_start,
+                             graphemes.begin() + block_end);
+            new_slice.push_back(graphemes[delim_pos]);
+            new_slice.insert(new_slice.end(),
+                             graphemes.begin() + prev_line_start,
+                             graphemes.begin() + prev_line_end);
+
+            BeginEdit(EditKind::Other);
+            graphemes.erase(graphemes.begin() + prev_line_start,
+                            graphemes.begin() + block_end);
+            graphemes.insert(graphemes.begin() + prev_line_start,
+                             new_slice.begin(), new_slice.end());
+
+            cursor_pos -= shift_amount;
+            if (selection_start != -1) {
+              selection_start -= shift_amount;
+            }
+            value = GraphemesToString(graphemes);
+            self->PropagateBinding("value", value);
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
+            ideal_column_ = pos2d.column;
+            KeepCursorVisible(root, is_multiline);
+          }
+          return true;
+        } else {
+          // ArrowDown
+          if (block_end < n) {
+            int delim_pos = block_end;
+            int next_line_start = delim_pos + 1;
+            int next_line_end = FindLineEnd(graphemes, next_line_start);
+            int shift_amount = next_line_end - block_end;
+
+            std::vector<Grapheme> new_slice;
+            new_slice.insert(new_slice.end(),
+                             graphemes.begin() + next_line_start,
+                             graphemes.begin() + next_line_end);
+            new_slice.push_back(graphemes[delim_pos]);
+            new_slice.insert(new_slice.end(), graphemes.begin() + block_start,
+                             graphemes.begin() + block_end);
+
+            BeginEdit(EditKind::Other);
+            graphemes.erase(graphemes.begin() + block_start,
+                            graphemes.begin() + next_line_end);
+            graphemes.insert(graphemes.begin() + block_start, new_slice.begin(),
+                             new_slice.end());
+
+            cursor_pos += shift_amount;
+            if (selection_start != -1) {
+              selection_start += shift_amount;
+            }
+            value = GraphemesToString(graphemes);
+            self->PropagateBinding("value", value);
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
+            ideal_column_ = pos2d.column;
+            KeepCursorVisible(root, is_multiline);
+          }
+          return true;
+        }
+      }
       if (is_multiline && kb.special == Event::Keyboard::Special::ArrowUp) {
         if (kb.modifier.shift && selection_start == -1) {
           selection_start = cursor_pos;
@@ -966,6 +1222,33 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
+      if (is_multiline && (kb.special == Event::Keyboard::Special::PageUp ||
+                           kb.special == Event::Keyboard::Special::PageDown)) {
+        if (kb.modifier.shift && selection_start == -1) {
+          selection_start = cursor_pos;
+        }
+        if (!kb.modifier.shift) {
+          selection_start = -1;
+        }
+        int page_size = 10;
+        if (root) {
+          int border_vert =
+              (root->style.border_style != BorderStyle::None) ? 2 : 0;
+          int padding_vert =
+              root->style.padding.top + root->style.padding.bottom;
+          int vis_h = root->layout_height() - border_vert - padding_vert;
+          if (vis_h > 2) {
+            page_size = vis_h - 1;
+          }
+        }
+        auto pos2d = GetCursor2D(graphemes, cursor_pos);
+        int target_line = (kb.special == Event::Keyboard::Special::PageUp)
+                              ? std::max(0, pos2d.line - page_size)
+                              : (pos2d.line + page_size);
+        cursor_pos = GetCursorPosFrom2D(graphemes, target_line, ideal_column_);
+        KeepCursorVisible(root, is_multiline);
+        return true;
+      }
       if (kb.special == Event::Keyboard::Special::Home) {
         if (kb.modifier.shift && selection_start == -1) {
           selection_start = cursor_pos;
@@ -973,10 +1256,19 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (!kb.modifier.shift) {
           selection_start = -1;
         }
-        if (is_multiline) {
-          cursor_pos = FindLineStart(graphemes, cursor_pos);
-        } else {
+        if (kb.modifier.ctrl) {
           cursor_pos = 0;
+        } else {
+          int line_start =
+              is_multiline ? FindLineStart(graphemes, cursor_pos) : 0;
+          int line_end = is_multiline ? FindLineEnd(graphemes, cursor_pos) : n;
+          int indent_pos = line_start;
+          while (indent_pos < line_end &&
+                 (graphemes[indent_pos].text == " " ||
+                  graphemes[indent_pos].text == "\t")) {
+            indent_pos++;
+          }
+          cursor_pos = (cursor_pos == indent_pos) ? line_start : indent_pos;
         }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
@@ -990,10 +1282,14 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (!kb.modifier.shift) {
           selection_start = -1;
         }
-        if (is_multiline) {
-          cursor_pos = FindLineEnd(graphemes, cursor_pos);
-        } else {
+        if (kb.modifier.ctrl) {
           cursor_pos = n;
+        } else {
+          if (is_multiline) {
+            cursor_pos = FindLineEnd(graphemes, cursor_pos);
+          } else {
+            cursor_pos = n;
+          }
         }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
         ideal_column_ = pos2d.column;
@@ -1046,56 +1342,140 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (is_multiline && kb.special == Event::Keyboard::Special::Tab) {
+      bool is_tab = (kb.special == Event::Keyboard::Special::Tab);
+      bool is_tab_reverse =
+          (kb.special == Event::Keyboard::Special::TabReverse);
+      bool is_shift_tab = is_tab_reverse || (is_tab && kb.modifier.shift);
+      if (is_multiline && (is_tab || is_tab_reverse)) {
         if (readonly) {
           return true;
         }
-        BeginEdit(EditKind::Other);
-        if (kb.modifier.shift) {
-          // Unindent: remove a tab or up to 4 spaces at the start of the line
-          int line_start = FindLineStart(graphemes, cursor_pos);
-          int to_remove = 0;
-          if (line_start < n) {
-            if (graphemes[line_start].text == "\t") {
-              to_remove = 1;
-            } else if (graphemes[line_start].text == " ") {
-              to_remove = 1;
-              while (to_remove < 4 && line_start + to_remove < n &&
-                     graphemes[line_start + to_remove].text == " ") {
-                to_remove++;
+        int sel_min = cursor_pos;
+        int sel_max = cursor_pos;
+        bool has_selection =
+            (selection_start != -1 && selection_start != cursor_pos);
+        if (has_selection) {
+          sel_min = std::min(selection_start, cursor_pos);
+          sel_max = std::max(selection_start, cursor_pos);
+        }
+
+        int first_line_start = FindLineStart(graphemes, sel_min);
+        int last_pos = sel_max;
+        if (sel_max > sel_min && sel_max == FindLineStart(graphemes, sel_max)) {
+          last_pos = sel_max - 1;
+        }
+        int last_line_start = FindLineStart(graphemes, last_pos);
+        bool is_multiline_selection = (first_line_start != last_line_start);
+
+        if (is_shift_tab) {
+          BeginEdit(EditKind::Other);
+          std::vector<int> lines;
+          int curr = first_line_start;
+          while (curr <= last_pos && curr < n) {
+            lines.push_back(curr);
+            int next_l = FindLineEnd(graphemes, curr);
+            if (next_l < n && IsLineBreak(graphemes[next_l])) {
+              next_l++;
+            } else {
+              break;
+            }
+            curr = next_l;
+          }
+
+          for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
+            int l_start = *it;
+            int to_remove = 0;
+            if (l_start < static_cast<int>(graphemes.size())) {
+              if (graphemes[l_start].text == "\t") {
+                to_remove = 1;
+              } else if (graphemes[l_start].text == " ") {
+                to_remove = 1;
+                while (to_remove < 2 &&
+                       l_start + to_remove <
+                           static_cast<int>(graphemes.size()) &&
+                       graphemes[l_start + to_remove].text == " ") {
+                  to_remove++;
+                }
+              }
+            }
+            if (to_remove > 0) {
+              graphemes.erase(graphemes.begin() + l_start,
+                              graphemes.begin() + l_start + to_remove);
+              auto adjust_pos = [&](int& p) {
+                if (p >= l_start + to_remove) {
+                  p -= to_remove;
+                } else if (p > l_start) {
+                  p = l_start;
+                }
+              };
+              adjust_pos(cursor_pos);
+              if (selection_start != -1) {
+                adjust_pos(selection_start);
               }
             }
           }
-          if (to_remove > 0) {
-            graphemes.erase(graphemes.begin() + line_start,
-                            graphemes.begin() + line_start + to_remove);
-            cursor_pos = std::max(line_start, cursor_pos - to_remove);
-            // See the Backspace branch above for why this must come before
-            // the `value` reassignment.
-            auto pos2d = GetCursor2D(graphemes, cursor_pos);
-            ideal_column_ = pos2d.column;
-            value = GraphemesToString(graphemes);
-            self->PropagateBinding("value", value);
-            KeepCursorVisible(root, is_multiline);
+          value = GraphemesToString(graphemes);
+          self->PropagateBinding("value", value);
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
+          ideal_column_ = pos2d.column;
+          KeepCursorVisible(root, is_multiline);
+          return true;
+        } else if (is_multiline_selection) {
+          BeginEdit(EditKind::Other);
+          std::vector<int> lines;
+          int curr = first_line_start;
+          while (curr <= last_pos && curr < n) {
+            lines.push_back(curr);
+            int next_l = FindLineEnd(graphemes, curr);
+            if (next_l < n && IsLineBreak(graphemes[next_l])) {
+              next_l++;
+            } else {
+              break;
+            }
+            curr = next_l;
           }
+
+          std::string tab_str = "  ";
+          auto tab_g = GetGraphemesList(tab_str);
+          int tab_len = static_cast<int>(tab_g.size());
+          for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
+            int l_start = *it;
+            graphemes.insert(graphemes.begin() + l_start, tab_g.begin(),
+                             tab_g.end());
+            auto adjust_pos = [&](int& p) {
+              if (p > l_start) {
+                p += tab_len;
+              }
+            };
+            adjust_pos(cursor_pos);
+            if (selection_start != -1) {
+              adjust_pos(selection_start);
+            }
+          }
+          value = GraphemesToString(graphemes);
+          self->PropagateBinding("value", value);
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
+          ideal_column_ = pos2d.column;
+          KeepCursorVisible(root, is_multiline);
+          return true;
         } else {
-          // Indent: insert a tab
-          std::string tab = "\t";
+          BeginEdit(EditKind::Other);
+          DeleteSelection(graphemes, selection_start, cursor_pos);
+          n = static_cast<int>(graphemes.size());
+          std::string tab = "  ";
           auto new_graphemes = GetGraphemesList(tab);
           CapInsertionToMaxLength(new_graphemes, n, maxlength);
           graphemes.insert(graphemes.begin() + cursor_pos,
                            new_graphemes.begin(), new_graphemes.end());
           cursor_pos += static_cast<int>(new_graphemes.size());
-          // See the Backspace branch above for why this must come before
-          // the `value` reassignment.
           auto pos2d = GetCursor2D(graphemes, cursor_pos);
           ideal_column_ = pos2d.column;
           value = GraphemesToString(graphemes);
           self->PropagateBinding("value", value);
+          last_edit_end_pos_ = cursor_pos;
           KeepCursorVisible(root, is_multiline);
+          return true;
         }
-        last_edit_end_pos_ = cursor_pos;
-        return true;
       }
       if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
         if (readonly) {
@@ -1153,6 +1533,77 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (readonly) {
           return true;
         }
+        bool has_selection =
+            (selection_start != -1 && selection_start != cursor_pos);
+        if (has_selection && !kb.from_paste) {
+          char open_delim = 0;
+          char close_delim = 0;
+          switch (kb.codepoint) {
+            case '(':
+            case ')':
+              open_delim = '(';
+              close_delim = ')';
+              break;
+            case '[':
+            case ']':
+              open_delim = '[';
+              close_delim = ']';
+              break;
+            case '{':
+            case '}':
+              open_delim = '{';
+              close_delim = '}';
+              break;
+            case '<':
+            case '>':
+              open_delim = '<';
+              close_delim = '>';
+              break;
+            case '"':
+              open_delim = '"';
+              close_delim = '"';
+              break;
+            case '\'':
+              open_delim = '\'';
+              close_delim = '\'';
+              break;
+            case '`':
+              open_delim = '`';
+              close_delim = '`';
+              break;
+            default:
+              break;
+          }
+          if (open_delim != 0) {
+            int sel_min = std::min(selection_start, cursor_pos);
+            int sel_max = std::max(selection_start, cursor_pos);
+            if (maxlength < 0 || n + 2 <= maxlength) {
+              BeginEdit(EditKind::Other);
+              std::string open_str(1, open_delim);
+              std::string close_str(1, close_delim);
+              auto open_g = GetGraphemesList(open_str);
+              auto close_g = GetGraphemesList(close_str);
+              graphemes.insert(graphemes.begin() + sel_max, close_g.begin(),
+                               close_g.end());
+              graphemes.insert(graphemes.begin() + sel_min, open_g.begin(),
+                               open_g.end());
+              if (cursor_pos >= selection_start) {
+                selection_start = sel_min + 1;
+                cursor_pos = sel_max + 1;
+              } else {
+                selection_start = sel_max + 1;
+                cursor_pos = sel_min + 1;
+              }
+              value = GraphemesToString(graphemes);
+              self->PropagateBinding("value", value);
+              last_edit_end_pos_ = cursor_pos;
+              auto pos2d = GetCursor2D(graphemes, cursor_pos);
+              ideal_column_ = pos2d.column;
+              KeepCursorVisible(root, is_multiline);
+              return true;
+            }
+          }
+        }
         BeginEdit(kb.from_paste ? EditKind::Paste : EditKind::Insert);
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
@@ -1195,12 +1646,20 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
     root->set_focused(false);
   }
   bool cur_focused = root ? root->focused() : false;
+  auto graphemes = GetGraphemesList(value);
+  int n = static_cast<int>(graphemes.size());
+  if (!is_focused_ && cur_focused && select_on_focus) {
+    if (n > 0) {
+      selection_start = 0;
+      cursor_pos = n;
+    } else {
+      selection_start = -1;
+      cursor_pos = 0;
+    }
+  }
   is_focused_ = cur_focused;
 
   placeholder_text = value.empty() ? placeholder : "";
-
-  auto graphemes = GetGraphemesList(value);
-  int n = static_cast<int>(graphemes.size());
   if (cursor_pos < 0) {
     cursor_pos = 0;
   }
