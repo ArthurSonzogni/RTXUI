@@ -5,6 +5,7 @@
 #define RTXUI_COMPONENT_HPP_
 
 #include <charconv>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -12,6 +13,7 @@
 #include <optional>
 #include <ranges>
 #include <set>
+#include <source_location>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -19,17 +21,16 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <filesystem>
-#include <source_location>
 #if defined(RTXUI_HAS_REFLECTION)
 #include <meta>
 #endif
+
+#include <rtxui/rtxui_export.hpp>
 
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/import.hpp"
 #include "rtxui/internal/refcounted.hpp"
-#include <rtxui/rtxui_export.hpp>
 
 namespace css {
 struct Ruleset;
@@ -59,7 +60,9 @@ class RTXUI_EXPORT TypeErasedRange {
   virtual ~TypeErasedRange() = default;
   virtual size_t Size() const = 0;
   virtual std::string GetItemString(size_t index) const = 0;
-  virtual std::string_view GetItemStringView(size_t index, std::string& fallback_storage) const = 0;
+  virtual std::string_view GetItemStringView(
+      size_t index,
+      std::string& fallback_storage) const = 0;
   virtual std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const = 0;
   virtual bool CheckAndUpdate() = 0;
 };
@@ -94,9 +97,11 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
   std::string_view Template();
-  void EnableHotReload(std::string_view view_var_name = "view",
-                       std::source_location location = std::source_location::current());
-  void EnableHotReload(std::string_view view_var_name, std::string_view filepath);
+  void EnableHotReload(
+      std::string_view view_var_name = "view",
+      std::source_location location = std::source_location::current());
+  void EnableHotReload(std::string_view view_var_name,
+                       std::string_view filepath);
   void HotReload(std::string_view new_template);
 
   void Mount();
@@ -126,7 +131,9 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   void ResolveTargetStyles();
   void ResolveTargetStyles(double current_time_ms);
   const css::StyleSheet* stylesheet() const;
-  const CategorizedRules* categorized_rules() const { return categorized_rules_.get(); }
+  const CategorizedRules* categorized_rules() const {
+    return categorized_rules_.get();
+  }
   bool HasAnyPseudoClasses() const;
   virtual bool Digest() = 0;
   virtual void InitReflection();
@@ -153,7 +160,9 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   /// stays an opaque forward declaration here.
   ComponentBase* QueryComponent(std::string_view selector);
   Ref<Element> Slot(std::string_view name);
-  const std::map<std::string, Ref<Element>, std::less<>>& slots() const { return slots_; }
+  const std::map<std::string, Ref<Element>, std::less<>>& slots() const {
+    return slots_;
+  }
   void SetProperty(std::string_view name, std::string_view value);
   void PropagateBinding(std::string_view child_prop, std::string_view value);
 
@@ -364,7 +373,9 @@ class TypeErasedRangeImpl : public TypeErasedRange {
     return reflection::to_string(*it);
   }
 
-  std::string_view GetItemStringView(size_t index, std::string& fallback_storage) const override {
+  std::string_view GetItemStringView(
+      size_t index,
+      std::string& fallback_storage) const override {
     auto it = std::ranges::begin(*container_ptr_);
     std::advance(it, index);
     using ItemType = std::ranges::range_value_t<Container>;
@@ -377,7 +388,6 @@ class TypeErasedRangeImpl : public TypeErasedRange {
   }
 
   std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const override {
-    using ItemType = std::ranges::range_value_t<Container>;
     auto it = std::ranges::begin(*container_ptr_);
     std::advance(it, index);
 
@@ -386,6 +396,7 @@ class TypeErasedRangeImpl : public TypeErasedRange {
     }
 
 #if defined(RTXUI_HAS_REFLECTION)
+    using ItemType = std::ranges::range_value_t<Container>;
     if constexpr (std::is_class_v<ItemType> &&
                   !std::is_same_v<ItemType, std::string>) {
       return std::make_shared<ReflectedStructVisitor<ItemType>>(*it);
@@ -397,7 +408,10 @@ class TypeErasedRangeImpl : public TypeErasedRange {
   bool CheckAndUpdate() override {
     if constexpr (requires { *container_ptr_ != snapshot_; }) {
       if (*container_ptr_ != snapshot_) {
-        if constexpr (requires { snapshot_.size(); snapshot_[0] = (*container_ptr_)[0]; }) {
+        if constexpr (requires {
+                        snapshot_.size();
+                        snapshot_[0] = (*container_ptr_)[0];
+                      }) {
           if (snapshot_.size() != container_ptr_->size()) {
             snapshot_ = *container_ptr_;
           } else {
@@ -650,7 +664,8 @@ struct CssError {
 /// terminal in raw mode -- apps that render arbitrary/live-edited CSS (e.g.
 /// a playground) should install their own handler to surface the error
 /// through their own UI instead. Pass nullptr to restore the default.
-RTXUI_EXPORT void SetCssErrorHandler(std::function<void(const CssError&)> handler);
+RTXUI_EXPORT void SetCssErrorHandler(
+    std::function<void(const CssError&)> handler);
 
 /// Reported when XML/HTML content generated from live-edited or bound state
 /// fails to parse (e.g. the <markdown> component's rendered body plus its
@@ -675,7 +690,8 @@ struct XmlError {
 /// handler to surface the error through their own UI instead, the same way
 /// SetCssErrorHandler works for <style> blocks. Pass nullptr to restore the
 /// default.
-RTXUI_EXPORT void SetXmlErrorHandler(std::function<void(const XmlError&)> handler);
+RTXUI_EXPORT void SetXmlErrorHandler(
+    std::function<void(const XmlError&)> handler);
 
 /// Routes an XML/HTML parse error to the handler installed via
 /// SetXmlErrorHandler, or prints it to stderr if none was installed.
@@ -691,7 +707,9 @@ struct HotReloadInfo {
 
 class HotReloadManager {
  public:
-  static void Register(ComponentBase* component, std::string_view view_var_name, std::string_view filepath);
+  static void Register(ComponentBase* component,
+                       std::string_view view_var_name,
+                       std::string_view filepath);
   static void Unregister(ComponentBase* component);
   static bool PollChanges();
 };

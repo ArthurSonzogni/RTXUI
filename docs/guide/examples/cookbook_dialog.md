@@ -1,6 +1,8 @@
-# Recipe: a confirmation dialog
+# Recipe
 
-The built-in &amp;lt;dialog&amp;gt; renders centered above the interface with a dimmed backdrop and closes on Escape. Bind its `open` attribute to a bool.
+Recipe: a confirmation dialog.
+
+The built-in `<dialog>` renders centered above the interface with a dimmed backdrop and closes on Escape. Bind its `open` attribute to a bool.
 
 <ExampleTabs src="/wasm/rtxui_example_cookbook_dialog.js" :cols="80" :rows="24">
 <template #source>

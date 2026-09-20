@@ -40,7 +40,6 @@ class h6 : public Component<h6> {
   static const std::string_view view;
 };
 
-
 }  // namespace rtxui
 
 #endif  // RTXUI_COMPONENT_DEFAULT_H1_HPP_

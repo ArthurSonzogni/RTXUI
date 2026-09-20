@@ -221,7 +221,7 @@ std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
 
   int run_start = 0;  // Grapheme index the pending (unbroken) run begins at.
   int col_start = 0;  // Monotonic column value at run_start.
-  int cur_col = 0;     // Monotonic column value of the next grapheme.
+  int cur_col = 0;    // Monotonic column value of the next grapheme.
   int last_space_index = -1;
   int last_space_col = 0;
 
@@ -252,7 +252,7 @@ std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
         // cur_col - col_start keeps counting the characters typed between
         // the space and here instead of discarding them (mirrors the fix
         // for the same bug in layout.cpp's LayoutInlineFlow).
-        col_start = last_space_col + 1;
+        col_start += last_space_col + 1;
         commit_line(last_space_index + 1);
         cur_col += g.width;
       } else if (overflow_wrap_normal) {
@@ -349,18 +349,25 @@ int FindLineEnd(const std::vector<Grapheme>& graphemes, int start_pos) {
   return pos;
 }
 
-std::pair<int, int> GetWordBoundaries(const std::vector<Grapheme>& graphemes, int click_pos) {
+std::pair<int, int> GetWordBoundaries(const std::vector<Grapheme>& graphemes,
+                                      int click_pos) {
   int n = static_cast<int>(graphemes.size());
   if (n == 0) {
     return {0, 0};
   }
-  if (click_pos < 0) click_pos = 0;
-  if (click_pos >= n) click_pos = n - 1;
+  if (click_pos < 0) {
+    click_pos = 0;
+  }
+  if (click_pos >= n) {
+    click_pos = n - 1;
+  }
 
   std::string_view target = graphemes[click_pos].text;
-  
+
   auto is_word_char = [](std::string_view s) {
-    if (s.empty()) return false;
+    if (s.empty()) {
+      return false;
+    }
     char c = s[0];
     if (std::isalnum(static_cast<unsigned char>(c)) || c == '_') {
       return true;
@@ -393,17 +400,21 @@ std::pair<int, int> GetWordBoundaries(const std::vector<Grapheme>& graphemes, in
       end++;
     }
   } else {
-    while (start > 0 && !is_word_char(graphemes[start - 1].text) && !is_space_char(graphemes[start - 1].text)) {
+    while (start > 0 && !is_word_char(graphemes[start - 1].text) &&
+           !is_space_char(graphemes[start - 1].text)) {
       start--;
     }
-    while (end < n && !is_word_char(graphemes[end].text) && !is_space_char(graphemes[end].text)) {
+    while (end < n && !is_word_char(graphemes[end].text) &&
+           !is_space_char(graphemes[end].text)) {
       end++;
     }
   }
   return {start, end};
 }
 
-bool DeleteSelection(std::vector<Grapheme>& graphemes, int& selection_start, int& cursor_pos) {
+bool DeleteSelection(std::vector<Grapheme>& graphemes,
+                     int& selection_start,
+                     int& cursor_pos) {
   if (selection_start != -1 && selection_start != cursor_pos) {
     int start = std::min(selection_start, cursor_pos);
     int end = std::max(selection_start, cursor_pos);
@@ -465,7 +476,8 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
   // self's scroll_y (and the mouse-click math in OnEventShared) operate in
   // rendered-row units, which only match logical-line indices when no line
   // wraps. See ComputeRowStarts for why.
-  Element* content_el = is_multiline ? root->QuerySelector(".content") : nullptr;
+  Element* content_el =
+      is_multiline ? root->QuerySelector(".content") : nullptr;
   int cursor_line = 0;
   int cursor_col = 0;
   if (is_multiline) {
@@ -476,15 +488,16 @@ void TextInputBase::KeepCursorVisible(Element* root, bool is_multiline) {
     auto row_starts =
         ComputeRowStarts(current_graphemes, wrap_width, overflow_wrap_normal);
     cursor_line = RowOfIndex(row_starts, cursor_pos);
-    cursor_col = ColOfIndex(current_graphemes, row_starts[cursor_line], cursor_pos);
+    cursor_col =
+        ColOfIndex(current_graphemes, row_starts[cursor_line], cursor_pos);
   } else {
     auto pos2d = GetCursor2D(current_graphemes, cursor_pos);
     cursor_col = pos2d.column;
   }
 
   int cursor_width = (cursor_pos < static_cast<int>(current_graphemes.size()))
-                          ? std::max(1, current_graphemes[cursor_pos].width)
-                          : 1;
+                         ? std::max(1, current_graphemes[cursor_pos].width)
+                         : 1;
 
   int border_offset = (root->style.border_style != BorderStyle::None) ? 1 : 0;
 
@@ -540,7 +553,8 @@ int TextInputBase::ClickToCursorPos(Element* root,
   // padding and (when linenumbers is set) the gutter's width, so no manual
   // offset arithmetic is needed here -- unlike self's own box, which a
   // gutter makes narrower than self's full width.
-  Element* content_el = is_multiline ? root->QuerySelector(".content") : nullptr;
+  Element* content_el =
+      is_multiline ? root->QuerySelector(".content") : nullptr;
   if (content_el) {
     int wrap_width = content_el->layout_width();
     int wrap_height = content_el->layout_height();
@@ -594,14 +608,14 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         int layout_w = root->layout_width();
         int layout_h = root->layout_height();
 
-        if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
-            click_y < abs_y + layout_h) {
+        if (click_x >= abs_x && click_x < abs_x + layout_w &&
+            click_y >= abs_y && click_y < abs_y + layout_h) {
           FocusExclusive(root);
           self->CaptureMouse();
 
           auto graphemes = GetGraphemesList(value);
-          int click_pos = ClickToCursorPos(root, is_multiline, click_x, click_y,
-                                           graphemes);
+          int click_pos =
+              ClickToCursorPos(root, is_multiline, click_x, click_y, graphemes);
 
           auto now = std::chrono::steady_clock::now();
           // last_click_time_ defaults to time_point::min() as a "no
@@ -609,7 +623,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           // (signed integer overflow is UB), so check for it explicitly
           // instead of ever computing `now - time_point::min()`.
           bool is_double_click =
-              last_click_time_ != std::chrono::steady_clock::time_point::min() &&
+              last_click_time_ !=
+                  std::chrono::steady_clock::time_point::min() &&
               now - last_click_time_ < std::chrono::milliseconds(500) &&
               click_pos == last_click_pos_;
           if (is_double_click) {
@@ -666,7 +681,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
 
         KeepCursorVisible(root, is_multiline);
         return true;
-      } else if (mouse.motion == Event::Mouse::Motion::Released && is_captured) {
+      } else if (mouse.motion == Event::Mouse::Motion::Released &&
+                 is_captured) {
         self->ReleaseMouse();
         if (selection_start == cursor_pos) {
           selection_start = -1;
@@ -735,7 +751,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         }
         int sel_min = std::min(selection_start, cursor_pos);
         int sel_max = std::max(selection_start, cursor_pos);
-        self->SetClipboard(GraphemesToString(graphemes, sel_min, sel_max - sel_min));
+        self->SetClipboard(
+            GraphemesToString(graphemes, sel_min, sel_max - sel_min));
         if (event == Event::CtrlX() && !readonly) {
           BeginEdit(EditKind::Other);
           DeleteSelection(graphemes, selection_start, cursor_pos);
@@ -755,7 +772,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (kb.modifier.shift && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift && selection_start != -1 && selection_start != cursor_pos && !kb.modifier.ctrl && !kb.modifier.alt) {
+        if (!kb.modifier.shift && selection_start != -1 &&
+            selection_start != cursor_pos && !kb.modifier.ctrl &&
+            !kb.modifier.alt) {
           cursor_pos = std::min(selection_start, cursor_pos);
           selection_start = -1;
         } else {
@@ -777,7 +796,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         if (kb.modifier.shift && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift && selection_start != -1 && selection_start != cursor_pos && !kb.modifier.ctrl && !kb.modifier.alt) {
+        if (!kb.modifier.shift && selection_start != -1 &&
+            selection_start != cursor_pos && !kb.modifier.ctrl &&
+            !kb.modifier.alt) {
           cursor_pos = std::max(selection_start, cursor_pos);
           selection_start = -1;
         } else {
@@ -1076,8 +1097,17 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
     sel_max = std::max(selection_start, cursor_pos);
   }
 
-  left_unselected = GraphemesToString(graphemes, 0, sel_min);
-  left_selected = GraphemesToString(graphemes, sel_min, cursor_pos - sel_min);
+  auto display_graphemes = graphemes;
+  if (type == "password") {
+    for (auto& g : display_graphemes) {
+      g.text = "*";
+      g.width = 1;
+    }
+  }
+
+  left_unselected = GraphemesToString(display_graphemes, 0, sel_min);
+  left_selected =
+      GraphemesToString(display_graphemes, sel_min, cursor_pos - sel_min);
   left_text = left_unselected + left_selected;
 
   bool cursor_is_newline = false;
@@ -1091,20 +1121,29 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
     cursor_char = " ";
     int right_sel_start = cursor_pos;
     int right_sel_count = std::max(0, sel_max - right_sel_start);
-    right_selected = GraphemesToString(graphemes, right_sel_start, right_sel_count);
-    right_unselected = GraphemesToString(graphemes, right_sel_start + right_sel_count);
+    right_selected =
+        GraphemesToString(display_graphemes, right_sel_start, right_sel_count);
+    right_unselected =
+        GraphemesToString(display_graphemes, right_sel_start + right_sel_count);
   } else {
-    cursor_char = (cursor_pos < n) ? std::string(graphemes[cursor_pos].text) : " ";
+    cursor_char =
+        (cursor_pos < n)
+            ? (type == "password" ? "*"
+                                  : std::string(graphemes[cursor_pos].text))
+            : " ";
     int right_sel_start = (cursor_pos < n) ? cursor_pos + 1 : n;
     int right_sel_count = std::max(0, sel_max - right_sel_start);
-    right_selected = GraphemesToString(graphemes, right_sel_start, right_sel_count);
-    right_unselected = GraphemesToString(graphemes, right_sel_start + right_sel_count);
+    right_selected =
+        GraphemesToString(display_graphemes, right_sel_start, right_sel_count);
+    right_unselected =
+        GraphemesToString(display_graphemes, right_sel_start + right_sel_count);
   }
   right_text = right_selected + right_unselected;
 
   bool cursor_is_selected = (cursor_pos >= sel_min && cursor_pos < sel_max);
   if (is_focused_) {
-    cursor_class = cursor_is_selected ? "cursor cursor-focused selection" : "cursor cursor-focused";
+    cursor_class = cursor_is_selected ? "cursor cursor-focused selection"
+                                      : "cursor cursor-focused";
   } else {
     cursor_class = cursor_is_selected ? "cursor selection" : "cursor";
   }
@@ -1116,4 +1155,3 @@ bool TextInputBase::DigestShared(ComponentBase* self) {
 }
 
 }  // namespace rtxui
-

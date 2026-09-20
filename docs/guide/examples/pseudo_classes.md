@@ -1,4 +1,6 @@
-# The interactive pseudo-classes: :hover, :focus and :active
+# The interactive pseudo-classes
+
+The interactive pseudo-classes: :hover, :focus and :active.
 
 Rules can be nested inside their parent with `&`, exactly as in modern CSS, so an element's interactive states live next to its base declarations.
 
@@ -15,5 +17,5 @@ Try it: move the mouse over the buttons, Tab between them, and hold the mouse bu
 ---
 
 * Source file: [`example/pseudo_classes.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/pseudo_classes.cpp)
-* Guide: [Relevant Documentation](/guide/css/animations)
+* Guide: [Relevant Documentation](/guide/css/basics)
 * [← Back to Examples Index](/guide/examples)

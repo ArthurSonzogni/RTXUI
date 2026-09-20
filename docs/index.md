@@ -14,7 +14,7 @@ hero:
       link: /guide/getting-started
     - theme: alt
       text: Try Playground
-      link: '#interactive-playground'
+      link: /playground
 
 features:
   - title: A real layout engine
@@ -85,6 +85,9 @@ class Counter : public rtxui::Component<Counter> {
     in the left-hand editor — every keystroke reparses the template and re-renders the preview on the
     right, using the same engine that powers every RTXUI app.
   </p>
+<div class="playground-cta">
+  <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_playground.js&fullscreen=1" class="playground-btn" target="_blank" rel="noopener noreferrer">⛶ Open Full-Screen Playground &rarr;</a>
+</div>
 
 <ExampleTabs src="/wasm/rtxui_example_playground.js" :cols="120" :rows="32">
 <template #source>
@@ -112,8 +115,32 @@ class Counter : public rtxui::Component<Counter> {
 .demo-section .demo-desc {
   font-size: 1rem;
   color: var(--vp-c-text-2);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   text-align: center;
   line-height: 1.6;
+}
+.playground-cta {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+.playground-cta a,
+.playground-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--vp-c-brand-1);
+  color: white !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.playground-cta a:hover,
+.playground-btn:hover {
+  background-color: var(--vp-c-brand-2);
+  transform: translateY(-1px);
 }
 </style>

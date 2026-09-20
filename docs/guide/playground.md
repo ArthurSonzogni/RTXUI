@@ -1,5 +1,8 @@
 # Playground: A Live HTML/CSS Editor
 
+> [!TIP] Live Interactive Environment
+> Experiment with templates and styles directly in the browser using the [**Full-Screen Playground**](/playground).
+
 `example/playground.cpp` splits the terminal in two: a `<textarea>` on the
 left holds raw HTML + CSS template text, and the pane on the right renders
 that exact text live, using RTXUI to render RTXUI. Every keystroke reparses
@@ -36,9 +39,7 @@ bool Digest() override {
     return true;  // Keep showing the last valid preview.
   }
 
-  Element* preview_root = Root()->QuerySelector("#preview");
-  auto* preview = dynamic_cast<LivePreview*>(
-      const_cast<ComponentBase*>(preview_root->component()));
+  auto* preview = dynamic_cast<LivePreview*>(QueryComponent("#preview"));
   preview->HotReload(code);
   return true;
 }
@@ -50,9 +51,8 @@ Two mechanisms from elsewhere in RTXUI make this possible:
     source file when it changes on disk. Called directly with an in-memory
     string, it reparses and re-renders *any* mounted component — which is
     exactly what a live editor needs, minus the file-watching.
-*   **[`QuerySelector()`](/guide/cpp/dom)** finds the preview's root element by
-    its `id`, and `Element::component()` recovers the owning `ComponentBase*`
-    so `Playground` can call `HotReload()` on it directly.
+*   **[`QueryComponent()`](/guide/cpp/dom)** finds the preview component by
+    its `id` so `Playground` can call `HotReload()` on it directly.
 
 If the typed markup fails to parse, `LivePreview` simply keeps rendering
 whatever it last rendered successfully, and the status line beneath the
@@ -61,10 +61,16 @@ editor reports the error with a line number — the same recovery behavior
 
 ## Limitations
 
-*   `LivePreview` only understands the tags it has explicitly `Import`-ed
-    (see the top of `example/playground.cpp` for the full list). A tag it
-    hasn't imported is silently ignored by the XML-to-DOM step.
 *   The preview is a *document*, not a program: `onclick` handlers and
     C++ member bindings only work for names already bound on `LivePreview`
     itself. Typed markup can restyle and rearrange freely, but it can't
     invent new application logic.
+
+---
+
+## See Also
+
+*   [**Interactive Playground (Full Screen)**](/playground) — Browser WebAssembly playground.
+*   [**HTML Elements Reference**](/html_reference) — All built-in tags and attributes.
+*   [**CSS Reference**](/css_reference) — Layout and style properties.
+

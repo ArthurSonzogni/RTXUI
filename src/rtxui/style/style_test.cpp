@@ -3,14 +3,14 @@
 // the LICENSE file.
 #include "rtxui/style/style.hpp"
 
-#include <iostream>
 #include <catch2/catch_test_macros.hpp>
-#include "rtxui/paint/color.hpp"
 #include <cmath>
+#include <iostream>
 #include <string>
 
 #include "rtxui/base/string.hpp"
 #include "rtxui/layout/style.hpp"
+#include "rtxui/paint/color.hpp"
 #include "rtxui/style/apply_style.hpp"
 
 TEST_CASE("CSS parser works correctly", "[css]") {
@@ -166,11 +166,17 @@ TEST_CASE("CSS attribute selectors", "[css]") {
     span[data-test] {
       color: blue;
     }
+    input[ type = "checkbox" ] {
+      color: green;
+    }
+    button[ disabled ] {
+      color: yellow;
+    }
   )";
 
   auto stylesheet = css::Parse(input);
   REQUIRE(stylesheet);
-  REQUIRE(stylesheet.value().size() == 2);
+  REQUIRE(stylesheet.value().size() == 4);
 
   CHECK(stylesheet.value()[0].parsed_selector.base == "div");
   REQUIRE(stylesheet.value()[0].parsed_selector.attributes.size() == 1);
@@ -183,6 +189,18 @@ TEST_CASE("CSS attribute selectors", "[css]") {
   CHECK(stylesheet.value()[1].parsed_selector.attributes[0].name ==
         "data-test");
   CHECK(stylesheet.value()[1].parsed_selector.attributes[0].has_value == false);
+
+  CHECK(stylesheet.value()[2].parsed_selector.base == "input");
+  REQUIRE(stylesheet.value()[2].parsed_selector.attributes.size() == 1);
+  CHECK(stylesheet.value()[2].parsed_selector.attributes[0].name == "type");
+  CHECK(stylesheet.value()[2].parsed_selector.attributes[0].value ==
+        "checkbox");
+  CHECK(stylesheet.value()[2].parsed_selector.attributes[0].has_value == true);
+
+  CHECK(stylesheet.value()[3].parsed_selector.base == "button");
+  REQUIRE(stylesheet.value()[3].parsed_selector.attributes.size() == 1);
+  CHECK(stylesheet.value()[3].parsed_selector.attributes[0].name == "disabled");
+  CHECK(stylesheet.value()[3].parsed_selector.attributes[0].has_value == false);
 }
 
 TEST_CASE("CSS nesting", "[css]") {
@@ -288,6 +306,19 @@ TEST_CASE("Color parsing in ApplyStyle", "[style][color]") {
     CHECK(style.foreground_color->r == 0);
     CHECK(style.foreground_color->g == 128);
     CHECK(style.foreground_color->b == 128);
+
+    rtxui::ApplyStyle(style, {"color", "orange"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 165);
+    CHECK(style.foreground_color->b == 0);
+
+    rtxui::ApplyStyle(style, {"color", "transparent"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 0);
+    CHECK(style.foreground_color->a == 0);
   }
 
   SECTION("rgb(...) function") {
@@ -306,6 +337,70 @@ TEST_CASE("Color parsing in ApplyStyle", "[style][color]") {
     CHECK(style.foreground_color->g == 20);
     CHECK(style.foreground_color->b == 30);
     CHECK(style.foreground_color->a == 127);
+  }
+
+  SECTION("rgb/rgba modern space-separated and percentages") {
+    rtxui::ApplyStyle(style, {"color", "rgb(10 20 30)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 10);
+    CHECK(style.foreground_color->g == 20);
+    CHECK(style.foreground_color->b == 30);
+    CHECK(style.foreground_color->a == 255);
+
+    rtxui::ApplyStyle(style, {"color", "rgb(10 20 30 / 0.5)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 10);
+    CHECK(style.foreground_color->g == 20);
+    CHECK(style.foreground_color->b == 30);
+    CHECK(style.foreground_color->a == 127);
+
+    rtxui::ApplyStyle(style, {"color", "rgb(100% 0% 50% / 50%)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 127);
+    CHECK(style.foreground_color->a == 127);
+  }
+
+  SECTION("hsl and hsla functions") {
+    rtxui::ApplyStyle(style, {"color", "hsl(0, 100%, 50%)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 255);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 0);
+    CHECK(style.foreground_color->a == 255);
+
+    rtxui::ApplyStyle(style, {"color", "hsl(120, 100%, 50%)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 255);
+    CHECK(style.foreground_color->b == 0);
+
+    rtxui::ApplyStyle(style, {"color", "hsl(240, 100%, 50%)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 0);
+    CHECK(style.foreground_color->b == 255);
+
+    rtxui::ApplyStyle(style, {"color", "hsl(120deg 100% 50% / 0.5)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 255);
+    CHECK(style.foreground_color->b == 0);
+    CHECK(style.foreground_color->a == 127);
+
+    rtxui::ApplyStyle(style, {"color", "hsla(180deg, 100%, 50%, 50%)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 255);
+    CHECK(style.foreground_color->b == 255);
+    CHECK(style.foreground_color->a == 127);
+
+    rtxui::ApplyStyle(style, {"color", "hsl(0.5turn 100% 50%)"});
+    REQUIRE(style.foreground_color.has_value());
+    CHECK(style.foreground_color->r == 0);
+    CHECK(style.foreground_color->g == 255);
+    CHECK(style.foreground_color->b == 255);
   }
 
   SECTION("Hex #RGB format") {
@@ -909,6 +1004,9 @@ TEST_CASE("CSS var() substitution", "[css][var]") {
   CHECK(css::SubstituteVars("1 var(--a) solid", props).value() ==
         "1 red solid");
   CHECK(css::SubstituteVars("var( --a )", props).value() == "red");
+  CHECK(css::SubstituteVars("var(\n  --a\n)", props).value() == "red");
+  CHECK(css::SubstituteVars("var(\n  --missing,\n  blue\n)", props).value() ==
+        "blue");
   CHECK(css::SubstituteVars("var(--missing, blue)", props).value() == "blue");
   CHECK(css::SubstituteVars("var(--missing, var(--a))", props).value() ==
         "red");
@@ -1256,7 +1354,8 @@ TEST_CASE("Align self and content parsing in ApplyStyle", "[style][align]") {
   }
 }
 
-TEST_CASE("Grid templates and placement parsing in ApplyStyle", "[style][grid]") {
+TEST_CASE("Grid templates and placement parsing in ApplyStyle",
+          "[style][grid]") {
   rtxui::ComputedStyle style;
 
   SECTION("grid-template-columns only") {
@@ -1310,7 +1409,8 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle", "[style][grid]")
   }
 
   SECTION("grid-template with repeat()") {
-    rtxui::ApplyStyle(style, {"grid-template-columns", "1fr repeat(3, 100px) 2fr"});
+    rtxui::ApplyStyle(style,
+                      {"grid-template-columns", "1fr repeat(3, 100px) 2fr"});
     REQUIRE(style.grid_template_columns.size() == 5);
     CHECK(style.grid_template_columns[0] == rtxui::Length::Fr(1.0f));
     CHECK(style.grid_template_columns[1] == rtxui::Length::Cells(100.0f));
@@ -1378,7 +1478,8 @@ TEST_CASE("Opacity parsing in ApplyStyle", "[style][opacity]") {
   }
 }
 
-TEST_CASE("CSS style parsing handles invalid values robustly", "[style][robustness]") {
+TEST_CASE("CSS style parsing handles invalid values robustly",
+          "[style][robustness]") {
   rtxui::ComputedStyle style;
 
   SECTION("Invalid color values") {
@@ -1497,8 +1598,6 @@ TEST_CASE("CSS ::part() selector parsing", "[css][part]") {
     CHECK(sel.pseudo_classes[0] == "hover");
   }
 }
-
-
 
 TEST_CASE("place-content sets both content-distribution axes",
           "[style][flex][grid]") {
@@ -1640,18 +1739,17 @@ TEST_CASE("lighten() and darken() mix toward a color", "[style][color]") {
     const Color base = Color::RGB(100, 100, 100);
     const Color direct = resolved("rgb(100, 100, 100)", "lighten(50%)");
     const Color composited = Blend(deferred("lighten(50%)"), base);
-    // One unit of slack for the two roundings, which happen in different orders.
+    // One unit of slack for the two roundings, which happen in different
+    // orders.
     CHECK(std::abs(int(direct.r) - int(composited.r)) <= 1);
     CHECK(std::abs(int(direct.g) - int(composited.g)) <= 1);
     CHECK(std::abs(int(direct.b) - int(composited.b)) <= 1);
   }
 
   SECTION("0% and 100% are the endpoints") {
-    CHECK(resolved("rgb(60, 70, 80)", "lighten(0%)") ==
-          Color::RGB(60, 70, 80));
+    CHECK(resolved("rgb(60, 70, 80)", "lighten(0%)") == Color::RGB(60, 70, 80));
     CHECK(resolved("rgb(60, 70, 80)", "lighten(100%)") ==
           Color::RGB(255, 255, 255));
-    CHECK(resolved("rgb(60, 70, 80)", "darken(100%)") ==
-          Color::RGB(0, 0, 0));
+    CHECK(resolved("rgb(60, 70, 80)", "darken(100%)") == Color::RGB(0, 0, 0));
   }
 }

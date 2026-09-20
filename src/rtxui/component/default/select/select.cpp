@@ -3,13 +3,13 @@
 // the LICENSE file.
 #include "rtxui/component/default/select/select.hpp"
 
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 
-#include "rtxui/dom/element.hpp"
-#include "rtxui/dom/text_element.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/option/option.hpp"
+#include "rtxui/dom/element.hpp"
+#include "rtxui/dom/text_element.hpp"
 
 namespace rtxui {
 
@@ -139,8 +139,9 @@ bool select::OnEvent(Event event) {
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      bool click_inside_select = (click_x >= abs_x && click_x < abs_x + layout_w &&
-                                  click_y >= abs_y && click_y < abs_y + layout_h);
+      bool click_inside_select =
+          (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+           click_y < abs_y + layout_h);
       bool click_inside_dropdown = false;
       if (is_open) {
         if (auto* dropdown_el = root->QuerySelector(".dropdown-list")) {
@@ -171,7 +172,8 @@ bool select::OnEvent(Event event) {
         }
         changed = true;
       } else if (click_inside_dropdown) {
-        // Click was inside the dropdown. Do nothing here to allow event propagation to the option components.
+        // Click was inside the dropdown. Do nothing here to allow event
+        // propagation to the option components.
       } else {
         if (is_open) {
           is_open = false;
@@ -186,8 +188,8 @@ bool select::OnEvent(Event event) {
         int opt_y = opt_el->absolute_y();
         int opt_w = opt_el->layout_width();
         int opt_h = opt_el->layout_height();
-        if (click_x >= opt_x && click_x < opt_x + opt_w &&
-            click_y >= opt_y && click_y < opt_y + opt_h) {
+        if (click_x >= opt_x && click_x < opt_x + opt_w && click_y >= opt_y &&
+            click_y < opt_y + opt_h) {
           if (hovered_index != i) {
             hovered_index = i;
             changed = true;
@@ -215,8 +217,8 @@ bool select::OnEvent(Event event) {
               // disabled this comes full circle back to hovered_index and
               // leaves it unchanged.
               for (size_t tries = 0; tries < options.size(); ++tries) {
-                next = static_cast<int>(
-                    (next + step + options.size()) % options.size());
+                next = static_cast<int>((next + step + options.size()) %
+                                        options.size());
                 if (!options[next].disabled) {
                   break;
                 }
@@ -272,8 +274,9 @@ bool select::OnEvent(Event event) {
               } else {
                 // Clamps at the ends rather than wrapping, skipping disabled
                 // options; stops at the first edge it can't move past.
-                int step =
-                    (kb.special == Event::Keyboard::Special::ArrowDown) ? 1 : -1;
+                int step = (kb.special == Event::Keyboard::Special::ArrowDown)
+                               ? 1
+                               : -1;
                 int candidate = curr_idx;
                 for (size_t tries = 0; tries < options.size(); ++tries) {
                   candidate += step;
@@ -408,7 +411,7 @@ void select::SelectOption(std::string_view opt_val) {
   if (root && root->Attributes().count("onchange")) {
     std::string onchange_cb = root->Attributes().at("onchange");
     if (auto* comp = GetAttributeOwnerComponent(root)) {
-        comp->RunCallback(onchange_cb);
+      comp->RunCallback(onchange_cb);
     }
   }
 }

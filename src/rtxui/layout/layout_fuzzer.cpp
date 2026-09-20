@@ -6,6 +6,8 @@
 // template. The other fuzzers stop at their parser; this one is the only cover
 // for the stages after it, which are also the ones that do arithmetic on sizes
 // the template controls.
+#include "rtxui/layout/layout.hpp"
+
 #include <fuzztest/fuzztest.h>
 #include <gtest/gtest.h>
 
@@ -16,7 +18,6 @@
 
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/refcounted.hpp"
-#include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"

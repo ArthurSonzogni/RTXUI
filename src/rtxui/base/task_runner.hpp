@@ -6,10 +6,10 @@
 
 #include <functional>
 #include <mutex>
+#include <rtxui/rtxui_export.hpp>
 
 #include "rtxui/base/task.hpp"
 #include "rtxui/base/task_queue.hpp"
-#include <rtxui/rtxui_export.hpp>
 
 namespace task {
 

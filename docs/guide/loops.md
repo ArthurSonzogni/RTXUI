@@ -24,8 +24,8 @@ Bind(fruits);
 
 Inside the loop body:
 
-- `{fruit}` interpolates the current item, converted to a string.
-- `{$index}` interpolates the current zero-based index. It is most useful for
+- `{fruit}` interpolates the item, converted to a string.
+- `{$index}` interpolates the zero-based index. It is most useful for
   passing to a parameterized callback, e.g.
   `<button onclick="RemoveItem({$index})">`
   (see [Event Handlers](/guide/bindings)).
@@ -46,13 +46,7 @@ This demo loops over a `std::vector<std::string>`, appending with a bound
 
 ## Keyed loops
 
-By default a loop's children are matched by **position**: the element at index
-0 is reused for whatever item is now first. That is what you want while a list
-is only being appended to or edited in place, but it is wrong as soon as items
-move. Reordering the collection leaves each element where it was and rewrites
-its content, so anything the *element* was holding — keyboard focus, a scroll
-offset, a running transition — stays at the index instead of following the item
-it belonged to.
+By default, collection children reconcile by **position**: the DOM node at index `i` is reused for the `i`-th item. When items reorder or shift, element-local state (keyboard focus, scroll offsets, active CSS transitions) stays locked to the index rather than tracking the item.
 
 Give the loop a `key` to identify items instead:
 
@@ -66,7 +60,7 @@ The key is interpolated per item, exactly like the loop body, so it can be any
 expression that names the item — an id field is the usual choice. On the next
 digest each item's existing elements are moved to the item's new position and
 reused there, carrying their state with them. Focus stays on the task the user
-had focused, even if it is now three rows further down.
+had focused, even if it shifts three rows down.
 
 Keys must be unique within the loop, and stable across frames: keying by
 `{$index}` is the same as not keying at all. A loop without `key` keeps the
@@ -108,6 +102,8 @@ The template reads the mapped fields with dot notation on the loop variable:
 
 `BindCollection("name", &collection, mapper)` is equivalent when you want the
 template name to differ from the member name.
+
+When compiled with C++26 static reflection (`RTXUI_HAS_REFLECTION`), struct fields are mapped automatically and explicit mappers are not required.
 
 This demo loops over a `std::vector<Task>` through a mapper, toggling each
 item's `completed` field from the template:

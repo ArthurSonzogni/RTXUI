@@ -5,8 +5,8 @@
 // An interactive flexbox playground.
 //
 // Every flex property is driven from the UI: change flex-direction,
-// justify-content, align-items, and each item's grow/shrink/basis, and watch the
-// boxes redistribute.
+// justify-content, align-items, and each item's grow/shrink/basis, and watch
+// the boxes redistribute.
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
@@ -140,7 +140,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
   void AddItem() {
     item_counter++;
     std::string colors[] = {
-        "var(--danger)",  "rgb(88, 166, 255)", "var(--success)",
+        "var(--danger)",     "rgb(88, 166, 255)", "var(--success)",
         "rgb(245, 158, 11)", "rgb(139, 92, 246)",
     };
     std::string color = colors[(item_counter - 1) % 5];

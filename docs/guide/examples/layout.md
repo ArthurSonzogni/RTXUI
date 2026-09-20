@@ -1,5 +1,7 @@
 # Flexbox basics
 
+Flexbox basics.
+
 A flex row distributing three child components, each its own component with bound props.
 
 <ExampleTabs src="/wasm/rtxui_example_layout.js" :cols="80" :rows="24">

@@ -7,7 +7,6 @@
 // The same result as the built-in <tabs>, assembled from plain elements and a
 // bound string -- useful when you want full control of the markup.
 #include <rtxui/rtxui.hpp>
-
 #include <string>
 
 using namespace rtxui;

@@ -6,11 +6,11 @@
 
 #include <cstdint>  // for uint32_t
 #include <iostream>
+#include <rtxui/rtxui_export.hpp>
 #include <string>  // for string, operator==
 #include <string_view>
 #include <variant>  // for variant
 #include <vector>
-#include <rtxui/rtxui_export.hpp>
 
 // Hoisted out of Event deliberately. GCC 13 will not evaluate a nested class's
 // default member initialisers while the enclosing class is still incomplete,
@@ -66,7 +66,7 @@ struct RTXUI_EXPORT Event {
       F12,
     };
     Special special = None;
-    Modifier modifier;
+    Modifier modifier = {};
     enum Motion {
       Pressed,
       Repeat,
@@ -136,13 +136,11 @@ struct RTXUI_EXPORT Event {
   // the end of its enclosing class". A requires-clause is checked during
   // overload resolution instead, by which point Event is complete.
   template <typename T>
-    requires(!std::is_same_v<std::decay_t<T>, Event> &&
-             std::is_constructible_v<std::variant<Keyboard,
-                                                  Mouse,
-                                                  Resized,
-                                                  CursorShape,
-                                                  CursorPosition>,
-                                     T>)
+    requires(
+        !std::is_same_v<std::decay_t<T>, Event> &&
+        std::is_constructible_v<
+            std::variant<Keyboard, Mouse, Resized, CursorShape, CursorPosition>,
+            T>)
   Event(T&& value) : data_(std::forward<T>(value)) {}
 
   // --- Singleton Events ---

@@ -1,4 +1,6 @@
-# Recipe: updating the UI from a worker thread
+# Recipe
+
+Recipe: updating the UI from a worker thread.
 
 The UI is single-threaded. A background thread must hand results back through the task runner, which applies them between frames.
 

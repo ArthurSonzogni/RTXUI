@@ -1,38 +1,34 @@
-# Reactivity
+# Reactivity & State Reconciliation Specification
 
-RTXUI keeps the terminal display synchronized with plain C++ state. There are
-no observable wrappers, signal types, or setters: component members are
-ordinary variables, and the engine detects changes by comparing values
-between frames. This page explains the model precisely — what triggers an
-update, when computed values refresh, and how data flows between components.
+This specification documents the reactivity model, snapshot-based dirty detection algorithms, two-way binding propagation, and collection reconciliation semantics in RTXUI.
 
-## A reactive component
+---
 
-Components derive from `rtxui::Component<Derived>`. Ordinary data members
-hold state, `const` member functions expose derived values, and non-`const`
-member functions act as event handlers. Each one is registered with `Bind()`
-so the template can refer to it by name:
+## 1. System Invariants
+
+1. **Zero Runtime Wrappers**: Reactive state is stored in standard C++ member variables (`int`, `std::string`, custom structs). RTXUI requires no special signal types, proxy wrappers, or accessor boilerplate.
+2. **Snapshot-Driven Change Detection**: Changes are detected by comparing member values against typed snapshots captured during the preceding frame reconciliation.
+3. **Discrete Event-Driven Execution**: State evaluation and DOM reconciliation are strictly event-driven. In the absence of terminal input or queued asynchronous tasks, the engine performs zero computation.
+
+---
+
+## 2. Binding Classification & Contracts
+
+Members are registered via `Bind()` within the component constructor or `InitReflection()`:
 
 ```cpp
-#include <rtxui/rtxui.hpp>
-
 class Counter : public rtxui::Component<Counter> {
  public:
-  // State.
   int count = 0;
-  std::string label = "Clicks";
+  std::string label = "Items";
 
-  // Derived value: re-evaluated whenever the component re-renders.
   int double_count() const { return count * 2; }
-
-  // Event handler.
   void Increment() { count++; }
 
   std::string_view view = R"html(
     <div class="panel">
-      <span>{label}: {count}</span>
-      <span>Double: {double_count}</span>
-      <button onclick="Increment">Increment</button>
+      <span>{label}: {count} (Double: {double_count})</span>
+      <button onclick="Increment">+1</button>
     </div>
   )html";
 
@@ -45,124 +41,126 @@ class Counter : public rtxui::Component<Counter> {
 };
 ```
 
-`Bind()` dispatches on the member's kind:
+### 2.1 Member Classification Matrix
+| Member Category | Type Signature | Snapshot Storage | Evaluation Stage | Semantic Contract |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mutable State** | `T member;` | Yes (`T snapshot_`) | `Digest()` | Must satisfy `std::equality_comparable` and `std::is_copy_constructible`. Evaluated with `!=`. |
+| **Computed Property** | `T method() const;` | No | Template Render | Invoked strictly on-demand during template string expansion. Must be side-effect free. |
+| **Event Handler** | `void method();` | No | Event Dispatch | Invoked upon matching event trigger. May freely mutate bound state. |
+| **Parameterized Handler**| `void method(std::string);` | No | Event Dispatch | Invoked with string argument parsed from template attribute call syntax. |
+| **Repetition Collection** | `std::vector<T>` | Yes (Deep copy) | `Digest()` | Element-wise equality comparison. Triggers `<for>` reconciliation on size or content mutation. |
 
-| Member | Effect of `Bind()` |
-| :--- | :--- |
-| Data member | Reactive state: snapshotted and compared each digest. |
-| `const` method | Computed value: interpolated on render, no snapshot. |
-| Non-`const` method | Event handler callable from `onclick`, `@change`, ... |
-| Method taking `std::string` | Parameterized handler, e.g. `onclick="Select(home)"`. |
-| Container (e.g. `std::vector`) | Collection for `<for>` loops. |
+---
 
-`Import("name", lambda)` registers a lambda or free function under an
-explicit name, and `Import<rtxui::button>()` makes a component type usable
-as a tag in the template.
+## 3. The Frame Reconciliation Lifecycle
 
-## The update cycle
+When an input event or worker task executes, `Screen::Step()` coordinates state reconciliation via `Digest()`:
 
-An RTXUI frame is driven by events, not by a fixed tick. When an event
-arrives (a keypress, a mouse click, or a task posted from another thread),
-the screen dispatches it and then runs a **digest**:
+```
+[State Mutation in Handler / Task]
+                │
+                ▼
+1. Snapshot Diffing (Component::Digest)
+   ├── Evaluate `member != snapshot_` for each registered data member
+   └── If changed: update `snapshot_ = member` and flag component as dirty
+                │
+                ▼
+2. Template Expansion (if dirty)
+   ├── Interpolate `{member}` and `{computed_method}` into XML string
+   └── Parse into AST via `rtxui::xml::Parse()`
+                │
+                ▼
+3. Virtual DOM Reconciliation
+   ├── Patch existing Element hierarchy in-place
+   ├── Recycle unchanged child elements
+   └── Route slotted content to `<slot>` targets
+                │
+                ▼
+4. Recursive Descendant Digest
+   └── Propagate `Digest()` down active child components
+```
 
-1. **Compare.** For every bound data member, the engine holds a snapshot — a
-   typed copy taken at registration. `Digest()` compares each member against
-   its snapshot with `operator!=` and updates the snapshot when they differ.
-   Collections are compared element-wise.
-2. **Re-render changed components.** If any bound member of a component
-   changed, that component re-renders: its template is re-evaluated and
-   **reconciled** against the existing element tree, reusing and patching
-   elements rather than rebuilding them. Child components digest recursively.
-   Elements are matched by position, so a `<for>` over a collection that
-   *reorders* needs a [`key`](/guide/loops#keyed-loops) for an item's element
-   state — focus, scroll offset, running transitions — to travel with it.
-3. **Layout and paint.** The (possibly updated) element tree is laid out,
-   painted into a cell buffer, and diffed against the previous frame so only
-   changed cells are written to the terminal.
+### Snapshot Invariant
+Snapshots are updated atomically as each divergence is verified. If no bound members differ, `Digest()` returns `false` in $O(K)$ time (where $K$ is the number of bound properties), bypassing XML parsing, DOM traversal, and layout invalidation.
 
-Nothing happens between events: an idle application performs no work.
+---
 
-## What the model implies
+## 4. Two-Way Data Binding Protocol
 
-**Mutate freely inside handlers.** Any change to bound members during an
-event handler is picked up by the digest that follows it. There is no
-`SetState`-style API to call.
+Composite controls (such as `<input>`, `<checkbox>`, `<radio>`, `<select>`, and `<slider>`) manage internal interactive state while reflecting updates back to parent variables:
 
-**Computed values depend on bound state.** A `const` method has no snapshot
-of its own; it is simply re-evaluated when its component re-renders. If it
-reads only bound members, it can never be stale. If it reads data that is
-*not* bound — a global, a clock, a file — nothing triggers a re-render when
-that data changes, and the display will not update. Bind the underlying
-state, or update a bound member when the external data changes.
+### 4.1 Parent-to-Child Downstream Flow
+When a parent component passes a bound variable as an attribute:
+```xml
+<input value="{username}" />
+```
+The evaluated string is written to the child component's matching property during reconciliation.
 
-**Change detection needs `operator!=`.** Bound types must be comparable.
-For a struct, either define equality or bind its fields separately.
+### 4.2 Child-to-Parent Upstream Flow
+When user interaction modifies the child control:
+1. The child mutates its internal state member (e.g. `checkbox::checked = true`).
+2. The child dispatches `PropagateBinding("checked", "true")`.
+3. The parent reconciler resolves the source variable bound to the attribute and assigns the new value directly to the parent's C++ member.
+4. Subsequent digest passes observe the updated value across both components in perfect synchronization.
 
-**Cross-thread updates go through the task runner.** Only the main thread
-may touch component state. From a worker thread, post a lambda with
-`task::TaskRunner::Current()->PostTask(...)`; it runs on the UI loop, and
-its state changes are digested like any event
-(see the [cookbook recipe](/guide/cookbook#background-work-without-freezing-the-ui)).
+---
 
-## Passing data between components
+## 5. Collection Keying & DOM Reconciliation
 
-A child component declares a public `Props` struct; the parent sets those
-fields as attributes, with interpolation evaluated in the parent's context:
+When rendering collections with `<for each="item in items">`, the reconciler maps collection items to active DOM subtrees.
+
+### 5.1 Positional Reconciliation (Unkeyed)
+```xml
+<for each="item in items">
+  <div class="row">
+    <input value="{item.name}" />
+  </div>
+</for>
+```
+Without an explicit `key`, elements are matched purely by collection index:
+- Adding or removing items at the beginning or middle causes in-place mutations across all subsequent elements.
+- Ephemeral element states (cursor position, scroll offset, running CSS transitions) remain pinned to the physical index, rather than following the logical entity.
+
+### 5.2 Associative Identity Reconciliation (Keyed)
+```xml
+<for each="item in items" key="item.id">
+  <div class="row">
+    <input value="{item.name}" />
+  </div>
+</for>
+```
+When `key` is specified:
+- Each item is assigned an identity based on the named struct field.
+- When the collection is sorted, filtered, or reordered, existing DOM nodes are repositioned rather than reconstructed.
+- Input focus, active text selection, and running CSS transitions stay anchored to the specific item.
+
+---
+
+## 6. Asynchronous Background State Synchronization
+
+State mutations must not occur on worker threads. To update reactive state from background operations:
 
 ```cpp
-class TodoItem : public rtxui::Component<TodoItem> {
- public:
-  struct Props {
-    std::string task_text;
-    bool completed = false;
-  } props;
-
-  std::string completion_class() const {
-    return props.completed ? "done" : "";
-  }
-
-  std::string_view view = R"html(
-    <div class="todo-row">
-      <span class="{completion_class}">{props.task_text}</span>
-    </div>
-  )html";
-
-  TodoItem() {
-    Bind(props.task_text);
-    Bind(props.completed);
-    Bind(completion_class);
-  }
-};
+void FetchDataAsync() {
+  std::thread([this]() {
+    std::string result = BackgroundHttpCall();
+    
+    // Dispatch state update to UI loop:
+    rtxui::task::TaskRunner::Current()->PostTask([this, result]() {
+      this->status_text = result;
+      // Screen event loop automatically digests and renders changes.
+    });
+  }).detach();
+}
 ```
 
-```html
-<TodoItem props.task_text="{item.text}" props.completed="{item.done}" />
-<!-- The props. prefix may be omitted: -->
-<TodoItem task_text="{item.text}" completed="{item.done}" />
-```
+The UI loop executes the posted lambda, detects the mutation during the subsequent digest phase, and paints the updated frame atomically.
 
-When the parent re-renders, the evaluated attribute values are written into
-the child's `props` members; the child's own digest then notices the change
-and refreshes its view. Data flows one way — parent to child. For
-child-to-parent communication, pass a callback name or let the child call a
-handler bound on an ancestor (event handlers propagate up the component
-tree until one component handles them).
+---
 
-## Where C++26 reflection fits
+## 7. Interactive Demos
 
-When the compiler supports standard C++26 reflection (CMake detects this and
-defines `RTXUI_HAS_REFLECTION`), struct fields inside bound collections are
-readable from templates directly — `{task.name}` works without writing a
-mapper. Without it, provide the mapper shown in the
-[loops guide](/guide/loops#collections-of-structs). Binding itself is
-explicit in either case: components list their reactive members in their
-constructor.
-
-## Demos
-
-The smallest complete picture: a bound `int`, a computed value derived from
-it, and two handlers that mutate it.
-
+### State Binding and Computed Values
 <ExampleTabs src="/wasm/rtxui_example_counter.js">
 <template #source>
 
@@ -171,9 +169,7 @@ it, and two handlers that mutate it.
 </template>
 </ExampleTabs>
 
-The same machinery at application scale — a bound collection of structs,
-several computed values, and conditional rendering driven by the selection:
-
+### Collection Reactivity and Selection
 <ExampleTabs src="/wasm/rtxui_example_app_dashboard.js" :cols="100" :rows="28">
 <template #source>
 
@@ -181,6 +177,3 @@ several computed values, and conditional rendering driven by the selection:
 
 </template>
 </ExampleTabs>
-
-For a single program exercising most of the library at once, see
-[demo.cpp](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/demo.cpp).

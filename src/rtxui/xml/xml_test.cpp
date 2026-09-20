@@ -328,7 +328,8 @@ TEST_CASE("XML.StyleContentIsRawText", "[xml]") {
   }
 
   SECTION("CSS is not entity-unescaped") {
-    auto nodes = xml::Parse("<style>.a::before { content: \"&amp;\"; }</style>");
+    auto nodes =
+        xml::Parse("<style>.a::before { content: \"&amp;\"; }</style>");
     REQUIRE(nodes.has_value());
     CHECK(nodes.value()[0].children[0].text ==
           ".a::before { content: \"&amp;\"; }");

@@ -1,4 +1,6 @@
-# &amp;lt;fieldset&amp;gt; and &amp;lt;legend&amp;gt; grouping
+# `<fieldset>` and `<legend>` grouping
+
+`<fieldset>` and `<legend>` grouping.
 
 The legend is nested into the top border of the group it captions.
 

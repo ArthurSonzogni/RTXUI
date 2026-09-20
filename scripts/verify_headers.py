@@ -34,26 +34,21 @@ ROOT = Path(__file__).resolve().parents[1]
 # CMakeLists.txt -- a header installed but not listed here is untested.
 PUBLIC_HEADERS = [
     "rtxui/rtxui.hpp",
+    "rtxui/color.hpp",
+    "rtxui/paint/color.hpp",
     "rtxui/internal/class_name.hpp",
     "rtxui/internal/component.hpp",
     "rtxui/internal/event.hpp",
     "rtxui/internal/import.hpp",
     "rtxui/internal/refcounted.hpp",
     "rtxui/internal/screen.hpp",
-    "rtxui/base/task.hpp",
-    "rtxui/base/task_queue.hpp",
-    "rtxui/base/task_runner.hpp",
-    "rtxui/dom/element.hpp",
-    "rtxui/layout/style.hpp",
-    "rtxui/paint/color.hpp",
 ]
 
 
 def find_header(relative: str) -> Path | None:
-    for base in (ROOT / "include", ROOT / "src"):
-        candidate = base / relative
-        if candidate.exists():
-            return candidate
+    candidate = ROOT / "include" / relative
+    if candidate.exists():
+        return candidate
     return None
 
 

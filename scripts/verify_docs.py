@@ -10,6 +10,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APPLY_STYLE = ROOT / "src/rtxui/style/apply_style.cpp"
 CSS_DOCS = ROOT / "docs/css_reference.md"
+COMPONENTS_DIR = ROOT / "src/rtxui/component/default"
+HTML_DOCS = ROOT / "docs/html_reference.md"
+
+NATIVE_HTML_TAGS = {
+    "table", "thead", "tbody", "tfoot", "tr", "th", "td", "slot", "template",
+    "for", "if"
+}
 
 def extract_code_css_properties():
     if not APPLY_STYLE.exists():
@@ -56,6 +63,36 @@ def check_docs_contain_values(values):
     doc_text = CSS_DOCS.read_text(encoding="utf-8").lower()
     return [v for v in values if f"`{v}`" not in doc_text]
 
+def extract_code_html_tags():
+    if not COMPONENTS_DIR.exists():
+        print(f"[ERROR] Could not find {COMPONENTS_DIR}", file=sys.stderr)
+        sys.exit(1)
+
+    tags = set(NATIVE_HTML_TAGS)
+    pattern = r'RegisterGlobalComponent\(\s*"(?P<tag>[a-zA-Z0-9\-]+)"'
+    for file_path in COMPONENTS_DIR.rglob("*.cpp"):
+        content = file_path.read_text(encoding="utf-8")
+        for match in re.finditer(pattern, content):
+            tags.add(match.group("tag"))
+    return tags
+
+def check_docs_contain_html_tags(tags):
+    if not HTML_DOCS.exists():
+        print(f"[ERROR] Could not find {HTML_DOCS}", file=sys.stderr)
+        sys.exit(1)
+
+    doc_text = HTML_DOCS.read_text(encoding="utf-8")
+    missing = []
+    for tag in sorted(tags):
+        # A tag is considered documented if referenced as an HTML element:
+        # `<tag>`, `<tag `, `<tag.`, or `` `<tag>` ``
+        if (f"<{tag}>" not in doc_text
+                and f"<{tag} " not in doc_text
+                and f"<{tag}." not in doc_text
+                and f"`<{tag}>`" not in doc_text):
+            missing.append(tag)
+    return missing
+
 def main():
     print("Extracting CSS properties from apply_style.cpp...")
     code_props = extract_code_css_properties()
@@ -81,8 +118,21 @@ def main():
             print(f"  - {v}", file=sys.stderr)
         sys.exit(1)
 
-    print("\n[SUCCESS] All CSS properties and border styles are documented!")
+    print("Extracting HTML tags and component registrations...")
+    html_tags = extract_code_html_tags()
+    print(f"Found {len(html_tags)} HTML elements/components: {', '.join(sorted(html_tags))}")
+
+    print("Checking docs/html_reference.md...")
+    missing_tags = check_docs_contain_html_tags(html_tags)
+    if missing_tags:
+        print("\n[ERROR] The following HTML tags are not documented in html_reference.md:", file=sys.stderr)
+        for tag in sorted(missing_tags):
+            print(f"  - <{tag}>", file=sys.stderr)
+        sys.exit(1)
+
+    print("\n[SUCCESS] All CSS properties, border styles, and HTML tags are fully documented!")
     sys.exit(0)
 
 if __name__ == "__main__":
     main()
+

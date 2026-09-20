@@ -8,14 +8,14 @@
 #ifndef RTXUI_BENCHMARKS_BENCHMARK_COMMON_HPP
 #define RTXUI_BENCHMARKS_BENCHMARK_COMMON_HPP
 
-#include "rtxui/rtxui.hpp"
-
 #include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <numeric>
 #include <string>
 #include <vector>
+
+#include "rtxui/rtxui.hpp"
 
 namespace rtxui::bench {
 
@@ -45,14 +45,16 @@ inline Stats ComputeStats(std::vector<double> values) {
   s.max = *std::max_element(values.begin(), values.end());
   std::sort(values.begin(), values.end());
   const size_t n = values.size();
-  s.median = (n % 2 == 0) ? (values[n / 2 - 1] + values[n / 2]) / 2.0
-                          : values[n / 2];
+  s.median =
+      (n % 2 == 0) ? (values[n / 2 - 1] + values[n / 2]) / 2.0 : values[n / 2];
   return s;
 }
 
 // Emits one stage of frame-timing stats, converting microseconds to
 // milliseconds. `comma` controls the trailing separator.
-inline void EmitStageJson(const std::string& stage, const Stats& s, bool comma) {
+inline void EmitStageJson(const std::string& stage,
+                          const Stats& s,
+                          bool comma) {
   std::cout << "  \"avg_" << stage << "_ms\": " << s.avg / 1000.0 << ",\n"
             << "  \"min_" << stage << "_ms\": " << s.min / 1000.0 << ",\n"
             << "  \"max_" << stage << "_ms\": " << s.max / 1000.0 << ",\n"
@@ -75,7 +77,8 @@ inline void EmitFrameJson(int frames,
 }
 
 // A large, wrap-heavy grid used to stress layout + paint. The list of items is
-// registered as a reactive collection so mutating `items` drives reconciliation.
+// registered as a reactive collection so mutating `items` drives
+// reconciliation.
 class StressLayoutComponent : public Component<StressLayoutComponent> {
  public:
   std::vector<std::string> items;

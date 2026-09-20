@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "rtxui/dom/element.hpp"
 #include "rtxui/component/component_internal.hpp"
+#include "rtxui/dom/element.hpp"
 
 namespace rtxui {
 
@@ -103,7 +103,7 @@ bool slider::OnEvent(Event event) {
         int click_y = mouse.y - 1;
         int abs_x = root->absolute_x();
         int abs_y = root->absolute_y();
-        
+
         int track_x = abs_x + 1;
         int track_y = abs_y;
         int track_w = is_vertical ? 1 : std::max(2, width);
@@ -131,10 +131,11 @@ bool slider::OnEvent(Event event) {
         int track_x = abs_x + 1;
         int track_y = abs_y;
         int track_size = std::max(2, width);
-        
+
         int pos = 0;
         if (is_vertical) {
-          pos = std::clamp(track_y + track_size - 1 - click_y, 0, track_size - 1);
+          pos =
+              std::clamp(track_y + track_size - 1 - click_y, 0, track_size - 1);
         } else {
           pos = std::clamp(click_x - track_x, 0, track_size - 1);
         }
@@ -172,7 +173,7 @@ bool slider::OnEvent(Event event) {
       if (root->focused()) {
         int delta = 0;
         bool is_primary_axis = false;
-        
+
         if (is_vertical) {
           if (kb.special == Event::Keyboard::Special::ArrowDown) {
             delta = -safe_step;
@@ -199,14 +200,14 @@ bool slider::OnEvent(Event event) {
             PropagateBinding("value", std::to_string(value));
             // Trigger onchange
             if (root->Attributes().count("onchange")) {
-                std::string onchange_cb = root->Attributes().at("onchange");
-                if (auto* comp = GetAttributeOwnerComponent(root)) {
-                    comp->RunCallback(onchange_cb);
-                }
+              std::string onchange_cb = root->Attributes().at("onchange");
+              if (auto* comp = GetAttributeOwnerComponent(root)) {
+                comp->RunCallback(onchange_cb);
+              }
             }
             return true;
           }
-          // If we are at the boundary and pressing in that direction, 
+          // If we are at the boundary and pressing in that direction,
           // we don't return true, allowing spatial navigation to take over.
         }
       }
@@ -220,7 +221,7 @@ bool slider::OnEvent(Event event) {
     if (root->Attributes().count("onchange")) {
       std::string onchange_cb = root->Attributes().at("onchange");
       if (auto* comp = GetAttributeOwnerComponent(root)) {
-          comp->RunCallback(onchange_cb);
+        comp->RunCallback(onchange_cb);
       }
     }
     return true;
@@ -239,27 +240,32 @@ bool slider::Digest() {
   int range = max - min;
   int pos = 0;
   if (range > 0) {
-    pos = static_cast<int>(
-        std::round(static_cast<double>(value - min) / range * (track_size - 1)));
+    pos = static_cast<int>(std::round(static_cast<double>(value - min) / range *
+                                      (track_size - 1)));
   }
   pos = std::clamp(pos, 0, track_size - 1);
 
   bool is_vertical = (direction == "vertical");
-  container_class = is_vertical ? "slider-container vertical" : "slider-container horizontal";
+  container_class =
+      is_vertical ? "slider-container vertical" : "slider-container horizontal";
   std::string char_sym = is_vertical ? "│" : "─";
 
   track_left = "";
   for (int i = 0; i < pos; ++i) {
     track_left += char_sym;
-    if (is_vertical && i < pos - 1) track_left += "\n";
+    if (is_vertical && i < pos - 1) {
+      track_left += "\n";
+    }
   }
-  
+
   thumb_char = "●";
-  
+
   track_right = "";
   for (int i = pos + 1; i < track_size; ++i) {
     track_right += char_sym;
-    if (is_vertical && i < track_size - 1) track_right += "\n";
+    if (is_vertical && i < track_size - 1) {
+      track_right += "\n";
+    }
   }
 
   return Component<slider>::Digest();

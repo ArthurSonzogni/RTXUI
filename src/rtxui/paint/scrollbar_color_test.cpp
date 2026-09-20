@@ -1,5 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <string>
 #include <vector>
 
@@ -47,7 +47,8 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
 //
 // The fix saves the original background before modifying it, and blends
 // both foreground and background against that original value.
-TEST_CASE("Paint: Scrollbar partial fill color blending", "[paint][scrollbar]") {
+TEST_CASE("Paint: Scrollbar partial fill color blending",
+          "[paint][scrollbar]") {
   // A scrollable container with many children to create a small scrollbar
   // thumb that will have partial-fill characters at its edges.
   // 20 lines of content in a 10-row viewport → small thumb.

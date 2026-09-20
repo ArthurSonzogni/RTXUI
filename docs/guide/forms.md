@@ -32,6 +32,8 @@ backspace/delete, cut); it matches `:read-only`.
 `placeholder` shows hint text (styled dim by default, via a `.placeholder`
 class) whenever `value` is empty, and never touches `value` itself.
 
+Set `type="password"` to visually mask entered characters with asterisks (`*`) while preserving the actual plain-text secret in the bound `value` string.
+
 Its selection/cursor/placeholder spans expose the same
 [`::part()`](/guide/css/basics) names as `<textarea>` (see below):
 `part="selection"` on the selected-text span, `part="cursor"` (also
@@ -189,6 +191,44 @@ class MyApp : public Component<MyApp> {
 <template #source>
 
 <<< @/../example/checkbox.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
+## Radio Button (`<radio>`)
+
+A mutually exclusive selection toggle within a named group. Radio buttons sharing the same `name` attribute coordinate automatically — selecting one unchecks the others in the same group. Bind a `bool` member to `checked` to observe or control the state.
+
+```html
+<radio name="theme" checked="{dark_mode}">Dark Theme</radio>
+<radio name="theme" checked="{light_mode}">Light Theme</radio>
+```
+
+```cpp
+class MyApp : public Component<MyApp> {
+  bool dark_mode = true;
+  bool light_mode = false;
+
+  std::string_view view = R"html(
+    <radio name="theme" checked="{dark_mode}">Dark Theme</radio>
+    <radio name="theme" checked="{light_mode}">Light Theme</radio>
+  )html";
+
+  MyApp() {
+    Bind(dark_mode);
+    Bind(light_mode);
+  }
+};
+```
+
+Exposes [`part="radio-circle"`](/guide/css/basics) on the radio indicator circle glyph for scoped CSS styling.
+
+<ExampleTabs src="/wasm/rtxui_example_radio.js">
+<template #source>
+
+<<< @/../example/radio.cpp
 
 </template>
 </ExampleTabs>

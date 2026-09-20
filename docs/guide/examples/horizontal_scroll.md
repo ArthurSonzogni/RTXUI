@@ -1,5 +1,7 @@
 # Horizontal overflow
 
+Horizontal overflow.
+
 overflow-x on a container that is narrower than its content produces a horizontal scrollbar.
 
 Try it: scroll with Shift+wheel, or drag the scrollbar.

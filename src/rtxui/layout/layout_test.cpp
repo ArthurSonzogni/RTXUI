@@ -1,17 +1,17 @@
 #include "rtxui/layout/layout.hpp"
-#include "rtxui/layout/layout_arena.hpp"
-#include <algorithm>
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <map>
 #include <string>
 #include <vector>
 
-#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/base/string.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/refcounted.hpp"
+#include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
@@ -273,8 +273,8 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
         <div class="b">XXXXXXXX</div>)html";
     };
     // width 6 = 2 padding + 4 content.
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
-          == CheckGrid({"  XXXX  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1)) ==
+          CheckGrid({"  XXXX  "}));
   }
 
   SECTION("content-box adds padding outside the declared width") {
@@ -287,8 +287,8 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
         <div class="b">XXXXXXXX</div>)html";
     };
     // 4 content + 2 padding occupies the same six columns.
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
-          == CheckGrid({"  XXXX  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1)) ==
+          CheckGrid({"  XXXX  "}));
   }
 
   SECTION("two auto margins centre a fixed-width block") {
@@ -300,8 +300,8 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
         </style>
         <div class="p"><div class="b">XX</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
-          == CheckGrid({"  XX  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"  XX  "}));
   }
 
   SECTION("the longhand form centres too") {
@@ -314,8 +314,8 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
         </style>
         <div class="p"><div class="b">XX</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
-          == CheckGrid({"  XX  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"  XX  "}));
   }
 
   SECTION("a single auto margin pushes the block to the other edge") {
@@ -327,8 +327,8 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
         </style>
         <div class="p"><div class="b">XX</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
-          == CheckGrid({"    XX"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"    XX"}));
   }
 
   SECTION("vertical margins do not collapse") {
@@ -342,8 +342,8 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
         </style>
         <div class="a">A</div><div class="b">B</div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 1, 4))
-          == CheckGrid({"A", " ", " ", "B"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 1, 4)) ==
+          CheckGrid({"A", " ", " ", "B"}));
   }
 }
 
@@ -352,166 +352,182 @@ TEST_CASE("Layout: box-sizing and auto margins", "[layout][box-model]") {
 TEST_CASE("Layout: flexbox conformance", "[layout][flex][conformance]") {
   SECTION("flex-grow absorbs the free space") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:6;}.a{width:2;flex-grow:1;}.b{width:2;}</style><div class="f"><div class="a">AAAA</div><div class="b">BB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:6;}.a{width:2;flex-grow:1;}.b{width:2;}</style><div class="f"><div class="a">AAAA</div><div class="b">BB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
-          == CheckGrid({"AAAABB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"AAAABB"}));
   }
 
   SECTION("equal flex-grow splits the remainder") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:8;}.a{width:2;flex-grow:1;}.b{width:2;flex-grow:1;}</style><div class="f"><div class="a">AAAA</div><div class="b">BBBB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:8;}.a{width:2;flex-grow:1;}.b{width:2;flex-grow:1;}</style><div class="f"><div class="a">AAAA</div><div class="b">BBBB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
-          == CheckGrid({"AAAABBBB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1)) ==
+          CheckGrid({"AAAABBBB"}));
   }
 
   SECTION("flex-shrink 0 holds an item at its basis") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:4;}.a{width:4;flex-shrink:0;}.b{width:4;flex-shrink:1;}</style><div class="f"><div class="a">AAAA</div><div class="b">BBBB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:4;}.a{width:4;flex-shrink:0;}.b{width:4;flex-shrink:1;}</style><div class="f"><div class="a">AAAA</div><div class="b">BBBB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1))
-          == CheckGrid({"AAAA"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1)) ==
+          CheckGrid({"AAAA"}));
   }
 
   SECTION("justify-content flex-end") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:6;justify-content:flex-end;}</style><div class="f"><div>AB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:6;justify-content:flex-end;}</style><div class="f"><div>AB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
-          == CheckGrid({"    AB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"    AB"}));
   }
 
   SECTION("justify-content center") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:6;justify-content:center;}</style><div class="f"><div>AB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:6;justify-content:center;}</style><div class="f"><div>AB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
-          == CheckGrid({"  AB  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"  AB  "}));
   }
 
   SECTION("justify-content space-between") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:6;justify-content:space-between;}</style><div class="f"><div>A</div><div>B</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:6;justify-content:space-between;}</style><div class="f"><div>A</div><div>B</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1))
-          == CheckGrid({"A    B"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"A    B"}));
   }
 
   SECTION("align-items flex-end") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:2;height:3;align-items:flex-end;}</style><div class="f"><div>AB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:2;height:3;align-items:flex-end;}</style><div class="f"><div>AB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3))
-          == CheckGrid({"  ", "  ", "AB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3)) ==
+          CheckGrid({"  ", "  ", "AB"}));
   }
 
   SECTION("align-items center") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:2;height:3;align-items:center;}</style><div class="f"><div>AB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:2;height:3;align-items:center;}</style><div class="f"><div>AB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3))
-          == CheckGrid({"  ", "AB", "  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3)) ==
+          CheckGrid({"  ", "AB", "  "}));
   }
 
   SECTION("flex-direction column") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;flex-direction:column;width:2;height:2;}</style><div class="f"><div>AB</div><div>CD</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;flex-direction:column;width:2;height:2;}</style><div class="f"><div>AB</div><div>CD</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 2))
-          == CheckGrid({"AB", "CD"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 2)) ==
+          CheckGrid({"AB", "CD"}));
   }
 
   SECTION("gap separates items") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;width:5;gap:1;}</style><div class="f"><div>AB</div><div>CD</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;width:5;gap:1;}</style><div class="f"><div>AB</div><div>CD</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 5, 1))
-          == CheckGrid({"AB CD"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 5, 1)) ==
+          CheckGrid({"AB CD"}));
   }
 
   SECTION("flex-wrap moves the overflow to a new line") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.f{display:flex;flex-wrap:wrap;width:4;}.i{width:3;}</style><div class="f"><div class="i">AAA</div><div class="i">BBB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.f{display:flex;flex-wrap:wrap;width:4;}.i{width:3;}</style><div class="f"><div class="i">AAA</div><div class="i">BBB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
-          == CheckGrid({"AAA ", "BBB "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"AAA ", "BBB "}));
   }
-
 }
 
 TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
   SECTION("explicit column tracks") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1))
-          == CheckGrid({"AABB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1)) ==
+          CheckGrid({"AABB"}));
   }
 
   SECTION("fr units share the free space") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:1fr 1fr;width:4;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:1fr 1fr;width:4;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1))
-          == CheckGrid({"AABB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1)) ==
+          CheckGrid({"AABB"}));
   }
 
   SECTION("uneven fr split") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:1fr 3fr;width:8;}</style><div class="g"><div>AAAA</div><div>BBBBBB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:1fr 3fr;width:8;}</style><div class="g"><div>AAAA</div><div>BBBBBB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1))
-          == CheckGrid({"AABBBBBB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1)) ==
+          CheckGrid({"AABBBBBB"}));
   }
 
   SECTION("overflow lands on an implicit row") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
-          == CheckGrid({"AABB", "CC  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"AABB", "CC  "}));
   }
 
   SECTION("grid-column span widens an item") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}.s{grid-column:span 2;}</style><div class="g"><div class="s">AAAA</div><div>BB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}.s{grid-column:span 2;}</style><div class="g"><div class="s">AAAA</div><div>BB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
-          == CheckGrid({"AAAA", "BB  "}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"AAAA", "BB  "}));
   }
 
   SECTION("explicit row tracks") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template-rows:1 1;width:2;height:2;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-rows:1 1;width:2;height:2;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 2))
-          == CheckGrid({"AA", "BB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 2)) ==
+          CheckGrid({"AA", "BB"}));
   }
 
   SECTION("column-gap separates tracks") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template-columns:2 2;column-gap:1;width:5;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;column-gap:1;width:5;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 5, 1))
-          == CheckGrid({"AA BB"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 5, 1)) ==
+          CheckGrid({"AA BB"}));
   }
 
   SECTION("the grid-template shorthand") {
     struct T : Component<T> {
-      std::string_view view = R"html(<style>.g{display:grid;grid-template:1 1 / 2 2;width:4;height:2;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div><div>DD</div></div>)html";
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template:1 1 / 2 2;width:4;height:2;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div><div>DD</div></div>)html";
     };
-    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2))
-          == CheckGrid({"AABB", "CCDD"}));
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"AABB", "CCDD"}));
   }
-
 }
 
 // position: sticky had no unit test, and its offset maths lives in one shared
 // helper used by painting, hit testing and scroll-into-view -- so this is the
 // guard for all of them.
-TEST_CASE("Layout: position sticky pins to the top edge",
-          "[layout][sticky]") {
+TEST_CASE("Layout: position sticky pins to the top edge", "[layout][sticky]") {
   struct T : Component<T> {
     std::string_view view = R"html(
       <style>
@@ -1830,7 +1846,8 @@ TEST_CASE("Layout: Table Grid Rendering", "[layout][table]") {
 // Regression test: LayoutTable applied max-width to its own box but never
 // min-width - same gap class as the grid-container and inline-block fixes
 // above, found by the same call-site audit.
-TEST_CASE("Layout: min-width is enforced on a table", "[layout][table][min-width]") {
+TEST_CASE("Layout: min-width is enforced on a table",
+          "[layout][table][min-width]") {
   struct T : Component<T> {
     std::string_view Setup() override {
       return R"html(
@@ -2086,7 +2103,8 @@ TEST_CASE("Layout: box-sizing", "[layout][box-sizing]") {
 // applied max-width, min-height, and max-height, but never min-width -
 // found while adding box-sizing regression tests above (a min-width test on
 // an inline-block silently did nothing until this was fixed).
-TEST_CASE("Layout: min-width is enforced on an inline-block", "[layout][min-width]") {
+TEST_CASE("Layout: min-width is enforced on an inline-block",
+          "[layout][min-width]") {
   struct T : Component<T> {
     std::string_view Setup() override {
       return R"html(
@@ -2726,8 +2744,6 @@ TEST_CASE("Layout: Flexbox Align Content center",
                                                 }));
 }
 
-
-
 TEST_CASE("Layout: Rowspan painting order", "[layout][table]") {
   struct RowspanPaintTest : Component<RowspanPaintTest> {
     std::string_view Setup() override {
@@ -2754,18 +2770,18 @@ TEST_CASE("Layout: Rowspan painting order", "[layout][table]") {
   };
   std::string bg_grid = GetColorLayer(texture, true, colors);
   std::string text_grid = GetTextLayer(texture);
-  
+
   INFO("BG Grid:\n" << bg_grid);
   INFO("Text Grid:\n" << text_grid);
 
   // Row 1
   CHECK(texture[0, 0].character == "S");
   CHECK(texture[0, 0].background_color == Color::RGB(0, 255, 0));
-  
+
   // Row 2
   // Character is not repeated for multi-row cell, but background should span.
   CHECK(texture[0, 1].background_color == Color::RGB(0, 255, 0));
-  
+
   CHECK(texture[1, 1].character == "B");
   CHECK(texture[1, 1].background_color == Color::RGB(255, 0, 0));
 }
@@ -2974,17 +2990,16 @@ TEST_CASE("Layout: CSS Grid Layout text containment", "[layout][grid][bug]") {
   INFO("Text layer:\n" << text_layer);
   INFO("BG layer:\n" << bg_layer);
 
-  // We check if the text 'AB' is drawn inside the padded area (inside the borders)
-  // Grid item border takes x=0, x=7, y=0, y=4.
-  // Padding takes x=1, x=6, y=1, y=3.
-  // So text 'AB' should be at y=2, starting at x=2.
+  // We check if the text 'AB' is drawn inside the padded area (inside the
+  // borders) Grid item border takes x=0, x=7, y=0, y=4. Padding takes x=1, x=6,
+  // y=1, y=3. So text 'AB' should be at y=2, starting at x=2.
   CHECK(text_layer == CheckGrid({
-                                    "┌──────┐",
-                                    "│      │",
-                                    "│ AB   │",
-                                    "│      │",
-                                    "└──────┘",
-                                }));
+                          "┌──────┐",
+                          "│      │",
+                          "│ AB   │",
+                          "│      │",
+                          "└──────┘",
+                      }));
 }
 
 TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
@@ -3015,12 +3030,12 @@ TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
   };
 
   auto texture = RenderComponent(Ref<GridTallTest>::New(), 8, 3);
-  
+
   const auto& left_cell = texture[0, 0];
-  INFO("left_cell fg: r=" << (int)left_cell.foreground_color.r 
-                         << " g=" << (int)left_cell.foreground_color.g 
-                         << " b=" << (int)left_cell.foreground_color.b 
-                         << " a=" << (int)left_cell.foreground_color.a);
+  INFO("left_cell fg: r=" << (int)left_cell.foreground_color.r
+                          << " g=" << (int)left_cell.foreground_color.g
+                          << " b=" << (int)left_cell.foreground_color.b
+                          << " a=" << (int)left_cell.foreground_color.a);
   // Both side cells of `tall` draw on the *parent's* background -- here the
   // grid container's, which is transparent. The glyph carries the border
   // color; the left cell is reversed, so the terminal swaps the pair for it.
@@ -3031,9 +3046,9 @@ TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
 
   const auto& right_cell = texture[7, 0];
   INFO("right_cell bg: r=" << (int)right_cell.background_color.r
-                          << " g=" << (int)right_cell.background_color.g
-                          << " b=" << (int)right_cell.background_color.b
-                          << " a=" << (int)right_cell.background_color.a);
+                           << " g=" << (int)right_cell.background_color.g
+                           << " b=" << (int)right_cell.background_color.b
+                           << " a=" << (int)right_cell.background_color.a);
   CHECK(right_cell.character == "▎");
   CHECK(right_cell.foreground_color == Color::RGB(255, 0, 0));
   CHECK(right_cell.background_color.a == 0);
@@ -3206,7 +3221,8 @@ TEST_CASE("Layout: position sticky pushing calendar test",
   }
 }
 
-TEST_CASE("Layout: InlineFlow respects height and min-height", "[layout][inline][height]") {
+TEST_CASE("Layout: InlineFlow respects height and min-height",
+          "[layout][inline][height]") {
   struct TestInlineHeight : Component<TestInlineHeight> {
     void InitReflection() override {
       Import<div>();
@@ -3248,7 +3264,8 @@ TEST_CASE("Layout: InlineFlow respects height and min-height", "[layout][inline]
   CHECK(inline_box_el->layout_width() == 10);
 }
 
-TEST_CASE("Layout: Absolute position centering via margin auto", "[layout][absolute][margin-auto]") {
+TEST_CASE("Layout: Absolute position centering via margin auto",
+          "[layout][absolute][margin-auto]") {
   struct TestAbsoluteCentering : Component<TestAbsoluteCentering> {
     void InitReflection() override {
       Import<div>();
@@ -3374,7 +3391,8 @@ TEST_CASE("Layout: justify skips hard-break lines",
                                  }));
 }
 
-TEST_CASE("Layout: aspect-ratio derives height from width", "[layout][aspect-ratio]") {
+TEST_CASE("Layout: aspect-ratio derives height from width",
+          "[layout][aspect-ratio]") {
   struct AspectRatioTest : Component<AspectRatioTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3406,7 +3424,8 @@ TEST_CASE("Layout: aspect-ratio derives height from width", "[layout][aspect-rat
                                                 }));
 }
 
-TEST_CASE("Layout: aspect-ratio in flex context", "[layout][aspect-ratio][flex]") {
+TEST_CASE("Layout: aspect-ratio in flex context",
+          "[layout][aspect-ratio][flex]") {
   struct FlexAspectTest : Component<FlexAspectTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3474,7 +3493,8 @@ TEST_CASE("Layout: aspect-ratio on a flex container",
                                                 }));
 }
 
-TEST_CASE("Layout: aspect-ratio in grid context", "[layout][aspect-ratio][grid]") {
+TEST_CASE("Layout: aspect-ratio in grid context",
+          "[layout][aspect-ratio][grid]") {
   struct GridAspectTest : Component<GridAspectTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3567,7 +3587,8 @@ TEST_CASE("Layout: aspect-ratio derives a grid container's width from height",
     }
   };
 
-  auto texture = RenderComponent(Ref<GridContainerAspectWidthTest>::New(), 10, 3);
+  auto texture =
+      RenderComponent(Ref<GridContainerAspectWidthTest>::New(), 10, 3);
 
   std::map<Color, char> colors = {
       {Color::RGB(0, 0, 255), 'B'},
@@ -3582,7 +3603,8 @@ TEST_CASE("Layout: aspect-ratio derives a grid container's width from height",
                                                 }));
 }
 
-TEST_CASE("Layout: aspect-ratio derives width from height", "[layout][aspect-ratio]") {
+TEST_CASE("Layout: aspect-ratio derives width from height",
+          "[layout][aspect-ratio]") {
   struct AspectRatioWidthTest : Component<AspectRatioWidthTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3673,7 +3695,8 @@ TEST_CASE("Layout: aspect-ratio derives a flex container's width from height",
     }
   };
 
-  auto texture = RenderComponent(Ref<FlexContainerAspectWidthTest>::New(), 10, 3);
+  auto texture =
+      RenderComponent(Ref<FlexContainerAspectWidthTest>::New(), 10, 3);
 
   std::map<Color, char> colors = {
       {Color::RGB(0, 0, 255), 'B'},
@@ -3686,9 +3709,10 @@ TEST_CASE("Layout: aspect-ratio derives a flex container's width from height",
                                                 }));
 }
 
-TEST_CASE("Layout: aspect-ratio transfers a stretched cross size to a flex "
-          "row item's width",
-          "[layout][aspect-ratio][flex]") {
+TEST_CASE(
+    "Layout: aspect-ratio transfers a stretched cross size to a flex "
+    "row item's width",
+    "[layout][aspect-ratio][flex]") {
   struct FlexRowStretchAspectTest : Component<FlexRowStretchAspectTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3756,7 +3780,8 @@ TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
                                                 }));
 }
 
-TEST_CASE("Layout: grid justify-items and align-self", "[layout][grid][justify]") {
+TEST_CASE("Layout: grid justify-items and align-self",
+          "[layout][grid][justify]") {
   struct GridJustifyTest : Component<GridJustifyTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3794,7 +3819,8 @@ TEST_CASE("Layout: grid justify-items and align-self", "[layout][grid][justify]"
                                  }));
 }
 
-TEST_CASE("Layout: white-space pre-line collapses runs", "[layout][white-space]") {
+TEST_CASE("Layout: white-space pre-line collapses runs",
+          "[layout][white-space]") {
   struct PreLineTest : Component<PreLineTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3811,7 +3837,8 @@ TEST_CASE("Layout: white-space pre-line collapses runs", "[layout][white-space]"
                                  }));
 }
 
-TEST_CASE("Layout: white-space pre-wrap wraps long lines", "[layout][white-space]") {
+TEST_CASE("Layout: white-space pre-wrap wraps long lines",
+          "[layout][white-space]") {
   struct PreWrapTest : Component<PreWrapTest> {
     std::string_view Setup() {
       Import<div>();
@@ -3892,9 +3919,10 @@ TEST_CASE("Layout: flex item with auto width shrinks to its block children",
 //    subtree entirely when it has no slotted content, since normally
 //    nothing outer could ever reach in there -- an optimization that
 //    silently broke ::part() once it made that reachable.
-TEST_CASE("Layout: ::part() lets an outer component style a nested "
-          "component's internals",
-          "[layout][style][part]") {
+TEST_CASE(
+    "Layout: ::part() lets an outer component style a nested "
+    "component's internals",
+    "[layout][style][part]") {
   struct InnerWithPart : Component<InnerWithPart> {
     std::string_view Setup() {
       Import<div>();
@@ -3936,9 +3964,10 @@ TEST_CASE("Layout: ::part() lets an outer component style a nested "
 // container. An inline-block with a fixed width, white-space:nowrap text
 // wider than it, and overflow-x:scroll had no way to reach the overflowing
 // text: scroll_width defaulted to 0, so ClampScrollX always clamped to 0.
-TEST_CASE("Layout: an inline-block reports scroll_width for overflowing "
-          "nowrap text",
-          "[layout][inline-block][scroll]") {
+TEST_CASE(
+    "Layout: an inline-block reports scroll_width for overflowing "
+    "nowrap text",
+    "[layout][inline-block][scroll]") {
   struct T : Component<T> {
     void InitReflection() override {
       Import<div>();
@@ -3965,9 +3994,10 @@ TEST_CASE("Layout: an inline-block reports scroll_width for overflowing "
 // never called set_scroll_width/set_scroll_height, unlike LayoutBlockFlow
 // and LayoutFlex. A grid with explicit column tracks wider than its
 // max-width had no way to expose the true content extent.
-TEST_CASE("Layout: a grid container reports scroll_width when its tracks "
-          "overflow max-width",
-          "[layout][grid][scroll]") {
+TEST_CASE(
+    "Layout: a grid container reports scroll_width when its tracks "
+    "overflow max-width",
+    "[layout][grid][scroll]") {
   struct T : Component<T> {
     std::string_view Setup() override {
       return R"html(
@@ -3996,11 +4026,13 @@ TEST_CASE("Layout: a grid container reports scroll_width when its tracks "
 // constraint from the parent. An explicit width smaller than what the
 // tracks need silently grew the box to fit them instead of clamping it and
 // letting the tracks overflow, unlike every other layout algorithm here.
-TEST_CASE("Layout: an explicit width/height on a grid container is honored, "
-          "not just min-/max-width/height",
-          "[layout][grid][width]") {
-  SECTION("explicit width smaller than the tracks need: box stays clamped, "
-          "tracks overflow") {
+TEST_CASE(
+    "Layout: an explicit width/height on a grid container is honored, "
+    "not just min-/max-width/height",
+    "[layout][grid][width]") {
+  SECTION(
+      "explicit width smaller than the tracks need: box stays clamped, "
+      "tracks overflow") {
     struct T : Component<T> {
       std::string_view Setup() override {
         return R"html(
@@ -4020,8 +4052,9 @@ TEST_CASE("Layout: an explicit width/height on a grid container is honored, "
     CHECK(grid->scroll_width() == 20);
   }
 
-  SECTION("explicit width larger than the tracks need: box grows, extra "
-          "space stays empty") {
+  SECTION(
+      "explicit width larger than the tracks need: box grows, extra "
+      "space stays empty") {
     struct T : Component<T> {
       std::string_view Setup() override {
         return R"html(
@@ -4051,9 +4084,10 @@ TEST_CASE("Layout: an explicit width/height on a grid container is honored, "
 // picking up its scroll_width (18). AccumulateScrollExtent now recurses
 // into a dom_node==nullptr, non-text fragment's children instead of
 // skipping it.
-TEST_CASE("Layout: scroll_width propagates through an anonymous inline-flow "
-          "wrapper to a further block ancestor",
-          "[layout][scroll][anonymous-wrapper]") {
+TEST_CASE(
+    "Layout: scroll_width propagates through an anonymous inline-flow "
+    "wrapper to a further block ancestor",
+    "[layout][scroll][anonymous-wrapper]") {
   struct T : Component<T> {
     void InitReflection() override {
       Import<div>();
@@ -4086,9 +4120,10 @@ TEST_CASE("Layout: scroll_width propagates through an anonymous inline-flow "
 // <blockquote> for every markdown `>` quoted line. Registered as a real
 // component (matching the <a> pattern) with a left border + padding,
 // reusing this session's earlier single-side-border rendering fix.
-TEST_CASE("Layout: <blockquote> is a registered, block-level, indented "
-          "component",
-          "[layout][blockquote]") {
+TEST_CASE(
+    "Layout: <blockquote> is a registered, block-level, indented "
+    "component",
+    "[layout][blockquote]") {
   struct T : Component<T> {
     void InitReflection() override {
       Import<blockquote>();
@@ -4114,7 +4149,6 @@ TEST_CASE("Layout: <blockquote> is a registered, block-level, indented "
   // border fix makes this a clean line, not a stray corner glyph).
   CHECK(layout_text.find("\xe2\x94\x82") != std::string::npos);  // "│"
 }
-
 
 TEST_CASE("The layout arena is double buffered", "[layout][arena]") {
   // Regression (1302018f, 257893e4): fragments and boxes are allocate_shared'd
@@ -4178,7 +4212,8 @@ int LayoutRunsForNestedFlex(int depth) {
   return LayoutRunCount();
 }
 
-TEST_CASE("Layout: nesting cost stays linear in depth", "[layout][flex][perf]") {
+TEST_CASE("Layout: nesting cost stays linear in depth",
+          "[layout][flex][perf]") {
   // Flex lays each child out three times -- measure, again with the resolved
   // main size, and finally in place -- and each of those runs re-measures its
   // own children, so the cost of a subtree used to multiply by ~3 with every
@@ -4199,9 +4234,10 @@ TEST_CASE("Layout: nesting cost stays linear in depth", "[layout][flex][perf]") 
   CHECK(per_level <= 8);
 }
 
-TEST_CASE("Layout: an absolutely positioned box nested in flex is placed "
-          "against its containing block",
-          "[layout][flex][position]") {
+TEST_CASE(
+    "Layout: an absolutely positioned box nested in flex is placed "
+    "against its containing block",
+    "[layout][flex][position]") {
   // The measurement cache keys on constraints alone, which is only sound
   // because nothing else in LayoutContext -- the nearest positioned ancestor's
   // size and the offsets accumulated down to it -- is read by anything except

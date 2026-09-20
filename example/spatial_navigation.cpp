@@ -4,8 +4,8 @@
 //
 // Arrow-key spatial navigation.
 //
-// Focus moves to the nearest focusable element in the direction pressed, computed
-// from the laid-out geometry.
+// Focus moves to the nearest focusable element in the direction pressed,
+// computed from the laid-out geometry.
 //
 // Try it: move around the grid with the arrow keys.
 #include <string>
@@ -26,7 +26,8 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
   }
 
   SpatialNavDemo() {
-    Import("OnButtonClick", [this](std::string label) { OnButtonClick(label); });
+    Import("OnButtonClick",
+           [this](std::string label) { OnButtonClick(label); });
     Bind(last_action);
     Bind(click_count);
   }

@@ -4,8 +4,8 @@
 //
 // Content projection with <slot>.
 //
-// A reusable Card component places its caller's markup into named slots, which is
-// how every built-in tag is implemented too.
+// A reusable Card component places its caller's markup into named slots, which
+// is how every built-in tag is implemented too.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -111,9 +111,7 @@ class SlotsDemo : public Component<SlotsDemo> {
     </style>
   )html";
 
-  SlotsDemo() {
-    Import<Card>();
-  }
+  SlotsDemo() { Import<Card>(); }
 };
 
 int main() {

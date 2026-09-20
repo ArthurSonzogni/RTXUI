@@ -17,6 +17,7 @@ namespace rtxui {
 class TextInputBase {
  public:
   std::string value;
+  std::string type = "text";
   int cursor_pos = 0;
   int selection_start = -1;
   bool disabled = false;
@@ -45,7 +46,8 @@ class TextInputBase {
   bool is_focused_ = false;
   int ideal_column_ = 0;
 
-  std::chrono::steady_clock::time_point last_click_time_ = std::chrono::steady_clock::time_point::min();
+  std::chrono::steady_clock::time_point last_click_time_ =
+      std::chrono::steady_clock::time_point::min();
   int last_click_pos_ = -1;
   bool double_clicked_ = false;
   int double_click_anchor_start_ = -1;
@@ -88,4 +90,3 @@ class TextInputBase {
 }  // namespace rtxui
 
 #endif  // RTXUI_COMPONENT_DEFAULT_INPUT_TEXT_INPUT_BASE_HPP_
-

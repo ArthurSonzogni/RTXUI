@@ -6,12 +6,7 @@ RTXUI supports both **default slots** (for simple child wrapping) and **named sl
 
 ---
 
-Content written between a slot's own tags is its fallback: it is shown when the
-consumer projects nothing into that slot, and replaced as soon as they do. A
-slot that is filled and then emptied again -- because the content sat inside a
-condition that turned false, say -- goes back to showing its fallback.
-
-## 1. Default Slots (`<slot>`)
+## Default Slots (`<slot>`)
 
 A default slot acts as a placeholder for any child element nested inside your custom component's tag.
 
@@ -36,9 +31,19 @@ When using `MyPanel` inside a parent component, any children you nest inside `<M
 </MyPanel>
 ```
 
+### Fallback Content
+
+Content placed inside a slot declaration acts as its fallback: it is rendered when the caller projects no elements into that slot, and is replaced whenever projecting content is provided. If the projected content is dynamically unmounted (e.g. by a reactive `<if>` condition evaluating to `false`), the slot reverts to displaying its fallback markup:
+
+```html
+<slot>
+  <span>Default placeholder content when no children are provided.</span>
+</slot>
+```
+
 ---
 
-## 2. Named Slots (`<slot.name>`)
+## Named Slots (`<slot.name>`)
 
 For complex components that have multiple customizable content zones (e.g. a Header, a Body, and a Footer), you can use named slots.
 
@@ -115,7 +120,7 @@ the default slot. This is how the built-in `<fieldset>` and `<details>` pick up
 
 Selection looks through `<if>`, `<elif>`, `<else>` and `<for>`, so a
 conditionally rendered `<legend>` still reaches its slot, and the slot empties
-again when the condition turns off. Only elements are matched -- bare text has
+again when the condition turns off. Only elements are matched — bare text has
 no tag and always lands in the default slot.
 
 ---

@@ -4,8 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 
-#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/base/string.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/internal/component.hpp"
@@ -167,8 +167,8 @@ class ReactiveStructCollection
   void InitReflection() override {
     BindCollection("rows", &rows, [](const BoundRow& row) {
       return std::make_shared<rtxui::ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"name", row.name}, {"cls", row.cls}});
+          std::map<std::string, std::string, std::less<>>{{"name", row.name},
+                                                          {"cls", row.cls}});
     });
     rtxui::Component<ReactiveStructCollection>::InitReflection();
   }
@@ -363,9 +363,7 @@ namespace rtxui {
 float ApplyEasing(float t, std::string_view timing);
 
 TEST_CASE("Transition Easing Functions", "[dom][easing]") {
-  auto IsClose = [](float a, float b) {
-    return std::abs(a - b) < 1e-5f;
-  };
+  auto IsClose = [](float a, float b) { return std::abs(a - b) < 1e-5f; };
 
   // Test boundary values
   CHECK(ApplyEasing(0.0f, "linear") == 0.0f);
@@ -386,8 +384,10 @@ TEST_CASE("Transition Easing Functions", "[dom][easing]") {
   // Sine
   CHECK(ApplyEasing(0.0f, "ease-in-sine") == 0.0f);
   CHECK(ApplyEasing(1.0f, "ease-in-sine") == 1.0f);
-  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-sine"), 1.0f - std::cos(0.5f * 3.1415926535f / 2.0f)));
-  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-sine"), std::sin(0.5f * 3.1415926535f / 2.0f)));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-in-sine"),
+                1.0f - std::cos(0.5f * 3.1415926535f / 2.0f)));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-sine"),
+                std::sin(0.5f * 3.1415926535f / 2.0f)));
   CHECK(IsClose(ApplyEasing(0.5f, "ease-in-out-sine"), 0.5f));
 
   // Quad
@@ -410,7 +410,8 @@ TEST_CASE("Transition Easing Functions", "[dom][easing]") {
 
   // Expo
   CHECK(IsClose(ApplyEasing(0.5f, "ease-in-expo"), std::pow(2.0f, -5.0f)));
-  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-expo"), 1.0f - std::pow(2.0f, -5.0f)));
+  CHECK(IsClose(ApplyEasing(0.5f, "ease-out-expo"),
+                1.0f - std::pow(2.0f, -5.0f)));
 
   // Circ
   CHECK(IsClose(ApplyEasing(0.5f, "ease-in-circ"), 1.0f - std::sqrt(0.75f)));
@@ -420,4 +421,4 @@ TEST_CASE("Transition Easing Functions", "[dom][easing]") {
   CHECK(ApplyEasing(0.5f, "ease-in-back") < 0.5f);
   CHECK(ApplyEasing(0.5f, "ease-out-back") > 0.5f);
 }
-} // namespace rtxui
+}  // namespace rtxui

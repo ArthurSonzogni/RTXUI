@@ -1,5 +1,7 @@
 # An interactive flexbox playground
 
+An interactive flexbox playground.
+
 Every flex property is driven from the UI: change flex-direction, justify-content, align-items, and each item's grow/shrink/basis, and watch the boxes redistribute.
 
 <ExampleTabs src="/wasm/rtxui_example_layout_flex.js" :cols="100" :rows="28">

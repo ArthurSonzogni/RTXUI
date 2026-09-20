@@ -1,6 +1,8 @@
 # Conditional rendering
 
-&amp;lt;if condition="{computed}"&amp;gt; includes its children only when the bound value is true; the `if` attribute does the same inline on any element.
+Conditional rendering.
+
+`<if condition="{computed}">` includes its children only when the bound value is true; the `if` attribute does the same inline on any element.
 
 Try it: switch tabs to swap the rendered branch.
 

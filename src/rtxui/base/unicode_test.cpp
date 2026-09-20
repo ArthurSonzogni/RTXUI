@@ -338,7 +338,7 @@ TEST_CASE("Grapheme.VariationSelector", "[unicode][emoji]") {
   // U+2600 is one cell as text. U+FE0F asks for the emoji presentation, which
   // terminals draw in two -- the selector clusters either way, but it used to
   // leave the width at one.
-  CHECK(ClustersAndWidth("\xe2\x98\x80") == std::pair{1, 1});          // ☀
+  CHECK(ClustersAndWidth("\xe2\x98\x80") == std::pair{1, 1});              // ☀
   CHECK(ClustersAndWidth("\xe2\x98\x80\xef\xb8\x8f") == std::pair{1, 2});  // ☀️
 
   // VS15 asks for text presentation, taking a default-emoji character back
@@ -382,10 +382,11 @@ TEST_CASE("string_width agrees with the grapheme widths", "[unicode][emoji]") {
   // is the only reason that never showed up on screen.
   for (std::string_view text : {
            "Hello",
-           "\xe6\xbc\xa2\xe5\xad\x97",                       // 漢字
-           "\xe2\x98\x80\xef\xb8\x8f",                       // ☀️
-           "\xf0\x9f\x87\xab\xf0\x9f\x87\xb7",               // 🇫🇷
-           "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7",
+           "\xe6\xbc\xa2\xe5\xad\x97",          // 漢字
+           "\xe2\x98\x80\xef\xb8\x8f",          // ☀️
+           "\xf0\x9f\x87\xab\xf0\x9f\x87\xb7",  // 🇫🇷
+           "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f"
+           "\x91\xa7",
        }) {
     INFO("text: " << text);
     CHECK(string_width(text) == ClustersAndWidth(text).second);

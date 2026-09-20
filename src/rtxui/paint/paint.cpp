@@ -1,7 +1,5 @@
 #include "rtxui/paint/paint.hpp"
 
-#include "rtxui/layout/sticky.hpp"
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -11,6 +9,7 @@
 #include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
+#include "rtxui/layout/sticky.hpp"
 #include "rtxui/paint/texture.hpp"
 
 namespace rtxui {
@@ -477,9 +476,9 @@ void PaintImpl(const PhysicalFragment* frag,
     // (left/right, `b_color`) side's color, matching the pre-existing
     // behavior for ordinary 4-sided borders (verified by "Individual Border
     // Colors": corners take the color of the vertical border).
-    auto draw_corner = [&](int x, int y, bool side_a, bool side_b,
-                           Glyph corner, Glyph a, const Color& a_color,
-                           Glyph b, const Color& b_color) {
+    auto draw_corner = [&](int x, int y, bool side_a, bool side_b, Glyph corner,
+                           Glyph a, const Color& a_color, Glyph b,
+                           const Color& b_color) {
       if (side_a && side_b) {
         set_char(x, y, corner, b_color);
       } else if (side_a) {
@@ -620,12 +619,14 @@ void PaintImpl(const PhysicalFragment* frag,
                                             max_scroll))
               : 0;
 
-      Color thumb_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_thumb)
-                           ? frag->dom_node->style.scrollbar_color_thumb
-                           : kDefaultScrollbarThumbColor;
-      Color track_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_track)
-                           ? frag->dom_node->style.scrollbar_color_track
-                           : kDefaultScrollbarTrackColor;
+      Color thumb_bg =
+          (frag->dom_node && frag->dom_node->style.has_scrollbar_color_thumb)
+              ? frag->dom_node->style.scrollbar_color_thumb
+              : kDefaultScrollbarThumbColor;
+      Color track_bg =
+          (frag->dom_node && frag->dom_node->style.has_scrollbar_color_track)
+              ? frag->dom_node->style.scrollbar_color_track
+              : kDefaultScrollbarTrackColor;
 
       thumb_bg.a = static_cast<uint8_t>(thumb_bg.a * current_opacity);
       track_bg.a = static_cast<uint8_t>(track_bg.a * current_opacity);
@@ -720,12 +721,14 @@ void PaintImpl(const PhysicalFragment* frag,
                                             max_scroll))
               : 0;
 
-      Color thumb_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_thumb)
-                           ? frag->dom_node->style.scrollbar_color_thumb
-                           : kDefaultScrollbarThumbColor;
-      Color track_bg = (frag->dom_node && frag->dom_node->style.has_scrollbar_color_track)
-                           ? frag->dom_node->style.scrollbar_color_track
-                           : kDefaultScrollbarTrackColor;
+      Color thumb_bg =
+          (frag->dom_node && frag->dom_node->style.has_scrollbar_color_thumb)
+              ? frag->dom_node->style.scrollbar_color_thumb
+              : kDefaultScrollbarThumbColor;
+      Color track_bg =
+          (frag->dom_node && frag->dom_node->style.has_scrollbar_color_track)
+              ? frag->dom_node->style.scrollbar_color_track
+              : kDefaultScrollbarTrackColor;
 
       thumb_bg.a = static_cast<uint8_t>(thumb_bg.a * current_opacity);
       track_bg.a = static_cast<uint8_t>(track_bg.a * current_opacity);
@@ -838,10 +841,12 @@ void PaintImpl(const PhysicalFragment* frag,
       sorted_children.begin(), sorted_children.end(),
       [](const PhysicalFragment::ChildLink& a,
          const PhysicalFragment::ChildLink& b) {
-        bool a_pos = (a.fragment && a.fragment->dom_node &&
-                      a.fragment->dom_node->style.position != PositionType::Static);
-        bool b_pos = (b.fragment && b.fragment->dom_node &&
-                      b.fragment->dom_node->style.position != PositionType::Static);
+        bool a_pos =
+            (a.fragment && a.fragment->dom_node &&
+             a.fragment->dom_node->style.position != PositionType::Static);
+        bool b_pos =
+            (b.fragment && b.fragment->dom_node &&
+             b.fragment->dom_node->style.position != PositionType::Static);
         int az = (a.fragment && a.fragment->dom_node)
                      ? a.fragment->dom_node->style.z_index.value_or(0)
                      : 0;
@@ -944,10 +949,9 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y,
            Color screen_background) {
-  PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y,
-            texture.width(), texture.height(),
-            Color::RGB(255, 255, 255), screen_background, false, false, false,
-            false, false, false, false, false,
+  PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y, texture.width(),
+            texture.height(), Color::RGB(255, 255, 255), screen_background,
+            false, false, false, false, false, false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
 }
 

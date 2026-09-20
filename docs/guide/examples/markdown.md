@@ -1,6 +1,6 @@
-# The &amp;lt;markdown&amp;gt; component: a live editor and rendered preview, side by side
+# The `<markdown>` component
 
-The &amp;lt;markdown&amp;gt; component: a live editor and rendered preview, side by side.
+The `<markdown>` component: a live editor and rendered preview, side by side.
 
 <ExampleTabs src="/wasm/rtxui_example_markdown.js" :cols="100" :rows="28">
 <template #source>
