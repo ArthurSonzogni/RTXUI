@@ -24,7 +24,7 @@ Styles are written using standard CSS rulesets inside a `<style>` block in your 
 
 A component may declare more than one `<style>` block. They are concatenated in
 the order they appear, so a later block can override an earlier one exactly as
-two rulesets in a single block would -- when neither selector is more specific,
+two rulesets in a single block would — when neither selector is more specific,
 the one written later wins.
 
 ## Supported Selectors
@@ -35,21 +35,21 @@ The CSS parser supports a wide range of standard selectors and combinators:
 *   **ID Selectors**: Targets unique identifiers (e.g., `#submit-btn { background-color: green; }`).
 *   **Compound Selectors**: Combine tags, classes, and IDs simultaneously (e.g., `div.card#active { border-color: red; }`).
 *   **Pseudo-classes**: Targets interactive states (`:hover`, `:focus`, `:active`,
-    `:disabled`, `:read-only`) and scrollbars.
+    `:disabled`, `:checked`, `:read-only`) and scrollbars.
 *   **Structural Pseudo-classes**:
     *   `:first-child`: Matches the first element among its siblings.
     *   `:last-child`: Matches the last element among its siblings.
     *   `:nth-child(even)`/`:nth-child(odd)`: Matches even or odd siblings.
     *   `:nth-child(N)`: Matches the 1-based N-th sibling (e.g., `:nth-child(3)`).
     *   `:nth-child(An+B)`: Matches sibling `A x k + B` for every whole `k >= 0`
-        -- `3n` is every third sibling, `2n+1` the odd ones, `n+3` everything
+        — `3n` is every third sibling, `2n+1` the odd ones, `n+3` everything
         from the third on, and `-n+2` the first two. Whitespace is allowed
         around the parts and the `n` is case-insensitive, so `2N + 1` parses.
     *   `:nth-last-child(...)`: The same arguments, counted from the last sibling backwards.
     *   `:only-child`: Matches an element that is its parent's only child.
     *   `:empty`: Matches an element with no content between its tags.
     *   `:first-of-type` / `:last-of-type` / `:only-of-type` / `:nth-of-type(...)` / `:nth-last-of-type(...)`: The same as the `-child` family, but counting only siblings with the same tag.
-    *   `:not(<selector-list>)`: Matches an element that none of the listed selectors do, e.g. `:not(.a, .b)`. Each entry is one compound selector -- a tag, `.class`, `#id`, `[attribute]`, a pseudo-class, or a combination such as `:not(div.card)` or `:not(.item:first-child)`. Every part of an entry must match for that entry to exclude an element, so `:not(.x:first-child)` still matches a `.x` that is not first. Combinators inside the negation (`:not(div span)`) are not supported and match nothing, as do an empty `:not()` and a list with a stray or trailing comma. `:not()` may nest, up to 32 levels; deeper than that matches nothing.
+    *   `:not(<selector-list>)`: Matches an element that none of the listed selectors do, e.g. `:not(.a, .b)`. Each entry is one compound selector — a tag, `.class`, `#id`, `[attribute]`, a pseudo-class, or a combination such as `:not(div.card)` or `:not(.item:first-child)`. Every part of an entry must match for that entry to exclude an element, so `:not(.x:first-child)` still matches a `.x` that is not first. Combinators inside the negation (`:not(div span)`) are not supported and match nothing, as do an empty `:not()` and a list with a stray or trailing comma. `:not()` may nest, up to 32 levels; deeper than that matches nothing.
 
     `<style>` blocks and text do not count as siblings, so they never displace a
     `:first-child` nor stop an element being an `:only-child`. An `An+B` offset must
@@ -83,9 +83,6 @@ self {
 }
 ```
 This is essential for wrapping custom components in custom borders or configuring their layout growth constraints in flex containers.
-
-Attribute selectors are also supported: `input[value]` matches elements
-having the attribute, `button[disabled=true]` matches an exact value.
 
 ### Styling a Nested Component's Internals: `::part()`
 
@@ -209,9 +206,8 @@ Appending `!important` to a declaration makes it win over normal
 declarations from later rules and over inline styles, as in standard CSS.
 Reach for it rarely; more specific selectors usually express intent better.
 
-::: warning Known limitation
-An `!important` declaration does not currently survive a matching
-pseudo-class rule on the same element: given
+::: warning Architectural detail
+An `!important` declaration does not survive a matching pseudo-class rule on the same element: given
 
 ```css
 .row       { color: green !important; }

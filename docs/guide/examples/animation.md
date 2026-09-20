@@ -1,5 +1,7 @@
 # Keyframe animations
 
+Keyframe animations.
+
 `@keyframes` plus the `animation` property drive a property through a cycle without any C++ state changing between frames.
 
 <ExampleTabs src="/wasm/rtxui_example_animation.js" :cols="80" :rows="24">

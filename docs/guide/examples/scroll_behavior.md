@@ -1,4 +1,6 @@
-# scroll-behavior: smooth versus auto
+# scroll-behavior
+
+scroll-behavior: smooth versus auto.
 
 Try it: click the jump buttons and compare how each column travels.
 

@@ -4,8 +4,8 @@
 #ifndef RTXUI_COMPONENT_INTERNAL_HPP_
 #define RTXUI_COMPONENT_INTERNAL_HPP_
 
-#include "rtxui/internal/component.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/internal/component.hpp"
 
 namespace rtxui {
 
@@ -22,6 +22,10 @@ void FocusExclusive(Element* element);
 // keyed off Element::disabled()) - and drops focus if the element is
 // currently focused while disabled, mirroring TextInputBase's behavior.
 void SyncDisabled(Element* root, bool disabled);
+
+// Syncs a component's bound `checked` state onto its root Element for
+// :checked CSS matching.
+void SyncChecked(Element* root, bool checked);
 
 }  // namespace rtxui
 

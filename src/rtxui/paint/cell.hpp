@@ -40,11 +40,8 @@ struct Cell {
 inline bool operator==(const Cell& lhs, const Cell& rhs) noexcept {
   return lhs.background_color == rhs.background_color &&
          lhs.foreground_color == rhs.foreground_color &&
-         lhs.blink == rhs.blink &&
-         lhs.bold == rhs.bold &&
-         lhs.dim == rhs.dim &&
-         lhs.italic == rhs.italic &&
-         lhs.inverted == rhs.inverted &&
+         lhs.blink == rhs.blink && lhs.bold == rhs.bold && lhs.dim == rhs.dim &&
+         lhs.italic == rhs.italic && lhs.inverted == rhs.inverted &&
          lhs.underlined == rhs.underlined &&
          lhs.underlined_double == rhs.underlined_double &&
          lhs.strikethrough == rhs.strikethrough &&

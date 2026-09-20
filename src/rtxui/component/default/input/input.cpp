@@ -7,6 +7,7 @@ namespace rtxui {
 
 void input::InitReflection() {
   Bind(value);
+  Bind(type);
   Bind(disabled);
   Bind(readonly);
   Bind(placeholder);

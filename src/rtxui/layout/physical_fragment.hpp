@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "rtxui/layout/layout_arena.hpp"
-
 #include "rtxui/layout/style.hpp"
 #include "rtxui/paint/color.hpp"
 

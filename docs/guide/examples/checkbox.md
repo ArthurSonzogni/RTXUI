@@ -1,4 +1,6 @@
-# The &amp;lt;checkbox&amp;gt; component bound to a bool
+# The `<checkbox>` component bound to a bool
+
+The `<checkbox>` component bound to a bool.
 
 Try it: click the box, or focus it and press Space.
 

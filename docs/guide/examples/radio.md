@@ -1,6 +1,6 @@
-# &amp;lt;radio&amp;gt; buttons sharing a `name`, with the selection bound to a C++ string
+# `<radio>` buttons sharing a `name`, with the selection bound to a C++ string
 
-&amp;lt;radio&amp;gt; buttons sharing a `name`, with the selection bound to a C++ string.
+`<radio>` buttons sharing a `name`, with the selection bound to a C++ string.
 
 <ExampleTabs src="/wasm/rtxui_example_radio.js" :cols="80" :rows="24">
 <template #source>

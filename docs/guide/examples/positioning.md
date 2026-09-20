@@ -1,4 +1,4 @@
-# position: relative, absolute and fixed, plus z-index stacking
+# position
 
 position: relative, absolute and fixed, plus z-index stacking.
 

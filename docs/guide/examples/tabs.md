@@ -1,4 +1,6 @@
-# The built-in &amp;lt;tabs&amp;gt;/&amp;lt;tab-pane&amp;gt; components
+# The built-in `<tabs>`/`<tab-pane>` components
+
+The built-in `<tabs>`/`<tab-pane>` components.
 
 The active pane is selected by the `value` attribute bound to a C++ string.
 

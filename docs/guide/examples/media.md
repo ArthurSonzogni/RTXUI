@@ -1,5 +1,7 @@
 # `@media` queries reacting to terminal size
 
+`@media` queries reacting to terminal size.
+
 Try it: resize the terminal and watch the layout change breakpoint.
 
 <ExampleTabs src="/wasm/rtxui_example_media.js" :cols="80" :rows="24">

@@ -79,8 +79,8 @@ struct MinMaxExpr {
   bool DependsOnBasis() const {
     // Referenced expressions always depend on the basis: constant ones are
     // folded before registration.
-    return a_percent != 0 || b_percent != 0 || c_percent != 0 ||
-           a_ref != -1 || b_ref != -1 || c_ref != -1;
+    return a_percent != 0 || b_percent != 0 || c_percent != 0 || a_ref != -1 ||
+           b_ref != -1 || c_ref != -1;
   }
 
   int Evaluate(int basis) const {
@@ -101,8 +101,8 @@ struct MinMaxExpr {
       case Op::Max:
         return ClampToCells(std::max(a, b));
       case Op::Clamp:
-        return ClampToCells(
-            std::max(a, std::min(b, lin(c_cells, c_percent, c_ref, c_ref_coef))));
+        return ClampToCells(std::max(
+            a, std::min(b, lin(c_cells, c_percent, c_ref, c_ref_coef))));
     }
     return 0;
   }
@@ -145,7 +145,8 @@ struct Length {
       return ToCells(static_cast<float>(basis) * (value / 100.0f));
     }
     if (unit == Unit::Calc) {
-      return ToCells(value + static_cast<float>(basis) * (calc_percent / 100.0f));
+      return ToCells(value +
+                     static_cast<float>(basis) * (calc_percent / 100.0f));
     }
     if (unit == Unit::MinMax) {
       return GetMinMaxExpr(ToCells(value)).Evaluate(basis);

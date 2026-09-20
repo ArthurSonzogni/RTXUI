@@ -1,0 +1,24 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        entry: tools/format.sh
+        language: script
+        files: \.(cpp|hpp|h|cc)$
+        pass_filenames: false
+
+      - id: verify-css-docs
+        name: verify-css-docs
+        entry: python3 scripts/verify_docs.py
+        language: system
+        files: ^(src/rtxui/style/apply_style\.cpp|docs/css_reference\.md)$
+        pass_filenames: false

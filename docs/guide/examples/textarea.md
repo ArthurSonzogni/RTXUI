@@ -1,6 +1,6 @@
-# The &amp;lt;textarea&amp;gt; component: multi-line editing with a line-number gutter
+# The `<textarea>` component
 
-The &amp;lt;textarea&amp;gt; component: multi-line editing with a line-number gutter.
+The `<textarea>` component: multi-line editing with a line-number gutter.
 
 <ExampleTabs src="/wasm/rtxui_example_textarea.js" :cols="80" :rows="24">
 <template #source>

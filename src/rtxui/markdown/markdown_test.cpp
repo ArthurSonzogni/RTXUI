@@ -44,8 +44,7 @@ TEST_CASE("Markdown: Setext headings", "[markdown]") {
   REQUIRE(MarkdownToHtml("-----") == "<p>-----</p>\n");
 
   // A blank line breaks the paragraph, so the underline no longer applies.
-  REQUIRE(MarkdownToHtml("title\n\n=====") ==
-          "<p>title</p>\n<p>=====</p>\n");
+  REQUIRE(MarkdownToHtml("title\n\n=====") == "<p>title</p>\n<p>=====</p>\n");
 }
 
 TEST_CASE("Markdown: Paragraphs and line breaks", "[markdown]") {
@@ -116,9 +115,10 @@ TEST_CASE("Markdown: Deeply nested blockquotes do not overflow the stack",
   REQUIRE_NOTHROW(MarkdownToHtml(input));
 }
 
-TEST_CASE("Markdown: Deeply nested emphasis markers do not overflow the "
-          "stack",
-          "[markdown]") {
+TEST_CASE(
+    "Markdown: Deeply nested emphasis markers do not overflow the "
+    "stack",
+    "[markdown]") {
   // Regression: bold/italic/link content recursed one level deeper into
   // ProcessInlineMixed per nesting level, with no cap. Found by fuzzing
   // (excessive stack usage on an adversarial input using many nested
@@ -201,14 +201,16 @@ TEST_CASE("Markdown: NUL and other C0 control characters are stripped",
   // can't tell an embedded NUL apart from end-of-input, and no XML
   // character reference can represent NUL anyway).
   REQUIRE(MarkdownToHtml(std::string("a") + '\0' + "b") == "<p>ab</p>\n");
-  REQUIRE(MarkdownToHtml(std::string("a\x01\x1B" "b")) == "<p>ab</p>\n");
+  REQUIRE(MarkdownToHtml(std::string("a\x01\x1B"
+                                     "b")) == "<p>ab</p>\n");
   // Tab, LF and CR must be preserved.
   REQUIRE(MarkdownToHtml("a\tb") == "<p>a\tb</p>\n");
 }
 
-TEST_CASE("Markdown: Link URL with a quote does not break out of the "
-          "href attribute",
-          "[markdown]") {
+TEST_CASE(
+    "Markdown: Link URL with a quote does not break out of the "
+    "href attribute",
+    "[markdown]") {
   // A '"' in the URL must not terminate the href attribute early: doing so
   // let markdown content inject arbitrary attributes (e.g. onclick=) into
   // the generated DOM, and could also make the output fail to parse as XML.
@@ -262,8 +264,29 @@ TEST_CASE("Markdown: Tables", "[markdown]") {
 </table>
 )";
   REQUIRE(MarkdownToHtml(escaped_input) == expected_escaped);
-}
 
+  // Test leading and trailing whitespace on table lines
+  const std::string whitespace_input =
+      " | Header 1 | Header 2 | \n"
+      " | --- | --- |\n"
+      " | Cell 1 | Cell 2 | \n";
+  const std::string expected_whitespace = R"(<table>
+<thead>
+<tr>
+<th>Header 1</th>
+<th>Header 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cell 1</td>
+<td>Cell 2</td>
+</tr>
+</tbody>
+</table>
+)";
+  REQUIRE(MarkdownToHtml(whitespace_input) == expected_whitespace);
+}
 
 TEST_CASE("Markdown: hard line breaks", "[markdown]") {
   // CommonMark's two hard-break spellings. Both were being dropped: the

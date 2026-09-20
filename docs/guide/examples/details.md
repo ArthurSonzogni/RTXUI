@@ -1,4 +1,6 @@
-# The &amp;lt;details&amp;gt;/&amp;lt;summary&amp;gt; disclosure widget
+# The `<details>`/`<summary>` disclosure widget
+
+The `<details>`/`<summary>` disclosure widget.
 
 Try it: click a summary row, or focus it and press Enter.
 

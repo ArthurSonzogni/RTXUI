@@ -5,13 +5,13 @@
 // Measures per-frame Digest + Draw cost while mutating one item every frame,
 // exercising reconciliation, re-layout and re-paint. Also reports element
 // allocation counts to catch reconciliation churn / leaks.
-#include "benchmark_common.hpp"
-#include "rtxui/terminal/terminal_device.hpp"
-
 #include <atomic>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "benchmark_common.hpp"
+#include "rtxui/terminal/terminal_device.hpp"
 
 using namespace rtxui;
 using rtxui::bench::Clock;
@@ -43,9 +43,9 @@ int main() {
     // Measurement phase
     for (int i = 0; i < kBenchmarkFrames; ++i) {
       // Dynamic updates to trigger digest and reconciliation
-      app->items[i % app->items.size()] =
-          "Updated description " + std::to_string(i) +
-          " with modified ASCII text content!";
+      app->items[i % app->items.size()] = "Updated description " +
+                                          std::to_string(i) +
+                                          " with modified ASCII text content!";
 
       auto t0 = Clock::now();
       app->Digest();

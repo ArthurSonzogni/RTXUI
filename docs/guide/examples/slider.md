@@ -1,4 +1,6 @@
-# The &amp;lt;slider&amp;gt; component bound to an int
+# The `<slider>` component bound to an int
+
+The `<slider>` component bound to an int.
 
 Try it: drag the thumb, or focus it and use the arrow keys.
 

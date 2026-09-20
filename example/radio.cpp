@@ -5,7 +5,6 @@
 // <radio> buttons sharing a `name`, with the selection bound to a C++ string.
 #include <rtxui/rtxui.hpp>
 
-
 using namespace rtxui;
 
 class RadioDemo : public Component<RadioDemo> {
@@ -15,9 +14,15 @@ class RadioDemo : public Component<RadioDemo> {
   bool select_c = false;
 
   std::string selected_tech() const {
-    if (select_a) return "PostgreSQL";
-    if (select_b) return "MongoDB";
-    if (select_c) return "Redis";
+    if (select_a) {
+      return "PostgreSQL";
+    }
+    if (select_b) {
+      return "MongoDB";
+    }
+    if (select_c) {
+      return "Redis";
+    }
     return "";
   }
 

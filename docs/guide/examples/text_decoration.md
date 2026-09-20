@@ -1,4 +1,4 @@
-# Text decoration: bold, dim, italic, underline and strikethrough
+# Text decoration
 
 Text decoration: bold, dim, italic, underline and strikethrough.
 

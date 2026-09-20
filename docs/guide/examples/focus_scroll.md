@@ -1,5 +1,7 @@
 # Scroll-into-view on keyboard focus
 
+Scroll-into-view on keyboard focus.
+
 Tabbing to an element that is outside its scroll container scrolls it into view automatically.
 
 Try it: hold Tab and watch the list follow the focus ring.

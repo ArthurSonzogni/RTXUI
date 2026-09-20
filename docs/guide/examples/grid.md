@@ -1,5 +1,7 @@
 # CSS grid
 
+CSS grid.
+
 grid-template sets the track sizes; items span tracks with grid-column and grid-row.
 
 <ExampleTabs src="/wasm/rtxui_example_grid.js" :cols="80" :rows="24">

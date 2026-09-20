@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.24)
 project(rtxui
   LANGUAGES CXX
   VERSION 0.1.0
-  DESCRIPTION "C++ reactive terminal renderering"
+  DESCRIPTION "C++ reactive terminal rendering"
 )
 
 option(RTXUI_BUILD_TESTS "Build tests" OFF)
@@ -62,6 +62,8 @@ add_library(rtxui_lib
   "src/rtxui/component/default/u/u.cpp"
   "src/rtxui/component/default/s/s.cpp"
   "src/rtxui/component/default/code/code.cpp"
+  "src/rtxui/component/default/kbd/kbd.cpp"
+  "src/rtxui/component/default/semantic/semantic.cpp"
   "src/rtxui/component/default/pre/pre.cpp"
   "include/rtxui/internal/import.hpp"
   "src/rtxui/base/expected.hpp"
@@ -120,12 +122,6 @@ target_compile_features(rtxui_lib PUBLIC cxx_std_23)
 target_compile_options(rtxui_lib PRIVATE
   -Wall
   -Wextra
-  -Wno-missing-field-initializers
-  -Wno-unused-local-typedefs
-  -Wno-unused-parameter
-  -Wno-sign-compare
-  -Wno-unused-variable
-  -Wno-unused-function
 )
 
 # Everything is hidden unless marked RTXUI_EXPORT, so the shared library's ABI
@@ -143,11 +139,13 @@ generate_export_header(rtxui_lib
 )
 target_include_directories(rtxui_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
-  $<INSTALL_INTERFACE:include>
-)
-target_include_directories(rtxui_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<INSTALL_INTERFACE:include>
+)
+target_include_directories(rtxui_lib SYSTEM INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   $<INSTALL_INTERFACE:include>
 )
 
@@ -158,6 +156,10 @@ if(EMSCRIPTEN)
     "-sEXPORTED_RUNTIME_METHODS=[ccall,cwrap]"
     "-sASYNCIFY_IMPORTS=[emscripten_asm_const_int]"
   )
+  if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options("-O3")
+    add_link_options("-O3")
+  endif()
 endif()
 
 include(cmake/reflection.cmake)

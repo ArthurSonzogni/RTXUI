@@ -82,8 +82,8 @@ inline void ApplyStickyOffset(const ComputedStyle& style,
 
     if (!context.parent_clips) {
       const int parent_content_bottom =
-          context.parent_y + context.parent_height - context.parent_border_bottom -
-          context.parent_padding_bottom;
+          context.parent_y + context.parent_height -
+          context.parent_border_bottom - context.parent_padding_bottom;
       child_y = std::min(child_y, parent_content_bottom - child_height);
     }
   }
@@ -106,9 +106,9 @@ inline void ApplyStickyOffset(const ComputedStyle& style,
     child_x = std::max(child_x, min_x);
 
     if (!context.parent_clips) {
-      const int parent_content_right =
-          context.parent_x + context.parent_width - context.parent_border_right -
-          context.parent_padding_right;
+      const int parent_content_right = context.parent_x + context.parent_width -
+                                       context.parent_border_right -
+                                       context.parent_padding_right;
       child_x = std::min(child_x, parent_content_right - child_width);
     }
   }

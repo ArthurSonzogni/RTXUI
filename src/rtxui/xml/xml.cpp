@@ -1,5 +1,5 @@
-#include <iostream>
 #include <charconv>
+#include <iostream>
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
@@ -55,8 +55,9 @@ class Parser {
   int depth_ = 0;
 };
 
-// Optimization: Inline character checks to bypass std::vector allocation/destruction.
-// Yields ~8x speedup in XML parsing (reducing average parsing time from 58us to 7.4us).
+// Optimization: Inline character checks to bypass std::vector
+// allocation/destruction. Yields ~8x speedup in XML parsing (reducing average
+// parsing time from 58us to 7.4us).
 inline bool IsWhitespace(char c) {
   return c == ' ' || c == '\n' || c == '\r' || c == '\t';
 }
@@ -198,7 +199,8 @@ std::string Unescape(std::string_view text) {
         } else if (entity.starts_with("#x")) {
           std::string_view hex_str = entity.substr(2);
           unsigned int val = 0;
-          auto [ptr, ec] = std::from_chars(hex_str.data(), hex_str.data() + hex_str.size(), val, 16);
+          auto [ptr, ec] = std::from_chars(
+              hex_str.data(), hex_str.data() + hex_str.size(), val, 16);
           if (ec == std::errc()) {
             AppendUtf8(result, val);
           }
@@ -207,7 +209,8 @@ std::string Unescape(std::string_view text) {
         } else if (entity.starts_with("#")) {
           std::string_view dec_str = entity.substr(1);
           unsigned int val = 0;
-          auto [ptr, ec] = std::from_chars(dec_str.data(), dec_str.data() + dec_str.size(), val, 10);
+          auto [ptr, ec] = std::from_chars(
+              dec_str.data(), dec_str.data() + dec_str.size(), val, 10);
           if (ec == std::errc()) {
             AppendUtf8(result, val);
           }
@@ -277,7 +280,8 @@ auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
       return MakeErrorExpected("'\"'");
     }
     Advance();  // Skip '"'.
-    attributes[std::string(key.value())] = Unescape(xml_.substr(value_start, pos_ - value_start - 1));
+    attributes[std::string(key.value())] =
+        Unescape(xml_.substr(value_start, pos_ - value_start - 1));
 
     ParseWhiteSpaces();
   }
@@ -292,7 +296,6 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
 
   int ws_start = pos_;
   ParseWhiteSpaces();
-  int ws_end = pos_;
 
   // Parse text node.
   if (Get() != '<') {

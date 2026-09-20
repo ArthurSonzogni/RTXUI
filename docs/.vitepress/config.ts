@@ -11,8 +11,9 @@ export default withMermaid({
     },
     nav: [
       { text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/' },
+      { text: 'Playground', link: '/playground', activeMatch: '^/playground' },
       { text: 'Reference', link: '/html_reference', activeMatch: '/(cpp_api|html_reference|css_reference)' },
-      { text: 'Examples', link: '/guide/examples' }
+      { text: 'Examples', link: '/guide/examples', activeMatch: '^/guide/examples' }
     ],
     sidebar: [
       {
@@ -20,7 +21,8 @@ export default withMermaid({
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Hello World', link: '/guide/hello-world' },
-          { text: 'Reactivity', link: '/reactivity' }
+          { text: 'Reactivity', link: '/reactivity' },
+          { text: 'Playground', link: '/playground' }
         ]
       },
       {
@@ -31,8 +33,8 @@ export default withMermaid({
           { text: 'Event Handlers', link: '/guide/bindings' },
           { text: 'Conditional Rendering', link: '/guide/conditionals' },
           { text: 'Loops & Lists', link: '/guide/loops' },
-          { text: 'Forms & Inputs', link: '/guide/forms' },
-          { text: 'Focus & Keyboard Navigation', link: '/guide/html/focus' }
+          { text: 'Form Elements', link: '/guide/forms' },
+          { text: 'Keyboard Focus & Navigation', link: '/guide/html/focus' }
         ]
       },
       {
@@ -40,13 +42,13 @@ export default withMermaid({
         collapsed: false,
         items: [
           { text: 'Basics & Selectors', link: '/guide/css/basics' },
-          { text: 'Box Model & Spacing', link: '/guide/css/box-model' },
+          { text: 'Box Model & Dimensions', link: '/guide/css/box-model' },
           { text: 'Flexbox', link: '/guide/css/flexbox' },
           { text: 'Grid', link: '/guide/css/grid' },
           { text: 'Positioning & Layers', link: '/guide/css/positioning' },
           { text: 'Typography', link: '/guide/typography' },
           { text: 'Scrolling', link: '/guide/scrolling' },
-          { text: 'Transitions & Animations', link: '/guide/css/animations' },
+          { text: 'Transitions & Hover States', link: '/guide/css/animations' },
           { text: 'Media Queries', link: '/guide/css/media-queries' }
         ]
       },
@@ -54,10 +56,10 @@ export default withMermaid({
         text: 'Components in C++',
         collapsed: false,
         items: [
-          { text: 'Custom Components', link: '/guide/cpp/components' },
+          { text: 'Creating Components', link: '/guide/cpp/components' },
           { text: 'Slots & Composition', link: '/guide/cpp/slots' },
-          { text: 'State & Binding', link: '/guide/cpp/bindings' },
-          { text: 'DOM Access', link: '/guide/cpp/dom' },
+          { text: 'State Bindings & Reflection', link: '/guide/cpp/bindings' },
+          { text: 'Navigating the DOM', link: '/guide/cpp/dom' },
           { text: 'Screen & Lifecycle', link: '/guide/cpp/lifecycle' }
         ]
       },
@@ -65,8 +67,8 @@ export default withMermaid({
         text: 'Going Further',
         collapsed: false,
         items: [
-          { text: 'Hot Reload', link: '/guide/hot-reload' },
-          { text: 'Playground', link: '/guide/playground' },
+          { text: 'HTML/CSS Hot-Reloading', link: '/guide/hot-reload' },
+          { text: 'Playground Guide', link: '/guide/playground' },
           { text: 'Unicode & CJK', link: '/guide/unicode' },
           { text: 'Markdown', link: '/guide/markdown' },
           { text: 'Cookbook', link: '/guide/cookbook' },
@@ -84,6 +86,9 @@ export default withMermaid({
       }
     ],
     outline: { level: [2, 3] },
+    search: {
+      provider: 'local'
+    },
     socialLinks: [
       { icon: 'github', link: 'https://github.com/ArthurSonzogni/RTXUI' }
     ]

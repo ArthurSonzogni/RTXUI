@@ -1,6 +1,8 @@
 # The smallest possible RTXUI application
 
-A component is a class deriving from Component&amp;lt;Derived&amp;gt; whose `view` member holds an HTML template plus a &amp;lt;style&amp;gt; block. `self` selects the component's own root element, and custom properties declared there (--bg, --accent, ...) inherit into every descendant, so a single palette styles the whole tree.
+The smallest possible RTXUI application.
+
+A component is a class deriving from Component`<Derived>` whose `view` member holds an HTML template plus a `<style>` block. `self` selects the component's own root element, and custom properties declared there (--bg, --accent, ...) inherit into every descendant, so a single palette styles the whole tree.
 
 <ExampleTabs src="/wasm/rtxui_example_helloworld.js" :cols="80" :rows="24">
 <template #source>

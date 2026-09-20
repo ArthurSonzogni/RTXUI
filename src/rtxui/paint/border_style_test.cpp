@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/base/string.hpp"
+#include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/refcounted.hpp"
@@ -508,9 +508,10 @@ TEST_CASE("Layout: a single border side renders as a plain line, no corners",
 // adjacent sides are present - here only top+left are set, so only the
 // top-left corner should render as "+"; the top and left lines should meet
 // it flush, with nothing drawn on the (absent) right/bottom sides.
-TEST_CASE("Layout: a corner glyph only appears when both adjacent sides "
-          "are present",
-          "[paint][border][asymmetric]") {
+TEST_CASE(
+    "Layout: a corner glyph only appears when both adjacent sides "
+    "are present",
+    "[paint][border][asymmetric]") {
   struct T : Component<T> {
     std::string_view Setup() {
       Import<div>();
@@ -625,7 +626,8 @@ TEST_CASE("Paint: Transparent Overlay Blending on Tall Border") {
   // it -- then blend with the semi-transparent overlay.
   CHECK_FALSE(texture[0, 1].inverted);
   CHECK(texture[0, 1].foreground_color == Blend(overlay, Color::RGB(0, 0, 0)));
-  CHECK(texture[0, 1].background_color == Blend(overlay, Color::RGB(255, 0, 0)));
+  CHECK(texture[0, 1].background_color ==
+        Blend(overlay, Color::RGB(255, 0, 0)));
 }
 
 // Pins Textual's BORDER_LOCATIONS: which of the two backgrounds fills each
@@ -699,10 +701,10 @@ TEST_CASE("Half-block borders follow Textual's location table",
   };
 
   //          style     tl      top   tr    left    right  bottom
-  check("tall",  RevOut, In,   Out,  RevOut, Out,   In);
-  check("panel", RevOut, In,   Out,  RevOut, Out,   In);
-  check("wide",  Out,    Out,  Out,  In,     RevIn, Out);
-  check("inner", Out,    Out,  Out,  Out,    Out,   Out);
+  check("tall", RevOut, In, Out, RevOut, Out, In);
+  check("panel", RevOut, In, Out, RevOut, Out, In);
+  check("wide", Out, Out, Out, In, RevIn, Out);
+  check("inner", Out, Out, Out, Out, Out, Out);
 }
 
 // Regression: the half-block styles used to swap the two colors themselves to
@@ -767,4 +769,3 @@ TEST_CASE("Paint: Half-block borders never render the default foreground",
 }
 
 }  // namespace rtxui
-

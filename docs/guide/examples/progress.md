@@ -1,6 +1,6 @@
-# The &amp;lt;progress&amp;gt; component driven by bound state
+# The `<progress>` component driven by bound state
 
-The &amp;lt;progress&amp;gt; component driven by bound state.
+The `<progress>` component driven by bound state.
 
 <ExampleTabs src="/wasm/rtxui_example_progress.js" :cols="80" :rows="24">
 <template #source>

@@ -5,11 +5,11 @@
 #define RTXUI_TERMINAL_SCREEN_HPP_
 
 #include <memory>
+#include <rtxui/rtxui_export.hpp>
 
+#include "rtxui/color.hpp"
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/event.hpp"
-#include "rtxui/paint/color.hpp"
-#include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
 

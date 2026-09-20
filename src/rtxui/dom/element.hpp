@@ -4,12 +4,12 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <rtxui/rtxui_export.hpp>
 #include <string>
 #include <vector>
 
 #include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/style.hpp"
-#include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
 
@@ -44,14 +44,16 @@ class ActiveTransitionsMap {
 
   ActiveTransitionsMap(const ActiveTransitionsMap& other) {
     if (other.map_) {
-      map_ = std::make_unique<std::map<std::string, ActiveTransition>>(*other.map_);
+      map_ = std::make_unique<std::map<std::string, ActiveTransition>>(
+          *other.map_);
     }
   }
 
   ActiveTransitionsMap& operator=(const ActiveTransitionsMap& other) {
     if (this != &other) {
       if (other.map_) {
-        map_ = std::make_unique<std::map<std::string, ActiveTransition>>(*other.map_);
+        map_ = std::make_unique<std::map<std::string, ActiveTransition>>(
+            *other.map_);
       } else {
         map_.reset();
       }
@@ -62,13 +64,9 @@ class ActiveTransitionsMap {
   ActiveTransitionsMap(ActiveTransitionsMap&&) noexcept = default;
   ActiveTransitionsMap& operator=(ActiveTransitionsMap&&) noexcept = default;
 
-  bool empty() const {
-    return !map_ || map_->empty();
-  }
+  bool empty() const { return !map_ || map_->empty(); }
 
-  size_t size() const {
-    return map_ ? map_->size() : 0;
-  }
+  size_t size() const { return map_ ? map_->size() : 0; }
 
   size_t count(const std::string& key) const {
     return map_ ? map_->count(key) : 0;
@@ -90,9 +88,7 @@ class ActiveTransitionsMap {
     return (*map_)[key];
   }
 
-  void clear() {
-    map_.reset();
-  }
+  void clear() { map_.reset(); }
 
   using MapType = std::map<std::string, ActiveTransition>;
   typename MapType::iterator begin() {
@@ -186,9 +182,13 @@ class RTXUI_EXPORT Element : public RefCounted {
     return *attributes_;
   }
   const std::string* GetAttribute(const std::string& name) const {
-    if (!attributes_) return nullptr;
+    if (!attributes_) {
+      return nullptr;
+    }
     auto it = attributes_->find(name);
-    if (it == attributes_->end()) return nullptr;
+    if (it == attributes_->end()) {
+      return nullptr;
+    }
     return &it->second;
   }
 
@@ -308,7 +308,6 @@ class RTXUI_EXPORT Element : public RefCounted {
   uint64_t resolved_classes_hash_ = ClassesHash();
 
  public:
-
   // Rendering.
   virtual std::string Print(int depth = 0) const;
 
@@ -370,6 +369,18 @@ class RTXUI_EXPORT Element : public RefCounted {
   bool disabled() const { return disabled_; }
   void set_disabled(bool d) { disabled_ = d; }
 
+  bool checked() const {
+    if (checked_) {
+      return true;
+    }
+    const std::string* attr = GetAttribute("checked");
+    if (attr && (*attr == "true" || *attr == "checked" || attr->empty())) {
+      return true;
+    }
+    return false;
+  }
+  void set_checked(bool c) { checked_ = c; }
+
   bool read_only() const { return read_only_; }
   void set_read_only(bool r) { read_only_ = r; }
 
@@ -408,6 +419,7 @@ class RTXUI_EXPORT Element : public RefCounted {
   bool hovered_ = false;
   bool active_ = false;
   bool disabled_ = false;
+  bool checked_ = false;
   bool read_only_ = false;
   bool scrollbar_hovered_ = false;
   bool scrollbar_active_ = false;
@@ -440,8 +452,8 @@ class RTXUI_EXPORT Element : public RefCounted {
 
   std::string tag_ = "div";
   // OPTIMIZATION: Wrapping attributes in a unique_ptr and allocating it lazily
-  // avoids the constructor/destructor overhead of std::map for the vast majority
-  // of DOM elements which don't have custom attributes.
+  // avoids the constructor/destructor overhead of std::map for the vast
+  // majority of DOM elements which don't have custom attributes.
   std::unique_ptr<std::map<std::string, std::string>> attributes_;
   std::vector<Ref<Element>> children_;
   Element* parent_ = nullptr;

@@ -4,12 +4,11 @@
 #include "rtxui/base/task.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
-#include "rtxui/base/task_runner.hpp"
-
-#include <thread>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
+
+#include "rtxui/base/task_runner.hpp"
 
 namespace {
 
@@ -89,15 +88,11 @@ TEST_CASE("Task posting from background thread", "[task][multithread]") {
       cv.wait(lock, [&started]() { return started; });
     }
 
-    runner_ptr->PostTask([&values]() {
-      values.push_back(42);
-    });
+    runner_ptr->PostTask([&values]() { values.push_back(42); });
   });
 
   bool wakeup_called = false;
-  runner.SetWakeupCallback([&wakeup_called]() {
-    wakeup_called = true;
-  });
+  runner.SetWakeupCallback([&wakeup_called]() { wakeup_called = true; });
 
   {
     std::lock_guard<std::mutex> lock(test_mutex);

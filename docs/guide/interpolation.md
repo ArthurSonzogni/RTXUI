@@ -88,9 +88,12 @@ Include curly braces around the C++ variable name inside the attribute's double-
 ### Vue-style Binding
 Prefix the attribute name with a colon `:` and pass the raw variable name directly as the value:
 ```html
-<div :class="color_class"></div>
+<div :title="color_class"></div>
 <checkbox :checked="is_active">Active Option</checkbox>
 ```
+
+> [!NOTE]
+> `:class` and `:id` are not supported using Vue-style binding. For classes and IDs, use React-style interpolation instead: `class="{variable}"`.
 
 Both styles perform the same underlying reactive linking, so you can choose the format you prefer.
 

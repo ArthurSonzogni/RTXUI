@@ -7,7 +7,6 @@
 // The built-in <dialog> renders centered above the interface with a dimmed
 // backdrop and closes on Escape. Bind its `open` attribute to a bool.
 #include <rtxui/rtxui.hpp>
-
 #include <string>
 
 using namespace rtxui;

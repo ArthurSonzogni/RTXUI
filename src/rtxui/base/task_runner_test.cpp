@@ -3,9 +3,8 @@
 // the LICENSE file.
 #include "rtxui/base/task_runner.hpp"
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <atomic>
+#include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <thread>
 #include <vector>
@@ -26,8 +25,7 @@ TEST_CASE("TaskRunner runs posted tasks in order", "[task][task_runner]") {
   CHECK(order == std::vector<int>{0, 1, 2, 3});
 }
 
-TEST_CASE("TaskRunner reports whether it ran anything",
-          "[task][task_runner]") {
+TEST_CASE("TaskRunner reports whether it ran anything", "[task][task_runner]") {
   task::TaskRunner runner;
 
   // The flag is what Screen uses to decide a digest is needed, so "nothing
@@ -42,7 +40,8 @@ TEST_CASE("TaskRunner reports whether it ran anything",
   CHECK(executed);
 }
 
-TEST_CASE("TaskRunner returns zero when the queue drains", "[task][task_runner]") {
+TEST_CASE("TaskRunner returns zero when the queue drains",
+          "[task][task_runner]") {
   task::TaskRunner runner;
   runner.PostTask([] {});
   CHECK(runner.RunUntilNextDelayedTask() ==
@@ -130,7 +129,8 @@ TEST_CASE("TaskRunner accepts posts from another thread",
   for (int t = 0; t < kThreads; ++t) {
     threads.emplace_back([&runner, &ran] {
       for (int i = 0; i < kPerThread; ++i) {
-        runner.PostTask([&ran] { ran.fetch_add(1, std::memory_order_relaxed); });
+        runner.PostTask(
+            [&ran] { ran.fetch_add(1, std::memory_order_relaxed); });
       }
     });
   }

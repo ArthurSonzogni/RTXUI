@@ -6,9 +6,8 @@
 //
 // The UI is single-threaded. A background thread must hand results back through
 // the task runner, which applies them between frames.
-#include <rtxui/rtxui.hpp>
-
 #include <chrono>
+#include <rtxui/rtxui.hpp>
 #include <thread>
 
 #include "rtxui/base/task_runner.hpp"

@@ -7,12 +7,12 @@
 
 #include <functional>
 #include <map>
+#include <rtxui/rtxui_export.hpp>
 #include <string>
 #include <string_view>
 
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/refcounted.hpp"
-#include <rtxui/rtxui_export.hpp>
 
 namespace rtxui {
 
@@ -24,8 +24,8 @@ class ComponentBase;
 /// Reports an import that names something already imported. Not fatal: the
 /// first registration stands and the duplicate is ignored.
 RTXUI_EXPORT void ReportDuplicateImport(std::string_view name);
-RTXUI_EXPORT void ReportDuplicateImportAlias(
-    std::string_view class_name, std::string_view alias);
+RTXUI_EXPORT void ReportDuplicateImportAlias(std::string_view class_name,
+                                             std::string_view alias);
 
 using ComponentFactory = std::function<Ref<ComponentBase>()>;
 using ComponentImportMap = std::map<std::string, ComponentFactory, std::less<>>;

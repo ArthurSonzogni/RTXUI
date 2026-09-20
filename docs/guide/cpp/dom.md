@@ -60,6 +60,4 @@ type.
 
 That means a program compiled against one release and run against another with
 a different `SOVERSION` must be rebuilt — which the versioned SONAME enforces
-rather than leaving to chance. Making `Element` layout-stable is tracked work;
-until then, treat `rtxui/dom/element.hpp` as the part of the API most likely
-to require a rebuild.
+rather than leaving to chance. Because `Element` exposes its layout members directly, changes across shared-library `SOVERSION` releases require rebuilding callers.

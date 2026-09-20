@@ -179,7 +179,8 @@ bool tabs::OnEvent(Event event) {
           auto* btn = buttons[i];
           if (btn && btn->focused()) {
             if (kb.special == Event::Keyboard::Special::Return ||
-                (kb.special == Event::Keyboard::Special::None && kb.codepoint == 32)) {
+                (kb.special == Event::Keyboard::Special::None &&
+                 kb.codepoint == 32)) {
               SelectTab(std::to_string(i));
               return true;
             }

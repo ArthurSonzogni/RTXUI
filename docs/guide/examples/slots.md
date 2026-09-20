@@ -1,4 +1,6 @@
-# Content projection with &amp;lt;slot&amp;gt;
+# Content projection with `<slot>`
+
+Content projection with `<slot>`.
 
 A reusable Card component places its caller's markup into named slots, which is how every built-in tag is implemented too.
 

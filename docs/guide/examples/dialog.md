@@ -1,4 +1,6 @@
-# The built-in &amp;lt;dialog&amp;gt; element
+# The built-in `<dialog>` element
+
+The built-in `<dialog>` element.
 
 `open` is bound to a bool; the dialog renders centered over the rest of the UI with a dimmed backdrop and closes on Escape.
 

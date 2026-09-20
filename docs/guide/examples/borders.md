@@ -1,4 +1,6 @@
-# Every border style: solid, double, dashed, round, tall, vkey and more
+# Every border style
+
+Every border style: solid, double, dashed, round, tall, vkey and more.
 
 Each tile names the style it draws, so this doubles as a lookup table.
 

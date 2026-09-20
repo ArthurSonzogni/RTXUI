@@ -1,5 +1,7 @@
 # Borders and scrollbars sharing an edge
 
+Borders and scrollbars sharing an edge.
+
 A scrollbar is laid out inside the border box, so it has to coexist with the border. Switch border styles to see each combination.
 
 <ExampleTabs src="/wasm/rtxui_example_border_scroll_demo.js" :cols="80" :rows="24">

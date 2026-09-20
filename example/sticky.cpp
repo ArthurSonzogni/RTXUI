@@ -30,7 +30,6 @@ class MonthSection : public Component<MonthSection> {
     <style>
       self {
         --accent: rgb(88, 166, 255);
-
         display: block;
       }
       .month-container {
@@ -41,9 +40,8 @@ class MonthSection : public Component<MonthSection> {
         top: 0;
         background-color: {header_bg};
         color: white;
-        border: solid;
         font-weight: bold;
-        padding: 1 1;
+        padding: 2 1;
         z-index: 10;
       }
       .item {
@@ -60,26 +58,25 @@ class MonthSection : public Component<MonthSection> {
   void set_month_index(std::string value) {
     int idx = std::stoi(value);
     std::vector<std::string> months = {
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
+        "January", "February", "March",     "April",   "May",      "June",
+        "July",    "August",   "September", "October", "November", "December",
     };
     std::vector<std::string> colors = {
         "rgb(248, 81, 73)",   // Jan: Red
         "rgb(249, 115, 22)",  // Feb: Orange
         "rgb(245, 158, 11)",  // Mar: Amber
-        "rgb(63, 185, 80)",  // Apr: Emerald
+        "rgb(63, 185, 80)",   // Apr: Emerald
         "rgb(20, 184, 166)",  // May: Teal
         "rgb(6, 182, 212)",   // Jun: Cyan
-        "var(--accent)",  // Jul: Blue
+        "rgb(88, 166, 255)",  // Jul: Blue
         "rgb(99, 102, 241)",  // Aug: Indigo
         "rgb(139, 92, 246)",  // Sep: Violet
         "rgb(168, 85, 247)",  // Oct: Purple
         "rgb(236, 72, 153)",  // Nov: Pink
         "rgb(244, 63, 94)"    // Dec: Rose
     };
-    std::vector<int> days_in_month = {
-        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-    };
+    std::vector<int> days_in_month = {31, 28, 31, 30, 31, 30,
+                                      31, 31, 30, 31, 30, 31};
     if (idx >= 0 && idx < 12) {
       name = months[idx];
       header_bg = colors[idx];
@@ -116,9 +113,8 @@ class MonthSection : public Component<MonthSection> {
 
 class StickyDemo : public Component<StickyDemo> {
  public:
-  std::vector<std::string> month_indices = {
-      "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"
-  };
+  std::vector<std::string> month_indices = {"0", "1", "2", "3", "4",  "5",
+                                            "6", "7", "8", "9", "10", "11"};
 
   std::string_view view = R"html(
     <div class="container">

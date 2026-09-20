@@ -1,5 +1,7 @@
 # Looping over a collection of structs
 
+Looping over a collection of structs.
+
 A mapper exposes each struct's fields to the template, which reads them with dot notation on the loop variable.
 
 Try it: toggle a task to see only that row re-render.

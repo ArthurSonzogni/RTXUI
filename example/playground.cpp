@@ -208,14 +208,14 @@ class Playground : public Component<Playground> {
 
     Expected<xml::Nodes, xml::Error> parsed = xml::Parse(code);
     if (!parsed) {
-      status = "Parse error, line " +
-                std::to_string(parsed.error().line + 1) + ": " +
-                parsed.error().message;
+      status = "Parse error, line " + std::to_string(parsed.error().line + 1) +
+               ": " + parsed.error().message;
       return true;
     }
     status = "OK";
 
-    if (auto* preview = dynamic_cast<LivePreview*>(QueryComponent("#preview"))) {
+    if (auto* preview =
+            dynamic_cast<LivePreview*>(QueryComponent("#preview"))) {
       preview->HotReload(code);
     }
     return true;
@@ -235,8 +235,8 @@ int main() {
   // the user could read anyway. Route it into the status line instead, same
   // as the XML parse errors already handled in Playground::Digest above.
   SetCssErrorHandler([app](const CssError& error) {
-    app->status = "CSS error, line " + std::to_string(error.line + 1) +
-                  ": " + error.message;
+    app->status = "CSS error, line " + std::to_string(error.line + 1) + ": " +
+                  error.message;
   });
 
   Screen screen(app);

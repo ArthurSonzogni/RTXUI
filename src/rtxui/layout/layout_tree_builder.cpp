@@ -55,7 +55,8 @@ size_t Utf8SequenceLength(std::string_view text, size_t i) {
   if (lead < 0x80) {
     return 1;
   }
-  const auto continuation = [&](size_t k, unsigned char low, unsigned char high) {
+  const auto continuation = [&](size_t k, unsigned char low,
+                                unsigned char high) {
     return i + k < text.size() && byte(i + k) >= low && byte(i + k) <= high;
   };
   if (lead >= 0xc2 && lead <= 0xdf) {
@@ -301,7 +302,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   resolved.align = dom_node->style.text_align.value_or(parent.align);
   box->style.text_align = resolved.align;
 
-  resolved.white_space = dom_node->style.white_space.value_or(parent.white_space);
+  resolved.white_space =
+      dom_node->style.white_space.value_or(parent.white_space);
   box->style.white_space = resolved.white_space;
 
   resolved.text_transform =
@@ -325,30 +327,44 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   resolved.word_break = dom_node->style.word_break.value_or(parent.word_break);
   box->style.word_break = resolved.word_break;
 
-  resolved.fg = dom_node->style.foreground_color.has_value() ? dom_node->style.foreground_color : parent.fg;
+  resolved.fg = dom_node->style.foreground_color.has_value()
+                    ? dom_node->style.foreground_color
+                    : parent.fg;
   box->style.foreground_color = resolved.fg;
 
-  resolved.bold = dom_node->style.bold.has_value() ? dom_node->style.bold : parent.bold;
+  resolved.bold =
+      dom_node->style.bold.has_value() ? dom_node->style.bold : parent.bold;
   box->style.bold = resolved.bold;
 
-  resolved.dim = dom_node->style.dim.has_value() ? dom_node->style.dim : parent.dim;
+  resolved.dim =
+      dom_node->style.dim.has_value() ? dom_node->style.dim : parent.dim;
   box->style.dim = resolved.dim;
 
-  resolved.italic = dom_node->style.italic.has_value() ? dom_node->style.italic : parent.italic;
+  resolved.italic = dom_node->style.italic.has_value() ? dom_node->style.italic
+                                                       : parent.italic;
   box->style.italic = resolved.italic;
 
-  resolved.underlined = dom_node->style.underlined.has_value() ? dom_node->style.underlined : parent.underlined;
+  resolved.underlined = dom_node->style.underlined.has_value()
+                            ? dom_node->style.underlined
+                            : parent.underlined;
   box->style.underlined = resolved.underlined;
 
-  resolved.underlined_double = dom_node->style.underlined_double.has_value() ? dom_node->style.underlined_double : parent.underlined_double;
+  resolved.underlined_double = dom_node->style.underlined_double.has_value()
+                                   ? dom_node->style.underlined_double
+                                   : parent.underlined_double;
   box->style.underlined_double = resolved.underlined_double;
 
-  resolved.strikethrough = dom_node->style.strikethrough.has_value() ? dom_node->style.strikethrough : parent.strikethrough;
+  resolved.strikethrough = dom_node->style.strikethrough.has_value()
+                               ? dom_node->style.strikethrough
+                               : parent.strikethrough;
   box->style.strikethrough = resolved.strikethrough;
-  resolved.overlined = dom_node->style.overlined.has_value() ? dom_node->style.overlined : parent.overlined;
+  resolved.overlined = dom_node->style.overlined.has_value()
+                           ? dom_node->style.overlined
+                           : parent.overlined;
   box->style.overlined = resolved.overlined;
 
-  resolved.blink = dom_node->style.blink.has_value() ? dom_node->style.blink : parent.blink;
+  resolved.blink =
+      dom_node->style.blink.has_value() ? dom_node->style.blink : parent.blink;
   box->style.blink = resolved.blink;
 
   // Text nodes don't usually run an algorithm themselves;
@@ -392,20 +408,30 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       slot.white_space = slot_style.white_space.value_or(resolved.white_space);
       slot.text_transform =
           slot_style.text_transform.value_or(resolved.text_transform);
-      slot.fg = slot_style.foreground_color.has_value() ? slot_style.foreground_color : resolved.fg;
+      slot.fg = slot_style.foreground_color.has_value()
+                    ? slot_style.foreground_color
+                    : resolved.fg;
       slot.bold = slot_style.bold.has_value() ? slot_style.bold : resolved.bold;
       slot.dim = slot_style.dim.has_value() ? slot_style.dim : resolved.dim;
-      slot.italic = slot_style.italic.has_value() ? slot_style.italic : resolved.italic;
-      slot.underlined = slot_style.underlined.has_value() ? slot_style.underlined : resolved.underlined;
-      slot.underlined_double = slot_style.underlined_double.has_value() ? slot_style.underlined_double : resolved.underlined_double;
-      slot.strikethrough = slot_style.strikethrough.has_value() ? slot_style.strikethrough : resolved.strikethrough;
-      slot.overlined = slot_style.overlined.has_value() ? slot_style.overlined : resolved.overlined;
-      slot.blink = slot_style.blink.has_value() ? slot_style.blink : resolved.blink;
+      slot.italic =
+          slot_style.italic.has_value() ? slot_style.italic : resolved.italic;
+      slot.underlined = slot_style.underlined.has_value()
+                            ? slot_style.underlined
+                            : resolved.underlined;
+      slot.underlined_double = slot_style.underlined_double.has_value()
+                                   ? slot_style.underlined_double
+                                   : resolved.underlined_double;
+      slot.strikethrough = slot_style.strikethrough.has_value()
+                               ? slot_style.strikethrough
+                               : resolved.strikethrough;
+      slot.overlined = slot_style.overlined.has_value() ? slot_style.overlined
+                                                        : resolved.overlined;
+      slot.blink =
+          slot_style.blink.has_value() ? slot_style.blink : resolved.blink;
       slot.letter_spacing =
           slot_style.letter_spacing.value_or(resolved.letter_spacing);
       slot.tab_size = slot_style.tab_size.value_or(resolved.tab_size);
-      slot.line_height =
-          slot_style.line_height.value_or(resolved.line_height);
+      slot.line_height = slot_style.line_height.value_or(resolved.line_height);
       slot.overflow_wrap =
           slot_style.overflow_wrap.value_or(resolved.overflow_wrap);
       slot.word_break = slot_style.word_break.value_or(resolved.word_break);
@@ -428,9 +454,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   // Whether anything in this subtree is positioned out of flow, which is what
   // decides in layout.cpp whether the subtree's fragments may be cached
   // across measurement passes.
-  box->has_out_of_flow =
-      box->style.position == PositionType::Absolute ||
-      box->style.position == PositionType::Fixed;
+  box->has_out_of_flow = box->style.position == PositionType::Absolute ||
+                         box->style.position == PositionType::Fixed;
   for (const auto& child_box : raw_children) {
     box->has_out_of_flow |= child_box->has_out_of_flow;
   }
@@ -458,7 +483,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     return box;
   }
 
-  if (box->style.display_outside == DisplayOutside::Block || dom_node->is_slot()) {
+  if (box->style.display_outside == DisplayOutside::Block ||
+      dom_node->is_slot()) {
     box->algorithm = LayoutBox::Algorithm::BlockFlow;
     std::vector<std::shared_ptr<LayoutBox>> refined_children;
     std::shared_ptr<LayoutBox> anonymous_box = nullptr;
@@ -473,8 +499,9 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       }
       if (child_box->style.display_outside == DisplayOutside::Inline) {
         if (!anonymous_box) {
-          anonymous_box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
-              LayoutArenaAllocator<LayoutBox>());
+          anonymous_box =
+              std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
+                  LayoutArenaAllocator<LayoutBox>());
           anonymous_box->is_anonymous = true;
           anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
           anonymous_box->style.text_align = resolved.align;
@@ -504,7 +531,6 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     box->algorithm = LayoutBox::Algorithm::InlineFlow;
     box->children = raw_children;
   }
-
 
   return box;
 }

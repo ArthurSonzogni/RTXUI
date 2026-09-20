@@ -1,4 +1,6 @@
-# The &amp;lt;select&amp;gt; dropdown with &amp;lt;option&amp;gt; children
+# The `<select>` dropdown with `<option>` children
+
+The `<select>` dropdown with `<option>` children.
 
 Try it: focus it and press Enter or Space to open, then arrows to choose.
 
