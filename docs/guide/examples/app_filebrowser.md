@@ -17,5 +17,6 @@ Try it: move with the arrow keys (or j/k via the buttons), Enter to open a direc
 ---
 
 * Source file: [`example/app_filebrowser.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/app_filebrowser.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_app_filebrowser.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/scrolling)
 * [← Back to Examples Index](/guide/examples)

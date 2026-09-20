@@ -15,5 +15,6 @@ Keyframe animations.
 ---
 
 * Source file: [`example/animation.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/animation.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_animation.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/css/animations)
 * [← Back to Examples Index](/guide/examples)

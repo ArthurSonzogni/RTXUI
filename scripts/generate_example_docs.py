@@ -14,6 +14,7 @@ generates:
 from pathlib import Path
 import re
 import sys
+import urllib.parse
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_DIR = ROOT / "example"
@@ -171,6 +172,8 @@ def main():
 
         target_name = f"rtxui_example_{stem}"
         wasm_js = f"/wasm/{target_name}.js"
+        encoded_src = urllib.parse.quote(f"/RTXUI{wasm_js}", safe="")
+        standalone_url = f"/RTXUI/terminal.html?src={encoded_src}&fullscreen=1"
         
         # 1. Write individual example markdown page
         page_md = EXAMPLES_DOC_DIR / f"{stem}.md"
@@ -189,6 +192,7 @@ def main():
 ---
 
 * Source file: [`example/{cpp.name}`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/{cpp.name})
+* Standalone terminal: <a href="{standalone_url}" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation]({guide})
 * [← Back to Examples Index](/guide/examples)
 """

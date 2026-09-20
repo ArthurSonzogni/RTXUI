@@ -17,5 +17,6 @@ Try it: click a service row to select it, use the filter buttons to narrow the l
 ---
 
 * Source file: [`example/app_dashboard.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/app_dashboard.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_app_dashboard.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/reactivity)
 * [← Back to Examples Index](/guide/examples)

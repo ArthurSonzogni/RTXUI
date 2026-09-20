@@ -17,5 +17,6 @@ Try it: open the dialog, then dismiss it with either button or Escape.
 ---
 
 * Source file: [`example/dialog.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/dialog.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_dialog.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/html_reference)
 * [← Back to Examples Index](/guide/examples)

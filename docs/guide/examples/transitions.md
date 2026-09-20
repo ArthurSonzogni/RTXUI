@@ -17,5 +17,6 @@ Try it: hover each card and watch them settle at different speeds.
 ---
 
 * Source file: [`example/transitions.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/transitions.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_transitions.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/css/animations)
 * [← Back to Examples Index](/guide/examples)

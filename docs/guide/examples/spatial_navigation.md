@@ -17,5 +17,6 @@ Try it: move around the grid with the arrow keys.
 ---
 
 * Source file: [`example/spatial_navigation.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/spatial_navigation.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_spatial_navigation.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/html/focus)
 * [← Back to Examples Index](/guide/examples)

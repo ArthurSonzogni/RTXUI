@@ -15,5 +15,6 @@ Editing the field writes straight back into the bound std::string, and the inter
 ---
 
 * Source file: [`example/input.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/input.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_input.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/forms)
 * [← Back to Examples Index](/guide/examples)

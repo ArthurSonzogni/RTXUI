@@ -15,5 +15,6 @@ A component is a class deriving from Component`<Derived>` whose `view` member ho
 ---
 
 * Source file: [`example/helloworld.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/helloworld.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_helloworld.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/hello-world)
 * [← Back to Examples Index](/guide/examples)
