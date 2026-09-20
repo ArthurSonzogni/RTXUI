@@ -203,7 +203,8 @@ bool IsSpace(const Grapheme& g) {
 // seen while laying out an earlier span isn't visible when laying out a
 // later one), so a wrap point that lands exactly on a word split across two
 // of those spans can differ by a few cells from the real layout -- a narrow
-// edge case, not the common case of unstyled or fully-selected text.
+}  // namespace
+
 std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
                                   int content_width,
                                   bool overflow_wrap_normal) {
@@ -323,6 +324,8 @@ int RowColToIndex(const std::vector<Grapheme>& graphemes,
   }
   return best_pos;
 }
+
+namespace {
 
 int FindLineStart(const std::vector<Grapheme>& graphemes, int start_pos) {
   int pos = start_pos;
