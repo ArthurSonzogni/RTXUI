@@ -51,12 +51,23 @@ class TextInputBase {
   bool is_focused_ = false;
   int ideal_column_ = 0;
 
+  enum class SelectionGranularity {
+    kCharacter,
+    kWord,
+    kLine,
+    kParagraph,
+  };
+
   std::chrono::steady_clock::time_point last_click_time_ =
       std::chrono::steady_clock::time_point::min();
   int last_click_pos_ = -1;
-  bool double_clicked_ = false;
-  int double_click_anchor_start_ = -1;
-  int double_click_anchor_end_ = -1;
+  int last_click_x_ = -1;
+  int last_click_y_ = -1;
+  int click_count_ = 0;
+  SelectionGranularity selection_granularity_ =
+      SelectionGranularity::kCharacter;
+  int selection_anchor_start_ = -1;
+  int selection_anchor_end_ = -1;
 
   void KeepCursorVisible(Element* root, bool is_multiline);
   bool OnEventShared(ComponentBase* self, Event event, bool is_multiline);
