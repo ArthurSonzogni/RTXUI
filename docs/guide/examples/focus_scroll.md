@@ -17,5 +17,6 @@ Try it: hold Tab and watch the list follow the focus ring.
 ---
 
 * Source file: [`example/focus_scroll.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/focus_scroll.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_focus_scroll.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/scrolling)
 * [← Back to Examples Index](/guide/examples)

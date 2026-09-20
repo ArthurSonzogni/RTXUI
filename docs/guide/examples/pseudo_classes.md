@@ -17,5 +17,6 @@ Try it: move the mouse over the buttons, Tab between them, and hold the mouse bu
 ---
 
 * Source file: [`example/pseudo_classes.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/pseudo_classes.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_pseudo_classes.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/css/basics)
 * [← Back to Examples Index](/guide/examples)
