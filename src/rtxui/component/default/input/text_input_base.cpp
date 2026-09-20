@@ -415,6 +415,82 @@ std::pair<int, int> GetWordBoundaries(const std::vector<Grapheme>& graphemes,
   return {start, end};
 }
 
+std::pair<int, int> GetLineBoundaries(const std::vector<Grapheme>& graphemes,
+                                      int click_pos,
+                                      bool is_multiline) {
+  int n = static_cast<int>(graphemes.size());
+  if (n == 0) {
+    return {0, 0};
+  }
+  if (!is_multiline) {
+    return {0, n};
+  }
+  click_pos = std::clamp(click_pos, 0, n);
+  int start = FindLineStart(graphemes, click_pos);
+  int end = FindLineEnd(graphemes, click_pos);
+  return {start, end};
+}
+
+std::pair<int, int> GetParagraphBoundaries(
+    const std::vector<Grapheme>& graphemes,
+    int click_pos,
+    bool is_multiline) {
+  int n = static_cast<int>(graphemes.size());
+  if (n == 0) {
+    return {0, 0};
+  }
+  if (!is_multiline) {
+    return {0, n};
+  }
+  click_pos = std::clamp(click_pos, 0, n);
+  int cur_line_start = FindLineStart(graphemes, click_pos);
+  int cur_line_end = FindLineEnd(graphemes, click_pos);
+
+  auto is_line_blank = [&](int l_start, int l_end) {
+    for (int i = l_start; i < l_end; ++i) {
+      if (graphemes[i].text != " " && graphemes[i].text != "\t") {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  if (is_line_blank(cur_line_start, cur_line_end)) {
+    return {cur_line_start, cur_line_end};
+  }
+
+  int p_start = cur_line_start;
+  while (p_start > 0) {
+    int prev_line_start = FindLineStart(graphemes, p_start - 1);
+    int prev_line_end = FindLineEnd(graphemes, p_start - 1);
+    if (is_line_blank(prev_line_start, prev_line_end)) {
+      break;
+    }
+    p_start = prev_line_start;
+  }
+
+  int p_end = cur_line_end;
+  while (p_end < n) {
+    int next_pos = p_end;
+    if (next_pos < n && (graphemes[next_pos].text == "\n" ||
+                         graphemes[next_pos].text == "\r\n" ||
+                         graphemes[next_pos].text == "\r")) {
+      next_pos++;
+    }
+    if (next_pos >= n) {
+      break;
+    }
+    int next_line_start = next_pos;
+    int next_line_end = FindLineEnd(graphemes, next_line_start);
+    if (is_line_blank(next_line_start, next_line_end)) {
+      break;
+    }
+    p_end = next_line_end;
+  }
+
+  return {p_start, p_end};
+}
+
 bool DeleteSelection(std::vector<Grapheme>& graphemes,
                      int& selection_start,
                      int& cursor_pos) {
@@ -625,25 +701,54 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           // previous click" sentinel; subtracting from it overflows
           // (signed integer overflow is UB), so check for it explicitly
           // instead of ever computing `now - time_point::min()`.
-          bool is_double_click =
+          bool is_consecutive_click =
               last_click_time_ !=
                   std::chrono::steady_clock::time_point::min() &&
               now - last_click_time_ < std::chrono::milliseconds(500) &&
-              click_pos == last_click_pos_;
-          if (is_double_click) {
-            double_clicked_ = true;
-            auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
-            double_click_anchor_start_ = w_start;
-            double_click_anchor_end_ = w_end;
-            selection_start = w_start;
-            cursor_pos = w_end;
+              (click_pos == last_click_pos_ ||
+               (click_x == last_click_x_ && click_y == last_click_y_));
+
+          if (is_consecutive_click) {
+            click_count_ = (click_count_ % 4) + 1;
           } else {
-            double_clicked_ = false;
+            click_count_ = 1;
+          }
+
+          if (click_count_ == 1) {
+            selection_granularity_ = SelectionGranularity::kCharacter;
+            selection_anchor_start_ = click_pos;
+            selection_anchor_end_ = click_pos;
             selection_start = click_pos;
             cursor_pos = click_pos;
+          } else if (click_count_ == 2) {
+            selection_granularity_ = SelectionGranularity::kWord;
+            auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
+            selection_anchor_start_ = w_start;
+            selection_anchor_end_ = w_end;
+            selection_start = w_start;
+            cursor_pos = w_end;
+          } else if (click_count_ == 3) {
+            selection_granularity_ = SelectionGranularity::kLine;
+            auto [l_start, l_end] =
+                GetLineBoundaries(graphemes, click_pos, is_multiline);
+            selection_anchor_start_ = l_start;
+            selection_anchor_end_ = l_end;
+            selection_start = l_start;
+            cursor_pos = l_end;
+          } else {  // click_count_ == 4
+            selection_granularity_ = SelectionGranularity::kParagraph;
+            auto [p_start, p_end] =
+                GetParagraphBoundaries(graphemes, click_pos, is_multiline);
+            selection_anchor_start_ = p_start;
+            selection_anchor_end_ = p_end;
+            selection_start = p_start;
+            cursor_pos = p_end;
           }
+
           last_click_time_ = now;
           last_click_pos_ = click_pos;
+          last_click_x_ = click_x;
+          last_click_y_ = click_y;
 
           auto pos2d = GetCursor2D(graphemes, cursor_pos);
           ideal_column_ = pos2d.column;
@@ -662,21 +767,35 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         int click_pos =
             ClickToCursorPos(root, is_multiline, click_x, click_y, graphemes);
 
-        if (double_clicked_) {
-          if (click_pos >= double_click_anchor_end_) {
-            auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
-            selection_start = double_click_anchor_start_;
-            cursor_pos = w_end;
-          } else if (click_pos <= double_click_anchor_start_) {
-            auto [w_start, w_end] = GetWordBoundaries(graphemes, click_pos);
-            selection_start = double_click_anchor_end_;
-            cursor_pos = w_start;
-          } else {
-            selection_start = double_click_anchor_start_;
-            cursor_pos = double_click_anchor_end_;
-          }
-        } else {
+        if (click_pos != last_click_pos_) {
+          click_count_ = 0;
+        }
+
+        if (selection_granularity_ == SelectionGranularity::kCharacter) {
           cursor_pos = click_pos;
+        } else {
+          auto get_boundaries = [&](int pos) {
+            if (selection_granularity_ == SelectionGranularity::kWord) {
+              return GetWordBoundaries(graphemes, pos);
+            }
+            if (selection_granularity_ == SelectionGranularity::kLine) {
+              return GetLineBoundaries(graphemes, pos, is_multiline);
+            }
+            return GetParagraphBoundaries(graphemes, pos, is_multiline);
+          };
+
+          if (click_pos >= selection_anchor_end_) {
+            auto [b_start, b_end] = get_boundaries(click_pos);
+            selection_start = selection_anchor_start_;
+            cursor_pos = b_end;
+          } else if (click_pos <= selection_anchor_start_) {
+            auto [b_start, b_end] = get_boundaries(click_pos);
+            selection_start = selection_anchor_end_;
+            cursor_pos = b_start;
+          } else {
+            selection_start = selection_anchor_start_;
+            cursor_pos = selection_anchor_end_;
+          }
         }
 
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
@@ -700,6 +819,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
     auto kb = event.get<Event::Keyboard>();
     if (kb.motion == Event::Keyboard::Motion::Pressed ||
         kb.motion == Event::Keyboard::Motion::Repeat) {
+      last_click_time_ = std::chrono::steady_clock::time_point::min();
+      click_count_ = 0;
       if (!root || !root->focused()) {
         return false;
       }
