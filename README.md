@@ -3,7 +3,7 @@
 [![Test](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml)
 [![Shared library](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml)
 [![Docs](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/deploy-docs.yml/badge.svg)](https://arthursonzogni.github.io/RTXUI/)
-[![Live Demo](https://img.shields.io/badge/demo-interactive_wasm-brightgreen.svg)](https://arthursonzogni.github.io/RTXUI/)
+[![Live Demo](https://img.shields.io/badge/demo-interactive_wasm-brightgreen.svg)](https://arthursonzogni.github.io/RTXUI/#interactive-playground)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
 
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://arthursonzogni.github.io/RTXUI/">
+  <a href="https://arthursonzogni.github.io/RTXUI/#interactive-playground">
     <img src="https://img.shields.io/badge/🎮_Interactive_Demo-Try_in_Browser-success?style=for-the-badge&logo=webassembly" alt="Try Interactive Demo in Browser" />
   </a>
 </p>
@@ -27,6 +27,17 @@
     Regenerate with <code>tools/ansi_to_svg.py</code>.
   </em>
 </p>
+
+---
+
+## 🌟 Key Features
+
+*   **HTML & CSS in C++:** Declare TUI structures using semantic HTML tags and layout/style them using standard CSS (Flexbox, Grid, margins, paddings, borders, colors, and transitions).
+*   **Reactive State Binding:** Bind C++ member variables and callbacks directly to template variables for seamless, reactive DOM updates.
+*   **🔥 Live HTML/CSS Hot-Reloading:** Modify your component templates and styles inside your C++ source code and watch the running terminal application update **instantly without recompiling** or restarting!
+*   **WebAssembly (WASM) Compatibility:** Easily compile your C++ TUI applications to WebAssembly to run them directly in web browsers.
+*   **Keyboard & Spatial Navigation:** Full out-of-the-box support for sequential Tab/Shift-Tab cycling and dynamic Arrow key spatial navigation.
+*   **Sleek Built-In Components:** Includes styled components like `<input>`, `<textarea>`, `<checkbox>`, `<radio>`, `<select>`, `<slider>`, `<progress>`, `<details>`, `<fieldset>`, `<tabs>`, and overlay modal `<dialog>`s.
 
 ---
 
@@ -55,17 +66,6 @@ Pick **RTXUI** when you already think in HTML and CSS, want to restyle without
 touching C++ (including [hot reload](#-live-htmlcss-hot-reloading) of templates
 in a running program), need real flexbox or grid, or want the same code to run
 in a browser through WebAssembly. It is younger, and Linux/macOS only.
-
----
-
-## 🌟 Key Features
-
-*   **HTML & CSS in C++:** Declare TUI structures using semantic HTML tags and layout/style them using standard CSS (Flexbox, Grid, margins, paddings, borders, colors, and transitions).
-*   **Reactive State Binding:** Bind C++ member variables and callbacks directly to template variables for seamless, reactive DOM updates.
-*   **🔥 Live HTML/CSS Hot-Reloading:** Modify your component templates and styles inside your C++ source code and watch the running terminal application update **instantly without recompiling** or restarting!
-*   **WebAssembly (WASM) Compatibility:** Easily compile your C++ TUI applications to WebAssembly to run them directly in web browsers.
-*   **Keyboard & Spatial Navigation:** Full out-of-the-box support for sequential Tab/Shift-Tab cycling and dynamic Arrow key spatial navigation.
-*   **Sleek Built-In Components:** Includes styled components like `<input>`, `<textarea>`, `<checkbox>`, `<radio>`, `<select>`, `<slider>`, `<progress>`, `<details>`, `<fieldset>`, `<tabs>`, and overlay modal `<dialog>`s.
 
 ---
 
