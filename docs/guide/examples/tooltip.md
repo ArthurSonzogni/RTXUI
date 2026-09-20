@@ -1,6 +1,6 @@
-# The &amp;lt;tooltip&amp;gt; component, shown on hover in each of four directions
+# The `<tooltip>` component, shown on hover in each of four directions
 
-The &amp;lt;tooltip&amp;gt; component, shown on hover in each of four directions.
+The `<tooltip>` component, shown on hover in each of four directions.
 
 <ExampleTabs src="/wasm/rtxui_example_tooltip.js" :cols="80" :rows="24">
 <template #source>

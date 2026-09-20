@@ -78,7 +78,7 @@ EXAMPLES_META = {
     "opacity.cpp": {"category": "Typography & Styling", "guide": "/guide/typography"},
     "text_align.cpp": {"category": "Typography & Styling", "guide": "/guide/typography"},
     "text_decoration.cpp": {"category": "Typography & Styling", "guide": "/guide/typography"},
-    "pseudo_classes.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
+    "pseudo_classes.cpp": {"category": "Typography & Styling", "guide": "/guide/css/basics"},
     "transitions.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
     "animation.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
 
@@ -102,8 +102,10 @@ EXAMPLES_META = {
 
 
 def sanitize_tags(text: str) -> str:
-    # Replace <tag...> with &amp;lt;tag...&amp;gt; so markdown-it and Vue SFC parser keep them as text entities
-    text = re.sub(r'<([a-zA-Z][^>]*)>', r'&amp;lt;\1&amp;gt;', text)
+    # Wrap C++ templates like std::vector<std::string> in backticks
+    text = re.sub(r'(?<!`)(std::[a-zA-Z0-9_:]+<[^>]+>)(?!`)', r'`\1`', text)
+    # Wrap <tag...> in backticks so markdown-it and Vue SFC parser treat them as code spans
+    text = re.sub(r'(?<!`)<([a-zA-Z][^>\n`]*?)>(?!`)', r'`<\1>`', text)
     # Wrap @directives like @keyframes, @media in backticks so Vue parser doesn't treat as v-on
     text = re.sub(r'(?<!`)(@[a-zA-Z0-9_\-]+)(?!`)', r'`\1`', text)
     return text
@@ -121,11 +123,10 @@ def parse_header(cpp_file: Path):
     if not desc_lines:
         return cpp_file.stem.replace("_", " ").title(), "", ""
 
-    raw_title = desc_lines[0].rstrip(".")
     body_paragraphs = []
     current_p = []
 
-    for l in desc_lines[1:]:
+    for l in desc_lines:
         if l == "":
             if current_p:
                 body_paragraphs.append(" ".join(current_p))
@@ -136,8 +137,14 @@ def parse_header(cpp_file: Path):
     if current_p:
         body_paragraphs.append(" ".join(current_p))
 
+    raw_first_p = body_paragraphs[0] if body_paragraphs else cpp_file.stem.replace("_", " ").title()
+    if ":" in raw_first_p and len(raw_first_p.split(":", 1)[0]) < 40:
+        raw_title = raw_first_p.split(":", 1)[0].strip()
+    else:
+        raw_title = raw_first_p.rstrip(".")
+
     raw_body = "\n\n".join(body_paragraphs)
-    raw_one_liner = " ".join(body_paragraphs[0].split()) if body_paragraphs else raw_title
+    raw_one_liner = raw_first_p
 
     title = sanitize_tags(raw_title)
     body = sanitize_tags(raw_body)
@@ -218,11 +225,14 @@ def main():
         for e in cat_examples:
             source_file = e["name"]
             stem = e["stem"]
-            desc_text = e["title"]
-            if e["one_liner"] and e["one_liner"] != e["title"]:
-                desc_text += f". {e['one_liner']}"
+            desc_text = e["one_liner"] if e["one_liner"] else e["title"]
             desc_text = desc_text.replace("|", "\\|")
-            guide_link = f"[Guide]({e['guide']})" if e["guide"] != "/guide/examples" else "-"
+            if e["guide"] in ("/html_reference", "/css_reference"):
+                guide_link = f"[Reference]({e['guide']})"
+            elif e["guide"].startswith("/"):
+                guide_link = f"[Guide]({e['guide']})"
+            else:
+                guide_link = "-"
             index_lines.append(
                 f"| [{source_file}](/guide/examples/{stem}) | {desc_text} | {guide_link} |"
             )

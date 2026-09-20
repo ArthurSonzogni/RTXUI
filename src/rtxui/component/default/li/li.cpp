@@ -45,7 +45,9 @@ void ForEachListItem(Element* immediate_list,
                      const std::function<bool(Element*)>& visit) {
   bool stop = false;
   std::function<void(Element*)> traverse = [&](Element* el) {
-    if (stop || !el) return;
+    if (stop || !el) {
+      return;
+    }
     if (el->tag() == "li") {
       Element* curr = el->Parent();
       Element* closest_list = nullptr;
@@ -63,7 +65,9 @@ void ForEachListItem(Element* immediate_list,
     }
     for (auto& child : el->children()) {
       traverse(child.get());
-      if (stop) return;
+      if (stop) {
+        return;
+      }
     }
   };
   traverse(immediate_list);
@@ -83,7 +87,10 @@ int GetListStart(Element* list, bool reversed) {
     return 1;
   }
   int count = 0;
-  ForEachListItem(list, [&](Element*) { count++; return true; });
+  ForEachListItem(list, [&](Element*) {
+    count++;
+    return true;
+  });
   return count;
 }
 
@@ -156,7 +163,8 @@ bool li::Digest() {
       if (immediate_list->style.list_style_type) {
         type = *immediate_list->style.list_style_type;
       } else {
-        type = (immediate_list->tag() == "ul") ? ListStyleType::Disc : ListStyleType::Decimal;
+        type = (immediate_list->tag() == "ul") ? ListStyleType::Disc
+                                               : ListStyleType::Decimal;
       }
     }
 
@@ -169,14 +177,15 @@ bool li::Digest() {
       if (immediate_list) {
         bool reversed = GetListReversed(immediate_list);
         int start = GetListStart(immediate_list, reversed);
-        number = GetListItemNumber(root, immediate_list, start,
-                                   reversed ? -1 : 1);
+        number =
+            GetListItemNumber(root, immediate_list, start, reversed ? -1 : 1);
       }
       new_marker = std::to_string(number) + ". ";
     } else {
       // Unordered list types (Disc, Circle, Square)
-      bool has_explicit_type = root->style.list_style_type.has_value() ||
-                               (immediate_list && immediate_list->style.list_style_type.has_value());
+      bool has_explicit_type =
+          root->style.list_style_type.has_value() ||
+          (immediate_list && immediate_list->style.list_style_type.has_value());
       if (!has_explicit_type) {
         // Fallback for nesting depth if no explicit style was specified
         if (list_depth == 2) {

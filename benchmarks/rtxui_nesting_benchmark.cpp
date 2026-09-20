@@ -11,13 +11,13 @@
 // without a measurement cache their curves are exponential in depth. Layout
 // invocations are reported alongside the timings: they are deterministic,
 // which makes them the metric worth regressing against.
-#include "benchmark_common.hpp"
-#include "rtxui/layout/layout.hpp"
-#include "rtxui/terminal/terminal_device.hpp"
-
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "benchmark_common.hpp"
+#include "rtxui/layout/layout.hpp"
+#include "rtxui/terminal/terminal_device.hpp"
 
 using namespace rtxui;
 using rtxui::bench::Clock;

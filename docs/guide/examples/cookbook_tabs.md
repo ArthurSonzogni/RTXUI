@@ -1,6 +1,8 @@
-# Recipe: tabs built by hand
+# Recipe
 
-The same result as the built-in &amp;lt;tabs&amp;gt;, assembled from plain elements and a bound string -- useful when you want full control of the markup.
+Recipe: tabs built by hand.
+
+The same result as the built-in `<tabs>`, assembled from plain elements and a bound string -- useful when you want full control of the markup.
 
 <ExampleTabs src="/wasm/rtxui_example_cookbook_tabs.js" :cols="80" :rows="24">
 <template #source>

@@ -3,8 +3,8 @@
 // the LICENSE file.
 #include "rtxui/base/expected.hpp"
 
-#include <string>
 #include <catch2/catch_test_macros.hpp>
+#include <string>
 
 TEST_CASE("Expected template wrapper test", "[base][expected]") {
   SECTION("Value representation") {

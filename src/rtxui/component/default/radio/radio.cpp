@@ -108,7 +108,8 @@ bool radio::OnEvent(Event event) {
 
         owner_root->Visit([&](Element& el) {
           if (&el != root && el.tag() == "radio") {
-            if (el.Attributes().count("name") && el.Attributes().at("name") == name_attr) {
+            if (el.Attributes().count("name") &&
+                el.Attributes().at("name") == name_attr) {
               if (auto* comp = const_cast<ComponentBase*>(el.component())) {
                 if (auto* other_radio = dynamic_cast<radio*>(comp)) {
                   if (other_radio->checked) {
@@ -139,6 +140,7 @@ bool radio::OnEvent(Event event) {
 bool radio::Digest() {
   radio_char = checked ? "◉" : "○";
   SyncDisabled(Root(), disabled);
+  SyncChecked(Root(), checked);
   return Component<radio>::Digest();
 }
 

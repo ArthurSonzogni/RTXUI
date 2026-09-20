@@ -174,3 +174,38 @@ jobs:
             echo "=== $bench ==="
             ./build/$bench
           done
+
+  test-wasm:
+    name: WebAssembly Build Check
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y ninja-build ccache
+
+      - name: Cache ccache and emscripten
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            ~/.emscripten_cache
+          key: ccache-wasm-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-wasm-${{ runner.os }}-
+
+      - name: Configure
+        run: |
+          mkdir -p build_wasm
+          cd build_wasm
+          emcmake cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build WASM Target
+        run: cmake --build build_wasm --target rtxui_example_playground --parallel

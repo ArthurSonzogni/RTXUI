@@ -1,6 +1,6 @@
-# The &amp;lt;hr&amp;gt; separator, and how border styles apply to it
+# The `<hr>` separator, and how border styles apply to it
 
-The &amp;lt;hr&amp;gt; separator, and how border styles apply to it.
+The `<hr>` separator, and how border styles apply to it.
 
 <ExampleTabs src="/wasm/rtxui_example_hr.js" :cols="80" :rows="24">
 <template #source>

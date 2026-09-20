@@ -9,6 +9,7 @@
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
+
 #include "rtxui/base/task_runner.hpp"
 
 using namespace rtxui;
@@ -62,10 +63,7 @@ class Sidebar : public Component<Sidebar> {
     int count = 0;
   } props;
 
-
-  Sidebar() {
-    Bind(props.count);
-  }
+  Sidebar() { Bind(props.count); }
 
   std::string_view view = R"html(
     <div class="sidebar">
@@ -138,7 +136,6 @@ class SectionTransitions : public Component<SectionTransitions> {
     int count = 0;
     bool show_secret = false;
   } props;
-
 
   SectionTransitions() {
     Bind(props.count);
@@ -229,10 +226,7 @@ class SectionBoxModel : public Component<SectionBoxModel> {
     int slider_val = 0;
   } props;
 
-
-  SectionBoxModel() {
-    Bind(props.slider_val);
-  }
+  SectionBoxModel() { Bind(props.slider_val); }
 
   std::string_view view = R"html(
     <div class="card">
@@ -285,7 +279,6 @@ class SectionInputs : public Component<SectionInputs> {
     std::string text_input = "";
     std::string textarea_input = "";
   } props;
-
 
   SectionInputs() {
     Bind(props.text_input);
@@ -759,7 +752,6 @@ class SectionMarkdown : public Component<SectionMarkdown> {
     )css";
   } props;
 
-
   SectionMarkdown() {
     Bind(props.markdown_content);
     Bind(props.custom_css);
@@ -881,11 +873,10 @@ class App : public Component<App> {
   int slider_val = 65;
   bool show_secret = false;
   std::string text_input = "Interactive CSS App";
-  std::string textarea_input = "RTXUI styling engine\nsupports box models,\nflexbox, & transitions.";
-  std::vector<Todo> todos = {
-    {.text = "Style dashboard", .appearing = false},
-    {.text = "Expose CSS layout", .appearing = false}
-  };
+  std::string textarea_input =
+      "RTXUI styling engine\nsupports box models,\nflexbox, & transitions.";
+  std::vector<Todo> todos = {{.text = "Style dashboard", .appearing = false},
+                             {.text = "Expose CSS layout", .appearing = false}};
 
   std::string markdown_content = R"md(# Heading 1
 ## Heading 2
@@ -933,7 +924,7 @@ int main() {
   void Increment() { count++; }
   void Decrement() { count--; }
   void ToggleSecret() { show_secret = !show_secret; }
-  
+
   void AddTodo() {
     size_t index = todos.size();
     todos.push_back({
@@ -973,9 +964,8 @@ int main() {
     Bind(Decrement);
     Bind(ToggleSecret);
     Bind(AddTodo);
-    Import("RemoveTodo", [this](std::string index_str) {
-      RemoveTodo(index_str);
-    });
+    Import("RemoveTodo",
+           [this](std::string index_str) { RemoveTodo(index_str); });
 
     Import<Header>();
     Import<Sidebar>();
@@ -1115,4 +1105,3 @@ int main() {
   return 0;
 }
 #endif
-

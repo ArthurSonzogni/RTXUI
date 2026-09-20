@@ -109,6 +109,7 @@ bool checkbox::OnEvent(Event event) {
 bool checkbox::Digest() {
   checked_char = checked ? "☑" : "☐";
   SyncDisabled(Root(), disabled);
+  SyncChecked(Root(), checked);
   return Component<checkbox>::Digest();
 }
 

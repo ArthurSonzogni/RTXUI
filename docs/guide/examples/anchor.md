@@ -1,6 +1,8 @@
 # Anchor navigation
 
-An &amp;lt;a href="#id"&amp;gt; scrolls its target into view inside the nearest scroll container.
+Anchor navigation.
+
+An `<a href="#id">` scrolls its target into view inside the nearest scroll container.
 
 Try it: click the links in the index to jump between sections.
 

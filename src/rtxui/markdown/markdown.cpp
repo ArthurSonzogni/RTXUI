@@ -239,9 +239,8 @@ std::string_view TrimTrailingSpaces(std::string_view line) {
 // (h2) characters, at least one, ignoring trailing whitespace.
 bool IsSetextUnderline(std::string_view line, char marker) {
   line = TrimTrailingSpaces(line);
-  return !line.empty() &&
-         std::all_of(line.begin(), line.end(),
-                      [marker](char c) { return c == marker; });
+  return !line.empty() && std::all_of(line.begin(), line.end(),
+                                      [marker](char c) { return c == marker; });
 }
 
 bool IsOrderedListItem(std::string_view line) {
@@ -276,22 +275,28 @@ bool IsTableDivider(std::string_view line) {
 }
 
 std::vector<std::string> SplitTableCells(std::string_view line) {
+  while (!line.empty() && (line.front() == ' ' || line.front() == '\t')) {
+    line.remove_prefix(1);
+  }
+  while (!line.empty() && (line.back() == ' ' || line.back() == '\t')) {
+    line.remove_suffix(1);
+  }
   std::vector<std::string> cells;
   bool starts_with_pipe = line.starts_with('|');
   bool ends_with_pipe = line.ends_with('|');
-  
+
   size_t start = 0;
   if (starts_with_pipe) {
     start = 1;
   }
-  
+
   size_t end_limit = line.size();
   if (ends_with_pipe && line.size() > 1) {
     if (line[line.size() - 2] != '\\') {
       end_limit = line.size() - 1;
     }
   }
-  
+
   size_t pos = start;
   std::string current_cell;
   while (pos < end_limit) {
@@ -308,19 +313,21 @@ std::vector<std::string> SplitTableCells(std::string_view line) {
     }
   }
   cells.push_back(current_cell);
-  
+
   // Trim whitespace from each cell
   for (auto& cell : cells) {
     size_t l = 0;
-    while (l < cell.size() && std::isspace(static_cast<unsigned char>(cell[l]))) {
+    while (l < cell.size() &&
+           std::isspace(static_cast<unsigned char>(cell[l]))) {
       l++;
     }
     cell.erase(0, l);
-    while (!cell.empty() && std::isspace(static_cast<unsigned char>(cell.back()))) {
+    while (!cell.empty() &&
+           std::isspace(static_cast<unsigned char>(cell.back()))) {
       cell.pop_back();
     }
   }
-  
+
   return cells;
 }
 
@@ -333,7 +340,6 @@ constexpr int kMaxBlockquoteDepth = 32;
 std::string MarkdownToHtmlImpl(std::string_view markdown, int depth);
 
 }  // namespace
-
 
 std::string MarkdownToHtml(std::string_view markdown) {
   return MarkdownToHtmlImpl(markdown, 0);
@@ -432,13 +438,14 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
 
     // Handle table row if already in table
     if (in_table) {
-      bool is_unordered_item = (line.starts_with("- ") ||
-                                line.starts_with("* ") || line.starts_with("+ "));
+      bool is_unordered_item =
+          (line.starts_with("- ") || line.starts_with("* ") ||
+           line.starts_with("+ "));
       bool is_ordered_item = IsOrderedListItem(line);
-      
-      if (line.find('|') == std::string_view::npos ||
-          line.starts_with("```") || line.starts_with("#") ||
-          is_blockquote_line || is_unordered_item || is_ordered_item) {
+
+      if (line.find('|') == std::string_view::npos || line.starts_with("```") ||
+          line.starts_with("#") || is_blockquote_line || is_unordered_item ||
+          is_ordered_item) {
         close_table();
         // Do not continue, process this line normally below
       } else {
@@ -466,7 +473,7 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
       close_paragraph();
       close_list();
       close_blockquote();
-      
+
       in_table = true;
       html += "<table>\n<thead>\n<tr>\n";
       auto cells = SplitTableCells(line);

@@ -1,5 +1,7 @@
 # CSS transitions
 
+CSS transitions.
+
 `transition` interpolates a property between its old and new computed value whenever a rule stops or starts matching -- here, when :hover applies. Each property can carry its own duration and easing function.
 
 Try it: hover each card and watch them settle at different speeds.

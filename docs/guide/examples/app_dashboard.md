@@ -1,6 +1,8 @@
 # A complete application, rather than a demo of one property
 
-Everything here has appeared on its own elsewhere in example/ -- reactive state, computed values, &amp;lt;for&amp;gt; over a collection of structs, conditional rendering, flexbox, grid, transitions and custom properties. This file is about how they compose into something you would actually ship.
+A complete application, rather than a demo of one property.
+
+Everything here has appeared on its own elsewhere in example/ -- reactive state, computed values, `<for>` over a collection of structs, conditional rendering, flexbox, grid, transitions and custom properties. This file is about how they compose into something you would actually ship.
 
 Try it: click a service row to select it, use the filter buttons to narrow the list, and press Restart to watch a row transition back to healthy.
 

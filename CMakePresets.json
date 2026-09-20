@@ -1,0 +1,108 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Default (Release with Tests & Examples)",
+      "description": "Standard Release build with tests and examples enabled",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "RTXUI_BUILD_TESTS": "ON",
+        "RTXUI_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "default",
+      "displayName": "Release"
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build with tests enabled",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "RTXUI_BUILD_TESTS": "ON",
+        "RTXUI_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "sanitizer",
+      "displayName": "ASan + UBSan",
+      "description": "Debug build with Address and UndefinedBehavior sanitizers",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "RTXUI_SANITIZE": "ON",
+        "RTXUI_BUILD_TESTS": "ON",
+        "RTXUI_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
+      "name": "fuzz",
+      "displayName": "Fuzzers",
+      "description": "FuzzTest fuzzers with sanitizers",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_fuzz",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "RTXUI_BUILD_FUZZERS": "ON",
+        "FUZZTEST_FUZZING_MODE": "ON",
+        "RTXUI_SANITIZE": "ON",
+        "RTXUI_BUILD_TESTS": "ON",
+        "RTXUI_BUILD_EXAMPLES": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "sanitizer",
+      "configurePreset": "sanitizer"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "sanitizer",
+      "configurePreset": "sanitizer",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

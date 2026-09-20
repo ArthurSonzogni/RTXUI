@@ -1,10 +1,10 @@
 #define RTXUI_BENCHMARK
+#include <chrono>
+#include <vector>
+
 #include "../example/demo.cpp"
 #include "benchmark_common.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
-
-#include <chrono>
-#include <vector>
 
 using namespace rtxui;
 using rtxui::bench::Clock;
@@ -60,7 +60,7 @@ int main() {
     screen.Draw();
     auto t2 = Clock::now();
 
-    device->ClearOutput(); // clear buffer to save memory
+    device->ClearOutput();  // clear buffer to save memory
 
     double digest_us = MicrosBetween(t0, t1);
     double draw_us = MicrosBetween(t1, t2);

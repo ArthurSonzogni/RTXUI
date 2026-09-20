@@ -12,7 +12,6 @@
 // Try it: click a service row to select it, use the filter buttons to narrow
 // the list, and press Restart to watch a row transition back to healthy.
 #include <rtxui/rtxui.hpp>
-
 #include <string>
 #include <vector>
 
@@ -52,9 +51,7 @@ class Dashboard : public Component<Dashboard> {
     return std::to_string(Count("degraded"));
   }
   std::string down_count() const { return std::to_string(Count("down")); }
-  std::string total_count() const {
-    return std::to_string(services.size());
-  }
+  std::string total_count() const { return std::to_string(services.size()); }
 
   std::string selected_name() const { return selected; }
   std::string selected_region() const {

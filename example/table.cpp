@@ -2,8 +2,8 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 //
-// Table elements: <table>, <thead>, <tr>, <th>, <td>, with colspan, rowspan and a
-// sticky header row.
+// Table elements: <table>, <thead>, <tr>, <th>, <td>, with colspan, rowspan and
+// a sticky header row.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;

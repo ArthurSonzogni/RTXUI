@@ -50,14 +50,13 @@ void textarea::InitReflection() {
   Bind(show_gutter);
   Bind(gutter_width);
   Bind(highlight_current_line);
-  BindCollection("gutter_lines", &gutter_lines,
-                 [](const GutterLine& line) {
-                   return std::make_shared<ManualStructVisitor>(
-                       std::map<std::string, std::string, std::less<>>{
-                           {"text", line.text},
-                           {"css_class", line.css_class},
-                       });
-                 });
+  BindCollection("gutter_lines", &gutter_lines, [](const GutterLine& line) {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"text", line.text},
+            {"css_class", line.css_class},
+        });
+  });
   BindCollection("content_line_highlights", &content_line_highlights,
                  [](const LineRow& row) {
                    return std::make_shared<ManualStructVisitor>(
@@ -291,9 +290,8 @@ void textarea::UpdateGutter() {
     if (line_end != -1 && absolute_number > line_end) {
       continue;  // Beyond line_end: blank gutter cell.
     }
-    int displayed = (relative && i != active_line)
-                        ? std::abs(i - active_line)
-                        : absolute_number;
+    int displayed = (relative && i != active_line) ? std::abs(i - active_line)
+                                                   : absolute_number;
     labels[i] = std::to_string(displayed);
   }
 
@@ -320,8 +318,8 @@ void textarea::UpdateGutter() {
 
   gutter_lines.reserve(num_lines);
   for (int i = 0; i < num_lines; ++i) {
-    std::string css_class = (i == active_line) ? "line-number active"
-                                                : "line-number";
+    std::string css_class =
+        (i == active_line) ? "line-number active" : "line-number";
     gutter_lines.push_back({PadLeft(labels[i], gutter_width), css_class});
 
     if (content_width > 0 && line_widths[i] > content_width) {

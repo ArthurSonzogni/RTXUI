@@ -1,6 +1,6 @@
-# &amp;lt;label&amp;gt; delegating clicks and focus to the control it names
+# `<label>` delegating clicks and focus to the control it names
 
-&amp;lt;label&amp;gt; delegating clicks and focus to the control it names.
+`<label>` delegating clicks and focus to the control it names.
 
 <ExampleTabs src="/wasm/rtxui_example_label.js" :cols="80" :rows="24">
 <template #source>

@@ -5,12 +5,12 @@
 #define XML_HPP_
 
 #include <map>
+#include <rtxui/rtxui_export.hpp>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "rtxui/base/expected.hpp"
-#include <rtxui/rtxui_export.hpp>
 
 namespace xml {
 
@@ -24,19 +24,19 @@ struct Node {
     kElement,  ///< Element node.
     kComment,  ///< Comment node.
   };
-  Type type;
+  Type type = kElement;
 
   /// The tag name of the node. Only valid if the type is kElement.
-  std::string tag;
+  std::string tag = {};
 
   /// The text of the node. Only valid if the type is kText or kComment.
-  std::string text;
+  std::string text = {};
 
   /// The attributes of the node. Only valid if the type is kElement.
-  Attributes attributes;
+  Attributes attributes = {};
 
   /// The children of the node. Only valid if the type is kElement.
-  std::vector<Node> children;
+  std::vector<Node> children = {};
 };
 
 using Nodes = std::vector<Node>;

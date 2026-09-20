@@ -36,12 +36,11 @@ bool label::OnEvent(Event event) {
       int layout_w = root->layout_width();
       int layout_h = root->layout_height();
 
-      if (click_x >= abs_x && click_x < abs_x + layout_w &&
-          click_y >= abs_y && click_y < abs_y + layout_h) {
-        
+      if (click_x >= abs_x && click_x < abs_x + layout_w && click_y >= abs_y &&
+          click_y < abs_y + layout_h) {
         // Find target element to focus
         Element* target_el = nullptr;
-        
+
         // Option 1: "for" attribute
         if (root->Attributes().count("for")) {
           std::string for_id = root->Attributes().at("for");
@@ -55,7 +54,7 @@ bool label::OnEvent(Event event) {
             }
           });
         }
-        
+
         // Option 2: Nested input/focusable element
         if (!target_el) {
           root->Visit([&](Element& el) {
@@ -69,7 +68,7 @@ bool label::OnEvent(Event event) {
             }
           });
         }
-        
+
         // If we found a target, focus it and trigger it (e.g. click simulation)
         if (target_el) {
           // Unfocus other elements first
@@ -78,15 +77,18 @@ bool label::OnEvent(Event event) {
             owner_root = owner_root->Parent();
           }
           owner_root->Visit([](Element& el) { el.set_focused(false); });
-          
+
           target_el->set_focused(true);
-          
-          // Trigger a click event on target if it supports click (like checkbox/radio/button)
+
+          // Trigger a click event on target if it supports click (like
+          // checkbox/radio/button)
           if (auto* comp = const_cast<ComponentBase*>(target_el->component())) {
-            // Trigger checkbox check change or button action by simulating spacebar keyboard press
+            // Trigger checkbox check change or button action by simulating
+            // spacebar keyboard press
             Event dummy_click = Event::Keyboard::From(' ');
             comp->OnEvent(dummy_click);
-            if (auto* parent = const_cast<ComponentBase*>(target_el->owner_component())) {
+            if (auto* parent =
+                    const_cast<ComponentBase*>(target_el->owner_component())) {
               parent->Digest();
             }
           }

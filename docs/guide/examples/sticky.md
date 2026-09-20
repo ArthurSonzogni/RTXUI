@@ -1,4 +1,6 @@
-# position: sticky
+# position
+
+position: sticky.
 
 Section headers pin to the top of the scroll container while their section is on screen.
 

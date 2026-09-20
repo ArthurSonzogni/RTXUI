@@ -18,9 +18,9 @@
 #include <string_view>
 #include <vector>
 
+#include "rtxui/base/string.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/slot_element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -82,6 +82,13 @@ void SyncDisabled(Element* root, bool disabled) {
   }
 }
 
+void SyncChecked(Element* root, bool checked) {
+  if (!root) {
+    return;
+  }
+  root->set_checked(checked);
+}
+
 RefCounted::~RefCounted() {
   assert(count_ == 0);
 }
@@ -132,7 +139,7 @@ std::optional<std::string> ComponentBase::TakePendingClipboardWrite() {
   return result;
 }
 
-bool ComponentBase::OnEvent(Event event) {
+bool ComponentBase::OnEvent(Event /*event*/) {
   return false;
 }
 
@@ -171,8 +178,7 @@ bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
 }
 
 void Bindings::Import(std::string_view name, std::function<void()> callback) {
-  if (callbacks_.count(name) ||
-      parameterized_callbacks_.count(name)) {
+  if (callbacks_.count(name) || parameterized_callbacks_.count(name)) {
     std::cerr << "Error: Callback '" << name << "' is already imported.\n";
     return;
   }
@@ -182,8 +188,7 @@ void Bindings::Import(std::string_view name, std::function<void()> callback) {
 
 void Bindings::Import(std::string_view name,
                       std::function<void(std::string)> callback) {
-  if (callbacks_.count(name) ||
-      parameterized_callbacks_.count(name)) {
+  if (callbacks_.count(name) || parameterized_callbacks_.count(name)) {
     std::cerr << "Error: Callback '" << name << "' is already imported.\n";
     return;
   }
@@ -543,7 +548,7 @@ std::string Interpolate(std::string_view text,
   return result;
 }
 
-} // namespace
+}  // namespace
 
 void PrintCompilerStyleError(std::string_view source_string,
                              int error_line,
@@ -553,7 +558,8 @@ void PrintCompilerStyleError(std::string_view source_string,
   std::vector<std::string_view> lines = Split(source_string, '\n');
   std::cerr << "======== " << label << " Error ========" << std::endl;
   std::cerr << "Error: " << message << std::endl;
-  std::cerr << "Line " << (error_line + 1) << ", Column " << (error_column + 1) << ":" << std::endl;
+  std::cerr << "Line " << (error_line + 1) << ", Column " << (error_column + 1)
+            << ":" << std::endl;
   std::cerr << "      ┌" << Repeat("─", 76) << std::endl;
 
   int start_line = std::max(0, error_line - 2);
@@ -561,10 +567,13 @@ void PrintCompilerStyleError(std::string_view source_string,
 
   for (int line = start_line; line <= end_line; ++line) {
     if (line == error_line) {
-      std::cerr << " > " << std::setw(4) << (line + 1) << " │ " << lines[line] << std::endl;
-      std::cerr << "   " << "     │ " << Repeat(" ", error_column) << "^" << std::endl;
+      std::cerr << " > " << std::setw(4) << (line + 1) << " │ " << lines[line]
+                << std::endl;
+      std::cerr << "   " << "     │ " << Repeat(" ", error_column) << "^"
+                << std::endl;
     } else {
-      std::cerr << "   " << std::setw(4) << (line + 1) << " │ " << lines[line] << std::endl;
+      std::cerr << "   " << std::setw(4) << (line + 1) << " │ " << lines[line]
+                << std::endl;
     }
   }
   std::cerr << "      └" << Repeat("─", 76) << std::endl;
@@ -603,7 +612,7 @@ void ReportXmlError(const XmlError& error, std::string_view xml_string) {
     return;
   }
   PrintCompilerStyleError(xml_string, error.line, error.column, error.message,
-                           "XML");
+                          "XML");
 }
 
 namespace {
@@ -620,7 +629,8 @@ void XmlParseError(const xml::Error& error, std::string_view xml_string) {
     handler(XmlError{error.message, error.line, error.column});
     return;
   }
-  PrintCompilerStyleError(xml_string, error.line, error.column, error.message, "DOM");
+  PrintCompilerStyleError(xml_string, error.line, error.column, error.message,
+                          "DOM");
   std::exit(1);
 }
 
@@ -635,7 +645,8 @@ void CssParseError(const css::Error& error, std::string_view css_string) {
     handler(CssError{error.message, error.line, error.column});
     return;
   }
-  PrintCompilerStyleError(css_string, error.line, error.column, error.message, "CSS");
+  PrintCompilerStyleError(css_string, error.line, error.column, error.message,
+                          "CSS");
 }
 
 bool IsStyledByComponent(const Element* element,
@@ -777,8 +788,7 @@ bool ParseAnPlusB(std::string_view arg, int& a, int& b) {
   text.reserve(arg.size());
   for (const char c : arg) {
     if (!std::isspace(static_cast<unsigned char>(c))) {
-      text += static_cast<char>(
-          std::tolower(static_cast<unsigned char>(c)));
+      text += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     }
   }
   if (text == "even") {
@@ -984,6 +994,9 @@ bool MatchOnePseudo(const Element* element,
   if (pseudo == "disabled") {
     return element->disabled();
   }
+  if (pseudo == "checked") {
+    return element->checked();
+  }
   if (pseudo == "read-only") {
     return element->read_only();
   }
@@ -1060,8 +1073,8 @@ bool MatchOnePseudo(const Element* element,
       return text;
     };
 
-    std::string_view rest = trim(std::string_view(pseudo).substr(
-        4, pseudo.size() - 5));
+    std::string_view rest =
+        trim(std::string_view(pseudo).substr(4, pseudo.size() - 5));
     if (rest.empty()) {
       return false;
     }
@@ -1116,16 +1129,24 @@ bool MatchPseudos(const Element* element,
   return true;
 }
 
-bool MatchSelectorPart(const Element* element, const Element* root, const css::SelectorPart& part) {
+bool MatchSelectorPart(const Element* element,
+                       const Element* root,
+                       const css::SelectorPart& part) {
   if (!part.base.empty()) {
     if (part.base == "self") {
-      if (element != root) return false;
+      if (element != root) {
+        return false;
+      }
     } else {
-      if (element->tag() != part.base) return false;
+      if (element->tag() != part.base) {
+        return false;
+      }
     }
   }
   if (!part.id.empty()) {
-    if (element->id != part.id) return false;
+    if (element->id != part.id) {
+      return false;
+    }
   }
   for (const auto& cls : part.classes) {
     bool found = false;
@@ -1135,19 +1156,27 @@ bool MatchSelectorPart(const Element* element, const Element* root, const css::S
         break;
       }
     }
-    if (!found) return false;
+    if (!found) {
+      return false;
+    }
   }
   for (const auto& attr : part.attributes) {
     const std::string* el_attr = element->GetAttribute(attr.name);
-    if (!el_attr) return false;
-    if (attr.has_value && *el_attr != attr.value) return false;
+    if (!el_attr) {
+      return false;
+    }
+    if (attr.has_value && *el_attr != attr.value) {
+      return false;
+    }
   }
   return true;
 }
 
 namespace {
 const Element* GetRealParent(const Element* element) {
-  if (!element) return nullptr;
+  if (!element) {
+    return nullptr;
+  }
   const Element* parent = element->Parent();
   while (parent && parent->is_slot()) {
     parent = parent->Parent();
@@ -1156,64 +1185,90 @@ const Element* GetRealParent(const Element* element) {
 }
 
 const Element* GetPrecedingSibling(const Element* element) {
-  if (!element) return nullptr;
+  if (!element) {
+    return nullptr;
+  }
   const Element* parent = element->Parent();
-  if (!parent) return nullptr;
+  if (!parent) {
+    return nullptr;
+  }
   const auto& children = parent->children();
 
-  size_t idx = -1;
+  std::optional<size_t> idx;
   for (size_t i = 0; i < children.size(); ++i) {
     if (children[i].get() == element) {
       idx = i;
       break;
     }
   }
-  if (idx == -1 || idx == 0) return nullptr;
+  if (!idx || *idx == 0) {
+    return nullptr;
+  }
 
-  for (int i = static_cast<int>(idx) - 1; i >= 0; --i) {
+  for (size_t i = *idx; i-- > 0;) {
     const Element* sibling = children[i].get();
     if (sibling->tag() != "style") {
-      if (sibling->is_text()) continue;
+      if (sibling->is_text()) {
+        continue;
+      }
       return sibling;
     }
   }
   return nullptr;
 }
-} // namespace
+}  // namespace
 
-bool MatchSelectorParents(const Element* element, const Element* root, const std::vector<css::SelectorPart>& parents) {
+bool MatchSelectorParents(const Element* element,
+                          const Element* root,
+                          const std::vector<css::SelectorPart>& parents) {
   const Element* curr = element;
   for (const auto& parent_part : parents) {
     if (parent_part.combinator == '>') {
       curr = GetRealParent(curr);
-      if (!curr) return false;
-      if (!MatchSelectorPart(curr, root, parent_part)) return false;
+      if (!curr) {
+        return false;
+      }
+      if (!MatchSelectorPart(curr, root, parent_part)) {
+        return false;
+      }
     } else if (parent_part.combinator == '+') {
       curr = GetPrecedingSibling(curr);
-      if (!curr) return false;
-      if (!MatchSelectorPart(curr, root, parent_part)) return false;
+      if (!curr) {
+        return false;
+      }
+      if (!MatchSelectorPart(curr, root, parent_part)) {
+        return false;
+      }
     } else if (parent_part.combinator == '~') {
       bool found = false;
       while (true) {
         curr = GetPrecedingSibling(curr);
-        if (!curr) break;
+        if (!curr) {
+          break;
+        }
         if (MatchSelectorPart(curr, root, parent_part)) {
           found = true;
           break;
         }
       }
-      if (!found) return false;
+      if (!found) {
+        return false;
+      }
     } else {
       bool found = false;
       while (true) {
         curr = GetRealParent(curr);
-        if (!curr) break;
+        if (!curr) {
+          break;
+        }
         if (MatchSelectorPart(curr, root, parent_part)) {
           found = true;
           break;
         }
       }
-      if (!found) return false;
+      if (!found) {
+        return false;
+      }
     }
   }
   return true;
@@ -1267,8 +1322,9 @@ void ResolveStylesRecursive(Element* element,
       element->custom_properties[name] = val;
     }
   }
-  // Resolve nested component internal styles first, so that parent styles (template/classes)
-  // take precedence and override the child's internal styles.
+  // Resolve nested component internal styles first, so that parent styles
+  // (template/classes) take precedence and override the child's internal
+  // styles.
   if (element->component() && element->component() != component) {
     ResolveStylesRecursive(element, element->component(), check_pseudos);
   }
@@ -1294,76 +1350,129 @@ void ResolveStylesRecursive(Element* element,
     }
 
     {
-    // Matching rulesets are collected first (in bucket order), so that all
-    // --* declarations are known before var() substitution happens.
-    std::vector<const css::Ruleset*> matched;
-    const auto* categorized = component->categorized_rules();
-    if (categorized && is_styled) {
-      auto match_and_apply = [&](const std::vector<const css::Ruleset*>& rulesets,
-                                 bool is_universal) {
-        for (const auto* ruleset : rulesets) {
+      // Matching rulesets are collected first (in bucket order), so that all
+      // --* declarations are known before var() substitution happens.
+      std::vector<const css::Ruleset*> matched;
+      const auto* categorized = component->categorized_rules();
+      if (categorized && is_styled) {
+        auto match_and_apply =
+            [&](const std::vector<const css::Ruleset*>& rulesets,
+                bool is_universal) {
+              for (const auto* ruleset : rulesets) {
+                if (!css::EvaluateMediaQuery(ruleset->media_query)) {
+                  continue;
+                }
+                const auto& parsed = ruleset->parsed_selector;
+                if (is_universal && parsed.base == "self" &&
+                    element != component->Root()) {
+                  continue;
+                }
+
+                if (!parsed.base.empty() && parsed.base != "self" &&
+                    element->tag() != parsed.base) {
+                  continue;
+                }
+
+                if (!parsed.id.empty() && element->id != parsed.id) {
+                  continue;
+                }
+
+                bool classes_match = true;
+                for (const auto& required_class : parsed.classes) {
+                  bool found = false;
+                  for (const auto& el_class : element->classes) {
+                    if (el_class == required_class) {
+                      found = true;
+                      break;
+                    }
+                  }
+                  if (!found) {
+                    classes_match = false;
+                    break;
+                  }
+                }
+
+                if (!classes_match) {
+                  continue;
+                }
+
+                bool attributes_match = true;
+                for (const auto& attr : parsed.attributes) {
+                  const std::string* el_attr = element->GetAttribute(attr.name);
+                  if (!el_attr) {
+                    attributes_match = false;
+                    break;
+                  }
+                  if (attr.has_value) {
+                    if (*el_attr != attr.value) {
+                      attributes_match = false;
+                      break;
+                    }
+                  }
+                }
+                if (!attributes_match) {
+                  continue;
+                }
+
+                if (!parsed.parents.empty()) {
+                  if (!MatchSelectorParents(element, component->Root(),
+                                            parsed.parents)) {
+                    continue;
+                  }
+                }
+
+                if (check_pseudos) {
+                  if (!parsed.pseudo_classes.empty() &&
+                      MatchPseudos(element, parsed.pseudo_classes)) {
+                    matched.push_back(ruleset);
+                  }
+                } else {
+                  if (parsed.pseudo_classes.empty()) {
+                    matched.push_back(ruleset);
+                  }
+                }
+              }
+            };
+
+        match_and_apply(categorized->universal, true);
+
+        auto it_tag = categorized->by_tag.find(element->tag());
+        if (it_tag != categorized->by_tag.end()) {
+          match_and_apply(it_tag->second, false);
+        }
+
+        // Buckets are visited in ascending specificity, because a later
+        // declaration overwrites an earlier one: tag, then class, then id.
+        // Class used to be visited last, which let `.c` override `#t` whichever
+        // order the two rules were written in -- the opposite of the CSS
+        // cascade.
+        for (const auto& cls : element->classes) {
+          auto it_class = categorized->by_class.find(cls);
+          if (it_class != categorized->by_class.end()) {
+            match_and_apply(it_class->second, false);
+          }
+        }
+
+        if (!element->id.empty()) {
+          auto it_id = categorized->by_id.find(element->id);
+          if (it_id != categorized->by_id.end()) {
+            match_and_apply(it_id->second, false);
+          }
+        }
+      }
+
+      // ::part() rules: unlike every bucket above, these can match `element`
+      // even when `is_styled` is false (see MatchPartSelector) -- checked
+      // regardless of `categorized && is_styled` above.
+      if (categorized) {
+        for (const auto* ruleset : categorized->part_rules) {
           if (!css::EvaluateMediaQuery(ruleset->media_query)) {
             continue;
           }
           const auto& parsed = ruleset->parsed_selector;
-          if (is_universal && parsed.base == "self" &&
-              element != component->Root()) {
+          if (!MatchPartSelector(element, component, parsed)) {
             continue;
           }
-
-          if (!parsed.base.empty() && parsed.base != "self" &&
-              element->tag() != parsed.base) {
-            continue;
-          }
-
-          if (!parsed.id.empty() && element->id != parsed.id) {
-            continue;
-          }
-
-          bool classes_match = true;
-          for (const auto& required_class : parsed.classes) {
-            bool found = false;
-            for (const auto& el_class : element->classes) {
-              if (el_class == required_class) {
-                found = true;
-                break;
-              }
-            }
-            if (!found) {
-              classes_match = false;
-              break;
-            }
-          }
-
-
-          if (!classes_match) {
-            continue;
-          }
-
-          bool attributes_match = true;
-          for (const auto& attr : parsed.attributes) {
-            const std::string* el_attr = element->GetAttribute(attr.name);
-            if (!el_attr) {
-              attributes_match = false;
-              break;
-            }
-            if (attr.has_value) {
-              if (*el_attr != attr.value) {
-                attributes_match = false;
-                break;
-              }
-            }
-          }
-          if (!attributes_match) {
-            continue;
-          }
-
-          if (!parsed.parents.empty()) {
-            if (!MatchSelectorParents(element, component->Root(), parsed.parents)) {
-              continue;
-            }
-          }
-
           if (check_pseudos) {
             if (!parsed.pseudo_classes.empty() &&
                 MatchPseudos(element, parsed.pseudo_classes)) {
@@ -1375,203 +1484,155 @@ void ResolveStylesRecursive(Element* element,
             }
           }
         }
-      };
-
-      match_and_apply(categorized->universal, true);
-
-      auto it_tag = categorized->by_tag.find(element->tag());
-      if (it_tag != categorized->by_tag.end()) {
-        match_and_apply(it_tag->second, false);
       }
 
-      // Buckets are visited in ascending specificity, because a later
-      // declaration overwrites an earlier one: tag, then class, then id. Class
-      // used to be visited last, which let `.c` override `#t` whichever order
-      // the two rules were written in -- the opposite of the CSS cascade.
-      for (const auto& cls : element->classes) {
-        auto it_class = categorized->by_class.find(cls);
-        if (it_class != categorized->by_class.end()) {
-          match_and_apply(it_class->second, false);
-        }
-      }
-
-      if (!element->id.empty()) {
-        auto it_id = categorized->by_id.find(element->id);
-        if (it_id != categorized->by_id.end()) {
-          match_and_apply(it_id->second, false);
-        }
-      }
-    }
-
-    // ::part() rules: unlike every bucket above, these can match `element`
-    // even when `is_styled` is false (see MatchPartSelector) -- checked
-    // regardless of `categorized && is_styled` above.
-    if (categorized) {
-      for (const auto* ruleset : categorized->part_rules) {
-        if (!css::EvaluateMediaQuery(ruleset->media_query)) {
-          continue;
-        }
-        const auto& parsed = ruleset->parsed_selector;
-        if (!MatchPartSelector(element, component, parsed)) {
-          continue;
-        }
-        if (check_pseudos) {
-          if (!parsed.pseudo_classes.empty() &&
-              MatchPseudos(element, parsed.pseudo_classes)) {
-            matched.push_back(ruleset);
+      // Order the cascade. Declarations are applied in sequence and a later one
+      // overwrites an earlier one, so sorting ascending by specificity leaves
+      // the most specific rule applied last. Ties break on source order, which
+      // is pointer order: every ruleset here points into the same contiguous
+      // `stylesheet_` vector.
+      //
+      // The buckets above exist to find candidates quickly, not to rank them.
+      // Ranking by which bucket a rule came from cannot express `.a.b` over
+      // `.a`, or `.card .title` over `.title`, because those live in the same
+      // bucket.
+      if (matched.size() > 1) {
+        auto precedes = [](const css::Ruleset* a, const css::Ruleset* b) {
+          const int specificity_a = a->parsed_selector.specificity;
+          const int specificity_b = b->parsed_selector.specificity;
+          if (specificity_a != specificity_b) {
+            return specificity_a < specificity_b;
           }
-        } else {
-          if (parsed.pseudo_classes.empty()) {
-            matched.push_back(ruleset);
+          return a < b;
+        };
+        // Measured: an is_sorted() pre-check does not pay for itself here. The
+        // buckets hand rules back grouped by selector kind, which is rarely
+        // already specificity order, so the check almost always scans and then
+        // sorts anyway.
+        std::sort(matched.begin(), matched.end(), precedes);
+      }
+
+      // Inline style attribute parsing. The declarations are string_views into
+      // css_rule, which must stay alive until they are applied below. Skipped
+      // when this pass was entered solely for ::part() matching (is_styled
+      // false): an element's own inline style is applied once, by the
+      // component that actually owns/rendered it, not by every outer
+      // component whose ::part() rules happen to reach in.
+      std::string css_rule;
+      std::vector<css::Declaration> inline_declarations;
+      const std::string* inline_style =
+          is_styled ? element->GetAttribute("style") : nullptr;
+      if (inline_style && !inline_style->empty()) {
+        css_rule = "dummy { " + *inline_style + " }";
+        auto maybe_stylesheet = css::Parse(css_rule);
+        if (maybe_stylesheet && !maybe_stylesheet.value().empty()) {
+          inline_declarations =
+              std::move(maybe_stylesheet.value()[0].declarations);
+        }
+      }
+
+      // Phase 1 (base pass only): accumulate this element's own --*
+      // declarations, then rebuild the resolved map as the DOM parent's
+      // resolved properties overlaid with the own ones. Rebuilding on every
+      // pass matters: an element hosting a nested component is styled by the
+      // nested component first, before the outer component has applied the
+      // parent's --* declarations.
+      if (!check_pseudos) {
+        auto collect_custom_properties =
+            [&](const css::Declaration& declaration) {
+              if (declaration.property.starts_with("--")) {
+                element
+                    ->own_custom_properties[std::string(declaration.property)] =
+                    std::string(declaration.value);
+              }
+            };
+        for (const auto* ruleset : matched) {
+          for (const auto& declaration : ruleset->declarations) {
+            collect_custom_properties(declaration);
           }
         }
-      }
-    }
-
-    // Order the cascade. Declarations are applied in sequence and a later one
-    // overwrites an earlier one, so sorting ascending by specificity leaves the
-    // most specific rule applied last. Ties break on source order, which is
-    // pointer order: every ruleset here points into the same contiguous
-    // `stylesheet_` vector.
-    //
-    // The buckets above exist to find candidates quickly, not to rank them.
-    // Ranking by which bucket a rule came from cannot express `.a.b` over `.a`,
-    // or `.card .title` over `.title`, because those live in the same bucket.
-    if (matched.size() > 1) {
-      auto precedes = [](const css::Ruleset* a, const css::Ruleset* b) {
-        const int specificity_a = a->parsed_selector.specificity;
-        const int specificity_b = b->parsed_selector.specificity;
-        if (specificity_a != specificity_b) {
-          return specificity_a < specificity_b;
-        }
-        return a < b;
-      };
-      // Measured: an is_sorted() pre-check does not pay for itself here. The
-      // buckets hand rules back grouped by selector kind, which is rarely
-      // already specificity order, so the check almost always scans and then
-      // sorts anyway.
-      std::sort(matched.begin(), matched.end(), precedes);
-    }
-
-    // Inline style attribute parsing. The declarations are string_views into
-    // css_rule, which must stay alive until they are applied below. Skipped
-    // when this pass was entered solely for ::part() matching (is_styled
-    // false): an element's own inline style is applied once, by the
-    // component that actually owns/rendered it, not by every outer
-    // component whose ::part() rules happen to reach in.
-    std::string css_rule;
-    std::vector<css::Declaration> inline_declarations;
-    const std::string* inline_style =
-        is_styled ? element->GetAttribute("style") : nullptr;
-    if (inline_style && !inline_style->empty()) {
-      css_rule = "dummy { " + *inline_style + " }";
-      auto maybe_stylesheet = css::Parse(css_rule);
-      if (maybe_stylesheet && !maybe_stylesheet.value().empty()) {
-        inline_declarations = std::move(maybe_stylesheet.value()[0].declarations);
-      }
-    }
-
-    // Phase 1 (base pass only): accumulate this element's own --*
-    // declarations, then rebuild the resolved map as the DOM parent's
-    // resolved properties overlaid with the own ones. Rebuilding on every
-    // pass matters: an element hosting a nested component is styled by the
-    // nested component first, before the outer component has applied the
-    // parent's --* declarations.
-    if (!check_pseudos) {
-      auto collect_custom_properties = [&](const css::Declaration& declaration) {
-        if (declaration.property.starts_with("--")) {
-          element->own_custom_properties[std::string(declaration.property)] =
-              std::string(declaration.value);
-        }
-      };
-      for (const auto* ruleset : matched) {
-        for (const auto& declaration : ruleset->declarations) {
+        for (const auto& declaration : inline_declarations) {
           collect_custom_properties(declaration);
         }
-      }
-      for (const auto& declaration : inline_declarations) {
-        collect_custom_properties(declaration);
+
+        const Element* parent = element->Parent();
+        if (parent) {
+          element->custom_properties = parent->custom_properties;
+        } else {
+          element->custom_properties.clear();
+        }
+        for (const auto& [name, val] : element->own_custom_properties) {
+          element->custom_properties[name] = val;
+        }
       }
 
-      const Element* parent = element->Parent();
-      if (parent) {
-        element->custom_properties = parent->custom_properties;
-      } else {
-        element->custom_properties.clear();
-      }
-      for (const auto& [name, val] : element->own_custom_properties) {
-        element->custom_properties[name] = val;
-      }
-    }
-
-    // In the pseudo pass, --* declarations from matching pseudo-class rules
-    // (e.g. ":hover { --glow: ...; }") overlay the element's resolved map
-    // for this element's own substitutions. The overlay is intentionally not
-    // stored: it must not leak into descendants or later frames.
-    css::CustomProperties pseudo_props;
-    bool has_pseudo_props = false;
-    if (check_pseudos) {
-      for (const auto* ruleset : matched) {
-        for (const auto& declaration : ruleset->declarations) {
-          if (declaration.property.starts_with("--")) {
-            if (!has_pseudo_props) {
-              pseudo_props = element->custom_properties;
-              has_pseudo_props = true;
+      // In the pseudo pass, --* declarations from matching pseudo-class rules
+      // (e.g. ":hover { --glow: ...; }") overlay the element's resolved map
+      // for this element's own substitutions. The overlay is intentionally not
+      // stored: it must not leak into descendants or later frames.
+      css::CustomProperties pseudo_props;
+      bool has_pseudo_props = false;
+      if (check_pseudos) {
+        for (const auto* ruleset : matched) {
+          for (const auto& declaration : ruleset->declarations) {
+            if (declaration.property.starts_with("--")) {
+              if (!has_pseudo_props) {
+                pseudo_props = element->custom_properties;
+                has_pseudo_props = true;
+              }
+              pseudo_props[std::string(declaration.property)] =
+                  std::string(declaration.value);
             }
-            pseudo_props[std::string(declaration.property)] =
-                std::string(declaration.value);
           }
         }
       }
-    }
-    const css::CustomProperties& active_props =
-        has_pseudo_props ? pseudo_props : element->custom_properties;
+      const css::CustomProperties& active_props =
+          has_pseudo_props ? pseudo_props : element->custom_properties;
 
-    // Phase 2: apply regular declarations, expanding var() references.
-    ComputedStyle& style_out =
-        check_pseudos ? element->target_style : element->base_style;
-    auto apply_with_vars = [&](const css::Declaration& declaration) {
-      if (declaration.property.starts_with("--")) {
-        return;
-      }
-      if (declaration.value.find("var(") != std::string_view::npos) {
-        auto expanded =
-            css::SubstituteVars(declaration.value, active_props);
-        if (!expanded) {
-          return;  // Undefined variable without fallback: ignore.
+      // Phase 2: apply regular declarations, expanding var() references.
+      ComputedStyle& style_out =
+          check_pseudos ? element->target_style : element->base_style;
+      auto apply_with_vars = [&](const css::Declaration& declaration) {
+        if (declaration.property.starts_with("--")) {
+          return;
         }
-        ApplyStyle(style_out, {declaration.property, *expanded});
-        return;
-      }
-      ApplyStyle(style_out, declaration);
-    };
-    // Normal declarations first, then !important ones, so important wins
-    // regardless of rule order (rules before inline within each round).
-    auto apply_round = [&](bool important) {
-      for (const auto* ruleset : matched) {
-        for (const auto& declaration : ruleset->declarations) {
-          if (declaration.important == important) {
-            apply_with_vars(declaration);
+        if (declaration.value.find("var(") != std::string_view::npos) {
+          auto expanded = css::SubstituteVars(declaration.value, active_props);
+          if (!expanded) {
+            return;  // Undefined variable without fallback: ignore.
+          }
+          ApplyStyle(style_out, {declaration.property, *expanded});
+          return;
+        }
+        ApplyStyle(style_out, declaration);
+      };
+      // Normal declarations first, then !important ones, so important wins
+      // regardless of rule order (rules before inline within each round).
+      auto apply_round = [&](bool important) {
+        for (const auto* ruleset : matched) {
+          for (const auto& declaration : ruleset->declarations) {
+            if (declaration.important == important) {
+              apply_with_vars(declaration);
+            }
           }
         }
-      }
-      // Style resolution runs twice per element: once for rules without a
-      // pseudo-class, then once for those with. The inline style has to be
-      // re-applied in the pseudo pass so it still outranks, say, a matching
-      // `.a:hover` rule -- but only when that pass actually matched something.
-      // Re-applying it unconditionally clobbered anything the base pass had
-      // set from an `!important` declaration, since the base pass's important
-      // round runs before the pseudo pass begins.
-      if (!check_pseudos || !matched.empty()) {
-        for (const auto& declaration : inline_declarations) {
-          if (declaration.important == important) {
-            apply_with_vars(declaration);
+        // Style resolution runs twice per element: once for rules without a
+        // pseudo-class, then once for those with. The inline style has to be
+        // re-applied in the pseudo pass so it still outranks, say, a matching
+        // `.a:hover` rule -- but only when that pass actually matched
+        // something. Re-applying it unconditionally clobbered anything the base
+        // pass had set from an `!important` declaration, since the base pass's
+        // important round runs before the pseudo pass begins.
+        if (!check_pseudos || !matched.empty()) {
+          for (const auto& declaration : inline_declarations) {
+            if (declaration.important == important) {
+              apply_with_vars(declaration);
+            }
           }
         }
-      }
-    };
-    apply_round(false);
-    apply_round(true);
+      };
+      apply_round(false);
+      apply_round(true);
     }  // matched/inline declarations scope (bypassed by the goto above).
 
     if (!check_pseudos) {
@@ -1689,11 +1750,11 @@ std::shared_ptr<const StyleData> GetSharedStyle(
       std::string_view selector_base = ruleset.parsed_selector.base;
       std::string_view selector_id = ruleset.parsed_selector.id;
 
-      const bool is_bare_self =
-          selector_id.empty() && ruleset.parsed_selector.classes.empty() &&
-          selector_base == "self" &&
-          ruleset.parsed_selector.attributes.empty() &&
-          ruleset.parsed_selector.parents.empty();
+      const bool is_bare_self = selector_id.empty() &&
+                                ruleset.parsed_selector.classes.empty() &&
+                                selector_base == "self" &&
+                                ruleset.parsed_selector.attributes.empty() &&
+                                ruleset.parsed_selector.parents.empty();
       if (!is_bare_self) {
         rules.only_self_rules = false;
       }
@@ -1710,11 +1771,11 @@ std::shared_ptr<const StyleData> GetSharedStyle(
         rules.by_tag[selector_base].push_back(&ruleset);
       }
     }
-
   }
 
   // Drop entries whose last user has gone before adding another.
-  std::erase_if(cache, [](const auto& entry) { return entry.second.expired(); });
+  std::erase_if(cache,
+                [](const auto& entry) { return entry.second.expired(); });
   cache[css_strings] = data;
   return data;
 }
@@ -2029,6 +2090,12 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
     if (!comp || !comp->Root()) {
       return;
     }
+    // Resolve child components first so that parent rules (e.g. button:hover)
+    // take precedence and override child component internal styles
+    // (self:hover).
+    for (auto& child : comp->children_) {
+      self(self, child.get(), root_comp);
+    }
     // Optimization: Skip resolving target styles if the component stylesheet
     // has no pseudo-classes (hover, active, focus). Yields ~18% speedup in DOM
     // Digest.
@@ -2043,9 +2110,6 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
           owner->categorized_rules()->has_pseudo_classes) {
         ResolveStylesRecursive(comp->Root(), owner, true);
       }
-    }
-    for (auto& child : comp->children_) {
-      self(self, child.get(), root_comp);
     }
   };
   ResolveAll(ResolveAll, this, this);
@@ -2182,7 +2246,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
           } else {
             // Look ahead for a text element
-            size_t match_idx = -1;
+            std::optional<size_t> match_idx;
             for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
               if (slot->ChildAt(i)->is_text()) {
                 match_idx = i;
@@ -2190,8 +2254,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
             }
             Ref<Element> text_el;
-            if (match_idx != -1) {
-              slot->MoveChild(match_idx, child_idx);
+            if (match_idx) {
+              slot->MoveChild(*match_idx, child_idx);
               text_el = slot->children()[child_idx];
               auto* t_el = static_cast<TextElement*>(text_el.get());
               if (t_el->text() != child_node.text) {
@@ -2244,7 +2308,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
         } else {
           // Look ahead for a text element
-          size_t match_idx = -1;
+          std::optional<size_t> match_idx;
           for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
             if (slot->ChildAt(i)->is_text()) {
               match_idx = i;
@@ -2252,8 +2316,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
           }
           Ref<Element> text_el;
-          if (match_idx != -1) {
-            slot->MoveChild(match_idx, child_idx);
+          if (match_idx) {
+            slot->MoveChild(*match_idx, child_idx);
             text_el = slot->children()[child_idx];
             auto* t_el = static_cast<TextElement*>(text_el.get());
             if (t_el->text() != text) {
@@ -2434,8 +2498,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               if (!key_attr.empty() && child_idx > run_start) {
                 if (Element* first = slot->ChildAt(run_start)) {
                   first->for_key = item_key;
-                  first->for_run =
-                      static_cast<uint16_t>(child_idx - run_start);
+                  first->for_run = static_cast<uint16_t>(child_idx - run_start);
                 }
               }
             }
@@ -2454,15 +2517,15 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             slot_element = slot->children()[child_idx];
           } else {
             // Look ahead for a slot element
-            size_t match_idx = -1;
+            std::optional<size_t> match_idx;
             for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
               if (slot->ChildAt(i)->is_slot()) {
                 match_idx = i;
                 break;
               }
             }
-            if (match_idx != -1) {
-              slot->MoveChild(match_idx, child_idx);
+            if (match_idx) {
+              slot->MoveChild(*match_idx, child_idx);
               slot_element = slot->children()[child_idx];
             } else {
               slot_element = Ref<SlotElement>::New();
@@ -2710,15 +2773,15 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               slot->ChildAt(child_idx) == child->Root()) {
             child->Root()->set_parent(slot);
           } else {
-            size_t match_idx = -1;
+            std::optional<size_t> match_idx;
             for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
               if (slot->ChildAt(i) == child->Root()) {
                 match_idx = i;
                 break;
               }
             }
-            if (match_idx != -1) {
-              slot->MoveChild(match_idx, child_idx);
+            if (match_idx) {
+              slot->MoveChild(*match_idx, child_idx);
             } else {
               if (child_idx < slot->ChildCount()) {
                 slot->ReplaceChild(child_idx, child->Root());
@@ -2861,7 +2924,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           is_reused = true;
         } else {
           // Look ahead for an element with the same tag
-          size_t match_idx = -1;
+          std::optional<size_t> match_idx;
           for (size_t i = child_idx + 1; i < slot->ChildCount(); ++i) {
             if (!slot->ChildAt(i)->is_text() && !slot->ChildAt(i)->is_slot() &&
                 !slot->ChildAt(i)->component() &&
@@ -2870,8 +2933,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               break;
             }
           }
-          if (match_idx != -1) {
-            slot->MoveChild(match_idx, child_idx);
+          if (match_idx) {
+            slot->MoveChild(*match_idx, child_idx);
             child_element = slot->children()[child_idx];
             is_reused = true;
           } else {
@@ -3046,11 +3109,13 @@ int ParseInt(std::string_view str) {
 }
 }  // namespace reflection
 
-void ComponentBase::EnableHotReload(std::string_view view_var_name, std::source_location location) {
+void ComponentBase::EnableHotReload(std::string_view view_var_name,
+                                    std::source_location location) {
   HotReloadManager::Register(this, view_var_name, location.file_name());
 }
 
-void ComponentBase::EnableHotReload(std::string_view view_var_name, std::string_view filepath) {
+void ComponentBase::EnableHotReload(std::string_view view_var_name,
+                                    std::string_view filepath) {
   HotReloadManager::Register(this, view_var_name, filepath);
 }
 
@@ -3060,7 +3125,8 @@ void ComponentBase::HotReload(std::string_view new_template) {
 
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
   if (!nodes) {
-    std::cerr << "XML parse error during hot reload: " << nodes.error().message << std::endl;
+    std::cerr << "XML parse error during hot reload: " << nodes.error().message
+              << std::endl;
     return;
   }
   xml_nodes_ = std::move(nodes.value());
@@ -3073,12 +3139,15 @@ std::vector<HotReloadInfo>& GetRegisteredHotReloads() {
   return registered;
 }
 
-std::string ExtractHotReloadTemplate(const std::string& filepath, const std::string& var_name) {
+std::string ExtractHotReloadTemplate(const std::string& filepath,
+                                     const std::string& var_name) {
   std::ifstream file(filepath);
-  if (!file.is_open()) return "";
-  
+  if (!file.is_open()) {
+    return "";
+  }
+
   std::string content((std::istreambuf_iterator<char>(file)),
-                       std::istreambuf_iterator<char>());
+                      std::istreambuf_iterator<char>());
 
   size_t search_start = 0;
   if (!var_name.empty()) {
@@ -3092,7 +3161,7 @@ std::string ExtractHotReloadTemplate(const std::string& filepath, const std::str
   size_t start_pos = content.find("R\"html(", search_start);
   std::string end_delim = ")html\"";
   size_t content_start = 0;
-  
+
   if (start_pos != std::string::npos) {
     content_start = start_pos + 7;
   } else {
@@ -3107,23 +3176,29 @@ std::string ExtractHotReloadTemplate(const std::string& filepath, const std::str
   }
 
   size_t end_pos = content.find(end_delim, content_start);
-  if (end_pos == std::string::npos) return "";
+  if (end_pos == std::string::npos) {
+    return "";
+  }
 
   return content.substr(content_start, end_pos - content_start);
 }
-} // namespace
+}  // namespace
 
-void HotReloadManager::Register(ComponentBase* component, std::string_view view_var_name, std::string_view filepath) {
+void HotReloadManager::Register(ComponentBase* component,
+                                std::string_view view_var_name,
+                                std::string_view filepath) {
   std::string path_str(filepath);
   if (!std::filesystem::exists(path_str)) {
     return;
   }
-  
+
   auto& list = GetRegisteredHotReloads();
-  list.erase(std::remove_if(list.begin(), list.end(), 
-    [component](const HotReloadInfo& info) { return info.component == component; }), 
-    list.end());
-    
+  list.erase(std::remove_if(list.begin(), list.end(),
+                            [component](const HotReloadInfo& info) {
+                              return info.component == component;
+                            }),
+             list.end());
+
   std::error_code ec;
   auto mod_time = std::filesystem::last_write_time(path_str, ec);
   if (!ec) {
@@ -3133,9 +3208,11 @@ void HotReloadManager::Register(ComponentBase* component, std::string_view view_
 
 void HotReloadManager::Unregister(ComponentBase* component) {
   auto& list = GetRegisteredHotReloads();
-  list.erase(std::remove_if(list.begin(), list.end(), 
-    [component](const HotReloadInfo& info) { return info.component == component; }), 
-    list.end());
+  list.erase(std::remove_if(list.begin(), list.end(),
+                            [component](const HotReloadInfo& info) {
+                              return info.component == component;
+                            }),
+             list.end());
 }
 
 bool HotReloadManager::PollChanges() {
@@ -3152,8 +3229,9 @@ bool HotReloadManager::PollChanges() {
     }
     if (current_time != info.last_modified) {
       info.last_modified = current_time;
-      
-      std::string new_template = ExtractHotReloadTemplate(info.filepath, info.view_var_name);
+
+      std::string new_template =
+          ExtractHotReloadTemplate(info.filepath, info.view_var_name);
       if (!new_template.empty()) {
         info.component->HotReload(new_template);
         reloaded = true;

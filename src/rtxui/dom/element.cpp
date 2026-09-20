@@ -1,6 +1,7 @@
 #include "rtxui/dom/element.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -8,8 +9,6 @@
 #include <fstream>
 
 #include "rtxui/internal/component.hpp"
-
-#include <atomic>
 std::atomic<int> g_elements_created{0};
 std::atomic<int> g_elements_destroyed{0};
 
@@ -91,7 +90,8 @@ float ApplyEasing(float t, std::string_view timing) {
     return 1.0f - (1.0f - t) * (1.0f - t);
   }
   if (timing == "ease-in-out-quad") {
-    return t < 0.5f ? 2.0f * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 2.0f) / 2.0f;
+    return t < 0.5f ? 2.0f * t * t
+                    : 1.0f - std::pow(-2.0f * t + 2.0f, 2.0f) / 2.0f;
   }
 
   // Cubic
@@ -102,7 +102,8 @@ float ApplyEasing(float t, std::string_view timing) {
     return 1.0f - std::pow(1.0f - t, 3.0f);
   }
   if (timing == "ease-in-out-cubic") {
-    return t < 0.5f ? 4.0f * t * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 3.0f) / 2.0f;
+    return t < 0.5f ? 4.0f * t * t * t
+                    : 1.0f - std::pow(-2.0f * t + 2.0f, 3.0f) / 2.0f;
   }
 
   // Quart
@@ -113,7 +114,8 @@ float ApplyEasing(float t, std::string_view timing) {
     return 1.0f - std::pow(1.0f - t, 4.0f);
   }
   if (timing == "ease-in-out-quart") {
-    return t < 0.5f ? 8.0f * t * t * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 4.0f) / 2.0f;
+    return t < 0.5f ? 8.0f * t * t * t * t
+                    : 1.0f - std::pow(-2.0f * t + 2.0f, 4.0f) / 2.0f;
   }
 
   // Quint
@@ -124,7 +126,8 @@ float ApplyEasing(float t, std::string_view timing) {
     return 1.0f - std::pow(1.0f - t, 5.0f);
   }
   if (timing == "ease-in-out-quint") {
-    return t < 0.5f ? 16.0f * t * t * t * t * t : 1.0f - std::pow(-2.0f * t + 2.0f, 5.0f) / 2.0f;
+    return t < 0.5f ? 16.0f * t * t * t * t * t
+                    : 1.0f - std::pow(-2.0f * t + 2.0f, 5.0f) / 2.0f;
   }
 
   // Expo
@@ -135,7 +138,8 @@ float ApplyEasing(float t, std::string_view timing) {
     return 1.0f - std::pow(2.0f, -10.0f * t);
   }
   if (timing == "ease-in-out-expo") {
-    return t < 0.5f ? std::pow(2.0f, 20.0f * t - 10.0f) / 2.0f : (2.0f - std::pow(2.0f, -20.0f * t + 10.0f)) / 2.0f;
+    return t < 0.5f ? std::pow(2.0f, 20.0f * t - 10.0f) / 2.0f
+                    : (2.0f - std::pow(2.0f, -20.0f * t + 10.0f)) / 2.0f;
   }
 
   // Circ
@@ -146,7 +150,10 @@ float ApplyEasing(float t, std::string_view timing) {
     return std::sqrt(1.0f - (t - 1.0f) * (t - 1.0f));
   }
   if (timing == "ease-in-out-circ") {
-    return t < 0.5f ? (1.0f - std::sqrt(1.0f - 4.0f * t * t)) / 2.0f : (std::sqrt(1.0f - std::pow(-2.0f * t + 2.0f, 2.0f)) + 1.0f) / 2.0f;
+    return t < 0.5f
+               ? (1.0f - std::sqrt(1.0f - 4.0f * t * t)) / 2.0f
+               : (std::sqrt(1.0f - std::pow(-2.0f * t + 2.0f, 2.0f)) + 1.0f) /
+                     2.0f;
   }
 
   // Back
@@ -161,8 +168,12 @@ float ApplyEasing(float t, std::string_view timing) {
   if (timing == "ease-in-out-back") {
     const float c2 = c1 * 1.525f;
     return t < 0.5f
-        ? (std::pow(2.0f * t, 2.0f) * ((c2 + 1.0f) * 2.0f * t - c2)) / 2.0f
-        : (std::pow(2.0f * t - 2.0f, 2.0f) * ((c2 + 1.0f) * (t * 2.0f - 2.0f) + c2) + 2.0f) / 2.0f;
+               ? (std::pow(2.0f * t, 2.0f) * ((c2 + 1.0f) * 2.0f * t - c2)) /
+                     2.0f
+               : (std::pow(2.0f * t - 2.0f, 2.0f) *
+                      ((c2 + 1.0f) * (t * 2.0f - 2.0f) + c2) +
+                  2.0f) /
+                     2.0f;
   }
 
   if (timing == "ease-in") {
@@ -179,7 +190,8 @@ float ApplyEasing(float t, std::string_view timing) {
     std::string_view params = timing.substr(13, timing.size() - 14);
     float x1 = 0.0f, y1 = 0.0f, x2 = 0.0f, y2 = 0.0f;
     std::string params_str(params);
-    if (std::sscanf(params_str.c_str(), "%f,%f,%f,%f", &x1, &y1, &x2, &y2) == 4) {
+    if (std::sscanf(params_str.c_str(), "%f,%f,%f,%f", &x1, &y1, &x2, &y2) ==
+        4) {
       return SolveCubicBezier(x1, y1, x2, y2, t);
     }
   }
@@ -234,12 +246,40 @@ const TransitionConfig* FindTransitionConfig(const Element* element,
     if (config.property == property) {
       return &config;
     }
-    if (config.property == "border-color" && property.starts_with("border-") &&
-        property.ends_with("-color")) {
+    if ((config.property == "color" || config.property == "foreground-color") &&
+        (property == "color" || property == "foreground-color")) {
+      return &config;
+    }
+    if (config.property == "border-color" &&
+        ((property.starts_with("border-") && property.ends_with("-color")) ||
+         property.starts_with("border-color-"))) {
+      return &config;
+    }
+    if ((config.property == "border-top-color" ||
+         config.property == "border-color-top") &&
+        (property == "border-top-color" || property == "border-color-top")) {
+      return &config;
+    }
+    if ((config.property == "border-right-color" ||
+         config.property == "border-color-right") &&
+        (property == "border-right-color" ||
+         property == "border-color-right")) {
+      return &config;
+    }
+    if ((config.property == "border-bottom-color" ||
+         config.property == "border-color-bottom") &&
+        (property == "border-bottom-color" ||
+         property == "border-color-bottom")) {
+      return &config;
+    }
+    if ((config.property == "border-left-color" ||
+         config.property == "border-color-left") &&
+        (property == "border-left-color" || property == "border-color-left")) {
       return &config;
     }
     if (config.property == "scrollbar-color" &&
-        (property == "scrollbar-color-thumb" || property == "scrollbar-color-track")) {
+        (property == "scrollbar-color-thumb" ||
+         property == "scrollbar-color-track")) {
       return &config;
     }
   }
@@ -321,7 +361,8 @@ struct ScrollAxis {
     bool updated = false;
     if (animating) {
       if (current_time_ms >= anim_start_time) {
-        float t = static_cast<float>((current_time_ms - anim_start_time) / duration_ms);
+        float t = static_cast<float>((current_time_ms - anim_start_time) /
+                                     duration_ms);
         if (t < 0.0f) {
           t = 0.0f;
         }
@@ -345,7 +386,8 @@ struct ScrollAxis {
       }
     } else if (visual_animating) {
       if (current_time_ms >= visual_anim_start_time) {
-        float t = static_cast<float>((current_time_ms - visual_anim_start_time) / duration_ms);
+        float t = static_cast<float>(
+            (current_time_ms - visual_anim_start_time) / duration_ms);
         if (t < 0.0f) {
           t = 0.0f;
         }
@@ -355,7 +397,8 @@ struct ScrollAxis {
           updated = true;
         } else {
           float eased_t = ApplyEasing(t, "ease");
-          float next_anim = visual_start + (visual_target - visual_start) * eased_t;
+          float next_anim =
+              visual_start + (visual_target - visual_start) * eased_t;
           if (next_anim != visual) {
             visual = next_anim;
             updated = true;
@@ -436,7 +479,9 @@ void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
 void Element::MoveChild(size_t from, size_t to) {
   assert(from < children_.size());
   assert(to < children_.size());
-  if (from == to) return;
+  if (from == to) {
+    return;
+  }
   Ref<Element> child = std::move(children_[from]);
   children_.erase(children_.begin() + from);
   children_.insert(children_.begin() + to, std::move(child));
@@ -697,8 +742,6 @@ void Element::TriggerTransitions(double current_time_ms) {
                       target_style.background_color);
   HandleColorProperty("color", style.foreground_color,
                       target_style.foreground_color);
-  HandleColorProperty("foreground-color", style.foreground_color,
-                      target_style.foreground_color);
 
   HandleColorProperty("border-top-color", style.border_color_top,
                       target_style.border_color_top);
@@ -717,8 +760,14 @@ void Element::TriggerTransitions(double current_time_ms) {
                       target_style.flex_shrink);
   HandleFloatProperty("opacity", style.opacity, target_style.opacity);
 
-  std::optional<Color> current_thumb = style.has_scrollbar_color_thumb ? std::optional<Color>(style.scrollbar_color_thumb) : std::nullopt;
-  std::optional<Color> target_thumb = target_style.has_scrollbar_color_thumb ? std::optional<Color>(target_style.scrollbar_color_thumb) : std::nullopt;
+  std::optional<Color> current_thumb =
+      style.has_scrollbar_color_thumb
+          ? std::optional<Color>(style.scrollbar_color_thumb)
+          : std::nullopt;
+  std::optional<Color> target_thumb =
+      target_style.has_scrollbar_color_thumb
+          ? std::optional<Color>(target_style.scrollbar_color_thumb)
+          : std::nullopt;
   HandleColorProperty("scrollbar-color-thumb", current_thumb, target_thumb);
   if (current_thumb) {
     style.has_scrollbar_color_thumb = true;
@@ -727,8 +776,14 @@ void Element::TriggerTransitions(double current_time_ms) {
     style.has_scrollbar_color_thumb = false;
   }
 
-  std::optional<Color> current_track = style.has_scrollbar_color_track ? std::optional<Color>(style.scrollbar_color_track) : std::nullopt;
-  std::optional<Color> target_track = target_style.has_scrollbar_color_track ? std::optional<Color>(target_style.scrollbar_color_track) : std::nullopt;
+  std::optional<Color> current_track =
+      style.has_scrollbar_color_track
+          ? std::optional<Color>(style.scrollbar_color_track)
+          : std::nullopt;
+  std::optional<Color> target_track =
+      target_style.has_scrollbar_color_track
+          ? std::optional<Color>(target_style.scrollbar_color_track)
+          : std::nullopt;
   HandleColorProperty("scrollbar-color-track", current_track, target_track);
   if (current_track) {
     style.has_scrollbar_color_track = true;
@@ -748,18 +803,34 @@ bool Element::TickTransitions(double current_time_ms) {
   bool updated = false;
 
   if (scroll_y_animating_ || visual_scroll_y_animating_) {
-    ScrollAxis axis_y{
-      scroll_y_, scroll_height_, target_scroll_y_, anim_scroll_y_, start_scroll_y_, scroll_y_anim_start_time_, scroll_y_animating_,
-      visual_scroll_y_, visual_start_scroll_y_, visual_target_scroll_y_, visual_scroll_y_anim_start_time_, visual_scroll_y_animating_
-    };
+    ScrollAxis axis_y{scroll_y_,
+                      scroll_height_,
+                      target_scroll_y_,
+                      anim_scroll_y_,
+                      start_scroll_y_,
+                      scroll_y_anim_start_time_,
+                      scroll_y_animating_,
+                      visual_scroll_y_,
+                      visual_start_scroll_y_,
+                      visual_target_scroll_y_,
+                      visual_scroll_y_anim_start_time_,
+                      visual_scroll_y_animating_};
     updated |= axis_y.Tick(current_time_ms, kScrollAnimationDurationMs);
   }
 
   if (scroll_x_animating_ || visual_scroll_x_animating_) {
-    ScrollAxis axis_x{
-      scroll_x_, scroll_width_, target_scroll_x_, anim_scroll_x_, start_scroll_x_, scroll_x_anim_start_time_, scroll_x_animating_,
-      visual_scroll_x_, visual_start_scroll_x_, visual_target_scroll_x_, visual_scroll_x_anim_start_time_, visual_scroll_x_animating_
-    };
+    ScrollAxis axis_x{scroll_x_,
+                      scroll_width_,
+                      target_scroll_x_,
+                      anim_scroll_x_,
+                      start_scroll_x_,
+                      scroll_x_anim_start_time_,
+                      scroll_x_animating_,
+                      visual_scroll_x_,
+                      visual_start_scroll_x_,
+                      visual_target_scroll_x_,
+                      visual_scroll_x_anim_start_time_,
+                      visual_scroll_x_animating_};
     updated |= axis_x.Tick(current_time_ms, kScrollAnimationDurationMs);
   }
 
@@ -891,34 +962,66 @@ bool Element::TickTransitions(double current_time_ms) {
 }
 
 void Element::set_scroll_y(int y, bool smooth) {
-  ScrollAxis axis_y{
-    scroll_y_, scroll_height_, target_scroll_y_, anim_scroll_y_, start_scroll_y_, scroll_y_anim_start_time_, scroll_y_animating_,
-    visual_scroll_y_, visual_start_scroll_y_, visual_target_scroll_y_, visual_scroll_y_anim_start_time_, visual_scroll_y_animating_
-  };
+  ScrollAxis axis_y{scroll_y_,
+                    scroll_height_,
+                    target_scroll_y_,
+                    anim_scroll_y_,
+                    start_scroll_y_,
+                    scroll_y_anim_start_time_,
+                    scroll_y_animating_,
+                    visual_scroll_y_,
+                    visual_start_scroll_y_,
+                    visual_target_scroll_y_,
+                    visual_scroll_y_anim_start_time_,
+                    visual_scroll_y_animating_};
   axis_y.Set(y, smooth, style.scroll_behavior);
 }
 
 void Element::set_scroll_x(int x, bool smooth) {
-  ScrollAxis axis_x{
-    scroll_x_, scroll_width_, target_scroll_x_, anim_scroll_x_, start_scroll_x_, scroll_x_anim_start_time_, scroll_x_animating_,
-    visual_scroll_x_, visual_start_scroll_x_, visual_target_scroll_x_, visual_scroll_x_anim_start_time_, visual_scroll_x_animating_
-  };
+  ScrollAxis axis_x{scroll_x_,
+                    scroll_width_,
+                    target_scroll_x_,
+                    anim_scroll_x_,
+                    start_scroll_x_,
+                    scroll_x_anim_start_time_,
+                    scroll_x_animating_,
+                    visual_scroll_x_,
+                    visual_start_scroll_x_,
+                    visual_target_scroll_x_,
+                    visual_scroll_x_anim_start_time_,
+                    visual_scroll_x_animating_};
   axis_x.Set(x, smooth, style.scroll_behavior);
 }
 
 void Element::ClampScrollY(int max_scroll) {
-  ScrollAxis axis_y{
-    scroll_y_, scroll_height_, target_scroll_y_, anim_scroll_y_, start_scroll_y_, scroll_y_anim_start_time_, scroll_y_animating_,
-    visual_scroll_y_, visual_start_scroll_y_, visual_target_scroll_y_, visual_scroll_y_anim_start_time_, visual_scroll_y_animating_
-  };
+  ScrollAxis axis_y{scroll_y_,
+                    scroll_height_,
+                    target_scroll_y_,
+                    anim_scroll_y_,
+                    start_scroll_y_,
+                    scroll_y_anim_start_time_,
+                    scroll_y_animating_,
+                    visual_scroll_y_,
+                    visual_start_scroll_y_,
+                    visual_target_scroll_y_,
+                    visual_scroll_y_anim_start_time_,
+                    visual_scroll_y_animating_};
   axis_y.Clamp(max_scroll);
 }
 
 void Element::ClampScrollX(int max_scroll) {
-  ScrollAxis axis_x{
-    scroll_x_, scroll_width_, target_scroll_x_, anim_scroll_x_, start_scroll_x_, scroll_x_anim_start_time_, scroll_x_animating_,
-    visual_scroll_x_, visual_start_scroll_x_, visual_target_scroll_x_, visual_scroll_x_anim_start_time_, visual_scroll_x_animating_
-  };
+  ScrollAxis axis_x{scroll_x_,
+                    scroll_width_,
+                    target_scroll_x_,
+                    anim_scroll_x_,
+                    start_scroll_x_,
+                    scroll_x_anim_start_time_,
+                    scroll_x_animating_,
+                    visual_scroll_x_,
+                    visual_start_scroll_x_,
+                    visual_target_scroll_x_,
+                    visual_scroll_x_anim_start_time_,
+                    visual_scroll_x_animating_};
   axis_x.Clamp(max_scroll);
 }
 

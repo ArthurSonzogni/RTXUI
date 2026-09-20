@@ -1,4 +1,6 @@
-# Looping over a std::vector&amp;lt;std::string&amp;gt; with &amp;lt;for&amp;gt;
+# Looping over a std
+
+Looping over a `std::vector<std::string>` with `<for>`.
 
 {$index} gives the current position, which is how a row passes its identity to a parameterized callback.
 

@@ -245,8 +245,8 @@ int main() {
   // straight to stderr and corrupt the running frame -- Screen owns the
   // terminal in raw mode, so route it into the status line instead.
   SetCssErrorHandler([app](const CssError& error) {
-    app->status = "CSS error, line " + std::to_string(error.line + 1) +
-                  ": " + error.message;
+    app->status = "CSS error, line " + std::to_string(error.line + 1) + ": " +
+                  error.message;
   });
 
   // The <markdown> component wraps the stylesheet and rendered Markdown body

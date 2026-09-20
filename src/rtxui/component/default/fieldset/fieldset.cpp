@@ -58,8 +58,8 @@ bool fieldset::Digest() {
   // The <legend> is routed into the legend slot by `select`, so all that is
   // left is to report whether one arrived.
   auto legend_slot = Slot("legend");
-  legend_class =
-      (legend_slot && legend_slot->ChildCount() > 0) ? "has-legend" : "no-legend";
+  legend_class = (legend_slot && legend_slot->ChildCount() > 0) ? "has-legend"
+                                                                : "no-legend";
 
   return Component<fieldset>::Digest();
 }

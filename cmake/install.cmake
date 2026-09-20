@@ -38,30 +38,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/generated/rtxui/rtxui_export.hpp"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui
 )
 
-# The task runner is public API in practice: the async cookbook recipe posts
-# work back to the UI thread through it. It lives under src/ for historical
-# reasons, so install just that closure -- without these an installed consumer
-# following the documented recipe cannot compile.
-# The DOM node is public API: the DOM guide queries an element and calls
-# set_scroll_y on it. Its layout is consequently part of the ABI -- see
-# docs/guide/cpp/dom.md. style.hpp and color.hpp follow because Element embeds
-# a ComputedStyle.
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/dom/element.hpp"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/dom
-)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/layout/style.hpp"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/layout
-)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/paint/color.hpp"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/paint
-)
-
-install(FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/base/task.hpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/base/task_queue.hpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/base/task_runner.hpp"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui/base
-)
 
 
 install(EXPORT rtxui-targets

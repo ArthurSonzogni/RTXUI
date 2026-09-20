@@ -1,5 +1,7 @@
 # Nested scroll containers and scroll chaining
 
+Nested scroll containers and scroll chaining.
+
 An inner container consumes wheel events until it reaches its end, then the event propagates to its parent.
 
 <ExampleTabs src="/wasm/rtxui_example_nested_scroll.js" :cols="80" :rows="24">

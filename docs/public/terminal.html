@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
@@ -32,6 +33,23 @@
     }
     .xterm-viewport::-webkit-scrollbar {
       display: none !important;
+    }
+    html.fullscreen, html.fullscreen body {
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+    html.fullscreen #terminal {
+      width: 100% !important;
+      height: 100% !important;
+      padding: 8px !important;
+      box-sizing: border-box !important;
+    }
+    html.fullscreen .xterm {
+      width: 100% !important;
+      height: 100% !important;
     }
   </style>
 </head>
@@ -71,8 +89,36 @@
       document.fonts.ready.then(() => {
         const params = new URLSearchParams(window.location.search);
         const src = params.get('src');
-        const cols = parseInt(params.get('cols') || '80', 10);
-        const rows = parseInt(params.get('rows') || '15', 10);
+        const isFullscreen = params.get('fullscreen') === '1' ||
+                             params.get('fullscreen') === 'true' ||
+                             params.get('fit') === '1' ||
+                             params.get('fit') === 'true';
+        let cols = parseInt(params.get('cols') || '80', 10);
+        let rows = parseInt(params.get('rows') || '15', 10);
+
+        const measureCharSize = () => {
+          const span = document.createElement('span');
+          span.style.fontFamily = '"JetBrains Mono", Fira Code, Cascadia Code, Consolas, "DejaVu Sans Mono", monospace';
+          span.style.fontSize = '14px';
+          span.style.position = 'absolute';
+          span.style.left = '-9999px';
+          span.style.top = '-9999px';
+          span.style.visibility = 'hidden';
+          span.textContent = 'WWWWWWWWWW';
+          document.body.appendChild(span);
+          const rect = span.getBoundingClientRect();
+          const w = (rect.width / 10) || 8.4;
+          const h = rect.height || 17;
+          document.body.removeChild(span);
+          return { width: w, height: h };
+        };
+
+        const charDim = measureCharSize();
+        if (isFullscreen) {
+          document.documentElement.classList.add('fullscreen');
+          cols = Math.max(40, Math.floor((window.innerWidth - 16) / charDim.width));
+          rows = Math.max(10, Math.floor((window.innerHeight - 16) / charDim.height));
+        }
 
         const Terminal = window.Terminal;
         const xtermInstance = new Terminal({
@@ -105,33 +151,56 @@
           console.warn('WebGL addon failed to load, falling back to standard renderer:', e);
         }
 
-        // Report dimensions to parent iframe container
-        const screenEl = document.querySelector('.xterm');
-        if (screenEl && window.ResizeObserver) {
-          const observer = new ResizeObserver(() => {
-            const width = screenEl.offsetWidth + 24 + 16;
-            const height = screenEl.offsetHeight + 24 + 4;
-            window.parent.postMessage({
-              type: 'rtxui-terminal-resize',
-              width: width,
-              height: height
-            }, '*');
+        if (isFullscreen) {
+          let resizeTimer = null;
+          window.addEventListener('resize', () => {
+            if (resizeTimer) clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+              const newCols = Math.max(40, Math.floor((window.innerWidth - 16) / charDim.width));
+              const newRows = Math.max(10, Math.floor((window.innerHeight - 16) / charDim.height));
+              if (newCols !== xtermInstance.cols || newRows !== xtermInstance.rows) {
+                xtermInstance.resize(newCols, newRows);
+                window.rtxui_columns = newCols;
+                window.rtxui_lines = newRows;
+                if (window.rtxui_on_input) {
+                  window.rtxui_on_input(-1);
+                } else if (window.rtxui_input_queue) {
+                  window.rtxui_input_queue.push(-1);
+                }
+              }
+            }, 30);
           });
-          observer.observe(screenEl);
+        } else {
+          // Report dimensions to parent iframe container
+          const screenEl = document.querySelector('.xterm');
+          if (screenEl && window.ResizeObserver) {
+            const observer = new ResizeObserver(() => {
+              const width = screenEl.offsetWidth + 24 + 16;
+              const height = screenEl.offsetHeight + 24 + 4;
+              window.parent.postMessage({
+                type: 'rtxui-terminal-resize',
+                width: width,
+                height: height
+              }, '*');
+            });
+            observer.observe(screenEl);
+          }
         }
 
         window.rtxui_columns = xtermInstance.cols;
         window.rtxui_lines = xtermInstance.rows;
         window.rtxui_input_queue = [];
 
+        const textEncoder = new TextEncoder();
         xtermInstance.onData((data) => {
-          for (let i = 0; i < data.length; ++i) {
-            const code = data.charCodeAt(i);
+          const bytes = textEncoder.encode(data);
+          for (let i = 0; i < bytes.length; ++i) {
+            const byte = bytes[i];
             if (window.rtxui_on_input) {
               const cb = window.rtxui_on_input;
-              cb(code);
+              cb(byte);
             } else {
-              window.rtxui_input_queue.push(code);
+              window.rtxui_input_queue.push(byte);
             }
           }
         });

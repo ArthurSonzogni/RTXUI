@@ -7,7 +7,6 @@
 // The legend is nested into the top border of the group it captions.
 #include <rtxui/rtxui.hpp>
 
-
 using namespace rtxui;
 
 class FieldsetDemo : public Component<FieldsetDemo> {

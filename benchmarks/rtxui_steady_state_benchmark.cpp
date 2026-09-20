@@ -4,10 +4,10 @@
 //
 // Measures per-frame Digest + Draw cost for a large, unchanging tree: the
 // steady state where nothing mutates and the engine should do minimal work.
+#include <vector>
+
 #include "benchmark_common.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
-
-#include <vector>
 
 using namespace rtxui;
 using rtxui::bench::Clock;

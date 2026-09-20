@@ -11,8 +11,8 @@
 #include <utility>   // for move
 #include <vector>
 
-#include "rtxui/internal/event.hpp"  // for Event
 #include "rtxui/base/string.hpp"     // for EatCodePoint
+#include "rtxui/internal/event.hpp"  // for Event
 
 std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
   static const auto& mapping = *new std::map<std::string, Event>{
@@ -226,8 +226,7 @@ void TerminalInputParser::Add(char c) {
     constexpr std::string_view kPasteEnd = "\x1B[201~";
     if (paste_buffer_.size() >= kPasteEnd.size() &&
         std::string_view(paste_buffer_)
-                .substr(paste_buffer_.size() - kPasteEnd.size()) ==
-            kPasteEnd) {
+                .substr(paste_buffer_.size() - kPasteEnd.size()) == kPasteEnd) {
       EmitPastedText(std::string_view(paste_buffer_)
                          .substr(0, paste_buffer_.size() - kPasteEnd.size()));
       paste_buffer_.clear();
@@ -498,7 +497,7 @@ TerminalInputParser::Output TerminalInputParser::ParseCSI() {
   }
 }
 TerminalInputParser::Output TerminalInputParser::ParseMouse(
-    bool altered,
+    bool /*altered*/,
     bool pressed,
     std::vector<int> arguments) {
   if (arguments.size() != 3) {

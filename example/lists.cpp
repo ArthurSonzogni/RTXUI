@@ -138,9 +138,7 @@ class ListsDemo : public Component<ListsDemo> {
       </style>
     )html";
 
-  ListsDemo() {
-    Bind(selected_style);
-  }
+  ListsDemo() { Bind(selected_style); }
 };
 
 int main() {

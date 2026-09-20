@@ -1,4 +1,4 @@
-# text-align: left, center and right
+# text-align
 
 text-align: left, center and right.
 

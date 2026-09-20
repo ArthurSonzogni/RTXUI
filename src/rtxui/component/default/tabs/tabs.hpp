@@ -5,8 +5,8 @@
 #define RTXUI_COMPONENT_DEFAULT_TABS_HPP_
 
 #include <string>
-#include <utility>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "rtxui/internal/component.hpp"

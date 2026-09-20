@@ -1,5 +1,7 @@
 # Foreground and background colors
 
+Foreground and background colors.
+
 Colors accept rgb(), #rrggbb and named forms, and are composed into a swatch grid by a small reusable child component.
 
 <ExampleTabs src="/wasm/rtxui_example_colors.js" :cols="80" :rows="24">

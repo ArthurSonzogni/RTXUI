@@ -1,5 +1,7 @@
 # Arrow-key spatial navigation
 
+Arrow-key spatial navigation.
+
 Focus moves to the nearest focusable element in the direction pressed, computed from the laid-out geometry.
 
 Try it: move around the grid with the arrow keys.

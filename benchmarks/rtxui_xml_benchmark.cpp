@@ -1,7 +1,7 @@
+#include <iostream>
+
 #include "benchmark_common.hpp"
 #include "rtxui/xml/xml.hpp"
-
-#include <iostream>
 
 using rtxui::bench::Clock;
 using rtxui::bench::MicrosBetween;

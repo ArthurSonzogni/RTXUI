@@ -1380,7 +1380,8 @@ bool IsControl(uint32_t ucs) {
   return false;
 }
 
-WordBreakProperty CodepointToWordBreakProperty(uint32_t codepoint) {
+[[maybe_unused]] WordBreakProperty CodepointToWordBreakProperty(
+    uint32_t codepoint) {
   WordBreakPropertyInterval interval = {0, 0, WBP::ALetter};
   std::ignore = Bisearch(codepoint, g_word_break_intervals, &interval);
   return interval.property;
@@ -1398,7 +1399,8 @@ int string_width(std::string_view input) {
   return width;
 }
 
-std::vector<WordBreakProperty> Utf8ToWordBreakProperty(std::string_view input) {
+[[maybe_unused]] std::vector<WordBreakProperty> Utf8ToWordBreakProperty(
+    std::string_view input) {
   std::vector<WordBreakProperty> out;
   out.reserve(input.size());
   size_t start = 0;
@@ -1473,8 +1475,8 @@ auto Base64Encode(std::string_view input) -> std::string {
   size_t i = 0;
   while (i + 3 <= input.size()) {
     uint32_t n = (static_cast<uint8_t>(input[i]) << 16) |
-                (static_cast<uint8_t>(input[i + 1]) << 8) |
-                static_cast<uint8_t>(input[i + 2]);
+                 (static_cast<uint8_t>(input[i + 1]) << 8) |
+                 static_cast<uint8_t>(input[i + 2]);
     result += kAlphabet[(n >> 18) & 0x3F];
     result += kAlphabet[(n >> 12) & 0x3F];
     result += kAlphabet[(n >> 6) & 0x3F];
@@ -1490,7 +1492,7 @@ auto Base64Encode(std::string_view input) -> std::string {
     result += "==";
   } else if (remaining == 2) {
     uint32_t n = (static_cast<uint8_t>(input[i]) << 16) |
-                (static_cast<uint8_t>(input[i + 1]) << 8);
+                 (static_cast<uint8_t>(input[i + 1]) << 8);
     result += kAlphabet[(n >> 18) & 0x3F];
     result += kAlphabet[(n >> 12) & 0x3F];
     result += kAlphabet[(n >> 6) & 0x3F];

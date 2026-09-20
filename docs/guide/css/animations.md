@@ -103,6 +103,6 @@ Hover over the **Hover Me** button and click **Grow Me** to observe interactive 
 
 ### Component-Level Transition Demos
 
-*   **Slider Transition**: Smooth track and thumb focus highlighting. (See [Slider Demo](/wasm/rtxui_example_slider.js))
-*   **Checkbox Transition**: Background check state changes. (See [Checkbox Demo](/wasm/rtxui_example_checkbox.js))
-*   **Dropdown Select Menu**: Highlight shifts. (See [Select Demo](/wasm/rtxui_example_select.js))
+*   **Slider Transition**: Smooth track and thumb focus highlighting. (See [Slider Demo](/guide/examples/slider))
+*   **Checkbox Transition**: Background check state changes. (See [Checkbox Demo](/guide/examples/checkbox))
+*   **Dropdown Select Menu**: Highlight shifts. (See [Select Demo](/guide/examples/select))

@@ -52,7 +52,7 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
 
   // Overline
   if (UNLIKELY(next->overlined != prev->overlined)) {
-    ss << (next->overlined ? "\x1B[53m"     // OVERLINED
+    ss << (next->overlined ? "\x1B[53m"    // OVERLINED
                            : "\x1B[55m");  // OVERLINED_RESET
   }
 
@@ -197,7 +197,8 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
         ss << cell.character;
       }
 
-      bool is_wide = (x + 1 < width_ && cells_[y * width_ + x + 1].is_continuation);
+      bool is_wide =
+          (x + 1 < width_ && cells_[y * width_ + x + 1].is_continuation);
       cursor_x += (is_wide ? 2 : 1);
     }
   }

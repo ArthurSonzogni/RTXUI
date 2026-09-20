@@ -78,7 +78,8 @@ bool details::OnEvent(Event event) {
       auto* summary_btn = root->QuerySelector(".summary-line");
       if (summary_btn && summary_btn->focused()) {
         if (kb.special == Event::Keyboard::Special::Return ||
-            (kb.special == Event::Keyboard::Special::None && kb.codepoint == 32)) {
+            (kb.special == Event::Keyboard::Special::None &&
+             kb.codepoint == 32)) {
           Toggle();
           return true;
         }

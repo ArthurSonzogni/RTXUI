@@ -4,7 +4,6 @@
 #include "rtxui/dom/element.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <string>
 #include <vector>
 
@@ -145,9 +144,7 @@ TEST_CASE("Element::Visit walks the whole subtree in document order",
   root->AddChild(b);
 
   std::vector<std::string> seen;
-  root->Visit([&seen](Element& element) {
-    seen.emplace_back(element.tag());
-  });
+  root->Visit([&seen](Element& element) { seen.emplace_back(element.tag()); });
 
   CHECK(seen == std::vector<std::string>{"root", "a", "a1", "b"});
 }
@@ -298,7 +295,8 @@ TEST_CASE("A child outliving its parent is left unattached", "[dom][element]") {
   CHECK(child->Parent() == adopter.get());
 }
 
-TEST_CASE("Detaching an element leaves both sides consistent", "[dom][element]") {
+TEST_CASE("Detaching an element leaves both sides consistent",
+          "[dom][element]") {
   auto parent = MakeElement("div");
   auto first = MakeElement("span");
   auto second = MakeElement("span");

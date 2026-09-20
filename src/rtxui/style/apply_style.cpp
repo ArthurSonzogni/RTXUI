@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <cmath>
 #include <cstdlib>
 #include <memory>
 #include <optional>
@@ -149,6 +150,196 @@ Spacing ParseSpacingShorthand(std::string_view value) {
   return result;
 }
 
+std::string_view TrimWhitespace(std::string_view sv) {
+  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
+    sv.remove_prefix(1);
+  }
+  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
+    sv.remove_suffix(1);
+  }
+  return sv;
+}
+
+std::vector<std::string_view> SplitColorArgs(std::string_view args) {
+  std::vector<std::string_view> tokens;
+  args = TrimWhitespace(args);
+  if (args.empty()) {
+    return tokens;
+  }
+  if (args.find(',') != std::string_view::npos) {
+    size_t start = 0;
+    while (start <= args.size()) {
+      size_t comma = args.find(',', start);
+      if (comma == std::string_view::npos) {
+        tokens.push_back(TrimWhitespace(args.substr(start)));
+        break;
+      }
+      tokens.push_back(TrimWhitespace(args.substr(start, comma - start)));
+      start = comma + 1;
+    }
+  } else {
+    size_t i = 0;
+    while (i < args.size()) {
+      while (i < args.size() &&
+             (std::isspace(static_cast<unsigned char>(args[i])) ||
+              args[i] == '/')) {
+        ++i;
+      }
+      if (i >= args.size()) {
+        break;
+      }
+      size_t start = i;
+      while (i < args.size() &&
+             !std::isspace(static_cast<unsigned char>(args[i])) &&
+             args[i] != '/') {
+        ++i;
+      }
+      tokens.push_back(args.substr(start, i - start));
+    }
+  }
+  return tokens;
+}
+
+std::optional<uint8_t> ParseRgbChannel(std::string_view sv) {
+  sv = TrimWhitespace(sv);
+  if (sv.empty()) {
+    return std::nullopt;
+  }
+  if (sv.back() == '%') {
+    sv.remove_suffix(1);
+    float pct = 0.0f;
+    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), pct);
+    if (ec != std::errc() || ptr != sv.data() + sv.size()) {
+      return std::nullopt;
+    }
+    float val = std::clamp(pct / 100.0f * 255.0f, 0.0f, 255.0f);
+    return static_cast<uint8_t>(val);
+  }
+  float num = 0.0f;
+  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), num);
+  if (ec != std::errc() || ptr != sv.data() + sv.size()) {
+    return std::nullopt;
+  }
+  return static_cast<uint8_t>(std::clamp(num, 0.0f, 255.0f));
+}
+
+std::optional<uint8_t> ParseAlphaChannel(std::string_view sv) {
+  sv = TrimWhitespace(sv);
+  if (sv.empty()) {
+    return std::nullopt;
+  }
+  if (sv.back() == '%') {
+    sv.remove_suffix(1);
+    float pct = 0.0f;
+    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), pct);
+    if (ec != std::errc() || ptr != sv.data() + sv.size()) {
+      return std::nullopt;
+    }
+    float val = std::clamp(pct / 100.0f * 255.0f, 0.0f, 255.0f);
+    return static_cast<uint8_t>(val);
+  }
+  float num = 0.0f;
+  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), num);
+  if (ec != std::errc() || ptr != sv.data() + sv.size()) {
+    return std::nullopt;
+  }
+  return static_cast<uint8_t>(std::clamp(num * 255.0f, 0.0f, 255.0f));
+}
+
+std::optional<float> ParseHue(std::string_view sv) {
+  sv = TrimWhitespace(sv);
+  if (sv.empty()) {
+    return std::nullopt;
+  }
+  float factor = 1.0f;
+  if (sv.ends_with("deg")) {
+    sv.remove_suffix(3);
+  } else if (sv.ends_with("grad")) {
+    sv.remove_suffix(4);
+    factor = 360.0f / 400.0f;
+  } else if (sv.ends_with("rad")) {
+    sv.remove_suffix(3);
+    factor = 180.0f / 3.14159265358979323846f;
+  } else if (sv.ends_with("turn")) {
+    sv.remove_suffix(4);
+    factor = 360.0f;
+  }
+  float val = 0.0f;
+  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), val);
+  if (ec != std::errc() || ptr != sv.data() + sv.size()) {
+    return std::nullopt;
+  }
+  float deg = val * factor;
+  deg = std::fmod(deg, 360.0f);
+  if (deg < 0.0f) {
+    deg += 360.0f;
+  }
+  return deg;
+}
+
+std::optional<float> ParseHslComponent(std::string_view sv) {
+  sv = TrimWhitespace(sv);
+  if (sv.empty()) {
+    return std::nullopt;
+  }
+  bool is_percent = false;
+  if (sv.ends_with('%')) {
+    is_percent = true;
+    sv.remove_suffix(1);
+  }
+  float val = 0.0f;
+  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), val);
+  if (ec != std::errc() || ptr != sv.data() + sv.size()) {
+    return std::nullopt;
+  }
+  if (is_percent) {
+    val /= 100.0f;
+  }
+  return std::clamp(val, 0.0f, 1.0f);
+}
+
+Color HslToRgb(float h, float s, float l, uint8_t a) {
+  float c = (1.0f - std::abs(2.0f * l - 1.0f)) * s;
+  float h_prime = h / 60.0f;
+  float x = c * (1.0f - std::abs(std::fmod(h_prime, 2.0f) - 1.0f));
+  float m = l - c / 2.0f;
+  float r_prime = 0.0f;
+  float g_prime = 0.0f;
+  float b_prime = 0.0f;
+  if (h_prime >= 0.0f && h_prime < 1.0f) {
+    r_prime = c;
+    g_prime = x;
+    b_prime = 0.0f;
+  } else if (h_prime >= 1.0f && h_prime < 2.0f) {
+    r_prime = x;
+    g_prime = c;
+    b_prime = 0.0f;
+  } else if (h_prime >= 2.0f && h_prime < 3.0f) {
+    r_prime = 0.0f;
+    g_prime = c;
+    b_prime = x;
+  } else if (h_prime >= 3.0f && h_prime < 4.0f) {
+    r_prime = 0.0f;
+    g_prime = x;
+    b_prime = c;
+  } else if (h_prime >= 4.0f && h_prime < 5.0f) {
+    r_prime = x;
+    g_prime = 0.0f;
+    b_prime = c;
+  } else if (h_prime >= 5.0f && h_prime < 6.0f) {
+    r_prime = c;
+    g_prime = 0.0f;
+    b_prime = x;
+  }
+  uint8_t r = static_cast<uint8_t>(
+      std::clamp(std::round((r_prime + m) * 255.0f), 0.0f, 255.0f));
+  uint8_t g = static_cast<uint8_t>(
+      std::clamp(std::round((g_prime + m) * 255.0f), 0.0f, 255.0f));
+  uint8_t b = static_cast<uint8_t>(
+      std::clamp(std::round((b_prime + m) * 255.0f), 0.0f, 255.0f));
+  return Color::RGBA(r, g, b, a);
+}
+
 std::optional<Color> ParseColor(std::string_view value) {
   if (value.empty()) {
     return std::nullopt;
@@ -205,96 +396,64 @@ std::optional<Color> ParseColor(std::string_view value) {
     return std::nullopt;
   }
 
-  // Parse rgb(r, g, b)
-  if (value.substr(0, 4) == "rgb(" && value.back() == ')') {
-    value.remove_prefix(4);
-    value.remove_suffix(1);
-    size_t first_comma = value.find(',');
-    if (first_comma == std::string_view::npos) {
-      return std::nullopt;
-    }
-    size_t second_comma = value.find(',', first_comma + 1);
-    if (second_comma == std::string_view::npos) {
-      return std::nullopt;
-    }
-    std::string_view r_str = value.substr(0, first_comma);
-    std::string_view g_str =
-        value.substr(first_comma + 1, second_comma - first_comma - 1);
-    std::string_view b_str = value.substr(second_comma + 1);
-    auto trim = [](std::string_view sv) {
-      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
-        sv.remove_prefix(1);
+  // Parse rgb(...) / rgba(...)
+  if ((value.starts_with("rgb(") || value.starts_with("rgba(")) &&
+      value.back() == ')') {
+    size_t open_paren = value.find('(');
+    std::string_view args =
+        value.substr(open_paren + 1, value.size() - open_paren - 2);
+    auto tokens = SplitColorArgs(args);
+    if (tokens.size() == 3 || tokens.size() == 4) {
+      auto r = ParseRgbChannel(tokens[0]);
+      auto g = ParseRgbChannel(tokens[1]);
+      auto b = ParseRgbChannel(tokens[2]);
+      uint8_t a = 255;
+      if (tokens.size() == 4) {
+        auto parsed_a = ParseAlphaChannel(tokens[3]);
+        if (!parsed_a) {
+          return std::nullopt;
+        }
+        a = *parsed_a;
       }
-      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
-        sv.remove_suffix(1);
+      if (r && g && b) {
+        return Color::RGBA(*r, *g, *b, a);
       }
-      return sv;
-    };
-    r_str = trim(r_str);
-    g_str = trim(g_str);
-    b_str = trim(b_str);
-    int r = 0, g = 0, b = 0;
-    auto [r_ptr, r_ec] = std::from_chars(r_str.data(), r_str.data() + r_str.size(), r);
-    auto [g_ptr, g_ec] = std::from_chars(g_str.data(), g_str.data() + g_str.size(), g);
-    auto [b_ptr, b_ec] = std::from_chars(b_str.data(), b_str.data() + b_str.size(), b);
-    if (r_ec == std::errc() && r_ptr == r_str.data() + r_str.size() &&
-        g_ec == std::errc() && g_ptr == g_str.data() + g_str.size() &&
-        b_ec == std::errc() && b_ptr == b_str.data() + b_str.size()) {
-      return Color::RGB(r, g, b);
     }
     return std::nullopt;
   }
 
-  // Parse rgba(r, g, b, a)
-  if (value.substr(0, 5) == "rgba(" && value.back() == ')') {
-    value.remove_prefix(5);
-    value.remove_suffix(1);
-    size_t first_comma = value.find(',');
-    if (first_comma == std::string_view::npos) {
-      return std::nullopt;
-    }
-    size_t second_comma = value.find(',', first_comma + 1);
-    if (second_comma == std::string_view::npos) {
-      return std::nullopt;
-    }
-    size_t third_comma = value.find(',', second_comma + 1);
-    if (third_comma == std::string_view::npos) {
-      return std::nullopt;
-    }
-    std::string_view r_str = value.substr(0, first_comma);
-    std::string_view g_str =
-        value.substr(first_comma + 1, second_comma - first_comma - 1);
-    std::string_view b_str =
-        value.substr(second_comma + 1, third_comma - second_comma - 1);
-    std::string_view a_str = value.substr(third_comma + 1);
-    auto trim = [](std::string_view sv) {
-      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
-        sv.remove_prefix(1);
+  // Parse hsl(...) / hsla(...)
+  if ((value.starts_with("hsl(") || value.starts_with("hsla(")) &&
+      value.back() == ')') {
+    size_t open_paren = value.find('(');
+    std::string_view args =
+        value.substr(open_paren + 1, value.size() - open_paren - 2);
+    auto tokens = SplitColorArgs(args);
+    if (tokens.size() == 3 || tokens.size() == 4) {
+      auto h = ParseHue(tokens[0]);
+      auto s = ParseHslComponent(tokens[1]);
+      auto l = ParseHslComponent(tokens[2]);
+      uint8_t a = 255;
+      if (tokens.size() == 4) {
+        auto parsed_a = ParseAlphaChannel(tokens[3]);
+        if (!parsed_a) {
+          return std::nullopt;
+        }
+        a = *parsed_a;
       }
-      while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
-        sv.remove_suffix(1);
+      if (h && s && l) {
+        return HslToRgb(*h, *s, *l, a);
       }
-      return sv;
-    };
-    r_str = trim(r_str);
-    g_str = trim(g_str);
-    b_str = trim(b_str);
-    a_str = trim(a_str);
-    int r = 0, g = 0, b = 0;
-    float a = 0.0f;
-    auto [r_ptr, r_ec] = std::from_chars(r_str.data(), r_str.data() + r_str.size(), r);
-    auto [g_ptr, g_ec] = std::from_chars(g_str.data(), g_str.data() + g_str.size(), g);
-    auto [b_ptr, b_ec] = std::from_chars(b_str.data(), b_str.data() + b_str.size(), b);
-    auto [a_ptr, a_ec] = std::from_chars(a_str.data(), a_str.data() + a_str.size(), a);
-    if (r_ec == std::errc() && r_ptr == r_str.data() + r_str.size() &&
-        g_ec == std::errc() && g_ptr == g_str.data() + g_str.size() &&
-        b_ec == std::errc() && b_ptr == b_str.data() + b_str.size() &&
-        a_ec == std::errc() && a_ptr == a_str.data() + a_str.size()) {
-      return Color::RGBA(r, g, b, a * 255.f);
     }
     return std::nullopt;
   }
 
+  if (value == "transparent") {
+    return Color::RGBA(0, 0, 0, 0);
+  }
+  if (value == "orange") {
+    return Color::RGB(255, 165, 0);
+  }
   if (value == "red") {
     return Color::RGB(255, 0, 0);
   }
@@ -357,11 +516,11 @@ Color MixToward(const std::optional<Color>& base, Color target, float amount) {
   }
   const Color c = *base;
   auto mix = [&](uint8_t from, uint8_t to) {
-    return static_cast<uint8_t>(from + amount * (static_cast<float>(to) -
-                                                 static_cast<float>(from)));
+    return static_cast<uint8_t>(
+        from + amount * (static_cast<float>(to) - static_cast<float>(from)));
   };
-  return Color::RGBA(mix(c.r, target.r), mix(c.g, target.g),
-                     mix(c.b, target.b), c.a);
+  return Color::RGBA(mix(c.r, target.r), mix(c.g, target.g), mix(c.b, target.b),
+                     c.a);
 }
 
 std::optional<Color> TransformColor(std::optional<Color> current,
@@ -517,12 +676,11 @@ class CalcParser {
         } else if (lhs->percent != 0 && rhs->percent != 0) {
           return std::nullopt;
         }
-        lhs = CalcLinear{
-            lhs->cells * rhs->cells,
-            lhs->percent * rhs->cells + rhs->percent * lhs->cells,
-            lhs->ref != -1 ? lhs->ref : rhs->ref,
-            lhs->ref != -1 ? lhs->ref_coef * rhs->cells
-                           : rhs->ref_coef * lhs->cells};
+        lhs = CalcLinear{lhs->cells * rhs->cells,
+                         lhs->percent * rhs->cells + rhs->percent * lhs->cells,
+                         lhs->ref != -1 ? lhs->ref : rhs->ref,
+                         lhs->ref != -1 ? lhs->ref_coef * rhs->cells
+                                        : rhs->ref_coef * lhs->cells};
       } else {
         // The divisor must be a plain non-zero number.
         if (rhs->percent != 0 || rhs->ref != -1 || rhs->cells == 0) {
@@ -778,20 +936,35 @@ std::vector<Length> ParseGridTemplate(std::string_view v) {
   }
 
   for (std::string_view token : tokens) {
-    if (token.empty() || token == "none") continue;
+    if (token.empty() || token == "none") {
+      continue;
+    }
     if (token.starts_with("repeat(") && token.back() == ')') {
       std::string_view inner = token.substr(7, token.size() - 8);
       size_t comma = inner.find(',');
       if (comma != std::string_view::npos) {
         std::string_view count_str = inner.substr(0, comma);
         std::string_view pattern_str = inner.substr(comma + 1);
-        while (!count_str.empty() && std::isspace(static_cast<unsigned char>(count_str.front()))) count_str.remove_prefix(1);
-        while (!count_str.empty() && std::isspace(static_cast<unsigned char>(count_str.back()))) count_str.remove_suffix(1);
-        while (!pattern_str.empty() && std::isspace(static_cast<unsigned char>(pattern_str.front()))) pattern_str.remove_prefix(1);
-        while (!pattern_str.empty() && std::isspace(static_cast<unsigned char>(pattern_str.back()))) pattern_str.remove_suffix(1);
+        while (!count_str.empty() &&
+               std::isspace(static_cast<unsigned char>(count_str.front()))) {
+          count_str.remove_prefix(1);
+        }
+        while (!count_str.empty() &&
+               std::isspace(static_cast<unsigned char>(count_str.back()))) {
+          count_str.remove_suffix(1);
+        }
+        while (!pattern_str.empty() &&
+               std::isspace(static_cast<unsigned char>(pattern_str.front()))) {
+          pattern_str.remove_prefix(1);
+        }
+        while (!pattern_str.empty() &&
+               std::isspace(static_cast<unsigned char>(pattern_str.back()))) {
+          pattern_str.remove_suffix(1);
+        }
 
         int count = 0;
-        auto [ptr, ec] = std::from_chars(count_str.data(), count_str.data() + count_str.size(), count);
+        auto [ptr, ec] = std::from_chars(
+            count_str.data(), count_str.data() + count_str.size(), count);
         if (ec != std::errc() || ptr != count_str.data() + count_str.size()) {
           continue;
         }
@@ -1280,9 +1453,9 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   if (p == "border") {
     if (auto style_opt = ParseBorderStyle(v)) {
       style.border_style = *style_opt;
-      if (style.border_style != BorderStyle::None &&
-          style.border.top == 0 && style.border.bottom == 0 &&
-          style.border.left == 0 && style.border.right == 0) {
+      if (style.border_style != BorderStyle::None && style.border.top == 0 &&
+          style.border.bottom == 0 && style.border.left == 0 &&
+          style.border.right == 0) {
         style.border = {1, 1, 1, 1};
       }
       return;
@@ -1647,10 +1820,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
 
   if (p == "grid-template") {
     std::string_view val = v;
-    while (!val.empty() && std::isspace(static_cast<unsigned char>(val.front()))) {
+    while (!val.empty() &&
+           std::isspace(static_cast<unsigned char>(val.front()))) {
       val.remove_prefix(1);
     }
-    while (!val.empty() && std::isspace(static_cast<unsigned char>(val.back()))) {
+    while (!val.empty() &&
+           std::isspace(static_cast<unsigned char>(val.back()))) {
       val.remove_suffix(1);
     }
     if (val == "none") {
@@ -1680,7 +1855,8 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       }
     } else {
       std::string_view s = v;
-      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+      while (!s.empty() &&
+             std::isspace(static_cast<unsigned char>(s.front()))) {
         s.remove_prefix(1);
       }
       while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
@@ -1712,7 +1888,8 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       }
     } else {
       std::string_view s = v;
-      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
+      while (!s.empty() &&
+             std::isspace(static_cast<unsigned char>(s.front()))) {
         s.remove_prefix(1);
       }
       while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
@@ -1735,23 +1912,49 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   // flexbox, and both spellings are in current use.
   auto parse_justify_content =
       [](std::string_view kw) -> std::optional<JustifyContent> {
-    if (kw == "flex-start" || kw == "start") return JustifyContent::FlexStart;
-    if (kw == "flex-end" || kw == "end") return JustifyContent::FlexEnd;
-    if (kw == "center") return JustifyContent::Center;
-    if (kw == "space-between") return JustifyContent::SpaceBetween;
-    if (kw == "space-around") return JustifyContent::SpaceAround;
-    if (kw == "space-evenly") return JustifyContent::SpaceEvenly;
+    if (kw == "flex-start" || kw == "start") {
+      return JustifyContent::FlexStart;
+    }
+    if (kw == "flex-end" || kw == "end") {
+      return JustifyContent::FlexEnd;
+    }
+    if (kw == "center") {
+      return JustifyContent::Center;
+    }
+    if (kw == "space-between") {
+      return JustifyContent::SpaceBetween;
+    }
+    if (kw == "space-around") {
+      return JustifyContent::SpaceAround;
+    }
+    if (kw == "space-evenly") {
+      return JustifyContent::SpaceEvenly;
+    }
     return std::nullopt;
   };
   auto parse_align_content =
       [](std::string_view kw) -> std::optional<AlignContent> {
-    if (kw == "stretch") return AlignContent::Stretch;
-    if (kw == "flex-start" || kw == "start") return AlignContent::FlexStart;
-    if (kw == "flex-end" || kw == "end") return AlignContent::FlexEnd;
-    if (kw == "center") return AlignContent::Center;
-    if (kw == "space-between") return AlignContent::SpaceBetween;
-    if (kw == "space-around") return AlignContent::SpaceAround;
-    if (kw == "space-evenly") return AlignContent::SpaceEvenly;
+    if (kw == "stretch") {
+      return AlignContent::Stretch;
+    }
+    if (kw == "flex-start" || kw == "start") {
+      return AlignContent::FlexStart;
+    }
+    if (kw == "flex-end" || kw == "end") {
+      return AlignContent::FlexEnd;
+    }
+    if (kw == "center") {
+      return AlignContent::Center;
+    }
+    if (kw == "space-between") {
+      return AlignContent::SpaceBetween;
+    }
+    if (kw == "space-around") {
+      return AlignContent::SpaceAround;
+    }
+    if (kw == "space-evenly") {
+      return AlignContent::SpaceEvenly;
+    }
     return std::nullopt;
   };
 
@@ -1762,21 +1965,44 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
-  auto parse_align_items = [](std::string_view kw) -> std::optional<AlignItems> {
-    if (kw == "stretch") return AlignItems::Stretch;
-    if (kw == "flex-start" || kw == "start") return AlignItems::FlexStart;
-    if (kw == "flex-end" || kw == "end") return AlignItems::FlexEnd;
-    if (kw == "center") return AlignItems::Center;
-    if (kw == "baseline") return AlignItems::Baseline;
+  auto parse_align_items =
+      [](std::string_view kw) -> std::optional<AlignItems> {
+    if (kw == "stretch") {
+      return AlignItems::Stretch;
+    }
+    if (kw == "flex-start" || kw == "start") {
+      return AlignItems::FlexStart;
+    }
+    if (kw == "flex-end" || kw == "end") {
+      return AlignItems::FlexEnd;
+    }
+    if (kw == "center") {
+      return AlignItems::Center;
+    }
+    if (kw == "baseline") {
+      return AlignItems::Baseline;
+    }
     return std::nullopt;
   };
   auto parse_align_self = [](std::string_view kw) -> std::optional<AlignSelf> {
-    if (kw == "auto") return AlignSelf::Auto;
-    if (kw == "stretch") return AlignSelf::Stretch;
-    if (kw == "flex-start" || kw == "start") return AlignSelf::FlexStart;
-    if (kw == "flex-end" || kw == "end") return AlignSelf::FlexEnd;
-    if (kw == "center") return AlignSelf::Center;
-    if (kw == "baseline") return AlignSelf::Baseline;
+    if (kw == "auto") {
+      return AlignSelf::Auto;
+    }
+    if (kw == "stretch") {
+      return AlignSelf::Stretch;
+    }
+    if (kw == "flex-start" || kw == "start") {
+      return AlignSelf::FlexStart;
+    }
+    if (kw == "flex-end" || kw == "end") {
+      return AlignSelf::FlexEnd;
+    }
+    if (kw == "center") {
+      return AlignSelf::Center;
+    }
+    if (kw == "baseline") {
+      return AlignSelf::Baseline;
+    }
     return std::nullopt;
   };
 

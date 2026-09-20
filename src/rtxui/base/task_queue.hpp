@@ -4,10 +4,9 @@
 #ifndef TASK_QUEUE_HPP
 #define TASK_QUEUE_HPP
 
+#include <mutex>
 #include <queue>
 #include <variant>
-
-#include <mutex>
 
 #include "rtxui/base/task.hpp"
 

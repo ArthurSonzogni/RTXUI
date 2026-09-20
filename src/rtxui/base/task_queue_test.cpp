@@ -4,7 +4,6 @@
 #include "rtxui/base/task_queue.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <chrono>
 #include <thread>
 #include <vector>
@@ -38,8 +37,7 @@ TEST_CASE("TaskQueue runs immediate tasks in the order posted", "[task]") {
   CHECK(order == std::vector<int>{0, 1, 2, 3, 4});
 }
 
-TEST_CASE("TaskQueue reports the delay until the next delayed task",
-          "[task]") {
+TEST_CASE("TaskQueue reports the delay until the next delayed task", "[task]") {
   task::TaskQueue queue;
   bool ran = false;
   queue.PostTask(task::PendingTask([&ran] { ran = true; }, 1h));
@@ -119,8 +117,8 @@ TEST_CASE("TaskQueue accepts tasks posted from other threads", "[task]") {
   for (int t = 0; t < kThreads; ++t) {
     threads.emplace_back([&queue, &ran] {
       for (int i = 0; i < kPerThread; ++i) {
-        queue.PostTask(
-            task::Task([&ran] { ran.fetch_add(1, std::memory_order_relaxed); }));
+        queue.PostTask(task::Task(
+            [&ran] { ran.fetch_add(1, std::memory_order_relaxed); }));
       }
     });
   }

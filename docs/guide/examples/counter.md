@@ -1,5 +1,7 @@
 # Reactive state and `{...}` interpolation
 
+Reactive state and `{...}` interpolation.
+
 Bind(count) registers a member as reactive state: the DOM is patched whenever it changes. Bind() on a const method registers a computed value that is re-evaluated from that state, and Bind() on a plain method registers an `onclick` handler.
 
 Try it: click the buttons, or Tab to them and press Enter.

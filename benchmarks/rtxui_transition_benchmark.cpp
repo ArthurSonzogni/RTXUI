@@ -10,9 +10,8 @@
 // animation at all is on every frame: target_style is reset from base_style
 // for every element in the tree, the pseudo-class pass runs, and every
 // element's style is recomputed by TriggerTransitions.
-#include <rtxui/rtxui.hpp>
-
 #include <memory>
+#include <rtxui/rtxui.hpp>
 #include <string>
 #include <vector>
 

@@ -2,10 +2,10 @@
 #define RTXUI_LAYOUT_LAYOUT_ARENA_HPP
 
 #include <algorithm>
-#include <memory>
-#include <vector>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
+#include <vector>
 
 namespace rtxui {
 
@@ -110,16 +110,22 @@ struct LayoutArenaAllocator {
     return static_cast<T*>(ptr);
   }
 
-  void deallocate(T* p, std::size_t n) noexcept {
+  void deallocate(T* /*p*/, std::size_t /*n*/) noexcept {
     // No-op! Memory is reclaimed via ResetLayoutArena()
   }
 };
 
 template <typename T, typename U>
-bool operator==(const LayoutArenaAllocator<T>&, const LayoutArenaAllocator<U>&) { return true; }
+bool operator==(const LayoutArenaAllocator<T>&,
+                const LayoutArenaAllocator<U>&) {
+  return true;
+}
 template <typename T, typename U>
-bool operator!=(const LayoutArenaAllocator<T>&, const LayoutArenaAllocator<U>&) { return false; }
+bool operator!=(const LayoutArenaAllocator<T>&,
+                const LayoutArenaAllocator<U>&) {
+  return false;
+}
 
-} // namespace rtxui
+}  // namespace rtxui
 
-#endif // RTXUI_LAYOUT_LAYOUT_ARENA_HPP
+#endif  // RTXUI_LAYOUT_LAYOUT_ARENA_HPP

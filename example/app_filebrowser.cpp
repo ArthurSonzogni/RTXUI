@@ -14,7 +14,6 @@
 // Try it: move with the arrow keys (or j/k via the buttons), Enter to open a
 // directory, Backspace to go up. The list scrolls to follow the selection.
 #include <rtxui/rtxui.hpp>
-
 #include <string>
 #include <vector>
 
@@ -130,7 +129,8 @@ class FileBrowser : public Component<FileBrowser> {
     if (!entry || entry->kind != "dir") {
       return;
     }
-    std::string next = path == "/" ? "/" + entry->name : path + "/" + entry->name;
+    std::string next =
+        path == "/" ? "/" + entry->name : path + "/" + entry->name;
     Navigate(next);
   }
 
@@ -384,9 +384,8 @@ class FileBrowser : public Component<FileBrowser> {
     Bind(Open);
     Bind(GoUp);
 
-    Import("Select", [this](std::string index_str) {
-      SetCursor(std::stoi(index_str));
-    });
+    Import("Select",
+           [this](std::string index_str) { SetCursor(std::stoi(index_str)); });
 
     SetCursor(0);
   }

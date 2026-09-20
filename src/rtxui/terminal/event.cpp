@@ -131,7 +131,8 @@ std::string Event::Mouse::Print() const {
              ((std::map<Mouse::Motion, const char*>&)motion_string)[motion]);
   out += ", x=" + std::to_string(x) + ", y=" + std::to_string(y);
   if (is_pixel_precise) {
-    out += ", px=" + std::to_string(pixel_x) + ", py=" + std::to_string(pixel_y);
+    out +=
+        ", px=" + std::to_string(pixel_x) + ", py=" + std::to_string(pixel_y);
   }
   std::string mod = modifier.Print();
   if (!mod.empty()) {
@@ -237,10 +238,10 @@ RTXUI_IMPL_EVENT(PageDown, .special = Event::Keyboard::PageDown)
 
 RTXUI_IMPL_LETTER(a, A, 'a')
 RTXUI_IMPL_LETTER(b, B, 'b')
-RTXUI_IMPL_LETTER(c, C, 'c') RTXUI_IMPL_LETTER(d, D, 'd') RTXUI_IMPL_LETTER(
-    e,
-    E,
-    'e') RTXUI_IMPL_LETTER(f, F, 'f') RTXUI_IMPL_LETTER(g, G, 'g')
+RTXUI_IMPL_LETTER(c, C, 'c')
+RTXUI_IMPL_LETTER(d, D, 'd')
+RTXUI_IMPL_LETTER(e, E, 'e')
+RTXUI_IMPL_LETTER(f, F, 'f') RTXUI_IMPL_LETTER(g, G, 'g')
     RTXUI_IMPL_LETTER(h, H, 'h') RTXUI_IMPL_LETTER(i, I, 'i')
         RTXUI_IMPL_LETTER(j, J, 'j') RTXUI_IMPL_LETTER(k, K, 'k')
             RTXUI_IMPL_LETTER(l, L, 'l') RTXUI_IMPL_LETTER(m, M, 'm')

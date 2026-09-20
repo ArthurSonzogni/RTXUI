@@ -34,7 +34,7 @@ struct SelectorPart {
   std::string id;
   std::vector<std::string> classes;
   std::vector<AttributeSelector> attributes;
-  char combinator = ' '; // ' ' or '>'
+  char combinator = ' ';  // ' ' or '>'
 };
 
 /// Parses one compound selector (`div.card#id[attr]`) with no combinators and
@@ -68,7 +68,7 @@ struct ParsedSelector {
   std::vector<std::string> classes;
   std::vector<std::string> pseudo_classes;
   std::vector<AttributeSelector> attributes;
-  std::vector<SelectorPart> parents; // Ancestors in right-to-left order
+  std::vector<SelectorPart> parents;  // Ancestors in right-to-left order
   // From a trailing `::part(name)`, e.g. `textarea::part(gutter)`. Empty
   // when the selector doesn't use ::part(). base/id/classes/attributes
   // above describe the *host* (the component instantiation site, e.g.
@@ -133,7 +133,8 @@ auto Parse(std::string_view css) -> Expected<StyleSheet, Error>;
 
 /// Parse the given inline CSS style string and return the declarations.
 /// If the CSS is invalid, return an error.
-auto ParseDeclarations(std::string_view css) -> Expected<std::vector<Declaration>, Error>;
+auto ParseDeclarations(std::string_view css)
+    -> Expected<std::vector<Declaration>, Error>;
 
 /// Print the stylesheet (useful for debugging).
 auto Print(const StyleSheet& stylesheet) -> std::string;

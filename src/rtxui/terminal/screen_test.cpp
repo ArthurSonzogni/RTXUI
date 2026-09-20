@@ -1,20 +1,19 @@
 #include "rtxui/internal/screen.hpp"
 
-#include "rtxui/base/task_runner.hpp"
-
 #include <memory>
 
 #include "catch2/catch_test_macros.hpp"
+#include "rtxui/base/task_runner.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/internal/component.hpp"
-#include "rtxui/paint/paint.hpp"
-#include "rtxui/paint/texture.hpp"
-#include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
+#include "rtxui/paint/paint.hpp"
+#include "rtxui/paint/texture.hpp"
 #include "rtxui/style/style.hpp"
+#include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
 namespace {
@@ -41,6 +40,19 @@ TEST_CASE("TerminalDevice.MockIOWrites", "[terminal]") {
   std::string output = device->GetOutput();
   REQUIRE_FALSE(output.empty());
   REQUIRE(output.find("Hello Mock") != std::string::npos);
+}
+
+TEST_CASE("Screen.SynchronizedOutputMode2026", "[terminal][sync]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<DummyComponent>::New();
+
+  Screen screen(component, device);
+  std::string output = device->GetOutput();
+  size_t start = output.find("\x1b[?2026h");
+  size_t end = output.find("\x1b[?2026l");
+  REQUIRE(start != std::string::npos);
+  REQUIRE(end != std::string::npos);
+  CHECK(start < end);
 }
 
 TEST_CASE("TerminalDevice.ResizeTrigger", "[terminal]") {
@@ -337,7 +349,10 @@ TEST_CASE("Control characters in text never reach the terminal",
     // An application displays text it did not write -- a filename, a log line,
     // something off the network. Passed through, this would repaint, recolour
     // and leave the cell diff describing a screen that never existed.
-    const std::string output = DrawWith("a\x1b" "[31mRED\x1b" "[0mb");
+    const std::string output = DrawWith(
+        "a\x1b"
+        "[31mRED\x1b"
+        "[0mb");
     // The payload's own bytes survive as text, so the sequence is visible
     // rather than obeyed...
     CHECK(output.find("[31mRED") != std::string::npos);
@@ -350,17 +365,24 @@ TEST_CASE("Control characters in text never reach the terminal",
     // Split literals on purpose: a hex escape in C++ swallows every hex digit
     // that follows it, so "a\x07b" is the single character 0x7B and tests
     // nothing at all.
-    for (const std::string payload : {std::string("a\x07" "b"),   // BEL, rings
-                                      std::string("a\x08" "b"),   // BS
-                                      std::string("a\x0b" "b"),   // VT
-                                      std::string("a\x0c" "b"),   // FF
-                                      std::string("a\x7f" "b"),   // DEL
+    for (const std::string payload : {std::string("a\x07"
+                                                  "b"),  // BEL, rings
+                                      std::string("a\x08"
+                                                  "b"),  // BS
+                                      std::string("a\x0b"
+                                                  "b"),  // VT
+                                      std::string("a\x0c"
+                                                  "b"),  // FF
+                                      std::string("a\x7f"
+                                                  "b"),           // DEL
                                       std::string("a\0b", 3)}) {  // NUL
       const std::string output = DrawWith(payload);
-      for (const char control : {'\x07', '\x08', '\x0b', '\x0c', '\x7f', '\0'}) {
+      for (const char control :
+           {'\x07', '\x08', '\x0b', '\x0c', '\x7f', '\0'}) {
         CHECK(output.find(control) == std::string::npos);
       }
-      // Replaced, not dropped: something was there and the reader should see it.
+      // Replaced, not dropped: something was there and the reader should see
+      // it.
       CHECK(output.find("\xef\xbf\xbd") != std::string::npos);
     }
   }
@@ -391,19 +413,27 @@ TEST_CASE("Malformed UTF-8 in text is replaced, not emitted",
     // The two bytes open a three-byte sequence. Left alone, the grapheme
     // reader takes whatever follows as the missing continuation -- so the
     // ']' was absorbed into the same cell and vanished from the output.
-    const std::string output = DrawWith("[\xe4\xbd" "]");
+    const std::string output = DrawWith(
+        "[\xe4\xbd"
+        "]");
     CHECK(output.find(']') != std::string::npos);
     CHECK(output.find(kReplacement) != std::string::npos);
-    CHECK(output.find("\xe4\xbd" "]") == std::string::npos);
+    CHECK(output.find("\xe4\xbd"
+                      "]") == std::string::npos);
   }
 
   SECTION("every ill-formed encoding is replaced") {
     for (const std::string payload : {
-             std::string("a\x80" "b"),              // lone continuation
-             std::string("a\xff" "b"),              // never valid
-             std::string("a\xc0\xaf" "b"),          // overlong '/'
-             std::string("a\xed\xa0\x80" "b"),      // encoded surrogate
-             std::string("a\xf5\x80\x80\x80" "b"),  // past U+10FFFF
+             std::string("a\x80"
+                         "b"),  // lone continuation
+             std::string("a\xff"
+                         "b"),  // never valid
+             std::string("a\xc0\xaf"
+                         "b"),  // overlong '/'
+             std::string("a\xed\xa0\x80"
+                         "b"),  // encoded surrogate
+             std::string("a\xf5\x80\x80\x80"
+                         "b"),  // past U+10FFFF
          }) {
       const std::string output = DrawWith(payload);
       CHECK(output.find(kReplacement) != std::string::npos);
@@ -420,9 +450,10 @@ TEST_CASE("Malformed UTF-8 in text is replaced, not emitted",
     // not to narrow what can be displayed.
     for (const std::string payload : {
              std::string("\xe4\xbd\xa0\xe5\xa5\xbd"),  // CJK
-             std::string("e\xcc\x81"),                  // e + combining acute
-             std::string("a\xe2\x80\x8b" "b"),           // zero-width space
-             std::string("\xf0\x9f\x8e\x89"),           // four-byte codepoint
+             std::string("e\xcc\x81"),                 // e + combining acute
+             std::string("a\xe2\x80\x8b"
+                         "b"),                 // zero-width space
+             std::string("\xf0\x9f\x8e\x89"),  // four-byte codepoint
          }) {
       const std::string output = DrawWith(payload);
       CHECK(output.find(payload) != std::string::npos);
@@ -982,7 +1013,8 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
   CHECK_FALSE(input2->focused());
 }
 
-TEST_CASE("Screen.DisabledInputExcludedFromTabOrder", "[terminal][focus][disabled]") {
+TEST_CASE("Screen.DisabledInputExcludedFromTabOrder",
+          "[terminal][focus][disabled]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
   class DisabledFocusCyclingComponent
@@ -1086,7 +1118,8 @@ TEST_CASE("Screen.RadioFocusCyclingAndNavigation", "[terminal][focus][radio]") {
   CHECK_FALSE(radio1->focused());
   CHECK(radio2->focused());
 
-  // 5. Arrow keys (Spatial Navigation): ArrowUp/ArrowDown to move between radio buttons
+  // 5. Arrow keys (Spatial Navigation): ArrowUp/ArrowDown to move between radio
+  // buttons
   radio2->set_focused(false);
   radio1->set_focused(true);
   screen.Draw();
@@ -2091,8 +2124,8 @@ TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
 
   auto* ta_el = container->Root()->QuerySelector("#ta");
   REQUIRE(ta_el != nullptr);
-  auto* ta_ptr = dynamic_cast<textarea*>(
-      const_cast<ComponentBase*>(ta_el->component()));
+  auto* ta_ptr =
+      dynamic_cast<textarea*>(const_cast<ComponentBase*>(ta_el->component()));
   REQUIRE(ta_ptr != nullptr);
 
   screen.Draw();
@@ -3225,6 +3258,104 @@ TEST_CASE("Transitions.NulloptTargetReverts",
   CHECK(btn->active_transitions.empty());
   // The foreground_color MUST have reverted back to std::nullopt
   CHECK_FALSE(btn->style.foreground_color.has_value());
+  time::SetCustomClock(nullptr);
+}
+
+TEST_CASE("Screen.TransitionForegroundColorAlias",
+          "[terminal][transition][regression]") {
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class ForegroundColorTransitionComponent
+      : public Component<ForegroundColorTransitionComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<ForegroundColorTransitionComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="btn">Click me</div>
+      <style>
+        #btn {
+          foreground-color: #000000;
+          transition: foreground-color 1s linear;
+        }
+        #btn:focus {
+          foreground-color: #ffffff;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<ForegroundColorTransitionComponent>::New();
+  Screen screen(component, device);
+
+  auto* btn = component->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+
+  btn->set_focused(true);
+  component->ResolveTargetStyles();
+
+  REQUIRE(btn->active_transitions.count("color") == 1);
+
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(btn->style.foreground_color == Color::RGB(255, 255, 255));
+  CHECK(btn->active_transitions.empty());
+
+  time::SetCustomClock(nullptr);
+}
+
+TEST_CASE("Screen.TransitionBorderColorTopAlias",
+          "[terminal][transition][regression]") {
+  static double mock_now_ms = 1000.0;
+  mock_now_ms = 1000.0;
+  time::SetCustomClock([]() -> double { return mock_now_ms; });
+
+  auto device = std::make_shared<MockTerminalDevice>();
+
+  class BorderColorTransitionComponent
+      : public Component<BorderColorTransitionComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<BorderColorTransitionComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="box">Box</div>
+      <style>
+        #box {
+          border: solid;
+          border-color-top: #000000;
+          transition: border-color-top 1s linear;
+        }
+        #box:focus {
+          border-color-top: #ffffff;
+        }
+      </style>
+    )html";
+  };
+
+  auto component = Ref<BorderColorTransitionComponent>::New();
+  Screen screen(component, device);
+
+  auto* box = component->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  box->set_focused(true);
+  component->ResolveTargetStyles();
+
+  REQUIRE(box->active_transitions.count("border-top-color") == 1);
+
+  mock_now_ms = 2000.0;
+  screen.Step();
+  CHECK(box->style.border_color_top == Color::RGB(255, 255, 255));
+  CHECK(box->active_transitions.empty());
+
+  time::SetCustomClock(nullptr);
 }
 
 TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
@@ -3862,7 +3993,8 @@ TEST_CASE("Screen.LayoutFlexDemoClickTest", "[terminal][flex]") {
 TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   auto device = std::make_shared<MockTerminalDevice>();
 
-  class ScreenTooltipHoverRegressionTest : public Component<ScreenTooltipHoverRegressionTest> {
+  class ScreenTooltipHoverRegressionTest
+      : public Component<ScreenTooltipHoverRegressionTest> {
    public:
     std::string tooltip_text = "regression-test";
     void InitReflection() override {
@@ -3898,8 +4030,8 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   Event::Mouse hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
-  hover_in.x = 2; // tx = 1, inside trigger
-  hover_in.y = 1; // ty = 0, inside trigger
+  hover_in.x = 2;  // tx = 1, inside trigger
+  hover_in.y = 1;  // ty = 0, inside trigger
   screen.Dispatch(hover_in);
 
   // Verify that the tooltip class reactively updated to visible
@@ -3909,7 +4041,7 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   Event::Mouse hover_out;
   hover_out.button = Event::Mouse::Button::None;
   hover_out.motion = Event::Mouse::Motion::Moved;
-  hover_out.x = 20; // outside bounds
+  hover_out.x = 20;  // outside bounds
   hover_out.y = 1;
   screen.Dispatch(hover_out);
 
@@ -3949,8 +4081,8 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   Event::Mouse hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
-  hover_in.x = 2; // inside trigger
-  hover_in.y = 5; // inside trigger
+  hover_in.x = 2;  // inside trigger
+  hover_in.y = 5;  // inside trigger
   screen.Dispatch(hover_in);
 
   auto* tt_comp = const_cast<ComponentBase*>(tt_el->component());
@@ -3968,8 +4100,8 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   Event::Mouse hover_out;
   hover_out.button = Event::Mouse::Button::None;
   hover_out.motion = Event::Mouse::Motion::Moved;
-  hover_out.x = 35; // far away
-  hover_out.y = 5; // far away
+  hover_out.x = 35;  // far away
+  hover_out.y = 5;   // far away
   screen.Dispatch(hover_out);
 
   CHECK(tt_ptr->tooltip_class == "hidden");
@@ -4058,8 +4190,8 @@ TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
   Event::Mouse hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
-  hover_in.x = btn_x + 1; // 1-indexed
-  hover_in.y = btn_y + 1; // 1-indexed
+  hover_in.x = btn_x + 1;  // 1-indexed
+  hover_in.y = btn_y + 1;  // 1-indexed
   screen.Dispatch(hover_in);
 
   auto* tt_comp = const_cast<ComponentBase*>(tt->component());
@@ -4067,7 +4199,8 @@ TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
   REQUIRE(tt_ptr != nullptr);
   CHECK(tt_ptr->tooltip_class == "visible");
 
-  CHECK(device->GetOutput().find("Tooltip aligned at the TOP of the") != std::string::npos);
+  CHECK(device->GetOutput().find("Tooltip aligned at the TOP of the") !=
+        std::string::npos);
 }
 
 TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
@@ -4110,8 +4243,8 @@ TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
   Event::Mouse hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
-  hover_in.x = trigger_x + 1; // 1-indexed
-  hover_in.y = trigger_y + 1; // 1-indexed
+  hover_in.x = trigger_x + 1;  // 1-indexed
+  hover_in.y = trigger_y + 1;  // 1-indexed
   screen.Dispatch(hover_in);
 
   auto* tt_comp = const_cast<ComponentBase*>(tt->component());
@@ -4234,9 +4367,7 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
       Import("OnStickyClick", [this]() { sticky_clicks++; });
     }
 
-    void InitReflection() override {
-      Import<div>();
-    }
+    void InitReflection() override { Import<div>(); }
     std::string_view view = R"xml(
       <div id="scrollable" style="width: 40; height: 5; overflow-y: scroll; display: block;">
         <div id="month-container" style="display: block;">
@@ -4261,7 +4392,7 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
     scrollable->set_scroll_y(0);
     component->Digest();
     screen.Draw();
-    
+
     component->sticky_clicks = 0;
 
     // Click at absolute (0, 0), which is 1-based mouse (1, 1)
@@ -4275,7 +4406,8 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
     CHECK(component->sticky_clicks == 1);
   }
 
-  // 2. scroll_y = 3: month-container scrolls up, but sticky-header should stick to viewport top (y = 0)
+  // 2. scroll_y = 3: month-container scrolls up, but sticky-header should stick
+  // to viewport top (y = 0)
   {
     scrollable->set_scroll_y(3);
     component->Digest();
@@ -4350,9 +4482,7 @@ TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
    public:
     std::string border_style = "solid";
 
-    void SelectBorder(std::string name) {
-      border_style = name;
-    }
+    void SelectBorder(std::string name) { border_style = name; }
 
     void InitReflection() override {
       Import<rtxui::div>();
@@ -4616,7 +4746,6 @@ TEST_CASE("Overlined cells emit SGR 53 and reset it with SGR 55",
   CHECK(output.find("\x1b[53m") < output.find("over"));
 }
 
-
 namespace {
 class TabsClickApp : public Component<TabsClickApp> {
  public:
@@ -4744,7 +4873,8 @@ TEST_CASE("Selecting a tab by keyboard keeps focus on the headers",
   CHECK(after[1]->focused());
 }
 
-TEST_CASE("Switching tab keeps the header buttons styled", "[tabs][mouse][css]") {
+TEST_CASE("Switching tab keeps the header buttons styled",
+          "[tabs][mouse][css]") {
   // Regression: tabs::Digest() rebuilt its header buttons whenever the set of
   // panes "changed", but compared panes by Element*. Selecting a tab changes
   // the host's bound state, which re-renders it and hands out fresh pane
@@ -4817,7 +4947,6 @@ TEST_CASE("Switching tab keeps the header buttons styled", "[tabs][mouse][css]")
   }
 }
 
-
 namespace {
 class DetailsApp : public Component<DetailsApp> {
  public:
@@ -4830,7 +4959,8 @@ class DetailsApp : public Component<DetailsApp> {
 };
 }  // namespace
 
-TEST_CASE("Clicking a summary toggles the details content", "[details][mouse]") {
+TEST_CASE("Clicking a summary toggles the details content",
+          "[details][mouse]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<DetailsApp>::New();
@@ -4846,8 +4976,8 @@ TEST_CASE("Clicking a summary toggles the details content", "[details][mouse]") 
   CHECK(content->style.display_none);
 
   auto click = [&] {
-    for (auto motion : {Event::Mouse::Motion::Pressed,
-                        Event::Mouse::Motion::Released}) {
+    for (auto motion :
+         {Event::Mouse::Motion::Pressed, Event::Mouse::Motion::Released}) {
       Event::Mouse e;
       e.button = Event::Mouse::Button::Left;
       e.motion = motion;
@@ -4920,8 +5050,8 @@ TEST_CASE("Checking a radio unchecks only its own group", "[radio][mouse]") {
 
   auto* r2 = app->Root()->QuerySelector("#r2");
   REQUIRE(r2 != nullptr);
-  for (auto motion : {Event::Mouse::Motion::Pressed,
-                      Event::Mouse::Motion::Released}) {
+  for (auto motion :
+       {Event::Mouse::Motion::Pressed, Event::Mouse::Motion::Released}) {
     Event::Mouse e;
     e.button = Event::Mouse::Button::Left;
     e.motion = motion;
@@ -4959,8 +5089,8 @@ TEST_CASE("Clicking a checkbox toggles its glyph", "[checkbox][mouse]") {
 
   const std::string before = glyph();
   auto click = [&] {
-    for (auto motion : {Event::Mouse::Motion::Pressed,
-                        Event::Mouse::Motion::Released}) {
+    for (auto motion :
+         {Event::Mouse::Motion::Pressed, Event::Mouse::Motion::Released}) {
       Event::Mouse e;
       e.button = Event::Mouse::Button::Left;
       e.motion = motion;
@@ -5006,8 +5136,9 @@ class ConditionalLegendApp : public Component<ConditionalLegendApp> {
 };
 }  // namespace
 
-TEST_CASE("A slot-selected child follows the consumer that stopped providing it",
-          "[fieldset][details][slot]") {
+TEST_CASE(
+    "A slot-selected child follows the consumer that stopped providing it",
+    "[fieldset][details][slot]") {
   // Regression: fieldset and details used to hoist the <legend>/<summary> out
   // of the default slot in Digest(), by const_cast-ing the children vector and
   // re-parenting the element. That destroyed the only record of where the
@@ -5102,12 +5233,12 @@ namespace {
 // Built-ins that inspect what their consumer projected into them. The
 // fieldset/details crash fixed in this area came from projected content
 // disappearing, so pin the behaviour for the others too.
-#define RTXUI_COND_CHILD_APP(NAME, MARKUP)                     \
-  class NAME : public Component<NAME> {                        \
-   public:                                                     \
-    bool show = true;                                          \
-    std::string_view view = MARKUP;                            \
-    NAME() { Bind(show); }                                     \
+#define RTXUI_COND_CHILD_APP(NAME, MARKUP) \
+  class NAME : public Component<NAME> {    \
+   public:                                 \
+    bool show = true;                      \
+    std::string_view view = MARKUP;        \
+    NAME() { Bind(show); }                 \
   };
 
 RTXUI_COND_CHILD_APP(CondTabsApp, R"html(<tabs value="t1">
@@ -5193,8 +5324,7 @@ TEST_CASE("Built-ins follow conditional projected children",
   }
 }
 
-TEST_CASE("tabs follows a collection that grows and shrinks",
-          "[slot][tabs]") {
+TEST_CASE("tabs follows a collection that grows and shrinks", "[slot][tabs]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<ForTabsApp>::New();
@@ -5389,8 +5519,8 @@ TEST_CASE("Declaring a screen background makes reversal exact",
     app->Mount();
     auto box = LayoutTreeBuilder::Build(app->Root());
     REQUIRE(box != nullptr);
-    auto fragment = RunLayout({box.get()}, {{6, MeasureMode::Exactly},
-                                            {3, MeasureMode::Exactly}});
+    auto fragment = RunLayout(
+        {box.get()}, {{6, MeasureMode::Exactly}, {3, MeasureMode::Exactly}});
     REQUIRE(fragment != nullptr);
     Texture texture(6, 3);
     Paint(fragment.get(), texture, 0, 0, screen_background);

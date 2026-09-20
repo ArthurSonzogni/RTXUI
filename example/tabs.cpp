@@ -7,7 +7,6 @@
 // The active pane is selected by the `value` attribute bound to a C++ string.
 #include <rtxui/rtxui.hpp>
 
-
 using namespace rtxui;
 
 class TabsDemo : public Component<TabsDemo> {
@@ -52,9 +51,7 @@ class TabsDemo : public Component<TabsDemo> {
       </style>
     )html";
 
-  TabsDemo() {
-    Bind(current_tab);
-  }
+  TabsDemo() { Bind(current_tab); }
 };
 
 int main() {
