@@ -27,6 +27,7 @@ class TextInputBase {
   int selection_start = -1;
   bool disabled = false;
   bool readonly = false;
+  bool select_on_focus = false;
   std::string placeholder;
   int maxlength = -1;  // -1 means unlimited.
 

@@ -10,6 +10,7 @@ void input::InitReflection() {
   Bind(type);
   Bind(disabled);
   Bind(readonly);
+  Bind(select_on_focus);
   Bind(placeholder);
   Bind(placeholder_text);
   Bind(maxlength);

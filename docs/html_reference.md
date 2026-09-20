@@ -165,6 +165,7 @@ self:disabled { cursor: default; opacity: 0.4; }
 | `placeholder` | `string` | `""` | One-way | Ghost text displayed when `value` is empty. |
 | `disabled` | `boolean` | `false` | One-way | Disables input and focus; applies `:disabled` pseudo-class. |
 | `readonly` | `boolean` | `false` | One-way | Prevents text modification while allowing focus and text selection. |
+| `select_on_focus` | `boolean` | `false` | One-way | Automatically selects all text content when focused. |
 | `maxlength` | `integer` | `-1` | One-way | Maximum character length constraint (`-1` indicates unconstrained). |
 | `onchange` | `handler` | — | — | Callback invoked when value is committed. Accepts `void()` or `void(std::string)`. |
 
@@ -209,6 +210,7 @@ self:disabled {
 | `placeholder` | `string` | `""` | One-way | Ghost text rendered when content is empty. |
 | `disabled` | `boolean` | `false` | One-way | Disables editing and interaction. |
 | `readonly` | `boolean` | `false` | One-way | Prevents text edits while maintaining scroll and selection capabilities. |
+| `select_on_focus` | `boolean` | `false` | One-way | Automatically selects all text content when focused. |
 | `maxlength` | `integer` | `-1` | One-way | Maximum character capacity limit. |
 | `linenumbers` | `string` | `""` | One-way | Displays line number gutter. Values: `""` (off), `"true"` / `"absolute"` (absolute), `"relative"` (relative). |
 | `line_start` | `integer` | `1` | One-way | The displayed number of the first logical line. |
