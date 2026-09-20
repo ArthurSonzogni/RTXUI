@@ -848,6 +848,72 @@ TEST_CASE("Input Component Advanced Selection and Editing",
     mouse.motion = Event::Mouse::Motion::Released;
     screen.Dispatch(Event(mouse));
   }
+
+  SECTION("Triple Click Whole Line Selection") {
+    input_ptr->value = "hello world test";
+    input_ptr->cursor_pos = 0;
+    input_ptr->selection_start = -1;
+    input_ptr->Digest();
+
+    int x_pos = input_el->absolute_x() + 1 + 2 + 1;
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.x = x_pos;
+    mouse.y = input_el->absolute_y() + 1;
+
+    for (int i = 0; i < 2; ++i) {
+      mouse.motion = Event::Mouse::Motion::Pressed;
+      screen.Dispatch(Event(mouse));
+      mouse.motion = Event::Mouse::Motion::Released;
+      screen.Dispatch(Event(mouse));
+    }
+
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    input_ptr->Digest();
+
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 16);
+
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+    input_ptr->Digest();
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 16);
+  }
+
+  SECTION("Quadruple Click Whole Paragraph Selection") {
+    input_ptr->value = "hello world test";
+    input_ptr->cursor_pos = 0;
+    input_ptr->selection_start = -1;
+    input_ptr->Digest();
+
+    int x_pos = input_el->absolute_x() + 1 + 2 + 1;
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.x = x_pos;
+    mouse.y = input_el->absolute_y() + 1;
+
+    for (int i = 0; i < 3; ++i) {
+      mouse.motion = Event::Mouse::Motion::Pressed;
+      screen.Dispatch(Event(mouse));
+      mouse.motion = Event::Mouse::Motion::Released;
+      screen.Dispatch(Event(mouse));
+    }
+
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    input_ptr->Digest();
+
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 16);
+
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+    input_ptr->Digest();
+    CHECK(input_ptr->selection_start == 0);
+    CHECK(input_ptr->cursor_pos == 16);
+  }
 }
 
 TEST_CASE("Input Component State Preservation", "[component]") {
@@ -1871,6 +1937,146 @@ TEST_CASE("Textarea Click Maps Correctly On A Word-Wrapped Row",
   mouse.x = ta_el->absolute_x() + 2 + 12;
   screen.Dispatch(Event(mouse));
   CHECK(ta_ptr->cursor_pos == 50);
+}
+
+class MultiClickTextareaTestComponent
+    : public rtxui::Component<MultiClickTextareaTestComponent> {
+ public:
+  std::string my_text =
+      "First line of p1\n"
+      "Second line of p1\n"
+      "\n"
+      "First line of p2\n"
+      "Second line of p2";
+
+  void InitReflection() override {
+    Bind(my_text);
+    Import<rtxui::textarea>();
+    rtxui::Component<MultiClickTextareaTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <textarea value="{my_text}" />
+  )";
+};
+
+TEST_CASE("Textarea Multi-Click Line and Paragraph Selection",
+          "[component][textarea]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<MultiClickTextareaTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  auto* content_el = ta_el->QuerySelector(".content");
+  REQUIRE(content_el != nullptr);
+
+  SECTION("Triple Click Selects Current Line") {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.x = content_el->absolute_x() + 1 + 2;
+    mouse.y = content_el->absolute_y() + 1 + 1;
+
+    for (int i = 0; i < 2; ++i) {
+      mouse.motion = Event::Mouse::Motion::Pressed;
+      screen.Dispatch(Event(mouse));
+      mouse.motion = Event::Mouse::Motion::Released;
+      screen.Dispatch(Event(mouse));
+    }
+
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    ta_ptr->Digest();
+
+    CHECK(ta_ptr->selection_start == 17);
+    CHECK(ta_ptr->cursor_pos == 34);
+
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+  }
+
+  SECTION("Quadruple Click Selects Entire Paragraph") {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.x = content_el->absolute_x() + 1 + 2;
+    mouse.y = content_el->absolute_y() + 1 + 1;
+
+    for (int i = 0; i < 3; ++i) {
+      mouse.motion = Event::Mouse::Motion::Pressed;
+      screen.Dispatch(Event(mouse));
+      mouse.motion = Event::Mouse::Motion::Released;
+      screen.Dispatch(Event(mouse));
+    }
+
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    ta_ptr->Digest();
+
+    CHECK(ta_ptr->selection_start == 0);
+    CHECK(ta_ptr->cursor_pos == 34);
+
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+  }
+
+  SECTION("Quadruple Click on Paragraph 2") {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.x = content_el->absolute_x() + 1 + 2;
+    mouse.y = content_el->absolute_y() + 1 + 3;
+
+    for (int i = 0; i < 3; ++i) {
+      mouse.motion = Event::Mouse::Motion::Pressed;
+      screen.Dispatch(Event(mouse));
+      mouse.motion = Event::Mouse::Motion::Released;
+      screen.Dispatch(Event(mouse));
+    }
+
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    ta_ptr->Digest();
+
+    CHECK(ta_ptr->selection_start == 36);
+    CHECK(ta_ptr->cursor_pos == 70);
+
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+  }
+
+  SECTION("Triple Click Drag Selects By Line") {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.x = content_el->absolute_x() + 1 + 2;
+    mouse.y = content_el->absolute_y() + 1 + 0;
+
+    for (int i = 0; i < 2; ++i) {
+      mouse.motion = Event::Mouse::Motion::Pressed;
+      screen.Dispatch(Event(mouse));
+      mouse.motion = Event::Mouse::Motion::Released;
+      screen.Dispatch(Event(mouse));
+    }
+
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    ta_ptr->Digest();
+    CHECK(ta_ptr->selection_start == 0);
+    CHECK(ta_ptr->cursor_pos == 16);
+
+    mouse.motion = Event::Mouse::Motion::Moved;
+    mouse.y = content_el->absolute_y() + 1 + 1;
+    screen.Dispatch(Event(mouse));
+    ta_ptr->Digest();
+
+    CHECK(ta_ptr->selection_start == 0);
+    CHECK(ta_ptr->cursor_pos == 34);
+
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+  }
 }
 
 TEST_CASE(
