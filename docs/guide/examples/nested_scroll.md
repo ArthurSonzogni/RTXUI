@@ -15,5 +15,6 @@ An inner container consumes wheel events until it reaches its end, then the even
 ---
 
 * Source file: [`example/nested_scroll.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/nested_scroll.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_nested_scroll.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/scrolling)
 * [← Back to Examples Index](/guide/examples)

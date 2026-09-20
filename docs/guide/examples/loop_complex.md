@@ -17,5 +17,6 @@ Try it: toggle a task to see only that row re-render.
 ---
 
 * Source file: [`example/loop_complex.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/loop_complex.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_loop_complex.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/loops)
 * [← Back to Examples Index](/guide/examples)

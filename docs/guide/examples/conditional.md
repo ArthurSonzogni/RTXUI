@@ -17,5 +17,6 @@ Try it: switch tabs to swap the rendered branch.
 ---
 
 * Source file: [`example/conditional.cpp`](https://github.com/ArthurSonzogni/RTXUI/blob/main/example/conditional.cpp)
+* Standalone terminal: <a href="/RTXUI/terminal.html?src=%2FRTXUI%2Fwasm%2Frtxui_example_conditional.js&fullscreen=1" target="_blank" rel="noopener noreferrer">⛶ Open Fullscreen</a>
 * Guide: [Relevant Documentation](/guide/conditionals)
 * [← Back to Examples Index](/guide/examples)
