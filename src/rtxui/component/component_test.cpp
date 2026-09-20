@@ -2261,6 +2261,49 @@ TEST_CASE("Textarea Component Highlight Current Line Works With Line Numbers",
 }
 
 TEST_CASE(
+    "Textarea Component Highlight Current Line Stays Aligned When Lines Wrap",
+    "[component][textarea][highlight_current_line][wrap]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+
+  // "line 1 " followed by 35 'a's wraps across 2 rows in a 37-cell content box.
+  // Then "\nline 2" is the second logical line (third visual row).
+  std::string text = "line 1 " + std::string(35, 'a') + "\nline 2";
+  container->my_text = text;
+
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->linenumbers = "true";
+  textarea_ptr->line_wrap = "subline";
+  textarea_ptr->highlight_current_line = true;
+  // Place cursor in "line 2"
+  textarea_ptr->cursor_pos = static_cast<int>(text.find("line 2"));
+  textarea_ptr->Digest();
+
+  REQUIRE(textarea_ptr->content_line_highlights.size() == 3);
+  // Row 0 and 1 belong to logical line 1 (the first row and its wrapped
+  // continuation).
+  CHECK(textarea_ptr->content_line_highlights[0].css_class == "line");
+  CHECK(textarea_ptr->content_line_highlights[1].css_class == "line");
+  // Row 2 is the active row containing "line 2".
+  CHECK(textarea_ptr->content_line_highlights[2].css_class ==
+        "line current-line");
+
+  // Gutter lines should also align across all 3 visual rows.
+  REQUIRE(textarea_ptr->gutter_lines.size() == 3);
+  CHECK(textarea_ptr->gutter_lines[0].css_class == "line-number");
+  CHECK(textarea_ptr->gutter_lines[1].css_class == "line-number wrapped");
+  CHECK(textarea_ptr->gutter_lines[2].css_class == "line-number active");
+}
+
+TEST_CASE(
     "Textarea Component Selection/Cursor/Placeholder Expose Part "
     "Attributes For External ::part() Styling",
     "[component][textarea][part]") {

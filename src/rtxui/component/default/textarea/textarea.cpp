@@ -229,11 +229,8 @@ bool textarea::Digest() {
 
 // Recomputes `show_gutter`/`gutter_width`/`gutter_lines` (from
 // `linenumbers`, `line_start`, `line_end`, `line_wrap`) and
-// `content_line_highlights` (from `highlight_current_line`), all derived
-// from `value` and `cursor_pos`. One entry per logical line (not per
-// rendered row: the whole value is always rendered, there's no
-// viewport-based windowing), so both collections stay in sync with the
-// content even while scrolled.
+// `content_line_highlights` (from `highlight_current_line`), matching
+// visual rendered rows computed via ComputeRowStarts.
 void textarea::UpdateGutter() {
   show_gutter = !linenumbers.empty();
   gutter_lines.clear();
@@ -246,88 +243,110 @@ void textarea::UpdateGutter() {
   auto graphemes = GetGraphemesList(value);
   int n = static_cast<int>(graphemes.size());
 
-  // Split into logical lines, tracking each line's display width (for the
-  // "subline" wrap estimate below) and which line the cursor sits on.
-  std::vector<int> line_widths;
-  int active_line = 0;
-  int current_width = 0;
-  int line = 0;
+  // Count logical lines and identify which logical line the cursor sits on.
+  std::vector<int> logical_line_starts = {0};
+  int active_logical_line = 0;
   for (int i = 0; i < n; ++i) {
     if (i == cursor_pos) {
-      active_line = line;
+      active_logical_line = static_cast<int>(logical_line_starts.size()) - 1;
     }
     if (IsLineBreak(graphemes[i])) {
-      line_widths.push_back(current_width);
-      current_width = 0;
-      line++;
-    } else {
-      current_width += graphemes[i].width;
+      logical_line_starts.push_back(i + 1);
     }
   }
   if (cursor_pos == n) {
-    active_line = line;
+    active_logical_line = static_cast<int>(logical_line_starts.size()) - 1;
   }
-  line_widths.push_back(current_width);
-  int num_lines = static_cast<int>(line_widths.size());
+  int num_logical_lines = static_cast<int>(logical_line_starts.size());
 
-  if (highlight_current_line) {
-    content_line_highlights.reserve(num_lines);
-    for (int i = 0; i < num_lines; ++i) {
-      content_line_highlights.push_back(
-          {(i == active_line) ? "line current-line" : "line"});
+  std::vector<std::string> labels;
+  if (show_gutter) {
+    labels.resize(num_logical_lines);
+    for (int i = 0; i < num_logical_lines; ++i) {
+      int absolute_number = line_start + i;
+      if (line_end != -1 && absolute_number > line_end) {
+        continue;  // Beyond line_end: blank gutter cell.
+      }
+      int displayed = (relative && i != active_logical_line)
+                          ? std::abs(i - active_logical_line)
+                          : absolute_number;
+      labels[i] = std::to_string(displayed);
+    }
+
+    gutter_width = 1;
+    for (const auto& label : labels) {
+      gutter_width =
+          std::max<int>(gutter_width, static_cast<int>(label.size()));
     }
   }
 
-  if (!show_gutter) {
-    return;
-  }
-
-  // First pass: compute every line's label so the gutter can be sized to
-  // the widest one before padding them all to that width.
-  std::vector<std::string> labels(num_lines);
-  for (int i = 0; i < num_lines; ++i) {
-    int absolute_number = line_start + i;
-    if (line_end != -1 && absolute_number > line_end) {
-      continue;  // Beyond line_end: blank gutter cell.
-    }
-    int displayed = (relative && i != active_line) ? std::abs(i - active_line)
-                                                   : absolute_number;
-    labels[i] = std::to_string(displayed);
-  }
-
-  gutter_width = 1;
-  for (const auto& label : labels) {
-    gutter_width = std::max<int>(gutter_width, static_cast<int>(label.size()));
-  }
-
-  // Wrapped-row estimate for line_wrap="subline": uses the content box's
-  // width from the *previous* frame's layout (same one-frame lag as
-  // KeepCursorVisible above), and sums grapheme widths rather than
-  // replicating the layout engine's actual word-break logic, so this is an
-  // approximation, not a guarantee of exact row alignment.
+  // Determine content width for visual row wrapping calculation.
   int content_width = 0;
-  if (line_wrap == "subline") {
-    if (Element* root = Root()) {
+  if (Element* root = Root()) {
+    if (Element* content_el = root->QuerySelector(".content")) {
+      content_width = content_el->layout_width();
+    }
+    if (content_width <= 0 && root->layout_width() > 0) {
       int border_offset =
           (root->style.border_style != BorderStyle::None) ? 1 : 0;
       content_width = root->layout_width() - border_offset * 2 -
                       root->style.padding.left - root->style.padding.right -
-                      gutter_width - 2;
+                      (show_gutter ? (gutter_width + 2) : 0);
     }
   }
 
-  gutter_lines.reserve(num_lines);
-  for (int i = 0; i < num_lines; ++i) {
-    std::string css_class =
-        (i == active_line) ? "line-number active" : "line-number";
-    gutter_lines.push_back({PadLeft(labels[i], gutter_width), css_class});
+  std::vector<int> row_starts;
+  if (content_width > 0) {
+    row_starts = ComputeRowStarts(graphemes, content_width, false);
+  } else {
+    row_starts = logical_line_starts;
+  }
 
-    if (content_width > 0 && line_widths[i] > content_width) {
-      int wrapped_rows =
-          (line_widths[i] + content_width - 1) / content_width - 1;
-      for (int w = 0; w < wrapped_rows; ++w) {
-        gutter_lines.push_back(
-            {std::string(gutter_width, ' '), "line-number wrapped"});
+  int cursor_row = RowOfIndex(row_starts, cursor_pos);
+
+  if (highlight_current_line) {
+    content_line_highlights.reserve(row_starts.size());
+  }
+  if (show_gutter) {
+    gutter_lines.reserve(row_starts.size());
+  }
+
+  int current_logical_line = 0;
+  for (size_t r = 0; r < row_starts.size(); ++r) {
+    bool is_new_logical_line =
+        (r == 0 ||
+         (row_starts[r] > 0 && IsLineBreak(graphemes[row_starts[r] - 1])));
+    if (r > 0 && is_new_logical_line) {
+      current_logical_line++;
+    }
+
+    if (highlight_current_line) {
+      bool is_current = (static_cast<int>(r) == cursor_row);
+      content_line_highlights.push_back(
+          {is_current ? "line current-line" : "line"});
+    }
+
+    if (show_gutter) {
+      if (line_wrap == "subline") {
+        if (is_new_logical_line) {
+          std::string css_class = (current_logical_line == active_logical_line)
+                                      ? "line-number active"
+                                      : "line-number";
+          gutter_lines.push_back(
+              {PadLeft(labels[current_logical_line], gutter_width), css_class});
+        } else {
+          gutter_lines.push_back(
+              {std::string(gutter_width, ' '), "line-number wrapped"});
+        }
+      } else {
+        // If line_wrap is not "subline", emit one gutter line per logical line.
+        if (is_new_logical_line) {
+          std::string css_class = (current_logical_line == active_logical_line)
+                                      ? "line-number active"
+                                      : "line-number";
+          gutter_lines.push_back(
+              {PadLeft(labels[current_logical_line], gutter_width), css_class});
+        }
       }
     }
   }
