@@ -40,6 +40,7 @@ void textarea::InitReflection() {
   Bind(value);
   Bind(disabled);
   Bind(readonly);
+  Bind(select_on_focus);
   Bind(placeholder);
   Bind(placeholder_text);
   Bind(maxlength);

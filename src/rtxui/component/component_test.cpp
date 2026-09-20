@@ -2605,7 +2605,7 @@ TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
   tab_kb.special = Event::Keyboard::Special::Tab;
   textarea_ptr->OnEvent(Event(tab_kb));
   textarea_ptr->Digest();
-  CHECK(textarea_ptr->value == "ab\n\t");
+  CHECK(textarea_ptr->value == "ab\n  ");
 
   // Two separate undo steps: first the tab, then the newline.
   textarea_ptr->OnEvent(Event::CtrlZ());
@@ -10405,4 +10405,475 @@ TEST_CASE("Playground button hover and active styling test",
   app->ResolveTargetStyles();
   CHECK(btn->target_style.background_color == Color::RGB(255, 0, 0));
   CHECK(btn->target_style.border_color_top == Color::RGB(255, 0, 0));
+}
+
+TEST_CASE("TextInputBase Ctrl+Home and Ctrl+End",
+          "[component][input][navigation]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "line 1\nline 2\nline 3";
+  textarea_ptr->cursor_pos = 10;
+  textarea_el->set_focused(true);
+  textarea_ptr->Digest();
+
+  // Ctrl+Home moves to 0
+  Event::Keyboard kb;
+  kb.special = Event::Keyboard::Special::Home;
+  kb.modifier.ctrl = true;
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos == 0);
+  CHECK(textarea_ptr->selection_start == -1);
+
+  // Ctrl+End moves to end
+  kb.special = Event::Keyboard::Special::End;
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos ==
+        static_cast<int>(textarea_ptr->value.size()));
+  CHECK(textarea_ptr->selection_start == -1);
+
+  // Shift+Ctrl+Home selects to 0
+  kb.special = Event::Keyboard::Special::Home;
+  kb.modifier.shift = true;
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos == 0);
+  CHECK(textarea_ptr->selection_start ==
+        static_cast<int>(textarea_ptr->value.size()));
+
+  // Shift+Ctrl+End expands selection to end
+  kb.special = Event::Keyboard::Special::End;
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos ==
+        static_cast<int>(textarea_ptr->value.size()));
+  CHECK(textarea_ptr->selection_start ==
+        static_cast<int>(textarea_ptr->value.size()));
+}
+
+TEST_CASE("TextInputBase Smart Home", "[component][input][navigation]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "    code here";
+  textarea_ptr->cursor_pos = 8;  // inside "code"
+  textarea_el->set_focused(true);
+  textarea_ptr->Digest();
+
+  Event::Keyboard kb;
+  kb.special = Event::Keyboard::Special::Home;
+
+  // First Home jumps to first non-whitespace (index 4)
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos == 4);
+
+  // Second Home toggles to column 0 (index 0)
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos == 0);
+
+  // Third Home jumps back to index 4
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos == 4);
+
+  // Shift+Home from index 8 selects to 4, then 0
+  textarea_ptr->cursor_pos = 8;
+  textarea_ptr->selection_start = -1;
+  kb.modifier.shift = true;
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos == 4);
+  CHECK(textarea_ptr->selection_start == 8);
+
+  textarea_ptr->OnEvent(Event(kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->cursor_pos == 0);
+  CHECK(textarea_ptr->selection_start == 8);
+}
+
+TEST_CASE("Textarea PageUp and PageDown", "[component][textarea][navigation]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  std::string content;
+  for (int i = 0; i < 30; ++i) {
+    content += "line " + std::to_string(i) + "\n";
+  }
+  textarea_ptr->value = content;
+  textarea_ptr->cursor_pos = 0;
+  textarea_el->set_focused(true);
+  textarea_ptr->Digest();
+
+  Event::Keyboard page_down;
+  page_down.special = Event::Keyboard::Special::PageDown;
+  textarea_ptr->OnEvent(Event(page_down));
+  textarea_ptr->Digest();
+
+  // PageDown jumped down by default page size (10 lines of "line X\n", 70
+  // chars)
+  CHECK(textarea_ptr->cursor_pos == 70);
+
+  Event::Keyboard page_up;
+  page_up.special = Event::Keyboard::Special::PageUp;
+  textarea_ptr->OnEvent(Event(page_up));
+  textarea_ptr->Digest();
+
+  CHECK(textarea_ptr->cursor_pos == 0);
+
+  // Shift+PageDown creates selection across pages
+  page_down.modifier.shift = true;
+  textarea_ptr->OnEvent(Event(page_down));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->selection_start == 0);
+  CHECK(textarea_ptr->cursor_pos == 70);
+}
+
+TEST_CASE("Textarea Block Indent and Outdent",
+          "[component][textarea][indent]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "alpha\nbeta\ngamma";
+  textarea_el->set_focused(true);
+
+  // Select alpha and beta
+  textarea_ptr->selection_start = 0;
+  textarea_ptr->cursor_pos = 10;  // into beta
+  textarea_ptr->Digest();
+
+  Event::Keyboard tab_kb;
+  tab_kb.special = Event::Keyboard::Special::Tab;
+  textarea_ptr->OnEvent(Event(tab_kb));
+  textarea_ptr->Digest();
+
+  CHECK(textarea_ptr->value == "  alpha\n  beta\ngamma");
+
+  // Outdent both lines
+  tab_kb.modifier.shift = true;
+  textarea_ptr->OnEvent(Event(tab_kb));
+  textarea_ptr->Digest();
+
+  CHECK(textarea_ptr->value == "alpha\nbeta\ngamma");
+
+  // Outdent 4-space indent: first shift+tab removes 2 spaces, second removes
+  // remaining 2
+  textarea_ptr->value = "    alpha\n    beta";
+  textarea_ptr->selection_start = 0;
+  textarea_ptr->cursor_pos = static_cast<int>(textarea_ptr->value.size());
+  textarea_ptr->Digest();
+
+  textarea_ptr->OnEvent(Event(tab_kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "  alpha\n  beta");
+
+  textarea_ptr->OnEvent(Event(tab_kb));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "alpha\nbeta");
+}
+
+TEST_CASE("Textarea Move Line Up and Down",
+          "[component][textarea][move_line]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "line 1\nline 2\nline 3";
+  textarea_el->set_focused(true);
+
+  // Place cursor in line 2
+  textarea_ptr->cursor_pos = 8;
+  textarea_ptr->Digest();
+
+  Event::Keyboard alt_up;
+  alt_up.special = Event::Keyboard::Special::ArrowUp;
+  alt_up.modifier.alt = true;
+
+  // Move line 2 up (swaps with line 1)
+  textarea_ptr->OnEvent(Event(alt_up));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "line 2\nline 1\nline 3");
+
+  // Move up again at top line is a no-op
+  textarea_ptr->OnEvent(Event(alt_up));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "line 2\nline 1\nline 3");
+
+  // Move line 2 down (swaps with line 1)
+  Event::Keyboard alt_down;
+  alt_down.special = Event::Keyboard::Special::ArrowDown;
+  alt_down.modifier.alt = true;
+
+  textarea_ptr->OnEvent(Event(alt_down));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "line 1\nline 2\nline 3");
+
+  // Move line 2 down again (swaps with line 3)
+  textarea_ptr->OnEvent(Event(alt_down));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "line 1\nline 3\nline 2");
+
+  // Move down again at bottom is a no-op
+  textarea_ptr->OnEvent(Event(alt_down));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "line 1\nline 3\nline 2");
+}
+
+TEST_CASE("TextInputBase Duplicate Line and Selection",
+          "[component][input][duplicate]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "hello\nworld";
+  textarea_el->set_focused(true);
+
+  // Duplicate line without selection via Ctrl+D
+  textarea_ptr->cursor_pos = 2;
+  textarea_ptr->Digest();
+
+  Event::Keyboard ctrl_d;
+  ctrl_d.codepoint = 'd';
+  ctrl_d.modifier.ctrl = true;
+
+  textarea_ptr->OnEvent(Event(ctrl_d));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "hello\nhello\nworld");
+
+  // Duplicate selection via Shift+Alt+Down
+  textarea_ptr->selection_start = 0;
+  textarea_ptr->cursor_pos = 5;  // "hello"
+  textarea_ptr->Digest();
+
+  Event::Keyboard shift_alt_down;
+  shift_alt_down.special = Event::Keyboard::Special::ArrowDown;
+  shift_alt_down.modifier.shift = true;
+  shift_alt_down.modifier.alt = true;
+
+  textarea_ptr->OnEvent(Event(shift_alt_down));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "hellohello\nhello\nworld");
+  CHECK(textarea_ptr->selection_start == 5);
+  CHECK(textarea_ptr->cursor_pos == 10);
+}
+
+TEST_CASE("TextInputBase Delete Entire Line",
+          "[component][input][delete_line]") {
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  container->Mount();
+  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(textarea_el != nullptr);
+  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  REQUIRE(textarea_ptr != nullptr);
+
+  textarea_ptr->value = "line 1\nline 2\nline 3";
+  textarea_el->set_focused(true);
+  textarea_ptr->cursor_pos = 8;  // in line 2
+  textarea_ptr->Digest();
+
+  Event::Keyboard ctrl_shift_k;
+  ctrl_shift_k.codepoint = 'k';
+  ctrl_shift_k.modifier.ctrl = true;
+  ctrl_shift_k.modifier.shift = true;
+
+  textarea_ptr->OnEvent(Event(ctrl_shift_k));
+  textarea_ptr->Digest();
+  CHECK(textarea_ptr->value == "line 1\nline 3");
+
+  // In single-line input: clears entire input
+  auto input_cont = rtxui::Ref<InputTestComponent>::New();
+  input_cont->Mount();
+  auto* input_el = input_cont->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "clear me";
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  input_ptr->OnEvent(Event(ctrl_shift_k));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "");
+  CHECK(input_ptr->cursor_pos == 0);
+}
+
+TEST_CASE("TextInputBase Auto-wrap Selection With Delimiters",
+          "[component][input][wrap]") {
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  container->Mount();
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "hello world";
+  input_ptr->selection_start = 6;
+  input_ptr->cursor_pos = 11;  // "world"
+  input_el->set_focused(true);
+  input_ptr->Digest();
+
+  // Wrap with ()
+  input_ptr->OnEvent(Event::Keyboard::From('('));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello (world)");
+  CHECK(input_ptr->selection_start == 7);
+  CHECK(input_ptr->cursor_pos == 12);
+
+  // Wrap again with []
+  input_ptr->OnEvent(Event::Keyboard::From('['));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello ([world])");
+  CHECK(input_ptr->selection_start == 8);
+  CHECK(input_ptr->cursor_pos == 13);
+
+  // Wrap again with quotes
+  input_ptr->OnEvent(Event::Keyboard::From('"'));
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello ([\"world\"])");
+
+  // Undo un-wraps
+  input_ptr->OnEvent(Event::CtrlZ());
+  input_ptr->Digest();
+  CHECK(input_ptr->value == "hello ([world])");
+}
+
+TEST_CASE("TextInputBase Select On Focus",
+          "[component][input][select_on_focus]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<InputTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* input_el = container->Root()->QuerySelector("input");
+  REQUIRE(input_el != nullptr);
+  auto* input_ptr = dynamic_cast<rtxui::input*>(
+      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  REQUIRE(input_ptr != nullptr);
+
+  input_ptr->value = "quick test";
+  input_ptr->select_on_focus = true;
+  input_ptr->Digest();
+  screen.Draw();
+
+  CHECK(input_ptr->selection_start == -1);
+
+  // Focus the input
+  input_el->set_focused(true);
+  input_ptr->Digest();
+  screen.Draw();
+
+  CHECK(input_ptr->selection_start == 0);
+  CHECK(input_ptr->cursor_pos == 10);
+
+  // Click on already-focused input does not re-select all
+  int x_pos = input_el->absolute_x() + 1 + 2 + 1;
+  Event::Mouse mouse;
+  mouse.button = Event::Mouse::Button::Left;
+  mouse.x = x_pos;
+  mouse.y = input_el->absolute_y() + 1;
+  mouse.motion = Event::Mouse::Motion::Pressed;
+  screen.Dispatch(Event(mouse));
+  mouse.motion = Event::Mouse::Motion::Released;
+  screen.Dispatch(Event(mouse));
+  screen.Draw();
+
+  CHECK(input_ptr->selection_start == -1);
+}
+
+TEST_CASE("Textarea Indentation Uses Spaces And Mouse Click Matches",
+          "[component][textarea][indent]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  auto container = rtxui::Ref<TextareaTestComponent>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  auto* ta_el = container->Root()->QuerySelector("textarea");
+  REQUIRE(ta_el != nullptr);
+  auto* ta_ptr = dynamic_cast<rtxui::textarea*>(
+      const_cast<rtxui::ComponentBase*>(ta_el->component()));
+  REQUIRE(ta_ptr != nullptr);
+
+  auto* content_el = ta_el->QuerySelector(".content");
+  REQUIRE(content_el != nullptr);
+
+  ta_el->set_focused(true);
+  ta_ptr->value = "hello";
+  ta_ptr->cursor_pos = 0;
+  ta_ptr->selection_start = -1;
+  ta_ptr->Digest();
+  screen.Draw();
+
+  // Press Tab: should insert 2 spaces
+  Event::Keyboard tab_kb;
+  tab_kb.special = Event::Keyboard::Special::Tab;
+  ta_ptr->OnEvent(Event(tab_kb));
+  ta_ptr->Digest();
+  screen.Draw();
+
+  CHECK(ta_ptr->value == "  hello");
+  CHECK(ta_ptr->cursor_pos == 2);
+
+  // Mouse click at column 0 (first space)
+  auto click_at = [&](int col) {
+    Event::Mouse mouse;
+    mouse.button = Event::Mouse::Button::Left;
+    mouse.x = content_el->absolute_x() + 1 + col;
+    mouse.y = content_el->absolute_y() + 1;
+    mouse.motion = Event::Mouse::Motion::Pressed;
+    screen.Dispatch(Event(mouse));
+    mouse.motion = Event::Mouse::Motion::Released;
+    screen.Dispatch(Event(mouse));
+    ta_ptr->Digest();
+    screen.Draw();
+  };
+
+  click_at(0);
+  CHECK(ta_ptr->cursor_pos == 0);
+
+  click_at(1);
+  CHECK(ta_ptr->cursor_pos == 1);
+
+  click_at(2);
+  CHECK(ta_ptr->cursor_pos == 2);
+
+  click_at(3);
+  CHECK(ta_ptr->cursor_pos == 3);
+
+  click_at(7);
+  CHECK(ta_ptr->cursor_pos == 7);
 }
