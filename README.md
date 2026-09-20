@@ -53,10 +53,29 @@ class CounterApp : public rtxui::Component<CounterApp> {
       <button onclick="Increment">Increment</button>
     </div>
     <style>
-      .card { border: round; border-color: cyan; padding: 1; }
-      h1 { color: yellow; }
-      button { border: solid; padding: 0 1; }
-      button:hover, button:focus { border-color: green; }
+      .card {
+        border: round;
+        border-color: cyan;
+        padding: 1 2;
+      }
+
+      h1 {
+        color: yellow;
+        margin-bottom: 1;
+      }
+
+      button {
+        border: solid;
+        border-color: gray;
+        padding: 0 1;
+        transition: all 0.2s ease;
+      }
+
+      button:hover,
+      button:focus {
+        border-color: green;
+        color: green;
+      }
     </style>
   )html";
 
