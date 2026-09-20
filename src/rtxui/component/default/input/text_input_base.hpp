@@ -14,6 +14,11 @@
 
 namespace rtxui {
 
+std::vector<int> ComputeRowStarts(const std::vector<Grapheme>& graphemes,
+                                  int content_width,
+                                  bool overflow_wrap_normal = false);
+int RowOfIndex(const std::vector<int>& row_starts, int pos);
+
 class TextInputBase {
  public:
   std::string value;

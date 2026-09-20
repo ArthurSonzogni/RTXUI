@@ -19,8 +19,9 @@ constexpr std::string_view kDefaultCode = R"html(
 
 <h1>RTXUI Playground</h1>
 <p>
-  Edit the HTML &amp; CSS on the left to see instant updates.
-  Hover over the button below to see a CSS transition in action.
+  Edit the HTML &amp; CSS on the left to see
+  instant updates. Hover over the button
+  below to see a CSS transition in action.
 </p>
 
 <button>Click me</button>
@@ -98,6 +99,7 @@ class Playground : public Component<Playground> {
           class="editor"
           value="{code}"
           linenumbers="absolute"
+          line_wrap="subline"
           highlight_current_line="true"
         />
         <div class="status {status_class}">{status}</div>
