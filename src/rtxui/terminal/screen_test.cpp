@@ -284,6 +284,57 @@ TEST_CASE("Screen.PasteAppliesAsOneRedrawNotOnePerCharacter",
   CHECK(redraw_count == 1);
 }
 
+TEST_CASE("Screen.WheelBurstAppliesAsOneRedrawNotOnePerTick",
+          "[terminal][scroll][regression]") {
+  // Regression: the wheel-scroll path called Draw() directly instead of
+  // going through the burst batching, so a fast scroll delivering several
+  // wheel ticks in one read painted and wrote a full frame per tick.
+  class WheelBurstComponent : public Component<WheelBurstComponent> {
+   public:
+    void InitReflection() override {
+      Import<rtxui::div>();
+      Component<WheelBurstComponent>::InitReflection();
+    }
+    std::string_view view = R"html(
+      <div id="scrollable">
+        <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+        <div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
+      </div>
+      <style>
+        #scrollable { display: block; height: 4; overflow-y: scroll; }
+      </style>
+    )html";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<WheelBurstComponent>::New();
+  Screen screen(component, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+
+  auto* scroll_element = component->Root()->QuerySelector("#scrollable");
+  REQUIRE(scroll_element != nullptr);
+
+  device->ClearOutput();
+  // Three SGR wheel-down ticks at (2, 2), all available in a single read.
+  std::string tick = "\x1b[<65;3;3M";
+  device->PushInput(tick + tick + tick);
+  screen.Step();
+
+  CHECK(scroll_element->scroll_y() == 3);
+
+  std::string output = device->GetOutput();
+  int redraw_count = 0;
+  for (std::string_view marker : {"\x1B[?25h", "\x1B[?25l"}) {
+    size_t pos = 0;
+    while ((pos = output.find(marker, pos)) != std::string::npos) {
+      ++redraw_count;
+      pos += marker.size();
+    }
+  }
+  CHECK(redraw_count == 1);
+}
+
 namespace {
 // #hide removes #banner, which moves #bump up a row. Clicking both in one
 // burst is what exposes a stale fragment tree: the second click is hit-tested
