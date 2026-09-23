@@ -967,6 +967,7 @@ class ScreenImpl {
   void Step();
   void Dispatch(Event event);
   void Draw();
+  void RequestDraw();
   void UpdateLayout();
 
   void UpdateSize();
@@ -994,12 +995,16 @@ class ScreenImpl {
   bool has_drawn_ = false;
   bool running_ = true;
   // Set while draining a burst of already-queued events (e.g. a paste,
-  // which synthesizes one keyboard event per character all at once) so
-  // DigestAndDraw() only actually redraws once, after the last of them --
-  // otherwise each character would trigger its own full layout/paint/write
-  // cycle, visibly "typing" the paste out one character at a time instead
+  // which synthesizes one keyboard event per character all at once, or a
+  // fast scroll delivering several wheel ticks) so RequestDraw() only
+  // updates the layout and Step() paints once after the last of them --
+  // otherwise each event would trigger its own full layout/paint/write
+  // cycle, visibly "typing" a paste out one character at a time instead
   // of applying it immediately.
   bool suppress_draw_ = false;
+  // A RequestDraw() was deferred by suppress_draw_ and no Draw() has run
+  // since.
+  bool draw_pending_ = false;
   std::shared_ptr<PhysicalFragment> root_fragment_;
   std::shared_ptr<LayoutBox> root_box_;
   std::unique_ptr<Texture> last_texture_;
@@ -1180,15 +1185,18 @@ void ScreenImpl::Step() {
       for (int i = 0; i < bytes_read; ++i) {
         parser_->Add(buffer[i]);
       }
-      // Several events commonly complete together (a burst of mouse motion,
-      // or the last byte of a paste's end marker synthesizing one keyboard
-      // event per pasted character): suppress intermediate draws so the
-      // whole batch applies as a single redraw.
+      // Several events commonly complete together (a burst of mouse motion
+      // or wheel ticks, or the last byte of a paste's end marker
+      // synthesizing one keyboard event per pasted character): suppress
+      // the per-event draws so the whole batch applies as a single redraw.
+      suppress_draw_ = true;
       while (auto event = parser_->GetEvent()) {
-        suppress_draw_ = parser_->HasPendingEvents();
         HandleEvent(*event);
       }
       suppress_draw_ = false;
+      if (draw_pending_) {
+        Draw();
+      }
     } else if (bytes_read == 0) {
       running_ = false;
     } else {
@@ -1499,12 +1507,13 @@ void ScreenImpl::HandleEvent(Event event) {
       // gives up is the case it was never for: a burst is mouse motion, which
       // changes hover state and no tree.
       if (suppress_draw_) {
-        // Same rule as DigestAndDraw: the paint can wait for the end of the
+        // Same rule as RequestDraw: the paint can wait for the end of the
         // burst, the layout cannot, or the rest of the burst hit-tests against
         // fragments pointing at destroyed elements.
         if (tree_changed) {
           UpdateLayout();
         }
+        draw_pending_ = true;
       } else {
         Draw();
       }
@@ -1653,7 +1662,7 @@ void ScreenImpl::HandleEvent(Event event) {
 
               // Update the styles and redraw since active states changed
               component_->ResolveTargetStyles();
-              Draw();
+              RequestDraw();
             } else if (!is_on_thumb &&
                        mouse.button == Event::Mouse::Button::Left) {
               // Track click: Page Up/Down or Page Left/Right
@@ -1760,7 +1769,7 @@ void ScreenImpl::HandleEvent(Event event) {
                 }
                 frag.reset();      // Release before Draw().
                 frag_opt.reset();  // Release before Draw().
-                Draw();
+                RequestDraw();
               }
             }
           }
@@ -1789,7 +1798,7 @@ void ScreenImpl::HandleEvent(Event event) {
             // click's own row/column math is about to read.
             if (focus_changed) {
               component_->ResolveTargetStyles();
-              Draw();
+              RequestDraw();
             }
           }
           std::vector<std::string> attr_keys;
@@ -1818,7 +1827,7 @@ void ScreenImpl::HandleEvent(Event event) {
                   }
                   if (target_el) {
                     ScrollIntoView(target_el);
-                    Draw();
+                    RequestDraw();
                     handled = true;
                     break;
                   }
@@ -1950,7 +1959,7 @@ void ScreenImpl::HandleEvent(Event event) {
           } else {
             action.element->set_scroll_x(action.new_value, false);
           }
-          Draw();
+          RequestDraw();
           return;
         }
       }
@@ -2041,7 +2050,7 @@ void ScreenImpl::HandleEvent(Event event) {
       focused_element_ = navigable[next_idx].element;
       component_->ResolveTargetStyles();
       ScrollIntoView(focused_element_);
-      Draw();
+      RequestDraw();
       return;
     }
   }
@@ -2087,7 +2096,7 @@ void ScreenImpl::HandleEvent(Event event) {
               int new_x = std::clamp(curr_x + delta, 0, max_scroll);
               if (new_x != curr_x) {
                 curr->set_scroll_x(new_x, false);
-                Draw();
+                RequestDraw();
                 return;
               }
             }
@@ -2123,7 +2132,7 @@ void ScreenImpl::HandleEvent(Event event) {
               }
               if (new_y != curr_y) {
                 curr->set_scroll_y(new_y, false);
-                Draw();
+                RequestDraw();
                 return;
               }
             }
@@ -2147,7 +2156,7 @@ void ScreenImpl::HandleEvent(Event event) {
           int new_x = std::clamp(curr_x + delta, 0, max_scroll);
           if (new_x != curr_x) {
             el->set_scroll_x(new_x, false);
-            Draw();
+            RequestDraw();
             return;
           }
         }
@@ -2181,7 +2190,7 @@ void ScreenImpl::HandleEvent(Event event) {
           }
           if (new_y != curr_y) {
             el->set_scroll_y(new_y, false);
-            Draw();
+            RequestDraw();
             return;
           }
         }
@@ -2255,6 +2264,7 @@ void ScreenImpl::UpdateLayout() {
 }
 
 void ScreenImpl::Draw() {
+  draw_pending_ = false;
   UpdateLayout();
 
   auto root = component_->Root();
@@ -2365,11 +2375,16 @@ void ScreenImpl::DigestAndDraw() {
   if (!component_->Digest()) {
     return;
   }
+  RequestDraw();
+}
+
+void ScreenImpl::RequestDraw() {
   // Batching still skips the paint and the terminal write -- a pasted line
   // must not repaint once per character -- but never the layout, because the
   // next event of the burst is hit-tested against root_fragment_.
   if (suppress_draw_) {
     UpdateLayout();
+    draw_pending_ = true;
   } else {
     Draw();
   }
@@ -2674,7 +2689,7 @@ bool ScreenImpl::SpatialNavigate(Event event) {
     focused_element_ = best->element;
     component_->ResolveTargetStyles();
     ScrollIntoView(focused_element_);
-    Draw();
+    RequestDraw();
     return true;
   }
 

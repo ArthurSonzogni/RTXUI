@@ -191,18 +191,40 @@
         window.rtxui_lines = xtermInstance.rows;
         window.rtxui_input_queue = [];
 
+        // Waking the WASM loop resumes it synchronously, and it draws a frame
+        // before returning. Waking it once per byte (or per event) meant one
+        // full frame per wheel tick or mouse motion, all inside the input
+        // handler, so a fast scroll queued up faster than it drew. Instead,
+        // queue the bytes and wake it at most once per animation frame: it
+        // then drains everything queued so far and draws it as one frame.
+        // The timer is a fallback for when animation frames are throttled
+        // (hidden tab, offscreen iframe), so input is never left stuck.
+        let wakeScheduled = false;
+        const wakeOnNextFrame = () => {
+          if (wakeScheduled) return;
+          wakeScheduled = true;
+          let timer = null;
+          const wake = () => {
+            if (!wakeScheduled) return;
+            wakeScheduled = false;
+            clearTimeout(timer);
+            const cb = window.rtxui_on_input;
+            const queue = window.rtxui_input_queue;
+            if (cb && queue.length > 0) {
+              cb(queue.shift());
+            }
+          };
+          requestAnimationFrame(wake);
+          timer = setTimeout(wake, 50);
+        };
+
         const textEncoder = new TextEncoder();
         xtermInstance.onData((data) => {
           const bytes = textEncoder.encode(data);
           for (let i = 0; i < bytes.length; ++i) {
-            const byte = bytes[i];
-            if (window.rtxui_on_input) {
-              const cb = window.rtxui_on_input;
-              cb(byte);
-            } else {
-              window.rtxui_input_queue.push(byte);
-            }
+            window.rtxui_input_queue.push(bytes[i]);
           }
+          wakeOnNextFrame();
         });
 
         window.rtxui_on_output = (str) => {
