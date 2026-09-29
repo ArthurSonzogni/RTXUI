@@ -147,6 +147,14 @@ Element* ComponentBase::Root() const {
   return root_.get();
 }
 
+ElementHandle ComponentBase::RootElement() const {
+  return ElementHandle(root_.get());
+}
+
+ElementHandle ComponentBase::QueryElement(std::string_view selector) const {
+  return RootElement().QuerySelector(selector);
+}
+
 ComponentBase* ComponentBase::QueryComponent(std::string_view selector) {
   Element* root = root_.get();
   if (!root) {

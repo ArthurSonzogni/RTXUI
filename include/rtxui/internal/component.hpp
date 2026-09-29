@@ -27,6 +27,7 @@
 
 #include <rtxui/rtxui_export.hpp>
 
+#include "rtxui/element.hpp"
 #include "rtxui/internal/class_name.hpp"
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/import.hpp"
@@ -151,13 +152,16 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
 
   Element* Root() const;
 
+  /// The root of this component's rendered DOM, or a null handle before
+  /// Mount(). See ElementHandle.
+  ElementHandle RootElement() const;
+
+  /// The first element in this component's DOM matching `selector` (`#id`,
+  /// `.class` or a tag), or a null handle.
+  ElementHandle QueryElement(std::string_view selector) const;
+
   /// Finds the component rendered at `selector` (`#id`, `.class` or a tag),
   /// or nullptr.
-  ///
-  /// This exists so an application can reach a child component without the
-  /// Element definition: Element carries the whole computed style and layout
-  /// state, and exposing it would freeze all of that into the ABI. `Element`
-  /// stays an opaque forward declaration here.
   ComponentBase* QueryComponent(std::string_view selector);
   Ref<Element> Slot(std::string_view name);
   const std::map<std::string, Ref<Element>, std::less<>>& slots() const {

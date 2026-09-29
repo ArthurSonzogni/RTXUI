@@ -49,7 +49,7 @@ Every screen update follows an exact 6-stage sequential pipeline:
 
 ## 2. Reference Handle: `rtxui::Ref<T>`
 
-Intrusive reference-counted pointer for `rtxui::ComponentBase` and `rtxui::Element` instances.
+Intrusive reference-counted pointer for `rtxui::ComponentBase` instances.
 
 ```cpp
 template <typename T>
@@ -117,49 +117,43 @@ Bindings are registered during component initialization (`InitReflection()` or c
 | :--- | :--- |
 | `virtual bool OnEvent(Event event)` | Intercepts keyboard/mouse input before DOM dispatch. Return `true` to consume the event. |
 | `bool Digest()` | Compares bound members against snapshots; reconciles template DOM if differences are detected. Returns `true` if state changed. |
-| `Element* Root() const noexcept` | Returns the root `Element` of the expanded component template. |
-| `Ref<Element> Slot(std::string_view name)` | Accesses the slot anchor with the given identifier (`""` for default slot). |
+| `ElementHandle RootElement() const` | Handle to the root element of the expanded component template (null before mounting). |
+| `ElementHandle QueryElement(std::string_view selector) const` | Handle to the first element matching `#id`, `.class`, or `tag`, or a null handle. |
+| `ComponentBase* QueryComponent(std::string_view selector)` | The component rendered at `selector`, or `nullptr`. |
 | `void CaptureMouse() noexcept` | Routes all subsequent mouse events exclusively to this component until released. |
 | `void ReleaseMouse() noexcept` | Restores standard mouse hit-testing. |
 | `void EnableHotReload()` | Watches the defining source file via `std::source_location` and dynamically reloads the template on disk modification. |
 
 ---
 
-## 4. DOM Node: `rtxui::Element`
+## 4. DOM Access: `rtxui::ElementHandle`
 
-Represents a node in the rendered element tree.
+A weak, nullable handle to an element of the rendered tree, declared in `<rtxui/element.hpp>`. The element itself is internal; the handle is one pointer with out-of-line methods, so the element's layout never reaches the ABI.
+
+- **Null-safe**: a query that matched nothing gives a null handle. On a null handle, getters return empty values and setters do nothing.
+- **Weak**: a handle does not keep its element alive. Once a re-render destroys the element, the handle becomes null instead of dangling.
+- **Template-shaped**: `<slot>` wrappers are transparent and text nodes are not children, so the tree matches the template as written.
 
 ### 4.1 Hierarchy & Traversal
 | Method Signature | Description |
 | :--- | :--- |
-| `Element* Parent() const noexcept` | Pointer to parent element, or `nullptr` at root. |
-| `size_t ChildCount() const noexcept` | Count of direct child nodes. |
-| `Element* ChildAt(size_t index) const` | Accesses child node by 0-based index. |
-| `const std::vector<Ref<Element>>& children() const` | Read-only view of child element vector. |
-| `Element* QuerySelector(std::string_view selector)` | First descendant matching `#id`, `.class`, or `tag`. |
-| `void Visit(const std::function<void(Element&)>& visitor)` | Pre-order traversal over element subtree. |
+| `explicit operator bool() const` | `false` for a null handle. |
+| `ElementHandle QuerySelector(std::string_view selector) const` | First descendant matching `#id`, `.class`, or `tag`. |
+| `ElementHandle Parent() const` | Parent element, or a null handle at the root. |
+| `size_t ChildCount() const` | Number of child elements. |
+| `ElementHandle ChildAt(size_t index) const` | Child element by 0-based index, or a null handle when out of range. |
 
-### 4.2 Attributes & State
+### 4.2 Content
 | Method Signature | Description |
 | :--- | :--- |
-| `const std::string* GetAttribute(const std::string& name) const` | Retrieves parsed attribute value, or `nullptr` if absent. |
-| `bool focused() const noexcept` | `true` if element holds active keyboard focus. |
-| `bool hovered() const noexcept` | `true` if mouse pointer coordinates intersect element bounds. |
-| `bool active() const noexcept` | `true` if element is being pressed by mouse button or spacebar. |
-| `bool checked() const noexcept` | `true` if toggle element (`checkbox`, `radio`) is checked. |
-| `bool disabled() const noexcept` | `true` if element interaction is disabled. |
+| `std::string tag() const` | Tag name, e.g. `"div"`. |
+| `std::optional<std::string> GetAttribute(std::string_view name) const` | Attribute value, or `std::nullopt` if absent. |
 
-### 4.3 Geometry & Scrolling
+### 4.3 Scrolling
 | Method Signature | Description |
 | :--- | :--- |
-| `int absolute_x() const noexcept` | Physical screen X coordinate (columns) of top-left boundary. |
-| `int absolute_y() const noexcept` | Physical screen Y coordinate (rows) of top-left boundary. |
-| `int layout_width() const noexcept` | Computed border-box width in character cells. |
-| `int layout_height() const noexcept` | Computed border-box height in character cells. |
-| `int scroll_x() const noexcept` / `int scroll_y() const noexcept` | Current horizontal and vertical scroll offsets in cells. |
-| `void set_scroll_x(int offset, bool smooth = false)` | Sets horizontal scroll position, optionally animated. |
-| `void set_scroll_y(int offset, bool smooth = false)` | Sets vertical scroll position, optionally animated. |
-| `int scroll_width() const noexcept` / `int scroll_height() const noexcept` | Extent of scrollable inner content. |
+| `int scroll_x() const` / `int scroll_y() const` | Current scroll offsets in cells. |
+| `void SetScrollX(int offset, bool smooth = false)` / `void SetScrollY(int offset, bool smooth = false)` | Sets the scroll position, optionally animated. Negative offsets become 0; offsets past the end are clamped by the next layout. |
 
 ---
 
