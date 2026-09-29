@@ -10407,6 +10407,26 @@ TEST_CASE("Playground button hover and active styling test",
   CHECK(btn->target_style.border_color_top == Color::RGB(255, 0, 0));
 }
 
+TEST_CASE("HotReload reports a parse error to the XML error handler",
+          "[component][hot_reload]") {
+  // It used to print straight to std::cerr, which lands in the middle of a
+  // raw-mode frame and cannot be surfaced by the app's own UI.
+  struct HotReloadTarget : public rtxui::Component<HotReloadTarget> {
+    std::string_view view = "<div>ok</div>";
+  };
+  auto app = rtxui::Ref<HotReloadTarget>::New();
+  app->Mount();
+
+  std::optional<rtxui::XmlError> reported_error;
+  rtxui::SetXmlErrorHandler(
+      [&](const rtxui::XmlError& error) { reported_error = error; });
+  app->HotReload("<div>\n  <span>\n</div>");
+  rtxui::SetXmlErrorHandler(nullptr);
+
+  REQUIRE(reported_error.has_value());
+  CHECK_FALSE(reported_error->message.empty());
+}
+
 TEST_CASE("TextInputBase Ctrl+Home and Ctrl+End",
           "[component][input][navigation]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();

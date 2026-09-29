@@ -19,3 +19,15 @@ target_link_libraries(rtxui_transition_benchmark PRIVATE rtxui)
 
 add_executable(rtxui_nesting_benchmark rtxui_nesting_benchmark.cpp)
 target_link_libraries(rtxui_nesting_benchmark PRIVATE rtxui)
+
+# The benchmarks drive internals (TerminalDevice, layout, the XML parser) that
+# the public rtxui target deliberately does not expose.
+foreach(benchmark
+    rtxui_benchmark
+    rtxui_layout_benchmark
+    rtxui_steady_state_benchmark
+    rtxui_xml_benchmark
+    rtxui_transition_benchmark
+    rtxui_nesting_benchmark)
+  target_include_directories(${benchmark} PRIVATE "${PROJECT_SOURCE_DIR}/src")
+endforeach()

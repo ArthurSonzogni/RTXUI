@@ -10,7 +10,6 @@
 #include <rtxui/rtxui.hpp>
 #include <thread>
 
-#include "rtxui/base/task_runner.hpp"
 
 using namespace rtxui;
 
@@ -18,7 +17,7 @@ using namespace rtxui;
 //
 // Callbacks run on the main thread, so blocking inside one freezes rendering.
 // Run the work on a std::thread and post the result back to the main loop
-// with task::TaskRunner, which may be called from other threads.
+// with a TaskPoster, which may be called from other threads.
 class AsyncApp : public Component<AsyncApp> {
  public:
   std::string status = "Idle";
@@ -31,14 +30,14 @@ class AsyncApp : public Component<AsyncApp> {
     status = "Fetching data...";
     is_loading = true;
 
-    auto* main_runner = task::TaskRunner::Current();
-    std::thread([this, main_runner]() {
+    auto post_to_ui = TaskPoster();
+    std::thread([this, post_to_ui]() {
       // Stand-in for real work: a network call, a database query, ...
       std::this_thread::sleep_for(std::chrono::seconds(2));
 
-      // Only the main thread may touch component state. PostTask schedules
+      // Only the main thread may touch component state. The poster schedules
       // this lambda on the UI loop and wakes it.
-      main_runner->PostTask([this]() {
+      post_to_ui([this]() {
         status = "Loaded 42 items.";
         is_loading = false;
       });

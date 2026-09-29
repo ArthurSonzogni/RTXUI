@@ -4,6 +4,7 @@
 #include "rtxui/base/task_runner.hpp"
 
 #include <atomic>
+#include <rtxui/task.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <thread>
@@ -155,6 +156,32 @@ TEST_CASE("TaskRunner::Run drains delayed tasks and returns",
   runner.Run();  // blocks until everything, including the delayed work, ran
 
   CHECK(order == std::vector<int>{1, 2, 3});
+}
+
+TEST_CASE("rtxui::PostTask posts to the current thread's runner",
+          "[task][task_runner]") {
+  task::TaskRunner runner;
+  bool ran = false;
+  rtxui::PostTask([&ran] { ran = true; });
+  CHECK_FALSE(ran);
+  runner.RunUntilNextDelayedTask();
+  CHECK(ran);
+}
+
+TEST_CASE("rtxui::TaskPoster posts from another thread to its creator's runner",
+          "[task][task_runner]") {
+  task::TaskRunner runner;
+  std::atomic<int> wakeups = 0;
+  runner.SetWakeupCallback([&wakeups] { wakeups.fetch_add(1); });
+
+  auto post = rtxui::TaskPoster();
+  std::atomic<bool> ran = false;
+  std::thread([&post, &ran] { post([&ran] { ran = true; }); }).join();
+
+  CHECK(wakeups.load() == 1);
+  CHECK_FALSE(ran.load());
+  runner.RunUntilNextDelayedTask();
+  CHECK(ran.load());
 }
 
 }  // namespace

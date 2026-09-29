@@ -8,5 +8,6 @@
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/refcounted.hpp"
 #include "rtxui/internal/screen.hpp"
+#include "rtxui/task.hpp"
 
 #endif  // RTXUI_RTXUI_HPP_

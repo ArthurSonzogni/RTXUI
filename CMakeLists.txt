@@ -24,6 +24,7 @@ add_library(rtxui_lib
   "include/rtxui/internal/event.hpp"
   "src/rtxui/terminal/screen.cpp"
   "include/rtxui/internal/screen.hpp"
+  "include/rtxui/task.hpp"
   "src/rtxui/component/component.cpp"
   "include/rtxui/internal/component.hpp"
   "src/rtxui/component/default/button/button.cpp"
@@ -140,8 +141,12 @@ generate_export_header(rtxui_lib
 target_include_directories(rtxui_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
   $<INSTALL_INTERFACE:include>
+)
+# Internal headers stay private: were src/ propagated, the examples could
+# include what an installed consumer cannot, and nothing would notice.
+target_include_directories(rtxui_lib PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_include_directories(rtxui_lib SYSTEM INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

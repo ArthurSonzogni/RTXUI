@@ -30,26 +30,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# The headers a consumer can include. Kept in step with the install() rules in
-# CMakeLists.txt -- a header installed but not listed here is untested.
-PUBLIC_HEADERS = [
-    "rtxui/rtxui.hpp",
-    "rtxui/color.hpp",
-    "rtxui/paint/color.hpp",
-    "rtxui/internal/class_name.hpp",
-    "rtxui/internal/component.hpp",
-    "rtxui/internal/event.hpp",
-    "rtxui/internal/import.hpp",
-    "rtxui/internal/refcounted.hpp",
-    "rtxui/internal/screen.hpp",
-]
-
-
-def find_header(relative: str) -> Path | None:
-    candidate = ROOT / "include" / relative
-    if candidate.exists():
-        return candidate
-    return None
+# The headers a consumer can include: everything install() copies from
+# include/. Globbed rather than listed, so a new public header is checked
+# without anyone remembering to add it here.
+PUBLIC_HEADERS = sorted(
+    path.relative_to(ROOT / "include").as_posix()
+    for path in (ROOT / "include").rglob("*.hpp"))
 
 
 def main() -> int:
@@ -71,16 +57,13 @@ def main() -> int:
               "tree first or pass --export-header-dir", file=sys.stderr)
         return 0
 
-    includes = [f"-I{ROOT / 'include'}", f"-I{ROOT / 'src'}", f"-I{export_dir}"]
+    # No -I src: a public header that includes an internal one compiles in
+    # this tree but not against an installed copy, so it must fail here too.
+    includes = [f"-I{ROOT / 'include'}", f"-I{export_dir}"]
     failures = []
 
     with tempfile.TemporaryDirectory() as tmp:
         for relative in PUBLIC_HEADERS:
-            header = find_header(relative)
-            if header is None:
-                failures.append(f"{relative}: not found under include/ or src/")
-                continue
-
             source = Path(tmp, "tu.cpp")
             source.write_text(f'#include <{relative}>\n', encoding="utf-8")
             result = subprocess.run(
