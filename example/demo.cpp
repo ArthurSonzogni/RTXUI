@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/base/task_runner.hpp"
 
 using namespace rtxui;
 
@@ -931,7 +930,7 @@ int main() {
         .text = "Task #" + std::to_string(index + 1),
         .appearing = true,
     });
-    task::TaskRunner::Current()->PostTask([this, index]() {
+    PostTask([this, index]() {
       if (index < todos.size()) {
         todos[index].appearing = false;
         Digest();

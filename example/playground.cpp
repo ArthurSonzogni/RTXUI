@@ -9,7 +9,6 @@
 #include <string>
 
 #include "rtxui/rtxui.hpp"
-#include "rtxui/xml/xml.hpp"
 
 using namespace rtxui;
 
@@ -208,12 +207,8 @@ class Playground : public Component<Playground> {
     }
     last_code_ = code;
 
-    Expected<xml::Nodes, xml::Error> parsed = xml::Parse(code);
-    if (!parsed) {
-      status = "Parse error, line " + std::to_string(parsed.error().line + 1) +
-               ": " + parsed.error().message;
-      return true;
-    }
+    // A parse error reaches the XML error handler installed in main(), which
+    // overwrites this.
     status = "OK";
 
     if (auto* preview =
@@ -234,11 +229,15 @@ int main() {
   // before the user finishes typing a rule) would print straight to stderr
   // and corrupt the running frame -- Screen owns the terminal in raw mode,
   // so that output lands in the middle of the app instead of a scrollback
-  // the user could read anyway. Route it into the status line instead, same
-  // as the XML parse errors already handled in Playground::Digest above.
+  // the user could read anyway. Route it into the status line instead. XML
+  // parse errors from HotReload() get the same treatment.
   SetCssErrorHandler([app](const CssError& error) {
     app->status = "CSS error, line " + std::to_string(error.line + 1) + ": " +
                   error.message;
+  });
+  SetXmlErrorHandler([app](const XmlError& error) {
+    app->status = "Parse error, line " + std::to_string(error.line + 1) +
+                  ": " + error.message;
   });
 
   Screen screen(app);

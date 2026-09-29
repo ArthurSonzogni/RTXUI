@@ -3125,8 +3125,9 @@ void ComponentBase::HotReload(std::string_view new_template) {
 
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
   if (!nodes) {
-    std::cerr << "XML parse error during hot reload: " << nodes.error().message
-              << std::endl;
+    ReportXmlError(
+        {nodes.error().message, nodes.error().line, nodes.error().column},
+        xml_string_);
     return;
   }
   xml_nodes_ = std::move(nodes.value());

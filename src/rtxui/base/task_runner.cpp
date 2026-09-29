@@ -6,6 +6,8 @@
 #include <cassert>
 #include <thread>
 
+#include "rtxui/task.hpp"
+
 namespace task {
 
 static thread_local TaskRunner* current_task_runner = nullptr;  // NOLINT
@@ -105,3 +107,18 @@ auto TaskRunner::Run() -> void {
 }
 
 }  // namespace task
+
+namespace rtxui {
+
+void PostTask(std::function<void()> task) {
+  task::TaskRunner::Current()->PostTask(std::move(task));
+}
+
+auto TaskPoster() -> std::function<void(std::function<void()>)> {
+  task::TaskRunner* runner = task::TaskRunner::Current();
+  return [runner](std::function<void()> task) {
+    runner->PostTask(std::move(task));
+  };
+}
+
+}  // namespace rtxui

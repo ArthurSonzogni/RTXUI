@@ -4,6 +4,7 @@
 
 #include "../example/demo.cpp"
 #include "benchmark_common.hpp"
+#include "rtxui/base/task_runner.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 using namespace rtxui;

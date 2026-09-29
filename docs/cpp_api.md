@@ -8,7 +8,7 @@ This specification defines the public C++ API of RTXUI (`#include <rtxui/rtxui.h
 
 ### 1.1 Concurrency Model
 - **UI Thread Affinity**: All component construction, template compilation, DOM mutations, layout resolution, and `Screen::Draw()` operations **must** execute on the designated main UI thread. They are non-reentrant and not thread-safe.
-- **Cross-Thread Synchronization**: Background worker threads communicate with UI state exclusively by dispatching callbacks via `rtxui::task::TaskRunner::Current()->PostTask(...)`. The runner queues tasks in a thread-safe atomic lock-free queue and wakes the terminal event loop via a POSIX signal pipe (`self-pipe`) or Windows event object.
+- **Cross-Thread Synchronization**: Background worker threads communicate with UI state exclusively by dispatching callbacks via a poster obtained on the UI thread with `rtxui::TaskPoster()`. The runner queues tasks in a thread-safe atomic lock-free queue and wakes the terminal event loop via a POSIX signal pipe (`self-pipe`) or Windows event object.
 
 ### 1.2 Exception Safety Contract
 - RTXUI is strictly non-throwing and compatible with `-fno-exceptions`. No C++ exceptions are thrown or caught across the public API surface.
@@ -239,20 +239,16 @@ Color Blend(Color over, Color under) noexcept;
 
 ---
 
-## 8. Asynchronous Task Scheduler: `rtxui::task::TaskRunner`
+## 8. Asynchronous Task Scheduling: `<rtxui/task.hpp>`
 
 Provides thread-safe task dispatching onto the primary UI event loop.
 
 ```cpp
-namespace task {
-class TaskRunner {
- public:
-  static TaskRunner* Current() noexcept;
-  void PostTask(Task task);
-  void PostDelayedTask(Task task, std::chrono::steady_clock::duration delay);
-};
+namespace rtxui {
+void PostTask(std::function<void()> task);
+auto TaskPoster() -> std::function<void(std::function<void()>)>;
 }
 ```
 
 ### Thread Invariant
-`TaskRunner::Current()` returns the runner associated with the calling thread. The main UI runner must be captured on the UI thread and distributed to worker threads. Calling `PostTask()` from any background thread thread-safely enqueues the callable and unblocks the screen event loop immediately.
+`PostTask()` schedules onto the calling thread's event loop, so it may only be called from the UI thread. `TaskPoster()` returns a function bound to the calling thread's loop: obtain it on the UI thread and hand it to worker threads. Calling it from any thread thread-safely enqueues the callable and unblocks the screen event loop immediately.
