@@ -431,7 +431,18 @@ Element::~Element() {
   for (auto& child : children_) {
     child->parent_ = nullptr;
   }
+  if (handle_target_) {
+    handle_target_->element = nullptr;
+  }
   g_elements_destroyed++;
+}
+
+Ref<ElementHandleTarget> Element::HandleTarget() {
+  if (!handle_target_) {
+    handle_target_ = Ref<ElementHandleTarget>::New();
+    handle_target_->element = this;
+  }
+  return handle_target_;
 }
 
 void Element::AddChild(Ref<Element> child) {

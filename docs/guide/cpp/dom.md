@@ -1,16 +1,11 @@
 # Navigating the DOM
 
-Once templates are parsed, components build an underlying tree of `rtxui::Element` nodes.
-
-DOM access is opt-in, so that programs which never need it don't pay for the
-header:
-
-```cpp
-#include <rtxui/dom/element.hpp>
-```
+Once templates are parsed, components build a tree of elements. Applications
+reach it through `rtxui::ElementHandle`, which `<rtxui/rtxui.hpp>` already
+includes.
 
 If all you want is the component rendered at a selector — rather than the
-element itself — `QueryComponent` avoids the DOM header entirely:
+element itself — use `QueryComponent`:
 
 ```cpp
 if (auto* preview = dynamic_cast<Preview*>(QueryComponent("#preview"))) {
@@ -21,43 +16,54 @@ if (auto* preview = dynamic_cast<Preview*>(QueryComponent("#preview"))) {
 ## Query Selector Queries
 
 Elements are found with CSS-style selectors (`#id`, `.class`, or a tag
-name) using `QuerySelector` on any `Element`. A component reaches its own
-tree through `Root()`:
+name). A component queries its own tree with `QueryElement`, and any handle
+can query below itself with `QuerySelector`:
 
 ```cpp
 void ResetScrollbar() {
-  rtxui::Element* element = Root()->QuerySelector("#my-list");
-  if (element) {
-    element->set_scroll_y(0);
-  }
+  QueryElement("#my-list").SetScrollY(0);
 }
 ```
 
+A query that matches nothing returns a null handle. Every method on a null
+handle is a no-op returning an empty value, so the line above is safe even when
+`#my-list` is not rendered. Test a handle with `if (handle)` when you need to
+know.
+
 ## Tree Traversal
 
-The `rtxui::Element` class provides family-style navigation API:
+`RootElement()` returns the root of a component's tree. From any handle:
 
-*   `Parent()`: Get a pointer to the parent element node.
-*   `ChildCount()`: Get the number of immediate child nodes.
-*   `ChildAt(index)`: Access the child node at a specific index.
+*   `Parent()`: the parent element, or a null handle at the root.
+*   `ChildCount()`: the number of child elements.
+*   `ChildAt(index)`: the child element at `index`, or a null handle.
+*   `tag()` and `GetAttribute(name)`: what the template declared.
 
 ```cpp
-void InspectFirstChild(rtxui::Element* parent) {
-  if (parent && parent->ChildCount() > 0) {
-    rtxui::Element* child = parent->ChildAt(0);
+void InspectFirstChild(rtxui::ElementHandle parent) {
+  if (parent.ChildCount() > 0) {
+    rtxui::ElementHandle child = parent.ChildAt(0);
     // Perform operations on the child element...
   }
 }
 ```
 
+The tree follows the template as written: `<slot>` wrappers are transparent,
+and text is not counted as a child.
+
+## Lifetime
+
+A handle does not keep its element alive. When a re-render removes the element
+— an `<if>` turning false, say — the handle becomes null rather than dangling.
+Removed elements are pooled for reuse until the next render, so for one frame
+the handle may still point at the detached element (its `Parent()` is null).
+Holding a handle across frames is safe, but query again rather than expecting
+it to follow a re-created element.
+
 ## ABI note
 
-`Element` is the one public type whose *layout* is part of the ABI: it holds
-its computed styles and scroll state as members, so adding or reordering them
-changes the ABI even though the methods are unchanged. Everything else in the
-public API either hides its state behind a pointer (`Screen`) or is a value
-type.
-
-That means a program compiled against one release and run against another with
-a different `SOVERSION` must be rebuilt — which the versioned SONAME enforces
-rather than leaving to chance. Because `Element` exposes its layout members directly, changes across shared-library `SOVERSION` releases require rebuilding callers.
+The element itself stays internal: its layout, style and animation state change
+between releases. `ElementHandle` is a single pointer and all of its methods
+are out-of-line library functions, so a release can change the element freely
+and add new handle methods without breaking programs built against an older
+one.

@@ -125,6 +125,16 @@ class ActiveTransitionsMap {
   std::unique_ptr<std::map<std::string, ActiveTransition>> map_;
 };
 
+/// What an ElementHandle holds instead of the element: the element clears
+/// `element` when destroyed, so a handle that outlives it reads null rather
+/// than freed memory. A strong reference would not do -- an element points
+/// back at its component without owning it, so keeping the element alive past
+/// its component leaves that pointer dangling.
+class Element;
+struct ElementHandleTarget : public RefCounted {
+  Element* element = nullptr;
+};
+
 class RTXUI_EXPORT Element : public RefCounted {
  public:
   Element();
@@ -459,6 +469,11 @@ class RTXUI_EXPORT Element : public RefCounted {
   Element* parent_ = nullptr;
   const ComponentBase* component_ = nullptr;
   const ComponentBase* owner_component_ = nullptr;
+  // Created on the first HandleTarget() call; most elements never get one.
+  Ref<ElementHandleTarget> handle_target_;
+
+ public:
+  Ref<ElementHandleTarget> HandleTarget();
 };
 
 namespace time {
