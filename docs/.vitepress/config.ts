@@ -68,6 +68,7 @@ export default withMermaid({
         collapsed: false,
         items: [
           { text: 'HTML/CSS Hot-Reloading', link: '/guide/hot-reload' },
+          { text: 'Editor Syntax Highlighting', link: '/guide/editor-setup' },
           { text: 'Playground Guide', link: '/guide/playground' },
           { text: 'Unicode & CJK', link: '/guide/unicode' },
           { text: 'Markdown', link: '/guide/markdown' },
