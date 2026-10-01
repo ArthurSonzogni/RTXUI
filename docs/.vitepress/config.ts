@@ -1,6 +1,38 @@
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import { bundledLanguages } from 'shiki'
+
+// Highlight templates embedded in C++ raw strings, e.g. R"html( ... )html",
+// with the grammar named by the delimiter.
+const embeddedInCpp = [
+  { delimiter: 'html', scope: 'text.html.basic' },
+  { delimiter: 'xml', scope: 'text.xml' },
+  { delimiter: 'css', scope: 'source.css' }
+]
+const cppRawStringInjection = {
+  name: 'cpp-raw-string-injection',
+  scopeName: 'cpp.raw-string.injection',
+  injectTo: ['source.cpp'],
+  injectionSelector: 'L:source.cpp -comment -string',
+  embeddedLangs: ['html', 'xml', 'css'],
+  patterns: embeddedInCpp.map(({ delimiter, scope }) => ({
+    begin: `R"${delimiter}\\(`,
+    end: `\\)${delimiter}"`,
+    beginCaptures: { 0: { name: 'string.quoted.double.raw.cpp' } },
+    endCaptures: { 0: { name: 'string.quoted.double.raw.cpp' } },
+    contentName: `meta.embedded.block.${delimiter}`,
+    patterns: [{ include: scope }]
+  }))
+}
 
 export default withMermaid({
+  markdown: {
+    languages: [
+      bundledLanguages.html,
+      bundledLanguages.xml,
+      bundledLanguages.css,
+      cppRawStringInjection as any
+    ]
+  },
   base: '/RTXUI/',
   title: 'RTXUI',
   description: 'Terminal user interfaces built from HTML templates, CSS, and plain C++ state.',
