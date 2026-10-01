@@ -127,6 +127,13 @@ export default withMermaid({
     ]
   },
   vite: {
+    // fastdom is CommonJS; pre-bundle it so mermaid can import it in dev.
+    optimizeDeps: {
+      include: [
+        'mermaid > fastdom',
+        'mermaid > fastdom/extensions/fastdom-promised.js'
+      ]
+    },
     build: {
       chunkSizeWarningLimit: 1500
     }
