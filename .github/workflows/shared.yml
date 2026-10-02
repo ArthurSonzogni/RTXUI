@@ -134,11 +134,12 @@ jobs:
           cd consumer
           ldd build/consumer | grep rtxui
 
-  # Gated to PRs and manual triggers to preserve private runner quota (10x multiplier on macOS)
+  # Runs on every push: macOS minutes are free for a public repository, and
+  # libc++ catches missing includes libstdc++ supplies transitively.
   shared-macos:
     name: macOS AppleClang shared
     runs-on: macos-latest
-    if: (github.event_name == 'pull_request' && !github.event.pull_request.draft) || github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
 
