@@ -94,7 +94,46 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
 
   virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
-  std::string_view Template();
+
+  // Reactivity ---------------------------------------------------------------
+  /// Registers the component's bindings. Called once, before the first
+  /// render; override it to Bind() or Import() there instead of in the
+  /// constructor.
+  virtual void InitReflection();
+
+  /// Compares bound state with its last snapshot, re-renders what changed and
+  /// recurses into children. Screen calls it every frame; returns whether
+  /// anything changed.
+  virtual bool Digest() = 0;
+
+  /// Pushes `value` to the parent state bound to this component's `child_prop`
+  /// attribute, for a component exposing a two-way binding.
+  void PropagateBinding(std::string_view child_prop, std::string_view value);
+
+  // Input --------------------------------------------------------------------
+  /// Handles an event no focused element consumed. Return true to stop it.
+  virtual bool OnEvent(Event event);
+  void CaptureMouse();
+  void ReleaseMouse();
+
+  /// Asks the terminal to set the system clipboard to `text` (OSC 52), on the
+  /// next frame.
+  void SetClipboard(std::string_view text);
+
+  // DOM ----------------------------------------------------------------------
+  /// The root of this component's rendered DOM, or a null handle before
+  /// Mount(). See ElementHandle.
+  ElementHandle RootElement() const;
+
+  /// The first element in this component's DOM matching `selector` (`#id`,
+  /// `.class` or a tag), or a null handle.
+  ElementHandle QueryElement(std::string_view selector) const;
+
+  /// Finds the component rendered at `selector` (`#id`, `.class` or a tag),
+  /// or nullptr.
+  ComponentBase* QueryComponent(std::string_view selector);
+
+  // Hot reload ---------------------------------------------------------------
   void EnableHotReload(
       std::string_view view_var_name = "view",
       std::source_location location = std::source_location::current());
@@ -102,16 +141,23 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
                        std::string_view filepath);
   void HotReload(std::string_view new_template);
 
+  // Driving a component without a Screen, for tests --------------------------
+  /// Parses the template and builds the DOM. Screen does this itself.
   void Mount();
+  /// Rebuilds the DOM from the template and the current state.
   void Render();
+  /// The rendered root element. Element is internal to the library.
+  Element* Root() const;
+  void ResolveTargetStyles();
+  void ResolveTargetStyles(double current_time_ms);
 
-  /// Recomputes `base_style` for this component's element tree, then seeds
-  /// `target_style`/`style` from it. Render() ends by doing exactly this, so
-  /// a component that mutates its own DOM *after* rendering -- the usual case
-  /// being a Digest() override that re-tags elements -- can call this instead
-  /// of re-rendering, which would churn element identity and cost a full
-  /// reconciliation. Elements whose resolved styles are still valid are
-  /// skipped, so the cost is proportional to what actually changed.
+ protected:
+  // The library's own access to what follows; see component_internal.hpp.
+  friend class ScreenImpl;
+  friend struct ComponentInternals;
+
+  std::string_view Template();
+
   /// Whether any element under this component still needs a base style pass.
   /// Cheap: a tree walk and a hash per element, no rule matching. Also drops
   /// any resolved-style memo that no longer matches its element's classes.
@@ -126,46 +172,21 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   /// elements, say -- does not need to ask for anything.
   void ResolveStyles();
 
-  void ResolveTargetStyles();
-  void ResolveTargetStyles(double current_time_ms);
   const css::StyleSheet* stylesheet() const;
   const CategorizedRules* categorized_rules() const {
     return categorized_rules_.get();
   }
   bool HasAnyPseudoClasses() const;
-  virtual bool Digest() = 0;
-  virtual void InitReflection();
-  virtual bool OnEvent(Event event);
-  void CaptureMouse();
-  void ReleaseMouse();
   static ComponentBase* GetMouseCapturer();
 
-  // Requests the system clipboard be set to `text` (via the terminal's OSC
-  // 52 escape sequence). The write only happens once Screen flushes it on
-  // the next frame, via TakePendingClipboardWrite() -- there is no direct
-  // path from a component to the terminal device.
-  void SetClipboard(std::string_view text);
+  /// The clipboard write SetClipboard() requested, for Screen to flush.
   static std::optional<std::string> TakePendingClipboardWrite();
 
-  Element* Root() const;
-
-  /// The root of this component's rendered DOM, or a null handle before
-  /// Mount(). See ElementHandle.
-  ElementHandle RootElement() const;
-
-  /// The first element in this component's DOM matching `selector` (`#id`,
-  /// `.class` or a tag), or a null handle.
-  ElementHandle QueryElement(std::string_view selector) const;
-
-  /// Finds the component rendered at `selector` (`#id`, `.class` or a tag),
-  /// or nullptr.
-  ComponentBase* QueryComponent(std::string_view selector);
   Ref<Element> Slot(std::string_view name);
   const std::map<std::string, Ref<Element>, std::less<>>& slots() const {
     return slots_;
   }
   void SetProperty(std::string_view name, std::string_view value);
-  void PropagateBinding(std::string_view child_prop, std::string_view value);
 
   virtual std::string GetInterpolatedValue(std::string_view expression) = 0;
 
@@ -181,7 +202,6 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   };
   std::vector<RangeEntry> range_entries_;
 
- protected:
   // Shared with every other instance declaring the same stylesheet text; see
   // GetSharedStyle. Aliasing pointers into one StyleData, so both keep it
   // alive and the index's pointers into the sheet stay valid.

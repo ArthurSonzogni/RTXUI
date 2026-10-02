@@ -13,6 +13,34 @@
 
 namespace rtxui {
 
+// The parts of ComponentBase that the rest of the library needs but that are
+// not part of the public API.
+struct ComponentInternals {
+  static const CategorizedRules* categorized_rules(const ComponentBase& c) {
+    return c.categorized_rules();
+  }
+  static const std::map<std::string, Ref<Element>, std::less<>>& slots(
+      const ComponentBase& c) {
+    return c.slots();
+  }
+  static Ref<Element> Slot(ComponentBase& c, std::string_view name) {
+    return c.Slot(name);
+  }
+  static std::string GetInterpolatedValue(ComponentBase& c,
+                                          std::string_view expression) {
+    return c.GetInterpolatedValue(expression);
+  }
+  static void SetProperty(ComponentBase& c,
+                          std::string_view name,
+                          std::string_view value) {
+    c.SetProperty(name, value);
+  }
+  static void ResolveStyles(ComponentBase& c) { c.ResolveStyles(); }
+  static ComponentBase* GetMouseCapturer() {
+    return ComponentBase::GetMouseCapturer();
+  }
+};
+
 ComponentBase* GetOwningComponent(Element* element);
 ComponentBase* GetAttributeOwnerComponent(Element* element);
 ComponentBase* GetParentComponent(ComponentBase* comp);
