@@ -962,9 +962,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
                              dup.end());
             selection_start = sel_max;
             cursor_pos = sel_max + dup_len;
+            // Before `value` is reassigned: `graphemes` views its old buffer.
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
             value = GraphemesToString(graphemes);
             self->PropagateBinding("value", value);
-            auto pos2d = GetCursor2D(graphemes, cursor_pos);
             ideal_column_ = pos2d.column;
             KeepCursorVisible(root, is_multiline);
           }
@@ -985,9 +986,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
                                to_insert.begin(), to_insert.end());
               cursor_pos = line_end + 1 + col;
               selection_start = -1;
+              // Before `value` is reassigned: `graphemes` views its old buffer.
+              auto pos2d = GetCursor2D(graphemes, cursor_pos);
               value = GraphemesToString(graphemes);
               self->PropagateBinding("value", value);
-              auto pos2d = GetCursor2D(graphemes, cursor_pos);
               ideal_column_ = pos2d.column;
               KeepCursorVisible(root, is_multiline);
             }
@@ -1003,9 +1005,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
                                to_insert.end());
               cursor_pos = line_end + 1 + col;
               selection_start = -1;
+              // Before `value` is reassigned: `graphemes` views its old buffer.
+              auto pos2d = GetCursor2D(graphemes, cursor_pos);
               value = GraphemesToString(graphemes);
               self->PropagateBinding("value", value);
-              auto pos2d = GetCursor2D(graphemes, cursor_pos);
               ideal_column_ = pos2d.column;
               KeepCursorVisible(root, is_multiline);
             }
@@ -1053,9 +1056,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
             cursor_pos = 0;
             selection_start = -1;
           }
+          // Before `value` is reassigned: `graphemes` views its old buffer.
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
           value = GraphemesToString(graphemes);
           self->PropagateBinding("value", value);
-          auto pos2d = GetCursor2D(graphemes, cursor_pos);
           ideal_column_ = pos2d.column;
           KeepCursorVisible(root, is_multiline);
           return true;
@@ -1155,9 +1159,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
             if (selection_start != -1) {
               selection_start -= shift_amount;
             }
+            // Before `value` is reassigned: `graphemes` views its old buffer.
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
             value = GraphemesToString(graphemes);
             self->PropagateBinding("value", value);
-            auto pos2d = GetCursor2D(graphemes, cursor_pos);
             ideal_column_ = pos2d.column;
             KeepCursorVisible(root, is_multiline);
           }
@@ -1188,9 +1193,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
             if (selection_start != -1) {
               selection_start += shift_amount;
             }
+            // Before `value` is reassigned: `graphemes` views its old buffer.
+            auto pos2d = GetCursor2D(graphemes, cursor_pos);
             value = GraphemesToString(graphemes);
             self->PropagateBinding("value", value);
-            auto pos2d = GetCursor2D(graphemes, cursor_pos);
             ideal_column_ = pos2d.column;
             KeepCursorVisible(root, is_multiline);
           }
@@ -1414,9 +1420,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
               }
             }
           }
+          // Before `value` is reassigned: `graphemes` views its old buffer.
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
           value = GraphemesToString(graphemes);
           self->PropagateBinding("value", value);
-          auto pos2d = GetCursor2D(graphemes, cursor_pos);
           ideal_column_ = pos2d.column;
           KeepCursorVisible(root, is_multiline);
           return true;
@@ -1451,9 +1458,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
               adjust_pos(selection_start);
             }
           }
+          // Before `value` is reassigned: `graphemes` views its old buffer.
+          auto pos2d = GetCursor2D(graphemes, cursor_pos);
           value = GraphemesToString(graphemes);
           self->PropagateBinding("value", value);
-          auto pos2d = GetCursor2D(graphemes, cursor_pos);
           ideal_column_ = pos2d.column;
           KeepCursorVisible(root, is_multiline);
           return true;
@@ -1593,10 +1601,11 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
                 selection_start = sel_max + 1;
                 cursor_pos = sel_min + 1;
               }
+              // Before `value` is reassigned: `graphemes` views its old buffer.
+              auto pos2d = GetCursor2D(graphemes, cursor_pos);
               value = GraphemesToString(graphemes);
               self->PropagateBinding("value", value);
               last_edit_end_pos_ = cursor_pos;
-              auto pos2d = GetCursor2D(graphemes, cursor_pos);
               ideal_column_ = pos2d.column;
               KeepCursorVisible(root, is_multiline);
               return true;
