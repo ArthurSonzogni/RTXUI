@@ -14,6 +14,24 @@ option(RTXUI_SANITIZE "Build with Address and UndefinedBehavior sanitizers" OFF)
 include(FetchContent)
 include(cmake/compiler.cmake)
 
+if(EMSCRIPTEN)
+  add_compile_options(
+    "-sASYNCIFY"
+    "-fno-exceptions"
+  )
+  add_link_options(
+    "-sASYNCIFY"
+    "-fno-exceptions"
+    "-sEXPORTED_RUNTIME_METHODS=[ccall,cwrap]"
+    "-sASYNCIFY_IMPORTS=[emscripten_asm_const_int]"
+  )
+  string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_lower)
+  if(cmake_build_type_lower MATCHES "release|relwithdebinfo")
+    add_compile_options("-O3" "-flto")
+    add_link_options("-O3" "-flto")
+  endif()
+endif()
+
 # No explicit STATIC: the kind follows BUILD_SHARED_LIBS so a consumer or a
 # distro can ask for a shared build. See the visibility settings and the
 # generated export header below -- a shared build only exports what is marked.
@@ -158,19 +176,6 @@ target_include_directories(rtxui_lib SYSTEM INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   $<INSTALL_INTERFACE:include>
 )
-
-if(EMSCRIPTEN)
-  add_compile_options("-sASYNCIFY")
-  add_link_options(
-    "-sASYNCIFY"
-    "-sEXPORTED_RUNTIME_METHODS=[ccall,cwrap]"
-    "-sASYNCIFY_IMPORTS=[emscripten_asm_const_int]"
-  )
-  if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_compile_options("-O3")
-    add_link_options("-O3")
-  endif()
-endif()
 
 include(cmake/reflection.cmake)
 
