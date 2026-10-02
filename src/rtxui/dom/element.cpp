@@ -516,6 +516,10 @@ void Element::Visit(const std::function<void(Element&)>& f) {
 
 void Element::SetAttribute(std::string name, std::string value) {
   ClearResolvedStyles();
+  if (const std::string* previous = GetAttribute(name);
+      !previous || *previous != value) {
+    selector_inputs_changed = true;
+  }
   if (name == "id") {
     id = value;
   } else if (name == "class") {
@@ -545,6 +549,9 @@ void Element::SetAttribute(std::string name, std::string value) {
 
 void Element::RemoveAttribute(const std::string& name) {
   ClearResolvedStyles();
+  if (GetAttribute(name)) {
+    selector_inputs_changed = true;
+  }
   if (name == "id") {
     id.clear();
   } else if (name == "class") {
