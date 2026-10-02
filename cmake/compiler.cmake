@@ -15,6 +15,16 @@ if(RTXUI_SANITIZE)
   add_link_options(-fsanitize=${RTXUI_SANITIZERS})
 endif()
 
+# Clang source-based coverage, read by scripts/coverage.sh.
+option(RTXUI_COVERAGE "Instrument for Clang source-based code coverage" OFF)
+if(RTXUI_COVERAGE)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "RTXUI_COVERAGE requires Clang")
+  endif()
+  add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+  add_link_options(-fprofile-instr-generate)
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 # C++23 is the requirement. C++26 is optional: when the compiler offers
