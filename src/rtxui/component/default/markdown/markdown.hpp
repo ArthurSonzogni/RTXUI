@@ -23,6 +23,9 @@ class markdown : public Component<markdown> {
 
  private:
   mutable std::string generated_html_;
+  // What generated_html_ was built from.
+  mutable std::string built_content_;
+  mutable std::string built_stylesheet_;
 };
 
 }  // namespace rtxui

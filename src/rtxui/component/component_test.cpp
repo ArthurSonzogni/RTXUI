@@ -10541,6 +10541,59 @@ class CountedParent : public rtxui::Component<CountedParent> {
 };
 }  // namespace
 
+namespace {
+class RenderCountedChild : public rtxui::Component<RenderCountedChild> {
+ public:
+  int value = 0;
+  mutable int renders = 0;
+  // Interpolated once per render, so its calls count the renders.
+  std::string label() const {
+    ++renders;
+    return std::to_string(value);
+  }
+  RenderCountedChild() {
+    Bind(value);
+    Bind(label);
+  }
+  std::string_view view = R"(<span>{label}</span>)";
+};
+
+class RenderCountedParent : public rtxui::Component<RenderCountedParent> {
+ public:
+  int value = 0;
+  void InitReflection() override {
+    Bind(value);
+    Import<RenderCountedChild>();
+    rtxui::Component<RenderCountedParent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <RenderCountedChild value="{value}"/>
+    </div>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A child given a new prop renders once per Digest()", "[component]") {
+  // The parent's render passes the new value and re-renders the child. The
+  // child's own Digest() then runs, and must not find that same change again.
+  auto app = rtxui::Ref<RenderCountedParent>::New();
+  app->Mount();
+  auto* child = dynamic_cast<RenderCountedChild*>(
+      app->QueryComponent("RenderCountedChild"));
+  REQUIRE(child != nullptr);
+
+  app->value = 1;
+  child->renders = 0;
+  app->Digest();
+  CHECK(child->value == 1);
+  CHECK(child->renders == 1);
+
+  child->renders = 0;
+  app->Digest();
+  CHECK(child->renders == 0);
+}
+
 TEST_CASE("One Digest() resolves the styles of the tree once",
           "[component][style]") {
   // The parent re-renders, and so do the children it passes the value to.
