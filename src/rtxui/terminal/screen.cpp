@@ -33,6 +33,7 @@
 #include "rtxui/base/string.hpp"
 #include "rtxui/base/task_runner.hpp"
 #include "rtxui/component/component_internal.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
@@ -1868,6 +1869,10 @@ void ScreenImpl::HandleEvent(Event event) {
                 }
                 comp = GetParentComponent(comp);
               }
+              if (!executed) {
+                ReportDiagnostic("handler '" + callback_name +
+                                 "' is not bound in any enclosing component");
+              }
               if (executed) {
                 break;
               }
@@ -2728,6 +2733,10 @@ void ScreenImpl::SimulateClick(Element* element) {
               break;
             }
             comp = GetParentComponent(comp);
+          }
+          if (!executed) {
+            ReportDiagnostic("handler '" + callback_name +
+                             "' is not bound in any enclosing component");
           }
           if (executed) {
             return;

@@ -43,6 +43,12 @@ These are enforced by `scripts/check.sh` and CI unless noted.
   be documented in `docs/css_reference.md` (`scripts/verify_docs.py`). When
   adding HTML tags or component features, update `docs/html_reference.md`,
   `docs/reactivity.md` or the relevant guide under `docs/guide/`.
+- **No silent no-ops**: constructs that parse but do nothing are reported
+  through `ReportDiagnostic` (`include/rtxui/diagnostic.hpp`, see
+  `docs/guide/diagnostics.md`). Each property branch in `ApplyStyle` must
+  `return` once it has applied a supported value; falling off the end reports
+  the declaration as unsupported. Examples run under `RTXUI_STRICT=1`, which
+  aborts on any diagnostic.
 - **Commits**: conventional commits (`feat:`, `fix:`, `docs:`, `build:`, …).
 
 ## Commands

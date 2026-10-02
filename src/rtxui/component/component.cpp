@@ -21,6 +21,7 @@
 #include "rtxui/base/string.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default_components_internal.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/slot_element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -1823,6 +1824,64 @@ std::string_view ComponentBase::Template() {
   return template_;
 }
 
+namespace {
+
+// Returns the RTXUI way to write `name="value"` when it is syntax from another
+// framework that RTXUI would silently treat as a plain attribute.
+std::optional<std::string> ForeignAttributeAdvice(std::string_view name,
+                                                  std::string_view value) {
+  auto starts = [&](std::string_view prefix) {
+    return name.starts_with(prefix);
+  };
+  if (name == "v-if" || name == "x-if" || name == "*ngIf" || name == "v-show" ||
+      name == "x-show") {
+    return "use if=\"{name}\" or <if condition=\"{name}\">";
+  }
+  if (name == "v-for" || name == "x-for" || name == "*ngFor" ||
+      name == "ng-repeat") {
+    return "use <for each=\"{list}\" as=\"item\">";
+  }
+  if (name == "for" && (value.find(" in ") != std::string_view::npos ||
+                        value.find(" of ") != std::string_view::npos)) {
+    return "use <for each=\"{list}\" as=\"item\"> instead of a for attribute";
+  }
+  if (starts("v-on:") || starts("(") || starts("x-on:")) {
+    return "use onclick=\"Name\" or @click=\"Name\"";
+  }
+  if (starts("v-bind:") || starts("[") || starts("x-bind:")) {
+    return "use attr=\"{name}\" or :attr=\"name\"";
+  }
+  if (name == "className") {
+    return "use class";
+  }
+  if (name.size() > 2 && starts("on") &&
+      std::isupper(static_cast<unsigned char>(name[2]))) {
+    return "event attributes are lowercase, e.g. onclick";
+  }
+  if (starts("v-") || starts("x-") || starts("ng-") || starts("*ng")) {
+    return "this is another framework's syntax";
+  }
+  return std::nullopt;
+}
+
+void CheckTemplate(const xml::Nodes& nodes, std::string_view tag) {
+  for (const auto& node : nodes) {
+    if (node.type != xml::Node::kElement) {
+      continue;
+    }
+    for (const auto& [name, value] : node.attributes) {
+      if (auto advice = ForeignAttributeAdvice(name, value)) {
+        ReportDiagnostic("attribute '" + name + "' on <" + node.tag + "> in <" +
+                         std::string(tag) +
+                         "> is not RTXUI syntax: " + *advice);
+      }
+    }
+    CheckTemplate(node.children, tag);
+  }
+}
+
+}  // namespace
+
 void ComponentBase::Mount() {
   InitReflection();
   template_ = Template();
@@ -1842,6 +1901,7 @@ void ComponentBase::Mount() {
     return;
   }
   xml_nodes_ = std::move(nodes.value());
+  CheckTemplate(xml_nodes_, Tag());
   Render();
 }
 
@@ -3135,6 +3195,7 @@ void ComponentBase::HotReload(std::string_view new_template) {
     return;
   }
   xml_nodes_ = std::move(nodes.value());
+  CheckTemplate(xml_nodes_, Tag());
   Render();
 }
 

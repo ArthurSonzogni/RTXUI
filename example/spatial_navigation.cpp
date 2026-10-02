@@ -54,7 +54,6 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
       }
       .section-title {
         color: #7dd3fc;
-        font-size: small;
         margin-top: 1;
         text-decoration: underline;
       }
@@ -148,11 +147,11 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
       <div class="row">
         <checkbox>Feature</checkbox>
         <div style="display: flex; flex-direction: column; align-items: center;">
-          <span style="font-size: small; color: #64748b;">Horizontal</span>
+          <span style="color: #64748b;">Horizontal</span>
           <slider value="50" style="width: 20;" />
         </div>
         <div style="display: flex; gap: 1; align-items: center; border: solid; border-color: #1e293b; padding: 1;">
-           <span style="font-size: small; color: #64748b;">Vertical</span>
+           <span style="color: #64748b;">Vertical</span>
            <slider direction="vertical" value="30" width="5" />
         </div>
         <input value="Search..." style="width: 15;" />
