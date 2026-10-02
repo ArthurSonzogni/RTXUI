@@ -279,17 +279,19 @@ class SystemTerminalDevice : public TerminalDevice {
     WriteFile(handle, data.data(), static_cast<DWORD>(data.size()), &written,
               nullptr);
 #elif defined(__EMSCRIPTEN__)
-    std::string str(data);
+    if (data.empty()) {
+      return;
+    }
     EM_ASM(
         {
-          let s = UTF8ToString($0);
+          let s = UTF8ToString($0, $1);
           if (window.rtxui_on_output) {
             window.rtxui_on_output(s);
           } else {
             console.log(s);
           }
         },
-        str.c_str());
+        data.data(), data.size());
 #else
     std::cout << data << std::flush;
 #endif
