@@ -172,6 +172,19 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   /// elements, say -- does not need to ask for anything.
   void ResolveStyles();
 
+  /// While one is alive, Render() leaves style resolution to the end of the
+  /// outermost scope, which resolves each re-rendered subtree once: a
+  /// component re-rendered inside another one's Render() or Digest() would
+  /// otherwise resolve its subtree, only for the enclosing one to do it again.
+  class RTXUI_EXPORT StyleResolutionScope {
+   public:
+    /// `owner` is the component whose Render() or Digest() opens the scope.
+    explicit StyleResolutionScope(ComponentBase* owner);
+    ~StyleResolutionScope();
+    StyleResolutionScope(const StyleResolutionScope&) = delete;
+    StyleResolutionScope& operator=(const StyleResolutionScope&) = delete;
+  };
+
   const css::StyleSheet* stylesheet() const;
   const CategorizedRules* categorized_rules() const {
     return categorized_rules_.get();
@@ -494,6 +507,7 @@ class Component : public ComponentBase {
   }
 
   bool Digest() override {
+    StyleResolutionScope scope(this);
     bool changed = false;
     for (auto& entry : entries_) {
       if (entry.check_and_update && entry.check_and_update()) {
