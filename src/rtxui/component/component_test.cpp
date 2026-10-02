@@ -10702,6 +10702,48 @@ TEST_CASE("A sibling rule follows a change of the sibling it names",
   CHECK(at("#later")->style.margin.left == 0);
 }
 
+namespace {
+class ClassTransitionApp : public rtxui::Component<ClassTransitionApp> {
+ public:
+  bool lit = false;
+  std::string state() const { return lit ? "card lit" : "card"; }
+  ClassTransitionApp() {
+    Bind(lit);
+    Bind(state);
+  }
+  std::string_view view = R"(
+    <div>
+      <div id="card" class="{state}">x</div>
+    </div>
+    <style>
+      .card {
+        background-color: rgb(32, 32, 32);
+        transition: background-color 4s linear;
+      }
+      .card.lit { background-color: rgb(208, 208, 208); }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A class change transitions from the style on screen",
+          "[component][style][transitions]") {
+  // The class change re-renders the component and recomputes the card's base
+  // style. Its style must not jump to the new color: the transition starts
+  // from the one on screen.
+  auto app = rtxui::Ref<ClassTransitionApp>::New();
+  app->Mount();
+  auto* card = app->Root()->QuerySelector("#card");
+  REQUIRE(card != nullptr);
+  CHECK(card->style.background_color == Color::RGB(32, 32, 32));
+
+  app->lit = true;
+  app->Digest();
+  CHECK(card->style.background_color == Color::RGB(32, 32, 32));
+  CHECK(card->target_style.background_color == Color::RGB(208, 208, 208));
+  CHECK(card->active_transitions.count("background-color") == 1);
+}
+
 TEST_CASE("A component's :hover rule outranks the one nested inside it",
           "[component][style][css]") {
   // <button> has its own `self:hover { background-color: … }`, two components

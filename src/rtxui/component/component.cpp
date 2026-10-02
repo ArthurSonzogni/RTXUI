@@ -384,8 +384,7 @@ void CollectElementStates(
       el->scroll_x() != 0 || el->scroll_y() != 0 || el->focused() ||
       el->hovered() || el->active() || el->scrollbar_hovered() ||
       el->scrollbar_active() || el->scrollbar_thumb_hovered() ||
-      el->scrollbar_thumb_active() || !el->active_transitions.empty() ||
-      (el->target_style.transitions && !el->target_style.transitions->empty());
+      el->scrollbar_thumb_active() || !el->active_transitions.empty();
   if (has_state) {
     states.push_back(
         {path,
@@ -1817,7 +1816,14 @@ bool ResolveStylesInTree(Element* element,
     // would overwrite a transition-blended `style` with its unanimated value.
     if (element->needs_style_seed) {
       element->target_style = element->base_style;
-      element->style = element->base_style;
+      // An element already on screen that declares transitions moves to its
+      // new style through them, from the one it has, rather than jumping.
+      if (element->style_seeded && element->base_style.transitions) {
+        element->TriggerTransitions(time::GetTimeMs());
+      } else {
+        element->style = element->base_style;
+      }
+      element->style_seeded = true;
       element->needs_style_seed = false;
       element->target_stale = true;
     }
@@ -2247,7 +2253,6 @@ void ComponentBase::Render() {
   if (!root_) {
     root_ = Ref<Element>::New(this);
   }
-  root_->style = ComputedStyle();
   root_->base_style = ComputedStyle();
   root_->target_style = ComputedStyle();
   root_->ClearResolvedStyles();
