@@ -17,6 +17,8 @@
 #include <ranges>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "rtxui/base/string.hpp"
@@ -2894,23 +2896,22 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // Instances are otherwise handed out in encounter order, which
           // re-imposes the old ordering on the DOM and undoes the keyed move
           // above: the element is put back and merely rewritten in place.
+          // A reused instance is taken out by leaving a null behind: erasing
+          // it would shift the rest, once per child of a long list.
           if (item_key && !item_key->empty()) {
-            for (auto it_old = old_children_.begin();
-                 it_old != old_children_.end(); ++it_old) {
-              if ((*it_old)->Tag() == child_node.tag && (*it_old)->Root() &&
-                  (*it_old)->Root()->for_key == *item_key) {
-                child = *it_old;
-                old_children_.erase(it_old);
+            for (auto& old_child : old_children_) {
+              if (old_child && old_child->Tag() == child_node.tag &&
+                  old_child->Root() &&
+                  old_child->Root()->for_key == *item_key) {
+                child = std::move(old_child);
                 break;
               }
             }
           }
           if (!child) {
-            for (auto it_old = old_children_.begin();
-                 it_old != old_children_.end(); ++it_old) {
-              if ((*it_old)->Tag() == child_node.tag) {
-                child = *it_old;
-                old_children_.erase(it_old);
+            for (auto& old_child : old_children_) {
+              if (old_child && old_child->Tag() == child_node.tag) {
+                child = std::move(old_child);
                 break;
               }
             }
@@ -3110,34 +3111,33 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           Ref<Element> default_slot = child->Slot("");
           if (default_slot) {
             if (!needs_render) {
+              // The child's components whose root is in its projected
+              // content move to old_children_, in encounter order, for the
+              // projection below to reuse. Sets keep this linear: a slot can
+              // hold a whole list.
+              std::unordered_map<const ComponentBase*, size_t> owned;
+              for (size_t i = 0; i < child->children_.size(); ++i) {
+                owned.emplace(child->children_[i].get(), i);
+              }
+              std::unordered_set<const ComponentBase*> projected;
               std::vector<Ref<ComponentBase>> slot_components;
               for (auto& [name, slot_el] : child->slots()) {
                 if (slot_el) {
                   for (auto& child_el : slot_el->children()) {
                     child_el->Visit([&](Element& el) {
-                      if (el.component()) {
-                        for (auto& comp : child->children_) {
-                          if (comp.get() == el.component()) {
-                            if (std::find(slot_components.begin(),
-                                          slot_components.end(),
-                                          comp) == slot_components.end()) {
-                              slot_components.push_back(comp);
-                            }
-                          }
-                        }
+                      auto it = owned.find(el.component());
+                      if (it != owned.end() &&
+                          projected.insert(el.component()).second) {
+                        slot_components.push_back(child->children_[it->second]);
                       }
                     });
                   }
                 }
               }
-              child->old_children_ = slot_components;
-              for (auto& comp : slot_components) {
-                auto it = std::find(child->children_.begin(),
-                                    child->children_.end(), comp);
-                if (it != child->children_.end()) {
-                  child->children_.erase(it);
-                }
-              }
+              std::erase_if(child->children_, [&](const auto& comp) {
+                return projected.contains(comp.get());
+              });
+              child->old_children_ = std::move(slot_components);
             }
 
             // Fill each `<slot.name select="tag">` from the projected content
