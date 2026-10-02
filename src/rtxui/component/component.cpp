@@ -2122,6 +2122,18 @@ void ComponentBase::ResolveStyles() {
 
 void ComponentBase::Render() {
   StyleResolutionScope scope(this);
+  // What is rendered is the current state, so that is what the next Digest()
+  // compares against. Otherwise a component re-rendered by its parent, for a
+  // prop the parent changed, finds the same change again in its own Digest()
+  // and renders a second time.
+  for (auto& entry : entries_) {
+    if (entry.check_and_update) {
+      entry.check_and_update();
+    }
+  }
+  for (auto& range_entry : range_entries_) {
+    range_entry.range->CheckAndUpdate();
+  }
   last_render_terminal_width_ = css::g_terminal_width;
   last_render_terminal_height_ = css::g_terminal_height;
   // Optimization: Use a flat vector of pairs instead of std::map<ElementPath,

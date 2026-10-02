@@ -22,6 +22,8 @@ std::string_view markdown::Setup() {
 
 std::string_view markdown::GetView() const {
   generated_html_.clear();
+  built_content_ = content;
+  built_stylesheet_ = stylesheet;
   if (!stylesheet.empty()) {
     generated_html_ += "<style>\n";
     generated_html_ += stylesheet;
@@ -32,6 +34,7 @@ std::string_view markdown::GetView() const {
 }
 
 bool markdown::Digest() {
+  StyleResolutionScope scope(this);
   bool changed = false;
   for (auto& entry : entries_) {
     if (entry.check_and_update && entry.check_and_update()) {
@@ -43,7 +46,12 @@ bool markdown::Digest() {
       changed = true;
     }
   }
-  if (changed) {
+  // Compared with what the template was built from, not with the last
+  // Digest(): a parent passing new content re-renders this component before
+  // its Digest() runs, which leaves nothing for change detection to report
+  // but a template still built from the old content.
+  if (content != built_content_ || stylesheet != built_stylesheet_) {
+    changed = true;
     template_.clear();
     template_ = Template();
     xml_string_ = StripIndent(template_);
