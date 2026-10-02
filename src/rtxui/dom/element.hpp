@@ -234,6 +234,15 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// actually changed -- not for every element on every pass.
   bool needs_style_seed = true;
 
+  /// Set when `target_style` was reseeded from `base_style`, or `style` was
+  /// restored, and cleared once the pseudo-class pass has run transitions on
+  /// the result. With it and `matched_pseudo_rule` both clear, `target_style`
+  /// still equals `base_style` and `style` has settled on it, so that pass has
+  /// nothing to do here unless a pseudo-class rule matches now.
+  bool target_stale = true;
+  /// Whether a pseudo-class rule matched in the last pseudo-class pass.
+  bool matched_pseudo_rule = false;
+
   /// Whether a base style pass still has work to do here. False once a pass
   /// has visited the element, true again as soon as anything invalidates it.
   /// Lets a frame ask "is any of this stale?" with a walk and a hash, instead

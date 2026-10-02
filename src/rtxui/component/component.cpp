@@ -447,6 +447,7 @@ void RestoreElementStates(
       el->set_scrollbar_thumb_hovered(pair.second.scrollbar_thumb_hovered);
       el->set_scrollbar_thumb_active(pair.second.scrollbar_thumb_active);
       el->style = pair.second.style;
+      el->target_stale = true;
       el->active_transitions = pair.second.active_transitions;
     }
   }
@@ -1523,6 +1524,9 @@ void ResolveElementStyle(Element* element,
       if (check_pseudos && matched.empty()) {
         return;
       }
+      if (check_pseudos) {
+        element->matched_pseudo_rule = true;
+      }
 
       // Order the cascade. Declarations are applied in sequence and a later one
       // overwrites an earlier one, so sorting ascending by specificity leaves
@@ -1719,9 +1723,14 @@ bool HasPartRules(const ComponentBase* component, bool check_pseudos) {
 // so that a component's styles override those of the components it uses:
 // `<button class="x">` takes the button's own `self` rules, then the
 // stylesheet that wrote the `.x`.
+//
+// The pseudo-class pass (`check_pseudos`) layers the pseudo-class rules over
+// each element's base style into `target_style`, then starts the transitions
+// towards it, at `current_time_ms`.
 void ResolveStylesInTree(Element* element,
                          std::vector<const ComponentBase*>& enclosing,
-                         bool check_pseudos) {
+                         bool check_pseudos,
+                         double current_time_ms) {
   ++g_style_visit_count;
   if (!check_pseudos) {
     element->needs_style_resolve = false;
@@ -1739,6 +1748,21 @@ void ResolveStylesInTree(Element* element,
     for (const auto& [name, val] : element->own_custom_properties) {
       element->custom_properties[name] = val;
     }
+  }
+
+  // Every div has pseudo-class rules, so this pass runs on nearly every
+  // render. Most elements match none of them, before or now: their target is
+  // still their base style and their style has settled, so there is nothing
+  // to reset and no transition to start.
+  bool must_update_target = false;
+  if (check_pseudos) {
+    must_update_target = element->target_stale ||
+                         element->matched_pseudo_rule ||
+                         !element->active_transitions.empty();
+    if (must_update_target) {
+      element->target_style = element->base_style;
+    }
+    element->matched_pseudo_rule = false;
   }
 
   const ComponentBase* own = element->component();
@@ -1760,9 +1784,14 @@ void ResolveStylesInTree(Element* element,
   if (!owner_applied) {
     ResolveElementStyle(element, owner, check_pseudos);
   }
+  if (must_update_target || element->matched_pseudo_rule) {
+    element->TriggerTransitions(current_time_ms);
+    element->target_stale = false;
+  }
 
   for (size_t i = 0; i < element->ChildCount(); ++i) {
-    ResolveStylesInTree(element->ChildAt(i), enclosing, check_pseudos);
+    ResolveStylesInTree(element->ChildAt(i), enclosing, check_pseudos,
+                        current_time_ms);
   }
   if (own) {
     enclosing.pop_back();
@@ -1771,7 +1800,9 @@ void ResolveStylesInTree(Element* element,
 
 // Resolves the styles of `root` and its subtree, with the components enclosing
 // `root` taking part as they would in a resolution of the whole document.
-void ResolveStylesFrom(Element* root, bool check_pseudos) {
+void ResolveStylesFrom(Element* root,
+                       bool check_pseudos,
+                       double current_time_ms = 0) {
   if (!root) {
     return;
   }
@@ -1782,7 +1813,7 @@ void ResolveStylesFrom(Element* root, bool check_pseudos) {
     }
   }
   std::reverse(enclosing.begin(), enclosing.end());
-  ResolveStylesInTree(root, enclosing, check_pseudos);
+  ResolveStylesInTree(root, enclosing, check_pseudos, current_time_ms);
 }
 
 }  // namespace
@@ -2111,6 +2142,7 @@ void ComponentBase::ResolveStyles() {
         element->target_style = element->base_style;
         element->style = element->base_style;
         element->needs_style_seed = false;
+        element->target_stale = true;
       }
       for (size_t i = 0; i < element->ChildCount(); ++i) {
         self(self, element->ChildAt(i));
@@ -2358,28 +2390,7 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
     }
   }
 
-  auto ResetTarget = [](auto& self, Element* element) -> void {
-    if (element) {
-      element->target_style = element->base_style;
-      for (size_t i = 0; i < element->ChildCount(); ++i) {
-        self(self, element->ChildAt(i));
-      }
-    }
-  };
-  ResetTarget(ResetTarget, root_.get());
-
-  ResolveStylesFrom(root_.get(), true);
-
-  auto TriggerAll = [](auto& self, Element* element,
-                       double current_time_ms) -> void {
-    if (element) {
-      element->TriggerTransitions(current_time_ms);
-      for (size_t i = 0; i < element->ChildCount(); ++i) {
-        self(self, element->ChildAt(i), current_time_ms);
-      }
-    }
-  };
-  TriggerAll(TriggerAll, root_.get(), current_time_ms);
+  ResolveStylesFrom(root_.get(), true, current_time_ms);
 }
 
 namespace {

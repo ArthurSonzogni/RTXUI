@@ -10621,9 +10621,16 @@ TEST_CASE("A component's :hover rule outranks the one nested inside it",
   auto* btn = app->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
+  const auto unhovered = btn->target_style.background_color;
   btn->set_hovered(true);
   app->ResolveTargetStyles();
   CHECK(btn->target_style.background_color == Color::RGB(255, 0, 0));
+
+  // The pass skips elements no pseudo-class rule matches, now or last time.
+  // One that stops matching is not one of them: it gets its base style back.
+  btn->set_hovered(false);
+  app->ResolveTargetStyles();
+  CHECK(btn->target_style.background_color == unhovered);
 }
 
 TEST_CASE("Playground button hover and active styling test",
