@@ -2935,6 +2935,8 @@ void ScreenImpl::RunHeadless() {
   auto& device = static_cast<HeadlessTerminalDevice&>(*device_);
 #if defined(_WIN32)
   const bool piped = !_isatty(_fileno(stdin));
+#elif defined(__EMSCRIPTEN__)
+  const bool piped = false;  // A browser has no stdin to pipe.
 #else
   const bool piped = !isatty(STDIN_FILENO);
 #endif
