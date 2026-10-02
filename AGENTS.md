@@ -166,3 +166,12 @@ parser).
 `docs/` is a VitePress site (deployed by `.github/workflows/deploy-docs.yml`)
 with per-feature guides under `docs/guide/`, plus `css_reference.md` /
 `html_reference.md` / `reactivity.md`.
+
+- Every ```cpp block that defines a component is compiled against the public
+  headers by `verify_doc_snippets` (ctest). Mark a deliberate excerpt with
+  `<!-- snippet: fragment -->` on the line before its fence.
+- `docs/guide/common-mistakes.md` lists syntax borrowed from other frameworks
+  that RTXUI does not have. Extend it when you find a new one.
+- `scripts/generate_llms_txt.py` builds `llms.txt` / `llms-full.txt` from the
+  sidebar at deploy time; a page added to the sidebar is included
+  automatically.

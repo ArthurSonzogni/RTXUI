@@ -11,6 +11,7 @@ on:
       - 'include/**'
       - 'CMakeLists.txt'
       - '.github/workflows/deploy-docs.yml'
+      - 'scripts/generate_llms_txt.py'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -78,6 +79,9 @@ jobs:
           mkdir -p docs/public/wasm
           cp build_wasm/rtxui_example_*.js docs/public/wasm/
           cp build_wasm/rtxui_example_*.wasm docs/public/wasm/
+
+      - name: Generate llms.txt
+        run: python3 scripts/generate_llms_txt.py
 
       - name: Install dependencies
         run: npm ci
