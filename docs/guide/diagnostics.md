@@ -13,6 +13,8 @@ RTXUI reports each one as a diagnostic.
 | Interpolating a name that is not bound | `{titel}` | `'{titel}' in <App> is not a bound name` |
 | An expression inside `{}` | `{count == 1}` | `templates do not evaluate expressions; bind a const method computing the value and use its name` |
 | A handler that is not bound | `onclick="Sumbit"`, when clicked | `handler 'Sumbit' is not bound in any enclosing component` |
+| A tag that is not a built-in or an imported component | `<View>`, `<Card/>` without `Import<Card>()` | `unknown tag <Card> in <App>: if it is your component, call Import<Card>() in <App>'s constructor` |
+| A `<style>` nested inside an element | `<div><style>...</style></div>` | `<style> inside <div> in <App> is ignored: put <style> at the top level of the view` |
 | Another framework's attribute syntax | `v-if`, `*ngFor`, `className`, `onClick`, `for="x in xs"` | `attribute 'v-if' on <div> in <App> is not RTXUI syntax: use if="{name}" or <if condition="{name}">` |
 
 Each distinct message is reported once per run, even though styles are

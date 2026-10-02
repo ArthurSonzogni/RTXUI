@@ -1864,10 +1864,42 @@ std::optional<std::string> ForeignAttributeAdvice(std::string_view name,
   return std::nullopt;
 }
 
-void CheckTemplate(const xml::Nodes& nodes, std::string_view tag) {
+// A tag that is neither a component (built-in or imported) nor one the layout
+// engine handles itself renders as a generic box, which is almost never what
+// was meant: a component that was not imported, or a tag from another UI
+// framework (<View>, <Text>).
+void ReportUnknownTag(std::string_view tag, std::string_view owner) {
+  static constexpr std::array<std::string_view, 8> kLayoutTags = {
+      "br", "table", "thead", "tbody", "tfoot", "tr", "th", "td"};
+  if (std::ranges::find(kLayoutTags, tag) != kLayoutTags.end()) {
+    return;
+  }
+  std::string message = "unknown tag <" + std::string(tag) + "> in <" +
+                        std::string(owner) + ">: ";
+  if (!tag.empty() && std::isupper(static_cast<unsigned char>(tag[0]))) {
+    message += "if it is your component, call Import<" + std::string(tag) +
+               ">() in <" + std::string(owner) + ">'s constructor";
+  } else {
+    message +=
+        "use a built-in tag (div, span, button, ...) or import a "
+        "component";
+  }
+  ReportDiagnostic(message);
+}
+
+void CheckTemplate(const xml::Nodes& nodes,
+                   std::string_view tag,
+                   std::string_view parent = "") {
   for (const auto& node : nodes) {
     if (node.type != xml::Node::kElement) {
       continue;
+    }
+    // Only top-level <style> blocks are collected; a nested one is dropped.
+    if (node.tag == "style" && !parent.empty()) {
+      ReportDiagnostic("<style> inside <" + std::string(parent) + "> in <" +
+                       std::string(tag) +
+                       "> is ignored: put <style> at the top level of the "
+                       "view, next to the root element");
     }
     for (const auto& [name, value] : node.attributes) {
       if (auto advice = ForeignAttributeAdvice(name, value)) {
@@ -1876,7 +1908,7 @@ void CheckTemplate(const xml::Nodes& nodes, std::string_view tag) {
                          "> is not RTXUI syntax: " + *advice);
       }
     }
-    CheckTemplate(node.children, tag);
+    CheckTemplate(node.children, tag, node.tag);
   }
 }
 
@@ -3005,6 +3037,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             child_element = Ref<Element>::New();
             child_element->set_owner_component(import_source);
             child_element->SetTag(std::string(child_node.tag));
+            ReportUnknownTag(child_node.tag, import_source->Tag());
           }
         }
 
