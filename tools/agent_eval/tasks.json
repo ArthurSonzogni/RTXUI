@@ -1,0 +1,44 @@
+[
+  {
+    "name": "counter",
+    "prompt": "Write an RTXUI app with a counter. The screen shows the text `Count: N`, where N starts at 0. The first focusable element is a button labelled `Increment` that adds one; the second is a button labelled `Reset` that sets N back to 0.",
+    "checks": [
+      {"input": "", "expect": ["Count: 0", "Increment", "Reset"]},
+      {"input": "\\t\\r\\r\\r", "expect": ["Count: 3"]},
+      {"input": "\\t\\r\\r\\t\\r", "expect": ["Count: 0"]}
+    ]
+  },
+  {
+    "name": "todo",
+    "prompt": "Write an RTXUI todo list. The first focusable element is a text input; the second is a button labelled `Add` that appends the input's text to a list shown below and clears the input. Each item is shown on its own line prefixed with `- `. Above the list, show `Items: N` with the number of items.",
+    "checks": [
+      {"input": "", "expect": ["Items: 0", "Add"]},
+      {"input": "\\tmilk\\t\\r", "expect": ["- milk", "Items: 1"]},
+      {"input": "\\tmilk\\t\\r\\teggs\\t\\r", "expect": ["- milk", "- eggs", "Items: 2"]}
+    ]
+  },
+  {
+    "name": "filter",
+    "prompt": "Write an RTXUI app showing the fruits Apple, Banana, Cherry and Mango, one per line. The first focusable element is a text input; only fruits whose name contains the typed text (case-insensitive) are listed. Below the list, show `Shown: N` with the number of fruits listed.",
+    "checks": [
+      {"input": "", "expect": ["Apple", "Banana", "Cherry", "Mango", "Shown: 4"]},
+      {"input": "\\tan", "expect": ["Banana", "Mango", "Shown: 2"], "reject": ["Apple", "Cherry"]}
+    ]
+  },
+  {
+    "name": "settings",
+    "prompt": "Write an RTXUI settings form with two checkboxes, labelled `Dark mode` and `Notifications`, both unchecked at first. Below them, show a status line `Dark mode: on` or `Dark mode: off`, and another `Notifications: on` or `Notifications: off`, following the checkboxes. The checkboxes are the first and second focusable elements.",
+    "checks": [
+      {"input": "", "expect": ["Dark mode: off", "Notifications: off"]},
+      {"input": "\\t ", "expect": ["Dark mode: on", "Notifications: off"]},
+      {"input": "\\t\\t ", "expect": ["Dark mode: off", "Notifications: on"]}
+    ]
+  },
+  {
+    "name": "layout",
+    "prompt": "Write an RTXUI app laid out like a classic application window: a header row containing the title `My App`, a body split into a left sidebar (about a quarter of the width, listing `Home`, `Files` and `Settings`) and a main area showing `Welcome`, and a footer row showing `Status: ready`. Draw a rounded border around the whole window.",
+    "checks": [
+      {"input": "", "expect": ["My App", "Home", "Files", "Settings", "Welcome", "Status: ready", "╭"]}
+    ]
+  }
+]
