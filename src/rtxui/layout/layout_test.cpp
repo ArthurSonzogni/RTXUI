@@ -3915,8 +3915,8 @@ TEST_CASE("Layout: flex item with auto width shrinks to its block children",
 //    component.cpp), so `element->component()` gives the immediate
 //    per-tag wrapper, not the outer instantiation boundary -- matching
 //    has to walk up the DOM parent chain via owner_component() instead.
-// 2. ResolveStylesRecursive skips descending into a nested component's
-//    subtree entirely when it has no slotted content, since normally
+// 2. the style walk used to skip descending into a nested component's
+//    subtree entirely when it had no slotted content, since normally
 //    nothing outer could ever reach in there -- an optimization that
 //    silently broke ::part() once it made that reachable.
 TEST_CASE(

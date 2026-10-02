@@ -10378,7 +10378,7 @@ class OnlySelfRulesApp : public rtxui::Component<OnlySelfRulesApp> {
 
 TEST_CASE("A bare `self` rule does not stop a stylesheet reaching descendants",
           "[component][style][css]") {
-  // ResolveStylesRecursive skips the whole matching pass for a component whose
+  // ResolveElementStyle skips the whole matching pass for a component whose
   // every rule is a bare `self { … }`, because such a component can only ever
   // style its own root -- and since every HTML tag is itself a component, that
   // describes most components in a tree. The skip is only sound if "bare self"
@@ -10440,6 +10440,74 @@ class HoverCardHost : public rtxui::Component<HoverCardHost> {
   )";
 };
 }  // namespace
+
+namespace {
+class PartLabel : public rtxui::Component<PartLabel> {
+ public:
+  std::string kind = "before";
+  PartLabel() { Bind(kind); }
+  std::string_view view = R"(
+    <div>
+      <span part="label" class="{kind}">x</span>
+    </div>
+  )";
+};
+
+class PartLabelMiddle : public rtxui::Component<PartLabelMiddle> {
+ public:
+  void InitReflection() override {
+    Import<PartLabel>();
+    rtxui::Component<PartLabelMiddle>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <PartLabel/>
+    </div>
+  )";
+};
+
+// The rule reaches through PartLabelMiddle, two components above the span.
+class PartLabelHost : public rtxui::Component<PartLabelHost> {
+ public:
+  void InitReflection() override {
+    Import<PartLabelMiddle>();
+    rtxui::Component<PartLabelHost>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <PartLabelMiddle/>
+    </div>
+    <style>
+      PartLabelMiddle::part(label) { padding: 3; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A ::part() rule survives the inner component re-rendering itself",
+          "[component][style][part]") {
+  // PartLabel re-renders on its own, from its own state, and the class change
+  // makes it restyle the span. Nothing above it changes, but the span must
+  // still get the ::part() rule of the host two components up, not only the
+  // rules of PartLabel and of the component directly using it.
+  auto app = rtxui::Ref<PartLabelHost>::New();
+  app->Mount();
+  auto label = [&] {
+    auto* element = app->Root()->QuerySelector("span");
+    REQUIRE(element != nullptr);
+    return element;
+  };
+  CHECK(label()->style.padding.left == 3);
+
+  auto* inner = const_cast<rtxui::ComponentBase*>(
+      app->Root()->QuerySelector("PartLabel")->component());
+  dynamic_cast<PartLabel*>(inner)->kind = "after";
+  bool changed = app->Digest();
+  CHECK(changed);
+  CHECK(label()->classes == std::vector<std::string>{"after"});
+  rtxui::ComponentInternals::ResolveStyles(*app);
+  CHECK(label()->style.padding.left == 3);
+}
 
 TEST_CASE("A component's :hover rule outranks the one nested inside it",
           "[component][style][css]") {

@@ -14,6 +14,7 @@
 #include <mutex>
 #include <optional>
 #include <print>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -1329,74 +1330,32 @@ bool IsCssWideKeyword(std::string_view value) {
 
 thread_local int g_style_visit_count = 0;
 
-void ResolveStylesRecursive(Element* element,
-                            const ComponentBase* component,
-                            bool check_pseudos) {
-  if (!element || !component) {
-    return;
-  }
-  ++g_style_visit_count;
-
-  bool is_styled = IsStyledByComponent(element, component);
+// Resolves `element` against the rules of one `component` that can style it:
+// the component it is the root of, the one whose template wrote it, or one
+// reaching in through ::part(). ResolveStylesInTree picks which, and in what
+// order.
+void ResolveElementStyle(Element* element,
+                         const ComponentBase* component,
+                         bool check_pseudos) {
   const auto* categorized_for_parts =
       ComponentInternals::categorized_rules(*component);
-  // The base pass keeps walking for any ::part() rule, pseudo or not: that
-  // walk is also what marks elements resolved and rebuilds custom properties.
+  if (check_pseudos &&
+      (!categorized_for_parts || !categorized_for_parts->has_pseudo_classes)) {
+    return;
+  }
+  bool is_styled = IsStyledByComponent(element, component);
+  // ::part() rules can match elements the component neither owns nor is the
+  // root of. In the base pass, a pseudo ::part() rule still counts: that pass
+  // is also what marks the element resolved and rebuilds custom properties.
   bool has_part_rules =
       categorized_for_parts &&
       (!categorized_for_parts->pseudo.part_rules.empty() ||
        (!check_pseudos && !categorized_for_parts->base.part_rules.empty()));
-  // Whenever the styled branch below is about to run AND actually redo the
-  // custom-properties resolution (i.e. not short-circuited by the
-  // goto-recurse below for an element already resolved against `component`
-  // this frame), that redo unconditionally overwrites element->
-  // custom_properties with freshly-collected own_custom_properties before
-  // anything in between ever reads it - so this pass's copy would just be
-  // computed and immediately discarded. Skipping it here avoids copying
-  // (and reallocating tree nodes for) the custom-properties map twice per
-  // element per frame, the common case for any styled element.
-  // Classes can be mutated in place without invalidating anything, so verify
-  // the memo against them before consulting it. Doing it once per element per
-  // base pass, before the recursion below, means the first component to reach
-  // the element drops the stale memo and every later pass sees a memo that
-  // agrees with the current classes.
-  if (!check_pseudos) {
-    element->needs_style_resolve = false;
-  }
-
-  bool will_recompute_custom_properties =
-      !check_pseudos && (is_styled || has_part_rules) &&
-      !element->IsStyleResolvedFor(component);
-
-  // Custom properties inherit through every element in the tree — including
-  // slot and other unstyled elements — so rebuild the resolved map from the
-  // DOM parent up front (parents are visited before children). The element's
-  // own --* declarations are overlaid again after collection below.
-  if (!check_pseudos && !will_recompute_custom_properties) {
-    const Element* parent = element->Parent();
-    if (parent) {
-      element->custom_properties = parent->custom_properties;
-    } else {
-      element->custom_properties.clear();
-    }
-    for (const auto& [name, val] : element->own_custom_properties) {
-      element->custom_properties[name] = val;
-    }
-  }
-  // Resolve nested component internal styles first, so that parent styles
-  // (template/classes) take precedence and override the child's internal
-  // styles. Not in the pseudo pass: ResolveTargetStyles already runs it for
-  // every component, children before parents, so dispatching here again would
-  // repeat each component's pass once per component it is nested in.
-  if (!check_pseudos && element->component() &&
-      element->component() != component) {
-    ResolveStylesRecursive(element, element->component(), check_pseudos);
-  }
 
   if (is_styled || has_part_rules) {
     if (!check_pseudos) {
       if (element->IsStyleResolvedFor(component)) {
-        goto recurse;
+        return;
       }
       if (!element->styled_by_1 && !element->styled_by_2) {
         element->base_style = ComputedStyle();
@@ -1410,7 +1369,7 @@ void ResolveStylesRecursive(Element* element,
     // matching, sorting and applying are skipped.
     if (categorized_for_parts && categorized_for_parts->only_self_rules &&
         element != component->Root()) {
-      goto recurse;
+      return;
     }
 
     {
@@ -1547,7 +1506,7 @@ void ResolveStylesRecursive(Element* element,
       // nothing matched there is nothing left to do. Stopping here skips
       // re-parsing the inline style of every element on every pass.
       if (check_pseudos && matched.empty()) {
-        goto recurse;
+        return;
       }
 
       // Order the cascade. Declarations are applied in sequence and a later one
@@ -1726,28 +1685,89 @@ void ResolveStylesRecursive(Element* element,
       element->needs_style_seed = true;
     }
   }
+}
 
-recurse:
-  if (element->component() && element->component() != component) {
-    bool has_slot_children = false;
-    for (const auto& [name, slot_el] :
-         ComponentInternals::slots(*element->component())) {
-      if (slot_el && slot_el->ChildCount() > 0) {
-        has_slot_children = true;
-        break;
-      }
+// Whether `component` has ::part() rules that this pass would use.
+bool HasPartRules(const ComponentBase* component, bool check_pseudos) {
+  const auto* rules = ComponentInternals::categorized_rules(*component);
+  return rules && (!rules->pseudo.part_rules.empty() ||
+                   (!check_pseudos && !rules->base.part_rules.empty()));
+}
+
+// Resolves the styles of `element` and its subtree, visiting each element
+// once.
+//
+// `enclosing` holds the components whose root is `element` or one of its
+// ancestors, outermost first. Only those can style an element: its own
+// component (when it is that component's root), its owner (whose template
+// wrote it), and any with ::part() rules. They are applied innermost first,
+// so that a component's styles override those of the components it uses:
+// `<button class="x">` takes the button's own `self` rules, then the
+// stylesheet that wrote the `.x`.
+void ResolveStylesInTree(Element* element,
+                         std::vector<const ComponentBase*>& enclosing,
+                         bool check_pseudos) {
+  ++g_style_visit_count;
+  if (!check_pseudos) {
+    element->needs_style_resolve = false;
+    // Custom properties inherit through every element, including slots and
+    // others no component styles, so start from the DOM parent's (resolved
+    // first, since parents are visited before children). A component that
+    // styles the element below rebuilds them again with its own --*
+    // declarations.
+    const Element* parent = element->Parent();
+    if (parent) {
+      element->custom_properties = parent->custom_properties;
+    } else {
+      element->custom_properties.clear();
     }
-    // Without slot content, `component`'s own selectors could never reach
-    // anything inside this nested component's subtree -- UNLESS it has
-    // ::part() rules, which are specifically designed to reach in there.
-    if (!has_slot_children && !has_part_rules) {
-      return;
+    for (const auto& [name, val] : element->own_custom_properties) {
+      element->custom_properties[name] = val;
     }
+  }
+
+  const ComponentBase* own = element->component();
+  if (own) {
+    enclosing.push_back(own);
+  }
+  const ComponentBase* owner = element->owner_component();
+  bool owner_applied = !owner;
+  for (const ComponentBase* component : std::views::reverse(enclosing)) {
+    if (component == owner) {
+      owner_applied = true;
+    } else if (component != own && !HasPartRules(component, check_pseudos)) {
+      continue;
+    }
+    ResolveElementStyle(element, component, check_pseudos);
+  }
+  // An owner whose root is not above the element still styles it, last, as
+  // the outermost of the components involved.
+  if (!owner_applied) {
+    ResolveElementStyle(element, owner, check_pseudos);
   }
 
   for (size_t i = 0; i < element->ChildCount(); ++i) {
-    ResolveStylesRecursive(element->ChildAt(i), component, check_pseudos);
+    ResolveStylesInTree(element->ChildAt(i), enclosing, check_pseudos);
   }
+  if (own) {
+    enclosing.pop_back();
+  }
+}
+
+// Resolves the styles of `root` and its subtree, with the components enclosing
+// `root` taking part as they would in a resolution of the whole document.
+void ResolveStylesFrom(Element* root, bool check_pseudos) {
+  if (!root) {
+    return;
+  }
+  std::vector<const ComponentBase*> enclosing;
+  for (const Element* el = root->Parent(); el; el = el->Parent()) {
+    if (el->component()) {
+      enclosing.push_back(el->component());
+    }
+  }
+  std::reverse(enclosing.begin(), enclosing.end());
+  ResolveStylesInTree(root, enclosing, check_pseudos);
 }
 
 }  // namespace
@@ -2064,10 +2084,7 @@ void ComponentBase::ResolveStyles() {
     return;
   }
 
-  ResolveStylesRecursive(root_.get(), this, false);
-  if (root_ && root_->owner_component() && root_->owner_component() != this) {
-    ResolveStylesRecursive(root_.get(), root_->owner_component(), false);
-  }
+  ResolveStylesFrom(root_.get(), false);
 
   auto CopyBaseStyles = [&](auto& self, Element* element) -> void {
     if (element) {
@@ -2288,34 +2305,7 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
   };
   ResetTarget(ResetTarget, root_.get());
 
-  auto ResolveAll = [](auto& self, ComponentBase* comp,
-                       ComponentBase* root_comp) -> void {
-    if (!comp || !comp->Root()) {
-      return;
-    }
-    // Resolve child components first so that parent rules (e.g. button:hover)
-    // take precedence and override child component internal styles
-    // (self:hover).
-    for (auto& child : comp->children_) {
-      self(self, child.get(), root_comp);
-    }
-    // Optimization: Skip resolving target styles if the component stylesheet
-    // has no pseudo-classes (hover, active, focus). Yields ~18% speedup in DOM
-    // Digest.
-    if (comp->categorized_rules() &&
-        comp->categorized_rules()->has_pseudo_classes) {
-      ResolveStylesRecursive(comp->Root(), comp, true);
-    }
-    if (comp == root_comp && comp->Root()->owner_component() &&
-        comp->Root()->owner_component() != comp) {
-      const ComponentBase* owner = comp->Root()->owner_component();
-      if (owner->categorized_rules() &&
-          owner->categorized_rules()->has_pseudo_classes) {
-        ResolveStylesRecursive(comp->Root(), owner, true);
-      }
-    }
-  };
-  ResolveAll(ResolveAll, this, this);
+  ResolveStylesFrom(root_.get(), true);
 
   auto TriggerAll = [](auto& self, Element* element,
                        double current_time_ms) -> void {
