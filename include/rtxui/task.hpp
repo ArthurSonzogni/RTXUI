@@ -9,16 +9,18 @@
 
 namespace rtxui {
 
-/// Schedules `task` on the calling thread's event loop, to run after the
-/// current callback returns. Must be called from a thread running an event
-/// loop, i.e. the UI thread. From a worker thread, use TaskPoster().
+/// Schedules `task` to run on the application's event loop, after the current
+/// callback returns. Safe to call from any thread: on a thread that runs an
+/// event loop it posts to that loop; from any other thread (a worker) it posts
+/// to the application's, which is how a worker hands back its result, since
+/// only the UI thread may touch component state. A task posted after the
+/// event loop is gone is dropped.
+///
+///   std::thread([] {
+///     auto result = SlowWork();
+///     rtxui::PostTask([result] { /* update bound state */ });
+///   }).detach();
 RTXUI_EXPORT void PostTask(std::function<void()> task);
-
-/// Returns a function that schedules a task on the calling thread's event
-/// loop. Call it on the UI thread; the returned function may then be handed
-/// to, and called from, any thread. Only the UI thread may touch component
-/// state, so this is how a worker thread delivers its result.
-RTXUI_EXPORT auto TaskPoster() -> std::function<void(std::function<void()>)>;
 
 }  // namespace rtxui
 

@@ -3,14 +3,33 @@
 // the LICENSE file.
 #include "rtxui/base/task_runner.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <mutex>
 #include <thread>
+#include <vector>
 
 #include "rtxui/task.hpp"
 
 namespace task {
 
 static thread_local TaskRunner* current_task_runner = nullptr;  // NOLINT
+
+namespace {
+
+// Every live runner, newest last, for rtxui::PostTask from threads that run
+// none. Guarded by a mutex held while posting, so a runner cannot be
+// destroyed mid-post.
+std::mutex& LiveRunnersMutex() {
+  static std::mutex mutex;
+  return mutex;
+}
+std::vector<TaskRunner*>& LiveRunners() {
+  static std::vector<TaskRunner*> runners;
+  return runners;
+}
+
+}  // namespace
 
 // static
 auto TaskRunner::Current() -> TaskRunner* {
@@ -20,9 +39,15 @@ auto TaskRunner::Current() -> TaskRunner* {
 
 TaskRunner::TaskRunner() {
   current_task_runner = this;
+  std::lock_guard<std::mutex> lock(LiveRunnersMutex());
+  LiveRunners().push_back(this);
 }
 
 TaskRunner::~TaskRunner() {
+  {
+    std::lock_guard<std::mutex> lock(LiveRunnersMutex());
+    std::erase(LiveRunners(), this);
+  }
   if (current_task_runner == this) {
     current_task_runner = nullptr;
   }
@@ -111,14 +136,17 @@ auto TaskRunner::Run() -> void {
 namespace rtxui {
 
 void PostTask(std::function<void()> task) {
-  task::TaskRunner::Current()->PostTask(std::move(task));
-}
-
-auto TaskPoster() -> std::function<void(std::function<void()>)> {
-  task::TaskRunner* runner = task::TaskRunner::Current();
-  return [runner](std::function<void()> task) {
-    runner->PostTask(std::move(task));
-  };
+  // On a thread with an event loop, post to that loop.
+  if (task::current_task_runner) {
+    task::current_task_runner->PostTask(std::move(task));
+    return;
+  }
+  // From a worker thread, post to the application's loop. Once it is gone
+  // there is nothing left to run the task, so it is dropped.
+  std::lock_guard<std::mutex> lock(task::LiveRunnersMutex());
+  if (!task::LiveRunners().empty()) {
+    task::LiveRunners().back()->PostTask(std::move(task));
+  }
 }
 
 }  // namespace rtxui

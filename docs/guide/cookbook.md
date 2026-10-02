@@ -42,9 +42,9 @@ is the underlying pattern for when you need full control over the header.
 
 Callbacks run on the main thread, so blocking inside one (network requests,
 large file reads) freezes rendering. Run the work on a `std::thread` and post
-the result back to the main loop with `rtxui::TaskPoster()`: call it on the
-main thread, and the function it returns may be called from other threads. State mutations posted this way are picked up by the
-normal digest cycle.
+the result back to the main loop with `rtxui::PostTask(...)`, which may be
+called from any thread. State mutations posted this way are picked up by the
+normal digest cycle; a task posted after the application exited is dropped.
 
 <ExampleTabs src="/wasm/rtxui_example_cookbook_async.js">
 <template #source>

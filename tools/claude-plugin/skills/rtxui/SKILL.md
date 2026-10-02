@@ -89,9 +89,9 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
 - CSS lengths are terminal cells (`width: 20`). `font-size` and `font-family`
   do not exist; use `font-weight`, `font-style`, `text-decoration`, colors and
   `border` (`solid`, `rounded`, `double`, `tall`, ...).
-- Only the UI thread may change component state. From a worker thread, take
-  `auto post = rtxui::TaskPoster();` on the UI thread and call
-  `post([...] { ... })` from the worker.
+- Only the UI thread may change component state. From a worker thread, hand
+  the result back with `rtxui::PostTask([...] { ... });`, which is safe to
+  call from any thread.
 
 When unsure whether a property, tag or attribute exists, check the references
 rather than guessing: https://arthursonzogni.github.io/RTXUI/llms-full.txt

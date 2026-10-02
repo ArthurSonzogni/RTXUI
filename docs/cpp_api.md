@@ -8,7 +8,7 @@ This specification defines the public C++ API of RTXUI (`#include <rtxui/rtxui.h
 
 ### 1.1 Concurrency Model
 - **UI Thread Affinity**: All component construction, template compilation, DOM mutations, layout resolution, and `Screen::Draw()` operations **must** execute on the designated main UI thread. They are non-reentrant and not thread-safe.
-- **Cross-Thread Synchronization**: Background worker threads communicate with UI state exclusively by dispatching callbacks via a poster obtained on the UI thread with `rtxui::TaskPoster()`. The runner queues tasks in a thread-safe atomic lock-free queue and wakes the terminal event loop via a POSIX signal pipe (`self-pipe`) or Windows event object.
+- **Cross-Thread Synchronization**: Background worker threads communicate with UI state exclusively by posting callbacks with `rtxui::PostTask()`. The runner queues them in a mutex-guarded queue and wakes the terminal event loop via a self-pipe (POSIX) or an event object (Windows).
 
 ### 1.2 Exception Safety Contract
 - RTXUI is strictly non-throwing and compatible with `-fno-exceptions`. No C++ exceptions are thrown or caught across the public API surface.
@@ -243,9 +243,8 @@ Provides thread-safe task dispatching onto the primary UI event loop.
 ```cpp
 namespace rtxui {
 void PostTask(std::function<void()> task);
-auto TaskPoster() -> std::function<void(std::function<void()>)>;
 }
 ```
 
 ### Thread Invariant
-`PostTask()` schedules onto the calling thread's event loop, so it may only be called from the UI thread. `TaskPoster()` returns a function bound to the calling thread's loop: obtain it on the UI thread and hand it to worker threads. Calling it from any thread thread-safely enqueues the callable and unblocks the screen event loop immediately.
+`PostTask()` may be called from any thread. On a thread running an event loop it schedules onto that loop; from any other thread (a worker) it schedules onto the application's loop and wakes it immediately. A task posted after the event loop is gone is dropped.
