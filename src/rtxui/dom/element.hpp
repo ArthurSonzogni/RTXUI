@@ -240,6 +240,9 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// still equals `base_style` and `style` has settled on it, so that pass has
   /// nothing to do here unless a pseudo-class rule matches now.
   bool target_stale = true;
+  /// Whether `style` was ever seeded from a resolved base style. Until then
+  /// there is nothing on screen to transition from.
+  bool style_seeded = false;
   /// Whether a pseudo-class rule matched in the last pseudo-class pass.
   bool matched_pseudo_rule = false;
 
