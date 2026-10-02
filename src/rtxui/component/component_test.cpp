@@ -10611,6 +10611,97 @@ TEST_CASE("One Digest() resolves the styles of the tree once",
   CHECK(rtxui::StyleVisitCount() == 2 * elements);
 }
 
+namespace {
+class DescendantRuleApp : public rtxui::Component<DescendantRuleApp> {
+ public:
+  bool on = false;
+  std::string state() const { return on ? "on" : "off"; }
+  DescendantRuleApp() {
+    Bind(on);
+    Bind(state);
+  }
+  std::string_view view = R"(
+    <div class="{state}">
+      <div>
+        <span id="leaf">x</span>
+      </div>
+    </div>
+    <style>
+      .on span { padding: 3; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A descendant rule follows a change of the ancestor it names",
+          "[component][style][css]") {
+  // Only the ancestor's class changes: the span itself is untouched, but
+  // `.on span` now matches it.
+  auto app = rtxui::Ref<DescendantRuleApp>::New();
+  app->Mount();
+  auto leaf = [&] { return app->Root()->QuerySelector("#leaf"); };
+  REQUIRE(leaf() != nullptr);
+  CHECK(leaf()->style.padding.left == 0);
+
+  app->on = true;
+  app->Digest();
+  rtxui::ComponentInternals::ResolveStyles(*app);
+  CHECK(leaf()->style.padding.left == 3);
+
+  app->on = false;
+  app->Digest();
+  rtxui::ComponentInternals::ResolveStyles(*app);
+  CHECK(leaf()->style.padding.left == 0);
+}
+
+namespace {
+class SiblingRuleApp : public rtxui::Component<SiblingRuleApp> {
+ public:
+  bool on = false;
+  std::string state() const { return on ? "on" : "off"; }
+  SiblingRuleApp() {
+    Bind(on);
+    Bind(state);
+  }
+  std::string_view view = R"(
+    <div>
+      <div class="{state}">a</div>
+      <span id="next">b</span>
+      <span id="later">c</span>
+    </div>
+    <style>
+      .on + span { padding: 3; }
+      .on ~ span { margin: 2; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A sibling rule follows a change of the sibling it names",
+          "[component][style][css]") {
+  // Only the first div's class changes: the spans after it are untouched,
+  // but `.on + span` and `.on ~ span` now match them.
+  auto app = rtxui::Ref<SiblingRuleApp>::New();
+  app->Mount();
+  auto at = [&](const char* id) { return app->Root()->QuerySelector(id); };
+  REQUIRE(at("#next") != nullptr);
+  REQUIRE(at("#later") != nullptr);
+  CHECK(at("#next")->style.padding.left == 0);
+
+  app->on = true;
+  app->Digest();
+  rtxui::ComponentInternals::ResolveStyles(*app);
+  CHECK(at("#next")->style.padding.left == 3);
+  CHECK(at("#later")->style.padding.left == 0);
+  CHECK(at("#later")->style.margin.left == 2);
+
+  app->on = false;
+  app->Digest();
+  rtxui::ComponentInternals::ResolveStyles(*app);
+  CHECK(at("#next")->style.padding.left == 0);
+  CHECK(at("#later")->style.margin.left == 0);
+}
+
 TEST_CASE("A component's :hover rule outranks the one nested inside it",
           "[component][style][css]") {
   // <button> has its own `self:hover { background-color: … }`, two components

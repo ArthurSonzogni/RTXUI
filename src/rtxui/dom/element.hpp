@@ -249,6 +249,16 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// of paying for a full resolution pass to discover there was nothing to do.
   bool needs_style_resolve = true;
 
+  /// Whether a base style pass has work to do here or anywhere below, as of
+  /// the last staleness walk. Lets the pass skip whole clean subtrees.
+  bool subtree_needs_style_resolve = true;
+
+  /// Set when something a selector can test on this element -- its id, its
+  /// classes, any attribute -- actually changed. Selectors also test
+  /// ancestors (`.on span`), so the next base style pass re-resolves the
+  /// whole subtree, not only this element.
+  bool selector_inputs_changed = false;
+
   bool IsStyleResolvedFor(const ComponentBase* comp) const {
     return styled_by_1 == comp || styled_by_2 == comp;
   }
@@ -269,6 +279,7 @@ class RTXUI_EXPORT Element : public RefCounted {
     }
     resolved_classes_hash_ = hash;
     ClearResolvedStyles();
+    selector_inputs_changed = true;
     return true;
   }
 

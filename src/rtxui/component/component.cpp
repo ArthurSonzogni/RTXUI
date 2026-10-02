@@ -295,6 +295,9 @@ struct CategorizedRules {
   RuleBuckets base;
   RuleBuckets pseudo;
   bool has_pseudo_classes = false;
+  // Whether a selector tests a preceding sibling (`+`, `~`), so that a change
+  // to one element can change what matches the elements after it.
+  bool has_sibling_combinators = false;
   // True when every ruleset is a bare `self { ... }`, so this component can
   // only ever style its own root. Because each HTML tag is itself a component,
   // most components in a tree are of this shape, and without this they still
@@ -1724,16 +1727,37 @@ bool HasPartRules(const ComponentBase* component, bool check_pseudos) {
 // `<button class="x">` takes the button's own `self` rules, then the
 // stylesheet that wrote the `.x`.
 //
+// The base pass skips the subtrees the last staleness walk (AnyStyleStale)
+// found clean, unless `restyle` says the whole subtree must be resolved again:
+// selectors test ancestors, and custom properties inherit from them. It
+// returns whether something a selector tests on `element` itself changed,
+// which can change what matches its later siblings too.
+//
 // The pseudo-class pass (`check_pseudos`) layers the pseudo-class rules over
 // each element's base style into `target_style`, then starts the transitions
 // towards it, at `current_time_ms`.
-void ResolveStylesInTree(Element* element,
+bool ResolveStylesInTree(Element* element,
                          std::vector<const ComponentBase*>& enclosing,
                          bool check_pseudos,
-                         double current_time_ms) {
+                         double current_time_ms,
+                         bool restyle = false) {
+  css::CustomProperties previous_custom_properties;
+  const bool selector_inputs_changed = element->selector_inputs_changed;
+  if (!check_pseudos) {
+    if (!restyle && !element->subtree_needs_style_resolve) {
+      return false;
+    }
+    if (restyle) {
+      element->ClearResolvedStyles();
+    }
+    restyle = restyle || selector_inputs_changed;
+    element->selector_inputs_changed = false;
+    element->subtree_needs_style_resolve = false;
+  }
   ++g_style_visit_count;
   if (!check_pseudos) {
     element->needs_style_resolve = false;
+    previous_custom_properties = std::move(element->custom_properties);
     // Custom properties inherit through every element, including slots and
     // others no component styles, so start from the DOM parent's (resolved
     // first, since parents are visited before children). A component that
@@ -1788,14 +1812,37 @@ void ResolveStylesInTree(Element* element,
     element->TriggerTransitions(current_time_ms);
     element->target_stale = false;
   }
+  if (!check_pseudos) {
+    // Only elements whose base style was just recomputed. Seeding the rest
+    // would overwrite a transition-blended `style` with its unanimated value.
+    if (element->needs_style_seed) {
+      element->target_style = element->base_style;
+      element->style = element->base_style;
+      element->needs_style_seed = false;
+      element->target_stale = true;
+    }
+    restyle =
+        restyle || element->custom_properties != previous_custom_properties;
+  }
 
+  const bool siblings_matter =
+      !check_pseudos &&
+      std::ranges::any_of(enclosing, [](const ComponentBase* component) {
+        const auto* rules = ComponentInternals::categorized_rules(*component);
+        return rules && rules->has_sibling_combinators;
+      });
+  bool restyle_following = false;
   for (size_t i = 0; i < element->ChildCount(); ++i) {
-    ResolveStylesInTree(element->ChildAt(i), enclosing, check_pseudos,
-                        current_time_ms);
+    if (ResolveStylesInTree(element->ChildAt(i), enclosing, check_pseudos,
+                            current_time_ms, restyle || restyle_following) &&
+        siblings_matter) {
+      restyle_following = true;
+    }
   }
   if (own) {
     enclosing.pop_back();
   }
+  return !check_pseudos && selector_inputs_changed;
 }
 
 // Resolves the styles of `root` and its subtree, with the components enclosing
@@ -1901,6 +1948,11 @@ std::shared_ptr<const StyleData> GetSharedStyle(
     CategorizedRules& rules = data->rules;
     for (const auto& ruleset : sheet) {
       const bool is_pseudo = !ruleset.parsed_selector.pseudo_classes.empty();
+      for (const auto& part : ruleset.parsed_selector.parents) {
+        if (part.combinator == '+' || part.combinator == '~') {
+          rules.has_sibling_combinators = true;
+        }
+      }
       if (is_pseudo) {
         rules.has_pseudo_classes = true;
       }
@@ -2114,6 +2166,7 @@ bool AnyStyleStale(Element* element) {
   for (size_t i = 0; i < element->ChildCount(); ++i) {
     stale = AnyStyleStale(element->ChildAt(i)) || stale;
   }
+  element->subtree_needs_style_resolve = stale;
   return stale;
 }
 
@@ -2131,25 +2184,6 @@ void ComponentBase::ResolveStyles() {
   }
 
   ResolveStylesFrom(root_.get(), false);
-
-  auto CopyBaseStyles = [&](auto& self, Element* element) -> void {
-    if (element) {
-      // Only elements whose base style was just recomputed. Seeding the rest
-      // would overwrite a transition-blended `style` with its unanimated
-      // value, and would copy two ~100-field structs per element per pass for
-      // nothing.
-      if (element->needs_style_seed) {
-        element->target_style = element->base_style;
-        element->style = element->base_style;
-        element->needs_style_seed = false;
-        element->target_stale = true;
-      }
-      for (size_t i = 0; i < element->ChildCount(); ++i) {
-        self(self, element->ChildAt(i));
-      }
-    }
-  };
-  CopyBaseStyles(CopyBaseStyles, root_.get());
 }
 
 void ComponentBase::Render() {
