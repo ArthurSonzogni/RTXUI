@@ -59,6 +59,18 @@ def main() -> int:
                 f"which does not exist"
             )
 
+    # Examples link `rtxui`, never `rtxui_lib`: rtxui_lib is a plain static
+    # archive, so linking it directly drops every built-in component nothing
+    # else references (they register themselves at static initialisation),
+    # and the example silently renders differently from an installed app.
+    for name in re.findall(
+            r"target_link_libraries\(\s*rtxui_example_(\w+)\s+\w+\s+rtxui_lib\b",
+            cmake):
+        errors.append(
+            f"rtxui_example_{name} links rtxui_lib; link rtxui, which keeps "
+            f"the built-in components"
+        )
+
     # 2. Every docs reference resolves.
     for md in sorted(DOCS.rglob("*.md")):
         if ".vitepress" in md.parts:
