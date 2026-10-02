@@ -4,9 +4,9 @@
 #include "rtxui/base/task_runner.hpp"
 
 #include <atomic>
-#include <rtxui/task.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <rtxui/task.hpp>
 #include <thread>
 #include <vector>
 

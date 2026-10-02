@@ -10,7 +10,6 @@
 #include <rtxui/rtxui.hpp>
 #include <thread>
 
-
 using namespace rtxui;
 
 // Cookbook recipe: background work without freezing the UI.
