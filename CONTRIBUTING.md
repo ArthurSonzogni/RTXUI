@@ -1,5 +1,7 @@
 # Contributing to RTXUI
 
+The full set of rules, also read by coding agents, lives in [AGENTS.md](AGENTS.md).
+
 Thank you for your interest in contributing to RTXUI!
 
 ## Development Setup
@@ -7,6 +9,7 @@ Thank you for your interest in contributing to RTXUI!
 ### Prerequisites
 
 - **C++23 compiler**: GCC 14+ or Clang 18+.
+- **Lint tools**: clang-format and clang-tidy (LLVM 21, as in CI).
 - **Build system**: CMake (>= 3.24) and Ninja.
 
 ### Building & Running Tests
@@ -56,7 +59,8 @@ You can also run the test runner directly:
 ## Submitting Changes
 
 1. Fork the repository and create your branch from `main`.
-2. Ensure all tests pass (`ctest --test-dir build --output-on-failure`).
+2. Run `scripts/check.sh` (format, lint, build, all tests) and make it pass.
+   `pre-commit install --hook-type pre-push` runs it automatically on push.
 3. Format your code with `./tools/format.sh`.
 4. Write clear, descriptive commit messages (preferably conventional commits, e.g., `feat: ...`, `fix: ...`).
 5. Open a Pull Request on GitHub.
