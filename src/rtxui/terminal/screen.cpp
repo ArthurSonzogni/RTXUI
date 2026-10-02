@@ -1038,6 +1038,7 @@ class ScreenImpl {
 
   void Loop();
   void Step();
+  void Exit() { running_ = false; }
   void Dispatch(Event event);
   void Draw();
   void RequestDraw();
@@ -2870,6 +2871,10 @@ void Screen::Loop() {
 
 void Screen::Step() {
   impl_->Step();
+}
+
+void Screen::Exit() {
+  impl_->Exit();
 }
 
 void Screen::Dispatch(Event event) {

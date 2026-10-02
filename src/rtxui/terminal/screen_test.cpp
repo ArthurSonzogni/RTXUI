@@ -2606,6 +2606,48 @@ TEST_CASE("Screen.InitialFrameInRawModeRegression", "[terminal]") {
   REQUIRE(output.find("Hello Mock") != std::string::npos);
 }
 
+namespace {
+// Hands input over one byte per read, so that what Loop() never read shows
+// how far it got.
+class ByteAtATimeDevice : public MockTerminalDevice {
+ public:
+  int Read(char* buf, int len) override {
+    return MockTerminalDevice::Read(buf, std::min(len, 1));
+  }
+};
+
+class QuitOnQ : public Component<QuitOnQ> {
+ public:
+  std::string_view view = "<div>keys</div>";
+  std::function<void()> quit;
+  int keys = 0;
+
+  bool OnEvent(Event event) override {
+    auto* key = event.get_if<Event::Keyboard>();
+    if (!key) {
+      return false;
+    }
+    ++keys;
+    if (key->codepoint == 'q') {
+      quit();
+    }
+    return true;
+  }
+};
+}  // namespace
+
+TEST_CASE("Screen.ExitStopsTheLoop", "[terminal]") {
+  auto device = std::make_shared<ByteAtATimeDevice>();
+  auto app = Ref<QuitOnQ>::New();
+  Screen screen(app, device);
+  app->quit = [&screen] { screen.Exit(); };
+
+  device->PushInput("abqcd");
+  screen.Loop();
+
+  REQUIRE(app->keys == 3);
+}
+
 TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
   struct VirtualTerminal {
     int width;

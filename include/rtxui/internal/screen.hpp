@@ -23,8 +23,14 @@ class RTXUI_EXPORT Screen {
                   std::shared_ptr<TerminalDevice> device = nullptr);
   ~Screen();
 
-  // Run the event loop (blocks until Escape or Ctrl+C is pressed)
+  /// Runs the event loop. Returns after Exit(), or when an Escape or Ctrl+C
+  /// that no component handled arrives, or when the input closes.
   void Loop();
+
+  /// Makes Loop() return once the event being handled is done. Call it from
+  /// the UI thread, typically from a callback; from another thread, post it
+  /// with PostTask().
+  void Exit();
 
   // Run one step of the event loop
   void Step();
