@@ -57,5 +57,6 @@ __pycache__/
 
 # Local tooling and IDEs
 /.antigravitycli/
-/.claude/
+/.claude/*
+!/.claude/settings.json
 /.cache/
