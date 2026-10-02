@@ -1327,12 +1327,15 @@ bool IsCssWideKeyword(std::string_view value) {
 
 }  // namespace
 
+thread_local int g_style_visit_count = 0;
+
 void ResolveStylesRecursive(Element* element,
                             const ComponentBase* component,
                             bool check_pseudos) {
   if (!element || !component) {
     return;
   }
+  ++g_style_visit_count;
 
   bool is_styled = IsStyledByComponent(element, component);
   const auto* categorized_for_parts =
@@ -1748,6 +1751,14 @@ recurse:
 }
 
 }  // namespace
+
+int StyleVisitCount() {
+  return g_style_visit_count;
+}
+
+void ResetStyleVisitCount() {
+  g_style_visit_count = 0;
+}
 
 namespace {
 

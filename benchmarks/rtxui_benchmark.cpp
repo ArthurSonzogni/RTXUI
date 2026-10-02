@@ -36,6 +36,7 @@ int main() {
   std::vector<double> draw_times_us;
   std::vector<double> total_times_us;
 
+  rtxui::bench::ResetWorkCounters();
   // Measurement phase
   for (int i = 0; i < kBenchmarkFrames; ++i) {
     // 1. Trigger state updates

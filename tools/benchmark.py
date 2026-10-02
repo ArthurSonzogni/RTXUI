@@ -51,6 +51,13 @@ def nesting_rows(data):
                      value, data.get(f"{variant}_depth_{depth}_layouts", 0)))
     return sorted(rows)
 
+# Per-frame work counts emitted by the frame benchmarks. Unlike the timings
+# they are deterministic, so --compare flags any growth, whatever --threshold.
+WORK_COUNTERS = [
+    ("style_visits_per_frame", "Style walk visits"),
+    ("layout_runs_per_frame", "Layout runs"),
+]
+
 def print_metrics(data, title="Benchmark Results"):
     """Prints benchmark metrics in a clean readable layout."""
     if data.get("kind") == "nesting":
@@ -91,6 +98,10 @@ def print_metrics(data, title="Benchmark Results"):
         avg_val = data.get(f"avg_{stage}_ms", 0.0)
         min_val = data.get(f"min_{stage}_ms", 0.0)
         print(f"{name:<25} | {median_val:<12.4f} | {avg_val:<10.4f} | {min_val:<10.4f}")
+    print("-" * 68)
+    for key, name in WORK_COUNTERS:
+        if key in data:
+            print(f"{name + ' / frame':<25} | {data[key]}")
     print("=" * 68)
 
 def format_diff(baseline_val, current_val, threshold):
@@ -182,6 +193,20 @@ def compare_results(baseline_path, current_data, threshold=5.0):
         diff_str, regressed = format_diff(b_val, c_val, threshold)
         any_regression = any_regression or regressed
         print(f"{name:<20} | {b_val:<15.4f} | {c_val:<15.4f} | {diff_str:<10}")
+
+    print("-" * 65)
+    for key, name in WORK_COUNTERS:
+        if key not in current_data or key not in baseline:
+            continue
+        b_val = baseline[key]
+        c_val = current_data[key]
+        change = "same"
+        if c_val > b_val:
+            change = "\033[91mmore\033[0m"
+            any_regression = True
+        elif c_val < b_val:
+            change = "\033[92mless\033[0m"
+        print(f"{name:<20} | {b_val:<15} | {c_val:<15} | {change:<10}")
 
     print("=" * 65)
     return any_regression
