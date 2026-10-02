@@ -5657,6 +5657,60 @@ TEST_CASE("Markdown code block newlines preserved",
   CHECK(rendered.find('\n', pos_main) < pos_return);
 }
 
+// Mirrors example/markdown.cpp: a fenced block with a language tag, inside a
+// list item, rendered in a scrolling flex pane with <pre> and <code> restyled.
+class MarkdownStyledCodeBlockTestContainer
+    : public rtxui::Component<MarkdownStyledCodeBlockTestContainer> {
+ public:
+  std::string content =
+      "- item:\n\n```cpp\n#include <rtxui/rtxui.hpp>\nint main() {\n"
+      "  return 0;\n}\n```";
+  std::string stylesheet =
+      "code { color: #94a3b8; }\n"
+      "pre { background-color: #1e293b; border: tall; display: block; }";
+  void InitReflection() override {
+    Bind(content);
+    Bind(stylesheet);
+    Import<rtxui::markdown>();
+    rtxui::Component<MarkdownStyledCodeBlockTestContainer>::InitReflection();
+  }
+
+  std::string_view view = R"html(
+    <div class="app">
+      <div class="pane">Editor</div>
+      <div class="pane">
+        <div class="preview-frame">
+          <markdown content="{content}" stylesheet="{stylesheet}" />
+        </div>
+      </div>
+    </div>
+    <style>
+      self { display: block; width: 100%; height: 100%; }
+      .app { display: flex; flex-direction: row; width: 100%; height: 100%; }
+      .pane { display: flex; flex-direction: column; width: 50%; padding: 1; }
+      .preview-frame { flex-grow: 1; width: 100%; overflow-y: scroll; }
+    </style>
+  )html";
+};
+
+TEST_CASE("Markdown styled code block newlines preserved",
+          "[component][markdown][pre]") {
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(80, 24);
+  auto container = rtxui::Ref<MarkdownStyledCodeBlockTestContainer>::New();
+  rtxui::Screen screen(container, device);
+  screen.Draw();
+
+  // Each source line of the block keeps its own row.
+  std::string text = screen.Text();
+  INFO(text);
+  auto main_pos = text.find("int main() {");
+  REQUIRE(main_pos != std::string::npos);
+  auto line_end = text.find('\n', main_pos);
+  CHECK(text.find("return 0;") > line_end);
+  CHECK(text.find("int main() {   return 0;") == std::string::npos);
+}
+
 class MarkdownStylesheetErrorTestContainer
     : public rtxui::Component<MarkdownStylesheetErrorTestContainer> {
  public:
