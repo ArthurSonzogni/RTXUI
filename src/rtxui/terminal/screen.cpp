@@ -2447,7 +2447,7 @@ void ScreenImpl::Draw() {
       }
     }
   }
-  last_texture_ = std::make_unique<Texture>(texture);
+  last_texture_ = std::make_unique<Texture>(std::move(texture));
   has_drawn_ = true;
 }
 

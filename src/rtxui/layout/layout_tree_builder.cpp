@@ -402,7 +402,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   for (auto& child_dom : dom_node->children()) {
     if (child_dom.get()->is_slot()) {
       // Skip elements with no tag (e.g., SlotElement)
-      auto slot_style = child_dom.get()->style;
+      const ComputedStyle& slot_style = child_dom.get()->style;
       InheritedTextStyle slot = resolved;
       slot.align = slot_style.text_align.value_or(resolved.align);
       slot.white_space = slot_style.white_space.value_or(resolved.white_space);
@@ -439,7 +439,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       for (auto& grandchild_dom : child_dom.get()->children()) {
         auto grandchild_box = Build(grandchild_dom.get(), slot);
         if (grandchild_box) {
-          raw_children.push_back(grandchild_box);
+          raw_children.push_back(std::move(grandchild_box));
         }
       }
       continue;
@@ -447,7 +447,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
     auto child_box = Build(child_dom.get(), resolved);
     if (child_box) {
-      raw_children.push_back(child_box);
+      raw_children.push_back(std::move(child_box));
     }
   }
 
@@ -462,7 +462,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
   // --- Algorithm Selection & Tree Refinement ---
   if (dom_node->tag() == "table") {
-    box->children = raw_children;
+    box->children = std::move(raw_children);
     box->algorithm = LayoutBox::Algorithm::Table;
     box->style.display_outside = DisplayOutside::Block;
 
@@ -470,14 +470,14 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   }
 
   if (box->style.display_inside == DisplayInside::Flex) {
-    box->children = raw_children;
+    box->children = std::move(raw_children);
     box->algorithm = LayoutBox::Algorithm::Flex;
 
     return box;
   }
 
   if (box->style.display_inside == DisplayInside::Grid) {
-    box->children = raw_children;
+    box->children = std::move(raw_children);
     box->algorithm = LayoutBox::Algorithm::Grid;
 
     return box;
@@ -526,10 +526,10 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
         refined_children.push_back(child_box);
       }
     }
-    box->children = refined_children;
+    box->children = std::move(refined_children);
   } else {  // Inline
     box->algorithm = LayoutBox::Algorithm::InlineFlow;
-    box->children = raw_children;
+    box->children = std::move(raw_children);
   }
 
   return box;
