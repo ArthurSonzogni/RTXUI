@@ -76,7 +76,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
   // Convert DOM to Layout Tree.
   auto layout_box = LayoutTreeBuilder::Build(component->Root());
 
-  Texture texture(static_cast<uint8_t>(width), static_cast<uint8_t>(height));
+  Texture texture(width, height);
   if (layout_box) {
     // Execute Layout algorithm.
     LayoutConstraints constraints;

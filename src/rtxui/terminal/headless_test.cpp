@@ -31,6 +31,21 @@ TEST_CASE("RenderToString returns the screen as text", "[headless]") {
   CHECK(RenderToString(Ref<Greeting>::New(), 20, 3) == "Hello world\n\n\n");
 }
 
+class RightAligned : public Component<RightAligned> {
+ public:
+  void InitReflection() override { Import<div>(); }
+  std::string_view view = R"html(
+    <div style="text-align: right">end</div>
+  )html";
+};
+
+TEST_CASE("A terminal wider than 255 columns is drawn in full", "[headless]") {
+  // The screen buffer once stored its size in a byte: 300 columns became 44,
+  // and everything past them was never drawn.
+  HeadlessScreen screen(Ref<RightAligned>::New(), 300, 2);
+  CHECK(screen.Text() == std::string(297, ' ') + "end\n\n");
+}
+
 class Form : public Component<Form> {
  public:
   std::string text;
