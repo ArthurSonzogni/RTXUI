@@ -19,6 +19,6 @@
   ▊  ┌─────┐ ┌─────┐  ▎    │                   ╚═══════════════════════╝    │
   ▊▁▁│▁▁▲▁▁│▁│▁▁▼▁▁│▁▁▎    │                                                │
      │ Up  │ │ Dow │       │                                                │
-  [FIXED STATUS BAR] Current Position: (10, 4) | RTXUI Layout Engine        │
+     │     │ │  n  │       │                                                │
      └─────┘ └─────┘       └────────────────────────────────────────────────┘
-
+  [FIXED STATUS BAR] Current Position: (10, 4) | RTXUI Layout Engine

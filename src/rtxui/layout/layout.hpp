@@ -9,9 +9,11 @@
 
 namespace rtxui {
 struct LayoutContext {
-  // Nearest positioned ancestor dimensions:
-  int npa_w = 80;
-  int npa_h = 24;
+  // Nearest positioned ancestor dimensions. -1 until the outermost RunLayout
+  // call sets them, like the viewport below: with no positioned ancestor, the
+  // containing block is the viewport.
+  int npa_w = -1;
+  int npa_h = -1;
   // Accumulated offsets from the nearest positioned ancestor to the current
   // container's content box origin:
   int npa_offset_x = 0;
@@ -19,9 +21,10 @@ struct LayoutContext {
   int viewport_offset_x = 0;
   int viewport_offset_y = 0;
 
-  // Viewport/Screen dimensions (for fixed positioning):
-  int viewport_w = 80;
-  int viewport_h = 24;
+  // Viewport/Screen dimensions (for fixed positioning). -1 until the
+  // outermost RunLayout call sets them from its constraints.
+  int viewport_w = -1;
+  int viewport_h = -1;
 
   bool is_measurement = false;
 };

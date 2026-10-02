@@ -324,9 +324,18 @@ std::shared_ptr<PhysicalFragment> RunLayoutUncached(
     return LayoutInlineFlow({wrapper_box.get()}, constraints, context);
   }
 
-  if (context.viewport_w == 80 && context.viewport_h == 24) {
+  // The outermost call defines the viewport. This used to be detected by the
+  // viewport still holding its 80x24 default, which on an actual 80x24
+  // screen matched at every level: each nested call replaced the viewport
+  // with its own constraints, and fixed boxes (dialogs) sized against
+  // whatever was being measured.
+  if (context.viewport_w < 0) {
     context.viewport_w = constraints.width.value;
     context.viewport_h = constraints.height.value;
+  }
+  if (context.npa_w < 0) {
+    context.npa_w = context.viewport_w;
+    context.npa_h = context.viewport_h;
   }
 
   switch (node.box->algorithm) {
