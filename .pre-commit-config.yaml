@@ -22,3 +22,12 @@ repos:
         language: system
         files: ^(src/rtxui/style/apply_style\.cpp|docs/css_reference\.md)$
         pass_filenames: false
+
+      # Full gate before pushing: pre-commit install --hook-type pre-push
+      - id: check
+        name: scripts/check.sh
+        entry: scripts/check.sh
+        language: script
+        stages: [pre-push]
+        always_run: true
+        pass_filenames: false
