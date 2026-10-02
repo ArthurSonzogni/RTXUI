@@ -241,6 +241,11 @@ RTXUI_EXPORT int ParseInt(std::string_view str);
 
 template <typename T>
 std::string to_string(const T& value) {
+  if constexpr (std::is_same_v<T, bool>) {
+    return value ? "true" : "false";
+  } else if constexpr (std::is_same_v<T, char>) {
+    return std::string(1, value);
+  }
   if constexpr (std::is_floating_point_v<T>) {
     char buf[64];
     auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);

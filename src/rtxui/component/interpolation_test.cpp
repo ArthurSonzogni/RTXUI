@@ -43,6 +43,27 @@ class InterpolationComponent : public rtxui::Component<InterpolationComponent> {
   )";
 };
 
+// A bool reads the way the library itself spells it when it propagates a
+// binding ("true"/"false"), and a char is the character, not its code.
+class ScalarComponent : public rtxui::Component<ScalarComponent> {
+ public:
+  bool on = true;
+  bool off = false;
+  char letter = 'A';
+  ScalarComponent() {
+    Bind(on);
+    Bind(off);
+    Bind(letter);
+  }
+  std::string_view view = "<span>{on} {off} {letter}</span>";
+};
+
+TEST_CASE("Interpolating a bool and a char", "[component][interpolation]") {
+  auto component = rtxui::Ref<ScalarComponent>::New();
+  component->Mount();
+  CHECK(component->Root()->Print().find("true false A") != std::string::npos);
+}
+
 TEST_CASE("Interpolation", "[component][interpolation]") {
   auto component = rtxui::Ref<InterpolationComponent>::New();
   component->Mount();
