@@ -3,4 +3,8 @@
 // the LICENSE file.
 #include "rtxui/paint/cell.hpp"
 
+namespace rtxui {
+
 Cell NullCell;
+
+}  // namespace rtxui

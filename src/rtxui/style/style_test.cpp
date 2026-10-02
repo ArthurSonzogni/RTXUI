@@ -13,6 +13,8 @@
 #include "rtxui/paint/color.hpp"
 #include "rtxui/style/apply_style.hpp"
 
+using rtxui::Color;
+
 TEST_CASE("CSS parser works correctly", "[css]") {
   const std::string input = R"(
     div {

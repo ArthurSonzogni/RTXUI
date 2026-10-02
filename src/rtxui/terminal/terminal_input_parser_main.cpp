@@ -12,6 +12,9 @@
 #include "rtxui/internal/event.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
+using rtxui::Event;
+using rtxui::TerminalInputParser;
+
 // A simple RAII class to configure the terminal in raw mode.
 struct RawTerminal {
   termios previous_termios_;

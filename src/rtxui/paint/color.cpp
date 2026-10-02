@@ -1,6 +1,8 @@
 #include "rtxui/paint/color.hpp"
 
 // static
+namespace rtxui {
+
 Color Color::RGB(std::uint8_t red, std::uint8_t green, std::uint8_t blue) {
   Color color;
   color.r = red;
@@ -48,3 +50,5 @@ Color Blend(Color over, Color under) {
 
   return Color::RGBA(r, g, b, a_out * 255.f);
 }
+
+}  // namespace rtxui

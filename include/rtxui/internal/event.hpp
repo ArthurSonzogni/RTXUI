@@ -12,6 +12,8 @@
 #include <variant>  // for variant
 #include <vector>
 
+namespace rtxui {
+
 // Hoisted out of Event deliberately. GCC 13 will not evaluate a nested class's
 // default member initialisers while the enclosing class is still incomplete,
 // and Event's std::variant member forces exactly that: the variant needs its
@@ -247,5 +249,7 @@ inline std::ostream& operator<<(std::ostream& os, const Event& event) {
   os << event.Print();
   return os;
 }
+
+}  // namespace rtxui
 
 #endif

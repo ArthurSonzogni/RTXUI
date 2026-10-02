@@ -11,6 +11,8 @@
 
 #include "rtxui/internal/event.hpp"  // for Event
 
+namespace rtxui {
+
 // Parse a sequence of |char| across |time|. Produces |Event|.
 class TerminalInputParser {
  public:
@@ -58,5 +60,7 @@ class TerminalInputParser {
   bool in_bracketed_paste_ = false;
   std::string paste_buffer_;
 };
+
+}  // namespace rtxui
 
 #endif /* end of include guard: RTXUI_TERMINAL_TERMINAL_INPUT_PARSER */
