@@ -2934,9 +2934,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               slot->MoveChild(*match_idx, child_idx);
             } else {
               if (child_idx < slot->ChildCount()) {
-                slot->ReplaceChild(child_idx, child->Root());
+                slot->ReplaceChild(child_idx, Ref<Element>(child->Root()));
               } else {
-                slot->AddChild(child->Root());
+                slot->AddChild(Ref<Element>(child->Root()));
               }
             }
           }
