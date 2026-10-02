@@ -8,8 +8,8 @@
 #include <string_view>
 #include <vector>
 
+#include "rtxui/component.hpp"
 #include "rtxui/component/default/input/text_input_base.hpp"
-#include "rtxui/internal/component.hpp"
 
 namespace rtxui {
 

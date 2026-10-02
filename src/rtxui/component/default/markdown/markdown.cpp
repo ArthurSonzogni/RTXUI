@@ -4,6 +4,7 @@
 #include "rtxui/component/default/markdown/markdown.hpp"
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/markdown/markdown.hpp"
 #include "rtxui/xml/xml.hpp"
 

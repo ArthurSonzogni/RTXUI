@@ -7,14 +7,14 @@
 #include <vector>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace rtxui {
 namespace {

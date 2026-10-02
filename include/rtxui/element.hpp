@@ -10,7 +10,7 @@
 #include <string>
 #include <string_view>
 
-#include "rtxui/internal/refcounted.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace rtxui {
 

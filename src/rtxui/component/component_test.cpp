@@ -1,7 +1,7 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/internal/component.hpp"
+#include "rtxui/component.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -9,14 +9,15 @@
 #include <iostream>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/color.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/internal/screen.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
-#include "rtxui/paint/color.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 using rtxui::Color;

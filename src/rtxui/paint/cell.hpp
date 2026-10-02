@@ -8,7 +8,7 @@
 #include <optional>  // for optional
 #include <string>    // for string, basic_string, allocator
 
-#include "rtxui/paint/color.hpp"  // for Color, Color::Default
+#include "rtxui/color.hpp"  // for Color, Color::Default
 
 namespace rtxui {
 

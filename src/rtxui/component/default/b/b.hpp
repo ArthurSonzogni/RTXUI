@@ -6,7 +6,7 @@
 
 #include <string_view>
 
-#include "rtxui/internal/component.hpp"
+#include "rtxui/component.hpp"
 
 namespace rtxui {
 

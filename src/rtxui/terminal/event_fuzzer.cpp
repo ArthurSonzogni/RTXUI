@@ -20,10 +20,10 @@
 #include <tuple>
 #include <vector>
 
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/refcounted.hpp"
-#include "rtxui/internal/screen.hpp"
+#include "rtxui/refcounted.hpp"
+#include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/xml/xml.hpp"
 

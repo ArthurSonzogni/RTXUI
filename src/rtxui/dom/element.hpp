@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/style.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace rtxui {
 

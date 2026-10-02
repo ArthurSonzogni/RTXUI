@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "rtxui/base/string.hpp"
-#include "rtxui/internal/component.hpp"
+#include "rtxui/component.hpp"
 
 namespace rtxui {
 

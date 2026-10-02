@@ -16,11 +16,11 @@
 #include <tuple>
 #include <vector>
 
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/refcounted.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace {
 

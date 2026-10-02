@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "rtxui/internal/event.hpp"
+#include "rtxui/event.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
 using rtxui::Event;

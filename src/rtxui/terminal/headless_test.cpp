@@ -7,8 +7,8 @@
 #include <utility>
 
 #include "catch2/catch_test_macros.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/component/default_components_internal.hpp"
-#include "rtxui/internal/component.hpp"
 
 namespace rtxui {
 namespace {

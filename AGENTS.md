@@ -112,7 +112,7 @@ The rendering pipeline mirrors a browser engine. A frame flows through these
 stages, each in its own directory under `src/rtxui/`:
 
 1. **Component** (`component/`) — user components inherit
-   `rtxui::Component<Derived>` (CRTP, `include/rtxui/internal/component.hpp`).
+   `rtxui::Component<Derived>` (CRTP, `include/rtxui/component.hpp`).
    The HTML template is either a `std::string_view view` member or a
    `std::string_view Setup()` method (non-virtual, no `override`), never both;
    `GetView()` finds them at compile time. Members are

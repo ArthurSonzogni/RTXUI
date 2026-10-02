@@ -9,8 +9,8 @@
 #include <string>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/color.hpp"
 #include "rtxui/layout/style.hpp"
-#include "rtxui/paint/color.hpp"
 #include "rtxui/style/apply_style.hpp"
 
 using rtxui::Color;

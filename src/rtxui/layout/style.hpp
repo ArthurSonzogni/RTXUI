@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "rtxui/paint/color.hpp"
+#include "rtxui/color.hpp"
 
 namespace rtxui {
 enum class DisplayOutside {

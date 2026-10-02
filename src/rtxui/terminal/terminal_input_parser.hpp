@@ -9,7 +9,7 @@
 #include <string>    // for string
 #include <vector>    // for vector
 
-#include "rtxui/internal/event.hpp"  // for Event
+#include "rtxui/event.hpp"  // for Event
 
 namespace rtxui {
 
