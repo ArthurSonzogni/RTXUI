@@ -1,0 +1,24 @@
+
+ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔
+ ▊                                 ▎  ▊                       ▎  ▊
+ ▊ RTXUI Horizontal Scrolling Demo ▎  ▊ [Outer Start]         ▎  ▊ [Scroll righ
+ ▊                                 ▎  ▊                       ▎  ▊ nested
+ ▊ This demo showcases horizontal  ▎  ▊                       ▎  ▊ scrollboxes.
+ ▊ scrollable elements. Scroll     ▎  ▊                       ▎  ▊
+ ▊ horizontally using Shift +      ▎  ▊                       ▎  ▊
+ ▊▁mouse wheel,    ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁
+   WheelLeft/Right events, or
+   ArrowLeft/ArrowRight keys when
+   focused.
+
+
+
+
+
+
+
+
+
+
+
+                     ▉

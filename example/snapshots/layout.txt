@@ -1,0 +1,24 @@
+
+ RTXUI Layout Demonstration
+
+ This layout uses nested custom Box components inside a flex row container.
+
+ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+ ▊ Blue-300             ▎  ▊ Blue-500              ▎  ▊ Blue-700              ▎
+ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

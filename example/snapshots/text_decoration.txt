@@ -1,0 +1,24 @@
+
+         RTXUI Text Decoration Demo
+
+         Demonstrates various text-decoration styling attributes
+         supported by the layout and painting engine.
+
+         ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+         ▊                                                          ▎
+         ▊ text-decoration: underline                               ▎
+         ▊                                                          ▎
+         ▊ This text has a single underline.                        ▎
+         ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+                                                                               ▄
+         ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+         ▊                                                          ▎
+         ▊ text-decoration: double-underline                        ▎
+         ▊                                                          ▎
+         ▊ This text has a double underline.                        ▎
+         ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+         ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+         ▊                                                          ▎
+         ▊ text-decoration: line-through / strikethrough            ▎
+

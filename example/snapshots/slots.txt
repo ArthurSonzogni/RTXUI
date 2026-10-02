@@ -1,0 +1,24 @@
+
+ Component Slots & Composition
+
+ This demo showcases how custom components can define slots for default and
+ named child content.
+
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │ Custom Card Title                                                      │
+  │╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍│
+  │                                                                        │
+  │                                                                        │
+  │ This body content is passed into the default slot of the Card          │
+  │ component.                                                             │
+  │                                                                        │
+  │ It can contain arbitrary elements, nested components, or text.         │
+  │                                                                        │
+  │                                                                        │
+  │────────────────────────────────────────────────────────────────────────│
+  │ Footer: Page 1 of 1                                                    │
+  └────────────────────────────────────────────────────────────────────────┘
+
+
+
+

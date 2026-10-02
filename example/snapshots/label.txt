@@ -1,0 +1,24 @@
+
+
+ Interactive Label Element
+
+ Clicking on a label delegates focus and actions to its associated
+ input/checkbox.
+
+
+ ╭────────────────────────────────────────────────────────────────────────────╮
+ │                                                                            │
+ │                                                                            │
+ │ 1. Explicit Association (via "for" attribute)                              │
+ │                                                                            │
+ │ ┌───────────────────────────┐                                              │
+ │ │ Click Me (Explicit Label) │     ☐ Checkbox 1                             │
+ │ └───────────────────────────┘                                              │
+ │                                                                            │
+ │ Checked state: 0                                                           │
+ │                                                                            │
+ │                                                                            │
+ ╰────────────────────────────────────────────────────────────────────────────╯
+
+
+ ╭────────────────────────────────────────────────────────────────────────────╮

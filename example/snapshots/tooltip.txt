@@ -1,0 +1,24 @@
+
+
+  RTXUI Tooltip Component Demo
+
+  Hover over the buttons below using your mouse cursor to see tooltips
+  rendered in different directions and alignments.
+
+
+
+  Top Placements:
+
+   top-start                       top (center)                       top-end
+
+
+
+  Bottom Placements:
+
+   bottom-start                   bottom (center)                  bottom-end
+
+
+
+  Left Placements:
+
+   left-start                      left (center)                     left-end

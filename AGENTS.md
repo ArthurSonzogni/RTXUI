@@ -49,6 +49,10 @@ These are enforced by `scripts/check.sh` and CI unless noted.
   `return` once it has applied a supported value; falling off the end reports
   the declaration as unsupported. Examples run under `RTXUI_STRICT=1`, which
   aborts on any diagnostic.
+- **Snapshots**: `snapshot_examples` (in ctest) compares what every example
+  draws with `example/snapshots/`. When a change alters an example on
+  purpose, review the diff, then run
+  `python3 scripts/snapshot_examples.py build --update` and commit the result.
 - **Commits**: conventional commits (`feat:`, `fix:`, `docs:`, `build:`, …).
 
 ## Commands
@@ -75,6 +79,17 @@ ctest --test-dir build                      # everything, incl. verify_* scripts
 Test sources live next to the code they test (`*_test.cpp`). New test files
 must be added to the `rtxui_test` target in `CMakeLists.txt`; new library
 sources to `rtxui_lib`.
+
+### Seeing what an app draws
+
+Run any app headless to read its screen as text, optionally after input
+(see `docs/guide/headless.md`):
+
+```bash
+printf '\t\r' | RTXUI_HEADLESS=80x24 RTXUI_STRICT=1 ./build/rtxui_example_counter
+```
+
+In C++, `HeadlessScreen` (`include/rtxui/headless.hpp`) does the same.
 
 ### Other builds
 

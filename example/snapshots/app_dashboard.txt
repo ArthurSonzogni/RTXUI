@@ -1,0 +1,24 @@
+  RTXUI  Service Health                     3 healthy    2 degraded    1 down
+────────────────────────────────────────────────────────────────────────────────
+
+  ╭─────╮ ╭──────────╮ ╭──────╮                ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+  │ All │ │ Degraded │ │ Down │                ▊                             ▎
+  ╰─────╯ ╰──────────╯ ╰──────╯                ▊  api-gateway                ▎
+                                               ▊  us-east-1                  ▎
+  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ ▊                             ▎
+  ▊ ▊ * api-gateway       us-east-1     42   ▎ ▊  State             healthy  ▎
+  ▊ ▊                                   ms   ▎ ▊  Latency             42 ms  ▎
+  ▊  * auth-service      us-east-1      18   ▎ ▊  Load                  61%  ▎
+  ▊                                     ms   ▎ ▊                             ▎
+  ▊  * search-index      eu-west-1     310   ▎ ▊  ████████████████           ▎
+  ▊                                     ms   ▎ ▊                             ▎
+  ▊  * media-encoder      eu-west-1     --   ▎ ▊                             ▎
+  ▊  * billing-worker    us-west-2      27   ▎ ▊                             ▎
+  ▊                                     ms   ▎ ▊                             ▎
+  ▊  * notification-bus  ap-south-1    154   ▎ ▊                             ▎
+  ▊                                     ms   ▎ ▊                             ▎
+  ▊                                          ▎ ▊                             ▎
+  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+────────────────────────────────────────────────────────────────────────────────
+  6 services                          click a row to select   .   filter above

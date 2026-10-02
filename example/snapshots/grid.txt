@@ -1,0 +1,24 @@
+
+ RTXUI CSS Grid Layout Demo
+
+ This demo showcases the CSS Grid layout support in RTXUI. The container uses
+ display: grid, the new shorthand grid-template: 1fr 1fr 1fr 1fr / 1fr 2fr 1fr,
+ and gaps. Spanning is also demonstrated (item 1 spans 2 columns, item 5 spans
+ 2 rows).
+
+
+ ┌────────────────────────────────────────────────────────────────────┐
+ │                                                                    │
+ │ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ │
+ │ ▊                                               ▎ ▊              ▎ │
+ │ ▊ 1 (span 2 cols)                               ▎ ▊ 3 (1fr)      ▎ │
+ │ ▊                                               ▎ ▊              ▎ │
+ │ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎ │
+ │                                                                    │
+ │ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ │
+ │ ▊              ▎ ▊                              ▎ ▊              ▎ │
+ │ ▊ 4 (1fr)      ▎ ▊ 5 (span 2 rows)              ▎ ▊ 6 (1fr)      ▎ │
+ │ ▊              ▎ ▊                              ▎ ▊              ▎ │
+ │ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎ ▊                              ▎ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎ │
+ │                  ▊                              ▎                  │
+ │ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ ▊                              ▎ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎ │

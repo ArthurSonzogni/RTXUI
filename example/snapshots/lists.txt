@@ -1,0 +1,24 @@
+
+ RTXUI List Elements Demo
+
+ Showcases nested unordered lists (<ul>), ordered lists (<ol>), and dynamic
+ styling.
+
+
+ Controls                     │      Interactive Preview
+                              │
+                              │
+ Custom List Style:           │      1. Custom Styled List (Dynamic
+                              │      list-style-type)
+  disc (•)    ▾               │
+                              │        • Dynamic list item A
+                              │        • Dynamic list item B
+                              │        • Dynamic list item C
+                              │
+                              │
+                              │      2. Default Nested List (Automatic bullet
+                              │      alternation)
+                              │
+                              │        • Level 1 (disc)
+                              │          ○ Level 2 (circle)
+                              │            ■ Level 3 (square)

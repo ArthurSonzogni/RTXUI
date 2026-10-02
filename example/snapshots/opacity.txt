@@ -1,0 +1,24 @@
+
+
+ Opacity Property Demo
+
+ rtxui supports the CSS 'opacity' property (0.0 to 1.0) for alpha-blending
+ elements and text transparently over underlying terminal content.
+
+
+ Adjust Opacity:    ────────────────────●─────────   70%
+
+
+
+ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+ ▊                                    ▎  ▊                                    ▎
+ ▊  1. Alpha Blending & Inheritance   ▎  ▊  2. CSS Transition on Hover        ▎
+ ▊                                    ▎  ▊                                    ▎
+ ▊  ┌──────────────────────────────┐  ▎  ▊  Hover or focus the button below   ▎
+ ▊  │                              │  ▎  ▊  to trigger a smooth opacity       ▎
+ ▊  │ Parent Container (opacity:   │  ▎  ▊  transition:                       ▎
+ ▊  │ 0.7)                         │  ▎  ▊                                    ▎
+ ▊  │                              │  ▎  ▊                                    ▎
+ ▊  │ ┏╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍┓ │  ▎  ▊  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎              ▎
+ ▊  │ ╏                          ╏ │  ▎  ▊  ▊                  ▎              ▎
+ ▊▁▁│▁╏▁Nested Child▁▁▁▁▁▁▁▁▁▁▁▁▁╏▁│▁▁▎  ▊▁▁▊▁▁▁Hover/Focus▁▁▁▁▎▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎

@@ -1,0 +1,24 @@
+
+ RTXUI Spatial Navigation
+
+ Arrow keys / hjkl to navigate • Space / Enter to activate
+
+ Interactive Cards
+ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+ ▊             ▎  ▊             ▎  ▊             ▎
+ ▊ Card 1      ▎  ▊ Card 2      ▎  ▊ Card 3      ▎
+ ▊             ▎  ▊             ▎  ▊             ▎
+ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+ Standard Components
+  Button A    Button B    Button C
+                                    ┌──────────────┐
+                                    │              │
+                                    │           │  │
+                   Horizontal       │           │  │
+  ☐ Feature    ──────────●───────── │ Vertical  │  │   Search...
+                                    │           ●  │
+                                    │           │  │
+                                    │              │
+                                    │              │
+                                    └──────────────┘

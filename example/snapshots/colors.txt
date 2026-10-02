@@ -1,0 +1,24 @@
+
+
+  RTXUI Color System Demo
+
+  Scroll to see standard keywords, hex codes, rgb(), and rgba() syntaxes.
+
+
+  1. Standard Keywords (16-color base)                                         ▃
+
+
+    black              gray               silver             white
+
+
+
+    maroon             red                purple             fuchsia
+
+
+
+    green              lime               olive              yellow
+
+
+
+
+
