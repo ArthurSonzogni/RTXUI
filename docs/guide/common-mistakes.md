@@ -84,4 +84,5 @@ not installed.
 a static link would otherwise drop.
 
 **Only the UI thread touches component state.** From a worker thread, hand the
-result back with `rtxui::TaskPoster()` (see the [cookbook](/guide/cookbook)).
+result back with `rtxui::PostTask(...)`, which is safe to call from any thread
+(see the [cookbook](/guide/cookbook)).

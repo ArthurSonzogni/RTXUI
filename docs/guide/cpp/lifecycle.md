@@ -35,7 +35,7 @@ The loop is event-driven; it sleeps until something happens. Each iteration:
    <kbd>Tab</kbd>, spatial navigation with arrows, scrolling, click
    simulation with <kbd>Enter</kbd>/<kbd>Space</kbd>).
 2. **Posted tasks.** Work queued with
-   `rtxui::PostTask(...)` or a `rtxui::TaskPoster()` — typically results arriving
+   `rtxui::PostTask(...)` — typically results arriving
    from worker threads — runs on the loop thread. If any task ran, a digest
    follows automatically, so state mutated by tasks is repainted without
    waiting for further input.

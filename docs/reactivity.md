@@ -142,13 +142,11 @@ State mutations must not occur on worker threads. To update reactive state from 
 
 ```cpp
 void FetchDataAsync() {
-  // Captured on the UI thread, callable from the worker.
-  auto post_to_ui = rtxui::TaskPoster();
-  std::thread([this, post_to_ui]() {
+  std::thread([this]() {
     std::string result = BackgroundHttpCall();
 
-    // Dispatch state update to UI loop:
-    post_to_ui([this, result]() {
+    // Dispatch state update to UI loop (safe from any thread):
+    rtxui::PostTask([this, result]() {
       this->status_text = result;
       // Screen event loop automatically digests and renders changes.
     });

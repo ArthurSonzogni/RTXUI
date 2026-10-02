@@ -1168,6 +1168,9 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
 }
 
 ScreenImpl::~ScreenImpl() {
+  // A worker thread may still post while this is torn down; its wakeup must
+  // not reach the pipe or event closed below.
+  task_runner_.SetWakeupCallback(nullptr);
   device_->Write("\x1b[?2004l");
 #if defined(_WIN32)
   if (wakeup_event_) {

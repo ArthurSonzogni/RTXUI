@@ -168,20 +168,29 @@ TEST_CASE("rtxui::PostTask posts to the current thread's runner",
   CHECK(ran);
 }
 
-TEST_CASE("rtxui::TaskPoster posts from another thread to its creator's runner",
+TEST_CASE("rtxui::PostTask from a worker thread reaches the event loop",
           "[task][task_runner]") {
   task::TaskRunner runner;
   std::atomic<int> wakeups = 0;
   runner.SetWakeupCallback([&wakeups] { wakeups.fetch_add(1); });
 
-  auto post = rtxui::TaskPoster();
   std::atomic<bool> ran = false;
-  std::thread([&post, &ran] { post([&ran] { ran = true; }); }).join();
+  std::thread([&ran] { rtxui::PostTask([&ran] { ran = true; }); }).join();
 
   CHECK(wakeups.load() == 1);
   CHECK_FALSE(ran.load());
   runner.RunUntilNextDelayedTask();
   CHECK(ran.load());
+}
+
+TEST_CASE("rtxui::PostTask after the event loop is gone is dropped",
+          "[task][task_runner]") {
+  // A worker can outlive the Screen. Its result has nowhere to go, but
+  // posting it must not touch the destroyed runner.
+  {
+    task::TaskRunner runner;
+  }
+  std::thread([] { rtxui::PostTask([] { FAIL("must not run"); }); }).join();
 }
 
 }  // namespace

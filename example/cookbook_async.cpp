@@ -15,8 +15,8 @@ using namespace rtxui;
 // Cookbook recipe: background work without freezing the UI.
 //
 // Callbacks run on the main thread, so blocking inside one freezes rendering.
-// Run the work on a std::thread and post the result back to the main loop
-// with a TaskPoster, which may be called from other threads.
+// Run the work on a std::thread and hand the result back to the main loop
+// with rtxui::PostTask, which may be called from any thread.
 class AsyncApp : public Component<AsyncApp> {
  public:
   std::string status = "Idle";
@@ -29,14 +29,14 @@ class AsyncApp : public Component<AsyncApp> {
     status = "Fetching data...";
     is_loading = true;
 
-    auto post_to_ui = TaskPoster();
-    std::thread([this, post_to_ui]() {
+    std::thread([this]() {
       // Stand-in for real work: a network call, a database query, ...
       std::this_thread::sleep_for(std::chrono::seconds(2));
 
-      // Only the main thread may touch component state. The poster schedules
-      // this lambda on the UI loop and wakes it.
-      post_to_ui([this]() {
+      // Only the main thread may touch component state. PostTask schedules
+      // this lambda on the UI loop and wakes it; if the app has already
+      // exited, it is dropped rather than run against a destroyed component.
+      PostTask([this]() {
         status = "Loaded 42 items.";
         is_loading = false;
       });
