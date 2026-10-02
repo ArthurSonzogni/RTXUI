@@ -3,42 +3,227 @@
     "name": "counter",
     "prompt": "Write an RTXUI app with a counter. The screen shows the text `Count: N`, where N starts at 0. The first focusable element is a button labelled `Increment` that adds one; the second is a button labelled `Reset` that sets N back to 0.",
     "checks": [
-      {"input": "", "expect": ["Count: 0", "Increment", "Reset"]},
-      {"input": "\\t\\r\\r\\r", "expect": ["Count: 3"]},
-      {"input": "\\t\\r\\r\\t\\r", "expect": ["Count: 0"]}
+      {
+        "input": "",
+        "expect": [
+          "Count: 0",
+          "Increment",
+          "Reset"
+        ]
+      },
+      {
+        "input": "\\t\\r\\r\\r",
+        "expect": [
+          "Count: 3"
+        ]
+      },
+      {
+        "input": "\\t\\r\\r\\t\\r",
+        "expect": [
+          "Count: 0"
+        ]
+      }
     ]
   },
   {
     "name": "todo",
     "prompt": "Write an RTXUI todo list. The first focusable element is a text input; the second is a button labelled `Add` that appends the input's text to a list shown below and clears the input. Each item is shown on its own line prefixed with `- `. Above the list, show `Items: N` with the number of items.",
     "checks": [
-      {"input": "", "expect": ["Items: 0", "Add"]},
-      {"input": "\\tmilk\\t\\r", "expect": ["- milk", "Items: 1"]},
-      {"input": "\\tmilk\\t\\r\\teggs\\t\\r", "expect": ["- milk", "- eggs", "Items: 2"]}
+      {
+        "input": "",
+        "expect": [
+          "Items: 0",
+          "Add"
+        ]
+      },
+      {
+        "input": "\\tmilk\\t\\r",
+        "expect": [
+          "- milk",
+          "Items: 1"
+        ]
+      },
+      {
+        "input": "\\tmilk\\t\\r\\teggs\\t\\r",
+        "expect": [
+          "- milk",
+          "- eggs",
+          "Items: 2"
+        ]
+      }
     ]
   },
   {
     "name": "filter",
     "prompt": "Write an RTXUI app showing the fruits Apple, Banana, Cherry and Mango, one per line. The first focusable element is a text input; only fruits whose name contains the typed text (case-insensitive) are listed. Below the list, show `Shown: N` with the number of fruits listed.",
     "checks": [
-      {"input": "", "expect": ["Apple", "Banana", "Cherry", "Mango", "Shown: 4"]},
-      {"input": "\\tan", "expect": ["Banana", "Mango", "Shown: 2"], "reject": ["Apple", "Cherry"]}
+      {
+        "input": "",
+        "expect": [
+          "Apple",
+          "Banana",
+          "Cherry",
+          "Mango",
+          "Shown: 4"
+        ]
+      },
+      {
+        "input": "\\tan",
+        "expect": [
+          "Banana",
+          "Mango",
+          "Shown: 2"
+        ],
+        "reject": [
+          "Apple",
+          "Cherry"
+        ]
+      }
     ]
   },
   {
     "name": "settings",
     "prompt": "Write an RTXUI settings form with two checkboxes, labelled `Dark mode` and `Notifications`, both unchecked at first. Below them, show a status line `Dark mode: on` or `Dark mode: off`, and another `Notifications: on` or `Notifications: off`, following the checkboxes. The checkboxes are the first and second focusable elements.",
     "checks": [
-      {"input": "", "expect": ["Dark mode: off", "Notifications: off"]},
-      {"input": "\\t ", "expect": ["Dark mode: on", "Notifications: off"]},
-      {"input": "\\t\\t ", "expect": ["Dark mode: off", "Notifications: on"]}
+      {
+        "input": "",
+        "expect": [
+          "Dark mode: off",
+          "Notifications: off"
+        ]
+      },
+      {
+        "input": "\\t ",
+        "expect": [
+          "Dark mode: on",
+          "Notifications: off"
+        ]
+      },
+      {
+        "input": "\\t\\t ",
+        "expect": [
+          "Dark mode: off",
+          "Notifications: on"
+        ]
+      }
     ]
   },
   {
     "name": "layout",
     "prompt": "Write an RTXUI app laid out like a classic application window: a header row containing the title `My App`, a body split into a left sidebar (about a quarter of the width, listing `Home`, `Files` and `Settings`) and a main area showing `Welcome`, and a footer row showing `Status: ready`. Draw a rounded border around the whole window.",
     "checks": [
-      {"input": "", "expect": ["My App", "Home", "Files", "Settings", "Welcome", "Status: ready", "╭"]}
+      {
+        "input": "",
+        "expect": [
+          "My App",
+          "Home",
+          "Files",
+          "Settings",
+          "Welcome",
+          "Status: ready",
+          "╭"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "dialog",
+    "prompt": "Write an RTXUI app that shows a status line, initially `Ready`, and a button labelled `Delete`. Activating `Delete` opens a modal dialog, using RTXUI's built-in dialog component, that says `Are you sure?` and has two buttons, `Yes` and `No`. `Yes` closes the dialog and sets the status to `Deleted`; `No` closes it and sets the status to `Kept`. `Delete` is the first focusable element, and the dialog's buttons come next in focus order: `Yes`, then `No`.",
+    "checks": [
+      {
+        "input": "",
+        "expect": [
+          "Ready",
+          "Delete"
+        ],
+        "reject": [
+          "Are you sure?"
+        ]
+      },
+      {
+        "input": "\\t\\r",
+        "expect": [
+          "Are you sure?",
+          "Yes",
+          "No"
+        ]
+      },
+      {
+        "input": "\\t\\r\\t\\r",
+        "expect": [
+          "Deleted"
+        ],
+        "reject": [
+          "Are you sure?"
+        ]
+      },
+      {
+        "input": "\\t\\r\\t\\t\\r",
+        "expect": [
+          "Kept"
+        ],
+        "reject": [
+          "Are you sure?"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "tabs",
+    "prompt": "Write an RTXUI app using RTXUI's built-in tabs component, with three tabs labelled `General`, `Network` and `About`, showing `General settings`, `Network settings` and `Version 1.0` respectively. The tab names are `general`, `network` and `about`, and `general` is selected at first. Below the tabs, show `Current: ` followed by the selected tab's name. The tab headers are the only focusable elements.",
+    "checks": [
+      {
+        "input": "",
+        "expect": [
+          "General settings",
+          "Current: general"
+        ],
+        "reject": [
+          "Network settings",
+          "Version 1.0"
+        ]
+      },
+      {
+        "input": "\\t\\t\\r",
+        "expect": [
+          "Network settings",
+          "Current: network"
+        ],
+        "reject": [
+          "General settings"
+        ]
+      },
+      {
+        "input": "\\t\\t\\t\\r",
+        "expect": [
+          "Version 1.0",
+          "Current: about"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "select",
+    "prompt": "Write an RTXUI app with RTXUI's built-in dropdown (select) offering `Dark`, `Light` and `Solarized`, whose values are `dark`, `light` and `solarized`, with `dark` selected at first. Below it, show `Theme: ` followed by the selected value. The dropdown is the only focusable element.",
+    "checks": [
+      {
+        "input": "",
+        "expect": [
+          "Theme: dark"
+        ]
+      },
+      {
+        "input": "\\t\\u001b[B",
+        "expect": [
+          "Theme: light"
+        ]
+      },
+      {
+        "input": "\\t\\u001b[B\\u001b[B",
+        "expect": [
+          "Theme: solarized"
+        ]
+      }
     ]
   }
 ]
