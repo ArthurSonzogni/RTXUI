@@ -382,7 +382,10 @@ if (RTXUI_BUILD_FUZZERS)
     "src/rtxui/xml/xml_fuzzer.cpp"
   )
   include(GoogleTest)
-  target_link_libraries(rtxui_fuzzer PRIVATE rtxui_lib)
+  # rtxui, not rtxui_lib: as a plain archive, rtxui_lib would leave out
+  # every built-in component no fuzzer names, and the templates under
+  # test would render those tags as generic boxes.
+  target_link_libraries(rtxui_fuzzer PRIVATE rtxui)
   target_include_directories(rtxui_fuzzer PRIVATE "src")
   link_fuzztest(rtxui_fuzzer)
   gtest_discover_tests(rtxui_fuzzer)
