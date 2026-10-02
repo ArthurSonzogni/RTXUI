@@ -176,6 +176,11 @@ with per-feature guides under `docs/guide/`, plus `css_reference.md` /
   in their agents (`.claude-plugin/marketplace.json` publishes it). Keep it
   in step with the docs: every construct it shows must compile and pass
   `RTXUI_STRICT=1`.
+- `tools/agent_eval/run.py` measures whether an agent with that skill can
+  build the apps in `tools/agent_eval/tasks.json`, scoring each result in
+  strict headless mode. It runs real `claude -p` sessions (one per task), so
+  run it on request only; each failure points at a library, docs or skill gap.
+  A new task needs a reference solution that passes its checks first.
 - `scripts/generate_llms_txt.py` builds `llms.txt` / `llms-full.txt` from the
   sidebar at deploy time; a page added to the sidebar is included
   automatically.
