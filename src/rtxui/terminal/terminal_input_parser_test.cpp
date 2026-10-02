@@ -697,4 +697,41 @@ TEST_CASE("Event's converting constructor accepts only its alternatives",
   CHECK(event.get_if<Event::Mouse>() == nullptr);
 }
 
+TEST_CASE("Parsed keys equal the named Event constants", "[terminal][event]") {
+  // Apps match keys by comparing against Event::ArrowUp(), Event::CtrlA(),
+  // ...; a constant that differs from what the parser produces for the same
+  // key never matches, silently.
+  auto parse = [](std::string_view bytes) {
+    TerminalInputParser parser;
+    for (char c : bytes) {
+      parser.Add(c);
+    }
+    auto event = parser.GetEvent();
+    REQUIRE(event.has_value());
+    CHECK_FALSE(parser.GetEvent().has_value());  // Exactly one event.
+    return *event;
+  };
+  CHECK(parse("a") == Event::a());
+  CHECK(parse("A") == Event::A());
+  CHECK(parse("\x01") == Event::CtrlA());
+  CHECK(parse("\033a") == Event::AltA());  // ESC, then a.
+  CHECK(parse("\r") == Event::Return());
+  CHECK(parse("\t") == Event::Tab());
+  CHECK(parse("\x1b[Z") == Event::TabReverse());
+  CHECK(parse("\x7f") == Event::Backspace());
+  CHECK(parse("\x1b\x7f") == Event::BackspaceAlt());
+  CHECK(parse("\x1b[A") == Event::ArrowUp());
+  CHECK(parse("\x1b[1;5A") == Event::ArrowUpCtrl());
+  CHECK(parse("\x1b[1;3D") == Event::ArrowLeftAlt());
+  CHECK(parse("\x1b[3~") == Event::Delete());
+  CHECK(parse("\x1b[3;5~") == Event::DeleteCtrl());
+  CHECK(parse("\x1b[2~") == Event::Insert());
+  CHECK(parse("\x1b[H") == Event::Home());
+  CHECK(parse("\x1b[F") == Event::End());
+  CHECK(parse("\x1b[5~") == Event::PageUp());
+  CHECK(parse("\x1b[6~") == Event::PageDown());
+  CHECK(parse("\x1bOP") == Event::F1());
+  CHECK(parse("\x1b[24~") == Event::F12());
+}
+
 // NOLINTEND
