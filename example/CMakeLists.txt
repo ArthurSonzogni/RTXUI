@@ -123,10 +123,10 @@ add_executable(rtxui_example_media media.cpp)
 target_link_libraries(rtxui_example_media PRIVATE rtxui)
 
 add_executable(rtxui_example_focus_scroll focus_scroll.cpp)
-target_link_libraries(rtxui_example_focus_scroll PRIVATE rtxui_lib)
+target_link_libraries(rtxui_example_focus_scroll PRIVATE rtxui)
 
 add_executable(rtxui_example_markdown markdown.cpp)
-target_link_libraries(rtxui_example_markdown PRIVATE rtxui_lib)
+target_link_libraries(rtxui_example_markdown PRIVATE rtxui)
 
 add_executable(rtxui_example_opacity opacity.cpp)
 target_link_libraries(rtxui_example_opacity PRIVATE rtxui)

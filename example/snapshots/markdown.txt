@@ -1,24 +1,24 @@
                                        │
  Markdown— live                        │ Preview
-                                       │
-    1                                  │ Markdown Playground
-    2 # Markdown Playground          ▆ │ ─────────────────────────────────────
+                                       │ Markdown Playground
+    1                                  │ ─────────────────────────────────────
+    2 # Markdown Playground          ▆ │
     3                                  │
-    4 Edit the **Markdown** on the     │
-    5 left. This preview re-renders    │ Edit the Markdown on the left. This
-    6 on every                         │ preview re-renders on every
-    7 keystroke, using the same        │ keystroke, using the same
-                                       │  <markdown>  component every RTXUI
- Stylesheet— CSS, live                 │ app can embed.
-                                       │
-    1                                  │                                      ▂
-    2   h1 {                         ▆ │ Features
-    3     color: #3b82f6;              │ ─────────────────────────────────────
-    4     border-bottom: solid;        │
-    5     border-color: #3b82f6;       │     • Bold and italic text
-    6     margin-bottom: 1;            │     • Links
-    7   }                              │     • Inline  code  and fenced code
-    8   h2 {                           │     blocks:
+    4 Edit the **Markdown** on the     │ Edit the Markdown on the left. This
+    5 left. This preview re-renders    │ preview re-renders on every
+    6 on every                         │ keystroke, using the same
+    7 keystroke, using the same        │  <markdown>  component every RTXUI
+                                       │ app can embed.
+ Stylesheet— CSS, live                 │
+                                       │                                      ▄
+    1                                  │ Features
+    2   h1 {                         ▆ │ ─────────────────────────────────────
+    3     color: #3b82f6;              │
+    4     border-bottom: solid;        │     • Bold and italic text
+    5     border-color: #3b82f6;       │     • Links
+    6     margin-bottom: 1;            │     • Inline  code  and fenced code
+    7   }                              │     blocks:
+    8   h2 {                           │
                                        │ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
- OK                                    │ ▊ #include <rtxui/rtxui.hpp> int    ▎
+ OK                                    │ ▊ #include <rtxui/rtxui.hpp>        ▎
                                        │
