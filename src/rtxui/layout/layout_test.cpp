@@ -96,7 +96,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
 
 TEST_CASE("Layout: Block-level vertical stacking", "[layout]") {
   struct BlockStackTest : Component<BlockStackTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -130,7 +130,7 @@ TEST_CASE("Layout: Block-level vertical stacking", "[layout]") {
 
 TEST_CASE("Layout: Inline-level wrapping", "[layout]") {
   struct InlineWrapTest : Component<InlineWrapTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<span>();
       return R"html(<span>WordA </span><span>WordB</span>)html";
     }
@@ -151,7 +151,7 @@ TEST_CASE("Layout: Inline-level wrapping", "[layout]") {
 // damage only showed from the third line onwards.
 TEST_CASE("Layout: Inline wrapping past the second line", "[layout]") {
   struct LongTextWrapTest : Component<LongTextWrapTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(<div>aaa bbb ccc ddd eee fff ggg hhh</div>)html";
     }
@@ -654,7 +654,7 @@ TEST_CASE("Layout: position sticky pins to the right edge",
 
 TEST_CASE("Layout: Padding and Box Model", "[layout]") {
   struct BoxModelTest : Component<BoxModelTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -697,7 +697,7 @@ TEST_CASE("Layout: Padding and Box Model", "[layout]") {
 
 TEST_CASE("Layout: Flexbox Row with Grow", "[layout]") {
   struct FlexGrowTest : Component<FlexGrowTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -736,7 +736,7 @@ TEST_CASE("Layout: Flexbox Row with Grow", "[layout]") {
 TEST_CASE("Layout: Flexbox order", "[layout][order]") {
   SECTION("Lower order is laid out first") {
     struct OrderTest : Component<OrderTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -763,7 +763,7 @@ TEST_CASE("Layout: Flexbox order", "[layout][order]") {
 
   SECTION("Negative order comes before the default of 0") {
     struct NegativeOrderTest : Component<NegativeOrderTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -788,7 +788,7 @@ TEST_CASE("Layout: Flexbox order", "[layout][order]") {
 
   SECTION("Items sharing an order value keep document order") {
     struct StableOrderTest : Component<StableOrderTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -815,7 +815,7 @@ TEST_CASE("Layout: Flexbox order", "[layout][order]") {
 
   SECTION("Order applies to a column flex container too") {
     struct ColumnOrderTest : Component<ColumnOrderTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -844,7 +844,7 @@ TEST_CASE("Layout: Flexbox order", "[layout][order]") {
 TEST_CASE("Layout: Borders", "[layout]") {
   SECTION("Simple ASCII Border") {
     struct BorderTest : Component<BorderTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -869,7 +869,7 @@ TEST_CASE("Layout: Borders", "[layout]") {
 
   SECTION("Border with Colors") {
     struct ColoredBorderTest : Component<ColoredBorderTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -902,7 +902,7 @@ TEST_CASE("Layout: Borders", "[layout]") {
 
   SECTION("Rounded Border") {
     struct RoundedBorderTest : Component<RoundedBorderTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -933,7 +933,7 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
     // é = e (U+0065) + combining acute accent (U+0301, UTF-8: \xCC\x81).
     // Both bytes must land in a single terminal cell of width 1.
     struct CombiningTest : Component<CombiningTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         // Embed combining codepoint as raw UTF-8 — XML passes it through as-is.
         static const std::string html =
@@ -954,7 +954,7 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
 
   SECTION("CJK double-width characters occupy two columns") {
     struct CjkTest : Component<CjkTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style> .box { display: block; } </style>
@@ -967,7 +967,7 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
     CHECK(GetTextLayer(texture_ascii) == "AB  \n");
 
     struct CjkTest2 : Component<CjkTest2> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style> .box { display: block; } </style>
@@ -991,7 +991,7 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
 
   SECTION("Mixed ASCII and CJK alignment") {
     struct MixedTest : Component<MixedTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style> .box { display: block; } </style>
@@ -1008,7 +1008,7 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
 TEST_CASE("Layout: display: none", "[layout][display]") {
   SECTION("Element with display: none takes no space") {
     struct DisplayNoneTest : Component<DisplayNoneTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         Import<span>();
         return R"html(
@@ -1030,7 +1030,7 @@ TEST_CASE("Layout: display: none", "[layout][display]") {
 
   SECTION("Root element with display: none renders empty") {
     struct RootDisplayNoneTest : Component<RootDisplayNoneTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         Import<span>();
         return R"html(
@@ -1051,7 +1051,7 @@ TEST_CASE("Layout: display: none", "[layout][display]") {
 TEST_CASE("Layout: text-align", "[layout][text-align]") {
   SECTION("text-align: right with fixed width") {
     struct TestComponent : Component<TestComponent> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -1071,7 +1071,7 @@ TEST_CASE("Layout: text-align", "[layout][text-align]") {
 
   SECTION("text-align: center with fixed width") {
     struct TestComponent : Component<TestComponent> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -1093,7 +1093,7 @@ TEST_CASE("Layout: text-align", "[layout][text-align]") {
 
   SECTION("text-align: right with automatic wrapping") {
     struct TestComponent : Component<TestComponent> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -1117,7 +1117,7 @@ TEST_CASE("Layout: text-align", "[layout][text-align]") {
 
   SECTION("text-align inheritance to nested components") {
     struct TestComponent : Component<TestComponent> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         Import<span>();
         return R"html(
@@ -1142,7 +1142,7 @@ TEST_CASE("Layout: text-align", "[layout][text-align]") {
 TEST_CASE("Layout: white-space", "[layout][white-space]") {
   SECTION("white-space: nowrap prevents text wrapping") {
     struct TestComponent : Component<TestComponent> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -1162,7 +1162,7 @@ TEST_CASE("Layout: white-space", "[layout][white-space]") {
 
   SECTION("white-space: nowrap inheritance") {
     struct TestComponent : Component<TestComponent> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         Import<span>();
         return R"html(
@@ -1189,7 +1189,7 @@ TEST_CASE("Layout: white-space", "[layout][white-space]") {
 TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
   struct TestComponent : Component<TestComponent> {
     std::string text = "hello";
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Bind(text);
       Import<rtxui::textarea>();
       return R"html(
@@ -1228,7 +1228,7 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
 TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
   struct TestComponent : Component<TestComponent> {
     std::string text = "foo\nbar";
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Bind(text);
       Import<rtxui::textarea>();
       return R"html(
@@ -1268,7 +1268,7 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
 
 TEST_CASE("Layout: position absolute and relative", "[layout][position]") {
   struct TestComponent : Component<TestComponent> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       return R"html(
         <div class="relative-parent">
           <div class="static-child">A</div>
@@ -1324,7 +1324,7 @@ TEST_CASE("Layout: position absolute and relative", "[layout][position]") {
 
 TEST_CASE("Layout: z-index stacking", "[layout][z-index]") {
   struct TestComponent : Component<TestComponent> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       return R"html(
         <div class="parent">
           <div class="absolute-child1">X</div>
@@ -1640,7 +1640,7 @@ TEST_CASE("Layout: position sticky direct child of scroll container",
 TEST_CASE("Layout: Flexbox Grow Cumulative Distribution",
           "[layout][flex][grow]") {
   struct FlexGrowTest : Component<FlexGrowTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -1688,7 +1688,7 @@ TEST_CASE("Layout: Text node in flexbox row regression",
           "[layout][flex][regression]") {
   SECTION("Wrapped text inside span does not throw") {
     struct FlexTextSpanTest : Component<FlexTextSpanTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         Import<span>();
         return R"html(
@@ -1706,7 +1706,7 @@ TEST_CASE("Layout: Text node in flexbox row regression",
 
   SECTION("Direct text child of flexbox does not throw and auto-wraps") {
     struct FlexDirectTextTest : Component<FlexDirectTextTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -1725,7 +1725,7 @@ TEST_CASE("Layout: Text node in flexbox row regression",
 TEST_CASE("Layout: Flexbox Shrink Cumulative Distribution",
           "[layout][flex][shrink]") {
   struct FlexShrinkTest : Component<FlexShrinkTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -1774,7 +1774,7 @@ TEST_CASE("Layout: Flexbox grow/shrink remainder allocated to final child",
           "[layout][flex][remainder]") {
   SECTION("Grow remainder allocation") {
     struct FlexRemainderGrowTest : Component<FlexRemainderGrowTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -2131,7 +2131,7 @@ TEST_CASE("Layout: min-width is enforced on an inline-block",
 TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
           "[layout]") {
   struct FixedNotWrappedTest : Component<FixedNotWrappedTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2249,7 +2249,7 @@ TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
 
 TEST_CASE("Layout: Flexbox Row wrapping", "[layout][flex][wrap]") {
   struct FlexRowWrapTest : Component<FlexRowWrapTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2284,7 +2284,7 @@ TEST_CASE("Layout: Flexbox Row wrapping", "[layout][flex][wrap]") {
 
 TEST_CASE("Layout: Flexbox Row wrap-reverse", "[layout][flex][wrap]") {
   struct FlexRowWrapReverseTest : Component<FlexRowWrapReverseTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2319,7 +2319,7 @@ TEST_CASE("Layout: Flexbox Row wrap-reverse", "[layout][flex][wrap]") {
 
 TEST_CASE("Layout: Flexbox Column wrapping", "[layout][flex][wrap]") {
   struct FlexColWrapTest : Component<FlexColWrapTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2355,7 +2355,7 @@ TEST_CASE("Layout: Flexbox Column wrapping", "[layout][flex][wrap]") {
 
 TEST_CASE("Layout: Flexbox Column wrap-reverse", "[layout][flex][wrap]") {
   struct FlexColWrapReverseTest : Component<FlexColWrapReverseTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2392,7 +2392,7 @@ TEST_CASE("Layout: Flexbox Column wrap-reverse", "[layout][flex][wrap]") {
 TEST_CASE("Layout: Block children in Flex wrap container",
           "[layout][flex][block]") {
   struct BlockInFlexTest : Component<BlockInFlexTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2423,7 +2423,7 @@ TEST_CASE("Layout: Block children in Flex wrap container",
 TEST_CASE("Layout: Flex wrap container inside Block container",
           "[layout][flex][block]") {
   struct FlexInBlockTest : Component<FlexInBlockTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2462,7 +2462,7 @@ TEST_CASE("Layout: Flex wrap container inside Block container",
 
 TEST_CASE("Layout: Flexbox Row Align Items Stretch", "[layout][flex][align]") {
   struct FlexRowStretchTest : Component<FlexRowStretchTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2495,7 +2495,7 @@ TEST_CASE("Layout: Flexbox Row Align Items Stretch", "[layout][flex][align]") {
 TEST_CASE("Layout: Flexbox Column Align Items Stretch",
           "[layout][flex][align]") {
   struct FlexColStretchTest : Component<FlexColStretchTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2530,7 +2530,7 @@ TEST_CASE("Layout: Flexbox Column Align Items Stretch",
 TEST_CASE("Layout: Flexbox Row Align Items Stretch With Wrap",
           "[layout][flex][align][wrap]") {
   struct FlexRowStretchWrapTest : Component<FlexRowStretchWrapTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2572,7 +2572,7 @@ TEST_CASE("Layout: Flexbox Row and Column Gap X and Y Only",
           "[layout][flex][gap]") {
   SECTION("Row layout with X-gap only") {
     struct FlexRowGapXTest : Component<FlexRowGapXTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -2610,7 +2610,7 @@ TEST_CASE("Layout: Flexbox Row and Column Gap X and Y Only",
 
   SECTION("Row layout with Y-gap only") {
     struct FlexRowGapYTest : Component<FlexRowGapYTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -2652,7 +2652,7 @@ TEST_CASE("Layout: Flexbox Row and Column Gap X and Y Only",
 TEST_CASE("Layout: Flexbox Flex Basis and Overrides", "[layout][flex][basis]") {
   SECTION("flex-basis sets initial size") {
     struct FlexBasisTest : Component<FlexBasisTest> {
-      std::string_view Setup() {
+      std::string_view Setup() override {
         Import<div>();
         return R"html(
           <style>
@@ -2681,7 +2681,7 @@ TEST_CASE("Layout: Flexbox Flex Basis and Overrides", "[layout][flex][basis]") {
 
 TEST_CASE("Layout: Flexbox Align Self override", "[layout][flex][align-self]") {
   struct FlexAlignSelfTest : Component<FlexAlignSelfTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2713,7 +2713,7 @@ TEST_CASE("Layout: Flexbox Align Self override", "[layout][flex][align-self]") {
 TEST_CASE("Layout: Flexbox Align Content center",
           "[layout][flex][align-content]") {
   struct FlexAlignContentTest : Component<FlexAlignContentTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2788,7 +2788,7 @@ TEST_CASE("Layout: Rowspan painting order", "[layout][table]") {
 
 TEST_CASE("Layout: CSS Grid Layout basic positioning", "[layout][grid]") {
   struct GridBasicTest : Component<GridBasicTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2867,7 +2867,7 @@ TEST_CASE("Layout: min-width/max-width are enforced on a grid container",
 
 TEST_CASE("Layout: CSS Grid Layout with fr units", "[layout][grid][fr]") {
   struct GridFrTest : Component<GridFrTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2908,7 +2908,7 @@ TEST_CASE("Layout: CSS Grid Layout with fr units", "[layout][grid][fr]") {
 
 TEST_CASE("Layout: CSS Grid Layout with spans", "[layout][grid][span]") {
   struct GridSpanTest : Component<GridSpanTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -2955,7 +2955,7 @@ TEST_CASE("Layout: CSS Grid Layout with spans", "[layout][grid][span]") {
 
 TEST_CASE("Layout: CSS Grid Layout text containment", "[layout][grid][bug]") {
   struct GridTextTest : Component<GridTextTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3004,7 +3004,7 @@ TEST_CASE("Layout: CSS Grid Layout text containment", "[layout][grid][bug]") {
 
 TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
   struct GridTallTest : Component<GridTallTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3322,7 +3322,7 @@ TEST_CASE("Layout: Absolute position centering via margin auto",
 
 TEST_CASE("Layout: calc() width", "[layout][calc]") {
   struct CalcWidthTest : Component<CalcWidthTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3352,7 +3352,7 @@ TEST_CASE("Layout: calc() width", "[layout][calc]") {
 TEST_CASE("Layout: text-align justify stretches wrapped lines",
           "[layout][text-align][justify]") {
   struct JustifyTest : Component<JustifyTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return "<style>div { display: block; text-align: justify; }</style>"
              "<div>aa bb cc dd ee</div>";
@@ -3372,7 +3372,7 @@ TEST_CASE("Layout: text-align justify stretches wrapped lines",
 TEST_CASE("Layout: justify skips hard-break lines",
           "[layout][text-align][justify]") {
   struct JustifyBreakTest : Component<JustifyBreakTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return "<style>div { display: block; text-align: justify;"
              " white-space: pre-wrap; }</style>"
@@ -3394,7 +3394,7 @@ TEST_CASE("Layout: justify skips hard-break lines",
 TEST_CASE("Layout: aspect-ratio derives height from width",
           "[layout][aspect-ratio]") {
   struct AspectRatioTest : Component<AspectRatioTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3427,7 +3427,7 @@ TEST_CASE("Layout: aspect-ratio derives height from width",
 TEST_CASE("Layout: aspect-ratio in flex context",
           "[layout][aspect-ratio][flex]") {
   struct FlexAspectTest : Component<FlexAspectTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3464,7 +3464,7 @@ TEST_CASE("Layout: aspect-ratio in flex context",
 TEST_CASE("Layout: aspect-ratio on a flex container",
           "[layout][aspect-ratio][flex]") {
   struct FlexContainerAspectTest : Component<FlexContainerAspectTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3496,7 +3496,7 @@ TEST_CASE("Layout: aspect-ratio on a flex container",
 TEST_CASE("Layout: aspect-ratio in grid context",
           "[layout][aspect-ratio][grid]") {
   struct GridAspectTest : Component<GridAspectTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3533,7 +3533,7 @@ TEST_CASE("Layout: aspect-ratio in grid context",
 TEST_CASE("Layout: aspect-ratio on a grid container",
           "[layout][aspect-ratio][grid]") {
   struct GridContainerAspectTest : Component<GridContainerAspectTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3570,7 +3570,7 @@ TEST_CASE("Layout: aspect-ratio derives a grid container's width from height",
           "[layout][aspect-ratio][grid]") {
   struct GridContainerAspectWidthTest
       : Component<GridContainerAspectWidthTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3606,7 +3606,7 @@ TEST_CASE("Layout: aspect-ratio derives a grid container's width from height",
 TEST_CASE("Layout: aspect-ratio derives width from height",
           "[layout][aspect-ratio]") {
   struct AspectRatioWidthTest : Component<AspectRatioWidthTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3639,7 +3639,7 @@ TEST_CASE("Layout: aspect-ratio derives width from height",
 TEST_CASE("Layout: aspect-ratio derives width from height in a flex column",
           "[layout][aspect-ratio][flex]") {
   struct FlexColumnAspectTest : Component<FlexColumnAspectTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3678,7 +3678,7 @@ TEST_CASE("Layout: aspect-ratio derives a flex container's width from height",
           "[layout][aspect-ratio][flex]") {
   struct FlexContainerAspectWidthTest
       : Component<FlexContainerAspectWidthTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3714,7 +3714,7 @@ TEST_CASE(
     "row item's width",
     "[layout][aspect-ratio][flex]") {
   struct FlexRowStretchAspectTest : Component<FlexRowStretchAspectTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3754,7 +3754,7 @@ TEST_CASE(
 
 TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
   struct MinWidthTest : Component<MinWidthTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3783,7 +3783,7 @@ TEST_CASE("Layout: min() width caps percentage", "[layout][calc][minmax]") {
 TEST_CASE("Layout: grid justify-items and align-self",
           "[layout][grid][justify]") {
   struct GridJustifyTest : Component<GridJustifyTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <style>
@@ -3822,7 +3822,7 @@ TEST_CASE("Layout: grid justify-items and align-self",
 TEST_CASE("Layout: white-space pre-line collapses runs",
           "[layout][white-space]") {
   struct PreLineTest : Component<PreLineTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return "<style>div { display: block; white-space: pre-line; }</style>"
              "<div>a   b  \n   c</div>";
@@ -3840,7 +3840,7 @@ TEST_CASE("Layout: white-space pre-line collapses runs",
 TEST_CASE("Layout: white-space pre-wrap wraps long lines",
           "[layout][white-space]") {
   struct PreWrapTest : Component<PreWrapTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return "<style>div { display: block; white-space: pre-wrap; }</style>"
              "<div>word1 word2</div>";
@@ -3869,7 +3869,7 @@ TEST_CASE("Layout: white-space pre-wrap wraps long lines",
 TEST_CASE("Layout: flex item with auto width shrinks to its block children",
           "[layout][flex][shrink-to-fit][bug]") {
   struct ShrinkToFitTest : Component<ShrinkToFitTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <div class="row">
@@ -3924,7 +3924,7 @@ TEST_CASE(
     "component's internals",
     "[layout][style][part]") {
   struct InnerWithPart : Component<InnerWithPart> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <div class="label" part="gizmo">X</div>
@@ -3937,7 +3937,7 @@ TEST_CASE(
   };
 
   struct OuterWithPartRule : Component<OuterWithPartRule> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<InnerWithPart>();
       return R"html(
         <InnerWithPart class="thing" />
@@ -4200,7 +4200,7 @@ int LayoutRunsForNestedFlex(int depth) {
   struct NestedFlexTest : Component<NestedFlexTest> {
     std::string html_;
     explicit NestedFlexTest(std::string html) : html_(std::move(html)) {}
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return html_;
     }
@@ -4246,7 +4246,7 @@ TEST_CASE(
   // pins that they still land where the context says, rather than reusing a
   // fragment measured under a different one.
   struct AbsInFlexTest : Component<AbsInFlexTest> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <div class="outer">
@@ -4292,7 +4292,7 @@ TEST_CASE("Layout: an auto-sized absolute box shrinks to fit its content",
   // negative coordinate -- off screen, painting nothing. CSS shrink-to-fit
   // is the max-content width capped by what is available.
   struct ShrinkToFitAbs : Component<ShrinkToFitAbs> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <div class="anchor">
@@ -4332,7 +4332,7 @@ TEST_CASE("Layout: an absolute box pinned to both edges stretches between them",
   // edges only means something if it may be narrower than they are; that is
   // how <tooltip> centers its popup over its anchor.
   struct StretchAbs : Component<StretchAbs> {
-    std::string_view Setup() {
+    std::string_view Setup() override {
       Import<div>();
       return R"html(
         <div class="anchor">

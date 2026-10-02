@@ -252,7 +252,7 @@ void TerminalInputParser::EmitPastedText(std::string_view text) {
       // indentation, so that would double it on every line.
       auto newline_kb = Event::Keyboard::From(static_cast<uint32_t>('\n'));
       newline_kb.from_paste = true;
-      events_.push_back(Event(newline_kb));
+      events_.emplace_back(newline_kb);
       ++i;
       continue;
     }
@@ -261,7 +261,7 @@ void TerminalInputParser::EmitPastedText(std::string_view text) {
     if (EatCodePoint(text, i, &end, &codepoint)) {
       auto kb = Event::Keyboard::From(codepoint);
       kb.from_paste = true;
-      events_.push_back(Event(kb));
+      events_.emplace_back(kb);
       i = end;
     } else {
       ++i;

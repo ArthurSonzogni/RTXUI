@@ -58,12 +58,10 @@
     # https://groups.google.com/a/chromium.org/g/cxx/c/noMMTNYiM0w .
     - key:          modernize-use-emplace.IgnoreImplicitConstructors
       value:        1
-    # Use of `std::ranges::reverse_view` is inconsistent with
-    # Chromium style. Recommend `base::Reversed` instead.
     - key:          modernize-loop-convert.MakeReverseRangeFunction
-      value:        base::Reversed
+      value:        std::views::reverse
     - key:          modernize-loop-convert.MakeReverseRangeHeader
-      value:        base/containers/adapters.h
+      value:        <ranges>
     # Exclude some third_party headers from modification as file paths are not
     # starting from repository root in replacement suggestion.
     # 'build/linux/debian' excludes system headers as they don't have

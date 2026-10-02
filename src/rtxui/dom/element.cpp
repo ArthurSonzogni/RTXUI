@@ -526,13 +526,13 @@ void Element::SetAttribute(std::string name, std::string value) {
       if (pos == std::string::npos) {
         auto sub = value.substr(start);
         if (!sub.empty()) {
-          classes.push_back(std::string(sub));
+          classes.emplace_back(sub);
         }
         break;
       }
       auto sub = value.substr(start, pos - start);
       if (!sub.empty()) {
-        classes.push_back(std::string(sub));
+        classes.emplace_back(sub);
       }
       start = pos + 1;
     }
@@ -558,6 +558,7 @@ void Element::RemoveAttribute(const std::string& name) {
   }
 }
 
+// NOLINTNEXTLINE(google-default-arguments): see the declaration.
 std::string Element::Print(int depth) const {
   std::string out;
   out += std::string(depth, ' ') + "<" + std::string(tag()) + "";

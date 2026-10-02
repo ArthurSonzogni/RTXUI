@@ -15,7 +15,7 @@ namespace {
 
 class Parser {
  public:
-  Parser(std::string_view css) : css_(css) {}
+  explicit Parser(std::string_view css) : css_(css) {}
 
   auto Get() -> char;
   auto Get(int offset) -> char;
@@ -270,7 +270,7 @@ SelectorPart ParseSinglePart(std::string_view current) {
       if (rest_part.front() == '.') {
         rest_part.remove_prefix(1);
         size_t next = rest_part.find_first_of(".#");
-        part.classes.push_back(std::string(rest_part.substr(0, next)));
+        part.classes.emplace_back(rest_part.substr(0, next));
         if (next == std::string_view::npos) {
           break;
         }
@@ -525,7 +525,7 @@ auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
     }
 
     if (parent_selectors.empty()) {
-      current_selectors.push_back(std::string(part));
+      current_selectors.emplace_back(part);
     } else {
       for (const auto& parent : parent_selectors) {
         current_selectors.push_back(CombineSelectors(parent, part));

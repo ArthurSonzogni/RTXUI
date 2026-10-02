@@ -319,6 +319,7 @@ class RTXUI_EXPORT Element : public RefCounted {
 
  public:
   // Rendering.
+  // NOLINTNEXTLINE(google-default-arguments): overrides add no default.
   virtual std::string Print(int depth = 0) const;
 
   // Query selector for testing.
