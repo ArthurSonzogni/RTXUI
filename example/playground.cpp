@@ -236,8 +236,8 @@ int main() {
                   error.message;
   });
   SetXmlErrorHandler([app](const XmlError& error) {
-    app->status = "Parse error, line " + std::to_string(error.line + 1) +
-                  ": " + error.message;
+    app->status = "Parse error, line " + std::to_string(error.line + 1) + ": " +
+                  error.message;
   });
 
   Screen screen(app);
