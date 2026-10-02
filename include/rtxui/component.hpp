@@ -690,10 +690,6 @@ class Component : public ComponentBase {
 #define Bind(x, ...) \
   this->Import(#x, &std::decay_t<decltype(*this)>::x, ##__VA_ARGS__)
 
-// BindComputed(x) and BindCallback(x) register member functions.
-#define BindComputed(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
-#define BindCallback(x) this->Import(#x, &std::decay_t<decltype(*this)>::x)
-
 // BindCollection(name, x) registers a collection with an explicit name.
 #define BindCollection(name, ...) this->Import(name, ##__VA_ARGS__)
 

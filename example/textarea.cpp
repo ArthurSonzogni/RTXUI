@@ -119,8 +119,8 @@ class TextareaDemo : public Component<TextareaDemo> {
 
   TextareaDemo() {
     Bind(text);
-    BindComputed(line_count);
-    BindComputed(char_count);
+    Bind(line_count);
+    Bind(char_count);
   }
 };
 
