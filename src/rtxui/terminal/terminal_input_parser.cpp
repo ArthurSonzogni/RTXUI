@@ -11,8 +11,8 @@
 #include <utility>   // for move
 #include <vector>
 
-#include "rtxui/base/string.hpp"     // for EatCodePoint
-#include "rtxui/internal/event.hpp"  // for Event
+#include "rtxui/base/string.hpp"  // for EatCodePoint
+#include "rtxui/event.hpp"        // for Event
 
 namespace rtxui {
 

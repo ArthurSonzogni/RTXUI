@@ -5,10 +5,10 @@
 #include <cmath>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
-#include "rtxui/internal/component.hpp"
 
 namespace {
 

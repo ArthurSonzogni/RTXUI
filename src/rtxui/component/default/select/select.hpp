@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-#include "rtxui/internal/component.hpp"
+#include "rtxui/component.hpp"
 
 namespace rtxui {
 

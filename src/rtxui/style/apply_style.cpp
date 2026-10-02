@@ -10,8 +10,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "rtxui/color.hpp"
 #include "rtxui/diagnostic.hpp"
-#include "rtxui/paint/color.hpp"
 
 namespace rtxui {
 namespace {

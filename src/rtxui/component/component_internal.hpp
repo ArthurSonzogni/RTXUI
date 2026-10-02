@@ -4,8 +4,12 @@
 #ifndef RTXUI_COMPONENT_INTERNAL_HPP_
 #define RTXUI_COMPONENT_INTERNAL_HPP_
 
+#include <filesystem>
+#include <string>
+#include <string_view>
+
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/internal/component.hpp"
 
 namespace rtxui {
 
@@ -26,6 +30,27 @@ void SyncDisabled(Element* root, bool disabled);
 // Syncs a component's bound `checked` state onto its root Element for
 // :checked CSS matching.
 void SyncChecked(Element* root, bool checked);
+
+/// Routes an XML/HTML parse error to the handler installed via
+/// SetXmlErrorHandler, or prints it to stderr if none was installed.
+RTXUI_EXPORT void ReportXmlError(const XmlError& error,
+                                 std::string_view xml_string);
+
+struct HotReloadInfo {
+  ComponentBase* component;
+  std::string view_var_name;
+  std::string filepath;
+  std::filesystem::file_time_type last_modified;
+};
+
+class HotReloadManager {
+ public:
+  static void Register(ComponentBase* component,
+                       std::string_view view_var_name,
+                       std::string_view filepath);
+  static void Unregister(ComponentBase* component);
+  static bool PollChanges();
+};
 
 }  // namespace rtxui
 

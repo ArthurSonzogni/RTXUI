@@ -18,8 +18,8 @@
 #include <tuple>
 #include <vector>
 
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/refcounted.hpp"
+#include "rtxui/component.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/xml/xml.hpp"
 

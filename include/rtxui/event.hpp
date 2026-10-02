@@ -1,11 +1,11 @@
 // Copyright 2020 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#ifndef RTXUI_TERMINAL_EVENT_HPP
-#define RTXUI_TERMINAL_EVENT_HPP
+#ifndef RTXUI_EVENT_HPP_
+#define RTXUI_EVENT_HPP_
 
 #include <cstdint>  // for uint32_t
-#include <iostream>
+#include <ostream>
 #include <rtxui/rtxui_export.hpp>
 #include <string>  // for string, operator==
 #include <string_view>

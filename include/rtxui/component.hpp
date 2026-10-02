@@ -5,20 +5,16 @@
 #define RTXUI_COMPONENT_HPP_
 
 #include <charconv>
-#include <filesystem>
 #include <functional>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
 #include <ranges>
-#include <set>
 #include <source_location>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -30,10 +26,10 @@
 #include <rtxui/rtxui_export.hpp>
 
 #include "rtxui/element.hpp"
+#include "rtxui/event.hpp"
 #include "rtxui/internal/class_name.hpp"
-#include "rtxui/internal/event.hpp"
 #include "rtxui/internal/import.hpp"
-#include "rtxui/internal/refcounted.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace css {
 struct Ruleset;
@@ -728,27 +724,6 @@ struct XmlError {
 /// default.
 RTXUI_EXPORT void SetXmlErrorHandler(
     std::function<void(const XmlError&)> handler);
-
-/// Routes an XML/HTML parse error to the handler installed via
-/// SetXmlErrorHandler, or prints it to stderr if none was installed.
-RTXUI_EXPORT void ReportXmlError(const XmlError& error,
-                                 std::string_view xml_string);
-
-struct HotReloadInfo {
-  ComponentBase* component;
-  std::string view_var_name;
-  std::string filepath;
-  std::filesystem::file_time_type last_modified;
-};
-
-class HotReloadManager {
- public:
-  static void Register(ComponentBase* component,
-                       std::string_view view_var_name,
-                       std::string_view filepath);
-  static void Unregister(ComponentBase* component);
-  static bool PollChanges();
-};
 
 }  // namespace rtxui
 

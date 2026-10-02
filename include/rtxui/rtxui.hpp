@@ -4,13 +4,13 @@
 #ifndef RTXUI_RTXUI_HPP_
 #define RTXUI_RTXUI_HPP_
 
+#include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/element.hpp"
+#include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/event.hpp"
-#include "rtxui/internal/refcounted.hpp"
-#include "rtxui/internal/screen.hpp"
+#include "rtxui/refcounted.hpp"
+#include "rtxui/screen.hpp"
 #include "rtxui/task.hpp"
 
 #endif  // RTXUI_RTXUI_HPP_

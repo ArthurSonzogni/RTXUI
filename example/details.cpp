@@ -7,8 +7,8 @@
 // Try it: click a summary row, or focus it and press Enter.
 #include <memory>
 
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/screen.hpp"
+#include "rtxui/component.hpp"
+#include "rtxui/screen.hpp"
 
 namespace {
 

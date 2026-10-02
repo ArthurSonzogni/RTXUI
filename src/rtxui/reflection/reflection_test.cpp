@@ -3,8 +3,8 @@
 // the LICENSE file.
 #include <catch2/catch_test_macros.hpp>
 
+#include "rtxui/component.hpp"
 #include "rtxui/internal/class_name.hpp"
-#include "rtxui/internal/component.hpp"
 
 namespace {
 class A {};

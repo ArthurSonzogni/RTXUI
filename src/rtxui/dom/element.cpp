@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <fstream>
 
-#include "rtxui/internal/component.hpp"
+#include "rtxui/component.hpp"
 std::atomic<int> g_elements_created{0};
 std::atomic<int> g_elements_destroyed{0};
 

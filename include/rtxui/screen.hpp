@@ -1,16 +1,16 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#ifndef RTXUI_TERMINAL_SCREEN_HPP_
-#define RTXUI_TERMINAL_SCREEN_HPP_
+#ifndef RTXUI_SCREEN_HPP_
+#define RTXUI_SCREEN_HPP_
 
 #include <memory>
 #include <rtxui/rtxui_export.hpp>
 #include <string>
 
 #include "rtxui/color.hpp"
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/event.hpp"
+#include "rtxui/component.hpp"
+#include "rtxui/event.hpp"
 
 namespace rtxui {
 
@@ -69,4 +69,4 @@ class RTXUI_EXPORT Screen {
 
 }  // namespace rtxui
 
-#endif  // RTXUI_TERMINAL_SCREEN_HPP_
+#endif  // RTXUI_SCREEN_HPP_

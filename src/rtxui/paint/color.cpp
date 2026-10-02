@@ -1,4 +1,4 @@
-#include "rtxui/paint/color.hpp"
+#include "rtxui/color.hpp"
 
 // static
 namespace rtxui {

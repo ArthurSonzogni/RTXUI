@@ -3,15 +3,15 @@
 #include <string>
 #include <vector>
 
+#include "rtxui/color.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/internal/component.hpp"
-#include "rtxui/internal/refcounted.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
-#include "rtxui/paint/color.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace rtxui {
 namespace {

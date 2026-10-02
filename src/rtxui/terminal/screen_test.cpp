@@ -1,12 +1,12 @@
-#include "rtxui/internal/screen.hpp"
+#include "rtxui/screen.hpp"
 
 #include <memory>
 
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/base/task_runner.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/internal/component.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"

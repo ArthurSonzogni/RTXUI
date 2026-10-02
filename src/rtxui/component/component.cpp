@@ -1,4 +1,4 @@
-#include "rtxui/internal/component.hpp"
+#include "rtxui/component.hpp"
 
 #include <algorithm>
 #include <array>
@@ -19,13 +19,13 @@
 #include <vector>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/color.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/slot_element.hpp"
 #include "rtxui/dom/text_element.hpp"
-#include "rtxui/paint/color.hpp"
 #include "rtxui/style/apply_style.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/xml/xml.hpp"
