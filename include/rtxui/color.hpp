@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <rtxui/rtxui_export.hpp>
 
+namespace rtxui {
+
 struct RTXUI_EXPORT Color {
   std::uint8_t r = 0;
   std::uint8_t g = 0;
@@ -26,5 +28,7 @@ struct RTXUI_EXPORT Color {
 };
 
 RTXUI_EXPORT Color Blend(Color over, Color under);
+
+}  // namespace rtxui
 
 #endif  // RTXUI_COLOR_HPP_

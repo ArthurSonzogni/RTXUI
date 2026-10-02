@@ -8,7 +8,7 @@
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
 void Fuzz(const std::string& s) {
-  auto parser = TerminalInputParser();
+  auto parser = rtxui::TerminalInputParser();
   for (const char c : s) {
     parser.Add(c);
 

@@ -7,6 +7,8 @@
 
 #include "rtxui/base/likely.hpp"
 
+namespace rtxui {
+
 namespace {
 void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
   // Bold
@@ -211,3 +213,5 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
 
   return ss.str();
 }
+
+}  // namespace rtxui

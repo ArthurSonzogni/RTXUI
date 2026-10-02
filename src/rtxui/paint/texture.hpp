@@ -9,6 +9,8 @@
 
 #include "rtxui/paint/cell.hpp"
 
+namespace rtxui {
+
 class Texture {
  public:
   Texture(std::uint8_t width, std::uint8_t height);
@@ -25,5 +27,7 @@ class Texture {
   const std::uint8_t height_;
   std::vector<Cell> cells_;
 };
+
+}  // namespace rtxui
 
 #endif  // PAINT_TEXTURE_HPP_

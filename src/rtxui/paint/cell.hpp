@@ -10,6 +10,8 @@
 
 #include "rtxui/paint/color.hpp"  // for Color, Color::Default
 
+namespace rtxui {
+
 /// @brief A Unicode character and its associated style.
 /// @ingroup screen
 struct Cell {
@@ -55,5 +57,7 @@ inline bool operator!=(const Cell& lhs, const Cell& rhs) noexcept {
 }
 
 extern Cell NullCell;
+
+}  // namespace rtxui
 
 #endif  // PAINT_CELL_HPP_

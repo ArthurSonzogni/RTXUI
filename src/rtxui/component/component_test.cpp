@@ -19,6 +19,10 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
+using rtxui::Color;
+using rtxui::Event;
+using rtxui::Texture;
+
 namespace {
 
 std::string RemoveWhitespace(std::string_view str) {

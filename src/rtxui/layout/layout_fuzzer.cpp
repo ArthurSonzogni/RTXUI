@@ -65,7 +65,7 @@ void TestLayout(const std::string& html, uint8_t width, uint8_t height) {
     return;
   }
 
-  Texture texture(width, height);
+  rtxui::Texture texture(width, height);
   rtxui::Paint(fragment.get(), texture);
   // Serialization walks every cell, so it catches a fragment placed outside
   // the texture that painting itself clipped away silently.

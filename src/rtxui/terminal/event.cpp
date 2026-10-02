@@ -17,6 +17,8 @@
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
 
+namespace rtxui {
+
 // static
 Event::Keyboard Event::Keyboard::From(std::uint32_t cp) {
   Keyboard k;
@@ -266,3 +268,5 @@ RTXUI_IMPL_LETTER(x, X, 'x')
 RTXUI_IMPL_LETTER(y, Y, 'y')
 RTXUI_IMPL_LETTER(z, Z, 'z')
 // clang-format on
+
+}  // namespace rtxui

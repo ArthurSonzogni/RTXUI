@@ -14,6 +14,8 @@
 #include "rtxui/base/string.hpp"     // for EatCodePoint
 #include "rtxui/internal/event.hpp"  // for Event
 
+namespace rtxui {
+
 std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
   static const auto& mapping = *new std::map<std::string, Event>{
       {"\x1B[D", Event::ArrowLeft()},
@@ -547,3 +549,5 @@ std::optional<Event> TerminalInputParser::GetEvent() {
   events_.erase(events_.begin());
   return event;
 }
+
+}  // namespace rtxui
