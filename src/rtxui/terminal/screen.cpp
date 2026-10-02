@@ -5,6 +5,7 @@
 
 #include <charconv>
 #include <cmath>
+#include <ranges>
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -323,16 +324,16 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
         return false;
       });
 
-  for (auto it = sorted_children.rbegin(); it != sorted_children.rend(); ++it) {
+  for (auto& child : std::views::reverse(sorted_children)) {
     bool is_fixed =
-        (it->fragment && it->fragment->dom_node &&
-         it->fragment->dom_node->style.position == PositionType::Fixed);
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Fixed);
     bool is_sticky =
-        (it->fragment && it->fragment->dom_node &&
-         it->fragment->dom_node->style.position == PositionType::Sticky);
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Sticky);
 
-    int child_abs_x = is_fixed ? it->x : abs_x + it->x - scroll_x_offset;
-    int child_abs_y = is_fixed ? it->y : abs_y + it->y - scroll_y_offset;
+    int child_abs_x = is_fixed ? child.x : abs_x + child.x - scroll_x_offset;
+    int child_abs_y = is_fixed ? child.y : abs_y + child.y - scroll_y_offset;
     int child_accum_scroll_x = next_accum_scroll_x;
     int child_accum_scroll_y = next_accum_scroll_y;
 
@@ -379,14 +380,14 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
         sticky.parent_padding_top = c_padding_t;
         sticky.parent_padding_right = c_padding_r;
         sticky.parent_padding_bottom = c_padding_b;
-        ApplyStickyOffset(it->fragment->dom_node->style, it->fragment->width,
-                          it->fragment->height, sticky, child_abs_x,
-                          child_abs_y);
+        ApplyStickyOffset(child.fragment->dom_node->style,
+                          child.fragment->width, child.fragment->height, sticky,
+                          child_abs_x, child_abs_y);
       }
     }
 
     if (auto* found = FindElementAtImpl(
-            it->fragment, target_x, target_y, child_abs_x, child_abs_y,
+            child.fragment, target_x, target_y, child_abs_x, child_abs_y,
             child_accum_scroll_x, child_accum_scroll_y, next_viewport_x,
             next_viewport_y, next_viewport_w, next_viewport_h)) {
       return found;
@@ -566,16 +567,16 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
         return false;
       });
 
-  for (auto it = sorted_children.rbegin(); it != sorted_children.rend(); ++it) {
+  for (auto& child : std::views::reverse(sorted_children)) {
     bool is_fixed =
-        (it->fragment && it->fragment->dom_node &&
-         it->fragment->dom_node->style.position == PositionType::Fixed);
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Fixed);
     bool is_sticky =
-        (it->fragment && it->fragment->dom_node &&
-         it->fragment->dom_node->style.position == PositionType::Sticky);
+        (child.fragment && child.fragment->dom_node &&
+         child.fragment->dom_node->style.position == PositionType::Sticky);
 
-    int child_abs_x = is_fixed ? it->x : abs_x + it->x - scroll_x_offset;
-    int child_abs_y = is_fixed ? it->y : abs_y + it->y - scroll_y_offset;
+    int child_abs_x = is_fixed ? child.x : abs_x + child.x - scroll_x_offset;
+    int child_abs_y = is_fixed ? child.y : abs_y + child.y - scroll_y_offset;
 
     if (is_sticky) {
       int c_border_l = 0, c_border_r = 0, c_border_t = 0, c_border_b = 0;
@@ -615,12 +616,13 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
       sticky.parent_padding_top = c_padding_t;
       sticky.parent_padding_right = c_padding_r;
       sticky.parent_padding_bottom = c_padding_b;
-      ApplyStickyOffset(it->fragment->dom_node->style, it->fragment->width,
-                        it->fragment->height, sticky, child_abs_x, child_abs_y);
+      ApplyStickyOffset(child.fragment->dom_node->style, child.fragment->width,
+                        child.fragment->height, sticky, child_abs_x,
+                        child_abs_y);
     }
 
     if (auto found = FindScrollableFragmentAtImpl(
-            it->fragment, target_x, target_y, child_abs_x, child_abs_y,
+            child.fragment, target_x, target_y, child_abs_x, child_abs_y,
             next_viewport_x, next_viewport_y, next_viewport_w,
             next_viewport_h)) {
       return found;

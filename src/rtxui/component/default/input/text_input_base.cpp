@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ranges>
 
 #include "rtxui/base/string.hpp"
 #include "rtxui/component/component_internal.hpp"
@@ -1382,8 +1383,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
             curr = next_l;
           }
 
-          for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
-            int l_start = *it;
+          for (int l_start : std::views::reverse(lines)) {
             int to_remove = 0;
             if (l_start < static_cast<int>(graphemes.size())) {
               if (graphemes[l_start].text == "\t") {
@@ -1438,8 +1438,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           std::string tab_str = "  ";
           auto tab_g = GetGraphemesList(tab_str);
           int tab_len = static_cast<int>(tab_g.size());
-          for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
-            int l_start = *it;
+          for (int l_start : std::views::reverse(lines)) {
             graphemes.insert(graphemes.begin() + l_start, tab_g.begin(),
                              tab_g.end());
             auto adjust_pos = [&](int& p) {

@@ -2549,10 +2549,10 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   std::vector<int> col_preferred_width(num_cols, 1);
 
   // Pass 1: Measure cell preferred widths
-  for (size_t row = 0; row < grid.size(); ++row) {
+  for (auto& row : grid) {
     for (size_t col = 0; col < num_cols; ++col) {
-      if (grid[row][col].is_top_left && grid[row][col].box) {
-        auto* cell = grid[row][col].box;
+      if (row[col].is_top_left && row[col].box) {
+        auto* cell = row[col].box;
         int cell_w = ResolveBoxWidth(cell->style, cell->style.width,
                                      content_width_limit);
         int measured_width = 0;
@@ -2568,7 +2568,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
           measured_width = cell_frag->width;
         }
 
-        int colspan = grid[row][col].colspan;
+        int colspan = row[col].colspan;
         int pref_per_col = (measured_width + colspan - 1) / colspan;
         for (int c = 0; c < colspan; ++c) {
           col_preferred_width[col + c] =
@@ -3007,7 +3007,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
     int C;
     std::vector<std::vector<bool>> grid;
 
-    OccupancyGrid(int cols) : C(cols) {}
+    explicit OccupancyGrid(int cols) : C(cols) {}
 
     bool IsOccupied(int r, int c) const {
       if (r >= static_cast<int>(grid.size())) {

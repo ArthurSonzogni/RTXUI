@@ -200,9 +200,9 @@ bool tabs::Digest() {
     PropagateBinding("value", value);
   }
 
-  for (size_t i = 0; i < panes.size(); ++i) {
-    auto* pane_el = panes[i].element;
-    const bool active = panes[i].name == value;
+  for (auto& pane : panes) {
+    auto* pane_el = pane.element;
+    const bool active = pane.name == value;
     const std::vector<std::string> want_classes = {active ? "active"
                                                           : "inactive"};
     const std::string want_style =
