@@ -164,7 +164,7 @@ class OpacityDemo : public Component<OpacityDemo> {
 
   OpacityDemo() {
     Bind(opacity_percent);
-    BindComputed(opacity_float);
+    Bind(opacity_float);
   }
 };
 

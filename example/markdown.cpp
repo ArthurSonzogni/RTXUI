@@ -108,7 +108,7 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
     Bind(markdown_source);
     Bind(stylesheet);
     Bind(status);
-    BindComputed(status_class);
+    Bind(status_class);
   }
 
   // Resets `status` to "OK" right before the reactive re-render triggered by

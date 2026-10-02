@@ -196,7 +196,7 @@ class Playground : public Component<Playground> {
   Playground() {
     Bind(code);
     Bind(status);
-    BindComputed(status_class);
+    Bind(status_class);
     Import<LivePreview>();
   }
 
