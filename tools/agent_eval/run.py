@@ -16,17 +16,17 @@ input, and the printed screen must contain every `expect` string and none of
 the `reject` ones.
 
 --agent picks the agent: claude (default; the plugin is loaded with
---plugin-dir) or gemini (the skill is written to GEMINI.md). Each runs on
-whatever account its CLI is logged into; on a subscription, runs consume
-its usage rather than being billed. The "API-equivalent usage" Claude Code
-reports is only a measure of effort.
+--plugin-dir) or agy, the Antigravity CLI (the skill is written to
+AGENTS.md). Each runs on whatever account its CLI is logged into; on a
+subscription, runs consume its usage rather than being billed. The
+"API-equivalent usage" Claude Code reports is only a measure of effort.
 
 This runs real agent sessions, roughly one per task. Run it when the docs, the
 skill or the API change, and read the failures: each is a construct agents
 get wrong, i.e. something to fix in the library, the docs or the skill.
 
 Usage:
-  python3 tools/agent_eval/run.py [--agent claude|gemini] [--task NAME ...]
+  python3 tools/agent_eval/run.py [--agent claude|agy] [--task NAME ...]
                                   [--build-dir build] [--model MODEL] [--keep]
 
 With --keep, each task directory also holds transcript.jsonl, the agent's
@@ -146,40 +146,42 @@ def run_claude(task, workdir, model):
     return {"error": result.stderr.strip() or result.stdout[-300:]}
 
 
-def run_gemini(task, workdir, model):
-    # Gemini CLI cannot load the Claude plugin, but reads GEMINI.md from the
-    # working directory: give it the same skill text.
+def run_agy(task, workdir, model):
+    # agy (Antigravity CLI) reads AGENTS.md from the working directory: give
+    # it the same skill text the Claude plugin carries.
     skill = (PLUGIN / "skills" / "rtxui" / "SKILL.md").read_text("utf-8")
     skill = skill.split("---", 2)[2].lstrip()  # Drop the front matter.
-    (workdir / "GEMINI.md").write_text(skill, encoding="utf-8")
+    (workdir / "AGENTS.md").write_text(skill, encoding="utf-8")
     command = [
-        "gemini", "-p", INSTRUCTIONS.format(prompt=task["prompt"]),
-        "--approval-mode", "auto_edit",
-        "--allowed-tools", "run_shell_command(./check.sh)",
-        "--output-format", "stream-json",
+        "agy", "-p", INSTRUCTIONS.format(prompt=task["prompt"]),
+        "--mode", "accept-edits", "--sandbox",
+        "--output-format", "stream-json", "--print-timeout", "1500s",
     ]
     if model:
         command += ["--model", model]
-    # No stdin: a CLI that wants to ask something (a login prompt) gets EOF
-    # instead of waiting forever.
     result = subprocess.run(command, cwd=workdir, capture_output=True,
                             stdin=subprocess.DEVNULL, text=True, timeout=1800,
                             check=False)
     (workdir / "transcript.jsonl").write_text(result.stdout, encoding="utf-8")
-    turns = 0
+    tool_steps = set()
     for line in result.stdout.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if event.get("type") == "tool_use":
-            turns += 1
-    if result.returncode != 0 and not turns:
-        return {"error": result.stderr.strip()[-300:] or "gemini failed"}
-    return {"turns": turns, "usage": None}
+        step = event.get("step_update", {})
+        if step.get("step_type") == "tool":
+            tool_steps.add(step.get("step_index"))
+        if event.get("event") == "result":
+            outcome = event["result"]
+            if outcome.get("status") != "SUCCESS" and not tool_steps:
+                return {"error": f"agy ended with {outcome.get('status')}"}
+            return {"turns": len(tool_steps),
+                    "tokens": outcome.get("usage", {}).get("total_tokens")}
+    return {"error": result.stderr.strip()[-300:] or "agy produced no result"}
 
 
-AGENTS = {"claude": run_claude, "gemini": run_gemini}
+AGENTS = {"agy": run_agy, "claude": run_claude}
 
 
 def responds(agent):
@@ -247,8 +249,10 @@ def main():
         # effort between tasks, not as a cost.
         usage = report.get("usage")
         status = "PASS" if not failures else "FAIL"
+        tokens = report.get("tokens")
         print(f"{status} {task['name']} (turns: {report.get('turns')}"
               + (f", API-equivalent usage: ${usage:.2f}" if usage else "")
+              + (f", tokens: {tokens}" if tokens else "")
               + ")")
         for failure in failures:
             print(f"    {failure}")
