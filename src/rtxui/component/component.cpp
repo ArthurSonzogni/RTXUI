@@ -272,17 +272,28 @@ ComponentFactory GetGlobalComponentFactory(std::string_view name) {
   return (it != reg.end()) ? it->second : nullptr;
 }
 
-struct CategorizedRules {
+// A stylesheet's rulesets, indexed by the part of the selector that is
+// cheapest to rule out.
+struct RuleBuckets {
   std::vector<const css::Ruleset*> universal;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_id;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>>
       by_class;
   std::unordered_map<std::string_view, std::vector<const css::Ruleset*>> by_tag;
-  bool has_pseudo_classes = false;
   // Rulesets with a trailing `::part(name)`, e.g. `textarea::part(gutter)`.
   // Matched separately (see MatchPartSelector): unlike every other bucket
   // above, these can apply to elements this component doesn't itself own.
   std::vector<const css::Ruleset*> part_rules;
+};
+
+struct CategorizedRules {
+  // Style resolution runs once for the rules without a pseudo-class and once
+  // for those with one. Indexing them apart means each pass only ever tests
+  // the rules it can use: most rules have no pseudo-class, and the pseudo pass
+  // runs again on every hover or focus change.
+  RuleBuckets base;
+  RuleBuckets pseudo;
+  bool has_pseudo_classes = false;
   // True when every ruleset is a bare `self { ... }`, so this component can
   // only ever style its own root. Because each HTML tag is itself a component,
   // most components in a tree are of this shape, and without this they still
@@ -439,6 +450,21 @@ void RestoreElementStates(
     }
   }
 }
+
+// How many Render() calls are building their template right now. A component
+// re-rendered by its parent's reconciliation runs inside the parent's Render(),
+// which resolves the styles of its whole tree once it is built. Resolving the
+// child's own subtree first would only be redone, once per level of nesting.
+int g_rendering_depth = 0;
+
+// The element states a nested Render() saved, restored by the outermost one
+// after it has resolved styles: restoring before would let that resolution
+// overwrite the restored (possibly mid-transition) styles.
+struct DeferredStateRestore {
+  Ref<Element> root;
+  std::vector<std::pair<ElementPath, ElementState>> states;
+};
+std::vector<DeferredStateRestore> g_deferred_state_restores;
 
 void RestoreElementFocusHoverActive(
     Element* root,
@@ -1311,8 +1337,12 @@ void ResolveStylesRecursive(Element* element,
   bool is_styled = IsStyledByComponent(element, component);
   const auto* categorized_for_parts =
       ComponentInternals::categorized_rules(*component);
+  // The base pass keeps walking for any ::part() rule, pseudo or not: that
+  // walk is also what marks elements resolved and rebuilds custom properties.
   bool has_part_rules =
-      categorized_for_parts && !categorized_for_parts->part_rules.empty();
+      categorized_for_parts &&
+      (!categorized_for_parts->pseudo.part_rules.empty() ||
+       (!check_pseudos && !categorized_for_parts->base.part_rules.empty()));
   // Whenever the styled branch below is about to run AND actually redo the
   // custom-properties resolution (i.e. not short-circuited by the
   // goto-recurse below for an element already resolved against `component`
@@ -1352,8 +1382,11 @@ void ResolveStylesRecursive(Element* element,
   }
   // Resolve nested component internal styles first, so that parent styles
   // (template/classes) take precedence and override the child's internal
-  // styles.
-  if (element->component() && element->component() != component) {
+  // styles. Not in the pseudo pass: ResolveTargetStyles already runs it for
+  // every component, children before parents, so dispatching here again would
+  // repeat each component's pass once per component it is nested in.
+  if (!check_pseudos && element->component() &&
+      element->component() != component) {
     ResolveStylesRecursive(element, element->component(), check_pseudos);
   }
 
@@ -1383,7 +1416,11 @@ void ResolveStylesRecursive(Element* element,
       std::vector<const css::Ruleset*> matched;
       const auto* categorized =
           ComponentInternals::categorized_rules(*component);
-      if (categorized && is_styled) {
+      const RuleBuckets* buckets = nullptr;
+      if (categorized) {
+        buckets = check_pseudos ? &categorized->pseudo : &categorized->base;
+      }
+      if (buckets && is_styled) {
         auto match_and_apply =
             [&](const std::vector<const css::Ruleset*>& rulesets,
                 bool is_universal) {
@@ -1450,23 +1487,17 @@ void ResolveStylesRecursive(Element* element,
                   }
                 }
 
-                if (check_pseudos) {
-                  if (!parsed.pseudo_classes.empty() &&
-                      MatchPseudos(element, parsed.pseudo_classes)) {
-                    matched.push_back(ruleset);
-                  }
-                } else {
-                  if (parsed.pseudo_classes.empty()) {
-                    matched.push_back(ruleset);
-                  }
+                if (!check_pseudos ||
+                    MatchPseudos(element, parsed.pseudo_classes)) {
+                  matched.push_back(ruleset);
                 }
               }
             };
 
-        match_and_apply(categorized->universal, true);
+        match_and_apply(buckets->universal, true);
 
-        auto it_tag = categorized->by_tag.find(element->tag());
-        if (it_tag != categorized->by_tag.end()) {
+        auto it_tag = buckets->by_tag.find(element->tag());
+        if (it_tag != buckets->by_tag.end()) {
           match_and_apply(it_tag->second, false);
         }
 
@@ -1476,15 +1507,15 @@ void ResolveStylesRecursive(Element* element,
         // order the two rules were written in -- the opposite of the CSS
         // cascade.
         for (const auto& cls : element->classes) {
-          auto it_class = categorized->by_class.find(cls);
-          if (it_class != categorized->by_class.end()) {
+          auto it_class = buckets->by_class.find(cls);
+          if (it_class != buckets->by_class.end()) {
             match_and_apply(it_class->second, false);
           }
         }
 
         if (!element->id.empty()) {
-          auto it_id = categorized->by_id.find(element->id);
-          if (it_id != categorized->by_id.end()) {
+          auto it_id = buckets->by_id.find(element->id);
+          if (it_id != buckets->by_id.end()) {
             match_and_apply(it_id->second, false);
           }
         }
@@ -1492,9 +1523,9 @@ void ResolveStylesRecursive(Element* element,
 
       // ::part() rules: unlike every bucket above, these can match `element`
       // even when `is_styled` is false (see MatchPartSelector) -- checked
-      // regardless of `categorized && is_styled` above.
-      if (categorized) {
-        for (const auto* ruleset : categorized->part_rules) {
+      // regardless of `buckets && is_styled` above.
+      if (buckets) {
+        for (const auto* ruleset : buckets->part_rules) {
           if (!css::EvaluateMediaQuery(ruleset->media_query)) {
             continue;
           }
@@ -1502,17 +1533,18 @@ void ResolveStylesRecursive(Element* element,
           if (!MatchPartSelector(element, component, parsed)) {
             continue;
           }
-          if (check_pseudos) {
-            if (!parsed.pseudo_classes.empty() &&
-                MatchPseudos(element, parsed.pseudo_classes)) {
-              matched.push_back(ruleset);
-            }
-          } else {
-            if (parsed.pseudo_classes.empty()) {
-              matched.push_back(ruleset);
-            }
+          if (!check_pseudos || MatchPseudos(element, parsed.pseudo_classes)) {
+            matched.push_back(ruleset);
           }
         }
+      }
+
+      // The pseudo pass only ever layers matched rules (and the inline style
+      // that must keep outranking them) on top of the base style, so with
+      // nothing matched there is nothing left to do. Stopping here skips
+      // re-parsing the inline style of every element on every pass.
+      if (check_pseudos && matched.empty()) {
+        goto recurse;
       }
 
       // Order the cascade. Declarations are applied in sequence and a later one
@@ -1791,11 +1823,13 @@ std::shared_ptr<const StyleData> GetSharedStyle(
     const css::StyleSheet& sheet = data->sheet;
     CategorizedRules& rules = data->rules;
     for (const auto& ruleset : sheet) {
-      if (!ruleset.parsed_selector.pseudo_classes.empty()) {
+      const bool is_pseudo = !ruleset.parsed_selector.pseudo_classes.empty();
+      if (is_pseudo) {
         rules.has_pseudo_classes = true;
       }
+      RuleBuckets& buckets = is_pseudo ? rules.pseudo : rules.base;
       if (!ruleset.parsed_selector.part.empty()) {
-        rules.part_rules.push_back(&ruleset);
+        buckets.part_rules.push_back(&ruleset);
         rules.only_self_rules = false;
         continue;
       }
@@ -1812,15 +1846,16 @@ std::shared_ptr<const StyleData> GetSharedStyle(
       }
 
       if (!selector_id.empty()) {
-        rules.by_id[selector_id].push_back(&ruleset);
+        buckets.by_id[selector_id].push_back(&ruleset);
       } else if (!ruleset.parsed_selector.classes.empty()) {
-        rules.by_class[ruleset.parsed_selector.classes[0]].push_back(&ruleset);
+        buckets.by_class[ruleset.parsed_selector.classes[0]].push_back(
+            &ruleset);
       } else if (selector_base == "self") {
-        rules.universal.push_back(&ruleset);
+        buckets.universal.push_back(&ruleset);
       } else if (selector_base.empty()) {
-        rules.universal.push_back(&ruleset);
+        buckets.universal.push_back(&ruleset);
       } else {
-        rules.by_tag[selector_base].push_back(&ruleset);
+        buckets.by_tag[selector_base].push_back(&ruleset);
       }
     }
   }
@@ -2145,7 +2180,9 @@ void ComponentBase::Render() {
     }
   }
 
+  ++g_rendering_depth;
   Render(template_node, root_.get(), this);
+  --g_rendering_depth;
 
   // Restore projected slot children
   for (auto& [name, children] : saved_slot_children) {
@@ -2179,8 +2216,20 @@ void ComponentBase::Render() {
     root_->set_parent(saved_parent);
   }
 
+  if (g_rendering_depth > 0) {
+    if (root_ && !saved_states.empty()) {
+      g_deferred_state_restores.push_back({root_, std::move(saved_states)});
+    }
+    return;
+  }
+
   ResolveStyles();
 
+  // Innermost components first, as they were rendered, then this one: its
+  // saved states cover the whole tree and so have the last word.
+  for (auto& [root, states] : std::exchange(g_deferred_state_restores, {})) {
+    RestoreElementStates(root.get(), states);
+  }
   if (root_ && !saved_states.empty()) {
     RestoreElementStates(root_.get(), saved_states);
   }

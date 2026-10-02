@@ -10411,6 +10411,51 @@ TEST_CASE("A bare `self` rule does not stop a stylesheet reaching descendants",
   }
 }
 
+namespace {
+class HoverCard : public rtxui::Component<HoverCard> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <button id="btn">x</button>
+    </div>
+    <style>
+      button:hover { background-color: red; }
+    </style>
+  )";
+};
+
+class HoverCardHost : public rtxui::Component<HoverCardHost> {
+ public:
+  void InitReflection() override {
+    Import<HoverCard>();
+    rtxui::Component<HoverCardHost>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <HoverCard/>
+    </div>
+    <style>
+      div:hover { background-color: blue; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A component's :hover rule outranks the one nested inside it",
+          "[component][style][css]") {
+  // <button> has its own `self:hover { background-color: … }`, two components
+  // below the root. HoverCard's `button:hover` must still win: each component's
+  // pseudo-class pass runs once, children before the components that use them.
+  auto app = rtxui::Ref<HoverCardHost>::New();
+  app->Mount();
+  auto* btn = app->Root()->QuerySelector("#btn");
+  REQUIRE(btn != nullptr);
+
+  btn->set_hovered(true);
+  app->ResolveTargetStyles();
+  CHECK(btn->target_style.background_color == Color::RGB(255, 0, 0));
+}
+
 TEST_CASE("Playground button hover and active styling test",
           "[component][style][playground]") {
   class TestLivePreview : public rtxui::Component<TestLivePreview> {
