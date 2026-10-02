@@ -37,10 +37,13 @@ trivial early-out frames), and only flags changes beyond `--threshold` percent
 (default 5%). `--compare` exits non-zero when any metric regresses past the
 threshold.
 
-The nesting benchmark also reports **layout runs** — how many times a layout
-algorithm executed for one frame. That number is deterministic, so unlike the
-timings it is a portable regression signal: `--compare` flags any growth in it
-regardless of the threshold.
+The frame benchmarks also report how much work a frame did: **style walk
+visits** (elements the style resolution walk entered, both passes) and
+**layout runs** (layout algorithm executions), averaged over the measured
+frames. The nesting benchmark reports layout runs per depth. These counts are
+deterministic, so unlike the timings they are a portable regression signal:
+`--compare` flags any growth in them regardless of the threshold, and a change
+meant to save work should show up there first.
 
 ## Getting a number you can trust
 

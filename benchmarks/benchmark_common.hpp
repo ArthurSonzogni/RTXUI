@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#include "rtxui/component/component_internal.hpp"
+#include "rtxui/layout/layout.hpp"
 #include "rtxui/rtxui.hpp"
 
 namespace rtxui::bench {
@@ -62,14 +64,27 @@ inline void EmitStageJson(const std::string& stage,
             << (comma ? ",\n" : "\n");
 }
 
+// Zeroes the work counters EmitFrameJson reports. Call it right before the
+// measured frames, so warmup is not counted.
+inline void ResetWorkCounters() {
+  ResetStyleVisitCount();
+  ResetLayoutRunCount();
+}
+
 // Emits the standard frame-timing JSON document consumed by
-// tools/benchmark.py (digest + draw + total-frame stages).
+// tools/benchmark.py (digest + draw + total-frame stages), plus how much work
+// the measured frames did. Timings are noisy; the work counts are
+// deterministic, so any growth in them is a real change.
 inline void EmitFrameJson(int frames,
                           const Stats& digest,
                           const Stats& draw,
                           const Stats& frame) {
   std::cout << "{\n"
-            << "  \"frames\": " << frames << ",\n";
+            << "  \"frames\": " << frames << ",\n"
+            << "  \"style_visits_per_frame\": " << StyleVisitCount() / frames
+            << ",\n"
+            << "  \"layout_runs_per_frame\": " << LayoutRunCount() / frames
+            << ",\n";
   EmitStageJson("digest", digest, true);
   EmitStageJson("draw", draw, true);
   EmitStageJson("frame", frame, false);

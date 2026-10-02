@@ -41,6 +41,12 @@ struct ComponentInternals {
   }
 };
 
+// Number of elements the style walk has visited since ResetStyleVisitCount(),
+// both passes together. Deterministic, unlike wall-clock time, so a benchmark
+// can flag any growth in how much work style resolution does.
+int StyleVisitCount();
+void ResetStyleVisitCount();
+
 ComponentBase* GetOwningComponent(Element* element);
 ComponentBase* GetAttributeOwnerComponent(Element* element);
 ComponentBase* GetParentComponent(ComponentBase* comp);

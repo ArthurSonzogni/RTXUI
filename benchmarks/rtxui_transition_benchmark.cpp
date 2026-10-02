@@ -112,6 +112,7 @@ int main() {
   std::vector<double> draw_times_us;
   std::vector<double> total_times_us;
 
+  rtxui::bench::ResetWorkCounters();
   for (int i = 0; i < kBenchmarkFrames; ++i) {
     auto t0 = Clock::now();
     app->Digest();
