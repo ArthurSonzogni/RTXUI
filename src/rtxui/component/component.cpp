@@ -2878,7 +2878,17 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               attribute_changed = true;
             }
 
-            child->SetProperty(key, interpolated_value);
+            auto echo = child->binding_echoes_.find(key);
+            if (echo != child->binding_echoes_.end() &&
+                echo->second == interpolated_value) {
+              // The child's own edit, reformatted by the parent: keep the
+              // child's text (see PropagateBinding).
+            } else {
+              if (echo != child->binding_echoes_.end()) {
+                child->binding_echoes_.erase(echo);
+              }
+              child->SetProperty(key, interpolated_value);
+            }
             if (child->Root()) {
               child->Root()->SetAttribute(std::string(key),
                                           std::string(interpolated_value));
@@ -3212,6 +3222,18 @@ void ComponentBase::PropagateBinding(std::string_view child_prop,
     }
     if (clean_binding_prop == clean_child_prop) {
       binding.parent->SetProperty(binding.parent_prop, value);
+      // The parent will render the stored value back into this component,
+      // possibly reformatted: typing "1." into an input bound to a double
+      // stores 1, which renders as "1". Remember that rendering, so it is
+      // recognised as this edit coming back rather than a new value, and
+      // does not overwrite the text being typed.
+      std::string echo =
+          binding.parent->GetInterpolatedValue(binding.parent_prop);
+      if (echo != value) {
+        binding_echoes_[binding.child_prop] = std::move(echo);
+      } else {
+        binding_echoes_.erase(binding.child_prop);
+      }
     }
   }
 }

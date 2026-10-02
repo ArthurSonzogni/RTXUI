@@ -193,6 +193,10 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   std::shared_ptr<const CategorizedRules> categorized_rules_;
   std::vector<std::string> css_strings_;
   std::vector<BindingLink> two_way_bindings_;
+  // Per bound property, how the parent renders the value this component last
+  // pushed to it, when that differs from what was pushed ("1." pushed into a
+  // double renders as "1"). See PropagateBinding().
+  std::map<std::string, std::string, std::less<>> binding_echoes_;
   int last_render_terminal_width_ = -1;
   int last_render_terminal_height_ = -1;
   void Render(const xml::Node& node,
