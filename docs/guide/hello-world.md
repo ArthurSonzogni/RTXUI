@@ -89,6 +89,13 @@ int main() {
   <kbd>Escape</kbd> outside of any open dialog). The loop is event-driven:
   it sleeps until input or posted work arrives, digests state changes, and
   repaints only the cells that changed.
+- `screen.Exit()` makes `Loop()` return, for a "Quit" button for example.
+  Hand the component a callback that calls it:
+
+<!-- snippet: fragment -->
+```cpp
+app->on_quit = [&screen] { screen.Exit(); };
+```
 
 ## Build and run
 
