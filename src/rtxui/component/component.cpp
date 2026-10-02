@@ -104,10 +104,6 @@ void RefCounted::Release() const {
   }
 }
 
-std::string_view ComponentBase::Setup() {
-  return "";
-}
-
 void ComponentBase::InitReflection() {}
 
 namespace {

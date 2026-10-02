@@ -6605,7 +6605,7 @@ class SmallInput : public rtxui::Component<SmallInput>,
   void InitReflection() override {
     rtxui::Component<SmallInput>::InitReflection();
   }
-  std::string_view Setup() override {
+  std::string_view Setup() {
     return R"html(
       <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
       <style>
@@ -6660,7 +6660,7 @@ class SmallTextarea : public rtxui::Component<SmallTextarea>,
   void InitReflection() override {
     rtxui::Component<SmallTextarea>::InitReflection();
   }
-  std::string_view Setup() override {
+  std::string_view Setup() {
     return R"html(
       <span>{left_text}</span><span class="{cursor_class}">{cursor_char}</span><span>{right_text}</span>
       <style>

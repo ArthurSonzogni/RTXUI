@@ -78,9 +78,11 @@ class Component : public ComponentBase;
 ```
 
 ### 3.1 Template Declaration
-Components provide HTML structure via one of two mechanisms:
+Components provide HTML structure via exactly one of two public members, found at compile time:
 1. **`view` Member** (Recommended): A `std::string_view` member variable. Supports runtime [Hot Reload](/guide/hot-reload).
-2. **`Setup()` Override**: A virtual method returning `std::string_view`.
+2. **`Setup()` Method**: A non-virtual method returning `std::string_view` (no `override`).
+
+Defining both is a compile error.
 
 ```cpp
 class CounterCard : public rtxui::Component<CounterCard> {

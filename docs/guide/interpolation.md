@@ -32,7 +32,7 @@ class ProfileApp : public rtxui::Component<ProfileApp> {
     Bind(score);
   }
 
-  std::string_view Setup() override {
+  std::string_view Setup() {
     return R"html(
       <div class="card">
         <span>Username: {username}</span>
@@ -61,7 +61,7 @@ class CounterApp : public rtxui::Component<CounterApp> {
     Bind(double_count);
   }
 
-  std::string_view Setup() override {
+  std::string_view Setup() {
     return R"html(
       <div>
         <span>Count: {count}</span>

@@ -16,7 +16,7 @@ class fieldset : public Component<fieldset> {
   std::string legend_class = "no-legend";
 
   void InitReflection() override;
-  std::string_view Setup() override;
+  std::string_view Setup();
   bool Digest() override;
 };
 

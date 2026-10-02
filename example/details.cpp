@@ -29,7 +29,7 @@ class DetailsDemo : public rtxui::Component<DetailsDemo> {
     Bind(status_text);
   }
 
-  std::string_view Setup() override {
+  std::string_view Setup() {
     return R"html(
       <div class="app">
         <h1>RTXUI Details &amp; Summary Demonstration</h1>

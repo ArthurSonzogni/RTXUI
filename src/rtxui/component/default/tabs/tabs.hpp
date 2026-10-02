@@ -26,7 +26,7 @@ class tabs : public Component<tabs> {
   void SelectTab(std::string index_str);
 
   void InitReflection() override;
-  std::string_view Setup() override;
+  std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;
 

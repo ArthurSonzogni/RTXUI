@@ -56,7 +56,7 @@ std::string GetColorLayer(const Texture& texture,
 
 TEST_CASE("Layout: Rowspan painting order regression test", "[layout][table]") {
   struct RowspanPaintTest : Component<RowspanPaintTest> {
-    std::string_view Setup() override {
+    std::string_view Setup() {
       return R"html(
         <style>
           self { display: block; width: 10; height: 2; }

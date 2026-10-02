@@ -90,7 +90,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
 
 TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
   struct BorderGridApp : Component<BorderGridApp> {
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       // We define a 4x3 grid using flexbox wrapping.
       // Each item is exactly 1/3 of the width and 1/4 of the height.
@@ -434,7 +434,7 @@ TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
 
 TEST_CASE("Individual Border Colors") {
   struct IndividualBorderColorTest : Component<IndividualBorderColorTest> {
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       return R"html(
           <style>
@@ -481,7 +481,7 @@ TEST_CASE("Individual Border Colors") {
 TEST_CASE("Layout: a single border side renders as a plain line, no corners",
           "[paint][border][asymmetric]") {
   struct T : Component<T> {
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       return R"html(
           <style>
@@ -513,7 +513,7 @@ TEST_CASE(
     "are present",
     "[paint][border][asymmetric]") {
   struct T : Component<T> {
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       return R"html(
           <style>
@@ -539,7 +539,7 @@ TEST_CASE(
 
 TEST_CASE("Paint: Tall Border Parent Background Propagation") {
   struct TallBorderParentBgTest : Component<TallBorderParentBgTest> {
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       return R"html(
           <style>
@@ -586,7 +586,7 @@ TEST_CASE("Paint: Tall Border Parent Background Propagation") {
 
 TEST_CASE("Paint: Transparent Overlay Blending on Tall Border") {
   struct OverlayTest : Component<OverlayTest> {
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       return R"html(
           <style>
@@ -642,7 +642,7 @@ TEST_CASE("Half-block borders follow Textual's location table",
 
   struct LocationTest : Component<LocationTest> {
     std::string style_name;
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       Bind(style_name);
       return R"html(
@@ -718,7 +718,7 @@ TEST_CASE("Paint: Half-block borders never render the default foreground",
           "[paint][border]") {
   struct NoBackgroundTest : Component<NoBackgroundTest> {
     std::string style_name;
-    std::string_view Setup() override {
+    std::string_view Setup() {
       Import<div>();
       Bind(style_name);
       return R"html(

@@ -24,7 +24,7 @@ struct ClickApp : public rtxui::Component<ClickApp> {
     Import("Reset", [this]() { clicks = 0; });
   }
 
-  std::string_view Setup() override;
+  std::string_view Setup();
 };
 ```
 

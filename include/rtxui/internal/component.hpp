@@ -19,6 +19,7 @@
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 #if defined(RTXUI_HAS_REFLECTION)
@@ -94,7 +95,6 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   ComponentBase(ComponentBase&&) = delete;
   ComponentBase& operator=(ComponentBase&&) = delete;
 
-  virtual std::string_view Setup();
   virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
   std::string_view Template();
@@ -447,14 +447,25 @@ class Component : public ComponentBase {
   static std::string_view StaticTag() { return ClassName<Derived>(); }
   std::string_view Tag() const final { return StaticTag(); }
 
+  // The template is either a `view` member or the result of a Setup() method,
+  // both found at compile time. Both must be public.
   std::string_view GetView() const override {
-    if constexpr (requires { static_cast<const Derived*>(this)->view; }) {
+    constexpr bool kHasView = requires(const Derived& d) { d.view; };
+    constexpr bool kHasSetup = requires(Derived& d) { d.Setup(); };
+    static_assert(!(kHasView && kHasSetup),
+                  "Define either a `view` member or a Setup() method, not "
+                  "both: Setup() would never be called.");
+    if constexpr (kHasView) {
       return static_cast<const Derived*>(this)->view;
+    } else if constexpr (kHasSetup) {
+      static_assert(std::is_same_v<decltype(std::declval<Derived&>().Setup()),
+                                   std::string_view>,
+                    "Setup() must return std::string_view.");
+      return const_cast<Derived*>(static_cast<const Derived*>(this))->Setup();
+    } else {
+      return "";
     }
-    return const_cast<Component<Derived>*>(this)->Setup();
   }
-
-  std::string_view Setup() override { return ""; }
 
   bool Digest() override {
     bool changed = false;
