@@ -40,6 +40,7 @@ bazel-*
 /dump*.txt
 /build_wasm/
 /build_fuzz/
+/build_coverage/
 /fuzz_coverage/
 /gcc-local/
 /Testing/

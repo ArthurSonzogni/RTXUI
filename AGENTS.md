@@ -72,6 +72,10 @@ sources to `rtxui_lib`.
 
 ### Other builds
 
+- Coverage: `scripts/coverage.sh [--html]` builds `build_coverage/` with
+  Clang source-based coverage, runs `rtxui_test`, and prints line coverage per
+  directory. Use it to find untested code; there is no threshold, so write
+  tests that assert behavior rather than tests that only execute lines.
 - FuzzTest fuzzers: configure with `-DRTXUI_BUILD_FUZZERS=ON
   -DFUZZTEST_FUZZING_MODE=ON` and run `./build_fuzz/rtxui_fuzzer`. Turn every
   crash into a regression test.

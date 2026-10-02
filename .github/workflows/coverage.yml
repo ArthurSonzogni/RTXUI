@@ -1,0 +1,63 @@
+# Code coverage of the library by rtxui_test (scripts/coverage.sh). The
+# per-directory summary goes to the run's step summary; the HTML report is
+# uploaded as an artifact. Informational only: no threshold is enforced.
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  workflow_dispatch:
+
+concurrency:
+  group: coverage-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Clang source-based coverage
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM 21
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build ccache
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 21
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-coverage-${{ github.sha }}
+          restore-keys: ccache-coverage-
+
+      - name: Coverage
+        env:
+          CC: clang-21
+          CXX: clang++-21
+          LLVM_PROFDATA: llvm-profdata-21
+          LLVM_COV: llvm-cov-21
+          JOBS: 4
+        run: |
+          scripts/coverage.sh --html
+          cat build_coverage/coverage.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: build_coverage/html
