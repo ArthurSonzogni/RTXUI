@@ -313,6 +313,20 @@ TEST_CASE("Bindings callback execution", "[component]") {
   REQUIRE(ran_nonexistent == false);
 }
 
+// State is bound by address, so binding a temporary would leave the binding
+// pointing at a destroyed object. Import() must refuse it at compile time.
+template <typename T>
+concept CanImport = requires(Counter& c, T&& value) {
+  c.Import("name", std::forward<T>(value));
+};
+static_assert(CanImport<int&>);
+static_assert(CanImport<std::vector<int>&>);
+static_assert(CanImport<int*>);
+static_assert(CanImport<void (*)()>);
+static_assert(!CanImport<int>);
+static_assert(!CanImport<std::string>);
+static_assert(!CanImport<std::vector<int>>);
+
 TEST_CASE("Screen Drawing", "[terminal]") {
   auto counter = rtxui::Ref<Counter>::New();
   rtxui::Screen screen(counter);

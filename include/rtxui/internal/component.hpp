@@ -564,9 +564,16 @@ class Component : public ComponentBase {
     }
   }
 
-  // Generic Binding (Event Handlers, Collections, or State References)
+  // Generic Binding (Event Handlers, Collections, or State References).
+  // State and collections are bound by address, so they must be lvalues: a
+  // temporary would be destroyed at the end of the call, leaving a dangling
+  // binding behind.
   template <typename T, typename... Args>
-    requires(!std::is_member_pointer_v<std::decay_t<T>>)
+    requires(!std::is_member_pointer_v<std::decay_t<T>> &&
+             (std::is_lvalue_reference_v<T> ||
+              std::is_pointer_v<std::decay_t<T>> ||
+              std::is_invocable_v<std::decay_t<T>> ||
+              std::is_invocable_v<std::decay_t<T>, std::string>))
   void Import(std::string name, T&& item, Args&&... args) {
     using U = std::decay_t<T>;
     if constexpr (std::is_invocable_v<U> ||
