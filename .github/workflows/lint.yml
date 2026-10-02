@@ -1,0 +1,45 @@
+# The lint half of scripts/check.sh: clang-format, the no-exceptions rule and
+# clang-tidy over every source file. Build and tests run in test.yml.
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: clang-format + clang-tidy
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM 21
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 21
+          sudo apt-get install -y clang-format-21 clang-tidy-21
+          sudo ln -sf /usr/bin/clang-format-21 /usr/local/bin/clang-format
+          sudo ln -sf /usr/bin/clang-tidy-21 /usr/local/bin/clang-tidy
+
+      - name: Configure
+        env:
+          CC: clang-21
+          CXX: clang++-21
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -DRTXUI_BUILD_TESTS=ON
+          -DRTXUI_BUILD_EXAMPLES=OFF
+          -DRTXUI_BUILD_BENCHMARKS=OFF
+
+      - name: Lint
+        # Diffing against the empty tree makes clang-tidy check every file.
+        run: BASE=$(git hash-object -t tree /dev/null) JOBS=4 scripts/check.sh --lint-only
