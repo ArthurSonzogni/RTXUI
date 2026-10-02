@@ -3152,7 +3152,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
 
   // Value should be 0 (leftmost) and capture active
   CHECK(slider_ptr->value == 0);
-  CHECK(rtxui::ComponentBase::GetMouseCapturer() == slider_ptr);
+  CHECK(rtxui::ComponentInternals::GetMouseCapturer() == slider_ptr);
 
   // Move to the centre of the track — y deliberately far off (capture ignores
   // it)
@@ -3167,7 +3167,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
 
   // Value should be 50 and capture still held
   CHECK(slider_ptr->value == 50);
-  CHECK(rtxui::ComponentBase::GetMouseCapturer() == slider_ptr);
+  CHECK(rtxui::ComponentInternals::GetMouseCapturer() == slider_ptr);
 
   // Release at the rightmost column
   {
@@ -3181,7 +3181,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
 
   // Value should be 100 and capture released
   CHECK(slider_ptr->value == 100);
-  CHECK(rtxui::ComponentBase::GetMouseCapturer() == nullptr);
+  CHECK(rtxui::ComponentInternals::GetMouseCapturer() == nullptr);
 }
 
 TEST_CASE(
@@ -6185,11 +6185,13 @@ TEST_CASE("Component props and two-way propagation", "[component][props]") {
 
   // Check initial properties
   CHECK(parent->parent_value == 10);
-  CHECK(child1->GetInterpolatedValue("value") == "10");
-  CHECK(child2->GetInterpolatedValue("value") == "10");
+  CHECK(rtxui::ComponentInternals::GetInterpolatedValue(*child1, "value") ==
+        "10");
+  CHECK(rtxui::ComponentInternals::GetInterpolatedValue(*child2, "value") ==
+        "10");
 
   // Simulate child1 modifying its prop (e.g. from user input)
-  child1->SetProperty("props.value", "42");
+  rtxui::ComponentInternals::SetProperty(*child1, "props.value", "42");
 
   // Running Digest to propagate reactive updates
   parent->Digest();
@@ -6198,7 +6200,8 @@ TEST_CASE("Component props and two-way propagation", "[component][props]") {
   CHECK(parent->parent_value == 42);
 
   // child2 should also receive the updated value 42
-  CHECK(child2->GetInterpolatedValue("value") == "42");
+  CHECK(rtxui::ComponentInternals::GetInterpolatedValue(*child2, "value") ==
+        "42");
 }
 
 class ListTestComponent : public rtxui::Component<ListTestComponent> {
@@ -6886,9 +6889,9 @@ TEST_CASE("Mouse capture is released when component is destroyed",
     auto comp = rtxui::Ref<rtxui::slider>::New();
     comp->CaptureMouse();
     raw_comp_ptr = comp.get();
-    CHECK(rtxui::ComponentBase::GetMouseCapturer() == raw_comp_ptr);
+    CHECK(rtxui::ComponentInternals::GetMouseCapturer() == raw_comp_ptr);
   }
-  CHECK(rtxui::ComponentBase::GetMouseCapturer() == nullptr);
+  CHECK(rtxui::ComponentInternals::GetMouseCapturer() == nullptr);
 }
 
 class HoverActiveTestComponent
@@ -8025,7 +8028,7 @@ TEST_CASE("Fieldset and Legend Components", "[component][fieldset]") {
   REQUIRE(fieldset_ptr != nullptr);
 
   // The legend slot should contain a legend component
-  auto legend_slot = fieldset_ptr->Slot("legend");
+  auto legend_slot = rtxui::ComponentInternals::Slot(*fieldset_ptr, "legend");
   REQUIRE(legend_slot != nullptr);
   REQUIRE(legend_slot->ChildCount() > 0);
 
@@ -9660,13 +9663,13 @@ TEST_CASE("Mutating classes in place restyles without an explicit invalidation",
 
   // Deliberately mutate the vector directly, with no invalidation call.
   box->classes.push_back("lit");
-  app->ResolveStyles();
+  rtxui::ComponentInternals::ResolveStyles(*app);
   CHECK(box->style.foreground_color == Color::RGB(2, 2, 2));
 
   // Removing it again must take the style away, not just add on top: the
   // element has to be resolved from scratch, not incrementally.
   box->classes.clear();
-  app->ResolveStyles();
+  rtxui::ComponentInternals::ResolveStyles(*app);
   CHECK(box->style.foreground_color == Color::RGB(1, 1, 1));
 }
 
@@ -10320,7 +10323,7 @@ TEST_CASE("A nested component keeps its host's rules when it re-renders",
   // Moving the active class re-renders both #a and #b, but not #c.
   app->mode = 1;
   app->Digest();
-  app->ResolveStyles();
+  rtxui::ComponentInternals::ResolveStyles(*app);
 
   CHECK(border_of("#a") == 1);
   CHECK(border_of("#b") == 1);
@@ -10331,7 +10334,7 @@ TEST_CASE("A nested component keeps its host's rules when it re-renders",
   // And back again, since the bug only showed after a re-render.
   app->mode = 0;
   app->Digest();
-  app->ResolveStyles();
+  rtxui::ComponentInternals::ResolveStyles(*app);
   CHECK(border_of("#a") == 1);
   CHECK(border_of("#b") == 1);
 }

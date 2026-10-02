@@ -542,7 +542,7 @@ std::string Interpolate(std::string_view text,
     }
 
     if (!resolved) {
-      result.append(source->GetInterpolatedValue(trimmed));
+      result.append(ComponentInternals::GetInterpolatedValue(*source, trimmed));
     }
     last_pos = close_idx + 1;
   }
@@ -1309,7 +1309,8 @@ void ResolveStylesRecursive(Element* element,
   }
 
   bool is_styled = IsStyledByComponent(element, component);
-  const auto* categorized_for_parts = component->categorized_rules();
+  const auto* categorized_for_parts =
+      ComponentInternals::categorized_rules(*component);
   bool has_part_rules =
       categorized_for_parts && !categorized_for_parts->part_rules.empty();
   // Whenever the styled branch below is about to run AND actually redo the
@@ -1380,7 +1381,8 @@ void ResolveStylesRecursive(Element* element,
       // Matching rulesets are collected first (in bucket order), so that all
       // --* declarations are known before var() substitution happens.
       std::vector<const css::Ruleset*> matched;
-      const auto* categorized = component->categorized_rules();
+      const auto* categorized =
+          ComponentInternals::categorized_rules(*component);
       if (categorized && is_styled) {
         auto match_and_apply =
             [&](const std::vector<const css::Ruleset*>& rulesets,
@@ -1693,7 +1695,8 @@ void ResolveStylesRecursive(Element* element,
 recurse:
   if (element->component() && element->component() != component) {
     bool has_slot_children = false;
-    for (const auto& [name, slot_el] : element->component()->slots()) {
+    for (const auto& [name, slot_el] :
+         ComponentInternals::slots(*element->component())) {
       if (slot_el && slot_el->ChildCount() > 0) {
         has_slot_children = true;
         break;

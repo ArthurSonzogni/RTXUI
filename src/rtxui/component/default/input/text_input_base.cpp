@@ -698,7 +698,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
   }
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    bool is_captured = (self->GetMouseCapturer() == self);
+    bool is_captured = (ComponentInternals::GetMouseCapturer() == self);
 
     if (mouse.button == Event::Mouse::Button::Left) {
       if (mouse.motion == Event::Mouse::Motion::Pressed) {
