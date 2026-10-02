@@ -54,6 +54,7 @@ export default withMermaid({
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Hello World', link: '/guide/hello-world' },
           { text: 'Reactivity', link: '/reactivity' },
+          { text: 'Common Mistakes', link: '/guide/common-mistakes' },
           { text: 'Playground', link: '/playground' }
         ]
       },

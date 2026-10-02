@@ -88,10 +88,11 @@ Defining both is a compile error.
 class CounterCard : public rtxui::Component<CounterCard> {
  public:
   int count = 0;
+  void Increment() { count++; }
 
   void InitReflection() override {
     Bind(count);
-    Bind("Increment", [this]() { count++; });
+    Bind(Increment);
   }
 
   std::string_view view = R"html(

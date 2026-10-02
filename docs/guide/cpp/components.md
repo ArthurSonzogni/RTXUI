@@ -53,15 +53,12 @@ class Header : public rtxui::Component<Header> {
 
 class Dashboard : public rtxui::Component<Dashboard> {
  public:
-  Dashboard() {
-    Import<Header>();
-    Import<MyCard>();
-  }
+  Dashboard() { Import<Header>(); }
 
   std::string_view view = R"html(
     <div>
       <Header />
-      <MyCard />
+      <p>Content</p>
     </div>
   )html";
 };
@@ -104,7 +101,7 @@ class Counter : public rtxui::Component<Counter> {
 
   Counter() {
     Bind(count);
-    Bind("Increment", [this] { Increment(); });
+    Bind(Increment);
   }
 
   std::string_view view = R"html(

@@ -254,6 +254,14 @@ if(RTXUI_BUILD_TESTS)
               --cxx "${CMAKE_CXX_COMPILER}"
               --export-header-dir "${CMAKE_CURRENT_BINARY_DIR}/generated"
     )
+
+    # Compile the C++ snippets of the docs against the public headers, so
+    # the code readers copy keeps up with the API.
+    add_test(NAME verify_doc_snippets
+      COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_doc_snippets.py"
+              --cxx "${CMAKE_CXX_COMPILER}"
+              --export-header-dir "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    )
   endif()
 
   # Catch2

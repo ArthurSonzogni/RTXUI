@@ -26,6 +26,7 @@ The app is two components:
 last frame. When it has, it parses the new text with `xml::Parse()` to check
 it's valid, then looks up the preview child through the DOM and reloads it:
 
+<!-- snippet: fragment -->
 ```cpp
 bool Digest() override {
   bool changed = Component<Playground>::Digest();

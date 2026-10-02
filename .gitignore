@@ -51,6 +51,8 @@ bazel-*
 /docs/.vitepress/dist/
 /docs/.vitepress/cache/
 /docs/public/wasm/
+/docs/public/llms.txt
+/docs/public/llms-full.txt
 
 # Python bytecode from the helper scripts under scripts/.
 __pycache__/

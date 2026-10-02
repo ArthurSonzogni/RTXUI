@@ -27,10 +27,6 @@ class ScrollBox : public Component<ScrollBox> {
         }
       </style>
     )html";
-
-  ScrollBox() {
-    Import<rtxui::div>();
-  }
 };
 ```
 
