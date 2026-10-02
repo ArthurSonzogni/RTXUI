@@ -1,0 +1,24 @@
+
+ ┌──────────────────────────────────────────────┐  ┌──────────────────────────┐
+ │                                              │  │                          │
+ │ Controls                                     │  │ Interactive Area         │
+ │                                              │  │                          │
+ │ ┌──────────────────┐ ┌──────────────────┐    │  │ Focus the test area      │
+ │ │ V-Scroll         │ │ H-Scroll         │    │  │ (Tab) and scroll/drag.   │
+ │ └──────────────────┘ └──────────────────┘    │  │ Observe how borders and  │
+ │                                              │  │ scrollbars mix correctly │
+ │                                              │  │ without overlapping!     │
+ │ Select Border Style:                         │  │                          │
+ │                                              │  │                          │
+ │ ┌───────────┐ ┌───────────┐ ┌───────────┐    │  │                          │
+ │ │ solid     │ │ round     │ │ double    │    │  │                          │
+ │ └───────────┘ └───────────┘ └───────────┘    │  │ ┌──────────────────────┐ │
+ │                                              │  │ │ RTXUI Border & Scrol │ │
+ │ ┌───────────┐ ┌───────────┐ ┌───────────┐    │  │ │                      │ │
+ │ │ ascii     │ │ dashed    │ │ heavy     │    │  │ │ Line 01: Focus this  │ │
+ │ └───────────┘ └───────────┘ └───────────┘    │  │ │                      │ │
+ │                                              │  │ │ Line 02: Click on an │ │
+ │ ┌───────────┐ ┌───────────┐ ┌───────────┐    │  │ │                      │ │
+ │ │ dotted    │ │ double-h  │ │ double-v  │    │  │ │ Line 03: The scrollb │ │
+ │ └───────────┘ └───────────┘ └───────────┘    │  │ │                      │ │
+ │                                              │  │ │ Line 04: This is a v │ │

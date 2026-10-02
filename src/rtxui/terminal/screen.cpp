@@ -27,14 +27,20 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <fstream>
 #include <iostream>
+#include <iterator>
+#include <optional>
+#include <thread>
+#include <utility>
 
 #include "rtxui/base/string.hpp"
 #include "rtxui/base/task_runner.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
@@ -960,6 +966,70 @@ bool IsCellOnHorizontalScrollbar(const PhysicalFragment* frag,
 
 }  // namespace
 
+// A terminal that exists only in memory, for HeadlessScreen and for
+// RTXUI_HEADLESS. Output is discarded: the frame is read back from the last
+// texture instead, which is what the output would have drawn.
+class HeadlessTerminalDevice : public TerminalDevice {
+ public:
+  HeadlessTerminalDevice(int width, int height)
+      : width_(width), height_(height) {}
+
+  bool IsAtty() override { return true; }
+  int Read(char* buf, int len) override {
+    int count = std::min(len, static_cast<int>(input_.size()));
+    std::copy_n(input_.begin(), count, buf);
+    input_.erase(0, count);
+    return count;
+  }
+  void Write(std::string_view /*data*/) override {}
+  bool GetSize(int& width, int& height) override {
+    width = width_;
+    height = height_;
+    return true;
+  }
+  void EnterRawMode(void (* /*sigwinch_handler*/)(int)) override {}
+  void ExitRawMode() override {}
+
+  void PushInput(std::string_view data) { input_ += data; }
+  bool HasInput() const { return !input_.empty(); }
+  void Resize(int width, int height) {
+    width_ = width;
+    height_ = height;
+  }
+
+ private:
+  std::string input_;
+  int width_;
+  int height_;
+};
+
+namespace {
+
+// Parses RTXUI_HEADLESS=<width>x<height>.
+std::optional<std::pair<int, int>> HeadlessSizeFromEnvironment() {
+  const char* value = std::getenv("RTXUI_HEADLESS");
+  if (!value) {
+    return std::nullopt;
+  }
+  std::string_view text = value;
+  size_t x = text.find('x');
+  if (x == std::string_view::npos) {
+    return std::nullopt;
+  }
+  int width = 0;
+  int height = 0;
+  auto [w_end, w_err] = std::from_chars(text.data(), text.data() + x, width);
+  auto [h_end, h_err] =
+      std::from_chars(text.data() + x + 1, text.data() + text.size(), height);
+  if (w_err != std::errc() || h_err != std::errc() || width <= 0 ||
+      height <= 0 || width > 255 || height > 255) {
+    return std::nullopt;
+  }
+  return std::pair{width, height};
+}
+
+}  // namespace
+
 class ScreenImpl {
  public:
   ScreenImpl(Ref<ComponentBase> component,
@@ -979,6 +1049,14 @@ class ScreenImpl {
   bool HasActiveTransitions();
   bool TickTransitions(double current_time_ms);
   void ScrollIntoView(Element* element);
+
+  std::string Text() const;
+  // Processes everything queued on a HeadlessTerminalDevice, then lets the
+  // transitions it started finish, so the frame left behind does not depend
+  // on timing.
+  void Settle(HeadlessTerminalDevice& device);
+  void RunHeadless();
+  bool headless_ = false;
 
   bool SpatialNavigate(Event event);
   void SimulateClick(Element* element);
@@ -1068,7 +1146,13 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
 #endif
 
   if (!device_) {
-    device_ = std::make_shared<SystemTerminalDevice>();
+    if (auto size = HeadlessSizeFromEnvironment()) {
+      device_ =
+          std::make_shared<HeadlessTerminalDevice>(size->first, size->second);
+      headless_ = true;
+    } else {
+      device_ = std::make_shared<SystemTerminalDevice>();
+    }
   }
   // Bracketed paste mode makes the terminal wrap pasted content in
   // "\x1b[200~"/"\x1b[201~" markers instead of sending it as if typed, so
@@ -1101,6 +1185,10 @@ ScreenImpl::~ScreenImpl() {
 }
 
 void ScreenImpl::Loop() {
+  if (headless_) {
+    RunHeadless();
+    return;
+  }
   RawTerminal raw_terminal(this);
   Draw();
 
@@ -2803,6 +2891,94 @@ void Screen::SetBackgroundColor(Color color) {
 
 Color Screen::background_color() const {
   return impl_->background_color();
+}
+
+std::string Screen::Text() const {
+  return impl_->Text();
+}
+
+std::string ScreenImpl::Text() const {
+  std::string text;
+  if (!last_texture_) {
+    return text;
+  }
+  for (int y = 0; y < last_texture_->height(); ++y) {
+    std::string line;
+    for (int x = 0; x < last_texture_->width(); ++x) {
+      const Cell& cell = (*last_texture_)[x, y];
+      if (cell.is_continuation) {
+        continue;
+      }
+      line += cell.character.empty() ? " " : cell.character;
+    }
+    line.erase(line.find_last_not_of(' ') + 1);
+    text += line;
+    text += '\n';
+  }
+  return text;
+}
+
+void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
+  while (device.HasInput()) {
+    Step();
+  }
+  // Bounded, so an endless animation cannot hang a test.
+  const double deadline = time::GetTimeMs() + 2000;
+  while (HasActiveTransitions() && time::GetTimeMs() < deadline) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    TickTransitions(time::GetTimeMs());
+  }
+  DigestAndDraw();
+}
+
+void ScreenImpl::RunHeadless() {
+  auto& device = static_cast<HeadlessTerminalDevice&>(*device_);
+#if defined(_WIN32)
+  const bool piped = !_isatty(_fileno(stdin));
+#else
+  const bool piped = !isatty(STDIN_FILENO);
+#endif
+  if (piped) {
+    std::string input{std::istreambuf_iterator<char>(std::cin),
+                      std::istreambuf_iterator<char>()};
+    device.PushInput(input);
+  }
+  Settle(device);
+  std::cout << Text() << std::flush;
+}
+
+HeadlessScreen::HeadlessScreen(Ref<ComponentBase> app, int width, int height)
+    : device_(std::make_shared<HeadlessTerminalDevice>(width, height)),
+      screen_(std::make_unique<Screen>(std::move(app), device_)) {
+  screen_->impl_->Settle(*device_);
+}
+
+HeadlessScreen::~HeadlessScreen() = default;
+
+void HeadlessScreen::Input(std::string_view bytes) {
+  device_->PushInput(bytes);
+  screen_->impl_->Settle(*device_);
+}
+
+void HeadlessScreen::Click(int x, int y) {
+  const std::string column = std::to_string(x + 1);
+  const std::string row = std::to_string(y + 1);
+  Input("\x1b[<0;" + column + ";" + row + "M" + "\x1b[<0;" + column + ";" +
+        row + "m");
+}
+
+void HeadlessScreen::Resize(int width, int height) {
+  device_->Resize(width, height);
+  screen_->impl_->UpdateSize();
+  screen_->impl_->Settle(*device_);
+}
+
+std::string HeadlessScreen::Text() const {
+  return screen_->Text();
+}
+
+std::string RenderToString(Ref<ComponentBase> app, int width, int height) {
+  return HeadlessScreen(std::move(app), width, height).Text();
 }
 
 }  // namespace rtxui

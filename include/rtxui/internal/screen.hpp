@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <rtxui/rtxui_export.hpp>
+#include <string>
 
 #include "rtxui/color.hpp"
 #include "rtxui/internal/component.hpp"
@@ -51,7 +52,12 @@ class RTXUI_EXPORT Screen {
   void SetBackgroundColor(Color color);
   Color background_color() const;
 
+  /// The last frame drawn, as plain text: one line per row, without colors or
+  /// styles, trailing spaces removed.
+  std::string Text() const;
+
  private:
+  friend class HeadlessScreen;
   std::unique_ptr<ScreenImpl> impl_;
 };
 

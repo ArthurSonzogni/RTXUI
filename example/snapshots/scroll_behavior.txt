@@ -1,0 +1,24 @@
+
+
+  RTXUI Scroll Behavior Demo
+
+  Compare the two scroll behaviors below using the mouse wheel, Arrow keys, or
+  PageUp/PageDown.
+
+
+
+  scroll-behavior: auto (Instant        scroll-behavior: smooth (Smooth
+  Content)                              Content)
+
+  Content snaps instantly, scrollbar    Both viewport content and scrollbar
+  thumb glides smoothly.                thumb glide smoothly.
+
+  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+  ▊                                  ▎  ▊                                  ▎
+  ▊  Item 1                         ▇▎  ▊  Item 1                         ▇▎
+  ▊                                  ▎  ▊                                  ▎
+  ▊                                  ▎  ▊                                  ▎
+  ▊  Item 2                          ▎  ▊  Item 2                          ▎
+  ▊                                  ▎  ▊                                  ▎
+  ▊                                  ▎  ▊                                  ▎
+  ▊                                  ▎  ▊                                  ▎

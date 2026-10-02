@@ -1,0 +1,24 @@
+
+
+ Horizontal Rule Element Demo
+
+ The <hr> component renders a light box-drawing line horizontally, acting as a
+ section separator.
+
+
+ Section 1: Introduction
+
+ This is the first section of the document. Below it is a horizontal separator
+ rule.
+
+ ──────────────────────────────────────────────────────────────────────────────
+
+ Section 2: Layout & Separation
+
+ This is the second section of the document, neatly separated from the
+ introduction above.
+
+
+
+
+

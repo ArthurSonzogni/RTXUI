@@ -26,6 +26,7 @@ add_library(rtxui_lib
   "include/rtxui/internal/screen.hpp"
   "include/rtxui/task.hpp"
   "include/rtxui/diagnostic.hpp"
+  "include/rtxui/headless.hpp"
   "include/rtxui/element.hpp"
   "src/rtxui/component/component.cpp"
   "include/rtxui/internal/component.hpp"
@@ -236,6 +237,14 @@ if(RTXUI_BUILD_TESTS)
       # name, ...), so an example cannot teach a construct that does nothing.
       set_tests_properties(smoke_examples PROPERTIES TIMEOUT 600
                            ENVIRONMENT RTXUI_STRICT=1)
+
+      # Compare what each example draws with example/snapshots/, so a
+      # change that alters an interface shows up as a text diff.
+      add_test(NAME snapshot_examples
+        COMMAND Python3::Interpreter
+                "${CMAKE_CURRENT_SOURCE_DIR}/scripts/snapshot_examples.py"
+                "$<TARGET_FILE_DIR:rtxui_example_demo>"
+      )
     endif()
 
     # Verify each public header compiles on its own. Most valuable where the
@@ -270,6 +279,7 @@ if(RTXUI_BUILD_TESTS)
 
   add_executable(rtxui_test
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
+    "src/rtxui/terminal/headless_test.cpp"
     "src/rtxui/terminal/screen_test.cpp"
     "src/rtxui/component/component_test.cpp"
     "src/rtxui/component/diagnostic_test.cpp"

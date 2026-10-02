@@ -1,0 +1,24 @@
+
+ RTXUI Radio Button Group Demonstration
+
+ Please select your favorite database technology:
+
+ │   ○ PostgreSQL (Robust, relational)
+ │
+ │   ○ MongoDB (Document-based)
+ │
+ │   ○ Redis (In-memory cache)
+
+ Selected Tech:
+
+
+
+
+
+
+
+
+
+
+
+

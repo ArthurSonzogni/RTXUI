@@ -1,0 +1,24 @@
+
+ RTXUI Border Styles Gallery
+
+ This demo showcases the 24 different border styles supported by RTXUI.
+
+
+
+  +-----------+                         ┏╍╍╍╍╍╍╍╍╍╍╍╍┓      ╔═════════════╗
+  |           |                         ╏            ╏      ║             ║    ▄
+  |   ascii   |          blank          ╏   dashed   ╏      ║   double    ║
+  |           |                         ╏            ╏      ║             ║
+  +-----------+                         ┗╍╍╍╍╍╍╍╍╍╍╍╍┛      ╚═════════════╝
+
+
+
+
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔      ┏━━━━━━━━━━━━━┓      ▗▄▄▄▄▄▄▄▄▄▄▄▄▄▖
+                     ┃             ┃      ▐             ▌          none
+      hkey           ┃    heavy    ┃      ▐    inner    ▌
+                     ┃             ┃      ▐             ▌
+  ▁▁▁▁▁▁▁▁▁▁▁▁▁      ┗━━━━━━━━━━━━━┛      ▝▀▀▀▀▀▀▀▀▀▀▀▀▀▘
+
+
+

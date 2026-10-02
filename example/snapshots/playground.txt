@@ -1,0 +1,24 @@
+                                       │
+ Editor— HTML + CSS, live              │ Preview
+                                       │
+    1                                  │ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+    2                                  │ ▊                                   ▎
+    3 <h1>RTXUI Playground</h1>        │ ▊  RTXUI Playground                 ▎
+    4 <p>                              │ ▊                                   ▎
+    5   Edit the HTML &amp; CSS on     │ ▊                                   ▎
+      the left to see                  │ ▊  Edit the HTML & CSS on the left  ▎
+    6   instant updates. Hover over    │ ▊  to see   instant updates. Hover  ▎
+      the button                       │ ▊  over the button   below to see   ▎
+    7   below to see a CSS             │ ▊  a CSS transition in action.      ▎
+      transition in action.            │ ▊                                   ▎
+    8 </p>                             │ ▊  ▊▔▔▔▔▔▔▔▔▔▔▔▔▎▊▔▔▔▔▔▔▔▔▔▔▔▔▎     ▎
+    9                                  │ ▊  ▊  Click me  ▎▊  Click me  ▎     ▎
+   10 <button>Click me</button>        │ ▊  ▊▁▁▁▁▁▁▁▁▁▁▁▁▎▊▁▁▁▁▁▁▁▁▁▁▁▁▎     ▎
+   11 <button>Click me</button>        │ ▊  ▊▔▔▔▔▔▔▔▔▔▔▔▔▎                   ▎
+   12 <button>Click me</button>        │ ▊  ▊  Click me  ▎                   ▎
+   13                                  │ ▊  ▊▁▁▁▁▁▁▁▁▁▁▁▁▎                   ▎
+   14 <style>                          │ ▊                                   ▎
+   15   self {                         │ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+                                       │
+ OK                                    │
+                                       │

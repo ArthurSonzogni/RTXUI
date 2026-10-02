@@ -1,0 +1,24 @@
+
+ RTXUI Flexbox Layout Demo
+ Toggle properties and add/remove elements to test wrapping and display rules.
+
+                                │  ┌────────┐  │
+                                │  │        │  │
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ Live   │  │  ┌──────────────────────────
+   direction: row           ▎   │  │ Previe │  │  │
+  ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │ w      │  │  │ display: flex;
+                                │  │ (Conta │  │  │
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ iner:  │  │  │ flex-direction: row;
+   wrap: wrap               ▎   │  │ 54 x   │  │  │
+  ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │ 16)    │  │  │ flex-wrap: wrap;
+                                │  │        │  │  │
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ W      │  │  │ justify-content: flex-sta
+   justify: flex-start      ▎   │  │ i      │  │  │
+  ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │ ─────  │  │  │ align-items: stretch;
+                                │  │ t      │  │  │
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ h      │  │  │ gap: 0;
+   align: stretch           ▎   │  │ :      │  │  │
+  ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │        │  │  └──────────────────────────
+                                │  │        │  │
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ H      │  │  Children CSS
+   gap: 0                   ▎   │  │ e      │  │

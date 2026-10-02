@@ -1,0 +1,24 @@
+
+
+  RTXUI CJK Character Demo
+
+  This demo showcases full-width CJK (Chinese, Japanese, Korean) characters
+  taking exactly 2 terminal cell slots, aligning perfectly inside layout
+  boxes.
+
+  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+  ▊                                                                         ▎
+  ▊ Chinese (中文)                                                          ▎
+  ▊                                                                         ▎
+  ▊ Text:          RTXUI 支持中文渲染                                       ▎
+  ▊ Width check:   123456789012345678                                       ▎  ▆
+  ▊                                                                         ▎
+  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+  ▊                                                                         ▎
+  ▊ Japanese (日本語)                                                       ▎
+  ▊                                                                         ▎
+  ▊ Text:          ターミナルでの日本語表示                                 ▎
+
+

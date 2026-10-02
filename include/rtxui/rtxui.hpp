@@ -6,6 +6,7 @@
 
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/element.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/internal/component.hpp"
 #include "rtxui/internal/event.hpp"
 #include "rtxui/internal/refcounted.hpp"

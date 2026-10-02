@@ -1,0 +1,24 @@
+
+  Anchor Navigation Demo
+
+  Click the links in the sidebar to scroll the corresponding section into
+  view.
+
+
+  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+  ▊                ▎  ▊                                                      ▎
+  ▊ SECTIONS       ▎  ▊                                                      ▎
+  ▊                ▎  ▊                                                      ▎
+  ▊  Introduction  ▎  ▊                                                      ▎
+  ▊                ▎  ▊    Introduction                                      ▎
+  ▊  Features      ▎  ▊                                                      ▎
+  ▊                ▎  ▊    Welcome to RTXUI. This framework lets you         ▎
+  ▊  Installation  ▎  ▊    build terminal user interfaces using              ▎
+  ▊                ▎  ▊    familiar XML templates and CSS styles.            ▎
+  ▊  Usage         ▎  ▊                                                      ▎
+  ▊                ▎  ▊    Layout features include block, inline,            ▎
+  ▊  Components    ▎  ▊    flexbox, grid, fixed, absolute, and               ▎
+  ▊                ▎  ▊    sticky positioning.                               ▎
+  ▊  Documentation ▎  ▊                                                      ▎
+  ▊                ▎  ▊                                                      ▎
+  ▊  FAQ           ▎  ▊                                                      ▎

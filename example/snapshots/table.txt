@@ -1,0 +1,24 @@
+
+ RTXUI Table Layout Demo
+
+ This demo showcases standard table elements (<table>, <tr>, <th>, <td>) with
+ dynamic layout and styling. Scroll down to see the sticky header!
+
+                                                                               ▂
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │                                                                           │
+ │ ID          Name           Category                 Price     Status      │
+ │                                                                           │
+ │───────────────────────────────────────────────────────────────────────────│
+ │                                                                           │
+ │ #101        Gadget A       Appliances               $10.00    Active      │
+ │                                                                           │
+ │                                                                           │
+ │ #117        Widget Z       Consumer Electronics     $15.00    Active      │
+ │                                                                           │
+ │                                                                           │
+ │ #102        Gadget B       Appliances               $49.50    Active      │
+ │                                                                           │
+ │                                                                           │
+ │ #103        Tool C         Hardware                 $5.99     Inactive    │
+
