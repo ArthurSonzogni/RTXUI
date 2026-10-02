@@ -81,7 +81,11 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
   imported in the parent constructor: `Import<Header>();`, then `<Header/>`.
 - Define the template as a `view` member or a `std::string_view Setup()`
   method (no `override`), never both.
-- Put `<style>` at the top level of the view, next to the root element.
+- Put `<style>` at the top level of the view, next to the root element; a
+  nested `<style>` is ignored.
+- Use only built-in tags (`div`, `span`, `p`, `h1`-`h6`, `button`, `input`,
+  `textarea`, `checkbox`, `radio`, `select`, `ul`/`ol`/`li`, `table`, ...) and
+  imported components. There is no `<View>`, `<Text>` or `<Box>`.
 - CSS lengths are terminal cells (`width: 20`). `font-size` and `font-family`
   do not exist; use `font-weight`, `font-style`, `text-decoration`, colors and
   `border` (`solid`, `rounded`, `double`, `tall`, ...).

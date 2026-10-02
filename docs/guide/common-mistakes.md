@@ -62,8 +62,11 @@ method.
 built-ins are always available. Your own components must be imported before a
 template can use them: `Import<Header>()` in the constructor.
 
-**Put `<style>` at the top level of the view**, next to the root element, as
-every example does.
+**Put `<style>` at the top level of the view**, next to the root element. A
+`<style>` nested inside an element is ignored.
+
+**There is no `<View>` or `<Text>`.** A tag that is neither a built-in nor an
+imported component renders as an unstyled box.
 
 ## Styling
 

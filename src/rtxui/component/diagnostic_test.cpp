@@ -68,6 +68,8 @@ class Valid : public Component<Valid> {
       <for each="{items}" as="item"><div>{item} {$index}</div></for>
       <button onclick="Go">go</button>
       <label for="field">field</label>
+      <table><thead><tr><th>h</th></tr></thead>
+        <tbody><tr><td>c<br/>d</td></tr></tbody></table>
     </div>
     <style>
       .box { display: flex; flex-direction: column; color: red; }
@@ -141,6 +143,35 @@ TEST_CASE("Other frameworks' attribute syntax is reported", "[diagnostic]") {
   CHECK(recorder.Has("'className'"));
   CHECK(recorder.Has("'onClick'"));
   CHECK(recorder.Has("'for' on <div>"));
+}
+
+class Card : public Component<Card> {
+ public:
+  std::string_view view = R"html(<div>card</div>)html";
+};
+
+class UnknownTags : public Component<UnknownTags> {
+ public:
+  void InitReflection() override { Import<div>(); }
+  std::string_view view = R"html(
+    <div>
+      <View>x</View>
+      <Card/>
+      <panel>y</panel>
+      <div><style>.a { color: red; }</style></div>
+    </div>
+  )html";
+};
+
+TEST_CASE("Unknown tags and nested <style> are reported", "[diagnostic]") {
+  DiagnosticRecorder recorder;
+  Show(Ref<UnknownTags>::New());
+  CHECK(
+      recorder.Has("unknown tag <View> in <UnknownTags>: if it is your "
+                   "component, call Import<View>()"));
+  CHECK(recorder.Has("unknown tag <Card>"));  // Defined, but not imported.
+  CHECK(recorder.Has("unknown tag <panel> in <UnknownTags>: use a built-in"));
+  CHECK(recorder.Has("<style> inside <div> in <UnknownTags> is ignored"));
 }
 
 class UnboundHandler : public Component<UnboundHandler> {
