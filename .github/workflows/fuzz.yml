@@ -70,7 +70,9 @@ jobs:
           UBSAN_OPTIONS: print_stacktrace=1
         run: |
           cd build_fuzz
-          for target in XML.TestXML Style.TestStyle TerminalInputParser.Fuzz Markdown.TestMarkdown; do
+          for target in XML.TestXML Style.TestStyle Selector.TestSelector \
+              TerminalInputParser.Fuzz Markdown.TestMarkdown Layout.TestLayout \
+              Events.TestEvents; do
             echo "=== Fuzzing $target ==="
             ./rtxui_fuzzer --fuzz="$target" --fuzz_for=30s
           done
