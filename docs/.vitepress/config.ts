@@ -103,6 +103,7 @@ export default withMermaid({
           { text: 'HTML/CSS Hot-Reloading', link: '/guide/hot-reload' },
           { text: 'Diagnostics', link: '/guide/diagnostics' },
           { text: 'Headless Rendering', link: '/guide/headless' },
+          { text: 'Coding Agents', link: '/guide/coding-agents' },
           { text: 'Editor Syntax Highlighting', link: '/guide/editor-setup' },
           { text: 'Playground Guide', link: '/guide/playground' },
           { text: 'Unicode & CJK', link: '/guide/unicode' },

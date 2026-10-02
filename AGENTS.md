@@ -172,6 +172,10 @@ with per-feature guides under `docs/guide/`, plus `css_reference.md` /
   `<!-- snippet: fragment -->` on the line before its fence.
 - `docs/guide/common-mistakes.md` lists syntax borrowed from other frameworks
   that RTXUI does not have. Extend it when you find a new one.
+- `tools/claude-plugin/skills/rtxui/SKILL.md` is the skill RTXUI users install
+  in their agents (`.claude-plugin/marketplace.json` publishes it). Keep it
+  in step with the docs: every construct it shows must compile and pass
+  `RTXUI_STRICT=1`.
 - `scripts/generate_llms_txt.py` builds `llms.txt` / `llms-full.txt` from the
   sidebar at deploy time; a page added to the sidebar is included
   automatically.

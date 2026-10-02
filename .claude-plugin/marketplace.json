@@ -1,0 +1,14 @@
+{
+  "name": "rtxui",
+  "description": "Plugins for building terminal interfaces with RTXUI.",
+  "owner": {
+    "name": "Arthur Sonzogni"
+  },
+  "plugins": [
+    {
+      "name": "rtxui",
+      "source": "./tools/claude-plugin",
+      "description": "Write RTXUI terminal interfaces with the syntax RTXUI actually supports, and check them headlessly before calling them done."
+    }
+  ]
+}
