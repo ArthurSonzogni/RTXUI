@@ -28,7 +28,7 @@ class slider : public Component<slider> {
   std::string container_class = "slider-container horizontal";
 
   void InitReflection() override;
-  std::string_view Setup() override;
+  std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;
 };

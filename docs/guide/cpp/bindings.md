@@ -19,7 +19,7 @@ struct Profile : public rtxui::Component<Profile> {
     Bind(level);
   }
 
-  std::string_view Setup() override {
+  std::string_view Setup() {
     return R"html(
       <div>
         <span>User: {username}</span>
@@ -41,7 +41,7 @@ struct TodoList : public rtxui::Component<TodoList> {
     BindCollection("items", &items);
   }
 
-  std::string_view Setup() override {
+  std::string_view Setup() {
     return R"html(
       <ul>
         <for each="{items}" as="todo">

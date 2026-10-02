@@ -18,7 +18,7 @@ class dialog : public Component<dialog> {
   std::string overlay_class = "closed";
 
   void InitReflection() override;
-  std::string_view Setup() override;
+  std::string_view Setup();
   bool Digest() override;
   bool OnEvent(Event event) override;
 };

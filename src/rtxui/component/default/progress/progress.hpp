@@ -22,7 +22,7 @@ class progress : public Component<progress> {
   std::string empty_track;
 
   void InitReflection() override;
-  std::string_view Setup() override;
+  std::string_view Setup();
   bool Digest() override;
 };
 

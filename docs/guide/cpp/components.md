@@ -33,7 +33,7 @@ class MyCard : public rtxui::Component<MyCard> {
 };
 ```
 
-Components can also compute or load their template dynamically by overriding `std::string_view Setup() override`. If `view` is defined on the class, it is used by default.
+Components can instead compute their template in a public `std::string_view Setup()` method, for example to call `Import<T>()` first. It is found at compile time, like `view`, so it is not virtual and takes no `override`. Define one or the other: a class with both does not compile.
 
 ---
 

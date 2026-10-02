@@ -88,7 +88,9 @@ stages, each in its own directory under `src/rtxui/`:
 
 1. **Component** (`component/`) — user components inherit
    `rtxui::Component<Derived>` (CRTP, `include/rtxui/internal/component.hpp`).
-   The HTML template is a `std::string_view view` member. Members are
+   The HTML template is either a `std::string_view view` member or a
+   `std::string_view Setup()` method (non-virtual, no `override`), never both;
+   `GetView()` finds them at compile time. Members are
    registered via `Bind(member)` in the constructor: variables become reactive
    state, `const` methods become computed values, methods become
    `onclick`-style callbacks. Change detection is snapshot-based: bound state

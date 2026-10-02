@@ -17,7 +17,7 @@ class markdown : public Component<markdown> {
   std::string stylesheet;
 
   void InitReflection() override;
-  std::string_view Setup() override;
+  std::string_view Setup();
   std::string_view GetView() const override;
   bool Digest() override;
 
