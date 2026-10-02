@@ -452,20 +452,35 @@ void RestoreElementStates(
   }
 }
 
-// How many Render() calls are building their template right now. A component
-// re-rendered by its parent's reconciliation runs inside the parent's Render(),
-// which resolves the styles of its whole tree once it is built. Resolving the
-// child's own subtree first would only be redone, once per level of nesting.
-int g_rendering_depth = 0;
-
-// The element states a nested Render() saved, restored by the outermost one
-// after it has resolved styles: restoring before would let that resolution
-// overwrite the restored (possibly mid-transition) styles.
+// The element states a Render() saved, restored once styles are resolved:
+// restoring before would let that resolution overwrite the restored (possibly
+// mid-transition) styles.
 struct DeferredStateRestore {
   Ref<Element> root;
   std::vector<std::pair<ElementPath, ElementState>> states;
 };
-std::vector<DeferredStateRestore> g_deferred_state_restores;
+
+// What the open StyleResolutionScopes have deferred.
+struct StyleResolutionBatch {
+  int depth = 0;
+  // The component that opened the outermost scope. Everything rendered while
+  // it is open belongs to its tree.
+  const ComponentBase* owner = nullptr;
+  // Re-rendered components whose styles are still to be resolved, in the
+  // order their Render() finished: innermost first.
+  std::vector<Ref<ComponentBase>> rendered;
+  std::vector<DeferredStateRestore> restores;
+};
+thread_local StyleResolutionBatch g_style_batch;
+
+bool IsInclusiveAncestor(const Element* ancestor, const Element* element) {
+  for (; element; element = element->Parent()) {
+    if (element == ancestor) {
+      return true;
+    }
+  }
+  return false;
+}
 
 void RestoreElementFocusHoverActive(
     Element* root,
@@ -2106,6 +2121,7 @@ void ComponentBase::ResolveStyles() {
 }
 
 void ComponentBase::Render() {
+  StyleResolutionScope scope(this);
   last_render_terminal_width_ = css::g_terminal_width;
   last_render_terminal_height_ = css::g_terminal_height;
   // Optimization: Use a flat vector of pairs instead of std::map<ElementPath,
@@ -2208,9 +2224,7 @@ void ComponentBase::Render() {
     }
   }
 
-  ++g_rendering_depth;
   Render(template_node, root_.get(), this);
-  --g_rendering_depth;
 
   // Restore projected slot children
   for (auto& [name, children] : saved_slot_children) {
@@ -2244,25 +2258,62 @@ void ComponentBase::Render() {
     root_->set_parent(saved_parent);
   }
 
-  if (g_rendering_depth > 0) {
-    if (root_ && !saved_states.empty()) {
-      g_deferred_state_restores.push_back({root_, std::move(saved_states)});
-    }
+  // Styles are resolved when the outermost scope closes, which is the end of
+  // this Render() unless it runs inside another component's Render() or
+  // Digest().
+  if (root_ && !saved_states.empty()) {
+    g_style_batch.restores.push_back({root_, std::move(saved_states)});
+  }
+  g_style_batch.rendered.emplace_back(this);
+}
+
+ComponentBase::StyleResolutionScope::StyleResolutionScope(
+    ComponentBase* owner) {
+  if (g_style_batch.depth++ == 0) {
+    g_style_batch.owner = owner;
+  }
+}
+
+ComponentBase::StyleResolutionScope::~StyleResolutionScope() {
+  if (--g_style_batch.depth > 0) {
+    return;
+  }
+  const ComponentBase* owner = std::exchange(g_style_batch.owner, nullptr);
+  auto rendered = std::exchange(g_style_batch.rendered, {});
+  auto restores = std::exchange(g_style_batch.restores, {});
+  if (rendered.empty()) {
     return;
   }
 
-  ResolveStyles();
+  // Resolving a subtree covers every component rendered inside it, so only
+  // the outermost re-rendered components need it. Those that reconciliation
+  // dropped from the owner's tree since need nothing.
+  std::vector<ComponentBase*> roots;
+  for (const auto& component : rendered) {
+    Element* root = component->Root();
+    if (!root || !IsInclusiveAncestor(owner->Root(), root)) {
+      continue;
+    }
+    const bool covered = std::ranges::any_of(rendered, [&](const auto& other) {
+      return other != component && other->Root() && other->Root() != root &&
+             IsInclusiveAncestor(other->Root(), root);
+    });
+    if (!covered && std::ranges::find(roots, component.get()) == roots.end()) {
+      roots.push_back(component.get());
+    }
+  }
 
-  // Innermost components first, as they were rendered, then this one: its
-  // saved states cover the whole tree and so have the last word.
-  for (auto& [root, states] : std::exchange(g_deferred_state_restores, {})) {
+  for (ComponentBase* component : roots) {
+    component->ResolveStyles();
+  }
+  // Innermost components first, as they were rendered: an enclosing
+  // component's saved states cover their elements too, and have the last word.
+  for (const auto& [root, states] : restores) {
     RestoreElementStates(root.get(), states);
   }
-  if (root_ && !saved_states.empty()) {
-    RestoreElementStates(root_.get(), saved_states);
+  for (ComponentBase* component : roots) {
+    component->ResolveTargetStyles();
   }
-
-  ResolveTargetStyles();
 }
 
 void ComponentBase::ResolveTargetStyles() {

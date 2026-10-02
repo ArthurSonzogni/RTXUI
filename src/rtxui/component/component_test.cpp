@@ -10509,6 +10509,55 @@ TEST_CASE("A ::part() rule survives the inner component re-rendering itself",
   CHECK(label()->style.padding.left == 3);
 }
 
+namespace {
+class CountedChild : public rtxui::Component<CountedChild> {
+ public:
+  int value = 0;
+  CountedChild() { Bind(value); }
+  std::string_view view = R"(
+    <div class="v{value}">
+      <span>{value}</span>
+    </div>
+    <style>
+      span:hover { color: red; }
+    </style>
+  )";
+};
+
+class CountedParent : public rtxui::Component<CountedParent> {
+ public:
+  int value = 0;
+  void InitReflection() override {
+    Bind(value);
+    Import<CountedChild>();
+    rtxui::Component<CountedParent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div class="v{value}">
+      <CountedChild value="{value}"/>
+      <CountedChild value="{value}"/>
+    </div>
+  )";
+};
+}  // namespace
+
+TEST_CASE("One Digest() resolves the styles of the tree once",
+          "[component][style]") {
+  // The parent re-renders, and so do the children it passes the value to.
+  // Each child resolving its own subtree, before or after the parent resolves
+  // the whole tree, would be work thrown away: the walk covers each element
+  // once per pass, base and pseudo-class.
+  auto app = rtxui::Ref<CountedParent>::New();
+  app->Mount();
+  int elements = 0;
+  app->Root()->Visit([&](rtxui::Element&) { ++elements; });
+
+  app->value = 1;
+  rtxui::ResetStyleVisitCount();
+  app->Digest();
+  CHECK(rtxui::StyleVisitCount() == 2 * elements);
+}
+
 TEST_CASE("A component's :hover rule outranks the one nested inside it",
           "[component][style][css]") {
   // <button> has its own `self:hover { background-color: … }`, two components
