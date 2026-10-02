@@ -166,12 +166,16 @@ jobs:
           cmake --build build
           --target rtxui_benchmark rtxui_layout_benchmark
           rtxui_steady_state_benchmark rtxui_xml_benchmark
-          rtxui_nesting_benchmark
+          rtxui_transition_benchmark rtxui_nesting_benchmark
 
-      # Smoke-run each benchmark: catches compile/runtime breakage.
+      # Smoke-run each benchmark: catches compile/runtime breakage. Strict, so a
+      # stylesheet the engine drops fails here rather than timing an unstyled
+      # tree.
       - name: Run benchmarks
+        env:
+          RTXUI_STRICT: 1
         run: |
-          for bench in rtxui_benchmark rtxui_layout_benchmark rtxui_steady_state_benchmark rtxui_xml_benchmark rtxui_nesting_benchmark; do
+          for bench in rtxui_benchmark rtxui_layout_benchmark rtxui_steady_state_benchmark rtxui_xml_benchmark rtxui_transition_benchmark rtxui_nesting_benchmark; do
             echo "=== $bench ==="
             ./build/$bench
           done

@@ -94,7 +94,6 @@ class StressLayoutComponent : public Component<StressLayoutComponent> {
     RegisterCollection("items", &items);
 
     view = R"xml(
-      <template>
         <style>
           .root-container {
             display: flex;
@@ -146,7 +145,6 @@ class StressLayoutComponent : public Component<StressLayoutComponent> {
             </for>
           </div>
         </div>
-      </template>
     )xml";
   }
 };
