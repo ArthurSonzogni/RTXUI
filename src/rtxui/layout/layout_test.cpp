@@ -4377,3 +4377,103 @@ TEST_CASE("Layout: an absolute box pinned to both edges stretches between them",
 }
 
 }  // namespace rtxui
+
+namespace rtxui {
+
+TEST_CASE("Layout: CSS-wide keywords reset a property",
+          "[layout][inheritance]") {
+  std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+
+  SECTION("inherit on an inherited property takes the parent's value") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; color: rgb(0,255,0); }
+          .inner { color: rgb(255,0,0); }
+          .inner { color: inherit; }
+        </style>
+        <div class="outer"><span class="inner">ab</span></div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"GG"}));
+  }
+
+  SECTION("unset on a non-inherited property restores its initial value") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .box { display: block; padding-left: 2; }
+          .box { padding-left: unset; }
+        </style>
+        <div class="box">ab</div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 4, 1);
+    CHECK(GetTextLayer(texture) == CheckGrid({"ab  "}));
+  }
+
+  SECTION("initial restores auto rather than parsing as a length") {
+    // Parsed as a number, "initial" used to be a width of 0 cells, and the
+    // element vanished.
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .box { display: block; width: 1; }
+          .box { width: initial; }
+        </style>
+        <div class="box">ab</div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetTextLayer(texture) == CheckGrid({"ab"}));
+  }
+
+  SECTION("an inline keyword overrides a rule") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; color: rgb(0,255,0); }
+          .inner { color: rgb(255,0,0); }
+        </style>
+        <div class="outer"><span class="inner" style="color: initial">ab</span></div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"GG"}));
+  }
+
+  SECTION("a keyword that loses the cascade does nothing") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .outer { display: block; color: rgb(0,255,0); }
+          .inner { color: rgb(255,0,0) !important; }
+          .inner { color: inherit; }
+        </style>
+        <div class="outer"><span class="inner">ab</span></div>)html";
+    };
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"RR"}));
+  }
+
+  SECTION("a keyword is not reported as an unsupported value") {
+    std::vector<std::string> reported;
+    SetDiagnosticHandler(
+        [&](const Diagnostic& d) { reported.push_back(d.message); });
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .row { display: flex; flex-direction: column; }
+          .row { flex-direction: initial; }
+        </style>
+        <div class="row"><span>a</span><span>b</span></div>)html";
+    };
+    // flex-direction's initial value is row: the two spans sit side by side.
+    auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    SetDiagnosticHandler(nullptr);
+    CHECK(GetTextLayer(texture) == CheckGrid({"ab"}));
+    CHECK(reported.empty());
+  }
+}
+
+}  // namespace rtxui

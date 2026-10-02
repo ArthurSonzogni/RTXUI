@@ -1279,6 +1279,28 @@ bool MatchSelectorParents(const Element* element,
   return true;
 }
 
+namespace {
+
+bool IsCssWideKeyword(std::string_view value) {
+  while (!value.empty() &&
+         std::isspace(static_cast<unsigned char>(value.back()))) {
+    value.remove_suffix(1);
+  }
+  while (!value.empty() &&
+         std::isspace(static_cast<unsigned char>(value.front()))) {
+    value.remove_prefix(1);
+  }
+  auto equals = [&](std::string_view keyword) {
+    return std::ranges::equal(value, keyword, [](char a, char b) {
+      return std::tolower(static_cast<unsigned char>(a)) == b;
+    });
+  };
+  return equals("inherit") || equals("initial") || equals("unset") ||
+         equals("revert") || equals("revert-layer");
+}
+
+}  // namespace
+
 void ResolveStylesRecursive(Element* element,
                             const ComponentBase* component,
                             bool check_pseudos) {
@@ -1613,11 +1635,13 @@ void ResolveStylesRecursive(Element* element,
       };
       // Normal declarations first, then !important ones, so important wins
       // regardless of rule order (rules before inline within each round).
-      auto apply_round = [&](bool important) {
+      // Visits every declaration in that order; the last one seen for a
+      // property is the one that wins.
+      auto for_each_round = [&](bool important, auto&& visit) {
         for (const auto* ruleset : matched) {
           for (const auto& declaration : ruleset->declarations) {
             if (declaration.important == important) {
-              apply_with_vars(declaration);
+              visit(declaration);
             }
           }
         }
@@ -1631,13 +1655,33 @@ void ResolveStylesRecursive(Element* element,
         if (!check_pseudos || !matched.empty()) {
           for (const auto& declaration : inline_declarations) {
             if (declaration.important == important) {
-              apply_with_vars(declaration);
+              visit(declaration);
             }
           }
         }
       };
-      apply_round(false);
-      apply_round(true);
+      // A CSS-wide keyword (inherit, initial, unset) winning the cascade for
+      // a property drops every declaration of that property, leaving the
+      // value it started from: inherited from the parent for inherited
+      // properties, the initial value for the others. That is what `unset`
+      // means, and `inherit`/`initial` in the common case.
+      std::vector<std::string_view> keyword_wins;
+      auto find_keyword_wins = [&](const css::Declaration& declaration) {
+        std::erase(keyword_wins, declaration.property);
+        if (IsCssWideKeyword(declaration.value)) {
+          keyword_wins.push_back(declaration.property);
+        }
+      };
+      for_each_round(false, find_keyword_wins);
+      for_each_round(true, find_keyword_wins);
+      auto apply_unless_reset = [&](const css::Declaration& declaration) {
+        if (std::ranges::find(keyword_wins, declaration.property) ==
+            keyword_wins.end()) {
+          apply_with_vars(declaration);
+        }
+      };
+      for_each_round(false, apply_unless_reset);
+      for_each_round(true, apply_unless_reset);
     }  // matched/inline declarations scope (bypassed by the goto above).
 
     if (!check_pseudos) {

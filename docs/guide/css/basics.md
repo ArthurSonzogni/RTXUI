@@ -221,5 +221,25 @@ applied its important ones. Avoid combining `!important` with pseudo-class
 rules for the same property.
 :::
 
+## `inherit`, `initial` and `unset`
+
+Any property accepts the CSS-wide keywords `inherit`, `initial` and `unset`
+(and `revert`, treated like `unset`). When one of them wins the cascade for a
+property, every declaration of that property on the element is dropped, so
+the property keeps the value it starts from: inherited from the parent for
+inherited properties such as `color`, the initial value for the others such
+as `width` or `padding-left`.
+
+```css
+.card       { color: #3b82f6; width: 30; }
+.card.plain { color: inherit; width: initial; }  /* parent's color, auto width */
+```
+
+That is exactly `unset`. `inherit` and `initial` match it in the common
+cases, with two differences from browser CSS: `initial` on an inherited
+property still inherits, and `inherit` on a non-inherited property gives the
+initial value rather than the parent's. A keyword on a longhand does not
+undo a shorthand (`margin: 1; margin-top: initial` keeps the top margin).
+
 The [CSS property reference](/css_reference) lists every supported property
 with its accepted values.
