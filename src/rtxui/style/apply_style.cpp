@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/paint/color.hpp"
 
 namespace rtxui {
@@ -2447,6 +2448,12 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
     return;
   }
+
+  // Every supported property returns above, as does every supported value of
+  // the keyword properties, so reaching here means the declaration had no
+  // effect.
+  ReportDiagnostic("unsupported CSS declaration '" + std::string(p) + ": " +
+                   std::string(v) + "'");
 }
 
 }  // namespace rtxui

@@ -401,7 +401,6 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
         }
         .css-display {
           display: block;
-          font-family: monospace;
           color: rgb(253, 224, 71);
           background-color: rgb(15, 23, 42);
           padding: 1;

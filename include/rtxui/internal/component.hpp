@@ -26,6 +26,7 @@
 #include <meta>
 #endif
 
+#include <rtxui/diagnostic.hpp>
 #include <rtxui/rtxui_export.hpp>
 
 #include "rtxui/element.hpp"
@@ -499,6 +500,15 @@ class Component : public ComponentBase {
       if (entry.name == target) {
         return entry.get_value();
       }
+    }
+    if (expression.find_first_of(" =!<>&|") != std::string_view::npos) {
+      ReportDiagnostic("'{" + std::string(expression) + "}' in <" +
+                       std::string(Tag()) +
+                       ">: templates do not evaluate expressions; bind a "
+                       "const method computing the value and use its name");
+    } else {
+      ReportDiagnostic("'{" + std::string(expression) + "}' in <" +
+                       std::string(Tag()) + "> is not a bound name");
     }
     return std::string(expression);
   }

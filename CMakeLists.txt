@@ -25,6 +25,7 @@ add_library(rtxui_lib
   "src/rtxui/terminal/screen.cpp"
   "include/rtxui/internal/screen.hpp"
   "include/rtxui/task.hpp"
+  "include/rtxui/diagnostic.hpp"
   "include/rtxui/element.hpp"
   "src/rtxui/component/component.cpp"
   "include/rtxui/internal/component.hpp"
@@ -68,6 +69,7 @@ add_library(rtxui_lib
   "src/rtxui/component/default/semantic/semantic.cpp"
   "src/rtxui/component/default/pre/pre.cpp"
   "include/rtxui/internal/import.hpp"
+  "src/rtxui/base/diagnostic.cpp"
   "src/rtxui/base/expected.hpp"
   "src/rtxui/base/likely.hpp"
   "include/rtxui/internal/refcounted.hpp"
@@ -230,7 +232,10 @@ if(RTXUI_BUILD_TESTS)
       # survive. Release finishes in about a minute; the sanitizer build takes
       # twice that, because the heaviest examples need ten seconds apiece just
       # to work through the burst.
-      set_tests_properties(smoke_examples PROPERTIES TIMEOUT 600)
+      # RTXUI_STRICT aborts on the first diagnostic (unknown CSS, unbound
+      # name, ...), so an example cannot teach a construct that does nothing.
+      set_tests_properties(smoke_examples PROPERTIES TIMEOUT 600
+                           ENVIRONMENT RTXUI_STRICT=1)
     endif()
 
     # Verify each public header compiles on its own. Most valuable where the
@@ -267,6 +272,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
     "src/rtxui/terminal/screen_test.cpp"
     "src/rtxui/component/component_test.cpp"
+    "src/rtxui/component/diagnostic_test.cpp"
     "src/rtxui/component/interpolation_test.cpp"
     "src/rtxui/base/expected_test.cpp"
     "src/rtxui/base/refcounted_test.cpp"

@@ -6603,6 +6603,10 @@ class SmallInput : public rtxui::Component<SmallInput>,
                    public rtxui::TextInputBase {
  public:
   void InitReflection() override {
+    Bind(left_text);
+    Bind(cursor_char);
+    Bind(right_text);
+    Bind(cursor_class);
     rtxui::Component<SmallInput>::InitReflection();
   }
   std::string_view Setup() {
@@ -6658,6 +6662,10 @@ class SmallTextarea : public rtxui::Component<SmallTextarea>,
                       public rtxui::TextInputBase {
  public:
   void InitReflection() override {
+    Bind(left_text);
+    Bind(cursor_char);
+    Bind(right_text);
+    Bind(cursor_class);
     rtxui::Component<SmallTextarea>::InitReflection();
   }
   std::string_view Setup() {
