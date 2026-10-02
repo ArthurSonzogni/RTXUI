@@ -37,7 +37,7 @@ class NestedComponent : public Component<NestedComponent> {
 
 // `depth` wrappers of the given display type around a fixed leaf.
 std::string MakeView(int depth, const char* style, int leaf_items) {
-  std::string s = "<template>";
+  std::string s = "<div>";
   for (int i = 0; i < depth; ++i) {
     s += std::string("<div style=\"") + style + "\">";
   }
@@ -47,7 +47,7 @@ std::string MakeView(int depth, const char* style, int leaf_items) {
   for (int i = 0; i < depth; ++i) {
     s += "</div>";
   }
-  s += "</template>";
+  s += "</div>";
   return s;
 }
 

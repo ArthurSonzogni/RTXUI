@@ -45,7 +45,6 @@ class TransitionStressComponent : public Component<TransitionStressComponent> {
     Bind(state_class);
 
     view = R"xml(
-      <template>
         <style>
           .root-container {
             display: flex;
@@ -82,7 +81,6 @@ class TransitionStressComponent : public Component<TransitionStressComponent> {
             </for>
           </div>
         </div>
-      </template>
     )xml";
   }
 };
