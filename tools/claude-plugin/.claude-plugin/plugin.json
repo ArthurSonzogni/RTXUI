@@ -1,0 +1,11 @@
+{
+  "name": "rtxui",
+  "version": "0.1.0",
+  "description": "Write RTXUI terminal interfaces with the syntax RTXUI actually supports, and check them headlessly before calling them done.",
+  "author": {
+    "name": "Arthur Sonzogni"
+  },
+  "homepage": "https://arthursonzogni.github.io/RTXUI/",
+  "repository": "https://github.com/ArthurSonzogni/RTXUI",
+  "license": "MIT"
+}
