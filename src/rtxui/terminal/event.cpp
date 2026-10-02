@@ -228,9 +228,11 @@ RTXUI_IMPL_EVENT(End, .special = Event::Keyboard::End)
 RTXUI_IMPL_EVENT(PageUp, .special = Event::Keyboard::PageUp)
 RTXUI_IMPL_EVENT(PageDown, .special = Event::Keyboard::PageDown)
 
+// A terminal sends Shift+A as the character 'A' and reports no Shift, so
+// that is what Event::A() must be to compare equal to the parsed key.
 #define RTXUI_IMPL_LETTER(L, UC, CP)                                      \
   RTXUI_IMPL_EVENT(L, .codepoint = CP)                                    \
-  RTXUI_IMPL_EVENT(UC, .codepoint = CP, .modifier = {.shift = true})      \
+  RTXUI_IMPL_EVENT(UC, .codepoint = CP - 'a' + 'A')                       \
   RTXUI_IMPL_EVENT(Ctrl##UC, .codepoint = CP, .modifier = {.ctrl = true}) \
   RTXUI_IMPL_EVENT(Alt##UC, .codepoint = CP, .modifier = {.alt = true})   \
   RTXUI_IMPL_EVENT(CtrlAlt##UC, .codepoint = CP,                          \
