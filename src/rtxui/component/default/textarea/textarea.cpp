@@ -353,11 +353,4 @@ void textarea::UpdateGutter() {
   }
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("textarea", []() { return Ref<textarea>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

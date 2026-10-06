@@ -173,11 +173,4 @@ bool tooltip::Digest() {
   }
   return Component<tooltip>::Digest();
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("tooltip", []() { return Ref<tooltip>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

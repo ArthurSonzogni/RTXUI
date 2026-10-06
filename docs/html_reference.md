@@ -7,7 +7,7 @@ This specification defines the complete set of built-in XML/HTML tags and compon
 ## 1. Architectural Model
 
 ### 1.1 Unified Component Architecture
-Every built-in tag—from `<div>` to `<dialog>`—is a component registered via `RegisterGlobalComponent()` and built over `rtxui::Element`. Simpler tags like `<div>` or `<span>` use trivial templates (e.g. `<slot></slot>` with a default stylesheet), while richer widgets like `<input>` or `<select>` encapsulate internal HTML templates, reactive state bindings, slot projections, and scoped CSS rules. The difference is in complexity, not in kind.
+Every built-in tag—from `<div>` to `<dialog>`—is a component registered in the global component registry and built over `rtxui::Element`. Simpler tags like `<div>` or `<span>` use trivial templates (e.g. `<slot></slot>` with a default stylesheet), while richer widgets like `<input>` or `<select>` encapsulate internal HTML templates, reactive state bindings, slot projections, and scoped CSS rules. The difference is in complexity, not in kind.
 
 ### 1.2 Parser Contract
 - **Well-Formed XML/HTML**: All tags must be balanced or explicitly self-closed (e.g. `<hr />`, `<br />`, `<input />`). Unclosed tags generate parser errors with line and column diagnostics.

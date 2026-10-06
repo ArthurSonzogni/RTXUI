@@ -34,13 +34,4 @@ const std::string_view del::view = R"html(
       }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("s", []() { return Ref<s>::New(); });
-  RegisterGlobalComponent("strike", []() { return Ref<strike>::New(); });
-  RegisterGlobalComponent("del", []() { return Ref<del>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

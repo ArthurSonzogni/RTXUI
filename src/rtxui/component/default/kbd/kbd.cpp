@@ -17,11 +17,4 @@ const std::string_view kbd::view = R"html(
       }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("kbd", []() { return Ref<kbd>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

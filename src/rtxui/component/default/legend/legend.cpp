@@ -13,11 +13,4 @@ const std::string_view legend::view = R"html(
       }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("legend", []() { return Ref<legend>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

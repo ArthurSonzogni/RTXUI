@@ -338,6 +338,9 @@ if(RTXUI_BUILD_TESTS)
   endif()
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
   target_include_directories(rtxui_test PRIVATE "src")
+  # Test files each define their own file-local helpers under the same names.
+  # The library supports CMAKE_UNITY_BUILD; its tests don't need to.
+  set_target_properties(rtxui_test PROPERTIES UNITY_BUILD OFF)
   list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
   include(CTest)
   include(Catch)

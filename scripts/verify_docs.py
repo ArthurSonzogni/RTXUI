@@ -10,7 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APPLY_STYLE = ROOT / "src/rtxui/style/apply_style.cpp"
 CSS_DOCS = ROOT / "docs/css_reference.md"
-COMPONENTS_DIR = ROOT / "src/rtxui/component/default"
+# Lists every built-in tag, in GetGlobalRegistry().
+COMPONENT_CPP = ROOT / "src/rtxui/component/component.cpp"
 HTML_DOCS = ROOT / "docs/html_reference.md"
 
 NATIVE_HTML_TAGS = {
@@ -64,16 +65,16 @@ def check_docs_contain_values(values):
     return [v for v in values if f"`{v}`" not in doc_text]
 
 def extract_code_html_tags():
-    if not COMPONENTS_DIR.exists():
-        print(f"[ERROR] Could not find {COMPONENTS_DIR}", file=sys.stderr)
+    if not COMPONENT_CPP.exists():
+        print(f"[ERROR] Could not find {COMPONENT_CPP}", file=sys.stderr)
         sys.exit(1)
 
     tags = set(NATIVE_HTML_TAGS)
-    pattern = r'RegisterGlobalComponent\(\s*"(?P<tag>[a-zA-Z0-9\-]+)"'
-    for file_path in COMPONENTS_DIR.rglob("*.cpp"):
-        content = file_path.read_text(encoding="utf-8")
-        for match in re.finditer(pattern, content):
-            tags.add(match.group("tag"))
+    # Matches the entries of: (*reg)["tag-name"] = ...
+    pattern = r'\(\*reg\)\["(?P<tag>[a-zA-Z0-9\-]+)"\]'
+    content = COMPONENT_CPP.read_text(encoding="utf-8")
+    for match in re.finditer(pattern, content):
+        tags.add(match.group("tag"))
     return tags
 
 def check_docs_contain_html_tags(tags):

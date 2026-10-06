@@ -53,11 +53,4 @@ bool progress::Digest() {
   return Component<progress>::Digest();
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("progress", []() { return Ref<progress>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

@@ -101,11 +101,4 @@ bool details::Digest() {
 
   return Component<details>::Digest();
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("details", []() { return Ref<details>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

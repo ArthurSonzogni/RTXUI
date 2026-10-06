@@ -112,11 +112,4 @@ bool dialog::OnEvent(Event event) {
   }
   return Component<dialog>::OnEvent(event);
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("dialog", []() { return Ref<dialog>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

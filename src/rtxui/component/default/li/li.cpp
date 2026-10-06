@@ -213,11 +213,4 @@ bool li::Digest() {
   }
   return Component<li>::Digest();
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("li", []() { return Ref<li>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

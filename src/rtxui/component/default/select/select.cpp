@@ -416,11 +416,4 @@ void select::SelectOption(std::string_view opt_val) {
   }
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("select", []() { return Ref<select>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

@@ -49,6 +49,15 @@ jobs:
             sanitize: "ON"
             cc: gcc-14
             cxx: g++-14
+          # Projects that fetch RTXUI may build it as a unity build, which
+          # merges the anonymous namespaces of several .cpp files.
+          - name: GCC Unity Release
+            os: ubuntu-latest
+            build_type: Release
+            sanitize: "OFF"
+            unity: "ON"
+            cc: gcc-14
+            cxx: g++-14
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +88,7 @@ jobs:
           -DRTXUI_BUILD_TESTS=ON
           -DRTXUI_BUILD_BENCHMARKS=OFF
           -DRTXUI_SANITIZE=${{ matrix.sanitize }}
+          -DCMAKE_UNITY_BUILD=${{ matrix.unity || 'OFF' }}
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
