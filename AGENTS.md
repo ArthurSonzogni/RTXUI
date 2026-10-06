@@ -145,8 +145,9 @@ parser).
 - **Built-in components** (`src/rtxui/component/default/<tag>/`) — every HTML
   tag (`<button>`, `<input>`, `<dialog>`, …) is itself an RTXUI component
   defined with its own `view` template using `<slot>` and a `self` CSS
-  selector. To add a tag: create the dir, register it in
-  `default_components_internal.hpp`, and add the .cpp to `CMakeLists.txt`.
+  selector. To add a tag: create the dir, include its header in
+  `default_components_internal.hpp`, add it to `GetGlobalRegistry()` in
+  `component/component.cpp`, and add the .cpp to `CMakeLists.txt`.
 - **WHOLE_ARCHIVE wrapper** — the public `rtxui` target wraps `rtxui_lib` with
   `$<LINK_LIBRARY:WHOLE_ARCHIVE,...>` so nothing gets dropped by the linker;
   link examples/apps against `rtxui`, tests against `rtxui_lib`.

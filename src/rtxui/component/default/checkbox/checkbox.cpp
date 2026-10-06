@@ -113,11 +113,4 @@ bool checkbox::Digest() {
   return Component<checkbox>::Digest();
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("checkbox", []() { return Ref<checkbox>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

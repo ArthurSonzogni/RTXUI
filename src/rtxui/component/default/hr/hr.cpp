@@ -51,11 +51,4 @@ bool hr::Digest() {
   return Component<hr>::Digest();
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("hr", []() { return Ref<hr>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

@@ -19,12 +19,4 @@ const std::string_view blockquote::view = R"html(
       }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("blockquote",
-                          []() { return Ref<blockquote>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

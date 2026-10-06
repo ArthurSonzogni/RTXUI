@@ -63,11 +63,4 @@ bool fieldset::Digest() {
 
   return Component<fieldset>::Digest();
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("fieldset", []() { return Ref<fieldset>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

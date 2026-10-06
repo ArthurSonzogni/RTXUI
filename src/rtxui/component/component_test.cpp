@@ -6109,30 +6109,22 @@ TEST_CASE("CSS selector and specificity conformance",
 }
 
 TEST_CASE("Default Components Registration", "[component]") {
-  CHECK(rtxui::GetGlobalComponentFactory("ul") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("ol") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("li") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("div") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("span") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("p") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("h1") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("h2") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("h3") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("h4") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("h5") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("h6") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("button") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("input") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("textarea") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("checkbox") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("slider") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("progress") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("select") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("option") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("hr") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("markdown") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("b") != nullptr);
-  CHECK(rtxui::GetGlobalComponentFactory("strong") != nullptr);
+  // Every built-in tag, including those that were once registered only by
+  // a static initializer in their own .cpp file.
+  for (std::string_view tag : {
+           "a",        "article",  "aside",  "b",       "blockquote", "button",
+           "checkbox", "code",     "del",    "details", "dialog",     "div",
+           "em",       "fieldset", "footer", "h1",      "h2",         "h3",
+           "h4",       "h5",       "h6",     "header",  "hr",         "i",
+           "input",    "kbd",      "label",  "legend",  "li",         "main",
+           "markdown", "nav",      "ol",     "option",  "p",          "pre",
+           "progress", "radio",    "s",      "section", "select",     "slider",
+           "span",     "strike",   "strong", "summary", "tab-pane",   "tabs",
+           "textarea", "tooltip",  "u",      "ul",
+       }) {
+    CAPTURE(tag);
+    CHECK(rtxui::GetGlobalComponentFactory(tag) != nullptr);
+  }
 }
 
 class ChildPropsTest : public rtxui::Component<ChildPropsTest> {

@@ -97,11 +97,4 @@ bool input::Digest() {
   return changed;
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("input", []() { return Ref<input>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

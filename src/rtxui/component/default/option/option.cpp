@@ -89,11 +89,4 @@ bool option::Digest() {
   return Component<option>::Digest();
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("option", []() { return Ref<option>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

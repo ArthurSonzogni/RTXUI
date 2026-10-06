@@ -11,11 +11,4 @@ const std::string_view span::view = R"html(
       self { display: inline; }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("span", []() { return Ref<span>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

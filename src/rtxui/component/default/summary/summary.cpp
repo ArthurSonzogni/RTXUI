@@ -13,11 +13,4 @@ const std::string_view summary::view = R"html(
       }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("summary", []() { return Ref<summary>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

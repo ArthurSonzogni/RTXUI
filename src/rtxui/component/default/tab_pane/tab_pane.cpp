@@ -8,11 +8,4 @@ namespace rtxui {
 const std::string_view tab_pane::view = R"html(
     <slot></slot>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("tab-pane", []() { return Ref<tab_pane>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

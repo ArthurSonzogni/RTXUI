@@ -14,11 +14,4 @@ const std::string_view ol::view = R"html(
       }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("ol", []() { return Ref<ol>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

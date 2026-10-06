@@ -16,11 +16,4 @@ const std::string_view a::view = R"html(
       }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("a", []() { return Ref<a>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

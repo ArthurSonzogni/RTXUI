@@ -143,11 +143,4 @@ bool radio::Digest() {
   SyncChecked(Root(), checked);
   return Component<radio>::Digest();
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("radio", []() { return Ref<radio>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

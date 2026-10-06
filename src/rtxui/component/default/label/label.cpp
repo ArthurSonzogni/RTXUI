@@ -100,11 +100,4 @@ bool label::OnEvent(Event event) {
 
   return Component<label>::OnEvent(event);
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("label", []() { return Ref<label>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

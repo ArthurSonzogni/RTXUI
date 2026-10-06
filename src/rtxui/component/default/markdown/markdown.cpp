@@ -71,11 +71,4 @@ bool markdown::Digest() {
   return changed;
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("markdown", []() { return Ref<markdown>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui

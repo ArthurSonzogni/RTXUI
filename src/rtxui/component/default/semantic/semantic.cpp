@@ -53,17 +53,4 @@ const std::string_view article::view = R"html(
       self { display: block; }
     </style>
   )html";
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("header", []() { return Ref<header>::New(); });
-  RegisterGlobalComponent("footer", []() { return Ref<footer>::New(); });
-  RegisterGlobalComponent("main", []() { return Ref<main>::New(); });
-  RegisterGlobalComponent("nav", []() { return Ref<nav>::New(); });
-  RegisterGlobalComponent("aside", []() { return Ref<aside>::New(); });
-  RegisterGlobalComponent("section", []() { return Ref<section>::New(); });
-  RegisterGlobalComponent("article", []() { return Ref<article>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

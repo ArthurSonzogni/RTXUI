@@ -230,11 +230,4 @@ bool tabs::Digest() {
 
   return Component<tabs>::Digest();
 }
-
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("tabs", []() { return Ref<tabs>::New(); });
-  return 0;
-}();
-}  // namespace
 }  // namespace rtxui

@@ -271,11 +271,4 @@ bool slider::Digest() {
   return Component<slider>::Digest();
 }
 
-namespace {
-int RegisterThis = []() {
-  RegisterGlobalComponent("slider", []() { return Ref<slider>::New(); });
-  return 0;
-}();
-}  // namespace
-
 }  // namespace rtxui
