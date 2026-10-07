@@ -13,6 +13,7 @@
 #include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
@@ -509,6 +510,23 @@ TEST_CASE("A transition moves an element by its offsets", "[animation]") {
   CHECK(box->style.left == Length::Cells(5));
   clock.Advance(box, 600);
   CHECK(box->style.left == Length::Cells(10));
+}
+
+class QuickSlide : public Component<QuickSlide> {
+ public:
+  std::string_view view = R"html(
+    <div id="box">Hi</div>
+    <style>
+      @keyframes slide { from { right: -10; } }
+      #box { position: fixed; top: 0; right: 2; animation: slide 50ms; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A headless screen shows the frame an animation ends on",
+          "[animation]") {
+  HeadlessScreen screen(Ref<QuickSlide>::New(), 10, 1);
+  CHECK(screen.Text() == "      Hi\n");
 }
 
 }  // namespace
