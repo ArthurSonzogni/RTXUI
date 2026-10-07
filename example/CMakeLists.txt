@@ -165,3 +165,6 @@ add_executable(rtxui_example_playground playground.cpp)
 target_link_libraries(rtxui_example_playground PRIVATE rtxui)
 add_executable(rtxui_example_keyframes keyframes.cpp)
 target_link_libraries(rtxui_example_keyframes PRIVATE rtxui)
+
+add_executable(rtxui_example_toast toast.cpp)
+target_link_libraries(rtxui_example_toast PRIVATE rtxui)

@@ -135,6 +135,18 @@ auto TaskRunner::Run() -> void {
 
 namespace rtxui {
 
+void PostDelayedTask(std::function<void()> task,
+                     std::chrono::milliseconds delay) {
+  if (task::current_task_runner) {
+    task::current_task_runner->PostDelayedTask(std::move(task), delay);
+    return;
+  }
+  std::lock_guard<std::mutex> lock(task::LiveRunnersMutex());
+  if (!task::LiveRunners().empty()) {
+    task::LiveRunners().back()->PostDelayedTask(std::move(task), delay);
+  }
+}
+
 void PostTask(std::function<void()> task) {
   // On a thread with an event loop, post to that loop.
   if (task::current_task_runner) {
