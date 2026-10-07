@@ -444,6 +444,28 @@ void PaintImpl(const PhysicalFragment* frag,
               tex_y < texture.height() && clip.Contains(tex_x, tex_y)) {
             auto& cell = texture[tex_x, tex_y];
             resolve_cell(cell);
+            if (new_bg.a == 255) {
+              // An opaque background hides whatever was painted beneath it,
+              // glyphs included: a dialog box must not show the text it
+              // covers through its blank cells.
+              const bool was_continuation = cell.is_continuation;
+              cell = Cell();
+              cell.background_color = new_bg;
+              cell.foreground_color = new_bg;
+              // A wide glyph cut in half by the box's edge would still be
+              // drawn two cells wide, over the box or past it: blank the
+              // half left outside.
+              if (was_continuation && tex_x > 0) {
+                texture[tex_x - 1, tex_y].character = " ";
+              }
+              if (tex_x + 1 < texture.width() &&
+                  texture[tex_x + 1, tex_y].is_continuation) {
+                auto& next = texture[tex_x + 1, tex_y];
+                next.is_continuation = false;
+                next.character = " ";
+              }
+              continue;
+            }
             cell.background_color = Blend(new_bg, cell.background_color);
             cell.foreground_color = Blend(new_bg, cell.foreground_color);
           }

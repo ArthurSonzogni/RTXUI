@@ -136,3 +136,37 @@ TEST_CASE("A dialog lays out the same at every screen size", "[headless]") {
 
 }  // namespace
 }  // namespace rtxui
+
+namespace rtxui {
+namespace {
+
+class Covered : public Component<Covered> {
+ public:
+  std::string_view view = R"html(
+    <div class="page">
+      <div>underneath text</div>
+      <div class="opaque"></div>
+      <div class="translucent">x</div>
+    </div>
+    <style>
+      .page { position: relative; }
+      .opaque {
+        position: absolute; top: 0; left: 2; width: 5; height: 1;
+        background-color: rgb(30, 41, 59);
+      }
+      .translucent {
+        position: absolute; top: 0; left: 10; width: 3; height: 1;
+        background-color: rgba(30, 41, 59, 0.5);
+      }
+    </style>
+  )html";
+};
+
+TEST_CASE("An opaque background hides the text beneath it", "[headless]") {
+  // The opaque box blanks "derne"; the translucent one only tints what it
+  // covers, " te", which shows through around the "x" it draws.
+  CHECK(RenderToString(Ref<Covered>::New(), 20, 1) == "un     athxtext\n");
+}
+
+}  // namespace
+}  // namespace rtxui
