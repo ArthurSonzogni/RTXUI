@@ -503,6 +503,49 @@ container of your own and set `toast::part(toast) { position: static; }`.
 
 ---
 
+### `<tree-item>`
+- **Classification**: Interactive Tree Node (`rtxui::tree_item`)
+- **Focus**: Its row is focusable.
+
+One node of a tree: a row showing `label`, and the `<tree-item>`s nested inside
+it, shown indented below while it is open. A node with no `<tree-item>` (or
+other element) inside is a leaf.
+
+```html
+<tree-item label="src" open="{src_open}">
+  <tree-item label="main.cpp" onclick="Open(main.cpp)"/>
+  <tree-item label="ui">
+    <tree-item label="app.cpp" onclick="Open(ui/app.cpp)"/>
+  </tree-item>
+</tree-item>
+```
+
+#### Attributes
+| Attribute | Type | Default | Reactive | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `label` | `string` | `""` | One-way | Text of the row. |
+| `open` | `boolean` | `false` | Two-way | Whether the children show. Ignored on a leaf. |
+| `onclick` | callback | — | — | Runs when the row is clicked or activated with Enter. A branch without one toggles instead. |
+
+#### Interaction
+- Clicking the arrow toggles a branch. Clicking the row, or pressing
+  <kbd>Enter</kbd> on it, runs its `onclick`; a branch without one toggles.
+- <kbd>Right</kbd> opens and <kbd>Left</kbd> closes the focused branch; with
+  nothing to open or close, the arrows move focus as usual.
+
+#### Parts
+`row`, `arrow` (`▸`, `▾`, or blank for a leaf), `label`, `children`.
+
+<ExampleTabs src="/wasm/rtxui_example_tree.js">
+<template #source>
+
+<<< @/../example/tree.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
 ### `<tooltip>`
 - **Classification**: Hover Overlay (`rtxui::tooltip`)
 - **Layer**: Top-layer popup (`z-index: 1000`)

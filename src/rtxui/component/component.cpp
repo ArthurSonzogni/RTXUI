@@ -230,6 +230,7 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
     (*reg)["details"] = []() { return Ref<details>::New(); };
     (*reg)["dialog"] = []() { return Ref<dialog>::New(); };
     (*reg)["toast"] = []() { return Ref<toast>::New(); };
+    (*reg)["tree-item"] = []() { return Ref<tree_item>::New(); };
     (*reg)["div"] = []() { return Ref<div>::New(); };
     (*reg)["em"] = []() { return Ref<em>::New(); };
     (*reg)["fieldset"] = []() { return Ref<fieldset>::New(); };

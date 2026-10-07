@@ -105,3 +105,4 @@ Built-in HTML elements, CJK text, Markdown rendering, spatial nav, and cookbook 
 | [tabs.cpp](/guide/examples/tabs) | The built-in `<tabs>`/`<tab-pane>` components. | [Reference](/html_reference) |
 | [toast.cpp](/guide/examples/toast) | Toast notifications. | [Reference](/html_reference) |
 | [tooltip.cpp](/guide/examples/tooltip) | The `<tooltip>` component, shown on hover in each of four directions. | [Reference](/html_reference) |
+| [tree.cpp](/guide/examples/tree) | A tree view. | [Reference](/html_reference) |
