@@ -1,24 +1,24 @@
  Log viewer — 100,000 lines
- ╭────────────────────────────────────────────────────────────────────────────╮
- │     0 INFO  request 0 served in 3ms                                        │
- │     1 INFO  request 1 served in 40ms                                       │
- │     2 INFO  request 2 served in 77ms                                       │
- │     3 WARN  request 3 served in 114ms                                      │
- │     4 INFO  request 4 served in 151ms                                      │
- │     5 DEBUG request 5 served in 188ms                                      │
- │     6 ERROR request 6 served in 225ms                                      │
- │     7 INFO  request 7 served in 12ms                                       │
- │     8 INFO  request 8 served in 49ms                                       │
- │     9 INFO  request 9 served in 86ms                                       │
- │    10 WARN  request 10 served in 123ms                                     │
- │    11 INFO  request 11 served in 160ms                                     │
- │    12 DEBUG request 12 served in 197ms                                     │
- │    13 ERROR request 13 served in 234ms                                     │
- │    14 INFO  request 14 served in 21ms                                      │
- │    15 INFO  request 15 served in 58ms                                      │
- │    16 INFO  request 16 served in 95ms                                      │
- │    17 WARN  request 17 served in 132ms                                     │
- │    18 INFO  request 18 served in 169ms                                     │
- │    19 DEBUG request 19 served in 206ms                                     │
- │    20 ERROR request 20 served in 243ms                                     │
- ╰────────────────────────────────────────────────────────────────────────────╯
+ ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+ ▊     0 INFO  request 0 served in 3ms                                        ▎
+ ▊     1 INFO  request 1 served in 40ms                                       ▎
+ ▊     2 INFO  request 2 served in 77ms                                       ▎
+ ▊     3 WARN  request 3 served in 114ms                                      ▎
+ ▊     4 INFO  request 4 served in 151ms                                      ▎
+ ▊     5 DEBUG request 5 served in 188ms                                      ▎
+ ▊     6 ERROR request 6 served in 225ms                                      ▎
+ ▊     7 INFO  request 7 served in 12ms                                       ▎
+ ▊     8 INFO  request 8 served in 49ms                                       ▎
+ ▊     9 INFO  request 9 served in 86ms                                       ▎
+ ▊    10 WARN  request 10 served in 123ms                                     ▎
+ ▊    11 INFO  request 11 served in 160ms                                     ▎
+ ▊    12 DEBUG request 12 served in 197ms                                     ▎
+ ▊    13 ERROR request 13 served in 234ms                                     ▎
+ ▊    14 INFO  request 14 served in 21ms                                      ▎
+ ▊    15 INFO  request 15 served in 58ms                                      ▎
+ ▊    16 INFO  request 16 served in 95ms                                      ▎
+ ▊    17 WARN  request 17 served in 132ms                                     ▎
+ ▊    18 INFO  request 18 served in 169ms                                     ▎
+ ▊    19 DEBUG request 19 served in 206ms                                     ▎
+ ▊    20 ERROR request 20 served in 243ms                                     ▎
+ ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎

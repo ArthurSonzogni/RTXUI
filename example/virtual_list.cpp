@@ -75,8 +75,9 @@ class LogViewer : public Component<LogViewer> {
         .log {
           flex-grow: 1;
           overflow-y: scroll;
-          border: round;
+          border: tall;
           border-color: rgb(48, 54, 61);
+          background-color: rgb(22, 27, 34);
         }
         .log:focus {
           border-color: rgb(88, 166, 255);
