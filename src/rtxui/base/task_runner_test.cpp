@@ -168,6 +168,19 @@ TEST_CASE("rtxui::PostTask posts to the current thread's runner",
   CHECK(ran);
 }
 
+TEST_CASE("rtxui::PostDelayedTask runs once its delay has passed",
+          "[task][task_runner]") {
+  task::TaskRunner runner;
+  bool ran = false;
+  rtxui::PostDelayedTask([&ran] { ran = true; }, std::chrono::milliseconds(20));
+  // Not due yet: the runner reports how long to wait instead.
+  CHECK(runner.RunUntilNextDelayedTask() > std::chrono::milliseconds(0));
+  CHECK_FALSE(ran);
+  std::this_thread::sleep_for(std::chrono::milliseconds(30));
+  runner.RunUntilNextDelayedTask();
+  CHECK(ran);
+}
+
 TEST_CASE("rtxui::PostTask from a worker thread reaches the event loop",
           "[task][task_runner]") {
   task::TaskRunner runner;

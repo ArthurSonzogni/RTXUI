@@ -4,6 +4,7 @@
 #ifndef RTXUI_TASK_HPP_
 #define RTXUI_TASK_HPP_
 
+#include <chrono>
 #include <functional>
 #include <rtxui/rtxui_export.hpp>
 
@@ -21,6 +22,15 @@ namespace rtxui {
 ///     rtxui::PostTask([result] { /* update bound state */ });
 ///   }).detach();
 RTXUI_EXPORT void PostTask(std::function<void()> task);
+
+/// Like PostTask(), but runs `task` once `delay` has passed: a timer. The
+/// event loop wakes for it on its own, so a task changing bound state shows
+/// on screen without waiting for input.
+///
+///   rtxui::PostDelayedTask([this] { saved = false; },
+///                          std::chrono::seconds(2));
+RTXUI_EXPORT void PostDelayedTask(std::function<void()> task,
+                                  std::chrono::milliseconds delay);
 
 }  // namespace rtxui
 

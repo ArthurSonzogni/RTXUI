@@ -243,8 +243,14 @@ Provides thread-safe task dispatching onto the primary UI event loop.
 ```cpp
 namespace rtxui {
 void PostTask(std::function<void()> task);
+void PostDelayedTask(std::function<void()> task,
+                     std::chrono::milliseconds delay);
 }
 ```
+
+`PostDelayedTask()` is a timer: the task runs on the event loop once `delay`
+has passed, and the loop wakes for it on its own, so a change it makes to
+bound state reaches the screen without waiting for input.
 
 ### Thread Invariant
 `PostTask()` may be called from any thread. On a thread running an event loop it schedules onto that loop; from any other thread (a worker) it schedules onto the application's loop and wakes it immediately. A task posted after the event loop is gone is dropped.

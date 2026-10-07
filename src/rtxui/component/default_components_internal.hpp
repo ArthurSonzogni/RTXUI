@@ -40,6 +40,7 @@
 #include "rtxui/component/default/tab_pane/tab_pane.hpp"
 #include "rtxui/component/default/tabs/tabs.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
+#include "rtxui/component/default/toast/toast.hpp"
 #include "rtxui/component/default/tooltip/tooltip.hpp"
 #include "rtxui/component/default/u/u.hpp"
 #include "rtxui/component/default/ul/ul.hpp"

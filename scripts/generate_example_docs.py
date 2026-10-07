@@ -87,6 +87,7 @@ EXAMPLES_META = {
     # Components & Advanced Features
     "tabs.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},
     "dialog.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},
+    "toast.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},
     "details.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},
     "lists.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},
     "tooltip.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},

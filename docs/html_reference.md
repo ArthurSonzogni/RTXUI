@@ -472,6 +472,37 @@ Pressing the `Escape` key automatically dismisses an open dialog and updates the
 
 ---
 
+### `<toast>`
+- **Classification**: Notification Overlay (`rtxui::toast`)
+- **Layer**: Top-layer popup (`z-index: 200`)
+
+A short notification in a corner of the screen, over everything else. It
+closes itself after `duration` milliseconds, or when clicked.
+
+#### Attributes
+| Attribute | Type | Default | Reactive | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `open` | `boolean` | `false` | Two-way | Shows the toast. It returns to `false` when the toast closes, by its timer or a click. Each opening starts the timer again. |
+| `duration` | `integer` | `3000` | One-way | Milliseconds before it closes itself; `0` keeps it until clicked or closed by the application. |
+| `placement` | `string` | `"bottom-right"` | One-way | Corner: `bottom-right`, `bottom-left`, `top-right` or `top-left`. Anything else is reported as a diagnostic. |
+
+#### Parts
+`toast` (the box), e.g. `.error::part(toast) { border-color: red; }`.
+
+Several toasts open at once in the same corner overlap. To stack them, give
+each a different `placement`, or render them from a `<for>` inside a fixed
+container of your own and set `toast::part(toast) { position: static; }`.
+
+<ExampleTabs src="/wasm/rtxui_example_toast.js">
+<template #source>
+
+<<< @/../example/toast.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
 ### `<tooltip>`
 - **Classification**: Hover Overlay (`rtxui::tooltip`)
 - **Layer**: Top-layer popup (`z-index: 1000`)

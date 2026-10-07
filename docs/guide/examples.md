@@ -103,4 +103,5 @@ Built-in HTML elements, CJK text, Markdown rendering, spatial nav, and cookbook 
 | [tabindex.cpp](/guide/examples/tabindex) | Controlling focus order with tabindex. | [Guide](/guide/html/focus) |
 | [table.cpp](/guide/examples/table) | Table elements: `<table>`, `<thead>`, `<tr>`, `<th>`, `<td>`, with colspan, rowspan and a sticky header row. | [Reference](/html_reference) |
 | [tabs.cpp](/guide/examples/tabs) | The built-in `<tabs>`/`<tab-pane>` components. | [Reference](/html_reference) |
+| [toast.cpp](/guide/examples/toast) | Toast notifications. | [Reference](/html_reference) |
 | [tooltip.cpp](/guide/examples/tooltip) | The `<tooltip>` component, shown on hover in each of four directions. | [Reference](/html_reference) |
