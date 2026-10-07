@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <rtxui/rtxui_export.hpp>
 #include <string>
 #include <vector>
@@ -53,6 +54,19 @@ struct RunningAnimation {
   double paused_at_ms = -1.0;
   bool finished = false;
   std::vector<AnimationFrame> frames;
+};
+
+// A ::before or ::after box, as the rules matching it resolve it.
+struct GeneratedContent {
+  // From `content`. Nothing when it is unset, `none` or `normal`: there is no
+  // box then, whatever else the rules say.
+  std::optional<std::string> content;
+  ComputedStyle style;
+};
+
+struct GeneratedContents {
+  GeneratedContent before;
+  GeneratedContent after;
 };
 
 class ComponentBase;
@@ -253,6 +267,17 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// The animations `target_style` declares, as UpdateAnimations() last saw
   /// them. Empty for the many elements declaring none.
   std::vector<RunningAnimation> running_animations;
+  /// The element's ::before and ::after, alongside `base_style` and
+  /// `target_style`: the rules without pseudo-classes, then all of them. Null
+  /// for the many elements no such rule matches.
+  std::unique_ptr<GeneratedContents> base_generated;
+  std::unique_ptr<GeneratedContents> generated;
+
+  /// What layout lays out for this element's ::before (`after` false) or
+  /// ::after: an element outside the DOM holding the generated text, styled
+  /// from `generated`, whose parent is this element. Null when there is no
+  /// such box.
+  Element* GeneratedBox(bool after);
   const ComponentBase* styled_by_1 = nullptr;
   const ComponentBase* styled_by_2 = nullptr;
   /// Set when a resolution pass recomputed `base_style`, cleared once
@@ -535,6 +560,8 @@ class RTXUI_EXPORT Element : public RefCounted {
   Element* parent_ = nullptr;
   const ComponentBase* component_ = nullptr;
   const ComponentBase* owner_component_ = nullptr;
+  // Built on demand by GeneratedBox(); index 0 is ::before, 1 is ::after.
+  Ref<Element> generated_boxes_[2];
   // Created on the first HandleTarget() call; most elements never get one.
   Ref<ElementHandleTarget> handle_target_;
 

@@ -430,6 +430,15 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
         ++it;
       }
     }
+    // `::before` / `::after` must end the selector. Anywhere else it stays a
+    // pseudo-class token the matcher does not know, so the selector matches
+    // nothing rather than something the author did not write.
+    if (!parsed.pseudo_classes.empty() &&
+        (parsed.pseudo_classes.back() == "before" ||
+         parsed.pseudo_classes.back() == "after")) {
+      parsed.pseudo_element = parsed.pseudo_classes.back();
+      parsed.pseudo_classes.pop_back();
+    }
   }
 
   for (int i = static_cast<int>(parts.size()) - 2; i >= 0; --i) {
@@ -455,8 +464,10 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   };
   count_compound(parsed.base, parsed.id, parsed.classes.size(),
                  parsed.attributes.size());
-  // Pseudo-classes weigh the same as a class in CSS.
+  // Pseudo-classes weigh the same as a class in CSS, pseudo-elements the
+  // same as a type.
   classes += static_cast<int>(parsed.pseudo_classes.size());
+  types += parsed.pseudo_element.empty() ? 0 : 1;
   for (const SelectorPart& parent : parsed.parents) {
     count_compound(parent.base, parent.id, parent.classes.size(),
                    parent.attributes.size());

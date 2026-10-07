@@ -96,6 +96,35 @@ self {
 ```
 This is essential for wrapping custom components in custom borders or configuring their layout growth constraints in flex containers.
 
+### Generated Content: `::before` and `::after`
+
+`::before` and `::after` add a box inside an element, before or after its
+content, holding the text of the `content` property. They suit decoration that
+belongs to the style rather than the template: bullets, icons, markers that
+follow a state.
+
+```css
+.item::before { content: "• "; color: rgb(100, 116, 139); }
+.open::before { content: "▼ "; }
+.closed::before { content: "▶ "; }
+a::after { content: " (" attr(href) ")"; }
+```
+
+`content` takes quoted strings and `attr(name)` (the element's attribute, empty
+when it has none), concatenated. CSS escapes work inside strings, so
+`"\25B6"` is `▶`. `none` or `normal` removes the box. Without a `content`
+declaration there is no box, whatever else the rule says, and `content` in a
+rule that is not for `::before` or `::after` is reported as a diagnostic.
+
+The box is inline by default and takes any other property: `display: block`
+gives it its own line, and colors and decorations not set on it are inherited
+from the element. The pseudo-element ends the selector and may follow
+pseudo-classes, as in `.row:first-child::before` or `.item:focus::before`; one
+followed by anything else, like `::before:hover`, matches nothing. The
+one-colon `:before` spelling also works. Transitions and animations do not
+apply to these boxes, and they are not part of the DOM, so other selectors
+never match them.
+
 ### Styling a Nested Component's Internals: `::part()`
 
 The opening line of this page said styles apply "only to that component's

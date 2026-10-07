@@ -76,6 +76,10 @@ struct ParsedSelector {
   // another component's own template to select an element it has marked
   // with a matching `part="..."` attribute (see docs/guide/css/basics.md).
   std::string part;
+  // From a trailing `::before` or `::after` (or the legacy one-colon form):
+  // the rule styles a box generated inside the element the rest of the
+  // selector matches, rather than that element. Empty otherwise.
+  std::string pseudo_element;
 
   /// CSS specificity, packed so it compares as a single integer: ids weigh
   /// most, then classes/attributes/pseudo-classes, then element names. It is

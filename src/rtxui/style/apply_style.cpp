@@ -1376,6 +1376,121 @@ bool ApplyAnimationLonghand(ComputedStyle& style,
 }
 }  // namespace
 
+ContentValue ParseContent(
+    std::string_view value,
+    const std::function<const std::string*(std::string_view)>& attribute) {
+  auto skip_spaces = [&] {
+    while (!value.empty() &&
+           std::isspace(static_cast<unsigned char>(value.front()))) {
+      value.remove_prefix(1);
+    }
+  };
+  skip_spaces();
+  if (value == "none" || value == "normal") {
+    return {true, std::nullopt};
+  }
+  std::string text;
+  bool any = false;
+  while (true) {
+    skip_spaces();
+    if (value.empty()) {
+      break;
+    }
+    any = true;
+    const char quote = value.front();
+    if (quote == '"' || quote == '\'') {
+      value.remove_prefix(1);
+      bool closed = false;
+      while (!value.empty()) {
+        const char c = value.front();
+        value.remove_prefix(1);
+        if (c == quote) {
+          closed = true;
+          break;
+        }
+        if (c != '\\') {
+          text += c;
+          continue;
+        }
+        // A CSS escape: up to six hex digits naming a code point, ended by
+        // one optional space, or any other character standing for itself.
+        size_t digits = 0;
+        while (digits < 6 && digits < value.size() &&
+               std::isxdigit(static_cast<unsigned char>(value[digits]))) {
+          ++digits;
+        }
+        if (digits == 0) {
+          if (value.empty()) {
+            return {};
+          }
+          text += value.front();
+          value.remove_prefix(1);
+          continue;
+        }
+        uint32_t code_point = 0;
+        std::from_chars(value.data(), value.data() + digits, code_point, 16);
+        value.remove_prefix(digits);
+        if (!value.empty() && value.front() == ' ') {
+          value.remove_prefix(1);
+        }
+        if (code_point == 0 || code_point > 0x10FFFF ||
+            (code_point >= 0xD800 && code_point <= 0xDFFF)) {
+          code_point = 0xFFFD;
+        }
+        // UTF-8.
+        if (code_point < 0x80) {
+          text += static_cast<char>(code_point);
+        } else if (code_point < 0x800) {
+          text += static_cast<char>(0xC0 | (code_point >> 6));
+          text += static_cast<char>(0x80 | (code_point & 0x3F));
+        } else if (code_point < 0x10000) {
+          text += static_cast<char>(0xE0 | (code_point >> 12));
+          text += static_cast<char>(0x80 | ((code_point >> 6) & 0x3F));
+          text += static_cast<char>(0x80 | (code_point & 0x3F));
+        } else {
+          text += static_cast<char>(0xF0 | (code_point >> 18));
+          text += static_cast<char>(0x80 | ((code_point >> 12) & 0x3F));
+          text += static_cast<char>(0x80 | ((code_point >> 6) & 0x3F));
+          text += static_cast<char>(0x80 | (code_point & 0x3F));
+        }
+      }
+      if (!closed) {
+        return {};
+      }
+      continue;
+    }
+    if (value.starts_with("attr(")) {
+      const size_t close = value.find(')');
+      if (close == std::string_view::npos) {
+        return {};
+      }
+      std::string_view name = value.substr(5, close - 5);
+      while (!name.empty() &&
+             std::isspace(static_cast<unsigned char>(name.front()))) {
+        name.remove_prefix(1);
+      }
+      while (!name.empty() &&
+             std::isspace(static_cast<unsigned char>(name.back()))) {
+        name.remove_suffix(1);
+      }
+      if (name.empty()) {
+        return {};
+      }
+      // An attribute the element does not have reads as the empty string.
+      if (const std::string* found = attribute(name)) {
+        text += *found;
+      }
+      value.remove_prefix(close + 1);
+      continue;
+    }
+    return {};
+  }
+  if (!any) {
+    return {};
+  }
+  return {true, std::move(text)};
+}
+
 void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   auto p = declaration.property;
   auto v = declaration.value;
@@ -1443,6 +1558,14 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       }
       value_view = value_view.substr(comma + 1);
     }
+    return;
+  }
+
+  if (p == "content") {
+    // Only a ::before or ::after rule generates content, and those are applied
+    // apart (see ApplyGeneratedContent); here it would do nothing.
+    ReportDiagnostic("'content: " + std::string(v) +
+                     "' only applies in a ::before or ::after rule");
     return;
   }
 

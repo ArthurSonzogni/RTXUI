@@ -298,6 +298,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/component/binding_test.cpp"
     "src/rtxui/component/component_test.cpp"
     "src/rtxui/component/diagnostic_test.cpp"
+    "src/rtxui/component/generated_content_test.cpp"
     "src/rtxui/component/interpolation_test.cpp"
     "src/rtxui/base/expected_test.cpp"
     "src/rtxui/base/refcounted_test.cpp"
