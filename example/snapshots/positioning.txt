@@ -11,7 +11,7 @@
   ▊  Controls         ▎    │ This area (blue border) is a relative          │
   ▊                   ▎    │ container. Items inside can be positioned      │
   ▊  ┌─────┐ ┌─────┐  ▎    │ absolute╔═════════════╗                        │
-  ▊  │  ◀  │ │ Rig │  ▎    │         ║ Absolute╔═══║═══════════════════╗    │
+  ▊  │  ◀  │ │ Rig │  ▎    │         ║ Absolute    ║═══════════════════╗    │
   ▊  │ Lef │ │ ht  │  ▎    │         ║ (Z-Index =  ║                   ║    │
   ▊  │  t  │ │  ▶  │  ▎    │         ╚═10)═════════╝ground (Z-Index =  ║    │
   ▊  └─────┘ └─────┘  ▎    │           X:10 Y:4║ 5)                    ║    │
