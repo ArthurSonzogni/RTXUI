@@ -1328,7 +1328,10 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
                child->style.margin.Horiz() == 0 &&
                child->style.margin.Vert() == 0 &&
                child->style.padding.Horiz() == 0 &&
-               child->style.padding.Vert() == 0) {
+               child->style.padding.Vert() == 0 &&
+               // An outline is drawn around a box, so an outlined span
+               // keeps one rather than dissolving into the line's text.
+               child->style.outline_style == BorderStyle::None) {
       for (auto& grandchild : child->children) {
         if (grandchild->is_text) {
           // background-color doesn't inherit, so a styled <span> (e.g.
