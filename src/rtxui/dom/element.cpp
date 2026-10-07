@@ -328,6 +328,11 @@ const TransitionConfig* FindTransitionConfig(const Element* element,
         (property == "border-left-color" || property == "border-color-left")) {
       return &config;
     }
+    if (config.property == "inset" &&
+        (property == "top" || property == "right" || property == "bottom" ||
+         property == "left")) {
+      return &config;
+    }
     if (config.property == "scrollbar-color" &&
         (property == "scrollbar-color-thumb" ||
          property == "scrollbar-color-track")) {
@@ -728,6 +733,10 @@ void Element::TriggerTransitions(double current_time_ms) {
   style.border_color_left = old_style.border_color_left;
   style.width = old_style.width;
   style.height = old_style.height;
+  style.top = old_style.top;
+  style.right = old_style.right;
+  style.bottom = old_style.bottom;
+  style.left = old_style.left;
   style.flex_grow = old_style.flex_grow;
   style.flex_shrink = old_style.flex_shrink;
   style.opacity = old_style.opacity;
@@ -852,6 +861,10 @@ void Element::TriggerTransitions(double current_time_ms) {
 
   HandleLengthProperty("width", style.width, target_style.width);
   HandleLengthProperty("height", style.height, target_style.height);
+  HandleLengthProperty("top", style.top, target_style.top);
+  HandleLengthProperty("right", style.right, target_style.right);
+  HandleLengthProperty("bottom", style.bottom, target_style.bottom);
+  HandleLengthProperty("left", style.left, target_style.left);
 
   HandleFloatProperty("flex-grow", style.flex_grow, target_style.flex_grow);
   HandleFloatProperty("flex-shrink", style.flex_shrink,
@@ -909,6 +922,10 @@ enum Animatable : uint8_t {
   kFlexShrink,
   kWidth,
   kHeight,
+  kTop,
+  kRight,
+  kBottom,
+  kLeft,
   kAnimatableCount,
 };
 
@@ -956,6 +973,21 @@ uint32_t AnimatedBy(std::string_view property) {
   }
   if (property == "height") {
     return Bit(kHeight);
+  }
+  if (property == "top") {
+    return Bit(kTop);
+  }
+  if (property == "right") {
+    return Bit(kRight);
+  }
+  if (property == "bottom") {
+    return Bit(kBottom);
+  }
+  if (property == "left") {
+    return Bit(kLeft);
+  }
+  if (property == "inset") {
+    return Bit(kTop) | Bit(kRight) | Bit(kBottom) | Bit(kLeft);
   }
   return 0;
 }
@@ -1009,6 +1041,18 @@ void InterpolateAnimatable(Animatable property,
     case kHeight:
       out.height = InterpolateLength(from.height, to.height, progress);
       return;
+    case kTop:
+      out.top = InterpolateLength(from.top, to.top, progress);
+      return;
+    case kRight:
+      out.right = InterpolateLength(from.right, to.right, progress);
+      return;
+    case kBottom:
+      out.bottom = InterpolateLength(from.bottom, to.bottom, progress);
+      return;
+    case kLeft:
+      out.left = InterpolateLength(from.left, to.left, progress);
+      return;
     case kAnimatableCount:
       return;
   }
@@ -1037,7 +1081,7 @@ std::vector<AnimationFrame> BuildFrames(const css::KeyframesRule& keyframes,
                          "' in @keyframes " + keyframes.name +
                          " cannot be animated; @keyframes animates colors, "
                          "border colors, opacity, flex-grow, flex-shrink, "
-                         "width and height");
+                         "width, height and top/right/bottom/left");
         continue;
       }
       if (declaration.value.find("var(") != std::string_view::npos) {
@@ -1408,6 +1452,14 @@ bool Element::TickTransitions(double current_time_ms) {
           style.width = val;
         } else if (prop_name == "height") {
           style.height = val;
+        } else if (prop_name == "top") {
+          style.top = val;
+        } else if (prop_name == "right") {
+          style.right = val;
+        } else if (prop_name == "bottom") {
+          style.bottom = val;
+        } else if (prop_name == "left") {
+          style.left = val;
         }
         updated = true;
       }
@@ -1430,6 +1482,14 @@ bool Element::TickTransitions(double current_time_ms) {
           style.width = target_style.width;
         } else if (prop_name == "height") {
           style.height = target_style.height;
+        } else if (prop_name == "top") {
+          style.top = target_style.top;
+        } else if (prop_name == "right") {
+          style.right = target_style.right;
+        } else if (prop_name == "bottom") {
+          style.bottom = target_style.bottom;
+        } else if (prop_name == "left") {
+          style.left = target_style.left;
         } else if (prop_name == "flex-grow") {
           style.flex_grow = target_style.flex_grow;
         } else if (prop_name == "flex-shrink") {

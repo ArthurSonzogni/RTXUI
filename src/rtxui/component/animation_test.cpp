@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,6 +13,8 @@
 #include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/screen.hpp"
+#include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
 namespace {
@@ -407,6 +410,105 @@ TEST_CASE("An animation naming no @keyframes is reported", "[animation]") {
   auto app = Ref<Unknown>::New();
   app->Mount();
   CHECK(diagnostics.Has("animation 'nowhere' has no matching @keyframes"));
+}
+
+class Slide : public Component<Slide> {
+ public:
+  std::string_view view = R"html(
+    <div id="box">Hi</div>
+    <style>
+      @keyframes slide { from { right: -10; } }
+      #box { position: fixed; top: 0; right: 2; animation: slide 1s linear; }
+    </style>
+  )html";
+};
+
+TEST_CASE("An animation moves an element by its offsets", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Slide>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  CHECK(box->style.right == Length::Cells(-10));
+  clock.Advance(box, 500);
+  CHECK(box->style.right == Length::Cells(-4));
+  // `to` is left out, so it ends on the element's own offset.
+  clock.Advance(box, 600);
+  CHECK(box->style.right == Length::Cells(2));
+}
+
+TEST_CASE("An element sliding in from past the edge of the screen is clipped",
+          "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Slide>::New();
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(10, 1);
+  Screen screen(app, device);
+  screen.Draw();
+  CHECK(screen.Text() == "\n");  // `right: -10` puts it past the edge.
+
+  g_now += 900;  // right: 0.8, drawn as 0.
+  screen.Step();
+  CHECK(screen.Text() == "        Hi\n");
+
+  g_now += 200;
+  screen.Step();
+  CHECK(screen.Text() == "      Hi\n");
+}
+
+class Inset : public Component<Inset> {
+ public:
+  std::string_view view = R"html(
+    <div id="box">Hi</div>
+    <style>
+      @keyframes drop { from { inset: 0; } to { inset: 4; } }
+      #box { position: fixed; animation: drop 1s linear forwards; }
+    </style>
+  )html";
+};
+
+TEST_CASE("inset animates the four offsets", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Inset>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  clock.Advance(box, 500);
+  CHECK(box->style.top == Length::Cells(2));
+  CHECK(box->style.right == Length::Cells(2));
+  CHECK(box->style.bottom == Length::Cells(2));
+  CHECK(box->style.left == Length::Cells(2));
+}
+
+class Shift : public Component<Shift> {
+ public:
+  std::string box_class;
+  Shift() { Bind(box_class); }
+  std::string_view view = R"html(
+    <div id="box" class="{box_class}">Hi</div>
+    <style>
+      #box { position: fixed; left: 0; transition: left 1s linear; }
+      #box.moved { left: 10; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A transition moves an element by its offsets", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Shift>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  app->box_class = "moved";
+  app->Digest();
+  CHECK(box->style.left == Length::Cells(0));
+  clock.Advance(box, 500);
+  CHECK(box->style.left == Length::Cells(5));
+  clock.Advance(box, 600);
+  CHECK(box->style.left == Length::Cells(10));
 }
 
 }  // namespace

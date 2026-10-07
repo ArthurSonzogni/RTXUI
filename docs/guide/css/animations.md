@@ -53,6 +53,7 @@ transition: background-color 0.2s ease-in-out, width 0.3s ease-out;
 
 ### Animatable Properties
 *   **Dimensions**: `width`, `height` (e.g. `20` to `40` cells).
+*   **Offsets**: `top`, `right`, `bottom`, `left` (or shorthand `inset`), which move a positioned element. Prefer moving sideways: a terminal has more columns than rows, so a horizontal move takes smaller steps.
 *   **Borders**: `border-top-color`, `border-right-color`, `border-bottom-color`, `border-left-color` (or shorthand `border-color`).
 *   **Colors & Opacities**: `color`, `background-color`, `opacity`.
 *   **Flex Constraints**: `flex-grow`, `flex-shrink`.
@@ -140,6 +141,7 @@ Like every other rule, `@keyframes` belong to the component that declares them: 
 *   An animation starts when an element starts declaring it, and keeps running when the component re-renders.
 *   Changing its duration, easing or play state does not restart it. Removing it (for example by removing the class that declares it) stops it; adding it back starts it again from the beginning.
 *   While any animation plays, the screen keeps redrawing. A [headless](/guide/headless) run waits for finite animations to end, but not for `infinite` ones.
+*   A length animates smoothly only between two values in the same unit (`-50` to `2`, `10%` to `50%`); from `auto`, or between cells and percents, it jumps at the end.
 
 ### Keyframes Demo
 
