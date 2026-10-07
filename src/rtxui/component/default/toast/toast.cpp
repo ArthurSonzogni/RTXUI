@@ -45,7 +45,7 @@ std::string_view toast::Setup() {
         z-index: 200;
         display: block;
         max-width: 50;
-        border: round;
+        border: tall;
         border-color: rgb(96, 165, 250);
         background-color: rgb(30, 41, 59);
         color: rgb(226, 232, 240);
