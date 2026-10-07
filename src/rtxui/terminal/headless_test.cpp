@@ -170,3 +170,39 @@ TEST_CASE("An opaque background hides the text beneath it", "[headless]") {
 
 }  // namespace
 }  // namespace rtxui
+
+namespace rtxui {
+namespace {
+
+class Search : public Component<Search> {
+ public:
+  bool searching = false;
+  std::string query;
+  Search() {
+    Bind(searching);
+    Bind(query);
+  }
+  std::string_view view = R"html(
+    <div>
+      <button>other</button>
+      <if condition="{searching}">
+        <input value="{query}" autofocus=""/>
+      </if>
+    </div>
+  )html";
+};
+
+TEST_CASE("An element appearing with autofocus takes the focus",
+          "[headless][focus]") {
+  auto app = Ref<Search>::New();
+  HeadlessScreen screen(app, 20, 4);
+  screen.Input("\t");  // Focus the button.
+  app->searching = true;
+  screen.Input("");
+  // Typing goes to the input that just appeared, not to the button.
+  screen.Input("abc");
+  CHECK(app->query == "abc");
+}
+
+}  // namespace
+}  // namespace rtxui

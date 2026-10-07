@@ -1607,6 +1607,7 @@ bool IsCssWideKeyword(std::string_view value) {
 }  // namespace
 
 thread_local int g_style_visit_count = 0;
+thread_local Ref<Element> g_pending_autofocus;
 
 thread_local bool g_base_styles_resolved = false;
 
@@ -2306,6 +2307,10 @@ bool ComponentBase::ConsumesRecreatedSlots() const {
     return false;
   };
   return visit(visit, *this);
+}
+
+Ref<Element> TakePendingAutofocus() {
+  return std::exchange(g_pending_autofocus, Ref<Element>());
 }
 
 bool TakeBaseStylesResolved() {
@@ -3576,6 +3581,13 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                 slot->AddChild(Ref<Element>(child->Root()));
               }
             }
+          }
+
+          // `autofocus`, as in HTML: an element appearing with it takes the
+          // focus. Applied once the frame is laid out, by which time the
+          // element is in the document wherever it is going to be.
+          if (is_new && child->Root()->GetAttribute("autofocus")) {
+            g_pending_autofocus = Ref<Element>(child->Root());
           }
 
           Ref<Element> default_slot = child->Slot("");

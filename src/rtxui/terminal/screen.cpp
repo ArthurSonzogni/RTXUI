@@ -2334,6 +2334,20 @@ void ScreenImpl::UpdateLayout() {
 
   auto root = component_->Root();
 
+  // An element that appeared with `autofocus` takes the focus, provided it is
+  // still in the document.
+  if (Ref<Element> autofocus = TakePendingAutofocus(); autofocus && root) {
+    const Element* top = autofocus.get();
+    while (top->Parent()) {
+      top = top->Parent();
+    }
+    if (top == root) {
+      root->Visit([](Element& el) { el.set_focused(false); });
+      autofocus->set_focused(true);
+      component_->ResolveTargetStyles();
+    }
+  }
+
   focused_element_ = nullptr;
   if (root) {
     std::function<void(Element*)> FindFocused = [&](Element* el) {
