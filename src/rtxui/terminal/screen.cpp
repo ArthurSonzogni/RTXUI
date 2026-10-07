@@ -2973,12 +2973,17 @@ void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
   // An animation that never ends is not waited for: the frame is as settled
   // as it gets. Bounded too, so a long one cannot hang a test.
   const double deadline = time::GetTimeMs() + 2000;
+  bool ticked = false;
   while (HasActiveTransitions(/*include_infinite=*/false) &&
          time::GetTimeMs() < deadline) {
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
-    TickTransitions(time::GetTimeMs());
+    ticked |= TickTransitions(time::GetTimeMs());
   }
-  DigestAndDraw();
+  // Drawn even when nothing else changed: the last frame drawn may be one
+  // from the middle of an animation.
+  if (component_->Digest() || ticked) {
+    RequestDraw();
+  }
 }
 
 void ScreenImpl::RunHeadless() {
