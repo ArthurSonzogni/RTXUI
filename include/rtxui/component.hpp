@@ -260,6 +260,10 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   // <slot> turned true, say -- and left a slot that only the consumer can
   // fill, so the consumer has to render again.
   bool slots_recreated_ = false;
+  // The tag a template wrote to create this component, which reconciliation
+  // matches on to reuse it. Not Tag(): that is the class name, which an alias
+  // or a hyphenated tag (`tab-pane` is `tab_pane`) does not match.
+  std::string created_tag_;
   void MarkSlotsRecreated(bool recreated);
   // Whether a component this one's template wrote re-rendered on its own and
   // left a slot only this one can fill.
