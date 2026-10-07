@@ -1095,6 +1095,9 @@ class ScreenImpl {
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
   Element* focused_element_ = nullptr;
+  // Set while UpdateLayout() lays out again for virtual lists, so it does so
+  // at most once per frame.
+  bool relayout_for_virtual_lists_ = false;
   bool smooth_scroll_enabled_ = true;
   // Transparent: the terminal's own background shows through.
   Color background_color_;
@@ -2385,6 +2388,18 @@ void ScreenImpl::UpdateLayout() {
   }
   root_fragment_ = root_fragment;
   root_box_ = root_box;
+
+  // A `<for virtual="">` renders the items around what its scroll container
+  // shows. Layout is what sizes and scrolls that container, so once laid out,
+  // the loops it has moved past render again -- Digest() finds them -- and
+  // the frame is laid out once more with their new items.
+  if (!relayout_for_virtual_lists_ &&
+      ComponentInternals::HasVirtualLists(*component_) &&
+      component_->Digest()) {
+    relayout_for_virtual_lists_ = true;
+    UpdateLayout();
+    relayout_for_virtual_lists_ = false;
+  }
 }
 
 void ScreenImpl::Draw() {

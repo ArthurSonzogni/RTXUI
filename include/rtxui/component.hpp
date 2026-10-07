@@ -83,6 +83,13 @@ struct LocalScope {
   }
 };
 
+// The scroll offset and height of the scroll container a `<for virtual="">`
+// renders into.
+struct VirtualListViewport {
+  int scroll = 0;
+  int height = 0;
+};
+
 class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
  public:
   ComponentBase();
@@ -266,6 +273,26 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   // <slot> turned true, say -- and left a slot that only the consumer can
   // fill, so the consumer has to render again.
   bool slots_recreated_ = false;
+
+  // What each `<for virtual="">` rendered last, to tell when scrolling has
+  // moved past it. Keyed by the loop's node in the template.
+  struct VirtualWindow {
+    const void* node = nullptr;
+    // The element the loop's items are rendered into.
+    Ref<Element> container;
+    size_t first = 0;
+    size_t last = 0;
+    size_t count = 0;
+    int item_height = 1;
+  };
+  std::vector<VirtualWindow> virtual_windows_;
+  // The scroll offset and height of each loop's scroll container, as last
+  // seen once laid out. Render() detaches the component while it runs, which
+  // hides a scroll container outside it; this is what it falls back to.
+  std::map<const void*, VirtualListViewport> virtual_viewports_;
+  /// Whether a virtual loop's scroll container now shows items outside what
+  /// the loop rendered, so that it has to render again.
+  bool VirtualWindowsStale();
   // The tag a template wrote to create this component, which reconciliation
   // matches on to reuse it. Not Tag(): that is the class name, which an alias
   // or a hyphenated tag (`tab-pane` is `tab_pane`) does not match.
@@ -538,6 +565,9 @@ class Component : public ComponentBase {
       if (range_entry.range->CheckAndUpdate()) {
         changed = true;
       }
+    }
+    if (VirtualWindowsStale()) {
+      changed = true;
     }
     if (changed) {
       this->Render();

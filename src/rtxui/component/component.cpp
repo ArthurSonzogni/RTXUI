@@ -2317,6 +2317,15 @@ bool TakeBaseStylesResolved() {
   return std::exchange(g_base_styles_resolved, false);
 }
 
+bool ComponentInternals::HasVirtualLists(const ComponentBase& c) {
+  if (!c.virtual_windows_.empty()) {
+    return true;
+  }
+  return std::ranges::any_of(c.children_, [](const auto& child) {
+    return child && HasVirtualLists(*child);
+  });
+}
+
 bool ComponentInternals::UsesRelationalSelectors(const ComponentBase& c) {
   if (c.categorized_rules_ && c.categorized_rules_->has_relational_selectors) {
     return true;
@@ -2663,8 +2672,78 @@ void ComponentBase::ResolveStyles() {
   ResolveStylesFrom(root_.get(), false);
 }
 
+namespace {
+
+// The element a virtual loop's items scroll in: the nearest one at or above
+// `element` that clips its content vertically.
+Element* FindScrollContainer(Element* element) {
+  for (; element; element = element->Parent()) {
+    if (!element->is_slot() && element->style.overflow_y != Overflow::Visible) {
+      return element;
+    }
+  }
+  return nullptr;
+}
+
+// The scroll offset and height of the container a virtual loop renders into,
+// or nothing when it is not inside one (yet).
+std::optional<VirtualListViewport> MeasureViewport(Element* container) {
+  Element* scroller = FindScrollContainer(container);
+  if (!scroller) {
+    return std::nullopt;
+  }
+  return VirtualListViewport{scroller->scroll_y(),
+                             scroller->layout_height() > 0
+                                 ? scroller->layout_height()
+                                 : css::g_terminal_height};
+}
+
+// The items worth rendering for a viewport: those it shows, and as many again
+// on either side, so that scrolling by less than a screen needs no render.
+std::pair<size_t, size_t> VirtualRange(size_t count,
+                                       int item_height,
+                                       VirtualListViewport view) {
+  const int overscan = view.height;
+  const int top = std::max(0, view.scroll - overscan);
+  const int bottom = view.scroll + view.height + overscan;
+  const size_t first = std::min(count, static_cast<size_t>(top / item_height));
+  const size_t last =
+      std::min(count, static_cast<size_t>(bottom / item_height) + 1);
+  return {first, std::max(first, last)};
+}
+
+}  // namespace
+
+bool ComponentBase::VirtualWindowsStale() {
+  bool stale = false;
+  for (const VirtualWindow& window : virtual_windows_) {
+    const std::optional<VirtualListViewport> view =
+        MeasureViewport(window.container.get());
+    if (!view) {
+      ReportDiagnostic("<for virtual> in <" + std::string(Tag()) +
+                       "> is not inside a scroll container: give an "
+                       "ancestor overflow-y: scroll");
+      continue;
+    }
+    virtual_viewports_[window.node] = *view;
+    // What is on screen now must have been rendered.
+    const int item_height = window.item_height;
+    const size_t visible_first =
+        std::min(window.count, static_cast<size_t>(view->scroll / item_height));
+    const size_t visible_last = std::min(
+        window.count,
+        static_cast<size_t>((view->scroll + view->height) / item_height) + 1);
+    if (visible_first < window.first || visible_last > window.last) {
+      stale = true;
+    }
+  }
+  return stale;
+}
+
 void ComponentBase::Render() {
   StyleResolutionScope scope(this);
+  // Each virtual loop records what it renders below.
+  virtual_windows_.clear();
   // What is rendered is the current state, so that is what the next Digest()
   // compares against. Otherwise a component re-rendered by its parent, for a
   // prop the parent changed, finds the same change again in its own Digest()
@@ -3225,8 +3304,81 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
           }
 
+          // `virtual`: in a scroll container, render only the items around
+          // what it shows, and stand in for the rest with two spacers of
+          // their height, so that a long list costs what a screenful does.
+          // Every item is assumed `item-height` rows tall (1 by default).
+          const bool is_virtual = child_node.attributes.contains("virtual");
+          size_t first = 0;
+          size_t last = range ? range->Size() : 0;
+          int item_height = 1;
+          if (range && is_virtual) {
+            if (const auto it = child_node.attributes.find("item-height");
+                it != child_node.attributes.end()) {
+              int parsed = 0;
+              const std::string_view text = it->second;
+              const auto [ptr, ec] = std::from_chars(
+                  text.data(), text.data() + text.size(), parsed);
+              if (ec != std::errc() || ptr != text.data() + text.size() ||
+                  parsed < 1) {
+                ReportDiagnostic("<for item-height=\"" + std::string(text) +
+                                 "\">: expected a whole number of rows, 1 "
+                                 "or more");
+              } else {
+                item_height = std::min(parsed, 1000);
+              }
+            }
+            std::optional<VirtualListViewport> view = MeasureViewport(slot);
+            if (!view) {
+              const auto cached =
+                  import_source->virtual_viewports_.find(&child_node);
+              if (cached != import_source->virtual_viewports_.end()) {
+                view = cached->second;
+              } else {
+                view = VirtualListViewport{0, css::g_terminal_height};
+              }
+            }
+            std::tie(first, last) =
+                VirtualRange(range->Size(), item_height, *view);
+            import_source->virtual_windows_.push_back(
+                {&child_node, Ref<Element>(slot), first, last, range->Size(),
+                 item_height});
+          }
+
+          // A block as tall as `rows`, standing in for items not rendered.
+          // Reused in place, like any other element of the loop's output.
+          auto place_spacer = [&](size_t rows) {
+            if (!is_virtual) {
+              return;
+            }
+            Ref<Element> spacer;
+            if (child_idx < slot->ChildCount() &&
+                !slot->ChildAt(child_idx)->component() &&
+                slot->ChildAt(child_idx)->tag() == "virtual-spacer") {
+              spacer = slot->children()[child_idx];
+            } else {
+              spacer = Ref<Element>::New();
+              spacer->SetTag("virtual-spacer");
+              spacer->set_owner_component(import_source);
+              if (child_idx < slot->ChildCount()) {
+                slot->ReplaceChild(child_idx, spacer);
+              } else {
+                slot->AddChild(spacer);
+              }
+            }
+            const std::string style =
+                "display: block; flex-shrink: 0; height: " +
+                std::to_string(rows) + ";";
+            const std::string* current = spacer->GetAttribute("style");
+            if (!current || *current != style) {
+              spacer->SetAttribute("style", style);
+            }
+            child_idx++;
+          };
+
           if (range) {
-            for (size_t i = 0; i < range->Size(); ++i) {
+            place_spacer(first * static_cast<size_t>(item_height));
+            for (size_t i = first; i < last; ++i) {
               LocalScope index_scope;
               index_scope.parent = scope;
               index_scope.name = "$index";
@@ -3249,9 +3401,16 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               // position before reconciling, so the reconcile below reuses
               // them instead of rewriting whatever sits here.
               std::string item_key;
-              if (!key_attr.empty()) {
-                item_key =
-                    rtxui::Interpolate(key_attr, import_source, &item_scope);
+              if (!key_attr.empty() || is_virtual) {
+                // A virtual loop's window moves, so a position means a
+                // different item from one render to the next: without a key
+                // of its own, each item is keyed by its index, which keeps
+                // focus and other element state on the item rather than on
+                // the row it happened to be rendered in.
+                item_key = key_attr.empty()
+                               ? "#" + std::to_string(i)
+                               : rtxui::Interpolate(key_attr, import_source,
+                                                    &item_scope);
                 for (size_t p = child_idx; p < slot->ChildCount(); ++p) {
                   Element* candidate = slot->ChildAt(p);
                   if (!candidate || candidate->for_key != item_key) {
@@ -3274,13 +3433,16 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
               // Stamp the identity on what this iteration produced, so the
               // next frame can find it again.
-              if (!key_attr.empty() && child_idx > run_start) {
-                if (Element* first = slot->ChildAt(run_start)) {
-                  first->for_key = item_key;
-                  first->for_run = static_cast<uint16_t>(child_idx - run_start);
+              if (!item_key.empty() && child_idx > run_start) {
+                if (Element* produced = slot->ChildAt(run_start)) {
+                  produced->for_key = item_key;
+                  produced->for_run =
+                      static_cast<uint16_t>(child_idx - run_start);
                 }
               }
             }
+            place_spacer((range->Size() - last) *
+                         static_cast<size_t>(item_height));
           }
           break;
         }

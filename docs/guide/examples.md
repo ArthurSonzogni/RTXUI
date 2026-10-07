@@ -67,6 +67,7 @@ Handling scrollable regions, focus tracking, and overflow behavior.
 | [horizontal_scroll.cpp](/guide/examples/horizontal_scroll) | Horizontal overflow. | [Guide](/guide/scrolling) |
 | [nested_scroll.cpp](/guide/examples/nested_scroll) | Nested scroll containers and scroll chaining. | [Guide](/guide/scrolling) |
 | [scroll_behavior.cpp](/guide/examples/scroll_behavior) | scroll-behavior: smooth versus auto. | [Guide](/guide/scrolling) |
+| [virtual_list.cpp](/guide/examples/virtual_list) | A virtual list: 100,000 log lines. | [Guide](/guide/loops) |
 
 ## Typography & Styling
 

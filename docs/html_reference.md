@@ -650,6 +650,8 @@ Repeats template structures across bound collections. Syntax: `<for each="{colle
 - `each`: Bound collection expression.
 - `as`: Variable alias for collection element.
 - `key`: (Optional) Unique identifier field on struct item. Preserves element state and cursor position across sort and filter operations.
+- `virtual`: (Optional) Inside a scroll container, renders only the items around what it shows. See [Long lists](/guide/loops#long-lists-virtual).
+- `item-height`: (Optional, with `virtual`) Rows each item takes; `1` by default.
 
 ### `<slot>` and `<template>` (Content Projection)
 Enables reusable components to project child content passed by their caller:

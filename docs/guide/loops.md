@@ -67,6 +67,49 @@ Keys must be unique within the loop, and stable across frames: keying by
 position matching described above, which stays the cheaper option for a list
 that never reorders.
 
+## Long lists: `virtual`
+
+A loop renders every item, and every item costs something each frame: a few
+thousand are fine, a hundred thousand are not. Inside a scroll container, mark
+the loop `virtual` to render only the items around what the container shows:
+
+```html
+<div class="log">
+  <for each="{lines}" as="line" virtual="">
+    <div>{$index}: {line}</div>
+  </for>
+</div>
+<style>
+  .log { height: 20; overflow-y: scroll; }
+</style>
+```
+
+The loop renders the items in view and a screenful more on either side, and
+two empty blocks stand in for the rest, so the scroll range, the scrollbar and
+`{$index}` are those of the whole collection. When scrolling moves past what
+was rendered, the loop renders again at the new position; scrolling within a
+screenful needs no render at all. A 100,000-item list costs about what one
+screen of items does.
+
+- Every item is assumed to be the same height: one row, or `item-height="N"`
+  rows. An item of a different height puts the rows the container shows out of
+  step with the items rendered.
+- The scroll container is the nearest ancestor with an `overflow-y` other than
+  `visible`. A virtual loop without one is reported as a diagnostic.
+- Only the rendered items are in the DOM: an item scrolled away loses its
+  element state (focus, its own scroll), and Tab does not reach the items not
+  rendered. Scrolling the container brings them in.
+- Spacers are block-level, so the container should lay out its items as a
+  column: a block, or a `flex-direction: column` flex box.
+
+<ExampleTabs src="/wasm/rtxui_example_virtual_list.js">
+<template #source>
+
+<<< @/../example/virtual_list.cpp
+
+</template>
+</ExampleTabs>
+
 ## Collections of structs
 
 A collection of plain values stringifies each item directly. For a collection
