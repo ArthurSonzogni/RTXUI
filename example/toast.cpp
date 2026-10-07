@@ -9,6 +9,10 @@
 // is two-way bound: the application raises its flag to show it, and the flag
 // falls back to false when the toast closes.
 //
+// A toast slides in from its side of the screen and back out when it closes.
+// The error toast replaces both animations with its own: it shakes as it
+// arrives, and fades out.
+//
 // Try it: press Save or Fail, then wait, or click a toast to dismiss it.
 #include <rtxui/rtxui.hpp>
 
@@ -74,9 +78,22 @@ class ToastDemo : public Component<ToastDemo> {
           gap: 2;
           margin-top: 1;
         }
+        @keyframes shake-in {
+          from { right: -50; }
+          60% { right: 2; }
+          70% { right: 0; }
+          80% { right: 4; }
+          90% { right: 1; }
+        }
+        @keyframes fade-out { to { opacity: 0; } }
         .error::part(toast) {
           border-color: rgb(248, 81, 73);
           color: rgb(255, 161, 152);
+          animation: shake-in 600ms ease-out;
+        }
+        /* After the rule above: a closing toast is both parts. */
+        .error::part(closing) {
+          animation: fade-out 300ms forwards;
         }
       </style>
     )html";
