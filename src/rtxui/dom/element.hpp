@@ -53,6 +53,8 @@ struct RunningAnimation {
   // When it was paused, or negative while it plays.
   double paused_at_ms = -1.0;
   bool finished = false;
+  // Finished since the screen last dispatched `onanimationend`.
+  bool end_pending = false;
   std::vector<AnimationFrame> frames;
 };
 
@@ -499,6 +501,10 @@ class RTXUI_EXPORT Element : public RefCounted {
     return !active_transitions.empty() || IsAnimatingScroll() ||
            HasPlayingAnimations(include_infinite);
   }
+  /// Whether an animation finished since TakeEndedAnimations() last ran.
+  bool HasEndedAnimations() const;
+  /// Whether an animation finished since the last call, clearing it.
+  bool TakeEndedAnimations();
 
   int absolute_x() const { return absolute_x_; }
   int absolute_y() const { return absolute_y_; }

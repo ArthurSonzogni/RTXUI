@@ -512,6 +512,51 @@ TEST_CASE("A transition moves an element by its offsets", "[animation]") {
   CHECK(box->style.left == Length::Cells(10));
 }
 
+class Ending : public Component<Ending> {
+ public:
+  int ended = 0;
+  std::string last_arg;
+  void Ended() { ++ended; }
+  void EndedWith(std::string arg) { last_arg = std::move(arg); }
+  Ending() {
+    Bind(Ended);
+    Bind(EndedWith);
+  }
+  std::string_view view = R"html(
+    <div id="once" onanimationend="Ended">Hi</div>
+    <div id="named" onanimationend="EndedWith(pop)">Hi</div>
+    <div id="forever" onanimationend="Ended">Hi</div>
+    <style>
+      @keyframes pop { from { opacity: 0; } }
+      #once, #named { animation: pop 100ms; }
+      #forever { animation: pop 100ms infinite; }
+    </style>
+  )html";
+};
+
+TEST_CASE("onanimationend runs once an animation finishes", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Ending>::New();
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(10, 3);
+  Screen screen(app, device);
+  screen.Draw();
+
+  g_now += 50;
+  screen.Step();
+  CHECK(app->ended == 0);
+  CHECK(app->last_arg.empty());
+
+  g_now += 100;
+  screen.Step();
+  CHECK(app->ended == 1);  // #once, not #forever.
+  CHECK(app->last_arg == "pop");
+
+  g_now += 1000;
+  screen.Step();
+  CHECK(app->ended == 1);
+}
+
 class QuickSlide : public Component<QuickSlide> {
  public:
   std::string_view view = R"html(

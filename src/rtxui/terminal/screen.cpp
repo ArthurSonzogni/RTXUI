@@ -1051,6 +1051,9 @@ class ScreenImpl {
   // false leaves out the animations that never end.
   bool HasActiveTransitions(bool include_infinite = true);
   bool TickTransitions(double current_time_ms);
+  // Runs the `onanimationend` handler of every element whose animation
+  // finished since the last call. Returns whether one ran.
+  bool DispatchAnimationEnds();
   void ScrollIntoView(Element* element);
 
   std::string Text() const;
@@ -1361,7 +1364,52 @@ bool ScreenImpl::TickTransitions(double current_time_ms) {
     }
     return updated;
   };
-  return TickAll(component_->Root());
+  bool updated = TickAll(component_->Root());
+  if (DispatchAnimationEnds()) {
+    component_->Digest();
+    updated = true;
+  }
+  return updated;
+}
+
+bool ScreenImpl::DispatchAnimationEnds() {
+  // Collected first: a handler may change the tree being walked.
+  std::vector<Ref<Element>> ended;
+  std::function<void(Element*)> Collect = [&](Element* element) {
+    if (element->TakeEndedAnimations() &&
+        element->GetAttribute("onanimationend")) {
+      ended.emplace_back(element);
+    }
+    for (size_t i = 0; i < element->ChildCount(); ++i) {
+      Collect(element->ChildAt(i));
+    }
+  };
+  Collect(component_->Root());
+
+  for (const Ref<Element>& element : ended) {
+    const std::string* action = element->GetAttribute("onanimationend");
+    if (!action || action->empty()) {
+      continue;
+    }
+    std::string callback_name = *action;
+    std::string callback_arg;
+    const size_t paren_open = action->find('(');
+    if (paren_open != std::string::npos && action->ends_with(')')) {
+      callback_name = action->substr(0, paren_open);
+      callback_arg =
+          action->substr(paren_open + 1, action->size() - paren_open - 2);
+    }
+    bool executed = false;
+    for (ComponentBase* comp = GetAttributeOwnerComponent(element.get());
+         comp && !executed; comp = GetParentComponent(comp)) {
+      executed = comp->RunCallback(callback_name, callback_arg);
+    }
+    if (!executed) {
+      ReportDiagnostic("handler '" + callback_name +
+                       "' is not bound in any enclosing component");
+    }
+  }
+  return !ended.empty();
 }
 
 void ScreenImpl::Dispatch(Event event) {
@@ -2979,6 +3027,8 @@ void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
     ticked |= TickTransitions(time::GetTimeMs());
   }
+  // An animation can also end while styles are resolved, without a tick.
+  DispatchAnimationEnds();
   // Drawn even when nothing else changed: the last frame drawn may be one
   // from the middle of an animation.
   if (component_->Digest() || ticked) {
