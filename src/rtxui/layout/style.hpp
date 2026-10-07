@@ -439,6 +439,12 @@ struct ComputedStyleCore {
   std::optional<Color> border_color_bottom;
   std::optional<Color> border_color_left;
 
+  // Drawn one cell outside the border box, plus outline_offset, over whatever
+  // is there: unlike a border, an outline takes no room in the layout.
+  BorderStyle outline_style = BorderStyle::None;
+  std::optional<Color> outline_color;
+  int outline_offset = 0;
+
   std::optional<Color> background_color;
   std::optional<Color> foreground_color;
   float opacity = 1.0f;

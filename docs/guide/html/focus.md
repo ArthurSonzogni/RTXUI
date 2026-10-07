@@ -43,6 +43,14 @@ Set `focusable="true"` as a clean shorthand for setting `tabindex="0"`:
 ```
 Focusable items automatically capture keyboard events (`ArrowLeft`, `Enter`, etc.) and focus CSS pseudoclasses like `:focus`.
 
+To show which element has focus without shifting the layout, give it an
+[`outline`](/css_reference): unlike a border, it takes no room, so nothing
+moves when focus does.
+
+```css
+button:focus { outline: round rgb(250, 204, 21); }
+```
+
 ## Live Demo
 
 <ExampleTabs src="/wasm/rtxui_example_tabindex.js">

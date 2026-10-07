@@ -299,6 +299,78 @@ struct ClipRect {
   }
 };
 
+// An element's outline, as found while painting the element. It is drawn
+// once everything else is, so that no element painted later covers it.
+struct PendingOutline {
+  BorderStyle style;
+  int left;
+  int top;
+  int right;
+  int bottom;
+  Color color;
+  ClipRect clip;
+};
+
+thread_local std::vector<PendingOutline> g_pending_outlines;
+
+// Notes the outline of the element painted at `x`, `y`, `w`, `h`: its outline
+// style's glyphs on a ring one cell outside its border box, `outline-offset`
+// further out (or in, when negative). It takes no room in the layout, so it
+// overlaps the margins and neighbours around the element.
+void QueueOutline(const ComputedStyleCore& style,
+                  int x,
+                  int y,
+                  int w,
+                  int h,
+                  Color foreground,
+                  float opacity,
+                  const ClipRect& clip) {
+  const int left = x - 1 - style.outline_offset;
+  const int top = y - 1 - style.outline_offset;
+  const int right = x + w + style.outline_offset;
+  const int bottom = y + h + style.outline_offset;
+  // A negative offset larger than half the box leaves no ring to draw.
+  if (right <= left || bottom <= top) {
+    return;
+  }
+  Color color = style.outline_color.value_or(foreground);
+  color.a = static_cast<uint8_t>(color.a * opacity);
+  g_pending_outlines.push_back(
+      {style.outline_style, left, top, right, bottom, color, clip});
+}
+
+void PaintOutline(const PendingOutline& outline, Texture& texture) {
+  const auto [style, left, top, right, bottom, color, clip] = outline;
+  const auto& charset = GetBorderData(style).charset;
+  auto set_char = [&](int cx, int cy, int row, int col) {
+    const char* c = charset[row][col];
+    if (c == nullptr || *c == '\0' || *c == ' ' || cx < 0 ||
+        cx >= texture.width() || cy < 0 || cy >= texture.height() ||
+        !clip.Contains(cx, cy)) {
+      return;
+    }
+    auto& cell = texture[cx, cy];
+    if (cell.inverted) {
+      std::swap(cell.background_color, cell.foreground_color);
+      cell.inverted = false;
+    }
+    cell.character = c;
+    cell.foreground_color = Blend(color, cell.background_color);
+  };
+  set_char(left, top, 0, 0);
+  set_char(right, top, 0, 2);
+  set_char(left, bottom, 2, 0);
+  set_char(right, bottom, 2, 2);
+  for (int i = left + 1; i < right; ++i) {
+    set_char(i, top, 0, 1);
+    set_char(i, bottom, 2, 1);
+  }
+  for (int i = top + 1; i < bottom; ++i) {
+    set_char(left, i, 1, 0);
+    set_char(right, i, 1, 2);
+  }
+}
+
 void PaintImpl(const PhysicalFragment* frag,
                Texture& texture,
                int off_x,
@@ -941,6 +1013,13 @@ void PaintImpl(const PhysicalFragment* frag,
               current_strikethrough, current_overlined, current_blink,
               child_clip_to_pass, current_opacity);
   }
+
+  // 5. Outline, drawn once the whole tree is painted.
+  if (frag->dom_node && !frag->is_text &&
+      frag->dom_node->style.outline_style != BorderStyle::None) {
+    QueueOutline(frag->dom_node->style, abs_x, abs_y, w, h,
+                 current_foreground_color, current_opacity, clip);
+  }
 }
 }  // namespace
 
@@ -949,10 +1028,16 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y,
            Color screen_background) {
+  g_pending_outlines.clear();
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y, texture.width(),
             texture.height(), Color::RGB(255, 255, 255), screen_background,
             false, false, false, false, false, false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
+  // Outlines go over everything, in the order their elements were painted.
+  for (const PendingOutline& outline : g_pending_outlines) {
+    PaintOutline(outline, texture);
+  }
+  g_pending_outlines.clear();
 }
 
 }  // namespace rtxui

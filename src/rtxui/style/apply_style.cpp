@@ -1872,6 +1872,54 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  // `outline: [style] [color] [width]`, in any order. An outline is always one
+  // cell thick, so the width only says whether there is one: 0 removes it.
+  if (p == "outline") {
+    std::optional<BorderStyle> outline_style;
+    std::optional<Color> outline_color;
+    bool zero_width = false;
+    bool valid = true;
+    for (std::string_view word : SplitWords(v)) {
+      if (auto parsed_style = ParseBorderStyle(word)) {
+        outline_style = parsed_style;
+      } else if (auto width = ParseWholeInt(word)) {
+        zero_width = *width == 0;
+      } else if (auto color = TransformColor(std::nullopt, word)) {
+        outline_color = color;
+      } else {
+        valid = false;
+      }
+    }
+    if (valid) {
+      style.outline_style = zero_width
+                                ? BorderStyle::None
+                                : outline_style.value_or(BorderStyle::Solid);
+      style.outline_color = outline_color;
+      return;
+    }
+  }
+
+  if (p == "outline-style") {
+    if (auto style_opt = ParseBorderStyle(v)) {
+      style.outline_style = *style_opt;
+      return;
+    }
+  }
+
+  if (p == "outline-color") {
+    if (auto color = TransformColor(style.outline_color, v)) {
+      style.outline_color = color;
+      return;
+    }
+  }
+
+  if (p == "outline-offset") {
+    if (auto offset = ParseWholeInt(v)) {
+      style.outline_offset = *offset;
+      return;
+    }
+  }
+
   if (p == "border-style") {
     if (auto style_opt = ParseBorderStyle(v)) {
       style.border_style = *style_opt;

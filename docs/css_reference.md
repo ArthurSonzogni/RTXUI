@@ -105,6 +105,10 @@ Length properties accept `calc()` expressions combining discrete cells and perce
 <CssProperty name="border-color-bottom" values="<color>" animatable description="Initial: `currentcolor`. Color of the bottom border line." />
 <CssProperty name="border-color-left" values="<color>" animatable description="Initial: `currentcolor`. Color of the left border line." />
 <CssProperty name="border-color-right" values="<color>" animatable description="Initial: `currentcolor`. Color of the right border line." />
+<CssProperty name="outline" values="[<border-style>] [<color>] [<integer>]" shorthand description="Initial: `none`. A frame drawn one cell outside the border box, using the border-style glyphs (default `solid`), in any order. It takes no room: nothing moves, and it is drawn over the margins, neighbours and content around the element, after everything else. Always one cell thick, so a width only says whether there is one (`outline: 0` removes it). An inline element with an outline keeps a box of its own rather than flowing into its line's text. Suits focus rings, e.g. `button:focus { outline: round yellow; }`." />
+<CssProperty name="outline-style" values="<border-style>" description="Initial: `none`. Glyph set of the outline, from the border styles below." />
+<CssProperty name="outline-color" values="<color>" description="Initial: `currentcolor`. Color of the outline." />
+<CssProperty name="outline-offset" values="<integer>" description="Initial: `0`. Cells between the border box and the outline; negative draws it inside the box." />
 
 ### 4.1 Border Style Glyph Matrix
 RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing and block elements:
