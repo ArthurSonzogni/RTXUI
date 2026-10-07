@@ -574,5 +574,45 @@ TEST_CASE("A headless screen shows the frame an animation ends on",
   CHECK(screen.Text() == "      Hi\n");
 }
 
+class Hidden : public Component<Hidden> {
+ public:
+  std::string box_class = "hidden";
+  Hidden() { Bind(box_class); }
+  std::string_view view = R"html(
+    <div id="box" class="{box_class}">Hi</div>
+    <style>
+      @keyframes fade { from { opacity: 0; } }
+      #box { animation: fade 1s linear; }
+      .hidden { display: none; }
+    </style>
+  )html";
+};
+
+TEST_CASE("An animation starts when its element is displayed", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Hidden>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  // Hidden for a while: nothing plays.
+  CHECK_FALSE(box->HasPlayingAnimations());
+  clock.Advance(box, 2000);
+
+  app->box_class = "";
+  app->Digest();
+  CHECK(box->style.opacity == Catch::Approx(0.0f));
+  clock.Advance(box, 500);
+  CHECK(box->style.opacity == Catch::Approx(0.5f));
+
+  // Hiding it stops it; showing it again starts it over.
+  app->box_class = "hidden";
+  app->Digest();
+  CHECK_FALSE(box->HasPlayingAnimations());
+  app->box_class = "";
+  app->Digest();
+  CHECK(box->style.opacity == Catch::Approx(0.0f));
+}
+
 }  // namespace
 }  // namespace rtxui

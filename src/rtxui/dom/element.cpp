@@ -1269,7 +1269,10 @@ bool ApplyAnimations(Element& element, double current_time_ms) {
 }  // namespace
 
 void Element::UpdateAnimations(double current_time_ms) {
-  const std::vector<AnimationConfig>* declared = target_style.animations.get();
+  // As in CSS, an element with `display: none` runs no animation: they start
+  // over once it is displayed, rather than having played out unseen.
+  const std::vector<AnimationConfig>* declared =
+      target_style.display_none ? nullptr : target_style.animations.get();
   if (!declared && running_animations.empty()) {
     return;
   }
