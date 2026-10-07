@@ -1257,6 +1257,9 @@ bool ApplyAnimations(Element& element, double current_time_ms) {
       ApplyAnimationAt(animation, *progress, element.target_style,
                        element.style);
     }
+    if (!was_finished && animation.finished) {
+      animation.end_pending = true;
+    }
     // The frame an animation finishes on still changes the style.
     playing = playing || (!was_finished && animation.paused_at_ms < 0.0);
   }
@@ -1336,6 +1339,20 @@ bool Element::HasPlayingAnimations(bool include_infinite) const {
                (include_infinite ||
                 !std::isinf(animation.config.iteration_count));
       });
+}
+
+bool Element::HasEndedAnimations() const {
+  return std::ranges::any_of(running_animations,
+                             &RunningAnimation::end_pending);
+}
+
+bool Element::TakeEndedAnimations() {
+  bool ended = false;
+  for (RunningAnimation& animation : running_animations) {
+    ended = ended || animation.end_pending;
+    animation.end_pending = false;
+  }
+  return ended;
 }
 
 bool Element::TickTransitions(double current_time_ms) {

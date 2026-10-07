@@ -39,6 +39,7 @@ The following attributes apply to all elements and components:
 | `disabled` | `boolean` | `false` | Disables user interaction, removes focus, and applies the `:disabled` CSS pseudo-class. |
 | `if` | `expression` | — | Conditional rendering directive. If the expression evaluates to `false`, the element and its subtree are pruned from the DOM. |
 | `part` | `string` | `""` | Names an element part for `::part()` CSS selector targeting from ancestor components. |
+| `onanimationend` | `handler` | — | Runs when one of the element's [keyframe animations](/guide/css/animations#animation-end) finishes. Not for an `infinite` one, nor one removed before its end. |
 
 ---
 

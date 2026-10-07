@@ -143,6 +143,15 @@ Like every other rule, `@keyframes` belong to the component that declares them: 
 *   While any animation plays, the screen keeps redrawing. A [headless](/guide/headless) run waits for finite animations to end, but not for `infinite` ones.
 *   A length animates smoothly only between two values in the same unit (`-50` to `2`, `10%` to `50%`); from `auto`, or between cells and percents, it jumps at the end.
 
+### Animation End
+
+`onanimationend` runs a handler once one of the element's animations finishes, as `onclick` does on a click. It does not run for an `infinite` animation, nor for one removed before its end. Use it to act after an exit animation, such as removing the item that just faded out:
+
+<!-- snippet: fragment -->
+```html
+<div class="{row_class}" onanimationend="Removed">{label}</div>
+```
+
 ### Keyframes Demo
 
 <ExampleTabs src="/wasm/rtxui_example_keyframes.js">
