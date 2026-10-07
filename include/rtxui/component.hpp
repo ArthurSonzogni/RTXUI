@@ -94,6 +94,12 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
 
   virtual std::string_view GetView() const = 0;
   virtual std::string_view Tag() const = 0;
+  /// The tag a template wrote to create this component: what selectors and
+  /// QuerySelector() match it by. Tag() -- the class name -- for a component
+  /// no template created, such as the application's own.
+  std::string_view WrittenTag() const {
+    return created_tag_.empty() ? Tag() : std::string_view(created_tag_);
+  }
 
   // Reactivity ---------------------------------------------------------------
   /// Registers the component's bindings. Called once, before the first

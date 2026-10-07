@@ -642,7 +642,10 @@ void Element::RemoveAttribute(const std::string& name) {
 // NOLINTNEXTLINE(google-default-arguments): see the declaration.
 std::string Element::Print(int depth) const {
   std::string out;
-  out += std::string(depth, ' ') + "<" + std::string(tag()) + "";
+  // The component's class rather than the tag it was written as: a dump is
+  // read to see what each tag turned into.
+  out += std::string(depth, ' ') + "<" +
+         std::string(component_ ? component_->Tag() : tag()) + "";
   if (!id.empty()) {
     out += " id=\"" + id + "\"";
   }
@@ -668,13 +671,14 @@ std::string Element::Print(int depth) const {
   for (const auto& child : children_) {
     out += child->Print(depth + 2);
   }
-  out += std::string(depth, ' ') + "</" + std::string(tag()) + ">\n";
+  out += std::string(depth, ' ') + "</" +
+         std::string(component_ ? component_->Tag() : tag()) + ">\n";
   return out;
 }
 
 std::string_view Element::tag() const {
   if (component_) {
-    return component_->Tag();
+    return component_->WrittenTag();
   }
   return tag_;
 }
