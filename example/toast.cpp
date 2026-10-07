@@ -60,8 +60,9 @@ class ToastDemo : public Component<ToastDemo> {
           color: rgb(230, 237, 243);
         }
         .card {
-          border: round;
+          border: tall;
           border-color: rgb(48, 54, 61);
+          background-color: rgb(22, 27, 34);
           padding: 1 3;
         }
         h1 {
