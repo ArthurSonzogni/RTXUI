@@ -78,18 +78,23 @@ class ToastDemo : public Component<ToastDemo> {
           gap: 2;
           margin-top: 1;
         }
+        /* Slides in, then swings sideways a few times, less each time. */
         @keyframes shake-in {
-          from { right: -50; }
-          60% { right: 2; }
-          70% { right: 0; }
-          80% { right: 4; }
-          90% { right: 1; }
+          from { right: -50; animation-timing-function: ease-out-cubic; }
+          30% { right: 2; }
+          42% { right: 8; }
+          54% { right: 0; }
+          66% { right: 6; }
+          78% { right: 1; }
+          90% { right: 4; }
         }
-        @keyframes fade-out { to { opacity: 0; } }
+        @keyframes fade-out {
+          to { opacity: 0; }
+        }
         .error::part(toast) {
           border-color: rgb(248, 81, 73);
           color: rgb(255, 161, 152);
-          animation: shake-in 600ms ease-out;
+          animation: shake-in 1s ease-in-out;
         }
         /* After the rule above: a closing toast is both parts. */
         .error::part(closing) {
