@@ -335,6 +335,7 @@ struct CategorizedRules {
 
 ComponentBase::ComponentBase() = default;
 ComponentBase::~ComponentBase() {
+  MarkSlotsRecreated(false);
   ReleaseMouse();
   HotReloadManager::Unregister(this);
 }
@@ -2156,6 +2157,43 @@ void ResetStyleVisitCount() {
   g_style_visit_count = 0;
 }
 
+namespace {
+// How many components have a slot their consumer has yet to fill. Almost
+// always zero, which keeps ConsumesRecreatedSlots() from walking anything.
+thread_local int g_unfilled_slot_components = 0;
+}  // namespace
+
+void ComponentBase::MarkSlotsRecreated(bool recreated) {
+  if (slots_recreated_ != recreated) {
+    g_unfilled_slot_components += recreated ? 1 : -1;
+    slots_recreated_ = recreated;
+  }
+}
+
+bool ComponentBase::ConsumesRecreatedSlots() const {
+  if (g_unfilled_slot_components == 0) {
+    return false;
+  }
+  // The component that wrote `<X>...</X>` is the one projecting into X's
+  // slots, wherever X sits in the component tree below it.
+  auto visit = [this](auto& self, const ComponentBase& component) -> bool {
+    for (const auto& child : component.children_) {
+      if (!child) {
+        continue;
+      }
+      if (child->slots_recreated_ && child->Root() &&
+          child->Root()->owner_component() == this) {
+        return true;
+      }
+      if (self(self, *child)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  return visit(visit, *this);
+}
+
 bool TakeBaseStylesResolved() {
   return std::exchange(g_base_styles_resolved, false);
 }
@@ -3152,6 +3190,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             } else {
               slot_element = Ref<SlotElement>::New();
               slot_element->set_owner_component(import_source);
+              import_source->MarkSlotsRecreated(true);
               if (child_idx < slot->ChildCount()) {
                 slot->ReplaceChild(child_idx, slot_element);
               } else {
@@ -3538,6 +3577,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               child->old_children_.clear();
             }
           }
+          // Whatever slots rendering the child created, this pass filled.
+          child->MarkSlotsRecreated(false);
           child_idx++;
           break;
         }

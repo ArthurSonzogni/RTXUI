@@ -11479,3 +11479,42 @@ TEST_CASE("A :has() rule follows a change inside a nested component",
   REQUIRE(form != nullptr);
   CHECK(form->style.padding.left == 0);
 }
+
+namespace {
+// Shows its slot only while `open` is set, deciding that on its own.
+class SlotToggle : public rtxui::Component<SlotToggle> {
+ public:
+  bool open = true;
+  SlotToggle() { Bind(open); }
+  std::string_view view = R"(
+    <div><if condition="{open}"><slot></slot></if></div>
+  )";
+};
+
+class SlotToggleUser : public rtxui::Component<SlotToggleUser> {
+ public:
+  SlotToggleUser() { Import<SlotToggle>(); }
+  std::string_view view = R"(
+    <div><SlotToggle><span id="projected">x</span></SlotToggle></div>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A slot a component shows again gets its projected content back",
+          "[component][slot]") {
+  auto app = rtxui::Ref<SlotToggleUser>::New();
+  app->Mount();
+  REQUIRE(app->Root()->QuerySelector("#projected") != nullptr);
+  auto* toggle = dynamic_cast<SlotToggle*>(const_cast<rtxui::ComponentBase*>(
+      app->Root()->QuerySelector("SlotToggle")->component()));
+  REQUIRE(toggle != nullptr);
+
+  // Only <SlotToggle> changes, so only it re-renders: the content it
+  // projects is its user's, which has to fill the slot again.
+  toggle->open = false;
+  app->Digest();
+  CHECK(app->Root()->QuerySelector("#projected") == nullptr);
+  toggle->open = true;
+  app->Digest();
+  CHECK(app->Root()->QuerySelector("#projected") != nullptr);
+}

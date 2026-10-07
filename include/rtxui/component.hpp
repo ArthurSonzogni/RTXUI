@@ -254,6 +254,16 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   xml::Nodes xml_nodes_;
   Ref<Element> root_;
   std::map<std::string, Ref<Element>, std::less<>> slots_;
+  // Set when rendering created a slot element afresh, cleared once the
+  // consumer has projected its content into the slots. Still set after a
+  // Digest() means this component re-rendered on its own -- an <if> around a
+  // <slot> turned true, say -- and left a slot that only the consumer can
+  // fill, so the consumer has to render again.
+  bool slots_recreated_ = false;
+  void MarkSlotsRecreated(bool recreated);
+  // Whether a component this one's template wrote re-rendered on its own and
+  // left a slot only this one can fill.
+  bool ConsumesRecreatedSlots() const;
   std::vector<Ref<ComponentBase>> children_;
   std::vector<Ref<ComponentBase>> old_children_;
   std::string id_;
@@ -526,6 +536,9 @@ class Component : public ComponentBase {
       if (child->Digest()) {
         changed = true;
       }
+    }
+    if (ConsumesRecreatedSlots()) {
+      this->Render();
     }
     return changed;
   }
