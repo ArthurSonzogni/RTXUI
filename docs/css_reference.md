@@ -42,7 +42,7 @@ Selector precedence is determined by a 3-component specificity vector `(A, B, C)
 2. **$B$ (Class & Pseudo Component)**: Count of class selectors (`.class`), attribute selectors (`[attr]`), and pseudo-classes (`:hover`, `:focus`, `:active`, `:checked`, `:disabled`, `:first-child`, etc.).
 3. **$C$ (Type Component)**: Count of element type selectors (`div`, `button`, `span`).
 
-*Note*: Pseudo-elements (`::part(...)`) participate in target isolation rather than global specificity weighting. Negation (`:not(X)`) contributes the specificity of its inner argument $X$.
+*Note*: Pseudo-elements (`::part(...)`) participate in target isolation rather than global specificity weighting. A functional pseudo-class (`:not(X)`, `:has(X)`, `:nth-child(...)`) counts as a single pseudo-class, whatever its argument; CSS would count the most specific selector in $X$ instead.
 
 ### 2.2 Precedence Order (Descending)
 1. Declarations with `!important` (resolved in reverse cascade order).

@@ -44,6 +44,8 @@ struct ComponentInternals {
   static ComponentBase* GetMouseCapturer() {
     return ComponentBase::GetMouseCapturer();
   }
+  // Whether `c` or a component inside it has a :has() selector.
+  static bool UsesRelationalSelectors(const ComponentBase& c);
 };
 
 // Number of elements the style walk has visited since ResetStyleVisitCount(),
@@ -51,6 +53,11 @@ struct ComponentInternals {
 // can flag any growth in how much work style resolution does.
 int StyleVisitCount();
 void ResetStyleVisitCount();
+
+// Whether a base style pass has resolved any element since the last call,
+// which then starts over. A :has() rule can depend on any of them, wherever
+// it sits in the tree.
+bool TakeBaseStylesResolved();
 
 ComponentBase* GetOwningComponent(Element* element);
 ComponentBase* GetAttributeOwnerComponent(Element* element);

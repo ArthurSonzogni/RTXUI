@@ -19,6 +19,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "rtxui/base/string.hpp"
@@ -320,6 +321,9 @@ struct CategorizedRules {
   // Whether a selector tests a preceding sibling (`+`, `~`), so that a change
   // to one element can change what matches the elements after it.
   bool has_sibling_combinators = false;
+  // Whether a selector uses :has(), so that a change to one element can
+  // change what matches the elements above it.
+  bool has_relational_selectors = false;
   // True when every ruleset is a bare `self { ... }`, so this component can
   // only ever style its own root. Because each HTML tag is itself a component,
   // most components in a tree are of this shape, and without this they still
@@ -1006,6 +1010,9 @@ bool MatchPseudos(const Element* element,
                   const std::vector<std::string>& pseudo_classes,
                   int depth);
 
+// Defined below, next to the tree walks it shares with the combinators.
+bool MatchHas(const Element* anchor, std::string_view argument, int depth);
+
 // How deep `:not()` may nest. The argument of a :not() is itself a compound
 // selector that may carry pseudo-classes, so `:not(:not(...))` recurses, and a
 // stylesheet is text -- hot reload and generated CSS both make it possible to
@@ -1125,6 +1132,15 @@ bool MatchOnePseudo(const Element* element,
         std::string_view(pseudo).substr(open, pseudo.size() - open - 1);
     const int index = StructuralIndex(element, from_end, same_tag_only);
     return index != 0 && MatchNth(arg, index);
+  }
+
+  if (pseudo.starts_with("has(") && pseudo.ends_with(")")) {
+    // Bounded up front for the same reason as :not() below.
+    if (depth == 0 && MaxParenDepth(pseudo) > kMaxPseudoDepth) {
+      return false;
+    }
+    return MatchHas(
+        element, std::string_view(pseudo).substr(4, pseudo.size() - 5), depth);
   }
 
   if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
@@ -1298,6 +1314,189 @@ const Element* GetPrecedingSibling(const Element* element) {
 }
 }  // namespace
 
+// One compound of a :has() argument, and how it relates to the compound
+// before it -- or, for the first, to the element the :has() is on.
+struct RelativeStep {
+  css::SelectorPart part;
+  std::vector<std::string> pseudo_classes;
+  char combinator = ' ';
+};
+
+std::string_view TrimSelector(std::string_view text) {
+  while (!text.empty() &&
+         std::isspace(static_cast<unsigned char>(text.front()))) {
+    text.remove_prefix(1);
+  }
+  while (!text.empty() &&
+         std::isspace(static_cast<unsigned char>(text.back()))) {
+    text.remove_suffix(1);
+  }
+  return text;
+}
+
+// Splits a relative selector, `> .a .b` or `+ li`, into its compounds. An
+// omitted leading combinator is the descendant one. Returns false for
+// anything malformed: an empty compound, or two combinators in a row.
+bool ParseRelativeSelector(std::string_view text,
+                           std::vector<RelativeStep>& steps) {
+  text = TrimSelector(text);
+  char combinator = ' ';
+  if (!text.empty() &&
+      (text.front() == '>' || text.front() == '+' || text.front() == '~')) {
+    combinator = text.front();
+    text = TrimSelector(text.substr(1));
+  }
+  while (true) {
+    if (text.empty()) {
+      return false;
+    }
+    // Nested, so the space in `:not(.a .b)` or `[title="a b"]` does not split.
+    const size_t end = css::FindTopLevel(text, " \n\r\t>+~");
+    RelativeStep step;
+    step.part = css::ParseCompound(text.substr(0, end), step.pseudo_classes);
+    step.combinator = combinator;
+    steps.push_back(std::move(step));
+    if (end == std::string_view::npos) {
+      return true;
+    }
+    text = text.substr(end);
+    const std::string_view rest = TrimSelector(text);
+    combinator = ' ';
+    if (!rest.empty() &&
+        (rest.front() == '>' || rest.front() == '+' || rest.front() == '~')) {
+      combinator = rest.front();
+      text = TrimSelector(rest.substr(1));
+    } else {
+      text = rest;
+    }
+  }
+}
+
+// Whether `element` matches steps[0..index] of a relative selector, with
+// steps[0] related to `anchor` by its combinator. Backtracks over every
+// ancestor or sibling a descendant or `~` combinator could mean.
+bool MatchRelativeStep(const Element* element,
+                       const Element* anchor,
+                       const std::vector<RelativeStep>& steps,
+                       size_t index,
+                       int depth) {
+  const RelativeStep& step = steps[index];
+  if (!MatchSelectorPart(element, nullptr, step.part) ||
+      !MatchPseudos(element, step.pseudo_classes, depth + 1)) {
+    return false;
+  }
+  // What the combinator leads to: the anchor itself for the first step, an
+  // element matching the step before it otherwise.
+  auto leads_to = [&](const Element* candidate) {
+    if (index == 0) {
+      return candidate == anchor;
+    }
+    return MatchRelativeStep(candidate, anchor, steps, index - 1, depth);
+  };
+  switch (step.combinator) {
+    case '>': {
+      const Element* parent = GetRealParent(element);
+      return parent && leads_to(parent);
+    }
+    case '+': {
+      const Element* sibling = GetPrecedingSibling(element);
+      return sibling && leads_to(sibling);
+    }
+    case '~':
+      for (const Element* sibling = GetPrecedingSibling(element); sibling;
+           sibling = GetPrecedingSibling(sibling)) {
+        if (leads_to(sibling)) {
+          return true;
+        }
+      }
+      return false;
+    default:
+      for (const Element* ancestor = GetRealParent(element); ancestor;
+           ancestor = GetRealParent(ancestor)) {
+        if (leads_to(ancestor)) {
+          return true;
+        }
+      }
+      return false;
+  }
+}
+
+// Whether any element in `element`'s subtree, itself included, ends a match
+// of `steps`.
+bool AnyInSubtreeMatches(const Element* element,
+                         const Element* anchor,
+                         const std::vector<RelativeStep>& steps,
+                         int depth) {
+  if (element->is_text() || element->tag() == "style") {
+    return false;
+  }
+  if (!element->is_slot() &&
+      MatchRelativeStep(element, anchor, steps, steps.size() - 1, depth)) {
+    return true;
+  }
+  for (const auto& child : element->children()) {
+    if (AnyInSubtreeMatches(child.get(), anchor, steps, depth)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// `:has(<relative selector list>)`: whether some element related to `anchor`
+// as one of the comma-separated relative selectors says -- a descendant by
+// default, or after `>`, `+` or `~` a child, the next sibling or a later one
+// -- matches it. Like :not(), a malformed argument matches nothing.
+bool MatchHas(const Element* anchor, std::string_view argument, int depth) {
+  std::string_view rest = TrimSelector(argument);
+  if (rest.empty()) {
+    return false;
+  }
+  std::vector<std::vector<RelativeStep>> selectors;
+  while (true) {
+    const size_t comma = css::FindTopLevel(rest, ",");
+    std::vector<RelativeStep> steps;
+    if (!ParseRelativeSelector(rest.substr(0, comma), steps)) {
+      return false;
+    }
+    selectors.push_back(std::move(steps));
+    if (comma == std::string_view::npos) {
+      break;
+    }
+    rest = rest.substr(comma + 1);
+  }
+
+  for (const auto& steps : selectors) {
+    // Every element the selector can end on lies inside the anchor when it
+    // starts with a descendant or child combinator, and inside the siblings
+    // that follow the anchor when it starts with a sibling one.
+    const char first = steps.front().combinator;
+    if (first == ' ' || first == '>') {
+      for (const auto& child : anchor->children()) {
+        if (AnyInSubtreeMatches(child.get(), anchor, steps, depth)) {
+          return true;
+        }
+      }
+      continue;
+    }
+    const Element* parent = anchor->Parent();
+    if (!parent) {
+      continue;
+    }
+    bool after_anchor = false;
+    for (const auto& sibling : parent->children()) {
+      if (sibling.get() == anchor) {
+        after_anchor = true;
+        continue;
+      }
+      if (after_anchor &&
+          AnyInSubtreeMatches(sibling.get(), anchor, steps, depth)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool MatchSelectorParents(const Element* element,
                           const Element* root,
                           const std::vector<css::SelectorPart>& parents) {
@@ -1377,6 +1576,7 @@ bool IsCssWideKeyword(std::string_view value) {
 }  // namespace
 
 thread_local int g_style_visit_count = 0;
+thread_local bool g_base_styles_resolved = false;
 
 // The @keyframes rule called `name` that `component` can see: its own, or
 // else the nearest one declared by a component around it, so that keyframes
@@ -1830,6 +2030,7 @@ bool ResolveStylesInTree(Element* element,
   }
   ++g_style_visit_count;
   if (!check_pseudos) {
+    g_base_styles_resolved = true;
     element->needs_style_resolve = false;
     previous_custom_properties = std::move(element->custom_properties);
     // Custom properties inherit through every element, including slots and
@@ -1955,6 +2156,19 @@ void ResetStyleVisitCount() {
   g_style_visit_count = 0;
 }
 
+bool TakeBaseStylesResolved() {
+  return std::exchange(g_base_styles_resolved, false);
+}
+
+bool ComponentInternals::UsesRelationalSelectors(const ComponentBase& c) {
+  if (c.categorized_rules_ && c.categorized_rules_->has_relational_selectors) {
+    return true;
+  }
+  return std::ranges::any_of(c.children_, [](const auto& child) {
+    return child && UsesRelationalSelectors(*child);
+  });
+}
+
 namespace {
 
 /// A component's parsed stylesheet and the index built over it.
@@ -2050,6 +2264,9 @@ std::shared_ptr<const StyleData> GetSharedStyle(
       }
       if (is_pseudo) {
         rules.has_pseudo_classes = true;
+      }
+      if (ruleset.selector.find(":has(") != std::string::npos) {
+        rules.has_relational_selectors = true;
       }
       RuleBuckets& buckets = is_pseudo ? rules.pseudo : rules.base;
       if (!ruleset.parsed_selector.part.empty()) {

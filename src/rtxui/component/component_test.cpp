@@ -18,6 +18,7 @@
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/task.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 using rtxui::Color;
@@ -11327,4 +11328,154 @@ TEST_CASE("Textarea Indentation Uses Spaces And Mouse Click Matches",
 
   click_at(7);
   CHECK(ta_ptr->cursor_pos == 7);
+}
+
+namespace {
+class HasSelectorApp : public rtxui::Component<HasSelectorApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <div id="with-error" class="card">
+        <p><span class="error">!</span></p>
+      </div>
+      <div id="with-child" class="card">
+        <span class="direct">x</span>
+      </div>
+      <div id="plain" class="card">
+        <span>ok</span>
+      </div>
+      <span id="before-badge">a</span>
+      <span class="badge">b</span>
+      <span id="before-later">c</span>
+      <span>d</span>
+      <span class="late">e</span>
+    </div>
+    <style>
+      .card:has(.error) { padding-left: 1; }
+      .card:has(> .direct) { padding-right: 2; }
+      .card:has(> .error) { margin-left: 5; }
+      .card:has(.missing, .direct) { padding-top: 1; }
+      span:has(+ .badge) { margin-left: 3; }
+      span:has(~ .late) { margin-right: 4; }
+      .card:not(:has(.error)) { padding-bottom: 1; }
+      .card:has(span.direct:first-child) { margin-right: 6; }
+      /* Malformed arguments must parse, match nothing, and not crash. */
+      .card:has() { margin-top: 9; }
+      .card:has(> ) { margin-top: 9; }
+      .card:has(.a > > .b) { margin-top: 9; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("The :has() selector", "[component][css][selector]") {
+  auto app = rtxui::Ref<HasSelectorApp>::New();
+  app->Mount();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("a descendant") {
+    CHECK(at("#with-error")->style.padding.left == 1);
+    CHECK(at("#with-child")->style.padding.left == 0);
+    CHECK(at("#plain")->style.padding.left == 0);
+  }
+
+  SECTION("a child") {
+    CHECK(at("#with-child")->style.padding.right == 2);
+    // The error is a grandchild, not a child.
+    CHECK(at("#with-error")->style.margin.left == 0);
+  }
+
+  SECTION("a selector list") {
+    CHECK(at("#with-child")->style.padding.top == 1);
+    CHECK(at("#plain")->style.padding.top == 0);
+  }
+
+  SECTION("the next sibling, and any later one") {
+    CHECK(at("#before-badge")->style.margin.left == 3);
+    CHECK(at("#before-later")->style.margin.left == 0);
+    CHECK(at("#before-badge")->style.margin.right == 4);
+    CHECK(at("#before-later")->style.margin.right == 4);
+    CHECK(at(".late")->style.margin.right == 0);
+  }
+
+  SECTION("inside :not(), and with pseudo-classes of its own") {
+    CHECK(at("#plain")->style.padding.bottom == 1);
+    CHECK(at("#with-error")->style.padding.bottom == 0);
+    CHECK(at("#with-child")->style.margin.right == 6);
+  }
+
+  SECTION("a malformed argument matches nothing") {
+    CHECK(at("#with-error")->style.margin.top == 0);
+    CHECK(at("#with-child")->style.margin.top == 0);
+    CHECK(at("#plain")->style.margin.top == 0);
+  }
+}
+
+namespace {
+// Owns the element a :has() rule above it tests, and changes it by
+// re-rendering itself alone.
+class HasField : public rtxui::Component<HasField> {
+ public:
+  bool invalid = false;
+  std::string field_class() const { return invalid ? "invalid" : "valid"; }
+  void Toggle() { invalid = !invalid; }
+  HasField() {
+    Bind(invalid);
+    Bind(field_class);
+    Bind(Toggle);
+  }
+  std::string_view view = R"(
+    <button class="{field_class}" onclick="Toggle">toggle</button>
+  )";
+};
+
+class HasForm : public rtxui::Component<HasForm> {
+ public:
+  HasForm() { Import<HasField>(); }
+  std::string_view view = R"(
+    <div class="form"><HasField/></div>
+    <style>
+      .form:has(.invalid) { padding-left: 4; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A :has() rule follows a change inside a nested component",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<HasForm>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(20, 3);
+  rtxui::Screen screen(app, device);
+  screen.Draw();
+
+  auto* form = app->Root()->QuerySelector(".form");
+  auto* button = app->Root()->QuerySelector("button");
+  REQUIRE(form != nullptr);
+  REQUIRE(button != nullptr);
+  CHECK(form->style.padding.left == 0);
+  auto* field = dynamic_cast<HasField*>(
+      const_cast<rtxui::ComponentBase*>(button->owner_component()));
+  REQUIRE(field != nullptr);
+
+  // Not through input, which re-matches every pseudo-class anyway: state
+  // changed by a task, as a worker thread's result would arrive. Only the
+  // nested component re-renders, but the form above it now holds an
+  // .invalid element.
+  rtxui::PostTask([&] { field->invalid = true; });
+  screen.Step();
+  form = app->Root()->QuerySelector(".form");
+  REQUIRE(form != nullptr);
+  CHECK(form->style.padding.left == 4);
+
+  rtxui::PostTask([&] { field->invalid = false; });
+  screen.Step();
+  form = app->Root()->QuerySelector(".form");
+  REQUIRE(form != nullptr);
+  CHECK(form->style.padding.left == 0);
 }
