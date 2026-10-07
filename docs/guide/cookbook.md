@@ -79,3 +79,28 @@ To build an overlay by hand instead — a dropdown, a toast, a context menu —
 use `position: absolute` (or `fixed`) with `z-index` inside a
 `position: relative` ancestor, and gate it behind an `<if>`. The
 [positioning guide](/guide/css/positioning) covers the mechanics.
+
+---
+
+## Command palette
+
+A palette is a [`<dialog>`](/html_reference) holding an `<input>` and the list
+of commands matching what is typed. Three pieces make it work:
+
+- The input sits inside an `<if>` on the dialog's flag and carries
+  [`autofocus`](/guide/html/focus#autofocus), so it appears, and takes the
+  focus, each time the palette opens.
+- A `Digest()` override recomputes the matches from the bound query before
+  each render, and marks the highlighted one with a class.
+- An `OnEvent()` override handles the keys the focused input leaves alone:
+  <kbd>Ctrl</kbd>+<kbd>P</kbd> to open, <kbd>Up</kbd> and <kbd>Down</kbd> to
+  move the highlight, <kbd>Enter</kbd> to run it. <kbd>Escape</kbd> closes the
+  dialog by itself.
+
+<ExampleTabs src="/wasm/rtxui_example_cookbook_command_palette.js">
+<template #source>
+
+<<< @/../example/cookbook_command_palette.cpp
+
+</template>
+</ExampleTabs>

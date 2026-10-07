@@ -102,6 +102,7 @@ EXAMPLES_META = {
     "cookbook_tabs.cpp": {"category": "Components & Advanced Features", "guide": "/guide/cookbook"},
     "cookbook_async.cpp": {"category": "Components & Advanced Features", "guide": "/guide/cookbook"},
     "cookbook_dialog.cpp": {"category": "Components & Advanced Features", "guide": "/guide/cookbook"},
+    "cookbook_command_palette.cpp": {"category": "Components & Advanced Features", "guide": "/guide/cookbook"},
 }
 
 
