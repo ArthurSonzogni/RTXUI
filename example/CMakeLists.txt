@@ -174,3 +174,6 @@ target_link_libraries(rtxui_example_tree PRIVATE rtxui)
 
 add_executable(rtxui_example_cookbook_command_palette cookbook_command_palette.cpp)
 target_link_libraries(rtxui_example_cookbook_command_palette PRIVATE rtxui)
+
+add_executable(rtxui_example_virtual_list virtual_list.cpp)
+target_link_libraries(rtxui_example_virtual_list PRIVATE rtxui)

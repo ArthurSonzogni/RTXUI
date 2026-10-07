@@ -46,6 +46,8 @@ struct ComponentInternals {
   }
   // Whether `c` or a component inside it has a :has() selector.
   static bool UsesRelationalSelectors(const ComponentBase& c);
+  // Whether `c` or a component inside it rendered a `<for virtual="">`.
+  static bool HasVirtualLists(const ComponentBase& c);
 };
 
 // Number of elements the style walk has visited since ResetStyleVisitCount(),

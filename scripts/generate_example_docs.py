@@ -45,6 +45,7 @@ EXAMPLES_META = {
     "conditional.cpp": {"category": "Core Concepts", "guide": "/guide/conditionals"},
     "loop_simple.cpp": {"category": "Core Concepts", "guide": "/guide/loops"},
     "loop_complex.cpp": {"category": "Core Concepts", "guide": "/guide/loops"},
+    "virtual_list.cpp": {"category": "Scrolling & Overflow", "guide": "/guide/loops"},
     "slots.cpp": {"category": "Core Concepts", "guide": "/guide/cpp/slots"},
 
     # Form Elements
