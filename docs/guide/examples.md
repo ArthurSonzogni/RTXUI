@@ -91,6 +91,7 @@ Built-in HTML elements, CJK text, Markdown rendering, spatial nav, and cookbook 
 | :--- | :--- | :--- |
 | [cjk.cpp](/guide/examples/cjk) | Double-width text. | [Guide](/guide/unicode) |
 | [cookbook_async.cpp](/guide/examples/cookbook_async) | Recipe: updating the UI from a worker thread. | [Guide](/guide/cookbook) |
+| [cookbook_command_palette.cpp](/guide/examples/cookbook_command_palette) | Recipe: a command palette. | [Guide](/guide/cookbook) |
 | [cookbook_dialog.cpp](/guide/examples/cookbook_dialog) | Recipe: a confirmation dialog. | [Guide](/guide/cookbook) |
 | [cookbook_tabs.cpp](/guide/examples/cookbook_tabs) | Recipe: tabs built by hand. | [Guide](/guide/cookbook) |
 | [details.cpp](/guide/examples/details) | The `<details>`/`<summary>` disclosure widget. | [Reference](/html_reference) |
