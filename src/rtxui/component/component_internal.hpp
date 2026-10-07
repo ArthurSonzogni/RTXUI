@@ -59,6 +59,10 @@ void ResetStyleVisitCount();
 // it sits in the tree.
 bool TakeBaseStylesResolved();
 
+// The element that last appeared carrying `autofocus` since the last call,
+// which then starts over, or null.
+Ref<Element> TakePendingAutofocus();
+
 ComponentBase* GetOwningComponent(Element* element);
 ComponentBase* GetAttributeOwnerComponent(Element* element);
 ComponentBase* GetParentComponent(ComponentBase* comp);

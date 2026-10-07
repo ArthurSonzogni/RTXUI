@@ -43,6 +43,21 @@ Set `focusable="true"` as a clean shorthand for setting `tabindex="0"`:
 ```
 Focusable items automatically capture keyboard events (`ArrowLeft`, `Enter`, etc.) and focus CSS pseudoclasses like `:focus`.
 
+### `autofocus`
+An element that appears carrying `autofocus` takes the focus, as in HTML. Put
+it on the field a panel or dialog opens with, inside the `<if>` that shows it,
+so that it appears, and takes the focus, each time the panel opens:
+
+```html
+<if condition="{searching}">
+  <input value="{query}" autofocus=""/>
+</if>
+```
+
+Templates are XML, so the attribute needs a value; any value works. An element
+that is always there takes the focus only once, when the application starts.
+The [command palette recipe](/guide/cookbook#command-palette) uses it.
+
 To show which element has focus without shifting the layout, give it an
 [`outline`](/css_reference): unlike a border, it takes no room, so nothing
 moves when focus does.
