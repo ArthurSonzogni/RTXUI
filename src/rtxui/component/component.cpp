@@ -3366,7 +3366,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // it would shift the rest, once per child of a long list.
           if (item_key && !item_key->empty()) {
             for (auto& old_child : old_children_) {
-              if (old_child && old_child->Tag() == child_node.tag &&
+              if (old_child && old_child->created_tag_ == child_node.tag &&
                   old_child->Root() &&
                   old_child->Root()->for_key == *item_key) {
                 child = std::move(old_child);
@@ -3376,7 +3376,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
           if (!child) {
             for (auto& old_child : old_children_) {
-              if (old_child && old_child->Tag() == child_node.tag) {
+              if (old_child && old_child->created_tag_ == child_node.tag) {
                 child = std::move(old_child);
                 break;
               }
@@ -3386,6 +3386,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           bool is_new = false;
           if (!child) {
             child = factory();
+            // The tag it was written as: not always its class name, for an
+            // alias (`Import<T>("my-tag")`) or a hyphenated built-in.
+            child->created_tag_ = child_node.tag;
             is_new = true;
           }
           if (std::find(children_.begin(), children_.end(), child) ==

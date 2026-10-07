@@ -11541,3 +11541,56 @@ TEST_CASE("A slot a component shows again gets its projected content back",
   app->Digest();
   CHECK(app->Root()->QuerySelector("#projected") != nullptr);
 }
+
+namespace {
+class AliasedCounter : public rtxui::Component<AliasedCounter> {
+ public:
+  int clicks = 0;
+  AliasedCounter() { Bind(clicks); }
+  std::string_view view = R"(<span>{clicks}</span>)";
+};
+
+class AliasUser : public rtxui::Component<AliasUser> {
+ public:
+  int renders = 0;
+  AliasUser() {
+    Bind(renders);
+    Import<AliasedCounter>("my-counter");
+  }
+  std::string_view view = R"(
+    <div>
+      <span>{renders}</span>
+      <my-counter id="aliased"/>
+      <tabs><tab-pane label="a"><span id="pane">a</span></tab-pane></tabs>
+    </div>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A component written under another tag survives its user's render",
+          "[component]") {
+  auto app = rtxui::Ref<AliasUser>::New();
+  app->Mount();
+  // The component of type T in the tree.
+  auto find = [&]<typename T>(std::type_identity<T>) -> T* {
+    T* found = nullptr;
+    app->Root()->Visit([&](rtxui::Element& element) {
+      if (auto* component = dynamic_cast<const T*>(element.component())) {
+        found = const_cast<T*>(component);
+      }
+    });
+    REQUIRE(found != nullptr);
+    return found;
+  };
+  AliasedCounter* counter = find(std::type_identity<AliasedCounter>{});
+  rtxui::tab_pane* pane = find(std::type_identity<rtxui::tab_pane>{});
+  counter->clicks = 3;
+
+  app->renders++;
+  app->Digest();
+  // Matched on the tag the template wrote, not the class name, so the alias
+  // and the hyphenated built-in keep their instances, and their state.
+  CHECK(find(std::type_identity<AliasedCounter>{}) == counter);
+  CHECK(find(std::type_identity<rtxui::tab_pane>{}) == pane);
+  CHECK(counter->clicks == 3);
+}
