@@ -152,6 +152,8 @@ Like every other rule, `@keyframes` belong to the component that declares them: 
 <div class="{row_class}" onanimationend="Removed">{label}</div>
 ```
 
+[`<toast>`](/html_reference#toast) uses it to hide only once it has slid out.
+
 ### Keyframes Demo
 
 <ExampleTabs src="/wasm/rtxui_example_keyframes.js">

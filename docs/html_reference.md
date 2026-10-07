@@ -490,7 +490,26 @@ closes itself after `duration` milliseconds, or when clicked.
 #### Parts
 `toast` (the box). It has a `tall` border by default; restyle it like any
 element, e.g. `.error::part(toast) { border-color: red; }` or
-`toast::part(toast) { border: round; }`.
+`toast::part(toast) { border: round; }`. While it closes, the box is also part
+`closing`.
+
+#### Animation
+A toast slides in horizontally from its side of the screen, and slides back
+out when it closes: a terminal has more columns than rows, so a sideways move
+looks smoother than a vertical one. It stays on screen until its closing
+animation ends. Replace either animation with your own `@keyframes`, declared
+in your component:
+
+```css
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+toast::part(toast) { animation: fade-in 200ms; }
+toast::part(closing) { animation: fade-out 200ms forwards; }
+```
+
+Write the `closing` rule after the `toast` one: the closing box is both
+parts. `toast::part(toast) { animation: none; }` turns both animations off,
+and a toast with no closing animation, or an `infinite` one, hides at once.
 
 Several toasts open at once in the same corner overlap. To stack them, give
 each a different `placement`, or render them from a `<for>` inside a fixed
