@@ -83,6 +83,10 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
   method (no `override`), never both.
 - Put `<style>` at the top level of the view, next to the root element; a
   nested `<style>` is ignored.
+- Styles are scoped to their component, selectors and `@keyframes` included:
+  a rule only matches elements its own template wrote, and `.dark .title` in a
+  child never sees a `.dark` set by its parent. Pass context down as a custom
+  property (`--accent`, which inherits) or as a prop.
 - Use only built-in tags (`div`, `span`, `p`, `h1`-`h6`, `button`, `input`,
   `textarea`, `checkbox`, `radio`, `select`, `ul`/`ol`/`li`, `table`, ...) and
   imported components. There is no `<View>`, `<Text>` or `<Box>`.

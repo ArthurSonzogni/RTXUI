@@ -333,28 +333,37 @@ class Child : public Component<Child> {
 class Parent : public Component<Parent> {
  public:
   std::string_view view = R"html(
-    <Child/>
+    <Child id="host"/>
     <style>
       @keyframes shared {
         from { opacity: 0; }
         to { opacity: 1; }
       }
+      #host { animation: shared 1s linear; }
     </style>
   )html";
   Parent() { Import<Child>(); }
 };
 
-TEST_CASE("A component uses the @keyframes of a component around it",
+TEST_CASE("@keyframes are scoped to the component declaring them",
           "[animation]") {
   FakeClock clock;
   DiagnosticRecorder diagnostics;
   auto app = Ref<Parent>::New();
   app->Mount();
+
+  // The parent's own rule, on the <Child> tag it wrote, finds its keyframes.
+  Element* host = app->Root()->QuerySelector("#host");
+  REQUIRE(host != nullptr);
+  clock.Advance(host, 500);
+  CHECK(host->style.opacity == Catch::Approx(0.5f));
+
+  // The child's rule does not see the parent's keyframes.
   Element* inner = app->Root()->QuerySelector("#inner");
   REQUIRE(inner != nullptr);
-  clock.Advance(inner, 500);
-  CHECK(inner->style.opacity == Catch::Approx(0.5f));
-  CHECK(diagnostics.messages.empty());
+  inner->TickTransitions(g_now);
+  CHECK(inner->style.opacity == Catch::Approx(1.0f));
+  CHECK(diagnostics.Has("animation 'shared' has no matching @keyframes"));
 }
 
 class Missing : public Component<Missing> {

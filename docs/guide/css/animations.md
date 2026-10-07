@@ -133,7 +133,7 @@ Keyframes animate the same properties as transitions (listed above). Anything el
 
 ### Where Keyframes Are Found
 
-An animation looks for its `@keyframes` in the stylesheet of the component that declared it, then in the components around it. Declaring them once in the application's root component makes them available everywhere inside it.
+Like every other rule, `@keyframes` belong to the component that declares them: an animation looks for its keyframes in the stylesheet of the component whose rule declared it, and nowhere else. A component can still animate a child component's tag from its own stylesheet, since the tag is part of its own template.
 
 ### Lifetime
 

@@ -11417,36 +11417,57 @@ TEST_CASE("The :has() selector", "[component][css][selector]") {
 }
 
 namespace {
-// Owns the element a :has() rule above it tests, and changes it by
-// re-rendering itself alone.
+// Shows what its user projects into it only while `shown` is set: the
+// projected elements belong to its user, but come and go when this component
+// re-renders on its own.
+class HasReveal : public rtxui::Component<HasReveal> {
+ public:
+  bool shown = true;
+  HasReveal() { Bind(shown); }
+  std::string_view view = R"(
+    <div><if condition="{shown}"><slot></slot></if></div>
+  )";
+};
+
+// Marks its own internal element .invalid, which is no business of the
+// stylesheets around it.
 class HasField : public rtxui::Component<HasField> {
  public:
-  bool invalid = false;
-  std::string field_class() const { return invalid ? "invalid" : "valid"; }
-  void Toggle() { invalid = !invalid; }
-  HasField() {
-    Bind(invalid);
-    Bind(field_class);
-    Bind(Toggle);
-  }
   std::string_view view = R"(
-    <button class="{field_class}" onclick="Toggle">toggle</button>
+    <span class="invalid">field</span>
   )";
 };
 
 class HasForm : public rtxui::Component<HasForm> {
  public:
-  HasForm() { Import<HasField>(); }
+  HasForm() {
+    Import<HasReveal>();
+    Import<HasField>();
+  }
   std::string_view view = R"(
-    <div class="form"><HasField/></div>
+    <div>
+      <div class="form"><HasReveal><span class="invalid">!</span></HasReveal></div>
+      <div class="other"><HasField/></div>
+    </div>
     <style>
       .form:has(.invalid) { padding-left: 4; }
+      .other:has(.invalid) { padding-left: 4; }
     </style>
   )";
 };
 }  // namespace
 
-TEST_CASE("A :has() rule follows a change inside a nested component",
+TEST_CASE("A :has() rule sees only its own component's elements",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<HasForm>::New();
+  app->Mount();
+  auto* other = app->Root()->QuerySelector(".other");
+  REQUIRE(other != nullptr);
+  // The .invalid inside <HasField> is that component's own.
+  CHECK(other->style.padding.left == 0);
+}
+
+TEST_CASE("A :has() rule follows its elements projected into a component",
           "[component][css][selector]") {
   auto app = rtxui::Ref<HasForm>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
@@ -11454,30 +11475,32 @@ TEST_CASE("A :has() rule follows a change inside a nested component",
   rtxui::Screen screen(app, device);
   screen.Draw();
 
-  auto* form = app->Root()->QuerySelector(".form");
-  auto* button = app->Root()->QuerySelector("button");
-  REQUIRE(form != nullptr);
-  REQUIRE(button != nullptr);
-  CHECK(form->style.padding.left == 0);
-  auto* field = dynamic_cast<HasField*>(
-      const_cast<rtxui::ComponentBase*>(button->owner_component()));
-  REQUIRE(field != nullptr);
+  auto form_padding = [&] {
+    auto* form = app->Root()->QuerySelector(".form");
+    REQUIRE(form != nullptr);
+    return form->style.padding.left;
+  };
+  auto invalid_count = [&] {
+    int count = 0;
+    app->Root()->Visit([&](rtxui::Element& e) {
+      count += std::ranges::count(e.classes, std::string("invalid"));
+    });
+    return count;
+  };
+  CHECK(form_padding() == 4);
+  auto* reveal = dynamic_cast<HasReveal*>(const_cast<rtxui::ComponentBase*>(
+      app->Root()->QuerySelector("HasReveal")->component()));
+  REQUIRE(reveal != nullptr);
 
-  // Not through input, which re-matches every pseudo-class anyway: state
-  // changed by a task, as a worker thread's result would arrive. Only the
-  // nested component re-renders, but the form above it now holds an
-  // .invalid element.
-  rtxui::PostTask([&] { field->invalid = true; });
+  rtxui::PostTask([&] { reveal->shown = false; });
   screen.Step();
-  form = app->Root()->QuerySelector(".form");
-  REQUIRE(form != nullptr);
-  CHECK(form->style.padding.left == 4);
+  INFO("invalid elements: " << invalid_count());
+  CHECK(form_padding() == 0);
 
-  rtxui::PostTask([&] { field->invalid = false; });
+  rtxui::PostTask([&] { reveal->shown = true; });
   screen.Step();
-  form = app->Root()->QuerySelector(".form");
-  REQUIRE(form != nullptr);
-  CHECK(form->style.padding.left == 0);
+  INFO("invalid elements: " << invalid_count());
+  CHECK(form_padding() == 4);
 }
 
 namespace {

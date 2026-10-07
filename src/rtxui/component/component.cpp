@@ -1009,10 +1009,14 @@ bool MatchSelectorPart(const Element* element,
 
 bool MatchPseudos(const Element* element,
                   const std::vector<std::string>& pseudo_classes,
-                  int depth);
+                  int depth,
+                  const ComponentBase* scope);
 
 // Defined below, next to the tree walks it shares with the combinators.
-bool MatchHas(const Element* anchor, std::string_view argument, int depth);
+bool MatchHas(const Element* anchor,
+              std::string_view argument,
+              int depth,
+              const ComponentBase* scope);
 
 // How deep `:not()` may nest. The argument of a :not() is itself a compound
 // selector that may carry pseudo-classes, so `:not(:not(...))` recurses, and a
@@ -1052,7 +1056,8 @@ int MaxParenDepth(std::string_view text) {
 // refused the same way, for the same reason.
 bool MatchOnePseudo(const Element* element,
                     const std::string& pseudo,
-                    int depth) {
+                    int depth,
+                    const ComponentBase* scope) {
   // Backstop. The real cut-off is made once, up front, in the :not() branch
   // below -- nothing else here recurses.
   if (depth > kMaxPseudoDepth) {
@@ -1140,8 +1145,9 @@ bool MatchOnePseudo(const Element* element,
     if (depth == 0 && MaxParenDepth(pseudo) > kMaxPseudoDepth) {
       return false;
     }
-    return MatchHas(
-        element, std::string_view(pseudo).substr(4, pseudo.size() - 5), depth);
+    return MatchHas(element,
+                    std::string_view(pseudo).substr(4, pseudo.size() - 5),
+                    depth, scope);
   }
 
   if (pseudo.starts_with("not(") && pseudo.ends_with(")")) {
@@ -1202,7 +1208,7 @@ bool MatchOnePseudo(const Element* element,
       const css::SelectorPart inner_part =
           css::ParseCompound(one, inner_pseudos);
       if (MatchSelectorPart(element, nullptr, inner_part) &&
-          MatchPseudos(element, inner_pseudos, depth + 1)) {
+          MatchPseudos(element, inner_pseudos, depth + 1, scope)) {
         return false;
       }
       if (comma == std::string_view::npos) {
@@ -1217,9 +1223,10 @@ bool MatchOnePseudo(const Element* element,
 
 bool MatchPseudos(const Element* element,
                   const std::vector<std::string>& pseudo_classes,
-                  int depth = 0) {
+                  int depth,
+                  const ComponentBase* scope) {
   for (const auto& pseudo : pseudo_classes) {
-    if (!MatchOnePseudo(element, pseudo, depth)) {
+    if (!MatchOnePseudo(element, pseudo, depth, scope)) {
       return false;
     }
   }
@@ -1270,19 +1277,31 @@ bool MatchSelectorPart(const Element* element,
 }
 
 namespace {
-const Element* GetRealParent(const Element* element) {
-  if (!element) {
+// Whether `element` belongs to the template of `scope`: the component wrote
+// it, or it is the component's own root. A null scope takes in everything.
+bool InScope(const Element* element, const ComponentBase* scope) {
+  return !scope || element->owner_component() == scope ||
+         element->component() == scope;
+}
+
+// The parent of `element` as `scope`'s template sees it: slots, and the
+// internals of the components the template uses, are transparent, and the
+// component's root has none -- a selector cannot look past it.
+const Element* GetRealParent(const Element* element,
+                             const ComponentBase* scope) {
+  if (!element || (scope && element->component() == scope)) {
     return nullptr;
   }
   const Element* parent = element->Parent();
-  while (parent && parent->is_slot()) {
+  while (parent && (parent->is_slot() || !InScope(parent, scope))) {
     parent = parent->Parent();
   }
   return parent;
 }
 
-const Element* GetPrecedingSibling(const Element* element) {
-  if (!element) {
+const Element* GetPrecedingSibling(const Element* element,
+                                   const ComponentBase* scope) {
+  if (!element || (scope && element->component() == scope)) {
     return nullptr;
   }
   const Element* parent = element->Parent();
@@ -1305,7 +1324,7 @@ const Element* GetPrecedingSibling(const Element* element) {
   for (size_t i = *idx; i-- > 0;) {
     const Element* sibling = children[i].get();
     if (sibling->tag() != "style") {
-      if (sibling->is_text()) {
+      if (sibling->is_text() || !InScope(sibling, scope)) {
         continue;
       }
       return sibling;
@@ -1380,10 +1399,11 @@ bool MatchRelativeStep(const Element* element,
                        const Element* anchor,
                        const std::vector<RelativeStep>& steps,
                        size_t index,
-                       int depth) {
+                       int depth,
+                       const ComponentBase* scope) {
   const RelativeStep& step = steps[index];
   if (!MatchSelectorPart(element, nullptr, step.part) ||
-      !MatchPseudos(element, step.pseudo_classes, depth + 1)) {
+      !MatchPseudos(element, step.pseudo_classes, depth + 1, scope)) {
     return false;
   }
   // What the combinator leads to: the anchor itself for the first step, an
@@ -1392,28 +1412,28 @@ bool MatchRelativeStep(const Element* element,
     if (index == 0) {
       return candidate == anchor;
     }
-    return MatchRelativeStep(candidate, anchor, steps, index - 1, depth);
+    return MatchRelativeStep(candidate, anchor, steps, index - 1, depth, scope);
   };
   switch (step.combinator) {
     case '>': {
-      const Element* parent = GetRealParent(element);
+      const Element* parent = GetRealParent(element, scope);
       return parent && leads_to(parent);
     }
     case '+': {
-      const Element* sibling = GetPrecedingSibling(element);
+      const Element* sibling = GetPrecedingSibling(element, scope);
       return sibling && leads_to(sibling);
     }
     case '~':
-      for (const Element* sibling = GetPrecedingSibling(element); sibling;
-           sibling = GetPrecedingSibling(sibling)) {
+      for (const Element* sibling = GetPrecedingSibling(element, scope);
+           sibling; sibling = GetPrecedingSibling(sibling, scope)) {
         if (leads_to(sibling)) {
           return true;
         }
       }
       return false;
     default:
-      for (const Element* ancestor = GetRealParent(element); ancestor;
-           ancestor = GetRealParent(ancestor)) {
+      for (const Element* ancestor = GetRealParent(element, scope); ancestor;
+           ancestor = GetRealParent(ancestor, scope)) {
         if (leads_to(ancestor)) {
           return true;
         }
@@ -1423,20 +1443,24 @@ bool MatchRelativeStep(const Element* element,
 }
 
 // Whether any element in `element`'s subtree, itself included, ends a match
-// of `steps`.
+// of `steps`. Only the elements of `scope`'s template can: the walk goes
+// through the internals of the components it uses, to reach what the
+// template projects into them, without matching them.
 bool AnyInSubtreeMatches(const Element* element,
                          const Element* anchor,
                          const std::vector<RelativeStep>& steps,
-                         int depth) {
+                         int depth,
+                         const ComponentBase* scope) {
   if (element->is_text() || element->tag() == "style") {
     return false;
   }
-  if (!element->is_slot() &&
-      MatchRelativeStep(element, anchor, steps, steps.size() - 1, depth)) {
+  if (!element->is_slot() && InScope(element, scope) &&
+      MatchRelativeStep(element, anchor, steps, steps.size() - 1, depth,
+                        scope)) {
     return true;
   }
   for (const auto& child : element->children()) {
-    if (AnyInSubtreeMatches(child.get(), anchor, steps, depth)) {
+    if (AnyInSubtreeMatches(child.get(), anchor, steps, depth, scope)) {
       return true;
     }
   }
@@ -1447,7 +1471,10 @@ bool AnyInSubtreeMatches(const Element* element,
 // as one of the comma-separated relative selectors says -- a descendant by
 // default, or after `>`, `+` or `~` a child, the next sibling or a later one
 // -- matches it. Like :not(), a malformed argument matches nothing.
-bool MatchHas(const Element* anchor, std::string_view argument, int depth) {
+bool MatchHas(const Element* anchor,
+              std::string_view argument,
+              int depth,
+              const ComponentBase* scope) {
   std::string_view rest = TrimSelector(argument);
   if (rest.empty()) {
     return false;
@@ -1473,7 +1500,7 @@ bool MatchHas(const Element* anchor, std::string_view argument, int depth) {
     const char first = steps.front().combinator;
     if (first == ' ' || first == '>') {
       for (const auto& child : anchor->children()) {
-        if (AnyInSubtreeMatches(child.get(), anchor, steps, depth)) {
+        if (AnyInSubtreeMatches(child.get(), anchor, steps, depth, scope)) {
           return true;
         }
       }
@@ -1490,7 +1517,7 @@ bool MatchHas(const Element* anchor, std::string_view argument, int depth) {
         continue;
       }
       if (after_anchor &&
-          AnyInSubtreeMatches(sibling.get(), anchor, steps, depth)) {
+          AnyInSubtreeMatches(sibling.get(), anchor, steps, depth, scope)) {
         return true;
       }
     }
@@ -1500,11 +1527,12 @@ bool MatchHas(const Element* anchor, std::string_view argument, int depth) {
 
 bool MatchSelectorParents(const Element* element,
                           const Element* root,
-                          const std::vector<css::SelectorPart>& parents) {
+                          const std::vector<css::SelectorPart>& parents,
+                          const ComponentBase* scope) {
   const Element* curr = element;
   for (const auto& parent_part : parents) {
     if (parent_part.combinator == '>') {
-      curr = GetRealParent(curr);
+      curr = GetRealParent(curr, scope);
       if (!curr) {
         return false;
       }
@@ -1512,7 +1540,7 @@ bool MatchSelectorParents(const Element* element,
         return false;
       }
     } else if (parent_part.combinator == '+') {
-      curr = GetPrecedingSibling(curr);
+      curr = GetPrecedingSibling(curr, scope);
       if (!curr) {
         return false;
       }
@@ -1522,7 +1550,7 @@ bool MatchSelectorParents(const Element* element,
     } else if (parent_part.combinator == '~') {
       bool found = false;
       while (true) {
-        curr = GetPrecedingSibling(curr);
+        curr = GetPrecedingSibling(curr, scope);
         if (!curr) {
           break;
         }
@@ -1537,7 +1565,7 @@ bool MatchSelectorParents(const Element* element,
     } else {
       bool found = false;
       while (true) {
-        curr = GetRealParent(curr);
+        curr = GetRealParent(curr, scope);
         if (!curr) {
           break;
         }
@@ -1577,38 +1605,31 @@ bool IsCssWideKeyword(std::string_view value) {
 }  // namespace
 
 thread_local int g_style_visit_count = 0;
+
 thread_local bool g_base_styles_resolved = false;
 
-// The @keyframes rule called `name` that `component` can see: its own, or
-// else the nearest one declared by a component around it, so that keyframes
-// an application declares once at its root reach every component it uses.
+// The @keyframes rule called `name` in `component`'s own stylesheet, or null.
+// Like every other rule, keyframes are scoped to the component declaring
+// them.
 std::shared_ptr<const css::KeyframesRule> FindKeyframes(
     const ComponentBase* component,
     std::string_view name) {
-  // Bounded: the chain follows template ownership upwards, and a malformed
-  // tree must not turn that into an endless loop.
-  for (int depth = 0; component && depth < 256; ++depth) {
-    const auto& rules = ComponentInternals::shared_rules(*component);
-    if (rules) {
-      const auto it = rules->keyframes.find(name);
-      if (it != rules->keyframes.end()) {
-        // Aliasing: holding the rule keeps the whole stylesheet alive, which
-        // its frames point into.
-        return {rules, &it->second};
-      }
-    }
-    const Element* root = component->Root();
-    const ComponentBase* outer = root ? root->owner_component() : nullptr;
-    component = outer == component ? nullptr : outer;
+  const auto& rules = ComponentInternals::shared_rules(*component);
+  if (!rules) {
+    return nullptr;
   }
-  return nullptr;
+  const auto it = rules->keyframes.find(name);
+  if (it == rules->keyframes.end()) {
+    return nullptr;
+  }
+  // Aliasing: holding the rule keeps the whole stylesheet alive, which its
+  // frames point into.
+  return {rules, &it->second};
 }
 
 // Points the animations `component`'s rules just declared at their
-// @keyframes. Those are the ones not pointing anywhere yet: declaring an
-// animation starts it unresolved, and the ones an earlier component declared
-// were resolved against that component, which is the one that knows where
-// their keyframes are.
+// @keyframes in its stylesheet. Those not pointing anywhere yet: a longhand
+// such as animation-duration keeps the keyframes an earlier component found.
 void ResolveKeyframes(std::vector<AnimationConfig>& animations,
                       const ComponentBase* component) {
   for (auto& animation : animations) {
@@ -1732,15 +1753,18 @@ void ResolveElementStyle(Element* element,
                   continue;
                 }
 
+                // Combinators and :has() see only this component's own
+                // template, as the rule's target does.
                 if (!parsed.parents.empty()) {
                   if (!MatchSelectorParents(element, component->Root(),
-                                            parsed.parents)) {
+                                            parsed.parents, component)) {
                     continue;
                   }
                 }
 
                 if (!check_pseudos ||
-                    MatchPseudos(element, parsed.pseudo_classes)) {
+                    MatchPseudos(element, parsed.pseudo_classes, 0,
+                                 component)) {
                   matched.push_back(ruleset);
                 }
               }
@@ -1785,7 +1809,10 @@ void ResolveElementStyle(Element* element,
           if (!MatchPartSelector(element, component, parsed)) {
             continue;
           }
-          if (!check_pseudos || MatchPseudos(element, parsed.pseudo_classes)) {
+          // The part belongs to the template that wrote it, so that is
+          // where its pseudo-classes look.
+          if (!check_pseudos || MatchPseudos(element, parsed.pseudo_classes, 0,
+                                             element->owner_component())) {
             matched.push_back(ruleset);
           }
         }
@@ -1908,6 +1935,9 @@ void ResolveElementStyle(Element* element,
       // Phase 2: apply regular declarations, expanding var() references.
       ComputedStyle& style_out =
           check_pseudos ? element->target_style : element->base_style;
+      // Declaring any animation property replaces the list, which is how the
+      // animations this component's rules declare are told from the others.
+      const auto* animations_before = style_out.animations.get();
       auto apply_with_vars = [&](const css::Declaration& declaration) {
         if (declaration.property.starts_with("--")) {
           return;
@@ -1972,7 +2002,8 @@ void ResolveElementStyle(Element* element,
       for_each_round(false, apply_unless_reset);
       for_each_round(true, apply_unless_reset);
 
-      if (style_out.animations) {
+      if (style_out.animations &&
+          style_out.animations.get() != animations_before) {
         ResolveKeyframes(*style_out.animations, component);
       }
     }  // matched/inline declarations scope (bypassed by the goto above).
