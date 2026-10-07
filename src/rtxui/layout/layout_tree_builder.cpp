@@ -399,6 +399,15 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   }
 
   std::vector<std::shared_ptr<LayoutBox>> raw_children;
+  // ::before is the element's first child, ::after its last.
+  auto add_generated = [&](bool after) {
+    if (Element* generated = dom_node->GeneratedBox(after)) {
+      if (auto generated_box = Build(generated, resolved)) {
+        raw_children.push_back(std::move(generated_box));
+      }
+    }
+  };
+  add_generated(/*after=*/false);
   for (auto& child_dom : dom_node->children()) {
     if (child_dom.get()->is_slot()) {
       // Skip elements with no tag (e.g., SlotElement)
@@ -450,6 +459,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       raw_children.push_back(std::move(child_box));
     }
   }
+  add_generated(/*after=*/true);
 
   // Whether anything in this subtree is positioned out of flow, which is what
   // decides in layout.cpp whether the subtree's fragments may be cached

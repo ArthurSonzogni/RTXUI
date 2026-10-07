@@ -1627,6 +1627,56 @@ std::shared_ptr<const css::KeyframesRule> FindKeyframes(
   return {rules, &it->second};
 }
 
+// Applies the ::before and ::after rules in `rules`, in cascade order, onto
+// `out`: `content` gives the text, every other declaration styles the box.
+// The element's own custom properties are in scope, as for its own rules.
+void ApplyGeneratedContent(const Element* element,
+                           const std::vector<const css::Ruleset*>& rules,
+                           const css::CustomProperties& vars,
+                           std::unique_ptr<GeneratedContents>& out) {
+  if (!out) {
+    out = std::make_unique<GeneratedContents>();
+  }
+  for (const bool important : {false, true}) {
+    for (const css::Ruleset* ruleset : rules) {
+      GeneratedContent& target =
+          ruleset->parsed_selector.pseudo_element == "after" ? out->after
+                                                             : out->before;
+      for (const css::Declaration& declaration : ruleset->declarations) {
+        if (declaration.important != important ||
+            declaration.property.starts_with("--")) {
+          continue;
+        }
+        std::string expanded;
+        css::Declaration resolved = declaration;
+        if (declaration.value.find("var(") != std::string_view::npos) {
+          auto substituted = css::SubstituteVars(declaration.value, vars);
+          if (!substituted) {
+            continue;  // Undefined variable without fallback: ignore.
+          }
+          expanded = std::move(*substituted);
+          resolved.value = expanded;
+        }
+        if (resolved.property != "content") {
+          ApplyStyle(target.style, resolved);
+          continue;
+        }
+        ContentValue content =
+            ParseContent(resolved.value, [element](std::string_view name) {
+              return element->GetAttribute(std::string(name));
+            });
+        if (!content.valid) {
+          ReportDiagnostic("invalid 'content: " + std::string(resolved.value) +
+                           "': expected quoted strings and attr(name), or "
+                           "none");
+          continue;
+        }
+        target.content = std::move(content.text);
+      }
+    }
+  }
+}
+
 // Points the animations `component`'s rules just declared at their
 // @keyframes in its stylesheet. Those not pointing anywhere yet: a longhand
 // such as animation-duration keeps the keyframes an earlier component found.
@@ -1670,6 +1720,7 @@ void ResolveElementStyle(Element* element,
       }
       if (!element->styled_by_1 && !element->styled_by_2) {
         element->base_style = ComputedStyle();
+        element->base_generated.reset();
         element->own_custom_properties.clear();
       }
     }
@@ -1855,6 +1906,17 @@ void ResolveElementStyle(Element* element,
         std::sort(matched.begin(), matched.end(), precedes);
       }
 
+      // ::before and ::after rules style the boxes generated inside the
+      // element, not the element, so they are set apart and applied last.
+      std::vector<const css::Ruleset*> generated_rules;
+      std::erase_if(matched, [&](const css::Ruleset* ruleset) {
+        if (ruleset->parsed_selector.pseudo_element.empty()) {
+          return false;
+        }
+        generated_rules.push_back(ruleset);
+        return true;
+      });
+
       // Inline style attribute parsing. The declarations are string_views into
       // css_rule, which must stay alive until they are applied below. Skipped
       // when this pass was entered solely for ::part() matching (is_styled
@@ -2006,12 +2068,29 @@ void ResolveElementStyle(Element* element,
           style_out.animations.get() != animations_before) {
         ResolveKeyframes(*style_out.animations, component);
       }
+
+      if (!generated_rules.empty()) {
+        ApplyGeneratedContent(
+            element, generated_rules, active_props,
+            check_pseudos ? element->generated : element->base_generated);
+      }
     }  // matched/inline declarations scope (bypassed by the goto above).
 
     if (!check_pseudos) {
       element->MarkStyleResolvedFor(component);
       element->needs_style_seed = true;
     }
+  }
+}
+
+void CopyGenerated(const std::unique_ptr<GeneratedContents>& from,
+                   std::unique_ptr<GeneratedContents>& to) {
+  if (!from) {
+    to.reset();
+  } else if (to) {
+    *to = *from;
+  } else {
+    to = std::make_unique<GeneratedContents>(*from);
   }
 }
 
@@ -2092,6 +2171,7 @@ bool ResolveStylesInTree(Element* element,
                          !element->active_transitions.empty();
     if (must_update_target) {
       element->target_style = element->base_style;
+      CopyGenerated(element->base_generated, element->generated);
     }
     element->matched_pseudo_rule = false;
   }
@@ -2124,6 +2204,7 @@ bool ResolveStylesInTree(Element* element,
     // would overwrite a transition-blended `style` with its unanimated value.
     if (element->needs_style_seed) {
       element->target_style = element->base_style;
+      CopyGenerated(element->base_generated, element->generated);
       // An element already on screen that declares transitions moves to its
       // new style through them, from the one it has, rather than jumping.
       if (element->style_seeded && element->base_style.transitions) {

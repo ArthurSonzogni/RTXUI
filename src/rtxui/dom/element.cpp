@@ -11,6 +11,7 @@
 
 #include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
+#include "rtxui/dom/text_element.hpp"
 #include "rtxui/style/apply_style.hpp"
 #include "rtxui/style/style.hpp"
 std::atomic<int> g_elements_created{0};
@@ -470,6 +471,29 @@ Element::Element() {
 Element::Element(const ComponentBase* component)
     : component_(component), owner_component_(component) {
   g_elements_created++;
+}
+
+Element* Element::GeneratedBox(bool after) {
+  Ref<Element>& box = generated_boxes_[after ? 1 : 0];
+  const GeneratedContent* content = nullptr;
+  if (generated) {
+    content = after ? &generated->after : &generated->before;
+  }
+  if (!content || !content->content) {
+    box = nullptr;
+    return nullptr;
+  }
+  if (!box) {
+    box = Ref<Element>::New();
+    box->AddChild(Ref<TextElement>::New(*content->content));
+  } else {
+    static_cast<TextElement*>(box->ChildAt(0))->set_text(*content->content);
+  }
+  box->style = content->style;
+  // Not one of this element's children, so selectors and DOM walks never
+  // meet it, but events on it reach this element.
+  box->set_parent(this);
+  return box.get();
 }
 
 Element::~Element() {

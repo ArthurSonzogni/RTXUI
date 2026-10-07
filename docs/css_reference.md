@@ -152,6 +152,8 @@ RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing 
 
 ## 5. Typography and Coloring
 
+<CssProperty name="content" values="<string> | attr(<name>) ... | none | normal" description="Initial: `normal`. Only in a `::before` or `::after` rule: the text of the box generated inside the element, from quoted strings (with CSS escapes, e.g. `\25B6`) and attribute values, concatenated. `none` and `normal` generate no box. Elsewhere it is reported as a diagnostic. See [Generated Content](/guide/css/basics#generated-content-before-and-after)." />
+
 <CssProperty name="color" values="<color>" animatable inherited description="Initial: `white`. Foreground text character color." />
 <CssProperty name="foreground-color" values="<color>" animatable inherited description="Initial: `white`. Alias for color." />
 <CssProperty name="background-color" values="<color>" animatable description="Initial: `transparent`. Background block container cell color." />
