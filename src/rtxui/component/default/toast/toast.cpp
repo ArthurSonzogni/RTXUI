@@ -9,6 +9,7 @@
 #include <string>
 
 #include "rtxui/diagnostic.hpp"
+#include "rtxui/dom/element.hpp"
 #include "rtxui/task.hpp"
 
 namespace rtxui {
@@ -18,25 +19,43 @@ void toast::Close() {
   PropagateBinding("open", "false");
 }
 
+void toast::AnimationEnded() {
+  // The opening animation ends too, while `closing_` is still false.
+  if (closing_) {
+    FinishClosing();
+  }
+}
+
+void toast::FinishClosing() {
+  closing_ = false;
+  toast_class = "closed";
+  toast_part = "toast";
+}
+
 void toast::InitReflection() {
   Bind(open);
   Bind(duration);
   Bind(placement);
   Bind(toast_class);
+  Bind(toast_part);
   Bind(Close);
+  Bind(AnimationEnded);
   Component<toast>::InitReflection();
 }
 
 std::string_view toast::Setup() {
   return R"html(
-    <div class="toast {toast_class}" part="toast" onclick="Close">
+    <div class="toast {toast_class}" part="{toast_part}" onclick="Close"
+         onanimationend="AnimationEnded">
       <slot></slot>
     </div>
     <style>
-      @keyframes toast-in {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
+      /* Horizontal: a terminal has more columns than rows, so the move is
+         smoother. 50 is the toast's max-width: it starts out of sight. */
+      @keyframes toast-in-right { from { right: -50; } }
+      @keyframes toast-out-right { to { right: -50; } }
+      @keyframes toast-in-left { from { left: -50; } }
+      @keyframes toast-out-left { to { left: -50; } }
       self {
         display: block;
       }
@@ -50,7 +69,18 @@ std::string_view toast::Setup() {
         background-color: rgb(30, 41, 59);
         color: rgb(226, 232, 240);
         padding: 0 1;
-        animation: toast-in 150ms ease-out;
+      }
+      .bottom-right, .top-right {
+        animation: toast-in-right 300ms ease-out-cubic;
+      }
+      .bottom-left, .top-left {
+        animation: toast-in-left 300ms ease-out-cubic;
+      }
+      .closing.bottom-right, .closing.top-right {
+        animation: toast-out-right 200ms ease-in-cubic forwards;
+      }
+      .closing.bottom-left, .closing.top-left {
+        animation: toast-out-left 200ms ease-in-cubic forwards;
       }
       .closed {
         display: none;
@@ -73,11 +103,11 @@ bool toast::Digest() {
                      "top-left");
     corner = kPlacements[0];
   }
-  toast_class = open ? std::string(corner) : "closed";
 
   // Each opening starts its own timer.
   if (open && !was_open_) {
     ++generation_;
+    closing_ = false;
     if (duration > 0) {
       PostDelayedTask(
           [self = Ref<toast>(this), generation = generation_] {
@@ -88,7 +118,32 @@ bool toast::Digest() {
           std::chrono::milliseconds(duration));
     }
   }
+  // Closing keeps the toast on screen until its closing animation ends. Once
+  // this frame's styles say whether there is one: none hides it at once.
+  if (!open && was_open_) {
+    closing_ = true;
+    PostTask([self = Ref<toast>(this), generation = generation_] {
+      if (!self->closing_ || self->generation_ != generation) {
+        return;
+      }
+      const Element* box = self->Root()->QuerySelector(".toast");
+      if (!box || !(box->HasPlayingAnimations(/*include_infinite=*/false) ||
+                    box->HasEndedAnimations())) {
+        self->FinishClosing();
+      }
+    });
+  }
   was_open_ = open;
+
+  if (open) {
+    toast_class = std::string(corner);
+    toast_part = "toast";
+  } else if (closing_) {
+    toast_class = std::string(corner) + " closing";
+    toast_part = "toast closing";
+  } else {
+    FinishClosing();
+  }
   return Component<toast>::Digest();
 }
 

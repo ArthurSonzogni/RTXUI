@@ -59,11 +59,16 @@ TEST_CASE("A toast shows, then closes itself", "[component][toast]") {
   screen.Step();
   CHECK(ToastShown(*app));
 
-  // ...gone after, and the application's flag follows.
+  // ...closing after, and the application's flag follows at once...
   std::this_thread::sleep_for(std::chrono::milliseconds(60));
   screen.Step();
-  CHECK_FALSE(ToastShown(*app));
   CHECK_FALSE(app->saved);
+  CHECK(ToastShown(*app));
+
+  // ...gone once it has slid out.
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
+  screen.Step();
+  CHECK_FALSE(ToastShown(*app));
 }
 
 TEST_CASE("A toast shows in a corner, over the rest", "[component][toast]") {
@@ -147,6 +152,151 @@ TEST_CASE("A toast's border can be restyled through its part",
         "╭──────╮\n"
         "│ hi   │\n"
         "╰──────╯\n");
+}
+
+// A clock the test moves by hand, so that animations are sampled at exact
+// times.
+double g_now = 1000.0;
+double FakeNow() {
+  return g_now;
+}
+
+class FakeClock {
+ public:
+  FakeClock() {
+    g_now = 1000.0;
+    time::SetCustomClock(&FakeNow);
+  }
+  ~FakeClock() { time::SetCustomClock(nullptr); }
+  FakeClock(const FakeClock&) = delete;
+  FakeClock& operator=(const FakeClock&) = delete;
+};
+
+class Placed : public Component<Placed> {
+ public:
+  bool shown = true;
+  std::string placement = "bottom-right";
+  Placed() {
+    Bind(shown);
+    Bind(placement);
+  }
+  std::string_view view = R"html(
+    <toast open="{shown}" duration="0" placement="{placement}">Saved</toast>
+  )html";
+};
+
+struct ToastScreen {
+  explicit ToastScreen(Ref<ComponentBase> app)
+      : device(std::make_shared<MockTerminalDevice>()) {
+    device->TriggerResize(20, 4);
+    screen = std::make_unique<Screen>(std::move(app), device);
+    screen->Draw();
+  }
+  std::string At(double ms) {
+    g_now += ms;
+    screen->Step();
+    return screen->Text();
+  }
+  std::shared_ptr<MockTerminalDevice> device;
+  std::unique_ptr<Screen> screen;
+};
+
+TEST_CASE("A toast slides in from the side it sits on", "[component][toast]") {
+  FakeClock clock;
+  ToastScreen right(Ref<Placed>::New());
+  CHECK(right.screen->Text() == "\n\n\n\n");  // Out of sight at first.
+  // Partway: cut by the edge of the screen.
+  CHECK(right.At(150) ==
+        "               ▊▔▔▔▔\n"
+        "               ▊ Sav\n"
+        "               ▊▁▁▁▁\n"
+        "\n");
+  CHECK(right.At(250) ==
+        "         ▊▔▔▔▔▔▔▔▎\n"
+        "         ▊ Saved ▎\n"
+        "         ▊▁▁▁▁▁▁▁▎\n"
+        "\n");
+
+  auto app = Ref<Placed>::New();
+  app->placement = "bottom-left";
+  ToastScreen left(app);
+  CHECK(left.At(150) ==
+        "▔▔▔▔▎\n"
+        "ved ▎\n"
+        "▁▁▁▁▎\n"
+        "\n");
+}
+
+TEST_CASE("A closing toast slides out before it hides", "[component][toast]") {
+  FakeClock clock;
+  auto app = Ref<Placed>::New();
+  ToastScreen screen(app);
+  screen.At(400);
+  const Element* box = app->Root()->QuerySelector(".toast");
+  REQUIRE(box != nullptr);
+
+  PostTask([&] { app->shown = false; });
+  screen.At(0);
+  CHECK(*box->GetAttribute("part") == "toast closing");
+  CHECK(screen.At(100) ==
+        "               ▊▔▔▔▔\n"
+        "               ▊ Sav\n"
+        "               ▊▁▁▁▁\n"
+        "\n");
+  CHECK(screen.At(150) == "\n\n\n\n");
+  CHECK(box->style.display_none);
+  CHECK(*box->GetAttribute("part") == "toast");
+}
+
+class Unanimated : public Component<Unanimated> {
+ public:
+  std::string_view view = R"html(
+    <toast open="true" duration="0">hi</toast>
+    <style>
+      toast::part(toast) { animation: none; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A toast without animations closes at once", "[component][toast]") {
+  auto app = Ref<Unanimated>::New();
+  HeadlessScreen screen(app, 10, 4);
+  CHECK(screen.Text() ==
+        "  ▊▔▔▔▔▎\n"
+        "  ▊ hi ▎\n"
+        "  ▊▁▁▁▁▎\n"
+        "\n");
+  screen.Click(4, 1);
+  CHECK(screen.Text() == "\n\n\n\n");
+}
+
+class Faded : public Component<Faded> {
+ public:
+  bool shown = true;
+  Faded() { Bind(shown); }
+  std::string_view view = R"html(
+    <toast open="{shown}" duration="0">hi</toast>
+    <style>
+      @keyframes fade-out { to { opacity: 0; } }
+      toast::part(closing) { animation: fade-out 300ms forwards; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A toast's closing animation can be replaced", "[component][toast]") {
+  FakeClock clock;
+  auto app = Ref<Faded>::New();
+  ToastScreen screen(app);
+  const std::string open = screen.At(400);
+  const Element* box = app->Root()->QuerySelector(".toast");
+  REQUIRE(box != nullptr);
+
+  PostTask([&] { app->shown = false; });
+  // Fading, in place: no slide.
+  screen.At(0);
+  CHECK(screen.At(150) == open);
+  CHECK(box->style.opacity < 1.0f);
+  CHECK(screen.At(200) == "\n\n\n\n");
 }
 
 }  // namespace
