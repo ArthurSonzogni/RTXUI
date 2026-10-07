@@ -1,0 +1,24 @@
+
+
+
+
+          ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+          ▊                                                          ▎
+          ▊   Keyframe animations                                    ▎
+          ▊                                                          ▎
+          ▊   ● Live: pulses forever, alternating direction.         ▎
+          ▊                                                          ▎
+          ▊                        Loading: steps(10), repeats.      ▎
+          ▊                                                          ▎
+          ▊   Prompt> █ Cursor: step-end, blinks.                    ▎
+          ▊                                                          ▎
+          ▊   Faded in once, then held (forwards).                   ▎
+          ▊                                                          ▎
+          ▊    Pause                                                 ▎
+          ▊                                                          ▎
+          ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+
+
+
+

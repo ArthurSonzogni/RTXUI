@@ -4,6 +4,7 @@
 #include "rtxui/style/style.hpp"
 
 #include <charconv>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -30,6 +31,7 @@ class Parser {
   auto ParseDeclaration() -> Expected<Declaration, Error>;
   auto ParseValue() -> Expected<std::string_view, Error>;
   auto ParseWhiteSpaces() -> void;
+  auto ParseKeyframes(StyleSheet& stylesheet) -> Expected<bool, Error>;
 
   auto MakeError(std::string message) -> Error;
   auto MakeErrorExpected(std::string expected) -> Error;
@@ -615,8 +617,11 @@ auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
   // If we have declarations, add rulesets for the current selectors.
   if (!declarations.empty()) {
     for (const auto& sel : current_selectors) {
-      rulesets.push_back(Ruleset{sel, declarations, std::string(media_query),
-                                 ParsedSelector{}});
+      Ruleset ruleset;
+      ruleset.selector = sel;
+      ruleset.declarations = declarations;
+      ruleset.media_query = std::string(media_query);
+      rulesets.push_back(std::move(ruleset));
       rulesets.back().parsed_selector =
           ParseSelectorString(rulesets.back().selector);
     }
@@ -643,6 +648,13 @@ auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {
         Advance();
       }
       std::string_view keyword = css_.substr(start, pos_ - start);
+      if (keyword == "@keyframes") {
+        auto keyframes = ParseKeyframes(stylesheet);
+        if (!keyframes) {
+          return keyframes.error();
+        }
+        continue;
+      }
       if (keyword != "@media") {
         return MakeError("Unexpected directive: " + std::string(keyword));
       }
@@ -698,6 +710,84 @@ auto Parser::ParseStyleSheet() -> Expected<StyleSheet, Error> {
     }
   }
   return stylesheet;
+}
+
+namespace {
+
+// The position of a keyframe selector in its animation: `from` is 0, `to` is
+// 1, and a percentage is itself divided by 100. Anything else, including a
+// percentage outside 0%..100%, is not a keyframe selector.
+std::optional<float> ParseKeyframeOffset(std::string_view selector) {
+  if (selector == "from") {
+    return 0.0f;
+  }
+  if (selector == "to") {
+    return 1.0f;
+  }
+  if (!selector.ends_with('%')) {
+    return std::nullopt;
+  }
+  selector.remove_suffix(1);
+  float percent = 0.0f;
+  const auto [ptr, ec] = std::from_chars(
+      selector.data(), selector.data() + selector.size(), percent);
+  if (ec != std::errc() || ptr != selector.data() + selector.size() ||
+      percent < 0.0f || percent > 100.0f) {
+    return std::nullopt;
+  }
+  return percent / 100.0f;
+}
+
+}  // namespace
+
+// `@keyframes name { from { ... } 50% { ... } to { ... } }`, the `@keyframes`
+// keyword already consumed. Each keyframe block becomes a Ruleset carrying the
+// animation name and its offset; a block listing several offsets (`0%, 100%`)
+// becomes one per offset, as a selector list does for an ordinary rule.
+auto Parser::ParseKeyframes(StyleSheet& stylesheet) -> Expected<bool, Error> {
+  ParseWhiteSpaces();
+  const size_t name_start = pos_;
+  while (Get() != '\0' && Get() != '{' && !IsWhiteSpace(Get())) {
+    Advance();
+  }
+  const std::string name(css_.substr(name_start, pos_ - name_start));
+  if (name.empty()) {
+    return MakeErrorExpected("keyframes name");
+  }
+  ParseWhiteSpaces();
+  if (Get() != '{') {
+    return MakeErrorExpected("'{'");
+  }
+  Advance();  // Skip '{'
+
+  while (true) {
+    ParseWhiteSpaces();
+    if (Get() == '}' || Get() == '\0') {
+      break;
+    }
+    auto blocks = ParseRuleset();
+    if (!blocks) {
+      return blocks.error();
+    }
+    for (auto& block : blocks.value()) {
+      const std::optional<float> offset = ParseKeyframeOffset(block.selector);
+      if (!offset) {
+        return MakeError("Invalid keyframe selector '" + block.selector +
+                         "' in @keyframes " + name +
+                         ": expected from, to or a percentage");
+      }
+      block.keyframes_name = name;
+      block.keyframe_offset = *offset;
+      block.parsed_selector = ParsedSelector{};
+      stylesheet.push_back(std::move(block));
+    }
+  }
+
+  if (Get() != '}') {
+    return MakeErrorExpected("'}'");
+  }
+  Advance();  // Skip '}'
+  return true;
 }
 
 auto Parser::MakeError(std::string message) -> Error {
@@ -835,6 +925,16 @@ auto EvaluateMediaQuery(std::string_view query) -> bool {
 auto Print(const StyleSheet& stylesheet) -> std::string {
   std::string result;
   for (const auto& ruleset : stylesheet) {
+    if (!ruleset.keyframes_name.empty()) {
+      result += "@keyframes " + ruleset.keyframes_name + " {\n  " +
+                ruleset.selector + " {\n";
+      for (const auto& decl : ruleset.declarations) {
+        result += "    " + std::string(decl.property) + ": " +
+                  std::string(decl.value) + ";\n";
+      }
+      result += "  }\n}\n";
+      continue;
+    }
     if (!ruleset.media_query.empty()) {
       result += "@media " + ruleset.media_query + " {\n  ";
     }

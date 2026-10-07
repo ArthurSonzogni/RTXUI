@@ -30,6 +30,31 @@ struct ActiveTransition {
   Length target_length;
 };
 
+// One block of a running animation's @keyframes, applied to the element's
+// style: which animatable properties it sets, and to what.
+struct AnimationFrame {
+  float offset = 0.0f;
+  // Bit i set when the block declares animatable property i (see
+  // element.cpp's kAnimatable).
+  uint32_t properties = 0;
+  // The block's own animation-timing-function, easing the way to the next
+  // block. Empty for the animation's.
+  std::string timing_function;
+  ComputedStyleCore values;
+};
+
+// An animation an element is playing, or has played: kept once finished, so
+// that it does not start over until the element stops declaring it.
+struct RunningAnimation {
+  AnimationConfig config;
+  // When it started, its delay not included.
+  double start_time_ms = 0.0;
+  // When it was paused, or negative while it plays.
+  double paused_at_ms = -1.0;
+  bool finished = false;
+  std::vector<AnimationFrame> frames;
+};
+
 class ComponentBase;
 
 // OPTIMIZATION: Empty std::map containers (like active_transitions) incur
@@ -225,6 +250,9 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// one. Lets a keyed match move a whole multi-element loop body.
   uint16_t for_run = 0;
   ActiveTransitionsMap active_transitions;
+  /// The animations `target_style` declares, as UpdateAnimations() last saw
+  /// them. Empty for the many elements declaring none.
+  std::vector<RunningAnimation> running_animations;
   const ComponentBase* styled_by_1 = nullptr;
   const ComponentBase* styled_by_2 = nullptr;
   /// Set when a resolution pass recomputed `base_style`, cleared once
@@ -432,6 +460,20 @@ class RTXUI_EXPORT Element : public RefCounted {
 
   void TriggerTransitions(double current_time_ms);
   bool TickTransitions(double current_time_ms);
+
+  /// Starts the animations `target_style` declares that are not running yet,
+  /// drops the ones it no longer declares, then applies them to `style` as
+  /// of `current_time_ms`. Called whenever `style` is reset to `target_style`.
+  void UpdateAnimations(double current_time_ms);
+  /// Whether an animation still needs frames: one not finished nor paused.
+  /// `include_infinite` false leaves out those that never finish.
+  bool HasPlayingAnimations(bool include_infinite = true) const;
+  /// Whether anything about the element is moving: a transition, a smooth
+  /// scroll, or a playing animation.
+  bool IsAnimating(bool include_infinite = true) const {
+    return !active_transitions.empty() || IsAnimatingScroll() ||
+           HasPlayingAnimations(include_infinite);
+  }
 
   int absolute_x() const { return absolute_x_; }
   int absolute_y() const { return absolute_y_; }

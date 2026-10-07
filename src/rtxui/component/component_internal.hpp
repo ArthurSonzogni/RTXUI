@@ -19,6 +19,11 @@ struct ComponentInternals {
   static const CategorizedRules* categorized_rules(const ComponentBase& c) {
     return c.categorized_rules();
   }
+  // The same, sharing ownership of the stylesheet the rules point into.
+  static const std::shared_ptr<const CategorizedRules>& shared_rules(
+      const ComponentBase& c) {
+    return c.categorized_rules_;
+  }
   static const std::map<std::string, Ref<Element>, std::less<>>& slots(
       const ComponentBase& c) {
     return c.slots();

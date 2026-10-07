@@ -7,9 +7,11 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "rtxui/base/string.hpp"
 #include "rtxui/color.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/style/apply_style.hpp"
 
@@ -1754,4 +1756,121 @@ TEST_CASE("lighten() and darken() mix toward a color", "[style][color]") {
           Color::RGB(255, 255, 255));
     CHECK(resolved("rgb(60, 70, 80)", "darken(100%)") == Color::RGB(0, 0, 0));
   }
+}
+
+TEST_CASE("@keyframes parses into one block per offset", "[css][animation]") {
+  auto stylesheet = css::Parse(R"(
+    @keyframes pulse {
+      from { opacity: 0; }
+      50%, 75% { opacity: 0.5; color: red; }
+      to { opacity: 1; }
+    }
+    div { animation: pulse 1s; }
+  )");
+  REQUIRE(stylesheet);
+  const auto& rules = stylesheet.value();
+  REQUIRE(rules.size() == 5);
+  CHECK(rules[0].keyframes_name == "pulse");
+  CHECK(rules[0].keyframe_offset == 0.0f);
+  CHECK(rules[1].keyframe_offset == 0.5f);
+  CHECK(rules[1].declarations.size() == 2);
+  CHECK(rules[2].keyframe_offset == 0.75f);
+  CHECK(rules[3].keyframe_offset == 1.0f);
+  // A keyframe block selects no element.
+  CHECK(rules[0].parsed_selector.base.empty());
+  CHECK(rules[4].keyframes_name.empty());
+  CHECK(rules[4].selector == "div");
+}
+
+TEST_CASE("@keyframes rejects a selector that is not an offset",
+          "[css][animation]") {
+  CHECK_FALSE(css::Parse("@keyframes a { middle { opacity: 0; } }"));
+  CHECK_FALSE(css::Parse("@keyframes a { 150% { opacity: 0; } }"));
+  CHECK_FALSE(css::Parse("@keyframes { from { opacity: 0; } }"));
+  CHECK(css::Parse("@keyframes a { 12.5% { opacity: 0; } }"));
+}
+
+TEST_CASE("animation shorthand reads its parts in any order",
+          "[css][animation]") {
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"animation",
+                            "infinite 2s spin ease-in 500ms alternate "
+                            "both paused"});
+  REQUIRE(style.animations);
+  REQUIRE(style.animations->size() == 1);
+  const auto& spin = style.animations->front();
+  CHECK(spin.name == "spin");
+  CHECK(spin.duration_seconds == 2.0f);
+  CHECK(spin.delay_seconds == 0.5f);
+  CHECK(spin.timing_function == "ease-in");
+  CHECK(std::isinf(spin.iteration_count));
+  CHECK(spin.direction == rtxui::AnimationDirection::Alternate);
+  CHECK(spin.fill_mode == rtxui::AnimationFillMode::Both);
+  CHECK(spin.paused);
+
+  rtxui::ApplyStyle(style, {"animation", "a 1s, b 2s steps(4, end) 3"});
+  REQUIRE(style.animations->size() == 2);
+  CHECK((*style.animations)[0].name == "a");
+  CHECK((*style.animations)[1].name == "b");
+  CHECK((*style.animations)[1].timing_function == "steps(4, end)");
+  CHECK((*style.animations)[1].iteration_count == 3.0f);
+
+  rtxui::ApplyStyle(style, {"animation", "none"});
+  REQUIRE(style.animations->size() == 1);
+  CHECK(style.animations->front().name == "none");
+}
+
+TEST_CASE("animation longhands repeat over the names", "[css][animation]") {
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"animation-duration", "2s"});
+  rtxui::ApplyStyle(style, {"animation-name", "a, b, c"});
+  rtxui::ApplyStyle(style, {"animation-delay", "1s, 250ms"});
+  rtxui::ApplyStyle(style, {"animation-iteration-count", "infinite"});
+  rtxui::ApplyStyle(style, {"animation-direction", "reverse"});
+  rtxui::ApplyStyle(style, {"animation-fill-mode", "forwards"});
+  rtxui::ApplyStyle(style, {"animation-play-state", "paused, running"});
+  rtxui::ApplyStyle(style, {"animation-timing-function", "linear"});
+  REQUIRE(style.animations);
+  REQUIRE(style.animations->size() == 3);
+  const auto& list = *style.animations;
+  CHECK(list[0].name == "a");
+  CHECK(list[2].name == "c");
+  // Declared before the names, the duration still covers every animation.
+  CHECK(list[2].duration_seconds == 2.0f);
+  CHECK(list[0].delay_seconds == 1.0f);
+  CHECK(list[1].delay_seconds == 0.25f);
+  CHECK(list[2].delay_seconds == 1.0f);
+  CHECK(std::isinf(list[1].iteration_count));
+  CHECK(list[1].direction == rtxui::AnimationDirection::Reverse);
+  CHECK(list[1].fill_mode == rtxui::AnimationFillMode::Forwards);
+  CHECK(list[0].paused);
+  CHECK_FALSE(list[1].paused);
+  CHECK(list[2].paused);
+  CHECK(list[2].timing_function == "linear");
+}
+
+TEST_CASE("An invalid animation value is reported, not ignored",
+          "[css][animation]") {
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& diagnostic) {
+    messages.push_back(diagnostic.message);
+  });
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"animation", "a 1s 2s 3s"});
+  rtxui::ApplyStyle(style, {"animation-duration", "-1s"});
+  rtxui::ApplyStyle(style, {"animation-direction", "sideways"});
+  rtxui::SetDiagnosticHandler(nullptr);
+  REQUIRE(messages.size() == 3);
+  CHECK(messages[0].find("invalid animation 'a 1s 2s 3s'") !=
+        std::string::npos);
+  CHECK(messages[1].find("animation-duration: -1s") != std::string::npos);
+  CHECK(messages[2].find("animation-direction: sideways") != std::string::npos);
+  CHECK_FALSE(style.animations);
+}
+
+TEST_CASE("Print writes @keyframes back out", "[css][animation]") {
+  auto stylesheet = css::Parse("@keyframes a { to { opacity: 1; } }");
+  REQUIRE(stylesheet);
+  CHECK(css::Print(stylesheet.value()) ==
+        "@keyframes a {\n  to {\n    opacity: 1;\n  }\n}\n");
 }

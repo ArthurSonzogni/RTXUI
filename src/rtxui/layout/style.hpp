@@ -12,6 +12,10 @@
 
 #include "rtxui/color.hpp"
 
+namespace css {
+struct KeyframesRule;
+}  // namespace css
+
 namespace rtxui {
 enum class DisplayOutside {
   Block,
@@ -341,6 +345,38 @@ struct TransitionConfig {
   bool operator==(const TransitionConfig&) const = default;
 };
 
+enum class AnimationDirection {
+  Normal,
+  Reverse,
+  Alternate,
+  AlternateReverse,
+};
+
+enum class AnimationFillMode {
+  None,
+  Forwards,
+  Backwards,
+  Both,
+};
+
+// One entry of the `animation` property: which @keyframes to run, and how.
+struct AnimationConfig {
+  std::string name;
+  float duration_seconds = 0.0f;
+  float delay_seconds = 0.0f;
+  std::string timing_function = "ease";
+  // How many times the keyframes play. Infinity for `infinite`.
+  float iteration_count = 1.0f;
+  AnimationDirection direction = AnimationDirection::Normal;
+  AnimationFillMode fill_mode = AnimationFillMode::None;
+  bool paused = false;
+  // The @keyframes rule `name` refers to, found once the element is styled:
+  // it lives in the stylesheet of the component that declared the animation,
+  // or of one of the components around it. Null when there is none.
+  std::shared_ptr<const css::KeyframesRule> keyframes;
+  bool operator==(const AnimationConfig&) const = default;
+};
+
 // The trivially-copyable part of ComputedStyle, kept in its own base so that
 // copying it compiles down to a single memcpy instead of ~100 individual field
 // assignments. Style copies are one of the hottest operations in a frame: every
@@ -470,6 +506,10 @@ struct ComputedStyle : ComputedStyleCore {
   // so this eliminates ~40% of CPU time spent in Element::~Element().
   std::unique_ptr<std::vector<TransitionConfig>> transitions;
 
+  // From `animation` and its longhands. Null, like `transitions`, for the
+  // many elements that declare none.
+  std::unique_ptr<std::vector<AnimationConfig>> animations;
+
   // Grid tracks only exist on grid containers, a small minority of elements.
   // They live here rather than in ComputedStyleCore so that the core stays
   // trivially copyable; copying an empty vector costs far less than the field
@@ -487,6 +527,10 @@ struct ComputedStyle : ComputedStyleCore {
       transitions =
           std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
     }
+    if (other.animations) {
+      animations =
+          std::make_unique<std::vector<AnimationConfig>>(*other.animations);
+    }
   }
 
   ComputedStyle& operator=(const ComputedStyle& other) {
@@ -502,6 +546,16 @@ struct ComputedStyle : ComputedStyleCore {
       }
     } else {
       transitions.reset();
+    }
+    if (other.animations) {
+      if (animations) {
+        *animations = *other.animations;
+      } else {
+        animations =
+            std::make_unique<std::vector<AnimationConfig>>(*other.animations);
+      }
+    } else {
+      animations.reset();
     }
     grid_template_columns = other.grid_template_columns;
     grid_template_rows = other.grid_template_rows;

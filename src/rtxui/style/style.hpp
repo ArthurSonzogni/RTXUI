@@ -104,6 +104,20 @@ struct Ruleset {
   std::string media_query;
   /// Pre-parsed selector representation.
   ParsedSelector parsed_selector;
+  /// Set on the blocks of an `@keyframes name { ... }` rule: the name, and
+  /// where this block sits in the animation, from 0 (`from`) to 1 (`to`). A
+  /// keyframe block selects no element, so `selector` is only kept for
+  /// printing. Empty for an ordinary ruleset.
+  std::string keyframes_name;
+  float keyframe_offset = 0.0f;
+};
+
+/// The keyframe blocks of one `@keyframes` rule, sorted by offset. They point
+/// into the stylesheet the rule was parsed from, which whoever hands out a
+/// KeyframesRule keeps alive alongside it.
+struct KeyframesRule {
+  std::string name;
+  std::vector<const Ruleset*> frames;
 };
 
 /// A stylesheet is a collection of rulesets.
