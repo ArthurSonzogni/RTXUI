@@ -487,7 +487,9 @@ closes itself after `duration` milliseconds, or when clicked.
 | `placement` | `string` | `"bottom-right"` | One-way | Corner: `bottom-right`, `bottom-left`, `top-right` or `top-left`. Anything else is reported as a diagnostic. |
 
 #### Parts
-`toast` (the box), e.g. `.error::part(toast) { border-color: red; }`.
+`toast` (the box). It has a `tall` border by default; restyle it like any
+element, e.g. `.error::part(toast) { border-color: red; }` or
+`toast::part(toast) { border: round; }`.
 
 Several toasts open at once in the same corner overlap. To stack them, give
 each a different `placement`, or render them from a `<for>` inside a fixed

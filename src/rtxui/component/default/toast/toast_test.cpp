@@ -73,9 +73,9 @@ TEST_CASE("A toast shows in a corner, over the rest", "[component][toast]") {
   HeadlessScreen screen(app, 20, 5);
   CHECK(screen.Text() ==
         "editor\n"
-        "         ╭───────╮\n"
-        "         │ Saved │\n"
-        "         ╰───────╯\n"
+        "         ▊▔▔▔▔▔▔▔▎\n"
+        "         ▊ Saved ▎\n"
+        "         ▊▁▁▁▁▁▁▁▎\n"
         "\n");
   // Clicking it closes it.
   screen.Click(12, 2);
@@ -123,12 +123,30 @@ class Stacked : public Component<Stacked> {
 TEST_CASE("Toasts stack in a container of their own", "[component][toast]") {
   CHECK(RenderToString(Ref<Stacked>::New(), 12, 7) ==
         "\n"
-        "     ╭─────╮\n"
-        "     │ one │\n"
-        "     ╰─────╯\n"
-        "     ╭─────╮\n"
-        "     │ two │\n"
-        "     ╰─────╯\n");
+        "     ▊▔▔▔▔▔▎\n"
+        "     ▊ one ▎\n"
+        "     ▊▁▁▁▁▁▎\n"
+        "     ▊▔▔▔▔▔▎\n"
+        "     ▊ two ▎\n"
+        "     ▊▁▁▁▁▁▎\n");
+}
+
+class Restyled : public Component<Restyled> {
+ public:
+  std::string_view view = R"html(
+    <toast open="true" duration="0">hi</toast>
+    <style>
+      toast::part(toast) { position: static; border: round; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A toast's border can be restyled through its part",
+          "[component][toast]") {
+  CHECK(RenderToString(Ref<Restyled>::New(), 8, 3) ==
+        "╭──────╮\n"
+        "│ hi   │\n"
+        "╰──────╯\n");
 }
 
 }  // namespace
