@@ -75,6 +75,14 @@ exist in a terminal, so `font-size` and `font-family` do nothing; use
 `font-weight`, `font-style`, `text-decoration` and colors for emphasis. The
 [CSS reference](/css_reference) lists every supported property.
 
+**A child cannot see an outer component's classes.** Styles are scoped to the
+component that declares them, selectors included: `.dark .title` written in a
+child component never matches a `.dark` the parent set on an ancestor. Pass
+the context in instead, as a custom property (`--accent: ...` inherits through
+every component) or as a prop the child turns into one of its own classes.
+`@keyframes` are scoped the same way: declare them in the component whose
+rules use them.
+
 ## C++ and Build
 
 **Include only `<rtxui/rtxui.hpp>`.** Headers under `src/` are internal and

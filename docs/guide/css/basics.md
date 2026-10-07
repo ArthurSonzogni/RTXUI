@@ -50,7 +50,7 @@ The CSS parser supports a wide range of standard selectors and combinators:
     *   `:empty`: Matches an element with no content between its tags.
     *   `:first-of-type` / `:last-of-type` / `:only-of-type` / `:nth-of-type(...)` / `:nth-last-of-type(...)`: The same as the `-child` family, but counting only siblings with the same tag.
     *   `:not(<selector-list>)`: Matches an element that none of the listed selectors do, e.g. `:not(.a, .b)`. Each entry is one compound selector — a tag, `.class`, `#id`, `[attribute]`, a pseudo-class, or a combination such as `:not(div.card)` or `:not(.item:first-child)`. Every part of an entry must match for that entry to exclude an element, so `:not(.x:first-child)` still matches a `.x` that is not first. Combinators inside the negation (`:not(div span)`) are not supported and match nothing, as do an empty `:not()` and a list with a stray or trailing comma. `:not()` may nest, up to 32 levels; deeper than that matches nothing.
-    *   `:has(<relative-selector-list>)`: Matches an element that has another element in a given relation to it, e.g. `.card:has(.error)` for a card holding an error anywhere inside it. Each entry starts with an optional combinator, saying where to look: none for any descendant, `>` for a child (`.list:has(> li)`), `+` for the next sibling (`h1:has(+ p)`), `~` for any later sibling. It may then chain compounds with combinators of its own, as in `.form:has(> .row input:focus)`, and they may carry pseudo-classes, so `.form:has(input:focus)` follows focus inside the form. `:has()` nests inside `:not()` (`.card:not(:has(.error))`). An empty or malformed entry matches nothing. Wherever the matching element is, including inside a nested component that re-renders on its own, the rule follows it as it changes.
+    *   `:has(<relative-selector-list>)`: Matches an element that has another element in a given relation to it, e.g. `.card:has(.error)` for a card holding an error anywhere inside it. Each entry starts with an optional combinator, saying where to look: none for any descendant, `>` for a child (`.list:has(> li)`), `+` for the next sibling (`h1:has(+ p)`), `~` for any later sibling. It may then chain compounds with combinators of its own, as in `.form:has(> .row input:focus)`, and they may carry pseudo-classes, so `.form:has(input:focus)` follows focus inside the form. `:has()` nests inside `:not()` (`.card:not(:has(.error))`). An empty or malformed entry matches nothing. Like combinators, `:has()` only looks at the component's own elements, including those it projects into another component's slot, and never at another component's internals.
 
     `<style>` blocks and text do not count as siblings, so they never displace a
     `:first-child` nor stop an element being an `:only-child`. An `An+B` offset must
@@ -72,6 +72,17 @@ The CSS parser supports a wide range of standard selectors and combinators:
     *   **Child combinator (`>`)**: Matches direct children (e.g., `div > span` targets `span` elements immediately nested under `div`).
     *   **Adjacent Sibling combinator (`+`)**: Matches immediate following sibling (e.g., `div + p` targets a `p` that is placed right after a `div`).
     *   **General Sibling combinator (`~`)**: Matches any following sibling (e.g., `div ~ p` targets any `p` that shares the same parent and follows a `div`).
+
+    Combinators see the component's own template, just as a rule's target is
+    always one of its own elements. `.card .title` matches when this component
+    wrote both the `.card` and the `.title`, even with other components in
+    between: a `<Panel>` holding the `.title` in its slot is transparent. But it
+    never matches across a component boundary. A rule in a child component
+    cannot test a class an outer component put on an ancestor, and no rule can
+    see a nested component's internals. To style a child from its context,
+    pass the context in: as a [custom property](#custom-properties), which
+    inherits through every component, or as a prop the child turns into a
+    class of its own.
 
 ### The Special `self` Selector
 To target the component's root outer boundary tag itself (rather than one of its child elements), use the `self` selector keyword:

@@ -2322,9 +2322,11 @@ void ScreenImpl::UpdateLayout() {
   // point where nothing can bypass it. Elements whose resolved styles are
   // still valid are skipped, so an unchanged tree costs a single walk.
   component_->ResolveStyles();
-  // A component that re-rendered resolved only its own subtree, but a :has()
-  // rule above it may match differently now. The pseudo-class pass is where
-  // those rules are matched, so it runs again over the whole tree.
+  // A :has() rule depends on elements other than the one it styles. Those are
+  // its own component's, which change when that component renders -- but not
+  // only then: <tabs> and <select> re-tag the panes and options their user
+  // wrote from their own Digest(). The pseudo-class pass is where :has()
+  // rules are matched, so whenever styles changed it runs over the whole tree.
   if (TakeBaseStylesResolved() &&
       ComponentInternals::UsesRelationalSelectors(*component_)) {
     component_->ResolveTargetStyles();
