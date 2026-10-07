@@ -2002,20 +2002,24 @@ void ResolveElementStyle(Element* element,
           check_pseudos ? element->target_style : element->base_style;
       // Declaring any animation property replaces the list, which is how the
       // animations this component's rules declare are told from the others.
-      const auto* animations_before = style_out.animations.get();
+      // Compared around each declaration, not across them all: a list freed
+      // by a later declaration can be reallocated at the first one's address.
+      bool declared_animations = false;
       auto apply_with_vars = [&](const css::Declaration& declaration) {
         if (declaration.property.starts_with("--")) {
           return;
         }
+        const auto* animations_before = style_out.animations.get();
         if (declaration.value.find("var(") != std::string_view::npos) {
           auto expanded = css::SubstituteVars(declaration.value, active_props);
           if (!expanded) {
             return;  // Undefined variable without fallback: ignore.
           }
           ApplyStyle(style_out, {declaration.property, *expanded});
-          return;
+        } else {
+          ApplyStyle(style_out, declaration);
         }
-        ApplyStyle(style_out, declaration);
+        declared_animations |= style_out.animations.get() != animations_before;
       };
       // Normal declarations first, then !important ones, so important wins
       // regardless of rule order (rules before inline within each round).
@@ -2067,8 +2071,7 @@ void ResolveElementStyle(Element* element,
       for_each_round(false, apply_unless_reset);
       for_each_round(true, apply_unless_reset);
 
-      if (style_out.animations &&
-          style_out.animations.get() != animations_before) {
+      if (style_out.animations && declared_animations) {
         ResolveKeyframes(*style_out.animations, component);
       }
 

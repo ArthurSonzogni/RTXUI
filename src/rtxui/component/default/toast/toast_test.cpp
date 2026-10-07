@@ -299,5 +299,39 @@ TEST_CASE("A toast's closing animation can be replaced", "[component][toast]") {
   CHECK(screen.At(200) == "\n\n\n\n");
 }
 
+class Restyled2 : public Component<Restyled2> {
+ public:
+  bool shown = true;
+  Restyled2() { Bind(shown); }
+  std::string_view view = R"html(
+    <toast class="error" open="{shown}" duration="0">hi</toast>
+    <style>
+      @keyframes slide-in { from { right: -50; } }
+      @keyframes fade-out { to { opacity: 0; } }
+      .error::part(toast) { animation: slide-in 300ms; }
+      .error::part(closing) { animation: fade-out 300ms forwards; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A toast's opening and closing animations can both be replaced",
+          "[component][toast]") {
+  FakeClock clock;
+  std::vector<std::string> messages;
+  SetDiagnosticHandler(
+      [&](const Diagnostic& d) { messages.push_back(d.message); });
+  auto app = Ref<Restyled2>::New();
+  ToastScreen screen(app);
+  screen.At(400);
+  PostTask([&] { app->shown = false; });
+  screen.At(0);
+  screen.At(150);
+  SetDiagnosticHandler(nullptr);
+  CHECK(messages.empty());
+  const Element* box = app->Root()->QuerySelector(".toast");
+  REQUIRE(box != nullptr);
+  CHECK(box->style.opacity < 1.0f);
+}
+
 }  // namespace
 }  // namespace rtxui
