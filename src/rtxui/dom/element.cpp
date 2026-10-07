@@ -3,12 +3,16 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
 
 #include "rtxui/component.hpp"
+#include "rtxui/diagnostic.hpp"
+#include "rtxui/style/apply_style.hpp"
+#include "rtxui/style/style.hpp"
 std::atomic<int> g_elements_created{0};
 std::atomic<int> g_elements_destroyed{0};
 
@@ -184,6 +188,52 @@ float ApplyEasing(float t, std::string_view timing) {
   }
   if (timing == "ease-in-out") {
     return SolveCubicBezier(0.42f, 0.0f, 0.58f, 1.0f, t);
+  }
+
+  // Steps hold a value, then jump to the next: `steps(4)` jumps at the end of
+  // each quarter, `steps(4, start)` at its start.
+  if (timing == "step-start") {
+    return 1.0f;
+  }
+  if (timing == "step-end") {
+    return 0.0f;
+  }
+  if (timing.starts_with("steps(") && timing.ends_with(")")) {
+    std::string_view params = timing.substr(6, timing.size() - 7);
+    const size_t comma = params.find(',');
+    std::string_view count_text = params.substr(0, comma);
+    std::string_view position;
+    if (comma != std::string_view::npos) {
+      position = params.substr(comma + 1);
+    }
+    auto trim = [](std::string_view text) {
+      while (!text.empty() && text.front() == ' ') {
+        text.remove_prefix(1);
+      }
+      while (!text.empty() && text.back() == ' ') {
+        text.remove_suffix(1);
+      }
+      return text;
+    };
+    count_text = trim(count_text);
+    position = trim(position);
+    int count = 0;
+    const auto [ptr, ec] = std::from_chars(
+        count_text.data(), count_text.data() + count_text.size(), count);
+    if (ec == std::errc() && ptr == count_text.data() + count_text.size() &&
+        count > 0) {
+      const auto steps = static_cast<float>(count);
+      if (position == "start" || position == "jump-start") {
+        return std::min(1.0f, std::floor(t * steps + 1.0f) / steps);
+      }
+      if (position == "jump-none" && count > 1) {
+        return std::floor(t * steps) / (steps - 1.0f);
+      }
+      if (position == "jump-both") {
+        return std::floor(t * steps + 1.0f) / (steps + 1.0f);
+      }
+      return std::floor(t * steps) / steps;
+    }
   }
 
   if (timing.starts_with("cubic-bezier(") && timing.ends_with(")")) {
@@ -636,6 +686,7 @@ Element* Element::QuerySelector(std::string_view selector) {
 void Element::TriggerTransitions(double current_time_ms) {
   if (!target_style.transitions && active_transitions.empty()) {
     style = target_style;
+    UpdateAnimations(current_time_ms);
     return;
   }
   auto old_style = style;
@@ -810,12 +861,415 @@ void Element::TriggerTransitions(double current_time_ms) {
   } else {
     style.has_scrollbar_color_track = false;
   }
+
+  UpdateAnimations(current_time_ms);
+}
+
+namespace {
+
+// The properties @keyframes can animate: those transitions can interpolate.
+// The order gives each its bit in AnimationFrame::properties.
+enum Animatable : uint8_t {
+  kBackgroundColor,
+  kColor,
+  kBorderTopColor,
+  kBorderRightColor,
+  kBorderBottomColor,
+  kBorderLeftColor,
+  kOpacity,
+  kFlexGrow,
+  kFlexShrink,
+  kWidth,
+  kHeight,
+  kAnimatableCount,
+};
+
+constexpr uint32_t Bit(Animatable property) {
+  return 1u << property;
+}
+
+// The animatable properties a declaration sets, or 0 when it sets none.
+uint32_t AnimatedBy(std::string_view property) {
+  constexpr uint32_t kAllBorders =
+      Bit(kBorderTopColor) | Bit(kBorderRightColor) | Bit(kBorderBottomColor) |
+      Bit(kBorderLeftColor);
+  if (property == "background-color") {
+    return Bit(kBackgroundColor);
+  }
+  if (property == "color" || property == "foreground-color") {
+    return Bit(kColor);
+  }
+  if (property == "border-color") {
+    return kAllBorders;
+  }
+  if (property == "border-color-top") {
+    return Bit(kBorderTopColor);
+  }
+  if (property == "border-color-right") {
+    return Bit(kBorderRightColor);
+  }
+  if (property == "border-color-bottom") {
+    return Bit(kBorderBottomColor);
+  }
+  if (property == "border-color-left") {
+    return Bit(kBorderLeftColor);
+  }
+  if (property == "opacity") {
+    return Bit(kOpacity);
+  }
+  if (property == "flex-grow") {
+    return Bit(kFlexGrow);
+  }
+  if (property == "flex-shrink") {
+    return Bit(kFlexShrink);
+  }
+  if (property == "width") {
+    return Bit(kWidth);
+  }
+  if (property == "height") {
+    return Bit(kHeight);
+  }
+  return 0;
+}
+
+// Sets `property` on `out` to its value `progress` of the way from `from` to
+// `to`.
+void InterpolateAnimatable(Animatable property,
+                           const ComputedStyleCore& from,
+                           const ComputedStyleCore& to,
+                           float progress,
+                           ComputedStyleCore& out) {
+  switch (property) {
+    case kBackgroundColor:
+      out.background_color = InterpolateOptionalColor(
+          from.background_color, to.background_color, progress);
+      return;
+    case kColor:
+      out.foreground_color = InterpolateOptionalColor(
+          from.foreground_color, to.foreground_color, progress);
+      return;
+    case kBorderTopColor:
+      out.border_color_top = InterpolateOptionalColor(
+          from.border_color_top, to.border_color_top, progress);
+      return;
+    case kBorderRightColor:
+      out.border_color_right = InterpolateOptionalColor(
+          from.border_color_right, to.border_color_right, progress);
+      return;
+    case kBorderBottomColor:
+      out.border_color_bottom = InterpolateOptionalColor(
+          from.border_color_bottom, to.border_color_bottom, progress);
+      return;
+    case kBorderLeftColor:
+      out.border_color_left = InterpolateOptionalColor(
+          from.border_color_left, to.border_color_left, progress);
+      return;
+    case kOpacity:
+      out.opacity = from.opacity + (to.opacity - from.opacity) * progress;
+      return;
+    case kFlexGrow:
+      out.flex_grow =
+          from.flex_grow + (to.flex_grow - from.flex_grow) * progress;
+      return;
+    case kFlexShrink:
+      out.flex_shrink =
+          from.flex_shrink + (to.flex_shrink - from.flex_shrink) * progress;
+      return;
+    case kWidth:
+      out.width = InterpolateLength(from.width, to.width, progress);
+      return;
+    case kHeight:
+      out.height = InterpolateLength(from.height, to.height, progress);
+      return;
+    case kAnimatableCount:
+      return;
+  }
+}
+
+// Applies the declarations of each keyframe block onto `underlying`, noting
+// which animatable properties each one sets. A declaration that cannot be
+// animated is reported rather than dropped silently.
+std::vector<AnimationFrame> BuildFrames(const css::KeyframesRule& keyframes,
+                                        const ComputedStyle& underlying,
+                                        const css::CustomProperties& vars) {
+  std::vector<AnimationFrame> frames;
+  frames.reserve(keyframes.frames.size());
+  for (const css::Ruleset* block : keyframes.frames) {
+    ComputedStyle values = underlying;
+    AnimationFrame frame;
+    frame.offset = block->keyframe_offset;
+    for (const css::Declaration& declaration : block->declarations) {
+      if (declaration.property == "animation-timing-function") {
+        frame.timing_function = std::string(declaration.value);
+        continue;
+      }
+      const uint32_t animated = AnimatedBy(declaration.property);
+      if (!animated) {
+        ReportDiagnostic("'" + std::string(declaration.property) +
+                         "' in @keyframes " + keyframes.name +
+                         " cannot be animated; @keyframes animates colors, "
+                         "border colors, opacity, flex-grow, flex-shrink, "
+                         "width and height");
+        continue;
+      }
+      if (declaration.value.find("var(") != std::string_view::npos) {
+        auto expanded = css::SubstituteVars(declaration.value, vars);
+        if (!expanded) {
+          continue;
+        }
+        ApplyStyle(values, {declaration.property, *expanded});
+      } else {
+        ApplyStyle(values, declaration);
+      }
+      frame.properties |= animated;
+    }
+    frame.values = values;
+    frames.push_back(std::move(frame));
+  }
+  return frames;
+}
+
+// Where in its keyframes `animation` is at `current_time_ms`, from 0 to 1,
+// direction applied. Nothing while it has no effect: before its delay
+// without a backwards fill, or once done without a forwards one. Marks the
+// animation finished once it is done.
+std::optional<float> AnimationProgress(RunningAnimation& animation,
+                                       double current_time_ms) {
+  const AnimationConfig& config = animation.config;
+  const double now =
+      animation.paused_at_ms >= 0.0 ? animation.paused_at_ms : current_time_ms;
+  const double elapsed =
+      now - animation.start_time_ms - config.delay_seconds * 1000.0;
+  const double duration = config.duration_seconds * 1000.0;
+  const double iterations = config.iteration_count;
+
+  // The progress `fraction` of the way through iteration `iteration`.
+  auto directed = [&](double fraction, double iteration) {
+    bool reversed = false;
+    const bool odd = std::fmod(iteration, 2.0) >= 1.0;
+    switch (config.direction) {
+      case AnimationDirection::Normal:
+        break;
+      case AnimationDirection::Reverse:
+        reversed = true;
+        break;
+      case AnimationDirection::Alternate:
+        reversed = odd;
+        break;
+      case AnimationDirection::AlternateReverse:
+        reversed = !odd;
+        break;
+    }
+    const float progress = static_cast<float>(std::clamp(fraction, 0.0, 1.0));
+    return reversed ? 1.0f - progress : progress;
+  };
+
+  const bool fills_backwards =
+      config.fill_mode == AnimationFillMode::Backwards ||
+      config.fill_mode == AnimationFillMode::Both;
+  const bool fills_forwards = config.fill_mode == AnimationFillMode::Forwards ||
+                              config.fill_mode == AnimationFillMode::Both;
+
+  if (elapsed < 0.0) {
+    if (fills_backwards) {
+      return directed(0.0, 0.0);
+    }
+    return std::nullopt;
+  }
+
+  // A zero duration plays every iteration in no time at all.
+  const double active = duration > 0.0 ? iterations * duration : 0.0;
+  if (elapsed >= active) {
+    animation.finished = true;
+    if (!fills_forwards) {
+      return std::nullopt;
+    }
+    if (iterations <= 0.0) {
+      return directed(0.0, 0.0);
+    }
+    // Where the last iteration ended: all the way through it, or part way
+    // for a fractional count such as 1.5.
+    const double whole = std::floor(iterations);
+    if (iterations == whole) {
+      return directed(1.0, whole - 1.0);
+    }
+    return directed(iterations - whole, whole);
+  }
+
+  const double iteration = std::floor(elapsed / duration);
+  return directed((elapsed - iteration * duration) / duration, iteration);
+}
+
+// Writes `animation`'s values at `progress` onto `style`, for the properties
+// its keyframes set. A property missing from the first or last keyframe runs
+// from or to its value without the animation, as in CSS.
+void ApplyAnimationAt(const RunningAnimation& animation,
+                      float progress,
+                      const ComputedStyleCore& underlying,
+                      ComputedStyleCore& style) {
+  uint32_t animated = 0;
+  for (const AnimationFrame& frame : animation.frames) {
+    animated |= frame.properties;
+  }
+  for (uint8_t i = 0; i < kAnimatableCount; ++i) {
+    const auto property = static_cast<Animatable>(i);
+    if (!(animated & Bit(property))) {
+      continue;
+    }
+    // The keyframes setting this property on either side of `progress`,
+    // standing in the underlying value at 0 and 1 when none sits there.
+    float from_offset = 0.0f;
+    const ComputedStyleCore* from_values = &underlying;
+    std::string_view from_timing;
+    float to_offset = 1.0f;
+    const ComputedStyleCore* to_values = &underlying;
+    bool found_to = false;
+    for (const AnimationFrame& frame : animation.frames) {
+      if (!(frame.properties & Bit(property))) {
+        continue;
+      }
+      if (frame.offset <= progress) {
+        from_offset = frame.offset;
+        from_values = &frame.values;
+        from_timing = frame.timing_function;
+      } else if (!found_to) {
+        to_offset = frame.offset;
+        to_values = &frame.values;
+        found_to = true;
+      }
+    }
+    // Past the last keyframe, which sits at 1: hold its value rather than
+    // easing towards the underlying one.
+    if (!found_to && from_offset >= 1.0f) {
+      to_offset = from_offset;
+      to_values = from_values;
+    }
+    float local = 0.0f;
+    if (to_offset > from_offset) {
+      local = (progress - from_offset) / (to_offset - from_offset);
+    }
+    const std::string_view timing =
+        from_timing.empty() ? animation.config.timing_function : from_timing;
+    InterpolateAnimatable(property, *from_values, *to_values,
+                          ApplyEasing(local, timing), style);
+  }
+}
+
+// Applies every animation `element` runs to its `style`, as of
+// `current_time_ms`. Returns whether one of them is still playing, and so
+// whether the next frame will differ.
+bool ApplyAnimations(Element& element, double current_time_ms) {
+  if (element.running_animations.empty()) {
+    return false;
+  }
+  // Every property an animation touches starts from its value without
+  // animations, so that one which stops having an effect -- it ended without
+  // filling forwards -- puts the property back.
+  for (const RunningAnimation& animation : element.running_animations) {
+    for (const AnimationFrame& frame : animation.frames) {
+      for (uint8_t i = 0; i < kAnimatableCount; ++i) {
+        const auto property = static_cast<Animatable>(i);
+        if (frame.properties & Bit(property)) {
+          InterpolateAnimatable(property, element.target_style,
+                                element.target_style, 0.0f, element.style);
+        }
+      }
+    }
+  }
+  bool playing = false;
+  for (RunningAnimation& animation : element.running_animations) {
+    const bool was_finished = animation.finished;
+    const std::optional<float> progress =
+        AnimationProgress(animation, current_time_ms);
+    if (progress) {
+      ApplyAnimationAt(animation, *progress, element.target_style,
+                       element.style);
+    }
+    // The frame an animation finishes on still changes the style.
+    playing = playing || (!was_finished && animation.paused_at_ms < 0.0);
+  }
+  return playing;
+}
+
+}  // namespace
+
+void Element::UpdateAnimations(double current_time_ms) {
+  const std::vector<AnimationConfig>* declared = target_style.animations.get();
+  if (!declared && running_animations.empty()) {
+    return;
+  }
+  std::vector<RunningAnimation> next;
+  if (declared) {
+    next.reserve(declared->size());
+    for (const AnimationConfig& config : *declared) {
+      if (config.name.empty() || config.name == "none") {
+        continue;
+      }
+      // An animation already running carries on, whatever else about it
+      // changed: only removing it and declaring it again restarts it.
+      auto running = std::ranges::find_if(
+          running_animations, [&](const RunningAnimation& candidate) {
+            return candidate.config.name == config.name;
+          });
+      RunningAnimation animation;
+      if (running != running_animations.end()) {
+        animation = std::move(*running);
+        running_animations.erase(running);
+        if (config.paused && animation.paused_at_ms < 0.0) {
+          animation.paused_at_ms = current_time_ms;
+        } else if (!config.paused && animation.paused_at_ms >= 0.0) {
+          animation.start_time_ms += current_time_ms - animation.paused_at_ms;
+          animation.paused_at_ms = -1.0;
+        }
+      } else {
+        if (!config.keyframes) {
+          ReportDiagnostic("animation '" + config.name +
+                           "' has no matching @keyframes rule");
+        }
+        animation.start_time_ms = current_time_ms;
+        animation.paused_at_ms = config.paused ? current_time_ms : -1.0;
+      }
+      animation.config = config;
+      // Rebuilt each time: the keyframes are applied over the element's own
+      // style, which may have changed since.
+      animation.frames.clear();
+      if (config.keyframes) {
+        animation.frames =
+            BuildFrames(*config.keyframes, target_style, custom_properties);
+      }
+      next.push_back(std::move(animation));
+    }
+  }
+  // Whatever an animation that just stopped running animated returns to its
+  // value without it.
+  for (const RunningAnimation& stopped : running_animations) {
+    for (const AnimationFrame& frame : stopped.frames) {
+      for (uint8_t i = 0; i < kAnimatableCount; ++i) {
+        const auto property = static_cast<Animatable>(i);
+        if (frame.properties & Bit(property)) {
+          InterpolateAnimatable(property, target_style, target_style, 0.0f,
+                                style);
+        }
+      }
+    }
+  }
+  running_animations = std::move(next);
+  ApplyAnimations(*this, current_time_ms);
+}
+
+bool Element::HasPlayingAnimations(bool include_infinite) const {
+  return std::ranges::any_of(
+      running_animations, [&](const RunningAnimation& animation) {
+        return !animation.finished && animation.paused_at_ms < 0.0 &&
+               (include_infinite ||
+                !std::isinf(animation.config.iteration_count));
+      });
 }
 
 bool Element::TickTransitions(double current_time_ms) {
   if (active_transitions.empty() && !scroll_y_animating_ &&
       !scroll_x_animating_ && !visual_scroll_y_animating_ &&
-      !visual_scroll_x_animating_) {
+      !visual_scroll_x_animating_ && !HasPlayingAnimations()) {
     return false;
   }
 
@@ -975,6 +1429,12 @@ bool Element::TickTransitions(double current_time_ms) {
     for (const auto& prop : to_remove) {
       active_transitions.erase(prop);
     }
+  }
+
+  // After the transitions: an animation overrides a transition of the same
+  // property, as in CSS.
+  if (!running_animations.empty()) {
+    updated |= ApplyAnimations(*this, current_time_ms);
   }
 
   return updated;

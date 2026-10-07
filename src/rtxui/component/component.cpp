@@ -325,6 +325,8 @@ struct CategorizedRules {
   // most components in a tree are of this shape, and without this they still
   // walk every descendant matching nothing.
   bool only_self_rules = true;
+  // The `@keyframes` rules, by name. When two share a name, the last wins.
+  std::map<std::string, css::KeyframesRule, std::less<>> keyframes;
 };
 
 ComponentBase::ComponentBase() = default;
@@ -388,6 +390,7 @@ struct ElementState {
   bool scrollbar_thumb_active = false;
   ComputedStyle style;
   ActiveTransitionsMap active_transitions;
+  std::vector<RunningAnimation> running_animations;
   /// Identity of the <for> item that produced the element, when it had one.
   /// State is then restored onto the element carrying this key rather than
   /// onto whatever now sits at the recorded path, so reordering a keyed
@@ -406,14 +409,16 @@ void CollectElementStates(
       el->scroll_x() != 0 || el->scroll_y() != 0 || el->focused() ||
       el->hovered() || el->active() || el->scrollbar_hovered() ||
       el->scrollbar_active() || el->scrollbar_thumb_hovered() ||
-      el->scrollbar_thumb_active() || !el->active_transitions.empty();
+      el->scrollbar_thumb_active() || !el->active_transitions.empty() ||
+      !el->running_animations.empty();
   if (has_state) {
     states.push_back(
         {path,
          {el->scroll_x(), el->scroll_y(), el->focused(), el->hovered(),
           el->active(), el->scrollbar_hovered(), el->scrollbar_active(),
           el->scrollbar_thumb_hovered(), el->scrollbar_thumb_active(),
-          el->style, el->active_transitions, el->for_key}});
+          el->style, el->active_transitions, el->running_animations,
+          el->for_key}});
   }
   for (size_t i = 0; i < el->ChildCount(); ++i) {
     path.push_back(static_cast<int>(i));
@@ -473,6 +478,9 @@ void RestoreElementStates(
       el->style = pair.second.style;
       el->target_stale = true;
       el->active_transitions = pair.second.active_transitions;
+      // A re-render builds new elements: carry on the animations of the old
+      // ones rather than starting them over.
+      el->running_animations = pair.second.running_animations;
     }
   }
 }
@@ -1370,6 +1378,47 @@ bool IsCssWideKeyword(std::string_view value) {
 
 thread_local int g_style_visit_count = 0;
 
+// The @keyframes rule called `name` that `component` can see: its own, or
+// else the nearest one declared by a component around it, so that keyframes
+// an application declares once at its root reach every component it uses.
+std::shared_ptr<const css::KeyframesRule> FindKeyframes(
+    const ComponentBase* component,
+    std::string_view name) {
+  // Bounded: the chain follows template ownership upwards, and a malformed
+  // tree must not turn that into an endless loop.
+  for (int depth = 0; component && depth < 256; ++depth) {
+    const auto& rules = ComponentInternals::shared_rules(*component);
+    if (rules) {
+      const auto it = rules->keyframes.find(name);
+      if (it != rules->keyframes.end()) {
+        // Aliasing: holding the rule keeps the whole stylesheet alive, which
+        // its frames point into.
+        return {rules, &it->second};
+      }
+    }
+    const Element* root = component->Root();
+    const ComponentBase* outer = root ? root->owner_component() : nullptr;
+    component = outer == component ? nullptr : outer;
+  }
+  return nullptr;
+}
+
+// Points the animations `component`'s rules just declared at their
+// @keyframes. Those are the ones not pointing anywhere yet: declaring an
+// animation starts it unresolved, and the ones an earlier component declared
+// were resolved against that component, which is the one that knows where
+// their keyframes are.
+void ResolveKeyframes(std::vector<AnimationConfig>& animations,
+                      const ComponentBase* component) {
+  for (auto& animation : animations) {
+    if (animation.keyframes || animation.name.empty() ||
+        animation.name == "none") {
+      continue;
+    }
+    animation.keyframes = FindKeyframes(component, animation.name);
+  }
+}
+
 // Resolves `element` against the rules of one `component` that can style it:
 // the component it is the root of, the one whose template wrote it, or one
 // reaching in through ::part(). ResolveStylesInTree picks which, and in what
@@ -1721,6 +1770,10 @@ void ResolveElementStyle(Element* element,
       };
       for_each_round(false, apply_unless_reset);
       for_each_round(true, apply_unless_reset);
+
+      if (style_out.animations) {
+        ResolveKeyframes(*style_out.animations, component);
+      }
     }  // matched/inline declarations scope (bypassed by the goto above).
 
     if (!check_pseudos) {
@@ -1844,6 +1897,7 @@ bool ResolveStylesInTree(Element* element,
         element->TriggerTransitions(time::GetTimeMs());
       } else {
         element->style = element->base_style;
+        element->UpdateAnimations(time::GetTimeMs());
       }
       element->style_seeded = true;
       element->needs_style_seed = false;
@@ -1975,6 +2029,19 @@ std::shared_ptr<const StyleData> GetSharedStyle(
     const css::StyleSheet& sheet = data->sheet;
     CategorizedRules& rules = data->rules;
     for (const auto& ruleset : sheet) {
+      if (!ruleset.keyframes_name.empty()) {
+        css::KeyframesRule& rule = rules.keyframes[ruleset.keyframes_name];
+        // The blocks of one @keyframes are consecutive in the sheet, so a
+        // block that does not directly follow the previous one of its name
+        // starts a later @keyframes of that name, which replaces the earlier
+        // one whole rather than merging into it.
+        if (rule.frames.empty() || rule.frames.back() + 1 != &ruleset) {
+          rule.name = ruleset.keyframes_name;
+          rule.frames.clear();
+        }
+        rule.frames.push_back(&ruleset);
+        continue;
+      }
       const bool is_pseudo = !ruleset.parsed_selector.pseudo_classes.empty();
       for (const auto& part : ruleset.parsed_selector.parents) {
         if (part.combinator == '+' || part.combinator == '~') {
@@ -2015,6 +2082,14 @@ std::shared_ptr<const StyleData> GetSharedStyle(
         buckets.by_tag[selector_base].push_back(&ruleset);
       }
     }
+  }
+
+  for (auto& [name, rule] : data->rules.keyframes) {
+    // Stable, so that of two blocks at the same offset the later one is
+    // applied last and wins.
+    std::ranges::stable_sort(rule.frames, {}, [](const css::Ruleset* frame) {
+      return frame->keyframe_offset;
+    });
   }
 
   // Drop entries whose last user has gone before adding another.
@@ -2435,6 +2510,8 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
       if (!element) {
         return false;
       }
+      // Animations are not needed here: ticking applies them, and they
+      // start or stop only when a style pass changes what is declared.
       if (!element->active_transitions.empty() ||
           element->IsAnimatingScroll()) {
         return true;

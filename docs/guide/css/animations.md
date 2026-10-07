@@ -1,6 +1,6 @@
-# Transitions & Hover States
+# Transitions, Animations & Hover States
 
-RTXUI supports CSS-style transitions and interactive pseudo-classes on DOM elements. This allows you to build terminal applications with smooth color shifts, expanding borders, and responsive mouse effects without writing manual frame updates.
+RTXUI supports CSS-style transitions, keyframe animations and interactive pseudo-classes on DOM elements. This allows you to build terminal applications with smooth color shifts, expanding borders, pulsing indicators and responsive mouse effects without writing manual frame updates.
 
 ---
 
@@ -72,6 +72,7 @@ transition: background-color 0.2s ease-in-out, width 0.3s ease-out;
 *   **Circ curves**: `ease-in-circ`, `ease-out-circ`, `ease-in-out-circ`
 *   **Back curves**: `ease-in-back`, `ease-out-back`, `ease-in-out-back`
 *   `cubic-bezier(x1, y1, x2, y2)` (Defines a custom cubic Bézier easing curve)
+*   **Steps**: `steps(n)` holds each value for `1/n` of the time, then jumps to the next; `steps(n, start)` jumps at the start of each step instead. `step-start` and `step-end` are `steps(1, start)` and `steps(1)`. Terminal cells are discrete, so steps often look cleaner than a smooth curve.
 
 ### Minimal Transition Demo
 Below is the interactive tab view for background-color and border-color transitions:
@@ -86,7 +87,73 @@ Below is the interactive tab view for background-color and border-color transiti
 
 ---
 
-## 3. Advanced Transition Examples
+## 3. Keyframe Animations
+
+A transition needs a change of state to run. An animation runs on its own as soon as an element declares it, which suits indicators: a pulsing status light, a loading bar, a blinking cursor.
+
+`@keyframes` names a sequence of styles, and `animation` plays it:
+
+```css
+@keyframes pulse {
+  from { color: rgb(35, 134, 54); }
+  to { color: rgb(126, 231, 135); }
+}
+
+.light {
+  animation: pulse 0.8s ease-in-out infinite alternate;
+}
+```
+
+### Shorthand Syntax
+```css
+animation: <name> <duration> [<timing-function>] [<delay>] [<iteration-count>]
+           [<direction>] [<fill-mode>] [<play-state>]
+```
+
+The parts may come in any order: the first time is the duration and the second the delay. Each also has its own longhand, `animation-name`, `animation-duration`, and so on (see the [CSS reference](/css_reference)).
+
+*   **`iteration-count`**: a number, or `infinite`.
+*   **`direction`**: `normal`, `reverse`, `alternate` (forwards, then backwards) or `alternate-reverse`.
+*   **`fill-mode`**: `forwards` holds the last keyframe once the animation ends, `backwards` shows the first one during the delay, `both` does both. With the default, `none`, the properties go back to their own values.
+*   **`play-state`**: `paused` freezes the animation where it is; `running` resumes it from there.
+
+### Keyframes
+
+Blocks are selected by `from`, `to` or a percentage, several at once when comma-separated (`0%, 100% { ... }`). A property missing from the first or the last block animates from, or to, the element's own value. A block can declare its own `animation-timing-function`, which eases the way from it to the next block:
+
+```css
+@keyframes blink {
+  from { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor { animation: blink 1s step-end infinite; }
+```
+
+Keyframes animate the same properties as transitions (listed above). Anything else in a block is reported as a [diagnostic](/guide/diagnostics), as is an `animation` whose name matches no `@keyframes`.
+
+### Where Keyframes Are Found
+
+An animation looks for its `@keyframes` in the stylesheet of the component that declared it, then in the components around it. Declaring them once in the application's root component makes them available everywhere inside it.
+
+### Lifetime
+
+*   An animation starts when an element starts declaring it, and keeps running when the component re-renders.
+*   Changing its duration, easing or play state does not restart it. Removing it (for example by removing the class that declares it) stops it; adding it back starts it again from the beginning.
+*   While any animation plays, the screen keeps redrawing. A [headless](/guide/headless) run waits for finite animations to end, but not for `infinite` ones.
+
+### Keyframes Demo
+
+<ExampleTabs src="/wasm/rtxui_example_keyframes.js">
+<template #source>
+
+<<< @/../example/keyframes.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
+## 4. Advanced Transition Examples
 
 ### Primary Animation & Flex Layout Demo
 Hover over the **Hover Me** button and click **Grow Me** to observe interactive transitions reflow the flex container:

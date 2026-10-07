@@ -245,9 +245,30 @@ self {
 
 ---
 
-## 10. Positioning & Transitions
+## 10. Positioning, Transitions & Animations
 
-<CssProperty name="transition" values="property duration timing-function" shorthand description="Initial: `none`. Shorthand (e.g. transition: background-color 0.2s linear). Easing keywords: linear, ease, ease-in, ease-out, ease-in-out, ease-in-sine, ease-out-sine, ease-in-out-sine, ease-in-quad, ease-out-quad, ease-in-out-quad, ease-in-cubic, ease-out-cubic, ease-in-quart, ease-out-quart, ease-in-quint, ease-out-quint, ease-in-expo, ease-out-expo, ease-in-circ, ease-out-circ, ease-in-back, ease-out-back." />
+<CssProperty name="transition" values="property duration timing-function" shorthand description="Initial: `none`. Shorthand (e.g. transition: background-color 0.2s linear). Easing keywords: linear, ease, ease-in, ease-out, ease-in-out, ease-in-sine, ease-out-sine, ease-in-out-sine, ease-in-quad, ease-out-quad, ease-in-out-quad, ease-in-cubic, ease-out-cubic, ease-in-quart, ease-out-quart, ease-in-quint, ease-out-quint, ease-in-expo, ease-out-expo, ease-in-circ, ease-out-circ, ease-in-back, ease-out-back, step-start, step-end, steps(n[, start | end | jump-none | jump-both]), cubic-bezier(x1, y1, x2, y2)." />
+<CssProperty name="animation" values="name duration [timing-function] [delay] [iteration-count] [direction] [fill-mode] [play-state]" shorthand description="Initial: `none`. Plays the `@keyframes` rule called name (e.g. animation: pulse 1s ease-in-out infinite alternate). Parts come in any order; the first time is the duration, the second the delay. Comma-separate several animations. The keyframes are looked up in the stylesheet of the component declaring the animation, then in the components around it, so an application can declare them once at its root. An unknown name is reported as a diagnostic." />
+<CssProperty name="animation-name" values="<name># | none" description="Initial: `none`. The @keyframes to play. The number of names decides how many animations run; the other animation-* lists repeat to cover them. Changing any other animation property leaves a running animation where it is; only removing the name and adding it back restarts it." />
+<CssProperty name="animation-duration" values="<time>#" description="Initial: `0s`. Length of one iteration, as `2s` or `150ms`." />
+<CssProperty name="animation-delay" values="<time>#" description="Initial: `0s`. Wait before the first iteration." />
+<CssProperty name="animation-timing-function" values="<easing>#" description="Initial: `ease`. Easing applied between each pair of keyframes, from the transition easing keywords. A keyframe block may declare its own to ease the way to the next block." />
+<CssProperty name="animation-iteration-count" values="<number># | infinite" description="Initial: `1`. How many times to play; fractions stop part way. An infinite animation keeps the screen redrawing, but a headless run does not wait for it to settle." />
+<CssProperty name="animation-direction" values="normal | reverse | alternate | alternate-reverse" description="Initial: `normal`. Whether iterations play forwards, backwards, or alternate between the two." />
+<CssProperty name="animation-fill-mode" values="none | forwards | backwards | both" description="Initial: `none`. forwards holds the last keyframe once done; backwards shows the first during the delay; both does both. With none the animated properties return to their own values." />
+<CssProperty name="animation-play-state" values="running | paused" description="Initial: `running`. Pauses an animation where it is; running it again resumes from there." />
+
+### `@keyframes`
+
+```css
+@keyframes pulse {
+  from { opacity: 0.4; }
+  50% { opacity: 1; animation-timing-function: ease-out; }
+  to { opacity: 0.4; }
+}
+```
+
+Blocks are selected by `from` (0%), `to` (100%) or a percentage, several at once when comma-separated. A property missing from the first or last block runs from, or to, the element's own value. Keyframes animate the properties transitions do: `color`, `background-color`, `border-color` and its per-side `border-color-*` longhands, `opacity`, `flex-grow`, `flex-shrink`, `width` and `height`. Any other declaration in a block is reported as a diagnostic.
 <CssProperty name="position" values="static | relative | absolute | fixed | sticky" description="Initial: `static`. Selects positioning flow model. An absolute/fixed box with an auto width or height sizes itself from its content, capped by the space available to it — it is free to be wider than the element it is anchored to, which is what lets a tooltip overhang a narrow trigger. Pinning both opposite edges (top and bottom, or left and right) stretches it between them instead, so inset: 0 fills the nearest positioned ancestor; auto margins on that axis opt back out, keeping the box content-sized and centering it between the edges." />
 <CssProperty name="inset" values="1-4 <length> values" shorthand description="Initial: `auto`. Shorthand setting top/right/bottom/left (same expansion as margin)." />
 <CssProperty name="aspect-ratio" values="<w> / <h> | <number> | auto" description="Initial: `auto`. Derives an element's auto dimension from whichever of width/height is definite: height-from-width in block, flex, and grid contexts (items and containers), and width-from-height in block contexts and on flex items/containers (grid containers only derive height from width). Ratios are in cells — terminal cells are ~2:1 tall, so 2 / 1 looks square. Content larger than the ratio overflows." />

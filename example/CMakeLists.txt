@@ -163,3 +163,5 @@ target_link_libraries(rtxui_example_app_dashboard PRIVATE rtxui)
 
 add_executable(rtxui_example_playground playground.cpp)
 target_link_libraries(rtxui_example_playground PRIVATE rtxui)
+add_executable(rtxui_example_keyframes keyframes.cpp)
+target_link_libraries(rtxui_example_keyframes PRIVATE rtxui)

@@ -5,6 +5,7 @@
 #include <charconv>
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -1132,6 +1133,247 @@ std::pair<std::string_view, std::string_view> SplitScrollbarColors(
   return {first, rest};
 }
 
+// A time value: `2s`, `150ms`. Negative times are refused, as CSS refuses a
+// negative duration.
+std::optional<float> ParseTimeSeconds(std::string_view text) {
+  float scale = 1.0f;
+  if (text.ends_with("ms")) {
+    text.remove_suffix(2);
+    scale = 0.001f;
+  } else if (text.ends_with('s')) {
+    text.remove_suffix(1);
+  } else {
+    return std::nullopt;
+  }
+  float value = 0.0f;
+  const auto [ptr, ec] =
+      std::from_chars(text.data(), text.data() + text.size(), value);
+  if (text.empty() || ec != std::errc() || ptr != text.data() + text.size() ||
+      value < 0.0f) {
+    return std::nullopt;
+  }
+  return std::min(value, static_cast<float>(kMaxCssNumber)) * scale;
+}
+
+// Whether `text` names an easing curve ApplyEasing understands.
+bool IsTimingFunction(std::string_view text) {
+  static constexpr std::string_view kKeywords[] = {
+      "linear",      "ease",       "ease-in",  "ease-out",
+      "ease-in-out", "step-start", "step-end",
+  };
+  if (std::ranges::find(kKeywords, text) != std::end(kKeywords)) {
+    return true;
+  }
+  static constexpr std::string_view kCurves[] = {
+      "sine", "quad", "cubic", "quart", "quint", "expo", "circ", "back",
+  };
+  for (std::string_view curve : kCurves) {
+    for (std::string_view prefix : {"ease-in-", "ease-out-", "ease-in-out-"}) {
+      if (text.size() == prefix.size() + curve.size() &&
+          text.starts_with(prefix) && text.ends_with(curve)) {
+        return true;
+      }
+    }
+  }
+  return (text.starts_with("cubic-bezier(") || text.starts_with("steps(")) &&
+         text.ends_with(')');
+}
+
+std::optional<float> ParseIterationCount(std::string_view text) {
+  if (text == "infinite") {
+    return std::numeric_limits<float>::infinity();
+  }
+  float value = 0.0f;
+  const auto [ptr, ec] =
+      std::from_chars(text.data(), text.data() + text.size(), value);
+  if (text.empty() || ec != std::errc() || ptr != text.data() + text.size() ||
+      value < 0.0f) {
+    return std::nullopt;
+  }
+  return std::min(value, static_cast<float>(kMaxCssNumber));
+}
+
+std::optional<AnimationDirection> ParseAnimationDirection(
+    std::string_view text) {
+  if (text == "normal") {
+    return AnimationDirection::Normal;
+  }
+  if (text == "reverse") {
+    return AnimationDirection::Reverse;
+  }
+  if (text == "alternate") {
+    return AnimationDirection::Alternate;
+  }
+  if (text == "alternate-reverse") {
+    return AnimationDirection::AlternateReverse;
+  }
+  return std::nullopt;
+}
+
+std::optional<AnimationFillMode> ParseAnimationFillMode(std::string_view text) {
+  if (text == "none") {
+    return AnimationFillMode::None;
+  }
+  if (text == "forwards") {
+    return AnimationFillMode::Forwards;
+  }
+  if (text == "backwards") {
+    return AnimationFillMode::Backwards;
+  }
+  if (text == "both") {
+    return AnimationFillMode::Both;
+  }
+  return std::nullopt;
+}
+
+std::optional<bool> ParseAnimationPaused(std::string_view text) {
+  if (text == "running") {
+    return false;
+  }
+  if (text == "paused") {
+    return true;
+  }
+  return std::nullopt;
+}
+
+// Splits a comma-separated list, trimming each entry. A comma inside
+// parentheses, as in `cubic-bezier(0, 0, 1, 1)`, does not split.
+std::vector<std::string_view> SplitCommaList(std::string_view text) {
+  std::vector<std::string_view> entries;
+  auto trim = [](std::string_view entry) {
+    while (!entry.empty() &&
+           std::isspace(static_cast<unsigned char>(entry.front()))) {
+      entry.remove_prefix(1);
+    }
+    while (!entry.empty() &&
+           std::isspace(static_cast<unsigned char>(entry.back()))) {
+      entry.remove_suffix(1);
+    }
+    return entry;
+  };
+  int depth = 0;
+  size_t start = 0;
+  for (size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == '(') {
+      ++depth;
+    } else if (text[i] == ')' && depth > 0) {
+      --depth;
+    } else if (text[i] == ',' && depth == 0) {
+      entries.push_back(trim(text.substr(start, i - start)));
+      start = i + 1;
+    }
+  }
+  entries.push_back(trim(text.substr(start)));
+  return entries;
+}
+
+// One entry of the `animation` shorthand: `spin 1s linear infinite`. Each
+// keyword is recognised by what it can be, in any order, as CSS allows; the
+// first time is the duration and the second the delay, and whatever is left
+// over is the name. Returns nothing when a word fits nowhere.
+std::optional<AnimationConfig> ParseAnimationShorthand(std::string_view text) {
+  AnimationConfig config;
+  bool has_duration = false;
+  bool has_delay = false;
+  bool has_timing = false;
+  bool has_count = false;
+  bool has_direction = false;
+  bool has_fill = false;
+  bool has_state = false;
+  bool has_name = false;
+  for (std::string_view word : SplitWords(text)) {
+    if (auto time = ParseTimeSeconds(word)) {
+      if (!has_duration) {
+        config.duration_seconds = *time;
+        has_duration = true;
+      } else if (!has_delay) {
+        config.delay_seconds = *time;
+        has_delay = true;
+      } else {
+        return std::nullopt;
+      }
+      continue;
+    }
+    if (!has_timing && IsTimingFunction(word)) {
+      config.timing_function = std::string(word);
+      has_timing = true;
+      continue;
+    }
+    if (!has_count) {
+      if (auto count = ParseIterationCount(word)) {
+        config.iteration_count = *count;
+        has_count = true;
+        continue;
+      }
+    }
+    if (!has_direction) {
+      if (auto direction = ParseAnimationDirection(word)) {
+        config.direction = *direction;
+        has_direction = true;
+        continue;
+      }
+    }
+    // `none` is a fill mode as well as "no animation"; as in CSS it is read as
+    // the fill mode, unless a name has been given already.
+    if (!has_fill) {
+      if (auto fill = ParseAnimationFillMode(word)) {
+        config.fill_mode = *fill;
+        has_fill = true;
+        continue;
+      }
+    }
+    if (!has_state) {
+      if (auto paused = ParseAnimationPaused(word)) {
+        config.paused = *paused;
+        has_state = true;
+        continue;
+      }
+    }
+    if (has_name) {
+      return std::nullopt;
+    }
+    config.name = std::string(word);
+    has_name = true;
+  }
+  if (!has_name) {
+    // `animation: none` names no keyframes. CSS reads a lone `none` as the
+    // name, which is what turns the animation off.
+    if (has_fill && config.fill_mode == AnimationFillMode::None) {
+      config.name = "none";
+      config.fill_mode = AnimationFillMode::None;
+      return config;
+    }
+    return std::nullopt;
+  }
+  return config;
+}
+
+// Applies one animation longhand: `values` is its comma-separated list, and
+// `apply` sets one parsed value onto an animation, returning false for a value
+// that does not parse. As in CSS, the list of names decides how many
+// animations there are, and a shorter list of values repeats to cover them.
+// Returns false, leaving `style` untouched, when any value is invalid.
+template <typename Apply>
+bool ApplyAnimationLonghand(ComputedStyle& style,
+                            std::string_view values,
+                            Apply apply) {
+  const std::vector<std::string_view> list = SplitCommaList(values);
+  std::vector<AnimationConfig> animations;
+  if (style.animations) {
+    animations = *style.animations;
+  }
+  if (animations.empty()) {
+    animations.resize(list.size());
+  }
+  for (size_t i = 0; i < animations.size(); ++i) {
+    if (!apply(animations[i], list[i % list.size()])) {
+      return false;
+    }
+  }
+  style.animations =
+      std::make_unique<std::vector<AnimationConfig>>(std::move(animations));
+  return true;
+}
 }  // namespace
 
 void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
@@ -1202,6 +1444,134 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       value_view = value_view.substr(comma + 1);
     }
     return;
+  }
+
+  if (p == "animation") {
+    std::vector<AnimationConfig> animations;
+    for (std::string_view entry : SplitCommaList(v)) {
+      auto config = ParseAnimationShorthand(entry);
+      if (!config) {
+        ReportDiagnostic("invalid animation '" + std::string(entry) +
+                         "': expected a @keyframes name with a duration, and "
+                         "optionally a timing function, delay, iteration "
+                         "count, direction, fill mode and play state");
+        return;
+      }
+      animations.push_back(std::move(*config));
+    }
+    style.animations =
+        std::make_unique<std::vector<AnimationConfig>>(std::move(animations));
+    return;
+  }
+
+  if (p == "animation-name") {
+    // The names decide how many animations there are: the other longhands'
+    // values are kept for the entries that remain, and repeat over new ones.
+    const std::vector<std::string_view> names = SplitCommaList(v);
+    std::vector<AnimationConfig> previous;
+    if (style.animations) {
+      previous = *style.animations;
+    }
+    std::vector<AnimationConfig> animations;
+    for (size_t i = 0; i < names.size(); ++i) {
+      if (names[i].empty()) {
+        ReportDiagnostic("invalid animation-name '" + std::string(v) + "'");
+        return;
+      }
+      AnimationConfig config =
+          previous.empty() ? AnimationConfig{} : previous[i % previous.size()];
+      config.name = std::string(names[i]);
+      config.keyframes = nullptr;
+      animations.push_back(std::move(config));
+    }
+    style.animations =
+        std::make_unique<std::vector<AnimationConfig>>(std::move(animations));
+    return;
+  }
+
+  if (p == "animation-duration" || p == "animation-delay") {
+    const bool is_duration = p == "animation-duration";
+    if (ApplyAnimationLonghand(
+            style, v, [&](AnimationConfig& config, std::string_view value) {
+              auto time = ParseTimeSeconds(value);
+              if (!time) {
+                return false;
+              }
+              (is_duration ? config.duration_seconds : config.delay_seconds) =
+                  *time;
+              return true;
+            })) {
+      return;
+    }
+  }
+
+  if (p == "animation-timing-function") {
+    if (ApplyAnimationLonghand(
+            style, v, [](AnimationConfig& config, std::string_view value) {
+              if (!IsTimingFunction(value)) {
+                return false;
+              }
+              config.timing_function = std::string(value);
+              return true;
+            })) {
+      return;
+    }
+  }
+
+  if (p == "animation-iteration-count") {
+    if (ApplyAnimationLonghand(
+            style, v, [](AnimationConfig& config, std::string_view value) {
+              auto count = ParseIterationCount(value);
+              if (!count) {
+                return false;
+              }
+              config.iteration_count = *count;
+              return true;
+            })) {
+      return;
+    }
+  }
+
+  if (p == "animation-direction") {
+    if (ApplyAnimationLonghand(
+            style, v, [](AnimationConfig& config, std::string_view value) {
+              auto direction = ParseAnimationDirection(value);
+              if (!direction) {
+                return false;
+              }
+              config.direction = *direction;
+              return true;
+            })) {
+      return;
+    }
+  }
+
+  if (p == "animation-fill-mode") {
+    if (ApplyAnimationLonghand(
+            style, v, [](AnimationConfig& config, std::string_view value) {
+              auto fill = ParseAnimationFillMode(value);
+              if (!fill) {
+                return false;
+              }
+              config.fill_mode = *fill;
+              return true;
+            })) {
+      return;
+    }
+  }
+
+  if (p == "animation-play-state") {
+    if (ApplyAnimationLonghand(
+            style, v, [](AnimationConfig& config, std::string_view value) {
+              auto paused = ParseAnimationPaused(value);
+              if (!paused) {
+                return false;
+              }
+              config.paused = *paused;
+              return true;
+            })) {
+      return;
+    }
   }
 
   if (p == "background-color") {

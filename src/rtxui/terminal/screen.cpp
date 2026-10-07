@@ -1047,7 +1047,9 @@ class ScreenImpl {
   void UpdateSize();
   void DigestAndDraw();
   void HandleEvent(Event event);
-  bool HasActiveTransitions();
+  // Whether something is moving and needs more frames. `include_infinite`
+  // false leaves out the animations that never end.
+  bool HasActiveTransitions(bool include_infinite = true);
   bool TickTransitions(double current_time_ms);
   void ScrollIntoView(Element* element);
 
@@ -1319,7 +1321,7 @@ void ScreenImpl::Step() {
   }
 }
 
-bool ScreenImpl::HasActiveTransitions() {
+bool ScreenImpl::HasActiveTransitions(bool include_infinite) {
   if (!component_ || !component_->Root()) {
     return false;
   }
@@ -1327,7 +1329,7 @@ bool ScreenImpl::HasActiveTransitions() {
     if (!element) {
       return false;
     }
-    if (!element->active_transitions.empty() || element->IsAnimatingScroll()) {
+    if (element->IsAnimating(include_infinite)) {
       return true;
     }
     for (size_t i = 0; i < element->ChildCount(); ++i) {
@@ -2930,9 +2932,11 @@ void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
   while (device.HasInput()) {
     Step();
   }
-  // Bounded, so an endless animation cannot hang a test.
+  // An animation that never ends is not waited for: the frame is as settled
+  // as it gets. Bounded too, so a long one cannot hang a test.
   const double deadline = time::GetTimeMs() + 2000;
-  while (HasActiveTransitions() && time::GetTimeMs() < deadline) {
+  while (HasActiveTransitions(/*include_infinite=*/false) &&
+         time::GetTimeMs() < deadline) {
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
     TickTransitions(time::GetTimeMs());
   }

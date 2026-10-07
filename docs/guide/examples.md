@@ -76,6 +76,7 @@ Colors, text decorations, pseudo-classes, transitions, and keyframe animations.
 | :--- | :--- | :--- |
 | [animation.cpp](/guide/examples/animation) | Keyframe animations. | [Guide](/guide/css/animations) |
 | [colors.cpp](/guide/examples/colors) | Foreground and background colors. | [Guide](/guide/typography) |
+| [keyframes.cpp](/guide/examples/keyframes) | CSS keyframe animations. | [Guide](/guide/css/animations) |
 | [opacity.cpp](/guide/examples/opacity) | Opacity and alpha blending, including how nested opacity compounds. | [Guide](/guide/typography) |
 | [pseudo_classes.cpp](/guide/examples/pseudo_classes) | The interactive pseudo-classes: :hover, :focus and :active. | [Guide](/guide/css/basics) |
 | [text_align.cpp](/guide/examples/text_align) | text-align: left, center and right. | [Guide](/guide/typography) |

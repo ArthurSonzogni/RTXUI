@@ -294,6 +294,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
     "src/rtxui/terminal/headless_test.cpp"
     "src/rtxui/terminal/screen_test.cpp"
+    "src/rtxui/component/animation_test.cpp"
     "src/rtxui/component/binding_test.cpp"
     "src/rtxui/component/component_test.cpp"
     "src/rtxui/component/diagnostic_test.cpp"
