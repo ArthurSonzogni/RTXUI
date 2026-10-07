@@ -11594,3 +11594,34 @@ TEST_CASE("A component written under another tag survives its user's render",
   CHECK(find(std::type_identity<rtxui::tab_pane>{}) == pane);
   CHECK(counter->clicks == 3);
 }
+
+namespace {
+class WrittenTags : public rtxui::Component<WrittenTags> {
+ public:
+  WrittenTags() { Import<AliasedCounter>("my-counter"); }
+  std::string_view view = R"(
+    <div>
+      <my-counter/>
+      <tabs><tab-pane label="a">a</tab-pane></tabs>
+    </div>
+    <style>
+      my-counter { padding-left: 1; }
+      tab-pane { padding-left: 2; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("A selector names a tag as the template wrote it",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<WrittenTags>::New();
+  app->Mount();
+  // Not by class name: AliasedCounter is <my-counter> here, tab_pane is
+  // <tab-pane>.
+  auto* counter = app->Root()->QuerySelector("my-counter");
+  auto* pane = app->Root()->QuerySelector("tab-pane");
+  REQUIRE(counter != nullptr);
+  REQUIRE(pane != nullptr);
+  CHECK(counter->style.padding.left == 1);
+  CHECK(pane->style.padding.left == 2);
+}
