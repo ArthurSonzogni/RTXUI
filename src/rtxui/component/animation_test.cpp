@@ -614,5 +614,32 @@ TEST_CASE("An animation starts when its element is displayed", "[animation]") {
   CHECK(box->style.opacity == Catch::Approx(0.0f));
 }
 
+class MixedUnits : public Component<MixedUnits> {
+ public:
+  std::string_view view = R"html(
+    <div id="box">Hi</div>
+    <style>
+      @keyframes move { from { right: 50%; } to { right: 10; } }
+      #box { position: fixed; animation: move 1s linear; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A length animates between cells and percents", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<MixedUnits>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  CHECK(box->style.right.Resolve(20) == 10);  // 50% of 20.
+  clock.Advance(box, 500);
+  // Halfway: 25% + 5, not a jump at the end.
+  CHECK(box->style.right == Length::MakeCalc(5, 25));
+  CHECK(box->style.right.Resolve(20) == 10);
+  clock.Advance(box, 250);
+  CHECK(box->style.right.Resolve(40) == 12);  // 12.5% of 40, + 7.5.
+}
+
 }  // namespace
 }  // namespace rtxui

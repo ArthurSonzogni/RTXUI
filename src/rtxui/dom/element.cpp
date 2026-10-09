@@ -278,11 +278,35 @@ std::optional<Color> InterpolateOptionalColor(std::optional<Color> start,
   return InterpolateColor(s, t, progress);
 }
 
+// A length as `cells + percent%`, the form calc() folds into. Nothing for
+// the units that have none: auto, fr and min()/max().
+std::optional<std::pair<float, float>> AsLinear(Length length) {
+  switch (length.unit) {
+    case Unit::Cells:
+      return std::pair{length.value, 0.0f};
+    case Unit::Percent:
+      return std::pair{0.0f, length.value};
+    case Unit::Calc:
+      return std::pair{length.value, length.calc_percent};
+    default:
+      return std::nullopt;
+  }
+}
+
 Length InterpolateLength(Length start, Length target, float progress) {
-  if (start.unit == target.unit) {
+  if (start.unit == target.unit && start.unit != Unit::Calc) {
     return {start.value + (target.value - start.value) * progress, start.unit};
   }
-  return progress >= 1.0f ? target : start;
+  // Cells, percents and calc() blend through calc(): `50%` to `10` is
+  // `25% + 5` halfway. Others jump at the end.
+  const auto from = AsLinear(start);
+  const auto to = AsLinear(target);
+  if (!from || !to || progress <= 0.0f || progress >= 1.0f) {
+    return progress >= 1.0f ? target : start;
+  }
+  return Length::MakeCalc(
+      from->first + (to->first - from->first) * progress,
+      from->second + (to->second - from->second) * progress);
 }
 
 const TransitionConfig* FindTransitionConfig(const Element* element,
