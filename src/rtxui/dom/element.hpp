@@ -270,6 +270,9 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// The animations `target_style` declares, as UpdateAnimations() last saw
   /// them. Empty for the many elements declaring none.
   std::vector<RunningAnimation> running_animations;
+  /// Under a `display: none` ancestor, whose subtree runs no animation: they
+  /// were dropped, and start over once it is shown again.
+  bool animations_suspended = false;
   /// The element's ::before and ::after, alongside `base_style` and
   /// `target_style`: the rules without pseudo-classes, then all of them. Null
   /// for the many elements no such rule matches.

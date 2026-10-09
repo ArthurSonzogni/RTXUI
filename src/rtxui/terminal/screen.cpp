@@ -1361,19 +1361,33 @@ bool ScreenImpl::TickTransitions(double current_time_ms) {
   if (!component_ || !component_->Root()) {
     return false;
   }
-  std::function<bool(Element*)> TickAll = [&](Element* element) {
+  // As in CSS, nothing under a `display: none` element animates: it would
+  // play out unseen, and keep the screen redrawing for nothing. Its
+  // animations start over once it is shown.
+  std::function<bool(Element*, bool)> TickAll = [&](Element* element,
+                                                    bool hidden) {
     if (!element) {
       return false;
     }
-    bool updated = element->TickTransitions(current_time_ms);
+    bool updated = false;
+    hidden = hidden || element->style.display_none;
+    if (hidden && !element->running_animations.empty()) {
+      element->running_animations.clear();
+      element->animations_suspended = true;
+    } else if (!hidden && element->animations_suspended) {
+      element->animations_suspended = false;
+      element->UpdateAnimations(current_time_ms);
+      updated = true;
+    }
+    updated |= element->TickTransitions(current_time_ms);
     for (size_t i = 0; i < element->ChildCount(); ++i) {
-      if (TickAll(element->ChildAt(i))) {
+      if (TickAll(element->ChildAt(i), hidden)) {
         updated = true;
       }
     }
     return updated;
   };
-  bool updated = TickAll(component_->Root());
+  bool updated = TickAll(component_->Root(), false);
   if (DispatchAnimationEnds()) {
     component_->Digest();
     updated = true;
