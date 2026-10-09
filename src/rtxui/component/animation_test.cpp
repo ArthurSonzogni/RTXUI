@@ -696,5 +696,32 @@ TEST_CASE("A transition moves an element by its translate", "[animation]") {
   CHECK(box->style.translate_y == Length::Pct(100));
 }
 
+class Short : public Component<Short> {
+ public:
+  std::string_view view = R"html(
+    <div id="box">Hi</div>
+    <style>
+      @keyframes fade { from { opacity: 0; } }
+      #box { animation: fade 200ms linear 100ms; }
+    </style>
+  )html";
+};
+
+TEST_CASE("An animation is sampled exactly at its delay and its end",
+          "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Short>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  // 0.1f and 0.2f seconds are not exact: read as they are, the animation
+  // started late and ended late.
+  clock.Advance(box, 200);
+  CHECK(box->style.opacity == Catch::Approx(0.5f));
+  clock.Advance(box, 100);
+  CHECK_FALSE(box->HasPlayingAnimations());
+}
+
 }  // namespace
 }  // namespace rtxui
