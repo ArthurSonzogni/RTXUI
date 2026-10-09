@@ -12,7 +12,6 @@
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
 #include "rtxui/task.hpp"
-#include "rtxui/testing/timeline.hpp"
 
 namespace rtxui {
 namespace {
@@ -41,7 +40,7 @@ bool ToastShown(Saver& app) {
 
 TEST_CASE("A toast shows, then closes itself", "[component][toast]") {
   auto app = Ref<Saver>::New();
-  testing::Timeline timeline(app, 30, 6);
+  TimelineScreen timeline(app, 30, 6);
   CHECK_FALSE(ToastShown(*app));
 
   PostTask([&] { app->saved = true; });
@@ -161,7 +160,7 @@ class Placed : public Component<Placed> {
 
 TEST_CASE("A toast slides in from the side it sits on", "[component][toast]") {
   {
-    testing::Timeline right(Ref<Placed>::New(), 20, 4);
+    TimelineScreen right(Ref<Placed>::New(), 20, 4);
     CHECK(right.Text() == "\n\n\n\n");  // Out of sight at first.
     // Partway: cut by the edge of the screen. It travels its own width and
     // the 2 cells it sits from the edge, so it shows from the first frames.
@@ -179,7 +178,7 @@ TEST_CASE("A toast slides in from the side it sits on", "[component][toast]") {
 
   auto app = Ref<Placed>::New();
   app->placement = "bottom-left";
-  testing::Timeline left(app, 20, 4);
+  TimelineScreen left(app, 20, 4);
   CHECK(left.Advance(60) ==
         "▔▔▔▔▔▎\n"
         "aved ▎\n"
@@ -189,7 +188,7 @@ TEST_CASE("A toast slides in from the side it sits on", "[component][toast]") {
 
 TEST_CASE("A closing toast slides out before it hides", "[component][toast]") {
   auto app = Ref<Placed>::New();
-  testing::Timeline screen(app, 20, 4);
+  TimelineScreen screen(app, 20, 4);
   screen.Advance(400);
   const Element* box = app->Root()->QuerySelector(".toast");
   REQUIRE(box != nullptr);
@@ -244,7 +243,7 @@ class Faded : public Component<Faded> {
 
 TEST_CASE("A toast's closing animation can be replaced", "[component][toast]") {
   auto app = Ref<Faded>::New();
-  testing::Timeline screen(app, 20, 4);
+  TimelineScreen screen(app, 20, 4);
   const std::string open = screen.Advance(400);
   const Element* box = app->Root()->QuerySelector(".toast");
   REQUIRE(box != nullptr);
@@ -278,7 +277,7 @@ TEST_CASE("A toast's opening and closing animations can both be replaced",
   SetDiagnosticHandler(
       [&](const Diagnostic& d) { messages.push_back(d.message); });
   auto app = Ref<Restyled2>::New();
-  testing::Timeline screen(app, 20, 4);
+  TimelineScreen screen(app, 20, 4);
   screen.Advance(400);
   PostTask([&] { app->shown = false; });
   screen.Advance(0);

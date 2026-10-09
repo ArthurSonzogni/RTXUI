@@ -1057,6 +1057,8 @@ class ScreenImpl {
   void ScrollIntoView(Element* element);
 
   std::string Text() const;
+  // The cell at column `x`, row `y` of the last frame drawn, or nothing.
+  const Cell* CellAt(int x, int y) const;
   // Processes everything queued on a HeadlessTerminalDevice, then lets the
   // transitions it started finish, so the frame left behind does not depend
   // on timing.
@@ -3052,6 +3054,14 @@ std::string ScreenImpl::Text() const {
   return text;
 }
 
+const Cell* ScreenImpl::CellAt(int x, int y) const {
+  if (!last_texture_ || x < 0 || y < 0 || x >= last_texture_->width() ||
+      y >= last_texture_->height()) {
+    return nullptr;
+  }
+  return &(*last_texture_)[x, y];
+}
+
 void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
   ScopedLayoutArenas arenas(layout_arenas_);
   while (device.HasInput()) {
@@ -3121,6 +3131,83 @@ void HeadlessScreen::Resize(int width, int height) {
 
 std::string HeadlessScreen::Text() const {
   return screen_->Text();
+}
+
+namespace {
+// TimelineScreen's clock. Not zero: some code reads a time of 0 as "never".
+constexpr double kTimelineStart = 1000.0;
+double g_timeline_now = kTimelineStart;
+double TimelineNow() {
+  return g_timeline_now;
+}
+}  // namespace
+
+TimelineScreen::TimelineScreen(Ref<ComponentBase> app, int width, int height)
+    : device_(std::make_shared<HeadlessTerminalDevice>(width, height)) {
+  g_timeline_now = kTimelineStart;
+  time::SetCustomClock(&TimelineNow);
+  screen_ = std::make_unique<Screen>(std::move(app), device_);
+  screen_->Draw();
+}
+
+TimelineScreen::~TimelineScreen() {
+  screen_.reset();
+  time::SetCustomClock(nullptr);
+}
+
+std::string TimelineScreen::Advance(double milliseconds) {
+  g_timeline_now += milliseconds;
+  screen_->impl_->Step();
+  return Text();
+}
+
+std::vector<std::string> TimelineScreen::Record(double milliseconds,
+                                                double frame_milliseconds) {
+  std::vector<std::string> frames = {Text()};
+  for (double elapsed = 0; elapsed < milliseconds;
+       elapsed += frame_milliseconds) {
+    std::string frame = Advance(frame_milliseconds);
+    if (frame != frames.back()) {
+      frames.push_back(std::move(frame));
+    }
+  }
+  return frames;
+}
+
+void TimelineScreen::Input(std::string_view bytes) {
+  device_->PushInput(bytes);
+  Advance(0);
+}
+
+void TimelineScreen::Click(int x, int y) {
+  const std::string column = std::to_string(x + 1);
+  const std::string row = std::to_string(y + 1);
+  Input("\x1b[<0;" + column + ";" + row + "M" + "\x1b[<0;" + column + ";" +
+        row + "m");
+}
+
+void TimelineScreen::Resize(int width, int height) {
+  device_->Resize(width, height);
+  screen_->impl_->UpdateSize();
+  Advance(0);
+}
+
+std::string TimelineScreen::Text() const {
+  return screen_->Text();
+}
+
+Color TimelineScreen::BackgroundAt(int x, int y) const {
+  const Cell* cell = screen_->impl_->CellAt(x, y);
+  return cell ? cell->background_color : Color();
+}
+
+Color TimelineScreen::ForegroundAt(int x, int y) const {
+  const Cell* cell = screen_->impl_->CellAt(x, y);
+  return cell ? cell->foreground_color : Color();
+}
+
+double TimelineScreen::Elapsed() const {
+  return g_timeline_now - kTimelineStart;
 }
 
 std::string RenderToString(Ref<ComponentBase> app, int width, int height) {

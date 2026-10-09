@@ -53,6 +53,34 @@ finished, so `Text()` does not depend on timing.
 For a single frame, `RenderToString(app, width, height)` returns the text
 directly.
 
+## Over Time
+
+`HeadlessScreen` waits for animations to end, so it shows where they land, not
+how they get there. `TimelineScreen` runs the application on a clock that
+moves only when told to. Animations, transitions, smooth scrolling and delayed
+tasks all follow it, so each frame can be checked at an exact time:
+
+```cpp
+#include <rtxui/rtxui.hpp>
+
+auto app = rtxui::Ref<Notifier>::New();
+rtxui::TimelineScreen screen(app, 40, 10);
+
+screen.Click(5, 3);                        // Starts a 300ms transition.
+std::string halfway = screen.Advance(150);  // The frame drawn at 150ms.
+screen.Advance(2000);                      // A PostDelayedTask of 2s has run.
+
+// Every distinct frame over the next half second, one per 16ms step:
+std::vector<std::string> frames = screen.Record(500);
+
+// Colors, which the text cannot show: a highlight, a scrollbar thumb.
+rtxui::Color row = screen.BackgroundAt(0, 2);
+```
+
+Nothing waits in real time, so such a test runs instantly and gives the same
+result on every machine. A `TimelineScreen` replaces the process-wide clock
+while it lives: use one at a time.
+
 ## Snapshot Tests
 
 RTXUI checks every example this way: `scripts/snapshot_examples.py` runs each

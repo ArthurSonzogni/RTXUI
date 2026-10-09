@@ -1,17 +1,16 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/testing/timeline.hpp"
-
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <string>
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/task.hpp"
 
-namespace rtxui::testing {
+namespace rtxui {
 namespace {
 
 class Later : public Component<Later> {
@@ -21,9 +20,10 @@ class Later : public Component<Later> {
   std::string_view view = R"html(<span>{label}</span>)html";
 };
 
-TEST_CASE("A timeline runs delayed tasks on its own clock", "[timeline]") {
+TEST_CASE("A timeline screen runs delayed tasks on its own clock",
+          "[headless][timeline]") {
   auto app = Ref<Later>::New();
-  Timeline timeline(app, 10, 1);
+  TimelineScreen timeline(app, 10, 1);
   PostDelayedTask([&] { app->label = "done"; }, std::chrono::milliseconds(500));
   CHECK(timeline.Advance(499) == "waiting\n");
   CHECK(timeline.Advance(1) == "done\n");
@@ -41,8 +41,9 @@ class Grow : public Component<Grow> {
   )html";
 };
 
-TEST_CASE("A timeline records the frames an animation draws", "[timeline]") {
-  Timeline timeline(Ref<Grow>::New(), 4, 1);
+TEST_CASE("A timeline screen records the frames an animation draws",
+          "[headless][timeline]") {
+  TimelineScreen timeline(Ref<Grow>::New(), 4, 1);
   // A cell more every 16ms, then nothing new.
   CHECK(timeline.Record(100) ==
         std::vector<std::string>{"\n", "a\n", "ab\n", "abc\n", "abcd\n"});
@@ -66,9 +67,9 @@ class Delayed : public Component<Delayed> {
   )html";
 };
 
-TEST_CASE("A transition waits out its delay", "[timeline][transition]") {
+TEST_CASE("A transition waits out its delay", "[headless][timeline]") {
   auto app = Ref<Delayed>::New();
-  Timeline timeline(app, 10, 1);
+  TimelineScreen timeline(app, 10, 1);
   PostTask([&] { app->bar_class = "open"; });
   timeline.Advance(0);
   CHECK(timeline.Advance(99) == "\n");      // Still waiting.
@@ -93,9 +94,9 @@ class HiddenParent : public Component<HiddenParent> {
 };
 
 TEST_CASE("An animation under a hidden parent starts once it is shown",
-          "[timeline][animation]") {
+          "[headless][timeline]") {
   auto app = Ref<HiddenParent>::New();
-  Timeline timeline(app, 4, 1);
+  TimelineScreen timeline(app, 4, 1);
   timeline.Advance(1000);  // Long enough to have played out unseen.
   PostTask([&] { app->wrap_class = ""; });
   timeline.Advance(0);
@@ -104,5 +105,23 @@ TEST_CASE("An animation under a hidden parent starts once it is shown",
   CHECK(timeline.Advance(32) == "abcd\n");
 }
 
+class Highlighted : public Component<Highlighted> {
+ public:
+  std::string_view view = R"html(
+    <div class="row">ab</div>
+    <style>
+      .row { background-color: rgb(10, 20, 30); color: rgb(200, 100, 50); }
+    </style>
+  )html";
+};
+
+TEST_CASE("A timeline screen reads the colors drawn", "[headless][timeline]") {
+  TimelineScreen screen(Ref<Highlighted>::New(), 4, 1);
+  CHECK(screen.BackgroundAt(0, 0) == Color::RGB(10, 20, 30));
+  CHECK(screen.ForegroundAt(1, 0) == Color::RGB(200, 100, 50));
+  // Outside the screen: nothing drawn.
+  CHECK(screen.BackgroundAt(9, 9) == Color());
+}
+
 }  // namespace
-}  // namespace rtxui::testing
+}  // namespace rtxui
