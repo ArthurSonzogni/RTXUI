@@ -2,7 +2,9 @@
 
 scroll-behavior: smooth versus auto.
 
-Try it: click the jump buttons and compare how each column travels.
+scroll-behavior decides how a box scrolls to show something it was asked to: an anchor link's target, or an element focused from the keyboard. `smooth` glides there, `auto` jumps. The mouse wheel and the scrolling keys always scroll at once, whatever the box says.
+
+Try it: click the jump links above each box, or Tab through the items, and compare how each column travels.
 
 <ExampleTabs src="/wasm/rtxui_example_scroll_behavior.js" :cols="80" :rows="24">
 <template #source>

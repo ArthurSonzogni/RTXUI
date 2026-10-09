@@ -66,6 +66,8 @@ RTXUI automatically scrolls containers to keep focused elements visible when use
 
 ### Scroll Behavior
 
+`scroll-behavior: smooth` makes a scroll container glide, rather than jump, to what it is asked to show: the target of an anchor link, or an element focused with <kbd>Tab</kbd> or the arrow keys. Scrolling with the mouse wheel or the scrolling keys is always immediate, so it keeps up with the hand.
+
 <ExampleTabs src="/wasm/rtxui_example_scroll_behavior.js">
 <template #source>
 

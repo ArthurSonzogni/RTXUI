@@ -247,7 +247,7 @@ self {
 <CssProperty name="scroll-speed" values="<integer>" description="Initial: `1`. Shorthand scroll step speed multiplier." />
 <CssProperty name="scroll-speed-x" values="<integer>" description="Initial: `1`. Horizontal scroll step distance." />
 <CssProperty name="scroll-speed-y" values="<integer>" description="Initial: `1`. Vertical scroll step distance." />
-<CssProperty name="scroll-behavior" values="auto | smooth" description="Initial: `auto`. Smooth scrolling transitions configuration." />
+<CssProperty name="scroll-behavior" values="auto | smooth" description="Initial: `auto`. How a scroll container brings into view what it is asked to show: the target of an anchor link, or an element focused from the keyboard. `smooth` glides there, `auto` jumps. The mouse wheel and the scrolling keys (arrows, PageUp/PageDown, Home/End) always scroll at once." />
 
 ---
 

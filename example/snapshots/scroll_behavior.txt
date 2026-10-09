@@ -2,16 +2,16 @@
 
   RTXUI Scroll Behavior Demo
 
-  Compare the two scroll behaviors below using the mouse wheel, Arrow keys, or
-  PageUp/PageDown.
+  Click a jump link, or Tab through the items: the left box jumps, the right
+  one glides. The wheel and the keys scroll both at once.
 
 
 
-  scroll-behavior: auto (Instant        scroll-behavior: smooth (Smooth
-  Content)                              Content)
+  scroll-behavior: auto                 scroll-behavior: smooth
 
-  Content snaps instantly, scrollbar    Both viewport content and scrollbar
-  thumb glides smoothly.                thumb glide smoothly.
+  Jumps straight to the target.         Glides to the target.
+
+  ↓ Last item   ↑ First item            ↓ Last item   ↑ First item
 
   ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
   ▊                                  ▎  ▊                                  ▎
