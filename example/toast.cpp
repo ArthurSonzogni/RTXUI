@@ -80,13 +80,16 @@ class ToastDemo : public Component<ToastDemo> {
         }
         /* Slides in, then swings sideways a few times, less each time. */
         @keyframes shake-in {
-          from { right: -50; animation-timing-function: ease-out-cubic; }
-          30% { right: 2; }
-          42% { right: 8; }
-          54% { right: 0; }
-          66% { right: 6; }
-          78% { right: 1; }
-          90% { right: 4; }
+          from {
+            translate: calc(100% + 2);
+            animation-timing-function: ease-out-cubic;
+          }
+          30% { translate: 0; }
+          42% { translate: -6; }
+          54% { translate: 2; }
+          66% { translate: -4; }
+          78% { translate: 1; }
+          90% { translate: -2; }
         }
         @keyframes fade-out {
           to { opacity: 0; }

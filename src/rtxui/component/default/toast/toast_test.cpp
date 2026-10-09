@@ -4,19 +4,15 @@
 #include "rtxui/component/default/toast/toast.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
-#include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
-#include "rtxui/screen.hpp"
 #include "rtxui/task.hpp"
-#include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/timeline.hpp"
 
 namespace rtxui {
 namespace {
@@ -45,29 +41,25 @@ bool ToastShown(Saver& app) {
 
 TEST_CASE("A toast shows, then closes itself", "[component][toast]") {
   auto app = Ref<Saver>::New();
-  auto device = std::make_shared<MockTerminalDevice>();
-  device->TriggerResize(30, 6);
-  Screen screen(app, device);
-  screen.Draw();
+  testing::Timeline timeline(app, 30, 6);
   CHECK_FALSE(ToastShown(*app));
 
   PostTask([&] { app->saved = true; });
-  screen.Step();
+  timeline.Advance(0);
   CHECK(ToastShown(*app));
 
-  // Still there before its time is up...
-  screen.Step();
+  // Still there just before its 40ms are up...
+  timeline.Advance(39);
   CHECK(ToastShown(*app));
+  CHECK(app->saved);
 
-  // ...closing after, and the application's flag follows at once...
-  std::this_thread::sleep_for(std::chrono::milliseconds(60));
-  screen.Step();
+  // ...closing once they are, and the application's flag follows at once...
+  timeline.Advance(1);
   CHECK_FALSE(app->saved);
   CHECK(ToastShown(*app));
 
   // ...gone once it has slid out.
-  std::this_thread::sleep_for(std::chrono::milliseconds(250));
-  screen.Step();
+  timeline.Advance(250);
   CHECK_FALSE(ToastShown(*app));
 }
 
@@ -154,24 +146,6 @@ TEST_CASE("A toast's border can be restyled through its part",
         "╰──────╯\n");
 }
 
-// A clock the test moves by hand, so that animations are sampled at exact
-// times.
-double g_now = 1000.0;
-double FakeNow() {
-  return g_now;
-}
-
-class FakeClock {
- public:
-  FakeClock() {
-    g_now = 1000.0;
-    time::SetCustomClock(&FakeNow);
-  }
-  ~FakeClock() { time::SetCustomClock(nullptr); }
-  FakeClock(const FakeClock&) = delete;
-  FakeClock& operator=(const FakeClock&) = delete;
-};
-
 class Placed : public Component<Placed> {
  public:
   bool shown = true;
@@ -185,65 +159,50 @@ class Placed : public Component<Placed> {
   )html";
 };
 
-struct ToastScreen {
-  explicit ToastScreen(Ref<ComponentBase> app)
-      : device(std::make_shared<MockTerminalDevice>()) {
-    device->TriggerResize(20, 4);
-    screen = std::make_unique<Screen>(std::move(app), device);
-    screen->Draw();
-  }
-  std::string At(double ms) {
-    g_now += ms;
-    screen->Step();
-    return screen->Text();
-  }
-  std::shared_ptr<MockTerminalDevice> device;
-  std::unique_ptr<Screen> screen;
-};
-
 TEST_CASE("A toast slides in from the side it sits on", "[component][toast]") {
-  FakeClock clock;
-  ToastScreen right(Ref<Placed>::New());
-  CHECK(right.screen->Text() == "\n\n\n\n");  // Out of sight at first.
-  // Partway: cut by the edge of the screen.
-  CHECK(right.At(150) ==
-        "               ▊▔▔▔▔\n"
-        "               ▊ Sav\n"
-        "               ▊▁▁▁▁\n"
-        "\n");
-  CHECK(right.At(250) ==
-        "         ▊▔▔▔▔▔▔▔▎\n"
-        "         ▊ Saved ▎\n"
-        "         ▊▁▁▁▁▁▁▁▎\n"
-        "\n");
+  {
+    testing::Timeline right(Ref<Placed>::New(), 20, 4);
+    CHECK(right.Text() == "\n\n\n\n");  // Out of sight at first.
+    // Partway: cut by the edge of the screen. It travels its own width and
+    // the 2 cells it sits from the edge, so it shows from the first frames.
+    CHECK(right.Advance(60) ==
+          "              ▊▔▔▔▔▔\n"
+          "              ▊ Save\n"
+          "              ▊▁▁▁▁▁\n"
+          "\n");
+    CHECK(right.Advance(340) ==
+          "         ▊▔▔▔▔▔▔▔▎\n"
+          "         ▊ Saved ▎\n"
+          "         ▊▁▁▁▁▁▁▁▎\n"
+          "\n");
+  }
 
   auto app = Ref<Placed>::New();
   app->placement = "bottom-left";
-  ToastScreen left(app);
-  CHECK(left.At(150) ==
-        "▔▔▔▔▎\n"
-        "ved ▎\n"
-        "▁▁▁▁▎\n"
+  testing::Timeline left(app, 20, 4);
+  CHECK(left.Advance(60) ==
+        "▔▔▔▔▔▎\n"
+        "aved ▎\n"
+        "▁▁▁▁▁▎\n"
         "\n");
 }
 
 TEST_CASE("A closing toast slides out before it hides", "[component][toast]") {
-  FakeClock clock;
   auto app = Ref<Placed>::New();
-  ToastScreen screen(app);
-  screen.At(400);
+  testing::Timeline screen(app, 20, 4);
+  screen.Advance(400);
   const Element* box = app->Root()->QuerySelector(".toast");
   REQUIRE(box != nullptr);
 
   PostTask([&] { app->shown = false; });
-  screen.At(0);
+  screen.Advance(0);
   CHECK(*box->GetAttribute("part") == "toast closing");
-  CHECK(screen.At(100) ==
-        "               ▊▔▔▔▔\n"
-        "               ▊ Sav\n"
-        "               ▊▁▁▁▁\n"
+  CHECK(screen.Advance(160) ==
+        "              ▊▔▔▔▔▔\n"
+        "              ▊ Save\n"
+        "              ▊▁▁▁▁▁\n"
         "\n");
-  CHECK(screen.At(150) == "\n\n\n\n");
+  CHECK(screen.Advance(60) == "\n\n\n\n");
   CHECK(box->style.display_none);
   CHECK(*box->GetAttribute("part") == "toast");
 }
@@ -284,19 +243,18 @@ class Faded : public Component<Faded> {
 };
 
 TEST_CASE("A toast's closing animation can be replaced", "[component][toast]") {
-  FakeClock clock;
   auto app = Ref<Faded>::New();
-  ToastScreen screen(app);
-  const std::string open = screen.At(400);
+  testing::Timeline screen(app, 20, 4);
+  const std::string open = screen.Advance(400);
   const Element* box = app->Root()->QuerySelector(".toast");
   REQUIRE(box != nullptr);
 
   PostTask([&] { app->shown = false; });
   // Fading, in place: no slide.
-  screen.At(0);
-  CHECK(screen.At(150) == open);
+  screen.Advance(0);
+  CHECK(screen.Advance(150) == open);
   CHECK(box->style.opacity < 1.0f);
-  CHECK(screen.At(200) == "\n\n\n\n");
+  CHECK(screen.Advance(200) == "\n\n\n\n");
 }
 
 class Restyled2 : public Component<Restyled2> {
@@ -316,16 +274,15 @@ class Restyled2 : public Component<Restyled2> {
 
 TEST_CASE("A toast's opening and closing animations can both be replaced",
           "[component][toast]") {
-  FakeClock clock;
   std::vector<std::string> messages;
   SetDiagnosticHandler(
       [&](const Diagnostic& d) { messages.push_back(d.message); });
   auto app = Ref<Restyled2>::New();
-  ToastScreen screen(app);
-  screen.At(400);
+  testing::Timeline screen(app, 20, 4);
+  screen.Advance(400);
   PostTask([&] { app->shown = false; });
-  screen.At(0);
-  screen.At(150);
+  screen.Advance(0);
+  screen.Advance(150);
   SetDiagnosticHandler(nullptr);
   CHECK(messages.empty());
   const Element* box = app->Root()->QuerySelector(".toast");
