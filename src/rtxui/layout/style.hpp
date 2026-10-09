@@ -388,7 +388,18 @@ struct ComputedStyleCore {
   Length right = Length::Auto();
   Length bottom = Length::Auto();
   Length left = Length::Auto();
+  // `translate`: moves the box as painted and hit-tested, after layout, so
+  // nothing around it moves. Percentages are of the box's own size.
+  Length translate_x = Length::Cells(0);
+  Length translate_y = Length::Cells(0);
   std::optional<int> z_index;
+
+  // Painted, and hit-tested, above the in-flow boxes beside it: positioned,
+  // or translated, as a CSS transform also lifts a box.
+  bool PaintsAsPositioned() const {
+    return position != PositionType::Static ||
+           translate_x != Length::Cells(0) || translate_y != Length::Cells(0);
+  }
 
   DisplayOutside display_outside = DisplayOutside::Inline;
   DisplayInside display_inside = DisplayInside::Flow;  // Default to flow

@@ -357,6 +357,19 @@ std::shared_ptr<PhysicalFragment> RunLayoutUncached(
   return nullptr;
 }
 
+void ApplyTranslate(PhysicalFragment& root) {
+  for (auto& child : root.children) {
+    if (!child.fragment) {
+      continue;
+    }
+    if (const Element* element = child.fragment->dom_node) {
+      child.x += element->style.translate_x.Resolve(child.fragment->width);
+      child.y += element->style.translate_y.Resolve(child.fragment->height);
+    }
+    ApplyTranslate(*child.fragment);
+  }
+}
+
 std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
                                             LayoutConstraints constraints,
                                             LayoutContext context) {

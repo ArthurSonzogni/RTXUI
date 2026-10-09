@@ -83,6 +83,10 @@ every component) or as a prop the child turns into one of its own classes.
 `@keyframes` are scoped the same way: declare them in the component whose
 rules use them.
 
+**There is no `transform`.** To move a box, use `translate: 2 1` rather than
+`transform: translate(2, 1)` or `translateX(2)`. It takes the same lengths,
+percentages of the box's own size and `calc()`, and it animates.
+
 ## C++ and Build
 
 **Include only `<rtxui/rtxui.hpp>`.** Headers under `src/` are internal and

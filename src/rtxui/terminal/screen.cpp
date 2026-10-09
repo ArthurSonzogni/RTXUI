@@ -310,12 +310,10 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
       sorted_children.begin(), sorted_children.end(),
       [](const PhysicalFragment::ChildLink& a,
          const PhysicalFragment::ChildLink& b) {
-        bool a_pos =
-            (a.fragment && a.fragment->dom_node &&
-             a.fragment->dom_node->style.position != PositionType::Static);
-        bool b_pos =
-            (b.fragment && b.fragment->dom_node &&
-             b.fragment->dom_node->style.position != PositionType::Static);
+        bool a_pos = (a.fragment && a.fragment->dom_node &&
+                      a.fragment->dom_node->style.PaintsAsPositioned());
+        bool b_pos = (b.fragment && b.fragment->dom_node &&
+                      b.fragment->dom_node->style.PaintsAsPositioned());
         int az = (a.fragment && a.fragment->dom_node)
                      ? a.fragment->dom_node->style.z_index.value_or(0)
                      : 0;
@@ -553,12 +551,10 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
       sorted_children.begin(), sorted_children.end(),
       [](const PhysicalFragment::ChildLink& a,
          const PhysicalFragment::ChildLink& b) {
-        bool a_pos =
-            (a.fragment && a.fragment->dom_node &&
-             a.fragment->dom_node->style.position != PositionType::Static);
-        bool b_pos =
-            (b.fragment && b.fragment->dom_node &&
-             b.fragment->dom_node->style.position != PositionType::Static);
+        bool a_pos = (a.fragment && a.fragment->dom_node &&
+                      a.fragment->dom_node->style.PaintsAsPositioned());
+        bool b_pos = (b.fragment && b.fragment->dom_node &&
+                      b.fragment->dom_node->style.PaintsAsPositioned());
         int az = (a.fragment && a.fragment->dom_node)
                      ? a.fragment->dom_node->style.z_index.value_or(0)
                      : 0;
@@ -2433,6 +2429,7 @@ void ScreenImpl::UpdateLayout() {
   std::shared_ptr<PhysicalFragment> root_fragment = nullptr;
   if (root_box) {
     root_fragment = RunLayout({root_box.get()}, viewport);
+    ApplyTranslate(*root_fragment);
   }
   root_fragment_ = root_fragment;
   root_box_ = root_box;

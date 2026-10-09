@@ -352,6 +352,10 @@ const TransitionConfig* FindTransitionConfig(const Element* element,
         (property == "border-left-color" || property == "border-color-left")) {
       return &config;
     }
+    if (config.property == "translate" &&
+        (property == "translate-x" || property == "translate-y")) {
+      return &config;
+    }
     if (config.property == "inset" &&
         (property == "top" || property == "right" || property == "bottom" ||
          property == "left")) {
@@ -761,6 +765,8 @@ void Element::TriggerTransitions(double current_time_ms) {
   style.right = old_style.right;
   style.bottom = old_style.bottom;
   style.left = old_style.left;
+  style.translate_x = old_style.translate_x;
+  style.translate_y = old_style.translate_y;
   style.flex_grow = old_style.flex_grow;
   style.flex_shrink = old_style.flex_shrink;
   style.opacity = old_style.opacity;
@@ -844,11 +850,9 @@ void Element::TriggerTransitions(double current_time_ms) {
     bool target_changed = false;
     if (has_active) {
       const auto& active = active_transitions[std::string(prop_name)];
-      target_changed = (active.target_length.value != target_val.value ||
-                        active.target_length.unit != target_val.unit);
+      target_changed = active.target_length != target_val;
     } else {
-      target_changed = (current_val.value != target_val.value ||
-                        current_val.unit != target_val.unit);
+      target_changed = current_val != target_val;
     }
 
     if (target_changed) {
@@ -889,6 +893,10 @@ void Element::TriggerTransitions(double current_time_ms) {
   HandleLengthProperty("right", style.right, target_style.right);
   HandleLengthProperty("bottom", style.bottom, target_style.bottom);
   HandleLengthProperty("left", style.left, target_style.left);
+  HandleLengthProperty("translate-x", style.translate_x,
+                       target_style.translate_x);
+  HandleLengthProperty("translate-y", style.translate_y,
+                       target_style.translate_y);
 
   HandleFloatProperty("flex-grow", style.flex_grow, target_style.flex_grow);
   HandleFloatProperty("flex-shrink", style.flex_shrink,
@@ -950,6 +958,8 @@ enum Animatable : uint8_t {
   kRight,
   kBottom,
   kLeft,
+  kTranslateX,
+  kTranslateY,
   kAnimatableCount,
 };
 
@@ -1012,6 +1022,9 @@ uint32_t AnimatedBy(std::string_view property) {
   }
   if (property == "inset") {
     return Bit(kTop) | Bit(kRight) | Bit(kBottom) | Bit(kLeft);
+  }
+  if (property == "translate") {
+    return Bit(kTranslateX) | Bit(kTranslateY);
   }
   return 0;
 }
@@ -1077,6 +1090,14 @@ void InterpolateAnimatable(Animatable property,
     case kLeft:
       out.left = InterpolateLength(from.left, to.left, progress);
       return;
+    case kTranslateX:
+      out.translate_x =
+          InterpolateLength(from.translate_x, to.translate_x, progress);
+      return;
+    case kTranslateY:
+      out.translate_y =
+          InterpolateLength(from.translate_y, to.translate_y, progress);
+      return;
     case kAnimatableCount:
       return;
   }
@@ -1105,7 +1126,8 @@ std::vector<AnimationFrame> BuildFrames(const css::KeyframesRule& keyframes,
                          "' in @keyframes " + keyframes.name +
                          " cannot be animated; @keyframes animates colors, "
                          "border colors, opacity, flex-grow, flex-shrink, "
-                         "width, height and top/right/bottom/left");
+                         "width, height, top/right/bottom/left and "
+                         "translate");
         continue;
       }
       if (declaration.value.find("var(") != std::string_view::npos) {
@@ -1504,6 +1526,10 @@ bool Element::TickTransitions(double current_time_ms) {
           style.bottom = val;
         } else if (prop_name == "left") {
           style.left = val;
+        } else if (prop_name == "translate-x") {
+          style.translate_x = val;
+        } else if (prop_name == "translate-y") {
+          style.translate_y = val;
         }
         updated = true;
       }
@@ -1534,6 +1560,10 @@ bool Element::TickTransitions(double current_time_ms) {
           style.bottom = target_style.bottom;
         } else if (prop_name == "left") {
           style.left = target_style.left;
+        } else if (prop_name == "translate-x") {
+          style.translate_x = target_style.translate_x;
+        } else if (prop_name == "translate-y") {
+          style.translate_y = target_style.translate_y;
         } else if (prop_name == "flex-grow") {
           style.flex_grow = target_style.flex_grow;
         } else if (prop_name == "flex-shrink") {

@@ -274,7 +274,7 @@ self {
 }
 ```
 
-Blocks are selected by `from` (0%), `to` (100%) or a percentage, several at once when comma-separated. A property missing from the first or last block runs from, or to, the element's own value. Keyframes animate the properties transitions do: `color`, `background-color`, `border-color` and its per-side `border-color-*` longhands, `opacity`, `flex-grow`, `flex-shrink`, `width` and `height`. Any other declaration in a block is reported as a diagnostic.
+Blocks are selected by `from` (0%), `to` (100%) or a percentage, several at once when comma-separated. A property missing from the first or last block runs from, or to, the element's own value. Keyframes animate the properties transitions do: `color`, `background-color`, `border-color` and its per-side `border-color-*` longhands, `opacity`, `flex-grow`, `flex-shrink`, `width`, `height`, `top`, `right`, `bottom`, `left`, `inset` and `translate`. Any other declaration in a block is reported as a diagnostic.
 <CssProperty name="position" values="static | relative | absolute | fixed | sticky" description="Initial: `static`. Selects positioning flow model. An absolute/fixed box with an auto width or height sizes itself from its content, capped by the space available to it — it is free to be wider than the element it is anchored to, which is what lets a tooltip overhang a narrow trigger. Pinning both opposite edges (top and bottom, or left and right) stretches it between them instead, so inset: 0 fills the nearest positioned ancestor; auto margins on that axis opt back out, keeping the box content-sized and centering it between the edges." />
 <CssProperty name="inset" values="1-4 <length> values" shorthand animatable description="Initial: `auto`. Shorthand setting top/right/bottom/left (same expansion as margin)." />
 <CssProperty name="aspect-ratio" values="<w> / <h> | <number> | auto" description="Initial: `auto`. Derives an element's auto dimension from whichever of width/height is definite: height-from-width in block, flex, and grid contexts (items and containers), and width-from-height in block contexts and on flex items/containers (grid containers only derive height from width). Ratios are in cells — terminal cells are ~2:1 tall, so 2 / 1 looks square. Content larger than the ratio overflows." />
@@ -282,6 +282,7 @@ Blocks are selected by `from` (0%), `to` (100%) or a percentage, several at once
 <CssProperty name="bottom" values="<length>" animatable description="Initial: `auto`. Offset relative to bottom boundary." />
 <CssProperty name="left" values="<length>" animatable description="Initial: `auto`. Offset relative to left boundary." />
 <CssProperty name="right" values="<length>" animatable description="Initial: `auto`. Offset relative to right boundary." />
+<CssProperty name="translate" values="<x> [<y>] | none" animatable description="Initial: `none`. Moves the box as painted and clicked, after layout: nothing around it moves. Each value is a length, a percentage of the box's own width or height, or calc() of both; `translate: calc(100% + 2)` takes a box just past its own right edge. A translated box paints above the in-flow boxes beside it, like a positioned one." />
 <CssProperty name="z-index" values="<integer> | auto" description="Initial: `auto`. Determines rendering paint layers." />
 
 ---

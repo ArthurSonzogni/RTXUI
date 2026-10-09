@@ -641,5 +641,60 @@ TEST_CASE("A length animates between cells and percents", "[animation]") {
   CHECK(box->style.right.Resolve(40) == 12);  // 12.5% of 40, + 7.5.
 }
 
+class SlideOwnWidth : public Component<SlideOwnWidth> {
+ public:
+  std::string_view view = R"html(
+    <div id="box">ABCD</div>
+    <style>
+      @keyframes in { from { translate: calc(100% + 2); } }
+      #box { width: 4; animation: in 1s linear; }
+    </style>
+  )html";
+};
+
+TEST_CASE("translate animates by the box's own size", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<SlideOwnWidth>::New();
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(10, 1);
+  Screen screen(app, device);
+  screen.Draw();
+  CHECK(screen.Text() == "      ABCD\n");  // 4 + 2 to the right.
+  g_now += 500;
+  screen.Step();
+  CHECK(screen.Text() == "   ABCD\n");
+  g_now += 600;
+  screen.Step();
+  CHECK(screen.Text() == "ABCD\n");
+}
+
+class SlideOnClass : public Component<SlideOnClass> {
+ public:
+  std::string box_class;
+  SlideOnClass() { Bind(box_class); }
+  std::string_view view = R"html(
+    <div id="box" class="{box_class}">Hi</div>
+    <style>
+      #box { transition: translate 1s linear; }
+      #box.away { translate: 0 100%; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A transition moves an element by its translate", "[animation]") {
+  FakeClock clock;
+  auto app = Ref<SlideOnClass>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  app->box_class = "away";
+  app->Digest();
+  clock.Advance(box, 500);
+  CHECK(box->style.translate_y == Length::MakeCalc(0, 50));
+  clock.Advance(box, 600);
+  CHECK(box->style.translate_y == Length::Pct(100));
+}
+
 }  // namespace
 }  // namespace rtxui
