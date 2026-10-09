@@ -1088,6 +1088,9 @@ class ScreenImpl {
   // A RequestDraw() was deferred by suppress_draw_ and no Draw() has run
   // since.
   bool draw_pending_ = false;
+  // Where this screen's layout lives. Declared before the trees allocated in
+  // it, so they are destroyed while it still exists.
+  LayoutArenas layout_arenas_;
   std::shared_ptr<PhysicalFragment> root_fragment_;
   std::shared_ptr<LayoutBox> root_box_;
   std::unique_ptr<Texture> last_texture_;
@@ -1125,6 +1128,7 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
     : component_(std::move(component)),
       device_(std::move(device)),
       parser_(std::make_unique<TerminalInputParser>()) {
+  ScopedLayoutArenas arenas(layout_arenas_);
 #if defined(_WIN32)
   wakeup_event_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
   task_runner_.SetWakeupCallback([this]() {
@@ -1173,6 +1177,7 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
 }
 
 ScreenImpl::~ScreenImpl() {
+  ScopedLayoutArenas arenas(layout_arenas_);
   // A worker thread may still post while this is torn down; its wakeup must
   // not reach the pipe or event closed below.
   task_runner_.SetWakeupCallback(nullptr);
@@ -1207,6 +1212,7 @@ void ScreenImpl::Loop() {
 }
 
 void ScreenImpl::Step() {
+  ScopedLayoutArenas arenas(layout_arenas_);
 #ifdef __EMSCRIPTEN__
   EM_ASM({ window.rtxui_has_active_transitions = $0; }, HasActiveTransitions());
 #endif
@@ -1409,6 +1415,7 @@ bool ScreenImpl::DispatchAnimationEnds() {
 }
 
 void ScreenImpl::Dispatch(Event event) {
+  ScopedLayoutArenas arenas(layout_arenas_);
   HandleEvent(event);
 }
 
@@ -2448,6 +2455,7 @@ void ScreenImpl::UpdateLayout() {
 }
 
 void ScreenImpl::Draw() {
+  ScopedLayoutArenas arenas(layout_arenas_);
   draw_pending_ = false;
   UpdateLayout();
 
@@ -2537,6 +2545,7 @@ void ScreenImpl::Draw() {
 }
 
 void ScreenImpl::UpdateSize() {
+  ScopedLayoutArenas arenas(layout_arenas_);
   int new_width = width_;
   int new_height = height_;
   if (device_->GetSize(new_width, new_height)) {
@@ -3012,6 +3021,7 @@ std::string ScreenImpl::Text() const {
 }
 
 void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
+  ScopedLayoutArenas arenas(layout_arenas_);
   while (device.HasInput()) {
     Step();
   }

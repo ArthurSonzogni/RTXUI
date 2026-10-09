@@ -204,5 +204,45 @@ TEST_CASE("An element appearing with autofocus takes the focus",
   CHECK(app->query == "abc");
 }
 
+class Clickable : public Component<Clickable> {
+ public:
+  int clicks = 0;
+  void Click() { ++clicks; }
+  Clickable() {
+    Bind(clicks);
+    Bind(Click);
+  }
+  std::string_view view = R"html(
+    <div>
+      <button onclick="Click">press</button>
+      <span>{clicks}</span>
+    </div>
+  )html";
+};
+
+class Busy : public Component<Busy> {
+ public:
+  std::string_view view = R"html(
+    <div>
+      <p>one</p><p>two</p><p>three</p><p>four</p><p>five</p>
+    </div>
+  )html";
+};
+
+TEST_CASE("Two screens alive at once keep their own layout", "[headless]") {
+  auto app = Ref<Clickable>::New();
+  HeadlessScreen first(app, 20, 3);
+  HeadlessScreen second(Ref<Busy>::New(), 20, 6);
+  // Each resize lays the second screen out again, twice over the arenas
+  // layout is allocated in.
+  for (int i = 0; i < 4; ++i) {
+    second.Resize(20 + i, 6);
+  }
+  // The first screen hit-tests against its own layout, from before.
+  first.Click(1, 0);
+  CHECK(app->clicks == 1);
+  CHECK(first.Text().find('1') != std::string::npos);
+}
+
 }  // namespace
 }  // namespace rtxui

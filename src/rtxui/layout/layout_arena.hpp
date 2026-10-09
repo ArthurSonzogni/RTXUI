@@ -92,7 +92,28 @@ class LayoutArena {
 // Draw() (e.g. locals held across Draw() in event handlers) release into
 // intact memory instead of corrupting the new tree's control blocks. Such
 // copies must still not outlive two frames.
+struct LayoutArenas {
+  LayoutArena arenas[2];
+  int active = 0;
+};
+
+// The arena layout allocates from, in the LayoutArenas of the current scope.
 LayoutArena& ActiveLayoutArena();
+
+// Makes `arenas` the ones layout uses on this thread while it lives. Each
+// screen lays out in its own: with one pair shared by the thread, a second
+// screen's frames reset the arena still holding the first screen's tree.
+// Outside any scope, a default pair per thread is used.
+class ScopedLayoutArenas {
+ public:
+  explicit ScopedLayoutArenas(LayoutArenas& arenas);
+  ~ScopedLayoutArenas();
+  ScopedLayoutArenas(const ScopedLayoutArenas&) = delete;
+  ScopedLayoutArenas& operator=(const ScopedLayoutArenas&) = delete;
+
+ private:
+  LayoutArenas* previous_;
+};
 
 template <typename T>
 struct LayoutArenaAllocator {

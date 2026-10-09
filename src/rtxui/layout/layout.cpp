@@ -20,8 +20,12 @@
 namespace rtxui {
 
 namespace {
-thread_local LayoutArena g_layout_arenas[2];
-thread_local int g_active_layout_arena = 0;
+thread_local LayoutArenas g_default_layout_arenas;
+thread_local LayoutArenas* g_layout_arenas = nullptr;
+
+LayoutArenas& CurrentLayoutArenas() {
+  return g_layout_arenas ? *g_layout_arenas : g_default_layout_arenas;
+}
 thread_local int g_layout_run_count = 0;
 }  // namespace
 
@@ -40,12 +44,23 @@ void ResetLayoutRunCount() {
 static AlignItems EffectiveAlign(AlignSelf self, AlignItems items);
 
 LayoutArena& ActiveLayoutArena() {
-  return g_layout_arenas[g_active_layout_arena];
+  LayoutArenas& arenas = CurrentLayoutArenas();
+  return arenas.arenas[arenas.active];
 }
 
 void ResetLayoutArena() {
-  g_active_layout_arena ^= 1;
-  g_layout_arenas[g_active_layout_arena].Reset();
+  LayoutArenas& arenas = CurrentLayoutArenas();
+  arenas.active ^= 1;
+  arenas.arenas[arenas.active].Reset();
+}
+
+ScopedLayoutArenas::ScopedLayoutArenas(LayoutArenas& arenas)
+    : previous_(g_layout_arenas) {
+  g_layout_arenas = &arenas;
+}
+
+ScopedLayoutArenas::~ScopedLayoutArenas() {
+  g_layout_arenas = previous_;
 }
 
 // Helper: allocate a PhysicalFragment in the arena using std::allocate_shared
