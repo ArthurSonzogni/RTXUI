@@ -2509,7 +2509,9 @@ void ScreenImpl::Draw() {
         }
       }
     };
-    FindCursor(root);
+    // Only a focused input shows its cursor, so it is under the focused
+    // element: no need to walk the whole tree every frame.
+    FindCursor(focused_element_);
   }
 
   if (cursor_element && IsWithinScrollClip(cursor_element)) {
