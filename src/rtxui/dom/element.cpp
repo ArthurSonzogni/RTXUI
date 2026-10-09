@@ -19,21 +19,6 @@ std::atomic<int> g_elements_destroyed{0};
 
 namespace rtxui {
 
-namespace time {
-ClockFn custom_clock = nullptr;
-void SetCustomClock(ClockFn clock) {
-  custom_clock = clock;
-}
-double GetTimeMs() {
-  if (custom_clock) {
-    return custom_clock();
-  }
-  auto now = std::chrono::steady_clock::now();
-  return std::chrono::duration<double, std::milli>(now.time_since_epoch())
-      .count();
-}
-}  // namespace time
-
 namespace {
 
 float SolveCubicBezier(float x1, float y1, float x2, float y2, float t) {
