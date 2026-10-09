@@ -244,5 +244,27 @@ TEST_CASE("Two screens alive at once keep their own layout", "[headless]") {
   CHECK(first.Text().find('1') != std::string::npos);
 }
 
+class Linked : public Component<Linked> {
+ public:
+  std::string_view view = R"html(
+    <div>
+      <a href="#last">last</a>
+      <div class="box">
+        <p>one</p><p>two</p><p>three</p><p>four</p><p id="last">five</p>
+      </div>
+    </div>
+    <style>
+      .box { height: 2; overflow-y: scroll; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A link is followed from the keyboard", "[headless]") {
+  HeadlessScreen screen(Ref<Linked>::New(), 10, 3);
+  CHECK(screen.Text().find("five") == std::string::npos);
+  screen.Input("\t\r");  // Tab to the link, Enter to follow it.
+  CHECK(screen.Text().find("five") != std::string::npos);
+}
+
 }  // namespace
 }  // namespace rtxui

@@ -129,6 +129,10 @@ std::optional<int> GetEffectiveTabIndex(Element* el) {
       tag == "radio" || tag == "slider" || tag == "button" || tag == "select") {
     return 0;
   }
+  // A link, as in a browser: one without an href is just text.
+  if (tag == "a" && attrs.count("href")) {
+    return 0;
+  }
   return std::nullopt;
 }
 
@@ -1062,6 +1066,9 @@ class ScreenImpl {
 
   bool SpatialNavigate(Event event);
   void SimulateClick(Element* element);
+  // Follows `link`, an <a href="#id">: scrolls the element with that id into
+  // view. Returns whether there was one.
+  bool FollowLink(Element* link);
 
   void SetBackgroundColor(Color color) { background_color_ = color; }
   Color background_color() const { return background_color_; }
@@ -1962,28 +1969,9 @@ void ScreenImpl::HandleEvent(Event event) {
           curr = clicked_element;
           handled = false;
           while (curr && !clicked_is_disabled) {
-            if (curr->tag() == "a") {
-              const auto& attrs = curr->Attributes();
-              if (attrs.count("href")) {
-                std::string href = attrs.at("href");
-                if (href.starts_with("#") && href.size() > 1) {
-                  std::string target_id = href.substr(1);
-                  Element* target_el = nullptr;
-                  if (component_->Root()) {
-                    component_->Root()->Visit([&](Element& el) {
-                      if (el.id == target_id) {
-                        target_el = &el;
-                      }
-                    });
-                  }
-                  if (target_el) {
-                    ScrollIntoView(target_el);
-                    RequestDraw();
-                    handled = true;
-                    break;
-                  }
-                }
-              }
+            if (FollowLink(curr)) {
+              handled = true;
+              break;
             }
 
             std::string action;
@@ -2888,6 +2876,31 @@ bool ScreenImpl::SpatialNavigate(Event event) {
 
   return false;
 }
+bool ScreenImpl::FollowLink(Element* link) {
+  if (link->tag() != "a") {
+    return false;
+  }
+  const std::string* href = link->GetAttribute("href");
+  if (!href || !href->starts_with("#") || href->size() < 2) {
+    return false;
+  }
+  const std::string_view target_id = std::string_view(*href).substr(1);
+  Element* target = nullptr;
+  if (component_->Root()) {
+    component_->Root()->Visit([&](Element& el) {
+      if (el.id == target_id) {
+        target = &el;
+      }
+    });
+  }
+  if (!target) {
+    return false;
+  }
+  ScrollIntoView(target);
+  RequestDraw();
+  return true;
+}
+
 void ScreenImpl::SimulateClick(Element* element) {
   if (!element) {
     return;
@@ -2895,6 +2908,9 @@ void ScreenImpl::SimulateClick(Element* element) {
   std::vector<std::string> attr_keys = {"onclick", "@click.left", "@click"};
   Element* curr = element;
   while (curr) {
+    if (FollowLink(curr)) {
+      return;
+    }
     const auto& attrs = curr->Attributes();
     for (const auto& key : attr_keys) {
       if (attrs.count(key)) {
