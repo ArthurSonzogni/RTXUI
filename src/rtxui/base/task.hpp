@@ -8,6 +8,8 @@
 #include <functional>
 #include <optional>
 
+#include "rtxui/base/clock.hpp"
+
 namespace task {
 
 /// A task represents a unit of work.
@@ -21,8 +23,7 @@ struct PendingTask {
 
   // Delayed task with a duration
   PendingTask(Task task, std::chrono::steady_clock::duration duration)
-      : task(std::move(task)),
-        time(std::chrono::steady_clock::now() + duration) {}
+      : task(std::move(task)), time(rtxui::time::SteadyNow() + duration) {}
 
   /// The task to be executed.
   Task task;

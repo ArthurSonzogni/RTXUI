@@ -12,7 +12,7 @@ auto TaskQueue::PostTask(PendingTask task) -> void {
     return;
   }
 
-  if (task.time.value() < std::chrono::steady_clock::now()) {
+  if (task.time.value() < rtxui::time::SteadyNow()) {
     immediate_tasks_.push(task);
     return;
   }
@@ -30,7 +30,7 @@ auto TaskQueue::Get() -> MaybeTask {
   }
 
   // Move all tasks that can be executed to the immediate queue.
-  auto now = std::chrono::steady_clock::now();
+  auto now = rtxui::time::SteadyNow();
   while (!delayed_tasks_.empty() && delayed_tasks_.top().time.value() <= now) {
     immediate_tasks_.push(delayed_tasks_.top());
     delayed_tasks_.pop();

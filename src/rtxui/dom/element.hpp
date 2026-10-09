@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "rtxui/base/clock.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 
@@ -574,12 +575,6 @@ class RTXUI_EXPORT Element : public RefCounted {
  public:
   Ref<ElementHandleTarget> HandleTarget();
 };
-
-namespace time {
-using ClockFn = double (*)();
-void SetCustomClock(ClockFn clock);
-double GetTimeMs();
-}  // namespace time
 
 }  // namespace rtxui
 
