@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/style/style.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <iostream>
@@ -1873,4 +1874,38 @@ TEST_CASE("Print writes @keyframes back out", "[css][animation]") {
   REQUIRE(stylesheet);
   CHECK(css::Print(stylesheet.value()) ==
         "@keyframes a {\n  to {\n    opacity: 1;\n  }\n}\n");
+}
+
+TEST_CASE("transition reads a delay and any timing function",
+          "[css][transition]") {
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"transition",
+                            "width 80ms linear 100ms, color 1s "
+                            "cubic-bezier(0.1, 0.7, 1, 0.1), 2s opacity"});
+  REQUIRE(style.transitions);
+  const auto& list = *style.transitions;
+  REQUIRE(list.size() == 3);
+  CHECK(list[0].property == "width");
+  CHECK(list[0].duration_seconds == Catch::Approx(0.08f));
+  CHECK(list[0].delay_seconds == Catch::Approx(0.1f));
+  CHECK(list[0].timing_function == "linear");
+  CHECK(list[1].property == "color");
+  CHECK(list[1].timing_function == "cubic-bezier(0.1, 0.7, 1, 0.1)");
+  CHECK(list[1].delay_seconds == 0.0f);
+  // Any order, as in CSS.
+  CHECK(list[2].property == "opacity");
+  CHECK(list[2].duration_seconds == 2.0f);
+  CHECK(list[2].timing_function == "ease");
+
+  rtxui::ApplyStyle(style, {"transition", "1s"});
+  REQUIRE(style.transitions);
+  CHECK((*style.transitions)[0].property == "all");
+
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler(
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+  rtxui::ApplyStyle(style, {"transition", "width 1s 2s 3s"});
+  rtxui::ApplyStyle(style, {"transition", "width color 1s"});
+  rtxui::SetDiagnosticHandler(nullptr);
+  CHECK(messages.size() == 2);
 }
