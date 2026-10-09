@@ -4,7 +4,13 @@
 //
 // scroll-behavior: smooth versus auto.
 //
-// Try it: click the jump buttons and compare how each column travels.
+// scroll-behavior decides how a box scrolls to show something it was asked
+// to: an anchor link's target, or an element focused from the keyboard.
+// `smooth` glides there, `auto` jumps. The mouse wheel and the scrolling keys
+// always scroll at once, whatever the box says.
+//
+// Try it: click the jump links above each box, or Tab through the items, and
+// compare how each column travels.
 #include <rtxui/rtxui.hpp>
 
 using namespace rtxui;
@@ -16,46 +22,54 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
       <div class="header">
         <h1>RTXUI Scroll Behavior Demo</h1>
         <p class="desc">
-          Compare the two scroll behaviors below using the mouse wheel, Arrow keys, or PageUp/PageDown.
+          Click a jump link, or Tab through the items: the left box jumps, the right one glides. The wheel and the keys scroll both at once.
         </p>
       </div>
 
       <div class="row">
         <div class="column">
-          <h2>scroll-behavior: auto (Instant Content)</h2>
-          <p class="subtitle">Content snaps instantly, scrollbar thumb glides smoothly.</p>
+          <h2>scroll-behavior: auto</h2>
+          <p class="subtitle">Jumps straight to the target.</p>
+          <p class="jump">
+            <a href="#auto-last">↓ Last item</a>
+            <a href="#auto-first">↑ First item</a>
+          </p>
           <div id="scroll-auto" class="scrollbox">
-            <div class="item">Item 1</div>
-            <div class="item">Item 2</div>
-            <div class="item">Item 3</div>
-            <div class="item">Item 4</div>
-            <div class="item">Item 5</div>
-            <div class="item">Item 6</div>
-            <div class="item">Item 7</div>
-            <div class="item">Item 8</div>
-            <div class="item">Item 9</div>
-            <div class="item">Item 10</div>
-            <div class="item">Item 11</div>
-            <div class="item">Item 12</div>
+            <div class="item" id="auto-first" tabindex="0">Item 1</div>
+            <div class="item" tabindex="0">Item 2</div>
+            <div class="item" tabindex="0">Item 3</div>
+            <div class="item" tabindex="0">Item 4</div>
+            <div class="item" tabindex="0">Item 5</div>
+            <div class="item" tabindex="0">Item 6</div>
+            <div class="item" tabindex="0">Item 7</div>
+            <div class="item" tabindex="0">Item 8</div>
+            <div class="item" tabindex="0">Item 9</div>
+            <div class="item" tabindex="0">Item 10</div>
+            <div class="item" tabindex="0">Item 11</div>
+            <div class="item" id="auto-last" tabindex="0">Item 12</div>
           </div>
         </div>
 
         <div class="column">
-          <h2>scroll-behavior: smooth (Smooth Content)</h2>
-          <p class="subtitle">Both viewport content and scrollbar thumb glide smoothly.</p>
+          <h2>scroll-behavior: smooth</h2>
+          <p class="subtitle">Glides to the target.</p>
+          <p class="jump">
+            <a href="#smooth-last">↓ Last item</a>
+            <a href="#smooth-first">↑ First item</a>
+          </p>
           <div id="scroll-smooth" class="scrollbox">
-            <div class="item">Item 1</div>
-            <div class="item">Item 2</div>
-            <div class="item">Item 3</div>
-            <div class="item">Item 4</div>
-            <div class="item">Item 5</div>
-            <div class="item">Item 6</div>
-            <div class="item">Item 7</div>
-            <div class="item">Item 8</div>
-            <div class="item">Item 9</div>
-            <div class="item">Item 10</div>
-            <div class="item">Item 11</div>
-            <div class="item">Item 12</div>
+            <div class="item" id="smooth-first" tabindex="0">Item 1</div>
+            <div class="item" tabindex="0">Item 2</div>
+            <div class="item" tabindex="0">Item 3</div>
+            <div class="item" tabindex="0">Item 4</div>
+            <div class="item" tabindex="0">Item 5</div>
+            <div class="item" tabindex="0">Item 6</div>
+            <div class="item" tabindex="0">Item 7</div>
+            <div class="item" tabindex="0">Item 8</div>
+            <div class="item" tabindex="0">Item 9</div>
+            <div class="item" tabindex="0">Item 10</div>
+            <div class="item" tabindex="0">Item 11</div>
+            <div class="item" id="smooth-last" tabindex="0">Item 12</div>
           </div>
         </div>
       </div>
@@ -106,8 +120,11 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
       }
       .subtitle {
         color: var(--muted);
+      }
+      .jump {
+        display: flex;
+        gap: 3;
         margin-bottom: 1;
-        height: 2;
       }
       .scrollbox {
         display: block;
@@ -131,6 +148,9 @@ class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
         background-color: var(--border);
         color: rgb(255, 255, 255);
         padding-left: 1;
+      }
+      .item:focus {
+        background-color: rgb(31, 111, 235);
       }
     </style>
   )html";
