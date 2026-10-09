@@ -8,7 +8,9 @@
 #include <rtxui/rtxui_export.hpp>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
 
 namespace rtxui {
@@ -47,6 +49,59 @@ class RTXUI_EXPORT HeadlessScreen {
   /// The screen as plain text: one line per row, without colors or styles,
   /// trailing spaces removed.
   std::string Text() const;
+
+ private:
+  std::shared_ptr<HeadlessTerminalDevice> device_;
+  std::unique_ptr<Screen> screen_;
+};
+
+/// Runs an application without a terminal, like HeadlessScreen, on a clock
+/// that moves only when told to. Animations, transitions, smooth scrolling and
+/// delayed tasks (PostDelayedTask) all follow it, so what an application draws
+/// over time can be checked frame by frame, at exact times:
+///
+///   TimelineScreen screen(app, 40, 10);
+///   screen.Click(3, 2);
+///   CHECK(screen.Advance(150) == "...");  // Halfway through a transition.
+///
+/// It replaces the process-wide clock while it lives: one at a time.
+class RTXUI_EXPORT TimelineScreen {
+ public:
+  TimelineScreen(Ref<ComponentBase> app, int width, int height);
+  ~TimelineScreen();
+  TimelineScreen(const TimelineScreen&) = delete;
+  TimelineScreen& operator=(const TimelineScreen&) = delete;
+
+  /// Moves time forward by `milliseconds`, then runs one frame: due tasks,
+  /// animations, then the draw. Returns the screen as text.
+  std::string Advance(double milliseconds);
+
+  /// Advances `frame_milliseconds` at a time until `milliseconds` have passed,
+  /// and returns each frame that differs from the one before, starting with
+  /// the current one.
+  std::vector<std::string> Record(double milliseconds,
+                                  double frame_milliseconds = 16);
+
+  /// Processes `bytes` as HeadlessScreen::Input() does, and runs one frame
+  /// without moving time.
+  void Input(std::string_view bytes);
+
+  /// Left-clicks the cell at column `x`, row `y`, both 0-based.
+  void Click(int x, int y);
+
+  /// Changes the size, as resizing the terminal would.
+  void Resize(int width, int height);
+
+  /// The screen as plain text, as HeadlessScreen::Text() returns it.
+  std::string Text() const;
+
+  /// The colors of the cell at column `x`, row `y`, as drawn: what text
+  /// alone cannot show, such as a scrollbar thumb or a highlighted row.
+  Color BackgroundAt(int x, int y) const;
+  Color ForegroundAt(int x, int y) const;
+
+  /// Milliseconds since the screen was created.
+  double Elapsed() const;
 
  private:
   std::shared_ptr<HeadlessTerminalDevice> device_;

@@ -64,6 +64,7 @@ class RTXUI_EXPORT Screen {
 
  private:
   friend class HeadlessScreen;
+  friend class TimelineScreen;
   std::unique_ptr<ScreenImpl> impl_;
 };
 
