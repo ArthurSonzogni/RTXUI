@@ -166,6 +166,18 @@ Like every other rule, `@keyframes` belong to the component that declares them: 
 </template>
 </ExampleTabs>
 
+### Translate Demo
+
+Cards lift through a `translate` transition when hovered or focused, and each task slides out of its list once done, removed by `onanimationend`:
+
+<ExampleTabs src="/wasm/rtxui_example_translate.js">
+<template #source>
+
+<<< @/../example/translate.cpp
+
+</template>
+</ExampleTabs>
+
 ---
 
 ## 4. Advanced Transition Examples

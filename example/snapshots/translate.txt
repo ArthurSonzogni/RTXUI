@@ -1,0 +1,24 @@
+  translate
+
+  Cards lift when hovered or focused:
+
+  ▊▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▎
+  ▊ Files      ▎  ▊ Search     ▎  ▊ Settings   ▎
+  ▊▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+  Picked: nothing yet
+
+  Tasks slide out once done:
+
+   ☐ Write the release notes
+   ☐ Answer the open issues
+   ☐ Update the screenshots
+   ☐ Tag the release
+
+
+
+
+
+
+
+
