@@ -76,5 +76,33 @@ TEST_CASE("A transition waits out its delay", "[timeline][transition]") {
   CHECK(timeline.Advance(40) == "abcdefgh\n");
 }
 
+class HiddenParent : public Component<HiddenParent> {
+ public:
+  std::string wrap_class = "hidden";
+  HiddenParent() { Bind(wrap_class); }
+  std::string_view view = R"html(
+    <div class="{wrap_class}">
+      <div class="bar">abcd</div>
+    </div>
+    <style>
+      @keyframes grow { from { width: 0; } to { width: 4; } }
+      .bar { height: 1; overflow: hidden; animation: grow 64ms linear; }
+      .hidden { display: none; }
+    </style>
+  )html";
+};
+
+TEST_CASE("An animation under a hidden parent starts once it is shown",
+          "[timeline][animation]") {
+  auto app = Ref<HiddenParent>::New();
+  Timeline timeline(app, 4, 1);
+  timeline.Advance(1000);  // Long enough to have played out unseen.
+  PostTask([&] { app->wrap_class = ""; });
+  timeline.Advance(0);
+  // From the beginning, as it is shown.
+  CHECK(timeline.Advance(32) == "ab\n");
+  CHECK(timeline.Advance(32) == "abcd\n");
+}
+
 }  // namespace
 }  // namespace rtxui::testing

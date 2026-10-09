@@ -141,7 +141,7 @@ Like every other rule, `@keyframes` belong to the component that declares them: 
 
 *   An animation starts when an element starts declaring it, and keeps running when the component re-renders.
 *   Changing its duration, easing or play state does not restart it. Removing it (for example by removing the class that declares it) stops it; adding it back starts it again from the beginning.
-*   An element with `display: none` runs no animation. Its animations start from the beginning once it is displayed, so an element that appears plays them in full.
+*   An element with `display: none`, or inside one, runs no animation. Its animations start from the beginning once it is displayed, so an element that appears plays them in full, and a hidden one costs no redraws.
 *   While any animation plays, the screen keeps redrawing. A [headless](/guide/headless) run waits for finite animations to end, but not for `infinite` ones.
 *   A length animates smoothly between cells, percentages and `calc()`, in any mix (`50%` to `10` is `calc(25% + 5)` halfway). From or to `auto`, it jumps at the end.
 
