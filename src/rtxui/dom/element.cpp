@@ -263,6 +263,13 @@ std::optional<Color> InterpolateOptionalColor(std::optional<Color> start,
   return InterpolateColor(s, t, progress);
 }
 
+// A CSS time, stored as float seconds, in milliseconds. Rounded to the
+// microsecond: `80ms` is 0.08f, which is 79.99999 ms as is, and an animation
+// sampled at its exact end or middle would land a frame short.
+double ToMs(float seconds) {
+  return std::round(static_cast<double>(seconds) * 1e6) / 1e3;
+}
+
 // A length as `cells + percent%`, the form calc() folds into. Nothing for
 // the units that have none: auto, fr and min()/max().
 std::optional<std::pair<float, float>> AsLinear(Length length) {
@@ -777,8 +784,8 @@ void Element::TriggerTransitions(double current_time_ms) {
       const TransitionConfig* config = FindTransitionConfig(this, prop_name);
       if (config && config->duration_seconds > 0.0f) {
         ActiveTransition trans;
-        trans.start_time_ms = current_time_ms + config->delay_seconds * 1000.0;
-        trans.duration_ms = config->duration_seconds * 1000.0;
+        trans.start_time_ms = current_time_ms + ToMs(config->delay_seconds);
+        trans.duration_ms = ToMs(config->duration_seconds);
         trans.timing_function = config->timing_function;
         trans.type = ActiveTransition::Type::Color;
         trans.start_color = current_val.value_or(Color::RGBA(0, 0, 0, 0));
@@ -815,8 +822,8 @@ void Element::TriggerTransitions(double current_time_ms) {
       const TransitionConfig* config = FindTransitionConfig(this, prop_name);
       if (config && config->duration_seconds > 0.0f) {
         ActiveTransition trans;
-        trans.start_time_ms = current_time_ms + config->delay_seconds * 1000.0;
-        trans.duration_ms = config->duration_seconds * 1000.0;
+        trans.start_time_ms = current_time_ms + ToMs(config->delay_seconds);
+        trans.duration_ms = ToMs(config->duration_seconds);
         trans.timing_function = config->timing_function;
         trans.type = ActiveTransition::Type::Float;
         trans.start_float = current_val;
@@ -844,8 +851,8 @@ void Element::TriggerTransitions(double current_time_ms) {
       const TransitionConfig* config = FindTransitionConfig(this, prop_name);
       if (config && config->duration_seconds > 0.0f) {
         ActiveTransition trans;
-        trans.start_time_ms = current_time_ms + config->delay_seconds * 1000.0;
-        trans.duration_ms = config->duration_seconds * 1000.0;
+        trans.start_time_ms = current_time_ms + ToMs(config->delay_seconds);
+        trans.duration_ms = ToMs(config->duration_seconds);
         trans.timing_function = config->timing_function;
         trans.type = ActiveTransition::Type::Length;
         trans.start_length = current_val;
@@ -1142,8 +1149,8 @@ std::optional<float> AnimationProgress(RunningAnimation& animation,
   const double now =
       animation.paused_at_ms >= 0.0 ? animation.paused_at_ms : current_time_ms;
   const double elapsed =
-      now - animation.start_time_ms - config.delay_seconds * 1000.0;
-  const double duration = config.duration_seconds * 1000.0;
+      now - animation.start_time_ms - ToMs(config.delay_seconds);
+  const double duration = ToMs(config.duration_seconds);
   const double iterations = config.iteration_count;
 
   // The progress `fraction` of the way through iteration `iteration`.
