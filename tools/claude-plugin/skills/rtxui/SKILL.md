@@ -68,7 +68,9 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
   `<elif condition="...">` and `<else>`. True means the value prints as `true`
   or `1`. Never `v-if`, `:if` or `*ngIf`.
 - Loops: `<for each="{list}" as="item">` with `{item}` and `{$index}`. Never
-  `v-for` or `for="x in xs"`.
+  `v-for` or `for="x in xs"`. When items move or disappear, give the loop a
+  key, `<for each="{tasks}" as="task" key="{task.id}">`, so each item keeps
+  its own element: its focus, its running animation.
 - Handlers: `onclick="Method"` or `onclick="Method(arg)"`, one string argument;
   `@click`, `@change` are aliases. No braces, statements or camelCase
   (`onClick`). Use `class`, not `className`.
@@ -87,12 +89,23 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
   a rule only matches elements its own template wrote, and `.dark .title` in a
   child never sees a `.dark` set by its parent. Pass context down as a custom
   property (`--accent`, which inherits) or as a prop.
-- Use only built-in tags (`div`, `span`, `p`, `h1`-`h6`, `button`, `input`,
-  `textarea`, `checkbox`, `radio`, `select`, `ul`/`ol`/`li`, `table`, ...) and
-  imported components. There is no `<View>`, `<Text>` or `<Box>`.
+- Use only built-in tags (`div`, `span`, `p`, `h1`-`h6`, `button`, `a`,
+  `input`, `textarea`, `checkbox`, `radio`, `select`, `ul`/`ol`/`li`, `table`,
+  `dialog`, `tabs`, `toast`, `tree-item`, ...) and imported components. There
+  is no `<View>`, `<Text>` or `<Box>`. A notification is
+  `<toast open="{saved}" duration="3000">Saved</toast>`: it slides in, and
+  `saved` falls back to false once it closes.
 - CSS lengths are terminal cells (`width: 20`). `font-size` and `font-family`
   do not exist; use `font-weight`, `font-style`, `text-decoration`, colors and
   `border` (`solid`, `rounded`, `double`, `tall`, ...).
+- Motion: `transition: width 200ms ease-out 100ms` (property, duration, then
+  optional timing function and delay), or `@keyframes slide { from { ... } }`
+  with `animation: slide 300ms ease-in forwards`. Colors, `opacity`, `width`,
+  `height`, `top`/`right`/`bottom`/`left`, `translate` and `flex-grow` animate.
+  `translate: 0 -1` moves a box without moving anything around it, and its
+  percentages are of the box's own size: `translate: calc(100% + 2)` puts it
+  just out of sight. There is no `transform`. `onanimationend="Method"` runs
+  once an animation finishes, for instance to remove an item that slid out.
 - Only the UI thread may change component state. From a worker thread, hand
   the result back with `rtxui::PostTask([...] { ... });`, which is safe to
   call from any thread.
@@ -131,3 +144,10 @@ printf '\t\t\r' | RTXUI_STRICT=1 RTXUI_HEADLESS=80x24 ./my_app
 Read the printed screen and compare it with what was asked. In C++ tests,
 `rtxui::HeadlessScreen screen(app, 80, 24);` offers `Input(bytes)`,
 `Click(x, y)` (0-based), `Resize(w, h)` and `Text()`.
+
+Headless runs wait for animations to end. To check what happens over time (an
+animation, a transition, a `PostDelayedTask` timer), use
+`rtxui::TimelineScreen screen(app, 80, 24);`: time moves only when told,
+`Advance(ms)` returns the frame drawn at that moment, `Record(ms)` every
+distinct frame, and `BackgroundAt(x, y)` a cell's color, which text cannot
+show.
