@@ -1267,6 +1267,47 @@ std::vector<std::string_view> SplitCommaList(std::string_view text) {
   return entries;
 }
 
+// One entry of the `transition` shorthand: `width 1s ease-out 200ms`. As in
+// CSS, the parts come in any order: the first time is the duration and the
+// second the delay, and the property defaults to `all`. Returns nothing when
+// a word fits nowhere.
+std::optional<TransitionConfig> ParseTransitionShorthand(
+    std::string_view text) {
+  TransitionConfig config;
+  bool has_property = false;
+  bool has_duration = false;
+  bool has_delay = false;
+  bool has_timing = false;
+  for (std::string_view word : SplitWords(text)) {
+    if (auto time = ParseTimeSeconds(word)) {
+      if (!has_duration) {
+        config.duration_seconds = *time;
+        has_duration = true;
+      } else if (!has_delay) {
+        config.delay_seconds = *time;
+        has_delay = true;
+      } else {
+        return std::nullopt;
+      }
+      continue;
+    }
+    if (!has_timing && IsTimingFunction(word)) {
+      config.timing_function = std::string(word);
+      has_timing = true;
+      continue;
+    }
+    if (has_property) {
+      return std::nullopt;
+    }
+    config.property = std::string(word);
+    has_property = true;
+  }
+  if (!has_property) {
+    config.property = "all";
+  }
+  return config;
+}
+
 // One entry of the `animation` shorthand: `spin 1s linear infinite`. Each
 // keyword is recognised by what it can be, in any order, as CSS allows; the
 // first time is the duration and the second the delay, and whatever is left
@@ -1496,68 +1537,18 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   auto v = declaration.value;
 
   if (p == "transition") {
-    std::string_view value_view = v;
-    style.transitions.reset();
-    while (!value_view.empty()) {
-      size_t comma = value_view.find(',');
-      std::string_view token = (comma == std::string_view::npos)
-                                   ? value_view
-                                   : value_view.substr(0, comma);
-      while (!token.empty() &&
-             std::isspace(static_cast<unsigned char>(token.front()))) {
-        token.remove_prefix(1);
+    auto transitions = std::make_unique<std::vector<TransitionConfig>>();
+    for (std::string_view entry : SplitCommaList(v)) {
+      auto config = ParseTransitionShorthand(entry);
+      if (!config) {
+        ReportDiagnostic("invalid transition '" + std::string(entry) +
+                         "': expected a property, a duration, and optionally "
+                         "a timing function and a delay");
+        return;
       }
-      while (!token.empty() &&
-             std::isspace(static_cast<unsigned char>(token.back()))) {
-        token.remove_suffix(1);
-      }
-      if (!token.empty()) {
-        size_t space1 = token.find(' ');
-        if (space1 != std::string_view::npos) {
-          std::string_view prop_name = token.substr(0, space1);
-          std::string_view remaining = token.substr(space1 + 1);
-          while (!remaining.empty() &&
-                 std::isspace(static_cast<unsigned char>(remaining.front()))) {
-            remaining.remove_prefix(1);
-          }
-          size_t space2 = remaining.find(' ');
-          std::string_view dur_str = (space2 == std::string_view::npos)
-                                         ? remaining
-                                         : remaining.substr(0, space2);
-          float dur = 0.0f;
-          if (dur_str.ends_with("ms")) {
-            dur = StoF(dur_str.substr(0, dur_str.size() - 2)) / 1000.0f;
-          } else if (dur_str.ends_with("s")) {
-            dur = StoF(dur_str.substr(0, dur_str.size() - 1));
-          } else {
-            dur = StoF(dur_str);
-          }
-          std::string_view timing = "ease";
-          if (space2 != std::string_view::npos) {
-            std::string_view remaining2 = remaining.substr(space2 + 1);
-            while (
-                !remaining2.empty() &&
-                std::isspace(static_cast<unsigned char>(remaining2.front()))) {
-              remaining2.remove_prefix(1);
-            }
-            size_t space3 = remaining2.find(' ');
-            timing = (space3 == std::string_view::npos)
-                         ? remaining2
-                         : remaining2.substr(0, space3);
-          }
-          if (!style.transitions) {
-            style.transitions =
-                std::make_unique<std::vector<TransitionConfig>>();
-          }
-          style.transitions->push_back(
-              {std::string(prop_name), dur, 0.0f, std::string(timing)});
-        }
-      }
-      if (comma == std::string_view::npos) {
-        break;
-      }
-      value_view = value_view.substr(comma + 1);
+      transitions->push_back(std::move(*config));
     }
+    style.transitions = std::move(transitions);
     return;
   }
 

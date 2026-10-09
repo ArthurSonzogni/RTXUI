@@ -48,5 +48,33 @@ TEST_CASE("A timeline records the frames an animation draws", "[timeline]") {
         std::vector<std::string>{"\n", "a\n", "ab\n", "abc\n", "abcd\n"});
 }
 
+class Delayed : public Component<Delayed> {
+ public:
+  std::string bar_class;
+  Delayed() { Bind(bar_class); }
+  std::string_view view = R"html(
+    <div class="bar {bar_class}">abcdefgh</div>
+    <style>
+      .bar {
+        width: 0;
+        height: 1;
+        overflow: hidden;
+        transition: width 80ms linear 100ms;
+      }
+      .bar.open { width: 8; }
+    </style>
+  )html";
+};
+
+TEST_CASE("A transition waits out its delay", "[timeline][transition]") {
+  auto app = Ref<Delayed>::New();
+  Timeline timeline(app, 10, 1);
+  PostTask([&] { app->bar_class = "open"; });
+  timeline.Advance(0);
+  CHECK(timeline.Advance(99) == "\n");      // Still waiting.
+  CHECK(timeline.Advance(41) == "abcd\n");  // Halfway through.
+  CHECK(timeline.Advance(40) == "abcdefgh\n");
+}
+
 }  // namespace
 }  // namespace rtxui::testing
