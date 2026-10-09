@@ -14,6 +14,10 @@ const std::string_view a::view = R"html(
         color: #3b82f6;
         cursor: pointer;
       }
+      self:focus {
+        background-color: rgb(37, 99, 235);
+        color: white;
+      }
     </style>
   )html";
 }  // namespace rtxui

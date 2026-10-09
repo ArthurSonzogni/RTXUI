@@ -594,7 +594,7 @@ other element) inside is a leaf.
 | :--- | :--- | :--- | :--- |
 | `<h1>`, `<h2>`, `<h3>`, `<h4>`, `<h5>`, `<h6>` | Block | `display: block; font-weight: bold;` | Hierarchical headings with stepped margins and sizes. |
 | `<p>` | Block | `display: block; margin: 1 0;` | Paragraph block with vertical separation. |
-| `<a>` | Inline | `color: rgb(59, 130, 246); text-decoration: underline;` | Hyperlink. `href="#id"` triggers page-local scroll-into-view. |
+| `<a>` | Inline | `color: rgb(59, 130, 246); text-decoration: underline;` | Hyperlink. `href="#id"` scrolls the element with that id into view, when clicked or when focused and activated with <kbd>Enter</kbd>. With an `href`, it is in the Tab order, as in a browser. |
 | `<b>`, `<strong>` | Inline | `font-weight: bold;` | Emphasized text with bold weight attribute. |
 | `<i>`, `<em>` | Inline | `font-style: italic;` | Slanted text with italic terminal attribute. |
 | `<u>` | Inline | `text-decoration: underline;` | Underlined text. |
