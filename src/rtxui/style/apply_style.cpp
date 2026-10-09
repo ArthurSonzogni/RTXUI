@@ -2288,6 +2288,39 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "translate") {
+    if (v == "none") {
+      style.translate_x = Length::Cells(0);
+      style.translate_y = Length::Cells(0);
+      return;
+    }
+    // A length, a percentage of the box's own size, or calc() of both.
+    auto parse = [](std::string_view token) -> std::optional<Length> {
+      if (token.empty() ||
+          !(std::isdigit(static_cast<unsigned char>(token[0])) ||
+            token[0] == '-' || token[0] == '+' || token[0] == '.' ||
+            token.starts_with("calc("))) {
+        return std::nullopt;
+      }
+      Length length = ParseLength(token);
+      if (length.unit != Unit::Cells && length.unit != Unit::Percent &&
+          length.unit != Unit::Calc) {
+        return std::nullopt;
+      }
+      return length;
+    };
+    auto parts = SplitWords(v);
+    if (parts.size() == 1 || parts.size() == 2) {
+      auto x = parse(parts[0]);
+      auto y = parts.size() == 2 ? parse(parts[1]) : Length::Cells(0);
+      if (x && y) {
+        style.translate_x = *x;
+        style.translate_y = *y;
+        return;
+      }
+    }
+  }
+
   if (p == "z-index") {
     if (v == "auto") {
       style.z_index = std::nullopt;

@@ -935,12 +935,10 @@ void PaintImpl(const PhysicalFragment* frag,
       sorted_children.begin(), sorted_children.end(),
       [](const PhysicalFragment::ChildLink& a,
          const PhysicalFragment::ChildLink& b) {
-        bool a_pos =
-            (a.fragment && a.fragment->dom_node &&
-             a.fragment->dom_node->style.position != PositionType::Static);
-        bool b_pos =
-            (b.fragment && b.fragment->dom_node &&
-             b.fragment->dom_node->style.position != PositionType::Static);
+        bool a_pos = (a.fragment && a.fragment->dom_node &&
+                      a.fragment->dom_node->style.PaintsAsPositioned());
+        bool b_pos = (b.fragment && b.fragment->dom_node &&
+                      b.fragment->dom_node->style.PaintsAsPositioned());
         int az = (a.fragment && a.fragment->dom_node)
                      ? a.fragment->dom_node->style.z_index.value_or(0)
                      : 0;

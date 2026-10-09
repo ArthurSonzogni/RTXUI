@@ -54,6 +54,7 @@ transition: background-color 0.2s ease-in-out, width 0.3s ease-out;
 ### Animatable Properties
 *   **Dimensions**: `width`, `height` (e.g. `20` to `40` cells).
 *   **Offsets**: `top`, `right`, `bottom`, `left` (or shorthand `inset`), which move a positioned element. Prefer moving sideways: a terminal has more columns than rows, so a horizontal move takes smaller steps.
+*   **Translation**: `translate`, which moves any box without moving what is around it. Its percentages are of the box's own size, so `from { translate: calc(100% + 2); }` slides a box in from just past its own right edge, whatever its width.
 *   **Borders**: `border-top-color`, `border-right-color`, `border-bottom-color`, `border-left-color` (or shorthand `border-color`).
 *   **Colors & Opacities**: `color`, `background-color`, `opacity`.
 *   **Flex Constraints**: `flex-grow`, `flex-shrink`.
