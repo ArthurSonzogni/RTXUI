@@ -84,6 +84,7 @@ EXAMPLES_META = {
     "transitions.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
     "animation.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
     "keyframes.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
+    "translate.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
 
     # Components & Advanced Features
     "tabs.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},

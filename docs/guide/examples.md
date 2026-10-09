@@ -83,6 +83,7 @@ Colors, text decorations, pseudo-classes, transitions, and keyframe animations.
 | [text_align.cpp](/guide/examples/text_align) | text-align: left, center and right. | [Guide](/guide/typography) |
 | [text_decoration.cpp](/guide/examples/text_decoration) | Text decoration: bold, dim, italic, underline and strikethrough. | [Guide](/guide/typography) |
 | [transitions.cpp](/guide/examples/transitions) | CSS transitions. | [Guide](/guide/css/animations) |
+| [translate.cpp](/guide/examples/translate) | Moving boxes with translate. | [Guide](/guide/css/animations) |
 
 ## Components & Advanced Features
 
