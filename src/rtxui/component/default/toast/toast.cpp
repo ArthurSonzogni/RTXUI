@@ -51,11 +51,12 @@ std::string_view toast::Setup() {
     </div>
     <style>
       /* Horizontal: a terminal has more columns than rows, so the move is
-         smoother. 50 is the toast's max-width: it starts out of sight. */
-      @keyframes toast-in-right { from { right: -50; } }
-      @keyframes toast-out-right { to { right: -50; } }
-      @keyframes toast-in-left { from { left: -50; } }
-      @keyframes toast-out-left { to { left: -50; } }
+         smoother. By its own width and the 2 cells it sits from the edge:
+         just out of sight, whatever its size. */
+      @keyframes toast-in-right { from { translate: calc(100% + 2); } }
+      @keyframes toast-out-right { to { translate: calc(100% + 2); } }
+      @keyframes toast-in-left { from { translate: calc(-100% - 2); } }
+      @keyframes toast-out-left { to { translate: calc(-100% - 2); } }
       self {
         display: block;
       }
