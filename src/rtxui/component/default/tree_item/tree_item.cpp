@@ -116,9 +116,10 @@ bool tree_item::Digest() {
   const bool branch = HasChildren();
   arrow = !branch ? " " : open ? "▾" : "▸";
   children_class = open ? "open" : "closed";
-  const bool has_own_onclick = root_ && (root_->GetAttribute("onclick") ||
-                                         root_->GetAttribute("@click") ||
-                                         root_->GetAttribute("@click.left"));
+  const Element* root = Root();
+  const bool has_own_onclick =
+      root && (root->GetAttribute("onclick") || root->GetAttribute("@click") ||
+               root->GetAttribute("@click.left"));
   row_action = (branch && !has_own_onclick) ? "Toggle" : "";
   return Component<tree_item>::Digest();
 }

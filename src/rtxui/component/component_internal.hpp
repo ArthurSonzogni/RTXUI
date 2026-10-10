@@ -5,13 +5,85 @@
 #define RTXUI_COMPONENT_INTERNAL_HPP_
 
 #include <filesystem>
+#include <functional>
+#include <map>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/style/style.hpp"
+#include "rtxui/xml/xml.hpp"
 
 namespace rtxui {
+
+/// What a component holds. It lives here rather than in the public header so
+/// that a component subclass cannot reach it, and so that changing it does not
+/// change the layout of every component.
+struct ComponentBase::Data {
+  std::vector<Entry> entries_;
+  std::vector<RangeEntry> range_entries_;
+
+  // Shared with every other instance declaring the same stylesheet text; see
+  // GetSharedStyle. Aliasing pointers into one StyleData, so both keep it
+  // alive and the index's pointers into the sheet stay valid.
+  std::shared_ptr<const css::StyleSheet> stylesheet_;
+  std::shared_ptr<const CategorizedRules> categorized_rules_;
+  std::vector<std::string> css_strings_;
+
+  struct BindingLink {
+    std::string child_prop;
+    ComponentBase* parent;
+    std::string parent_prop;
+  };
+  std::vector<BindingLink> two_way_bindings_;
+  // Per bound property, how the parent renders the value this component last
+  // pushed to it, when that differs from what was pushed ("1." pushed into a
+  // double renders as "1"). See PropagateBinding().
+  std::map<std::string, std::string, std::less<>> binding_echoes_;
+  int last_render_terminal_width_ = -1;
+  int last_render_terminal_height_ = -1;
+
+  std::string template_;
+  std::string xml_string_;
+  xml::Nodes xml_nodes_;
+  Ref<Element> root_;
+  std::map<std::string, Ref<Element>, std::less<>> slots_;
+  // Set when rendering created a slot element afresh, cleared once the
+  // consumer has projected its content into the slots. Still set after a
+  // Digest() means this component re-rendered on its own -- an <if> around a
+  // <slot> turned true, say -- and left a slot that only the consumer can
+  // fill, so the consumer has to render again.
+  bool slots_recreated_ = false;
+
+  // What each `<for virtual="">` rendered last, to tell when scrolling has
+  // moved past it. Keyed by the loop's node in the template.
+  struct VirtualWindow {
+    const void* node = nullptr;
+    // The element the loop's items are rendered into.
+    Ref<Element> container;
+    size_t first = 0;
+    size_t last = 0;
+    size_t count = 0;
+    int item_height = 1;
+  };
+  std::vector<VirtualWindow> virtual_windows_;
+  // The scroll offset and height of each loop's scroll container, as last
+  // seen once laid out. Render() detaches the component while it runs, which
+  // hides a scroll container outside it; this is what it falls back to.
+  std::map<const void*, VirtualListViewport> virtual_viewports_;
+
+  // The tag a template wrote to create this component, which reconciliation
+  // matches on to reuse it. Not Tag(): that is the class name, which an alias
+  // or a hyphenated tag (`tab-pane` is `tab_pane`) does not match.
+  std::string created_tag_;
+  std::vector<Ref<ComponentBase>> children_;
+  std::vector<Ref<ComponentBase>> old_children_;
+  std::string id_;
+  std::vector<std::string> classes_;
+};
 
 // The parts of ComponentBase that the rest of the library needs but that are
 // not part of the public API.
@@ -22,7 +94,7 @@ struct ComponentInternals {
   // The same, sharing ownership of the stylesheet the rules point into.
   static const std::shared_ptr<const CategorizedRules>& shared_rules(
       const ComponentBase& c) {
-    return c.categorized_rules_;
+    return c.data_->categorized_rules_;
   }
   static const std::map<std::string, Ref<Element>, std::less<>>& slots(
       const ComponentBase& c) {

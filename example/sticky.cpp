@@ -103,7 +103,7 @@ class MonthSection : public Component<MonthSection> {
       }
       return false;
     };
-    entries_.push_back({"month-index", get_value, check_and_update, set_value});
+    AddEntry({"month-index", get_value, check_and_update, set_value});
 
     Bind(name);
     Bind(header_bg);

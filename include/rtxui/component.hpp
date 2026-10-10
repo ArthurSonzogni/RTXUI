@@ -104,9 +104,7 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   /// The tag a template wrote to create this component: what selectors and
   /// QuerySelector() match it by. Tag() -- the class name -- for a component
   /// no template created, such as the application's own.
-  std::string_view WrittenTag() const {
-    return created_tag_.empty() ? Tag() : std::string_view(created_tag_);
-  }
+  std::string_view WrittenTag() const;
 
   // Reactivity ---------------------------------------------------------------
   /// Registers the component's bindings. Called once, before the first
@@ -199,9 +197,7 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   };
 
   const css::StyleSheet* stylesheet() const;
-  const CategorizedRules* categorized_rules() const {
-    return categorized_rules_.get();
-  }
+  const CategorizedRules* categorized_rules() const;
   bool HasAnyPseudoClasses() const;
   static ComponentBase* GetMouseCapturer();
 
@@ -209,38 +205,11 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   static std::optional<std::string> TakePendingClipboardWrite();
 
   Ref<Element> Slot(std::string_view name);
-  const std::map<std::string, Ref<Element>, std::less<>>& slots() const {
-    return slots_;
-  }
+  const std::map<std::string, Ref<Element>, std::less<>>& slots() const;
   void SetProperty(std::string_view name, std::string_view value);
 
   virtual std::string GetInterpolatedValue(std::string_view expression) = 0;
 
-  struct BindingLink {
-    std::string child_prop;
-    ComponentBase* parent;
-    std::string parent_prop;
-  };
-
-  struct RangeEntry {
-    std::string name;
-    std::shared_ptr<TypeErasedRange> range;
-  };
-  std::vector<RangeEntry> range_entries_;
-
-  // Shared with every other instance declaring the same stylesheet text; see
-  // GetSharedStyle. Aliasing pointers into one StyleData, so both keep it
-  // alive and the index's pointers into the sheet stay valid.
-  std::shared_ptr<const css::StyleSheet> stylesheet_;
-  std::shared_ptr<const CategorizedRules> categorized_rules_;
-  std::vector<std::string> css_strings_;
-  std::vector<BindingLink> two_way_bindings_;
-  // Per bound property, how the parent renders the value this component last
-  // pushed to it, when that differs from what was pushed ("1." pushed into a
-  // double renders as "1"). See PropagateBinding().
-  std::map<std::string, std::string, std::less<>> binding_echoes_;
-  int last_render_terminal_width_ = -1;
-  int last_render_terminal_height_ = -1;
   void Render(const xml::Node& node,
               Element* element,
               ComponentBase* source,
@@ -262,58 +231,45 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
                        bool preserve_newlines = false,
                        const SlotFilter* filter = nullptr,
                        const std::string* item_key = nullptr);
-  std::string template_;
-  std::string xml_string_;
-  xml::Nodes xml_nodes_;
-  Ref<Element> root_;
-  std::map<std::string, Ref<Element>, std::less<>> slots_;
-  // Set when rendering created a slot element afresh, cleared once the
-  // consumer has projected its content into the slots. Still set after a
-  // Digest() means this component re-rendered on its own -- an <if> around a
-  // <slot> turned true, say -- and left a slot that only the consumer can
-  // fill, so the consumer has to render again.
-  bool slots_recreated_ = false;
-
-  // What each `<for virtual="">` rendered last, to tell when scrolling has
-  // moved past it. Keyed by the loop's node in the template.
-  struct VirtualWindow {
-    const void* node = nullptr;
-    // The element the loop's items are rendered into.
-    Ref<Element> container;
-    size_t first = 0;
-    size_t last = 0;
-    size_t count = 0;
-    int item_height = 1;
-  };
-  std::vector<VirtualWindow> virtual_windows_;
-  // The scroll offset and height of each loop's scroll container, as last
-  // seen once laid out. Render() detaches the component while it runs, which
-  // hides a scroll container outside it; this is what it falls back to.
-  std::map<const void*, VirtualListViewport> virtual_viewports_;
   /// Whether a virtual loop's scroll container now shows items outside what
   /// the loop rendered, so that it has to render again.
   bool VirtualWindowsStale();
-  // The tag a template wrote to create this component, which reconciliation
-  // matches on to reuse it. Not Tag(): that is the class name, which an alias
-  // or a hyphenated tag (`tab-pane` is `tab_pane`) does not match.
-  std::string created_tag_;
   void MarkSlotsRecreated(bool recreated);
   // Whether a component this one's template wrote re-rendered on its own and
   // left a slot only this one can fill.
   bool ConsumesRecreatedSlots() const;
-  std::vector<Ref<ComponentBase>> children_;
-  std::vector<Ref<ComponentBase>> old_children_;
-  std::string id_;
-  std::vector<std::string> classes_;
 
-  // Simulated reflection registry.
+  /// A bound name: how to read its value and, for state, how to tell that it
+  /// changed since the last look and how to set it from a string.
   struct Entry {
     std::string name;
     std::function<std::string()> get_value;
     std::function<bool()> check_and_update;
     std::function<void(std::string_view)> set_value;
   };
-  std::vector<Entry> entries_;
+  /// A bound collection, for `<for>`.
+  struct RangeEntry {
+    std::string name;
+    std::shared_ptr<TypeErasedRange> range;
+  };
+  void AddEntry(Entry entry);
+  void AddRange(RangeEntry entry);
+  /// The bound name `name`, or nullptr.
+  const Entry* FindEntry(std::string_view name) const;
+  /// Compares every bound value with its snapshot, and takes a new one.
+  /// Whether any changed.
+  bool UpdateBindings();
+  /// Digests the components this one's template wrote. Whether any changed.
+  bool DigestChildren();
+  /// Offers `event` to the components this one's template wrote, until one
+  /// handles it.
+  bool ChildrenOnEvent(Event event);
+
+  /// Everything else a component holds, defined inside the library
+  /// (component_internal.hpp) so that it is neither visible to a component
+  /// nor part of its layout.
+  struct Data;
+  std::unique_ptr<Data> data_;
 };
 
 namespace reflection {
@@ -555,27 +511,15 @@ class Component : public ComponentBase {
 
   bool Digest() override {
     StyleResolutionScope scope(this);
-    bool changed = false;
-    for (auto& entry : entries_) {
-      if (entry.check_and_update && entry.check_and_update()) {
-        changed = true;
-      }
-    }
-    for (auto& range_entry : range_entries_) {
-      if (range_entry.range->CheckAndUpdate()) {
-        changed = true;
-      }
-    }
+    bool changed = UpdateBindings();
     if (VirtualWindowsStale()) {
       changed = true;
     }
     if (changed) {
       this->Render();
     }
-    for (auto& child : children_) {
-      if (child->Digest()) {
-        changed = true;
-      }
+    if (DigestChildren()) {
+      changed = true;
     }
     if (ConsumesRecreatedSlots()) {
       this->Render();
@@ -588,10 +532,8 @@ class Component : public ComponentBase {
     if (target.starts_with("props.")) {
       target = target.substr(6);
     }
-    for (const auto& entry : entries_) {
-      if (entry.name == target) {
-        return entry.get_value();
-      }
+    if (const Entry* entry = FindEntry(target)) {
+      return entry->get_value();
     }
     if (expression.find_first_of(" =!<>&|") != std::string_view::npos) {
       ReportDiagnostic("'{" + std::string(expression) + "}' in <" +
@@ -605,14 +547,7 @@ class Component : public ComponentBase {
     return std::string(expression);
   }
 
-  bool OnEvent(Event event) override {
-    for (auto& child : children_) {
-      if (child->OnEvent(event)) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool OnEvent(Event event) override { return ChildrenOnEvent(event); }
 
   // Member Pointer Binding (Variables or Computed Properties)
   template <typename T, typename C, typename... Args>
@@ -620,13 +555,12 @@ class Component : public ComponentBase {
     if constexpr (std::is_member_function_pointer_v<T C::*>) {
       if constexpr (requires { (std::declval<const Derived>().*member)(); }) {
         // Const member function -> Computed property
-        entries_.push_back(
-            {name,
-             [this, member]() {
-               return reflection::to_string(
-                   (static_cast<const Derived*>(this)->*member)());
-             },
-             nullptr, nullptr});
+        AddEntry({name,
+                  [this, member]() {
+                    return reflection::to_string(
+                        (static_cast<const Derived*>(this)->*member)());
+                  },
+                  nullptr, nullptr});
       } else if constexpr (requires {
                              (std::declval<Derived>().*member)(std::string{});
                            }) {
@@ -697,9 +631,8 @@ class Component : public ComponentBase {
     if (clean_name.starts_with("props.")) {
       clean_name = clean_name.substr(6);
     }
-    range_entries_.push_back(
-        {std::move(clean_name),
-         std::make_shared<TypeErasedRangeImpl<Container>>(ptr)});
+    AddRange({std::move(clean_name),
+              std::make_shared<TypeErasedRangeImpl<Container>>(ptr)});
   }
 
   template <typename Container>
@@ -712,9 +645,8 @@ class Component : public ComponentBase {
     if (clean_name.starts_with("props.")) {
       clean_name = clean_name.substr(6);
     }
-    range_entries_.push_back(
-        {std::move(clean_name),
-         std::make_shared<TypeErasedRangeImpl<Container>>(ptr, mapper)});
+    AddRange({std::move(clean_name),
+              std::make_shared<TypeErasedRangeImpl<Container>>(ptr, mapper)});
   }
 
  protected:
@@ -738,18 +670,18 @@ class Component : public ComponentBase {
         reflection::from_string(val, *ptr);
       }
     };
-    entries_.push_back({std::move(clean_name), std::move(get_value),
-                        std::move(check_and_update), std::move(set_value)});
+    AddEntry({std::move(clean_name), std::move(get_value),
+              std::move(check_and_update), std::move(set_value)});
   }
 
   template <typename Ret>
   void RegisterComputed(std::string name, Ret (Derived::*method)() const) {
-    entries_.push_back({name,
-                        [this, method]() {
-                          return reflection::to_string(
-                              (static_cast<const Derived*>(this)->*method)());
-                        },
-                        nullptr, nullptr});
+    AddEntry({name,
+              [this, method]() {
+                return reflection::to_string(
+                    (static_cast<const Derived*>(this)->*method)());
+              },
+              nullptr, nullptr});
   }
 };
 

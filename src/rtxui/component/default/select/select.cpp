@@ -345,7 +345,7 @@ bool select::Digest() {
   }
 
   if (root && state_changed) {
-    auto& comp_cls = classes_;
+    auto& comp_cls = data_->classes_;
     auto it_comp = std::find(comp_cls.begin(), comp_cls.end(), "open");
     if (is_open) {
       if (it_comp == comp_cls.end()) {

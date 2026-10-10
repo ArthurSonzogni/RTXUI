@@ -158,11 +158,11 @@ bool ComponentBase::OnEvent(Event /*event*/) {
 }
 
 Element* ComponentBase::Root() const {
-  return root_.get();
+  return data_->root_.get();
 }
 
 ElementHandle ComponentBase::RootElement() const {
-  return ElementHandle(root_.get());
+  return ElementHandle(data_->root_.get());
 }
 
 ElementHandle ComponentBase::QueryElement(std::string_view selector) const {
@@ -170,7 +170,7 @@ ElementHandle ComponentBase::QueryElement(std::string_view selector) const {
 }
 
 ComponentBase* ComponentBase::QueryComponent(std::string_view selector) {
-  Element* root = root_.get();
+  Element* root = data_->root_.get();
   if (!root) {
     return nullptr;
   }
@@ -348,7 +348,73 @@ struct CategorizedRules {
   std::map<std::string, css::KeyframesRule, std::less<>> keyframes;
 };
 
-ComponentBase::ComponentBase() = default;
+ComponentBase::ComponentBase() : data_(std::make_unique<Data>()) {}
+
+std::string_view ComponentBase::WrittenTag() const {
+  return data_->created_tag_.empty() ? Tag()
+                                     : std::string_view(data_->created_tag_);
+}
+
+const CategorizedRules* ComponentBase::categorized_rules() const {
+  return data_->categorized_rules_.get();
+}
+
+const std::map<std::string, Ref<Element>, std::less<>>& ComponentBase::slots()
+    const {
+  return data_->slots_;
+}
+
+void ComponentBase::AddEntry(Entry entry) {
+  data_->entries_.push_back(std::move(entry));
+}
+
+void ComponentBase::AddRange(RangeEntry entry) {
+  data_->range_entries_.push_back(std::move(entry));
+}
+
+const ComponentBase::Entry* ComponentBase::FindEntry(
+    std::string_view name) const {
+  for (const Entry& entry : data_->entries_) {
+    if (entry.name == name) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+bool ComponentBase::UpdateBindings() {
+  bool changed = false;
+  for (Entry& entry : data_->entries_) {
+    if (entry.check_and_update && entry.check_and_update()) {
+      changed = true;
+    }
+  }
+  for (RangeEntry& range_entry : data_->range_entries_) {
+    if (range_entry.range->CheckAndUpdate()) {
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+bool ComponentBase::DigestChildren() {
+  bool changed = false;
+  for (auto& child : data_->children_) {
+    if (child->Digest()) {
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+bool ComponentBase::ChildrenOnEvent(Event event) {
+  for (auto& child : data_->children_) {
+    if (child->OnEvent(event)) {
+      return true;
+    }
+  }
+  return false;
+}
 ComponentBase::~ComponentBase() {
   MarkSlotsRecreated(false);
   ReleaseMouse();
@@ -2339,9 +2405,9 @@ thread_local int g_unfilled_slot_components = 0;
 }  // namespace
 
 void ComponentBase::MarkSlotsRecreated(bool recreated) {
-  if (slots_recreated_ != recreated) {
+  if (data_->slots_recreated_ != recreated) {
     g_unfilled_slot_components += recreated ? 1 : -1;
-    slots_recreated_ = recreated;
+    data_->slots_recreated_ = recreated;
   }
 }
 
@@ -2352,11 +2418,11 @@ bool ComponentBase::ConsumesRecreatedSlots() const {
   // The component that wrote `<X>...</X>` is the one projecting into X's
   // slots, wherever X sits in the component tree below it.
   auto visit = [this](auto& self, const ComponentBase& component) -> bool {
-    for (const auto& child : component.children_) {
+    for (const auto& child : component.data_->children_) {
       if (!child) {
         continue;
       }
-      if (child->slots_recreated_ && child->Root() &&
+      if (child->data_->slots_recreated_ && child->Root() &&
           child->Root()->owner_component() == this) {
         return true;
       }
@@ -2378,19 +2444,20 @@ bool TakeBaseStylesResolved() {
 }
 
 bool ComponentInternals::HasVirtualLists(const ComponentBase& c) {
-  if (!c.virtual_windows_.empty()) {
+  if (!c.data_->virtual_windows_.empty()) {
     return true;
   }
-  return std::ranges::any_of(c.children_, [](const auto& child) {
+  return std::ranges::any_of(c.data_->children_, [](const auto& child) {
     return child && HasVirtualLists(*child);
   });
 }
 
 bool ComponentInternals::UsesRelationalSelectors(const ComponentBase& c) {
-  if (c.categorized_rules_ && c.categorized_rules_->has_relational_selectors) {
+  if (c.data_->categorized_rules_ &&
+      c.data_->categorized_rules_->has_relational_selectors) {
     return true;
   }
-  return std::ranges::any_of(c.children_, [](const auto& child) {
+  return std::ranges::any_of(c.data_->children_, [](const auto& child) {
     return child && UsesRelationalSelectors(*child);
   });
 }
@@ -2575,10 +2642,10 @@ const std::string& StrippedTemplate(std::string_view view) {
 }  // namespace
 
 std::string_view ComponentBase::Template() {
-  if (template_.empty()) {
-    template_ = StrippedTemplate(GetView());
+  if (data_->template_.empty()) {
+    data_->template_ = StrippedTemplate(GetView());
   }
-  return template_;
+  return data_->template_;
 }
 
 namespace {
@@ -2673,24 +2740,24 @@ void CheckTemplate(const xml::Nodes& nodes,
 
 void ComponentBase::Mount() {
   InitReflection();
-  template_ = Template();
+  data_->template_ = Template();
   // Template() has already stripped it. Running StripIndent again finds a
   // minimum indent of zero and changes nothing, but still splits the text into
   // lines twice and rebuilds it -- per component instance, so an interface
   // made of many copies of the same component pays for it every time.
-  xml_string_ = template_;
+  data_->xml_string_ = data_->template_;
 
-  Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
+  Expected<xml::Nodes, xml::Error> nodes = xml::Parse(data_->xml_string_);
   if (!nodes) {
-    XmlParseError(nodes.error(), xml_string_);
+    XmlParseError(nodes.error(), data_->xml_string_);
     // Only reached when a handler chose not to exit. Falling through would
     // read nodes.value() on an empty optional.
-    xml_nodes_ = {};
+    data_->xml_nodes_ = {};
     Render();
     return;
   }
-  xml_nodes_ = std::move(nodes.value());
-  CheckTemplate(xml_nodes_, Tag());
+  data_->xml_nodes_ = std::move(nodes.value());
+  CheckTemplate(data_->xml_nodes_, Tag());
   Render();
 }
 
@@ -2719,7 +2786,7 @@ bool AnyStyleStale(Element* element) {
 }  // namespace
 
 bool ComponentBase::StylesNeedResolve() {
-  return AnyStyleStale(root_.get());
+  return AnyStyleStale(data_->root_.get());
 }
 
 void ComponentBase::ResolveStyles() {
@@ -2729,7 +2796,7 @@ void ComponentBase::ResolveStyles() {
     return;
   }
 
-  ResolveStylesFrom(root_.get(), false);
+  ResolveStylesFrom(data_->root_.get(), false);
 }
 
 namespace {
@@ -2776,7 +2843,7 @@ std::pair<size_t, size_t> VirtualRange(size_t count,
 
 bool ComponentBase::VirtualWindowsStale() {
   bool stale = false;
-  for (const VirtualWindow& window : virtual_windows_) {
+  for (const Data::VirtualWindow& window : data_->virtual_windows_) {
     const std::optional<VirtualListViewport> view =
         MeasureViewport(window.container.get());
     if (!view) {
@@ -2785,7 +2852,7 @@ bool ComponentBase::VirtualWindowsStale() {
                        "ancestor overflow-y: scroll");
       continue;
     }
-    virtual_viewports_[window.node] = *view;
+    data_->virtual_viewports_[window.node] = *view;
     // What is on screen now must have been rendered.
     const int item_height = window.item_height;
     const size_t visible_first =
@@ -2803,44 +2870,44 @@ bool ComponentBase::VirtualWindowsStale() {
 void ComponentBase::Render() {
   StyleResolutionScope scope(this);
   // Each virtual loop records what it renders below.
-  virtual_windows_.clear();
+  data_->virtual_windows_.clear();
   // What is rendered is the current state, so that is what the next Digest()
   // compares against. Otherwise a component re-rendered by its parent, for a
   // prop the parent changed, finds the same change again in its own Digest()
   // and renders a second time.
-  for (auto& entry : entries_) {
+  for (auto& entry : data_->entries_) {
     if (entry.check_and_update) {
       entry.check_and_update();
     }
   }
-  for (auto& range_entry : range_entries_) {
+  for (auto& range_entry : data_->range_entries_) {
     range_entry.range->CheckAndUpdate();
   }
-  last_render_terminal_width_ = css::g_terminal_width;
-  last_render_terminal_height_ = css::g_terminal_height;
+  data_->last_render_terminal_width_ = css::g_terminal_width;
+  data_->last_render_terminal_height_ = css::g_terminal_height;
   // Optimization: Use a flat vector of pairs instead of std::map<ElementPath,
   // ElementState>. Since very few elements actually hold state (scroll, focus,
   // transitions), this avoids the dynamic allocation and key-comparison
   // overhead of a red-black tree map.
   std::vector<std::pair<ElementPath, ElementState>> saved_states;
   Element* saved_parent = nullptr;
-  if (root_) {
-    saved_parent = root_->Parent();
-    root_->set_parent(nullptr);
+  if (data_->root_) {
+    saved_parent = data_->root_->Parent();
+    data_->root_->set_parent(nullptr);
     ElementPath path;
-    CollectElementStates(root_.get(), path, saved_states);
+    CollectElementStates(data_->root_.get(), path, saved_states);
   }
 
   // Save projected slot children and clear parent pointers
   std::map<std::string, std::vector<Ref<Element>>> saved_slot_children;
   std::vector<Ref<ComponentBase>> saved_slot_components;
-  for (auto& [name, slot_el] : slots_) {
+  for (auto& [name, slot_el] : data_->slots_) {
     if (slot_el) {
       saved_slot_children[name] = slot_el->children();
       for (auto& child_el : slot_el->children()) {
         child_el->Visit([&](Element& el) {
           if (el.component()) {
-            for (auto& comp : children_) {
+            for (auto& comp : data_->children_) {
               if (comp.get() == el.component()) {
                 if (std::find(saved_slot_components.begin(),
                               saved_slot_components.end(),
@@ -2856,26 +2923,26 @@ void ComponentBase::Render() {
     }
   }
 
-  old_children_ = std::move(children_);
-  children_.clear();
-  slots_.clear();
+  data_->old_children_ = std::move(data_->children_);
+  data_->children_.clear();
+  data_->slots_.clear();
 
-  if (!root_) {
-    root_ = Ref<Element>::New(this);
+  if (!data_->root_) {
+    data_->root_ = Ref<Element>::New(this);
   }
-  root_->base_style = ComputedStyle();
-  root_->target_style = ComputedStyle();
-  root_->ClearResolvedStyles();
-  root_->id = id_;
-  root_->classes = classes_;
+  data_->root_->base_style = ComputedStyle();
+  data_->root_->target_style = ComputedStyle();
+  data_->root_->ClearResolvedStyles();
+  data_->root_->id = data_->id_;
+  data_->root_->classes = data_->classes_;
 
   xml::Node template_node;
   template_node.type = xml::Node::Type::kElement;
   template_node.tag = "template";
-  template_node.children.reserve(xml_nodes_.size());
+  template_node.children.reserve(data_->xml_nodes_.size());
 
   std::vector<std::string> new_css_strings;
-  for (const auto& node : xml_nodes_) {
+  for (const auto& node : data_->xml_nodes_) {
     if (node.type == xml::Node::Type::kElement && node.tag == "style") {
       if (!node.children.empty() &&
           node.children[0].type == xml::Node::Type::kText) {
@@ -2885,26 +2952,26 @@ void ComponentBase::Render() {
     }
   }
 
-  bool css_changed = (new_css_strings != css_strings_);
+  bool css_changed = (new_css_strings != data_->css_strings_);
   if (css_changed) {
-    if (root_) {
-      root_->Visit([](Element& el) { el.ClearResolvedStyles(); });
+    if (data_->root_) {
+      data_->root_->Visit([](Element& el) { el.ClearResolvedStyles(); });
     }
-    css_strings_ = std::move(new_css_strings);
-    const auto shared = GetSharedStyle(css_strings_);
+    data_->css_strings_ = std::move(new_css_strings);
+    const auto shared = GetSharedStyle(data_->css_strings_);
     if (shared) {
       // Aliasing shared_ptrs: either one keeps the whole StyleData alive, so
       // the raw Ruleset pointers inside `rules` cannot outlive the vector they
       // point into.
-      stylesheet_ = {shared, &shared->sheet};
-      categorized_rules_ = {shared, &shared->rules};
+      data_->stylesheet_ = {shared, &shared->sheet};
+      data_->categorized_rules_ = {shared, &shared->rules};
     } else {
-      stylesheet_ = nullptr;
-      categorized_rules_ = nullptr;
+      data_->stylesheet_ = nullptr;
+      data_->categorized_rules_ = nullptr;
     }
   }
 
-  for (const auto& node : xml_nodes_) {
+  for (const auto& node : data_->xml_nodes_) {
     if (node.type == xml::Node::Type::kElement) {
       if (node.tag == "style") {
         continue;
@@ -2917,12 +2984,12 @@ void ComponentBase::Render() {
     }
   }
 
-  Render(template_node, root_.get(), this);
+  Render(template_node, data_->root_.get(), this);
 
   // Restore projected slot children
   for (auto& [name, children] : saved_slot_children) {
-    auto it = slots_.find(name);
-    if (it != slots_.end() && it->second) {
+    auto it = data_->slots_.find(name);
+    if (it != data_->slots_.end() && it->second) {
       for (auto& child_el : children) {
         it->second->AddChild(child_el);
       }
@@ -2930,14 +2997,14 @@ void ComponentBase::Render() {
   }
 
   for (auto& comp : saved_slot_components) {
-    if (std::find(children_.begin(), children_.end(), comp) ==
-        children_.end()) {
-      children_.push_back(comp);
+    if (std::find(data_->children_.begin(), data_->children_.end(), comp) ==
+        data_->children_.end()) {
+      data_->children_.push_back(comp);
     }
   }
 
-  if (root_ && !saved_states.empty()) {
-    RestoreElementFocusHoverActive(root_.get(), saved_states);
+  if (data_->root_ && !saved_states.empty()) {
+    RestoreElementFocusHoverActive(data_->root_.get(), saved_states);
   }
 
   // Reattach before resolving, not after. The root is detached for the stretch
@@ -2947,15 +3014,15 @@ void ComponentBase::Render() {
   // { … } }` becomes `self button`), matches nothing while the root is an
   // orphan, so re-rendering a nested component silently dropped every rule its
   // host had aimed at it.
-  if (root_ && saved_parent) {
-    root_->set_parent(saved_parent);
+  if (data_->root_ && saved_parent) {
+    data_->root_->set_parent(saved_parent);
   }
 
   // Styles are resolved when the outermost scope closes, which is the end of
   // this Render() unless it runs inside another component's Render() or
   // Digest().
-  if (root_ && !saved_states.empty()) {
-    g_style_batch.restores.push_back({root_, std::move(saved_states)});
+  if (data_->root_ && !saved_states.empty()) {
+    g_style_batch.restores.push_back({data_->root_, std::move(saved_states)});
   }
   g_style_batch.rendered.emplace_back(this);
 }
@@ -3014,7 +3081,7 @@ void ComponentBase::ResolveTargetStyles() {
 }
 
 void ComponentBase::ResolveTargetStyles(double current_time_ms) {
-  if (!root_) {
+  if (!data_->root_) {
     return;
   }
 
@@ -3036,12 +3103,12 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
       }
       return false;
     };
-    if (!HasActive(HasActive, root_.get())) {
+    if (!HasActive(HasActive, data_->root_.get())) {
       return;
     }
   }
 
-  ResolveStylesFrom(root_.get(), true, current_time_ms);
+  ResolveStylesFrom(data_->root_.get(), true, current_time_ms);
 }
 
 namespace {
@@ -3357,7 +3424,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
 
           std::shared_ptr<TypeErasedRange> range;
-          for (const auto& entry : import_source->range_entries_) {
+          for (const auto& entry : import_source->data_->range_entries_) {
             if (entry.name == range_name) {
               range = entry.range;
               break;
@@ -3391,8 +3458,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             std::optional<VirtualListViewport> view = MeasureViewport(slot);
             if (!view) {
               const auto cached =
-                  import_source->virtual_viewports_.find(&child_node);
-              if (cached != import_source->virtual_viewports_.end()) {
+                  import_source->data_->virtual_viewports_.find(&child_node);
+              if (cached != import_source->data_->virtual_viewports_.end()) {
                 view = cached->second;
               } else {
                 view = VirtualListViewport{0, css::g_terminal_height};
@@ -3400,7 +3467,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
             std::tie(first, last) =
                 VirtualRange(range->Size(), item_height, *view);
-            import_source->virtual_windows_.push_back(
+            import_source->data_->virtual_windows_.push_back(
                 {&child_node, Ref<Element>(slot), first, last, range->Size(),
                  item_height});
           }
@@ -3559,7 +3626,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                             scope, fallback_idx, preserve_newlines);
             slot_element->TruncateChildren(fallback_idx);
           }
-          import_source->slots_[slot_name] = slot_element;
+          import_source->data_->slots_[slot_name] = slot_element;
           child_idx++;
           break;
         }
@@ -3593,8 +3660,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // A reused instance is taken out by leaving a null behind: erasing
           // it would shift the rest, once per child of a long list.
           if (item_key && !item_key->empty()) {
-            for (auto& old_child : old_children_) {
-              if (old_child && old_child->created_tag_ == child_node.tag &&
+            for (auto& old_child : data_->old_children_) {
+              if (old_child &&
+                  old_child->data_->created_tag_ == child_node.tag &&
                   old_child->Root() &&
                   old_child->Root()->for_key == *item_key) {
                 child = std::move(old_child);
@@ -3603,8 +3671,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
           }
           if (!child) {
-            for (auto& old_child : old_children_) {
-              if (old_child && old_child->created_tag_ == child_node.tag) {
+            for (auto& old_child : data_->old_children_) {
+              if (old_child &&
+                  old_child->data_->created_tag_ == child_node.tag) {
                 child = std::move(old_child);
                 break;
               }
@@ -3616,32 +3685,32 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             child = factory();
             // The tag it was written as: not always its class name, for an
             // alias (`Import<T>("my-tag")`) or a hyphenated built-in.
-            child->created_tag_ = child_node.tag;
+            child->data_->created_tag_ = child_node.tag;
             is_new = true;
           }
-          if (std::find(children_.begin(), children_.end(), child) ==
-              children_.end()) {
-            children_.push_back(child);
+          if (std::find(data_->children_.begin(), data_->children_.end(),
+                        child) == data_->children_.end()) {
+            data_->children_.push_back(child);
           }
 
           bool id_changed = false;
           if (child_node.attributes.contains("id")) {
             const auto& id_attr = child_node.attributes.at("id");
             if (id_attr.find('{') == std::string::npos) {
-              if (id_attr != child->id_) {
+              if (id_attr != child->data_->id_) {
                 id_changed = true;
-                child->id_ = id_attr;
+                child->data_->id_ = id_attr;
               }
             } else {
               std::string new_id = Interpolate(id_attr);
-              if (new_id != child->id_) {
+              if (new_id != child->data_->id_) {
                 id_changed = true;
-                child->id_ = std::move(new_id);
+                child->data_->id_ = std::move(new_id);
               }
             }
-          } else if (!child->id_.empty()) {
+          } else if (!child->data_->id_.empty()) {
             id_changed = true;
-            child->id_.clear();
+            child->data_->id_.clear();
           }
 
           bool classes_changed = false;
@@ -3649,10 +3718,11 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             const auto& class_attr = child_node.attributes.at("class");
             if (class_attr.find('{') == std::string::npos) {
               auto class_views = Split(class_attr, ' ');
-              bool matches = (class_views.size() == child->classes_.size());
+              bool matches =
+                  (class_views.size() == child->data_->classes_.size());
               if (matches) {
                 for (size_t i = 0; i < class_views.size(); ++i) {
-                  if (class_views[i] != child->classes_[i]) {
+                  if (class_views[i] != child->data_->classes_[i]) {
                     matches = false;
                     break;
                   }
@@ -3660,15 +3730,17 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
               if (!matches) {
                 classes_changed = true;
-                child->classes_.assign(class_views.begin(), class_views.end());
+                child->data_->classes_.assign(class_views.begin(),
+                                              class_views.end());
               }
             } else {
               std::string interpolated_class = Interpolate(class_attr);
               auto class_views = Split(interpolated_class, ' ');
-              bool matches = (class_views.size() == child->classes_.size());
+              bool matches =
+                  (class_views.size() == child->data_->classes_.size());
               if (matches) {
                 for (size_t i = 0; i < class_views.size(); ++i) {
-                  if (class_views[i] != child->classes_[i]) {
+                  if (class_views[i] != child->data_->classes_[i]) {
                     matches = false;
                     break;
                   }
@@ -3676,18 +3748,19 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
               if (!matches) {
                 classes_changed = true;
-                child->classes_.assign(class_views.begin(), class_views.end());
+                child->data_->classes_.assign(class_views.begin(),
+                                              class_views.end());
               }
             }
-          } else if (!child->classes_.empty()) {
+          } else if (!child->data_->classes_.empty()) {
             classes_changed = true;
-            child->classes_.clear();
+            child->data_->classes_.clear();
           }
 
           if (is_new) {
             child->Mount();
           } else {
-            child->two_way_bindings_.clear();
+            child->data_->two_way_bindings_.clear();
           }
 
           bool attribute_changed = false;
@@ -3742,14 +3815,14 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               attribute_changed = true;
             }
 
-            auto echo = child->binding_echoes_.find(key);
-            if (echo != child->binding_echoes_.end() &&
+            auto echo = child->data_->binding_echoes_.find(key);
+            if (echo != child->data_->binding_echoes_.end() &&
                 echo->second == interpolated_value) {
               // The child's own edit, reformatted by the parent: keep the
               // child's text (see PropagateBinding).
             } else {
-              if (echo != child->binding_echoes_.end()) {
-                child->binding_echoes_.erase(echo);
+              if (echo != child->data_->binding_echoes_.end()) {
+                child->data_->binding_echoes_.erase(echo);
               }
               child->SetProperty(key, interpolated_value);
             }
@@ -3763,14 +3836,16 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               if (expr.starts_with("{") && expr.ends_with("}")) {
                 expr = expr.substr(1, expr.size() - 2);
               }
-              child->two_way_bindings_.push_back(
+              child->data_->two_way_bindings_.push_back(
                   {std::string(key), import_source, std::string(expr)});
             }
           }
 
           bool terminal_size_changed =
-              (child->last_render_terminal_width_ != css::g_terminal_width ||
-               child->last_render_terminal_height_ != css::g_terminal_height);
+              (child->data_->last_render_terminal_width_ !=
+                   css::g_terminal_width ||
+               child->data_->last_render_terminal_height_ !=
+                   css::g_terminal_height);
 
           bool needs_render = is_new || id_changed || classes_changed ||
                               attribute_changed || terminal_size_changed;
@@ -3820,8 +3895,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               // projection below to reuse. Sets keep this linear: a slot can
               // hold a whole list.
               std::unordered_map<const ComponentBase*, size_t> owned;
-              for (size_t i = 0; i < child->children_.size(); ++i) {
-                owned.emplace(child->children_[i].get(), i);
+              for (size_t i = 0; i < child->data_->children_.size(); ++i) {
+                owned.emplace(child->data_->children_[i].get(), i);
               }
               std::unordered_set<const ComponentBase*> projected;
               std::vector<Ref<ComponentBase>> slot_components;
@@ -3832,16 +3907,17 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                       auto it = owned.find(el.component());
                       if (it != owned.end() &&
                           projected.insert(el.component()).second) {
-                        slot_components.push_back(child->children_[it->second]);
+                        slot_components.push_back(
+                            child->data_->children_[it->second]);
                       }
                     });
                   }
                 }
               }
-              std::erase_if(child->children_, [&](const auto& comp) {
+              std::erase_if(child->data_->children_, [&](const auto& comp) {
                 return projected.contains(comp.get());
               });
-              child->old_children_ = std::move(slot_components);
+              child->data_->old_children_ = std::move(slot_components);
             }
 
             // Fill each `<slot.name select="tag">` from the projected content
@@ -3925,7 +4001,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
 
             if (!needs_render) {
-              child->old_children_.clear();
+              child->data_->old_children_.clear();
             }
           }
           // Whatever slots rendering the child created, this pass filled.
@@ -4063,8 +4139,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 }
 
 Ref<Element> ComponentBase::Slot(std::string_view name) {
-  auto it = slots_.find(name);
-  return (it != slots_.end()) ? it->second : Ref<Element>();
+  auto it = data_->slots_.find(name);
+  return (it != data_->slots_.end()) ? it->second : Ref<Element>();
 }
 
 void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
@@ -4072,7 +4148,7 @@ void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
   if (target.starts_with("props.")) {
     target = target.substr(6);
   }
-  for (auto& entry : entries_) {
+  for (auto& entry : data_->entries_) {
     if (entry.name == target && entry.set_value) {
       entry.set_value(value);
       PropagateBinding(target, value);
@@ -4087,7 +4163,7 @@ void ComponentBase::PropagateBinding(std::string_view child_prop,
   if (clean_child_prop.starts_with("props.")) {
     clean_child_prop = clean_child_prop.substr(6);
   }
-  for (const auto& binding : two_way_bindings_) {
+  for (const auto& binding : data_->two_way_bindings_) {
     std::string_view clean_binding_prop = binding.child_prop;
     if (clean_binding_prop.starts_with("props.")) {
       clean_binding_prop = clean_binding_prop.substr(6);
@@ -4102,23 +4178,24 @@ void ComponentBase::PropagateBinding(std::string_view child_prop,
       std::string echo =
           binding.parent->GetInterpolatedValue(binding.parent_prop);
       if (echo != value) {
-        binding_echoes_[binding.child_prop] = std::move(echo);
+        data_->binding_echoes_[binding.child_prop] = std::move(echo);
       } else {
-        binding_echoes_.erase(binding.child_prop);
+        data_->binding_echoes_.erase(binding.child_prop);
       }
     }
   }
 }
 
 const css::StyleSheet* ComponentBase::stylesheet() const {
-  return stylesheet_.get();
+  return data_->stylesheet_.get();
 }
 
 bool ComponentBase::HasAnyPseudoClasses() const {
-  if (categorized_rules_ && categorized_rules_->has_pseudo_classes) {
+  if (data_->categorized_rules_ &&
+      data_->categorized_rules_->has_pseudo_classes) {
     return true;
   }
-  for (const auto& child : children_) {
+  for (const auto& child : data_->children_) {
     if (child && child->HasAnyPseudoClasses()) {
       return true;
     }
@@ -4155,18 +4232,18 @@ void ComponentBase::EnableHotReload(std::string_view view_var_name,
 }
 
 void ComponentBase::HotReload(std::string_view new_template) {
-  template_ = StripIndent(std::string(new_template));
-  xml_string_ = template_;  // Already stripped, see Mount().
+  data_->template_ = StripIndent(std::string(new_template));
+  data_->xml_string_ = data_->template_;  // Already stripped, see Mount().
 
-  Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
+  Expected<xml::Nodes, xml::Error> nodes = xml::Parse(data_->xml_string_);
   if (!nodes) {
     ReportSyntaxError({nodes.error().message, Diagnostic::Kind::XmlSyntax,
                        nodes.error().line, nodes.error().column},
-                      xml_string_);
+                      data_->xml_string_);
     return;
   }
-  xml_nodes_ = std::move(nodes.value());
-  CheckTemplate(xml_nodes_, Tag());
+  data_->xml_nodes_ = std::move(nodes.value());
+  CheckTemplate(data_->xml_nodes_, Tag());
   Render();
 }
 
