@@ -39,6 +39,11 @@ The CSS parser supports a wide range of standard selectors and combinators:
     matches the focused element and every element containing it, so
     `.panel:focus-within` lights up the panel holding the focused field, even
     when the focus is inside another component such as an `<input>`.
+    `:focus-visible` matches a focused element unless the mouse gave it the
+    focus, as in a browser: `button:focus-visible { outline: solid; }` draws
+    a ring when Tab reaches the button but not when it is clicked, until the
+    keyboard is used again. `<input>` and `<textarea>` read the keyboard, so
+    theirs always shows.
 *   **Structural Pseudo-classes**:
     *   `:first-child`: Matches the first element among its siblings.
     *   `:last-child`: Matches the last element among its siblings.
