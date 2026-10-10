@@ -51,10 +51,11 @@ class RTXUI_EXPORT Screen {
   /// The default is transparent: the terminal's own background shows through
   /// wherever nothing paints over it, which is what lets an app sit in a
   /// themed or translucent terminal instead of stamping a rectangle onto it.
-  /// The cost is that the color is unknown, so anything that needs to blend
-  /// against it -- a semi-transparent overlay, a reversed border cell -- has to
-  /// approximate. Naming it here makes all of that exact, at the price of no
-  /// longer inheriting the terminal's background.
+  /// Anything that needs to blend against it -- a semi-transparent overlay, a
+  /// reversed border cell -- uses the color the terminal reports when asked
+  /// (OSC 11), and approximates in a terminal that does not answer. Naming it
+  /// here makes all of that exact everywhere, at the price of no longer
+  /// inheriting the terminal's background.
   void SetBackgroundColor(Color color);
   Color background_color() const;
 

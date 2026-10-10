@@ -1074,8 +1074,12 @@ class ScreenImpl {
   // Follows `link`, an <a href="#id">: scrolls the element with that id into
   // view. Returns whether there was one.
   bool FollowLink(Element* link);
+  void PaintScreen(const PhysicalFragment& root, Texture& texture) const;
 
-  void SetBackgroundColor(Color color) { background_color_ = color; }
+  void SetBackgroundColor(Color color) {
+    background_color_ = color;
+    background_color_set_ = true;
+  }
   Color background_color() const { return background_color_; }
 
   void SetSmoothScrollEnabled(bool enabled) {
@@ -1120,6 +1124,11 @@ class ScreenImpl {
   bool smooth_scroll_enabled_ = true;
   // Transparent: the terminal's own background shows through.
   Color background_color_;
+  bool background_color_set_ = false;
+  // What the terminal said its background is, in reply to the OSC 11 query
+  // made on entering raw mode. Transparent until then, and for a terminal
+  // that does not answer. Used only while the app has not named one.
+  Color terminal_background_;
   bool drag_active_ = false;
   Element* drag_element_ = nullptr;
   bool drag_vertical_ = false;
@@ -1314,6 +1323,12 @@ void ScreenImpl::Step() {
       suppress_draw_ = true;
       while (auto event = parser_->GetEvent()) {
         HandleEvent(*event);
+      }
+      if (auto background = parser_->TakeBackgroundColor()) {
+        terminal_background_ = *background;
+        if (!background_color_set_) {
+          RequestDraw();
+        }
       }
       suppress_draw_ = false;
       if (draw_pending_) {
@@ -2517,7 +2532,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
 
   Texture texture(width_, height_);
   if (root_fragment) {
-    Paint(root_fragment.get(), texture, 0, 0, background_color_);
+    PaintScreen(*root_fragment, texture);
   }
 
   // RTXUI_VERIFY_LAYOUT_REUSE (set for the tests) lays out again anyway, and
@@ -2526,7 +2541,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
     UpdateLayout();
     Texture fresh(width_, height_);
     if (root_fragment_) {
-      Paint(root_fragment_.get(), fresh, 0, 0, background_color_);
+      PaintScreen(*root_fragment_, fresh);
     }
     if (fresh.Render() != texture.Render()) {
       std::cerr << "rtxui: the reused layout drew\n"
@@ -2960,6 +2975,29 @@ bool ScreenImpl::SpatialNavigate(Event event) {
 
   return false;
 }
+// Paints the frame against the screen background: the app's, or else the
+// terminal's own when it reported one. The terminal's is only borrowed for the
+// arithmetic -- what a translucent color or a reversed border cell comes out
+// as over it. Wherever it would merely show, the cell is left at the
+// terminal's default background, so a translucent or themed terminal still
+// shows through, as it does when its color is unknown.
+void ScreenImpl::PaintScreen(const PhysicalFragment& root,
+                             Texture& texture) const {
+  if (background_color_set_ || terminal_background_.a == 0) {
+    Paint(&root, texture, 0, 0, background_color_);
+    return;
+  }
+  Paint(&root, texture, 0, 0, terminal_background_);
+  for (int y = 0; y < texture.height(); ++y) {
+    for (int x = 0; x < texture.width(); ++x) {
+      Cell& cell = texture[x, y];
+      if (cell.background_color == terminal_background_) {
+        cell.background_color = Color();
+      }
+    }
+  }
+}
+
 bool ScreenImpl::FollowLink(Element* link) {
   if (link->tag() != "a") {
     return false;
@@ -3040,6 +3078,12 @@ ScreenImpl::RawTerminal::RawTerminal(ScreenImpl* screen) : screen_(screen) {
   if (screen_ && screen_->device_) {
     if (screen_->device_->IsAtty()) {
       screen_->device_->EnterRawMode(handle_sigwinch);
+      // Ask for the terminal's background color (OSC 11). The reply comes
+      // back as input, whenever the terminal sends it, and one that does not
+      // answer ignores the question.
+      if (!screen_->background_color_set_) {
+        screen_->device_->Write("\x1b]11;?\x1b\\");
+      }
     }
     screen_->has_drawn_ = false;
     screen_->last_texture_.reset();
