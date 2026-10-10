@@ -321,6 +321,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/layout/rowspan_paint_test.cpp"
     "src/rtxui/paint/border_style_test.cpp"
     "src/rtxui/paint/outline_test.cpp"
+    "src/rtxui/paint/hyperlink_test.cpp"
     "src/rtxui/paint/translate_test.cpp"
     "src/rtxui/terminal/timeline_screen_test.cpp"
     "src/rtxui/paint/scrollbar_color_test.cpp"

@@ -2,8 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <cctype>
 #include <cmath>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "rtxui/base/string.hpp"
@@ -355,6 +358,7 @@ void PaintOutline(const PendingOutline& outline, Texture& texture) {
       cell.inverted = false;
     }
     cell.character = c;
+    cell.link = 0;
     cell.foreground_color = Blend(color, cell.background_color);
   };
   set_char(left, top, 0, 0);
@@ -369,6 +373,35 @@ void PaintOutline(const PendingOutline& outline, Texture& texture) {
     set_char(left, i, 1, 0);
     set_char(right, i, 1, 2);
   }
+}
+
+std::atomic<int> g_link_elements = 0;
+
+// The URL a text is a link to: the `href` of the `<a>` around it, when it
+// leaves the app. A `#id` target scrolls within it instead, and a relative
+// path means nothing to a terminal, so only a URL with a scheme
+// (`https:`, `mailto:`, `file:`) is one.
+std::string_view ExternalLink(const Element* element) {
+  for (; element; element = element->Parent()) {
+    if (element->tag() != "a") {
+      continue;
+    }
+    const std::string* href = element->GetAttribute("href");
+    if (!href) {
+      return {};
+    }
+    const size_t colon = href->find(':');
+    if (colon == std::string::npos || colon == 0 ||
+        !std::isalpha(static_cast<unsigned char>((*href)[0])) ||
+        !std::all_of(href->begin(), href->begin() + colon, [](char c) {
+          return std::isalnum(static_cast<unsigned char>(c)) || c == '+' ||
+                 c == '-' || c == '.';
+        })) {
+      return {};
+    }
+    return *href;
+  }
+  return {};
 }
 
 void PaintImpl(const PhysicalFragment* frag,
@@ -516,6 +549,7 @@ void PaintImpl(const PhysicalFragment* frag,
         auto& cell = texture[x, y];
         resolve_cell(cell);
         cell.character = c;
+        cell.link = 0;
 
         // The glyph is always drawn in the border color. What varies is which
         // background fills the rest of the cell -- the element's own, or its
@@ -620,6 +654,9 @@ void PaintImpl(const PhysicalFragment* frag,
 
   // 2. Draw Text
   if (frag->is_text) {
+    const uint16_t link = g_link_elements.load(std::memory_order_relaxed) > 0
+                              ? texture.AddLink(ExternalLink(frag->dom_node))
+                              : 0;
     int border_offset = frag->has_border ? 1 : 0;
     int cell_x = 0;  // cell column offset within the text fragment
     int y = abs_y + border_offset;
@@ -641,6 +678,7 @@ void PaintImpl(const PhysicalFragment* frag,
         auto& cell = texture[x, y];
         resolve_cell(cell);
         cell.character = std::string(g.text);
+        cell.link = link;
         Color fg = current_foreground_color;
         fg.a = static_cast<uint8_t>(fg.a * current_opacity);
         Color bg = cell.background_color;
@@ -742,6 +780,7 @@ void PaintImpl(const PhysicalFragment* frag,
         if (y >= 0 && y < texture.height() && clip.Contains(scrollbar_x, y)) {
           auto& cell = texture[scrollbar_x, y];
           resolve_cell(cell);
+          cell.link = 0;
 
           int cell_start = i * 8;
           int cell_end = (i + 1) * 8;
@@ -844,6 +883,7 @@ void PaintImpl(const PhysicalFragment* frag,
         if (x >= 0 && x < texture.width() && clip.Contains(x, scrollbar_y)) {
           auto& cell = texture[x, scrollbar_y];
           resolve_cell(cell);
+          cell.link = 0;
 
           int cell_start = i * 8;
           int cell_end = (i + 1) * 8;
@@ -1058,6 +1098,10 @@ void Paint(const PhysicalFragment* frag,
     PaintOutline(outline, texture);
   }
   g_pending_outlines.clear();
+}
+
+void CountLinkElements(int delta) {
+  g_link_elements.fetch_add(delta, std::memory_order_relaxed);
 }
 
 }  // namespace rtxui
