@@ -13,6 +13,7 @@
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default_components_internal.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
@@ -11758,4 +11759,31 @@ TEST_CASE("An element matching two entries of one :is() takes the rule once",
   REQUIRE(both != nullptr);
   REQUIRE(both->style.background_color);
   CHECK(both->style.background_color->r == 127);
+}
+
+namespace {
+class ClickFocusApp : public rtxui::Component<ClickFocusApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <button id="button">press</button>
+    </div>
+    <style>
+      button:focus { margin-left: 1; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("Clicking a button's label focuses the button",
+          "[component][screen][focus]") {
+  auto app = rtxui::Ref<ClickFocusApp>::New();
+  rtxui::HeadlessScreen screen(app, 40, 10);
+  auto* button = app->Root()->QuerySelector("#button");
+  REQUIRE(button != nullptr);
+  // The middle of " press ", on the text rather than the padding.
+  screen.Click(button->absolute_x() + 3, button->absolute_y());
+  button = app->Root()->QuerySelector("#button");
+  CHECK(button->focused());
+  CHECK(button->style.margin.left == 1);  // button:focus
 }

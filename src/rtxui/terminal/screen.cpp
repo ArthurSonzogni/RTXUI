@@ -1968,12 +1968,23 @@ void ScreenImpl::HandleEvent(Event event) {
           }
 
           if (!clicked_is_disabled) {
-            bool focus_changed = (focused_element_ != clicked_element);
+            // The focus goes to the focusable element the click landed in,
+            // as in a browser: a click on a button's label focuses the
+            // button, not the label's text. A click on nothing focusable
+            // focuses what it landed on, which is where keys then go.
+            Element* focus_target = clicked_element;
+            for (Element* el = clicked_element; el; el = el->Parent()) {
+              if (GetEffectiveTabIndex(el)) {
+                focus_target = el;
+                break;
+              }
+            }
+            bool focus_changed = (focused_element_ != focus_target);
             if (component_->Root()) {
               component_->Root()->Visit(
                   [](Element& el) { el.set_focused(false); });
             }
-            focused_element_ = clicked_element;
+            focused_element_ = focus_target;
             focused_element_->set_focused(true);
             // No ScrollIntoView() here: a mouse click always lands on an
             // already-visible cell, unlike Tab/arrow-key focus movement
