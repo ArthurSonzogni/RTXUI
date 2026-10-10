@@ -295,77 +295,61 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
   auto box = std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
       LayoutArenaAllocator<LayoutBox>());
-  box->style = dom_node->style;
+  box->set_style(dom_node->style);
   box->dom_node = dom_node;
 
   InheritedTextStyle resolved;
   resolved.align = dom_node->style.text_align.value_or(parent.align);
-  box->style.text_align = resolved.align;
 
   resolved.white_space =
       dom_node->style.white_space.value_or(parent.white_space);
-  box->style.white_space = resolved.white_space;
 
   resolved.text_transform =
       dom_node->style.text_transform.value_or(parent.text_transform);
-  box->style.text_transform = resolved.text_transform;
 
   resolved.letter_spacing =
       dom_node->style.letter_spacing.value_or(parent.letter_spacing);
-  box->style.letter_spacing = resolved.letter_spacing;
   resolved.tab_size = dom_node->style.tab_size.value_or(parent.tab_size);
-  box->style.tab_size = resolved.tab_size;
 
   resolved.line_height =
       dom_node->style.line_height.value_or(parent.line_height);
-  box->style.line_height = resolved.line_height;
 
   resolved.overflow_wrap =
       dom_node->style.overflow_wrap.value_or(parent.overflow_wrap);
-  box->style.overflow_wrap = resolved.overflow_wrap;
 
   resolved.word_break = dom_node->style.word_break.value_or(parent.word_break);
-  box->style.word_break = resolved.word_break;
 
   resolved.fg = dom_node->style.foreground_color.has_value()
                     ? dom_node->style.foreground_color
                     : parent.fg;
-  box->style.foreground_color = resolved.fg;
 
   resolved.bold =
       dom_node->style.bold.has_value() ? dom_node->style.bold : parent.bold;
-  box->style.bold = resolved.bold;
 
   resolved.dim =
       dom_node->style.dim.has_value() ? dom_node->style.dim : parent.dim;
-  box->style.dim = resolved.dim;
 
   resolved.italic = dom_node->style.italic.has_value() ? dom_node->style.italic
                                                        : parent.italic;
-  box->style.italic = resolved.italic;
 
   resolved.underlined = dom_node->style.underlined.has_value()
                             ? dom_node->style.underlined
                             : parent.underlined;
-  box->style.underlined = resolved.underlined;
 
   resolved.underlined_double = dom_node->style.underlined_double.has_value()
                                    ? dom_node->style.underlined_double
                                    : parent.underlined_double;
-  box->style.underlined_double = resolved.underlined_double;
 
   resolved.strikethrough = dom_node->style.strikethrough.has_value()
                                ? dom_node->style.strikethrough
                                : parent.strikethrough;
-  box->style.strikethrough = resolved.strikethrough;
   resolved.overlined = dom_node->style.overlined.has_value()
                            ? dom_node->style.overlined
                            : parent.overlined;
-  box->style.overlined = resolved.overlined;
 
   resolved.blink =
       dom_node->style.blink.has_value() ? dom_node->style.blink : parent.blink;
-  box->style.blink = resolved.blink;
+  box->text = resolved;
 
   // Text nodes don't usually run an algorithm themselves;
   // they are consumed by the parent's InlineFlow.
@@ -464,8 +448,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   // Whether anything in this subtree is positioned out of flow, which is what
   // decides in layout.cpp whether the subtree's fragments may be cached
   // across measurement passes.
-  box->has_out_of_flow = box->style.position == PositionType::Absolute ||
-                         box->style.position == PositionType::Fixed;
+  box->has_out_of_flow = box->style().position == PositionType::Absolute ||
+                         box->style().position == PositionType::Fixed;
   for (const auto& child_box : raw_children) {
     box->has_out_of_flow |= child_box->has_out_of_flow;
   }
@@ -474,26 +458,26 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   if (dom_node->tag() == "table") {
     box->children = std::move(raw_children);
     box->algorithm = LayoutBox::Algorithm::Table;
-    box->style.display_outside = DisplayOutside::Block;
+    box->mutable_style().display_outside = DisplayOutside::Block;
 
     return box;
   }
 
-  if (box->style.display_inside == DisplayInside::Flex) {
+  if (box->style().display_inside == DisplayInside::Flex) {
     box->children = std::move(raw_children);
     box->algorithm = LayoutBox::Algorithm::Flex;
 
     return box;
   }
 
-  if (box->style.display_inside == DisplayInside::Grid) {
+  if (box->style().display_inside == DisplayInside::Grid) {
     box->children = std::move(raw_children);
     box->algorithm = LayoutBox::Algorithm::Grid;
 
     return box;
   }
 
-  if (box->style.display_outside == DisplayOutside::Block ||
+  if (box->style().display_outside == DisplayOutside::Block ||
       dom_node->is_slot()) {
     box->algorithm = LayoutBox::Algorithm::BlockFlow;
     std::vector<std::shared_ptr<LayoutBox>> refined_children;
@@ -502,23 +486,23 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       // Out-of-flow elements (fixed/absolute) must remain direct children
       // of their containing block so LayoutOutOfFlowChildren can find them.
       // They should not be wrapped in anonymous inline boxes.
-      if (child_box->style.position == PositionType::Absolute ||
-          child_box->style.position == PositionType::Fixed) {
+      if (child_box->style().position == PositionType::Absolute ||
+          child_box->style().position == PositionType::Fixed) {
         refined_children.push_back(child_box);
         continue;
       }
-      if (child_box->style.display_outside == DisplayOutside::Inline) {
+      if (child_box->style().display_outside == DisplayOutside::Inline) {
         if (!anonymous_box) {
           anonymous_box =
               std::allocate_shared<LayoutBox, LayoutArenaAllocator<LayoutBox>>(
                   LayoutArenaAllocator<LayoutBox>());
           anonymous_box->is_anonymous = true;
           anonymous_box->algorithm = LayoutBox::Algorithm::InlineFlow;
-          anonymous_box->style.text_align = resolved.align;
-          anonymous_box->style.white_space = resolved.white_space;
-          anonymous_box->style.line_height = resolved.line_height;
-          anonymous_box->style.overflow_wrap = resolved.overflow_wrap;
-          anonymous_box->style.word_break = resolved.word_break;
+          anonymous_box->text.align = resolved.align;
+          anonymous_box->text.white_space = resolved.white_space;
+          anonymous_box->text.line_height = resolved.line_height;
+          anonymous_box->text.overflow_wrap = resolved.overflow_wrap;
+          anonymous_box->text.word_break = resolved.word_break;
           // Taken from the block rather than from `resolved`: text-overflow is
           // not inherited, it belongs to the block container, and this box is
           // that container's inline formatting context. Without it the
@@ -526,7 +510,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
           // `text-overflow: ellipsis` did nothing at all on a plain block --
           // which is every <div>, and every element that does not opt into
           // being inline-block.
-          anonymous_box->style.text_overflow = box->style.text_overflow;
+          anonymous_box->mutable_style().text_overflow =
+              box->style().text_overflow;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);

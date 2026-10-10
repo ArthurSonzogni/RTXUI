@@ -334,8 +334,9 @@ std::shared_ptr<PhysicalFragment> RunLayoutUncached(
     wrapper_box->algorithm = LayoutBox::Algorithm::InlineFlow;
     wrapper_box->children.push_back(
         std::shared_ptr<LayoutBox>(box, [](LayoutBox*) {}));
-    wrapper_box->style = box->style;
-    wrapper_box->style.display_outside = DisplayOutside::Inline;
+    wrapper_box->set_style(box->style());
+    wrapper_box->text = box->text;
+    wrapper_box->mutable_style().display_outside = DisplayOutside::Inline;
     return LayoutInlineFlow({wrapper_box.get()}, constraints, context);
   }
 
@@ -472,7 +473,7 @@ LayoutContext CreateChildContext(LayoutBox* parent,
   child_context.viewport_offset_x += child_flow_x;
   child_context.viewport_offset_y += child_flow_y;
 
-  if (parent->style.position != PositionType::Static) {
+  if (parent->style().position != PositionType::Static) {
     child_context.npa_w = parent_w;
     child_context.npa_h = parent_h;
     child_context.npa_offset_x = child_flow_x;
@@ -488,9 +489,9 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
                              std::shared_ptr<PhysicalFragment>& fragment,
                              const LayoutContext& parent_context) {
   for (auto& child_box : parent->children) {
-    if (child_box->style.position == PositionType::Absolute ||
-        child_box->style.position == PositionType::Fixed) {
-      bool is_fixed = child_box->style.position == PositionType::Fixed;
+    if (child_box->style().position == PositionType::Absolute ||
+        child_box->style().position == PositionType::Fixed) {
+      bool is_fixed = child_box->style().position == PositionType::Fixed;
       int container_w = parent_context.npa_w;
       int container_h = parent_context.npa_h;
       int npa_offset_x = parent_context.npa_offset_x;
@@ -501,7 +502,7 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
         container_h = parent_context.viewport_h;
         npa_offset_x = parent_context.viewport_offset_x;
         npa_offset_y = parent_context.viewport_offset_y;
-      } else if (parent->style.position != PositionType::Static) {
+      } else if (parent->style().position != PositionType::Static) {
         container_w = fragment->width;
         container_h = fragment->height;
         npa_offset_x = 0;
@@ -509,12 +510,12 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
       }
 
       LayoutConstraints child_c;
-      int child_w = ResolveBoxWidth(child_box->style, child_box->style.width,
-                                    container_w);
-      int child_h = ResolveBoxHeight(child_box->style, child_box->style.height,
-                                     container_h);
+      int child_w = ResolveBoxWidth(child_box->style(),
+                                    child_box->style().width, container_w);
+      int child_h = ResolveBoxHeight(child_box->style(),
+                                     child_box->style().height, container_h);
 
-      const auto& child_style = child_box->style;
+      const auto& child_style = child_box->style();
       const bool left_auto = child_style.left.unit == Unit::Auto;
       const bool right_auto = child_style.right.unit == Unit::Auto;
       const bool top_auto = child_style.top.unit == Unit::Auto;
@@ -581,56 +582,56 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
       LayoutContext child_context = parent_context;
       auto child_frag = RunLayout(child_input, child_c, child_context);
 
-      if (child_box->style.left.unit != Unit::Auto &&
-          child_box->style.right.unit != Unit::Auto) {
-        int left_val = child_box->style.left.Resolve(container_w);
-        int right_val = child_box->style.right.Resolve(container_w);
+      if (child_box->style().left.unit != Unit::Auto &&
+          child_box->style().right.unit != Unit::Auto) {
+        int left_val = child_box->style().left.Resolve(container_w);
+        int right_val = child_box->style().right.Resolve(container_w);
         int avail_space = container_w - left_val - right_val;
-        if (child_box->style.margin_left_auto &&
-            child_box->style.margin_right_auto) {
+        if (child_box->style().margin_left_auto &&
+            child_box->style().margin_right_auto) {
           int m = std::max(0, avail_space - child_frag->width) / 2;
           x = left_val + m;
-        } else if (child_box->style.margin_left_auto) {
+        } else if (child_box->style().margin_left_auto) {
           x = left_val + std::max(0, avail_space - child_frag->width);
-        } else if (child_box->style.margin_right_auto) {
-          x = left_val + child_box->style.margin.left;
+        } else if (child_box->style().margin_right_auto) {
+          x = left_val + child_box->style().margin.left;
         } else {
-          x = left_val + child_box->style.margin.left;
+          x = left_val + child_box->style().margin.left;
         }
-      } else if (child_box->style.left.unit != Unit::Auto) {
-        x = child_box->style.left.Resolve(container_w) +
-            child_box->style.margin.left;
-      } else if (child_box->style.right.unit != Unit::Auto) {
-        x = container_w - child_box->style.right.Resolve(container_w) -
-            child_frag->width - child_box->style.margin.right;
+      } else if (child_box->style().left.unit != Unit::Auto) {
+        x = child_box->style().left.Resolve(container_w) +
+            child_box->style().margin.left;
+      } else if (child_box->style().right.unit != Unit::Auto) {
+        x = container_w - child_box->style().right.Resolve(container_w) -
+            child_frag->width - child_box->style().margin.right;
       } else {
-        x = child_box->style.margin.left;
+        x = child_box->style().margin.left;
       }
 
-      if (child_box->style.top.unit != Unit::Auto &&
-          child_box->style.bottom.unit != Unit::Auto) {
-        int top_val = child_box->style.top.Resolve(container_h);
-        int bottom_val = child_box->style.bottom.Resolve(container_h);
+      if (child_box->style().top.unit != Unit::Auto &&
+          child_box->style().bottom.unit != Unit::Auto) {
+        int top_val = child_box->style().top.Resolve(container_h);
+        int bottom_val = child_box->style().bottom.Resolve(container_h);
         int avail_space = container_h - top_val - bottom_val;
-        if (child_box->style.margin_top_auto &&
-            child_box->style.margin_bottom_auto) {
+        if (child_box->style().margin_top_auto &&
+            child_box->style().margin_bottom_auto) {
           int m = std::max(0, avail_space - child_frag->height) / 2;
           y = top_val + m;
-        } else if (child_box->style.margin_top_auto) {
+        } else if (child_box->style().margin_top_auto) {
           y = top_val + std::max(0, avail_space - child_frag->height);
-        } else if (child_box->style.margin_bottom_auto) {
-          y = top_val + child_box->style.margin.top;
+        } else if (child_box->style().margin_bottom_auto) {
+          y = top_val + child_box->style().margin.top;
         } else {
-          y = top_val + child_box->style.margin.top;
+          y = top_val + child_box->style().margin.top;
         }
-      } else if (child_box->style.top.unit != Unit::Auto) {
-        y = child_box->style.top.Resolve(container_h) +
-            child_box->style.margin.top;
-      } else if (child_box->style.bottom.unit != Unit::Auto) {
-        y = container_h - child_box->style.bottom.Resolve(container_h) -
-            child_frag->height - child_box->style.margin.bottom;
+      } else if (child_box->style().top.unit != Unit::Auto) {
+        y = child_box->style().top.Resolve(container_h) +
+            child_box->style().margin.top;
+      } else if (child_box->style().bottom.unit != Unit::Auto) {
+        y = container_h - child_box->style().bottom.Resolve(container_h) -
+            child_frag->height - child_box->style().margin.bottom;
       } else {
-        y = child_box->style.margin.top;
+        y = child_box->style().margin.top;
       }
 
       int relative_to_parent_x = x - npa_offset_x;
@@ -640,7 +641,7 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
       // context
       child_context.viewport_offset_x += relative_to_parent_x;
       child_context.viewport_offset_y += relative_to_parent_y;
-      if (child_box->style.position != PositionType::Static) {
+      if (child_box->style().position != PositionType::Static) {
         child_context.npa_w = child_w != -1 ? child_w : container_w;
         child_context.npa_h = child_h != -1 ? child_h : container_h;
         child_context.npa_offset_x = 0;
@@ -672,7 +673,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   int early_resolved_height =
       (constraints.height.mode == MeasureMode::Exactly)
           ? constraints.height.value
-          : ResolveBoxHeight(box->style, box->style.height,
+          : ResolveBoxHeight(box->style(), box->style().height,
                              constraints.height.value);
 
   int width = 0;
@@ -681,40 +682,41 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   if (constraints.width.mode == MeasureMode::Exactly) {
     width = avail_width;
   } else {
-    int resolved = ResolveBoxWidth(box->style, box->style.width, avail_width);
+    int resolved =
+        ResolveBoxWidth(box->style(), box->style().width, avail_width);
     if (resolved != -1) {
       width = resolved;
-    } else if (early_resolved_height != -1 && box->style.aspect_ratio > 0) {
-      width = static_cast<int>(early_resolved_height * box->style.aspect_ratio +
-                               0.5f);
+    } else if (early_resolved_height != -1 && box->style().aspect_ratio > 0) {
+      width = static_cast<int>(
+          early_resolved_height * box->style().aspect_ratio + 0.5f);
     } else {
       is_auto_width = true;
       width = (constraints.width.mode == MeasureMode::Undefined)
                   ? 0
-                  : std::max(0, avail_width - box->style.margin.Horiz());
+                  : std::max(0, avail_width - box->style().margin.Horiz());
     }
   }
 
   // Apply max-width constraint
   int max_width_resolved =
-      ResolveBoxWidth(box->style, box->style.max_width, avail_width);
+      ResolveBoxWidth(box->style(), box->style().max_width, avail_width);
   if (max_width_resolved != -1 && width > max_width_resolved) {
     width = max_width_resolved;
     is_auto_width = false;
   }
 
-  bool has_v_scrollbar = (box->style.overflow_y == Overflow::Scroll &&
-                          box->style.scrollbar_width == ScrollbarWidth::Auto);
+  bool has_v_scrollbar = (box->style().overflow_y == Overflow::Scroll &&
+                          box->style().scrollbar_width == ScrollbarWidth::Auto);
   int scrollbar_spacing_x = has_v_scrollbar ? 1 : 0;
 
   int content_width_limit =
       is_auto_width && constraints.width.mode == MeasureMode::Undefined
           ? 10000
-          : std::max(0, width - box->style.padding.Horiz() -
-                            box->style.border.Horiz() - scrollbar_spacing_x);
+          : std::max(0, width - box->style().padding.Horiz() -
+                            box->style().border.Horiz() - scrollbar_spacing_x);
 
   int child_width_limit = content_width_limit;
-  if (box->style.overflow_x == Overflow::Scroll) {
+  if (box->style().overflow_x == Overflow::Scroll) {
     child_width_limit = 10000;
   }
 
@@ -722,31 +724,31 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   fragment->children.reserve(box->children.size());
   fragment->dom_node = box->dom_node;
   fragment->paint_fields = kPaintAll;
-  fragment->visibility = box->style.visibility;
-  fragment->background_color = box->style.background_color;
-  fragment->foreground_color = box->style.foreground_color;
-  fragment->opacity = box->style.opacity;
-  fragment->bold = box->style.bold;
-  fragment->dim = box->style.dim;
-  fragment->italic = box->style.italic;
-  fragment->underlined = box->style.underlined;
-  fragment->underlined_double = box->style.underlined_double;
-  fragment->strikethrough = box->style.strikethrough;
-  fragment->overlined = box->style.overlined;
-  fragment->blink = box->style.blink;
-  fragment->border_style = box->style.border_style;
-  fragment->border_color_top = box->style.border_color_top;
-  fragment->border_color_right = box->style.border_color_right;
-  fragment->border_color_bottom = box->style.border_color_bottom;
-  fragment->border_color_left = box->style.border_color_left;
-  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
-      box->style.border_style != BorderStyle::None) {
+  fragment->visibility = box->style().visibility;
+  fragment->background_color = box->style().background_color;
+  fragment->foreground_color = box->text.fg;
+  fragment->opacity = box->style().opacity;
+  fragment->bold = box->text.bold;
+  fragment->dim = box->text.dim;
+  fragment->italic = box->text.italic;
+  fragment->underlined = box->text.underlined;
+  fragment->underlined_double = box->text.underlined_double;
+  fragment->strikethrough = box->text.strikethrough;
+  fragment->overlined = box->text.overlined;
+  fragment->blink = box->text.blink;
+  fragment->border_style = box->style().border_style;
+  fragment->border_color_top = box->style().border_color_top;
+  fragment->border_color_right = box->style().border_color_right;
+  fragment->border_color_bottom = box->style().border_color_bottom;
+  fragment->border_color_left = box->style().border_color_left;
+  if ((box->style().border.Horiz() > 0 || box->style().border.Vert() > 0) &&
+      box->style().border_style != BorderStyle::None) {
     fragment->has_border = true;
-    fragment->border_width = box->style.border;
+    fragment->border_width = box->style().border;
   }
 
-  int cur_y = box->style.border.top + box->style.padding.top;
-  int cur_x = box->style.border.left + box->style.padding.left;
+  int cur_y = box->style().border.top + box->style().padding.top;
+  int cur_x = box->style().border.left + box->style().padding.left;
   int max_child_width = 0;
   int prev_margin_bottom = 0;
   bool is_first_child = true;
@@ -755,10 +757,10 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   if (constraints.height.mode == MeasureMode::Exactly) {
     parent_resolved_height = constraints.height.value;
   } else {
-    int resolved = ResolveBoxHeight(box->style, box->style.height,
+    int resolved = ResolveBoxHeight(box->style(), box->style().height,
                                     constraints.height.value);
-    if (resolved == -1 && box->style.aspect_ratio > 0) {
-      resolved = static_cast<int>(width / box->style.aspect_ratio + 0.5f);
+    if (resolved == -1 && box->style().aspect_ratio > 0) {
+      resolved = static_cast<int>(width / box->style().aspect_ratio + 0.5f);
     }
     if (resolved != -1) {
       parent_resolved_height = resolved;
@@ -768,17 +770,17 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   int child_height_limit = 0;
   if (parent_resolved_height != -1) {
     child_height_limit =
-        std::max(0, parent_resolved_height - box->style.padding.Vert() -
-                        box->style.border.Vert());
+        std::max(0, parent_resolved_height - box->style().padding.Vert() -
+                        box->style().border.Vert());
   } else if (constraints.height.mode == MeasureMode::AtMost) {
     child_height_limit =
-        std::max(0, constraints.height.value - box->style.padding.Vert() -
-                        box->style.border.Vert());
+        std::max(0, constraints.height.value - box->style().padding.Vert() -
+                        box->style().border.Vert());
   }
 
   for (auto& child_box : box->children) {
-    if (child_box->style.position == PositionType::Absolute ||
-        child_box->style.position == PositionType::Fixed) {
+    if (child_box->style().position == PositionType::Absolute ||
+        child_box->style().position == PositionType::Fixed) {
       continue;
     }
 
@@ -798,16 +800,16 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
             ? MeasureMode::Undefined
             : MeasureMode::AtMost;
     child_c.width = {
-        child_width_limit - child_box->style.margin.Horiz(),
+        child_width_limit - child_box->style().margin.Horiz(),
         child_width_mode,
     };
     child_c.height = {
-        std::max(0, child_height_limit - child_box->style.margin.Vert()),
+        std::max(0, child_height_limit - child_box->style().margin.Vert()),
         MeasureMode::Undefined,
     };
 
-    int margin_top = child_box->style.margin.top;
-    int margin_bottom = child_box->style.margin.bottom;
+    int margin_top = child_box->style().margin.top;
+    int margin_bottom = child_box->style().margin.bottom;
 
     int collapsed_margin =
         is_first_child ? margin_top : std::max(prev_margin_bottom, margin_top);
@@ -822,34 +824,34 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
     int rx = cx;
     int shift = 0;
-    if (child_box->style.margin_left_auto &&
-        child_box->style.margin_right_auto) {
+    if (child_box->style().margin_left_auto &&
+        child_box->style().margin_right_auto) {
       shift = std::max(0, child_width_limit - child_frag->width) / 2;
-    } else if (child_box->style.margin_left_auto) {
+    } else if (child_box->style().margin_left_auto) {
       shift = std::max(0, child_width_limit - child_frag->width);
     } else {
-      shift = child_box->style.margin.left;
+      shift = child_box->style().margin.left;
     }
     rx += shift;
     int ry = cy;
 
-    if (shift != child_box->style.margin.left) {
+    if (shift != child_box->style().margin.left) {
       AdjustOutOfFlowCoordinates(child_frag.get(),
-                                 shift - child_box->style.margin.left, 0,
+                                 shift - child_box->style().margin.left, 0,
                                  child_box->dom_node);
     }
 
-    if (child_box->style.position == PositionType::Relative) {
-      if (child_box->style.left.unit != Unit::Auto) {
-        rx += child_box->style.left.Resolve(width);
-      } else if (child_box->style.right.unit != Unit::Auto) {
-        rx -= child_box->style.right.Resolve(width);
+    if (child_box->style().position == PositionType::Relative) {
+      if (child_box->style().left.unit != Unit::Auto) {
+        rx += child_box->style().left.Resolve(width);
+      } else if (child_box->style().right.unit != Unit::Auto) {
+        rx -= child_box->style().right.Resolve(width);
       }
-      if (child_box->style.top.unit != Unit::Auto) {
-        ry += child_box->style.top.Resolve(
+      if (child_box->style().top.unit != Unit::Auto) {
+        ry += child_box->style().top.Resolve(
             0);  // unresolved container height is 0
-      } else if (child_box->style.bottom.unit != Unit::Auto) {
-        ry -= child_box->style.bottom.Resolve(0);
+      } else if (child_box->style().bottom.unit != Unit::Auto) {
+        ry -= child_box->style().bottom.Resolve(0);
       }
     }
 
@@ -864,21 +866,22 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     is_first_child = false;
 
     max_child_width = std::max(
-        max_child_width, child_frag->width + child_box->style.margin.Horiz());
+        max_child_width, child_frag->width + child_box->style().margin.Horiz());
   }
 
   cur_y += prev_margin_bottom;
 
-  cur_y += box->style.border.bottom + box->style.padding.bottom;
+  cur_y += box->style().border.bottom + box->style().padding.bottom;
 
   if (is_auto_width && constraints.width.mode == MeasureMode::Undefined) {
-    fragment->width = max_child_width + box->style.padding.Horiz() +
-                      box->style.border.Horiz();
+    fragment->width = max_child_width + box->style().padding.Horiz() +
+                      box->style().border.Horiz();
   }
 
   // Cap width by max-width if needed
   {
-    int max_w = ResolveBoxWidth(box->style, box->style.max_width, avail_width);
+    int max_w =
+        ResolveBoxWidth(box->style(), box->style().max_width, avail_width);
     if (max_w != -1 && fragment->width > max_w) {
       fragment->width = max_w;
     }
@@ -886,7 +889,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
   // Apply min-width constraint
   {
-    int min_w = ResolveBoxWidth(box->style, box->style.min_width, avail_width);
+    int min_w =
+        ResolveBoxWidth(box->style(), box->style().min_width, avail_width);
     if (min_w != -1 && fragment->width < min_w) {
       fragment->width = min_w;
     }
@@ -895,21 +899,21 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   if (constraints.height.mode == MeasureMode::Exactly) {
     fragment->height = constraints.height.value;
   } else {
-    int resolved_h = ResolveBoxHeight(box->style, box->style.height,
+    int resolved_h = ResolveBoxHeight(box->style(), box->style().height,
                                       constraints.height.value);
-    if (resolved_h == -1 && box->style.aspect_ratio > 0) {
+    if (resolved_h == -1 && box->style().aspect_ratio > 0) {
       // aspect-ratio derives the auto height from the used width. Content
       // taller than the ratio height overflows (pair with overflow if
       // clipping is desired).
       resolved_h =
-          static_cast<int>(fragment->width / box->style.aspect_ratio + 0.5f);
+          static_cast<int>(fragment->width / box->style().aspect_ratio + 0.5f);
     }
     fragment->height = (resolved_h != -1) ? resolved_h : cur_y;
   }
 
   // Cap height by max-height if needed
   {
-    int max_h = ResolveBoxHeight(box->style, box->style.max_height,
+    int max_h = ResolveBoxHeight(box->style(), box->style().max_height,
                                  constraints.height.value);
     if (max_h != -1 && fragment->height > max_h) {
       fragment->height = max_h;
@@ -918,7 +922,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
   // Apply min-height constraint
   {
-    int min_h = ResolveBoxHeight(box->style, box->style.min_height,
+    int min_h = ResolveBoxHeight(box->style(), box->style().min_height,
                                  constraints.height.value);
     if (min_h != -1 && fragment->height < min_h) {
       fragment->height = min_h;
@@ -927,15 +931,15 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
 
   LayoutOutOfFlowChildren(box, fragment, context);
 
-  if (box->style.overflow_y != Overflow::Visible ||
-      box->style.overflow_x != Overflow::Visible) {
+  if (box->style().overflow_y != Overflow::Visible ||
+      box->style().overflow_x != Overflow::Visible) {
     fragment->clips_descendants = true;
   }
 
   if (box->dom_node) {
     int total_scroll_height = cur_y;
-    int total_scroll_width = max_child_width + box->style.padding.Horiz() +
-                             box->style.border.Horiz();
+    int total_scroll_width = max_child_width + box->style().padding.Horiz() +
+                             box->style().border.Horiz();
 
     int max_child_right = 0;
     int max_child_bottom = 0;
@@ -943,12 +947,12 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
       AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
                              child_link.y, &max_child_right, &max_child_bottom);
     }
-    total_scroll_width = std::max(
-        total_scroll_width,
-        max_child_right + box->style.padding.right + box->style.border.right);
+    total_scroll_width = std::max(total_scroll_width,
+                                  max_child_right + box->style().padding.right +
+                                      box->style().border.right);
     total_scroll_height = std::max(
-        total_scroll_height, max_child_bottom + box->style.padding.bottom +
-                                 box->style.border.bottom);
+        total_scroll_height, max_child_bottom + box->style().padding.bottom +
+                                 box->style().border.bottom);
 
     ApplyScrollExtent(box, fragment.get(), context, total_scroll_width,
                       total_scroll_height);
@@ -981,9 +985,10 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
                         ? 10000
                         : constraints.width.value;
 
-  int width = (constraints.width.mode == MeasureMode::Exactly)
-                  ? avail_width
-                  : ResolveBoxWidth(box->style, box->style.width, avail_width);
+  int width =
+      (constraints.width.mode == MeasureMode::Exactly)
+          ? avail_width
+          : ResolveBoxWidth(box->style(), box->style().width, avail_width);
   bool is_fixed_width =
       (width != -1) || (box->is_anonymous && avail_width < 10000);
   if (width == -1) {
@@ -991,7 +996,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   }
 
   int content_width_limit = std::max(
-      0, width - box->style.padding.Horiz() - box->style.border.Horiz());
+      0, width - box->style().padding.Horiz() - box->style().border.Horiz());
   auto container_frag = MakeArenaFragment(width, 0);
   // Optimization: Estimate and pre-reserve the children vector capacity of the
   // physical fragment. Combined with LayoutArenaAllocator, this completely
@@ -1008,44 +1013,42 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   container_frag->children.reserve(estimated_children + 8);
   container_frag->dom_node = box->dom_node;
   container_frag->paint_fields = kPaintAll;
-  container_frag->visibility = box->style.visibility;
-  container_frag->background_color = box->style.background_color;
-  container_frag->foreground_color = box->style.foreground_color;
-  container_frag->opacity = box->style.opacity;
-  container_frag->bold = box->style.bold;
-  container_frag->dim = box->style.dim;
-  container_frag->italic = box->style.italic;
-  container_frag->underlined = box->style.underlined;
-  container_frag->underlined_double = box->style.underlined_double;
-  container_frag->strikethrough = box->style.strikethrough;
-  container_frag->overlined = box->style.overlined;
-  container_frag->blink = box->style.blink;
-  container_frag->border_style = box->style.border_style;
-  container_frag->border_color_top = box->style.border_color_top;
-  container_frag->border_color_right = box->style.border_color_right;
-  container_frag->border_color_bottom = box->style.border_color_bottom;
-  container_frag->border_color_left = box->style.border_color_left;
-  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
-      box->style.border_style != BorderStyle::None) {
+  container_frag->visibility = box->style().visibility;
+  container_frag->background_color = box->style().background_color;
+  container_frag->foreground_color = box->text.fg;
+  container_frag->opacity = box->style().opacity;
+  container_frag->bold = box->text.bold;
+  container_frag->dim = box->text.dim;
+  container_frag->italic = box->text.italic;
+  container_frag->underlined = box->text.underlined;
+  container_frag->underlined_double = box->text.underlined_double;
+  container_frag->strikethrough = box->text.strikethrough;
+  container_frag->overlined = box->text.overlined;
+  container_frag->blink = box->text.blink;
+  container_frag->border_style = box->style().border_style;
+  container_frag->border_color_top = box->style().border_color_top;
+  container_frag->border_color_right = box->style().border_color_right;
+  container_frag->border_color_bottom = box->style().border_color_bottom;
+  container_frag->border_color_left = box->style().border_color_left;
+  if ((box->style().border.Horiz() > 0 || box->style().border.Vert() > 0) &&
+      box->style().border_style != BorderStyle::None) {
     container_frag->has_border = true;
-    container_frag->border_width = box->style.border;
+    container_frag->border_width = box->style().border;
   }
 
   int cursor_x = 0;
-  int cursor_y = box->style.padding.top + box->style.border.top;
+  int cursor_y = box->style().padding.top + box->style().border.top;
   // CSS line-height acts as a minimum: tall inline children still grow the
   // line beyond it.
-  const int min_line_height = box->style.line_height.value_or(1);
+  const int min_line_height = box->text.line_height;
   // overflow-wrap: normal lets words longer than the line overflow instead
   // of emergency-breaking them at the container edge.
   const bool overflow_wrap_normal =
-      box->style.overflow_wrap.value_or(OverflowWrap::Anywhere) ==
-      OverflowWrap::Normal;
+      box->text.overflow_wrap == OverflowWrap::Normal;
   // word-break: break-all treats every grapheme boundary as a break
   // opportunity, so a word wraps as soon as it would cross the line instead
   // of being pushed whole to the next line first.
-  const bool word_break_all =
-      box->style.word_break.value_or(WordBreak::Normal) == WordBreak::BreakAll;
+  const bool word_break_all = box->text.word_break == WordBreak::BreakAll;
   int line_height = min_line_height;
   int max_line_width = 0;
 
@@ -1072,9 +1075,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   auto process_text_in_flow = [&](std::string_view text, Element* dom_node,
                                   const TextStyle& style) {
-    if (box->style.text_overflow == TextOverflow::Ellipsis &&
-        (box->style.white_space == WhiteSpace::Nowrap ||
-         box->style.white_space == WhiteSpace::Pre)) {
+    if (box->style().text_overflow == TextOverflow::Ellipsis &&
+        (box->text.white_space == WhiteSpace::Nowrap ||
+         box->text.white_space == WhiteSpace::Pre)) {
       int avail = content_width_limit - cursor_x;
       int text_w = 0;
       for (const Grapheme& g : Graphemes(text)) {
@@ -1113,7 +1116,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
       container_frag->children.push_back(
           {text_frag,
-           box->style.padding.left + box->style.border.left + cursor_x,
+           box->style().padding.left + box->style().border.left + cursor_x,
            cursor_y});
       cursor_x += col_width;
     };
@@ -1160,8 +1163,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           have_last_space = true;
         }
 
-        if (box->style.white_space == WhiteSpace::Nowrap ||
-            box->style.white_space == WhiteSpace::Pre) {
+        if (box->text.white_space == WhiteSpace::Nowrap ||
+            box->text.white_space == WhiteSpace::Pre) {
           cur_col += g_width;
         } else if (cursor_x + (cur_col - col_start) + g_width >
                    content_width_limit) {
@@ -1237,8 +1240,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         have_last_space = true;
       }
 
-      if (box->style.white_space == WhiteSpace::Nowrap ||
-          box->style.white_space == WhiteSpace::Pre) {
+      if (box->text.white_space == WhiteSpace::Nowrap ||
+          box->text.white_space == WhiteSpace::Pre) {
         cur_col += g.width;
       } else if (cursor_x + (cur_col - col_start) + g.width >
                  content_width_limit) {
@@ -1317,14 +1320,14 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   };
 
   auto place_opaque_box = [&](LayoutBox* elem) {
-    if (elem->style.position == PositionType::Absolute ||
-        elem->style.position == PositionType::Fixed) {
+    if (elem->style().position == PositionType::Absolute ||
+        elem->style().position == PositionType::Fixed) {
       return;
     }
-    int m_left = elem->style.margin.left;
-    int m_right = elem->style.margin.right;
-    int m_top = elem->style.margin.top;
-    int m_bottom = elem->style.margin.bottom;
+    int m_left = elem->style().margin.left;
+    int m_right = elem->style().margin.right;
+    int m_top = elem->style().margin.top;
+    int m_bottom = elem->style().margin.bottom;
     int child_m_horiz = m_left + m_right;
     int child_m_vert = m_top + m_bottom;
 
@@ -1332,8 +1335,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     if (constraints.height.mode == MeasureMode::Exactly ||
         constraints.height.mode == MeasureMode::AtMost) {
       child_height_limit =
-          std::max(0, constraints.height.value - box->style.padding.Vert() -
-                          box->style.border.Vert());
+          std::max(0, constraints.height.value - box->style().padding.Vert() -
+                          box->style().border.Vert());
     }
 
     LayoutConstraints child_c = {
@@ -1341,8 +1344,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         {std::max(0, child_height_limit - child_m_vert),
          MeasureMode::Undefined}};
 
-    int cx =
-        box->style.padding.left + box->style.border.left + cursor_x + m_left;
+    int cx = box->style().padding.left + box->style().border.left + cursor_x +
+             m_left;
     int cy = cursor_y + m_top;
 
     LayoutContext child_context =
@@ -1350,12 +1353,13 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     LayoutInputNode child_input = {elem};
     auto child_frag = RunLayout(child_input, child_c, child_context);
 
-    if (box->style.white_space != WhiteSpace::Nowrap &&
-        box->style.white_space != WhiteSpace::Pre &&
+    if (box->text.white_space != WhiteSpace::Nowrap &&
+        box->text.white_space != WhiteSpace::Pre &&
         cursor_x + child_frag->width + child_m_horiz > content_width_limit &&
         cursor_x > 0) {
       commit_line();
-      cx = box->style.padding.left + box->style.border.left + cursor_x + m_left;
+      cx = box->style().padding.left + box->style().border.left + cursor_x +
+           m_left;
       cy = cursor_y + m_top;
       child_context = CreateChildContext(box, width, 0, cx, cy, context);
     }
@@ -1363,16 +1367,16 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     int rx = cx;
     int ry = cy;
 
-    if (elem->style.position == PositionType::Relative) {
-      if (elem->style.left.unit != Unit::Auto) {
-        rx += elem->style.left.Resolve(width);
-      } else if (elem->style.right.unit != Unit::Auto) {
-        rx -= elem->style.right.Resolve(width);
+    if (elem->style().position == PositionType::Relative) {
+      if (elem->style().left.unit != Unit::Auto) {
+        rx += elem->style().left.Resolve(width);
+      } else if (elem->style().right.unit != Unit::Auto) {
+        rx -= elem->style().right.Resolve(width);
       }
-      if (elem->style.top.unit != Unit::Auto) {
-        ry += elem->style.top.Resolve(0);
-      } else if (elem->style.bottom.unit != Unit::Auto) {
-        ry -= elem->style.bottom.Resolve(0);
+      if (elem->style().top.unit != Unit::Auto) {
+        ry += elem->style().top.Resolve(0);
+      } else if (elem->style().bottom.unit != Unit::Auto) {
+        ry -= elem->style().bottom.Resolve(0);
       }
     }
 
@@ -1382,32 +1386,31 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   };
 
   for (auto& child : box->children) {
-    if (child->style.position == PositionType::Absolute ||
-        child->style.position == PositionType::Fixed) {
+    if (child->style().position == PositionType::Absolute ||
+        child->style().position == PositionType::Fixed) {
       continue;
     }
     if (child->is_text) {
       process_text_in_flow(
           child->text_data, child->dom_node,
-          {child->style.background_color, child->style.foreground_color,
-           child->style.bold, child->style.dim, child->style.italic,
-           child->style.underlined, child->style.underlined_double,
-           child->style.strikethrough, child->style.overlined,
-           child->style.blink});
+          {child->style().background_color, child->text.fg, child->text.bold,
+           child->text.dim, child->text.italic, child->text.underlined,
+           child->text.underlined_double, child->text.strikethrough,
+           child->text.overlined, child->text.blink});
     } else if (is_br(child.get())) {
       commit_line(/*hard_break=*/true);
-    } else if (child->style.display_outside == DisplayOutside::Inline &&
-               child->style.display_inside == DisplayInside::Flow &&
+    } else if (child->style().display_outside == DisplayOutside::Inline &&
+               child->style().display_inside == DisplayInside::Flow &&
                child->algorithm != LayoutBox::Algorithm::Table &&
-               child->style.border.Horiz() == 0 &&
-               child->style.border.Vert() == 0 &&
-               child->style.margin.Horiz() == 0 &&
-               child->style.margin.Vert() == 0 &&
-               child->style.padding.Horiz() == 0 &&
-               child->style.padding.Vert() == 0 &&
+               child->style().border.Horiz() == 0 &&
+               child->style().border.Vert() == 0 &&
+               child->style().margin.Horiz() == 0 &&
+               child->style().margin.Vert() == 0 &&
+               child->style().padding.Horiz() == 0 &&
+               child->style().padding.Vert() == 0 &&
                // An outline is drawn around a box, so an outlined span
                // keeps one rather than dissolving into the line's text.
-               child->style.outline_style == BorderStyle::None) {
+               child->style().outline_style == BorderStyle::None) {
       for (auto& grandchild : child->children) {
         if (grandchild->is_text) {
           // background-color doesn't inherit, so a styled <span> (e.g.
@@ -1417,20 +1420,19 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
           // correctly inherited) values are used for those.
           process_text_in_flow(
               grandchild->text_data, child->dom_node,
-              {child->style.background_color,
-               grandchild->style.foreground_color, grandchild->style.bold,
-               grandchild->style.dim, grandchild->style.italic,
-               grandchild->style.underlined,
-               grandchild->style.underlined_double,
-               grandchild->style.strikethrough, grandchild->style.overlined,
-               grandchild->style.blink});
+              {child->style().background_color, grandchild->text.fg,
+               grandchild->text.bold, grandchild->text.dim,
+               grandchild->text.italic, grandchild->text.underlined,
+               grandchild->text.underlined_double,
+               grandchild->text.strikethrough, grandchild->text.overlined,
+               grandchild->text.blink});
         } else if (is_br(grandchild.get())) {
           commit_line(/*hard_break=*/true);
         } else {
           place_opaque_box(grandchild.get());
         }
       }
-    } else if (child->style.display_outside == DisplayOutside::Block) {
+    } else if (child->style().display_outside == DisplayOutside::Block) {
       // A block-level box in an inline formatting context takes a line of its
       // own: the line before it is closed, and the next inline content starts
       // below it. Without this it was placed like any atomic inline box and
@@ -1455,23 +1457,24 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
   } else {
-    int resolved_h = ResolveBoxHeight(box->style, box->style.height,
+    int resolved_h = ResolveBoxHeight(box->style(), box->style().height,
                                       constraints.height.value);
     if (resolved_h != -1) {
       container_frag->height = resolved_h;
     } else {
       container_frag->height =
-          cursor_y + box->style.padding.bottom + box->style.border.bottom;
+          cursor_y + box->style().padding.bottom + box->style().border.bottom;
     }
   }
   if (!is_fixed_width) {
-    container_frag->width =
-        max_line_width + box->style.padding.Horiz() + box->style.border.Horiz();
+    container_frag->width = max_line_width + box->style().padding.Horiz() +
+                            box->style().border.Horiz();
   }
 
   // Cap width by max-width if needed
   {
-    int max_w = ResolveBoxWidth(box->style, box->style.max_width, avail_width);
+    int max_w =
+        ResolveBoxWidth(box->style(), box->style().max_width, avail_width);
     if (max_w != -1 && container_frag->width > max_w) {
       container_frag->width = max_w;
     }
@@ -1479,7 +1482,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   // Apply min-width constraint
   {
-    int min_w = ResolveBoxWidth(box->style, box->style.min_width, avail_width);
+    int min_w =
+        ResolveBoxWidth(box->style(), box->style().min_width, avail_width);
     if (min_w != -1 && container_frag->width < min_w) {
       container_frag->width = min_w;
     }
@@ -1487,7 +1491,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   // Apply min-height constraint
   {
-    int min_h = ResolveBoxHeight(box->style, box->style.min_height,
+    int min_h = ResolveBoxHeight(box->style(), box->style().min_height,
                                  constraints.height.value);
     if (min_h != -1 && container_frag->height < min_h) {
       container_frag->height = min_h;
@@ -1496,7 +1500,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
 
   // Cap height by max-height if needed
   {
-    int max_h = ResolveBoxHeight(box->style, box->style.max_height,
+    int max_h = ResolveBoxHeight(box->style(), box->style().max_height,
                                  constraints.height.value);
     if (max_h != -1 && container_frag->height > max_h) {
       container_frag->height = max_h;
@@ -1513,11 +1517,11 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     // seeds its own total_scroll_width/height from max_child_width/cur_y
     // rather than the (possibly clamped) fragment size.
     int total_scroll_width = std::max(
-        container_frag->width, max_line_width + box->style.padding.Horiz() +
-                                   box->style.border.Horiz());
-    int total_scroll_height =
-        std::max(container_frag->height, cursor_y + box->style.padding.bottom +
-                                             box->style.border.bottom);
+        container_frag->width, max_line_width + box->style().padding.Horiz() +
+                                   box->style().border.Horiz());
+    int total_scroll_height = std::max(
+        container_frag->height,
+        cursor_y + box->style().padding.bottom + box->style().border.bottom);
 
     int max_child_right = 0;
     int max_child_bottom = 0;
@@ -1525,12 +1529,12 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
                              child_link.y, &max_child_right, &max_child_bottom);
     }
-    total_scroll_width = std::max(
-        total_scroll_width,
-        max_child_right + box->style.padding.right + box->style.border.right);
+    total_scroll_width = std::max(total_scroll_width,
+                                  max_child_right + box->style().padding.right +
+                                      box->style().border.right);
     total_scroll_height = std::max(
-        total_scroll_height, max_child_bottom + box->style.padding.bottom +
-                                 box->style.border.bottom);
+        total_scroll_height, max_child_bottom + box->style().padding.bottom +
+                                 box->style().border.bottom);
 
     ApplyScrollExtent(box, container_frag.get(), context, total_scroll_width,
                       total_scroll_height);
@@ -1539,15 +1543,14 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   int final_content_width =
       is_fixed_width ? content_width_limit : max_line_width;
 
-  if (box->style.text_align.has_value() &&
-      box->style.text_align != TextAlign::Left && final_content_width > 0) {
+  if (box->text.align != TextAlign::Left && final_content_width > 0) {
     for (const auto& line : lines) {
       int remaining_space = final_content_width - line.occupied_width;
       if (remaining_space > 0) {
         int shift = 0;
-        if (box->style.text_align == TextAlign::Right) {
+        if (box->text.align == TextAlign::Right) {
           shift = remaining_space;
-        } else if (box->style.text_align == TextAlign::Center) {
+        } else if (box->text.align == TextAlign::Center) {
           shift = remaining_space / 2;
         }
         if (shift > 0) {
@@ -1564,7 +1567,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   // fills the content width. The spaces are widened in place: each affected
   // text fragment gets an arena-allocated copy of its text with extra spaces
   // inserted, so the styling of the spaces is preserved.
-  if (box->style.text_align == TextAlign::Justify && final_content_width > 0 &&
+  if (box->text.align == TextAlign::Justify && final_content_width > 0 &&
       lines.size() > 1) {
     for (size_t li = 0; li + 1 < lines.size(); ++li) {
       const auto& line = lines[li];
@@ -1650,56 +1653,58 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                                              LayoutConstraints constraints,
                                              LayoutContext context) {
   auto* box = node.box;
-  bool is_row = box->style.flex_direction == Direction::Row ||
-                box->style.flex_direction == Direction::RowReverse;
-  bool is_reverse = box->style.flex_direction == Direction::RowReverse ||
-                    box->style.flex_direction == Direction::ColumnReverse;
+  bool is_row = box->style().flex_direction == Direction::Row ||
+                box->style().flex_direction == Direction::RowReverse;
+  bool is_reverse = box->style().flex_direction == Direction::RowReverse ||
+                    box->style().flex_direction == Direction::ColumnReverse;
 
   int parent_w = constraints.width.value;
   int parent_h = constraints.height.value;
 
-  int my_width = (constraints.width.mode == MeasureMode::Exactly)
-                     ? parent_w
-                     : ResolveBoxWidth(box->style, box->style.width, parent_w);
+  int my_width =
+      (constraints.width.mode == MeasureMode::Exactly)
+          ? parent_w
+          : ResolveBoxWidth(box->style(), box->style().width, parent_w);
   int my_height =
       (constraints.height.mode == MeasureMode::Exactly)
           ? parent_h
-          : ResolveBoxHeight(box->style, box->style.height, parent_h);
+          : ResolveBoxHeight(box->style(), box->style().height, parent_h);
 
   // aspect-ratio derives the flex container's auto dimension from whichever
   // of width/height is already resolved; min/max constraints below still
   // win. Only one of width/height can be auto here for the ratio to apply
   // unambiguously (if both are, sizing falls back to content as before).
-  if (my_height == -1 && my_width != -1 && box->style.aspect_ratio > 0) {
-    my_height = static_cast<int>(my_width / box->style.aspect_ratio + 0.5f);
-  } else if (my_width == -1 && my_height != -1 && box->style.aspect_ratio > 0) {
-    my_width = static_cast<int>(my_height * box->style.aspect_ratio + 0.5f);
+  if (my_height == -1 && my_width != -1 && box->style().aspect_ratio > 0) {
+    my_height = static_cast<int>(my_width / box->style().aspect_ratio + 0.5f);
+  } else if (my_width == -1 && my_height != -1 &&
+             box->style().aspect_ratio > 0) {
+    my_width = static_cast<int>(my_height * box->style().aspect_ratio + 0.5f);
   }
 
   // Apply max-width constraint
   int max_width_resolved =
-      ResolveBoxWidth(box->style, box->style.max_width, parent_w);
+      ResolveBoxWidth(box->style(), box->style().max_width, parent_w);
   if (max_width_resolved != -1 && my_width > max_width_resolved) {
     my_width = max_width_resolved;
   }
 
   // Apply min-width constraint
   int min_width_resolved =
-      ResolveBoxWidth(box->style, box->style.min_width, parent_w);
+      ResolveBoxWidth(box->style(), box->style().min_width, parent_w);
   if (min_width_resolved != -1 && my_width < min_width_resolved) {
     my_width = min_width_resolved;
   }
 
   // Apply max-height constraint
   int max_height_resolved =
-      ResolveBoxHeight(box->style, box->style.max_height, parent_h);
+      ResolveBoxHeight(box->style(), box->style().max_height, parent_h);
   if (max_height_resolved != -1 && my_height > max_height_resolved) {
     my_height = max_height_resolved;
   }
 
   // Apply min-height constraint
   int min_height_resolved =
-      ResolveBoxHeight(box->style, box->style.min_height, parent_h);
+      ResolveBoxHeight(box->style(), box->style().min_height, parent_h);
   if (min_height_resolved != -1 && my_height < min_height_resolved) {
     my_height = min_height_resolved;
   }
@@ -1714,19 +1719,19 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     my_height = parent_h;
   }
 
-  bool has_v_scrollbar = (box->style.overflow_y == Overflow::Scroll &&
-                          box->style.scrollbar_width == ScrollbarWidth::Auto);
-  bool has_h_scrollbar = (box->style.overflow_x == Overflow::Scroll &&
-                          box->style.scrollbar_width == ScrollbarWidth::Auto);
+  bool has_v_scrollbar = (box->style().overflow_y == Overflow::Scroll &&
+                          box->style().scrollbar_width == ScrollbarWidth::Auto);
+  bool has_h_scrollbar = (box->style().overflow_x == Overflow::Scroll &&
+                          box->style().scrollbar_width == ScrollbarWidth::Auto);
   int scrollbar_spacing_x = has_v_scrollbar ? 1 : 0;
   int scrollbar_spacing_y = has_h_scrollbar ? 1 : 0;
 
   int content_w =
-      std::max(0, my_width - box->style.border.Horiz() -
-                      box->style.padding.Horiz() - scrollbar_spacing_x);
+      std::max(0, my_width - box->style().border.Horiz() -
+                      box->style().padding.Horiz() - scrollbar_spacing_x);
   int content_h =
-      std::max(0, my_height - box->style.border.Vert() -
-                      box->style.padding.Vert() - scrollbar_spacing_y);
+      std::max(0, my_height - box->style().border.Vert() -
+                      box->style().padding.Vert() - scrollbar_spacing_y);
 
   struct FlexItem {
     std::shared_ptr<LayoutBox> child_ptr;
@@ -1751,7 +1756,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   // Pass 1: Determine Flex Base Sizes
   int resolved_gap =
-      ResolveSize(is_row ? box->style.column_gap : box->style.row_gap,
+      ResolveSize(is_row ? box->style().column_gap : box->style().row_gap,
                   is_row ? content_w : content_h);
 
   // CSS `order` lays items out in order-modified document order without
@@ -1762,7 +1767,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   std::vector<std::shared_ptr<LayoutBox>> ordered_children;
   bool has_order = false;
   for (const auto& child : box->children) {
-    if (child->style.order != 0) {
+    if (child->style().order != 0) {
       has_order = true;
       break;
     }
@@ -1772,27 +1777,27 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     std::stable_sort(ordered_children.begin(), ordered_children.end(),
                      [](const std::shared_ptr<LayoutBox>& a,
                         const std::shared_ptr<LayoutBox>& b) {
-                       return a->style.order < b->style.order;
+                       return a->style().order < b->style().order;
                      });
     flex_children = &ordered_children;
   }
 
   for (auto& child : *flex_children) {
-    if (child->style.position == PositionType::Absolute ||
-        child->style.position == PositionType::Fixed) {
+    if (child->style().position == PositionType::Absolute ||
+        child->style().position == PositionType::Fixed) {
       continue;
     }
     int basis = -1;
-    if (child->style.flex_basis.unit != Unit::Auto) {
-      basis = is_row ? ResolveBoxWidth(child->style, child->style.flex_basis,
-                                       content_w)
-                     : ResolveBoxHeight(child->style, child->style.flex_basis,
-                                        content_h);
+    if (child->style().flex_basis.unit != Unit::Auto) {
+      basis = is_row ? ResolveBoxWidth(child->style(),
+                                       child->style().flex_basis, content_w)
+                     : ResolveBoxHeight(child->style(),
+                                        child->style().flex_basis, content_h);
     } else {
-      basis =
-          is_row
-              ? ResolveBoxWidth(child->style, child->style.width, content_w)
-              : ResolveBoxHeight(child->style, child->style.height, content_h);
+      basis = is_row ? ResolveBoxWidth(child->style(), child->style().width,
+                                       content_w)
+                     : ResolveBoxHeight(child->style(), child->style().height,
+                                        content_h);
     }
 
     // CSS "transferred size": a row item with an auto flex-basis (width) and
@@ -1801,13 +1806,14 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     // size resolved here is locked in as an Exactly width by the final pass
     // below - too late for block-flow's own aspect-ratio-from-height to see
     // an auto width by then.
-    if (is_row && basis == -1 && child->style.aspect_ratio > 0 &&
-        child->style.height.unit == Unit::Auto &&
-        EffectiveAlign(child->style.align_self, box->style.align_items) ==
+    if (is_row && basis == -1 && child->style().aspect_ratio > 0 &&
+        child->style().height.unit == Unit::Auto &&
+        EffectiveAlign(child->style().align_self, box->style().align_items) ==
             AlignItems::Stretch &&
         !(auto_height && constraints.height.mode == MeasureMode::Undefined)) {
-      int stretched_h = content_h - child->style.margin.Vert();
-      basis = static_cast<int>(stretched_h * child->style.aspect_ratio + 0.5f);
+      int stretched_h = content_h - child->style().margin.Vert();
+      basis =
+          static_cast<int>(stretched_h * child->style().aspect_ratio + 0.5f);
     }
 
     LayoutConstraints child_c;
@@ -1819,7 +1825,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         child_c.height = {content_h, MeasureMode::Undefined};
       } else {
         int max_h =
-            (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
+            (box->style().overflow_y == Overflow::Scroll) ? 10000 : content_h;
         child_c.height = {max_h, MeasureMode::AtMost};
       }
     } else {
@@ -1827,7 +1833,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         child_c.width = {content_w, MeasureMode::Undefined};
       } else {
         int max_w =
-            (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
+            (box->style().overflow_x == Overflow::Scroll) ? 10000 : content_w;
         child_c.width = {max_w, MeasureMode::AtMost};
       }
       child_c.height = {basis != -1 ? basis : 0, basis != -1
@@ -1841,13 +1847,14 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     child_context.is_measurement = true;
     auto frag = RunLayout(child_input, child_c, child_context);
     int m_margin =
-        is_row ? child->style.margin.Horiz() : child->style.margin.Vert();
+        is_row ? child->style().margin.Horiz() : child->style().margin.Vert();
     int main_size = (is_row ? frag->width : frag->height) + m_margin;
-    int cross_size = is_row ? (frag->height + child->style.margin.Vert())
-                            : (frag->width + child->style.margin.Horiz());
+    int cross_size = is_row ? (frag->height + child->style().margin.Vert())
+                            : (frag->width + child->style().margin.Horiz());
 
-    items.push_back({child, frag, main_size, main_size, child->style.flex_grow,
-                     child->style.flex_shrink, cross_size});
+    items.push_back({child, frag, main_size, main_size,
+                     child->style().flex_grow, child->style().flex_shrink,
+                     cross_size});
   }
 
   // Pass 2: Group items into Flex Lines and resolve flexible lengths
@@ -1856,8 +1863,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       is_row
           ? (constraints.width.mode == MeasureMode::Undefined && auto_width)
           : (constraints.height.mode == MeasureMode::Undefined && auto_height);
-  bool is_wrap = box->style.flex_wrap == FlexWrap::Wrap ||
-                 box->style.flex_wrap == FlexWrap::WrapReverse;
+  bool is_wrap = box->style().flex_wrap == FlexWrap::Wrap ||
+                 box->style().flex_wrap == FlexWrap::WrapReverse;
   int container_main = is_row ? content_w : content_h;
 
   if (!is_wrap || main_is_indefinite || items.empty()) {
@@ -1935,8 +1942,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       }
     } else if (free_space < 0 && line.total_shrink_scaled > 0) {
       bool allow_overflow =
-          (is_row && box->style.overflow_x == Overflow::Scroll) ||
-          (!is_row && box->style.overflow_y == Overflow::Scroll);
+          (is_row && box->style().overflow_x == Overflow::Scroll) ||
+          (!is_row && box->style().overflow_y == Overflow::Scroll);
       if (!allow_overflow) {
         int total_shrunk = 0;
         float current_shrink_scaled_sum = 0.0f;
@@ -1971,8 +1978,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     line.cross_size = 0;
     for (auto& item : line.items) {
       LayoutConstraints final_c;
-      int m_horiz = item.child_ptr->style.margin.Horiz();
-      int m_vert = item.child_ptr->style.margin.Vert();
+      int m_horiz = item.child_ptr->style().margin.Horiz();
+      int m_vert = item.child_ptr->style().margin.Vert();
 
       if (is_row) {
         final_c.width = {item.main_resolved_size - m_horiz,
@@ -1981,7 +1988,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
           final_c.height = {content_h, MeasureMode::Undefined};
         } else {
           int max_h =
-              (box->style.overflow_y == Overflow::Scroll) ? 10000 : content_h;
+              (box->style().overflow_y == Overflow::Scroll) ? 10000 : content_h;
           final_c.height = {max_h, MeasureMode::AtMost};
         }
       } else {
@@ -1989,7 +1996,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
           final_c.width = {content_w, MeasureMode::Undefined};
         } else {
           int max_w =
-              (box->style.overflow_x == Overflow::Scroll) ? 10000 : content_w;
+              (box->style().overflow_x == Overflow::Scroll) ? 10000 : content_w;
           final_c.width = {max_w, MeasureMode::AtMost};
         }
         final_c.height = {item.main_resolved_size - m_vert,
@@ -2031,7 +2038,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   // Compute total cross lines and max line main resolved size
   int total_cross_lines = 0;
   int resolved_cross_gap =
-      ResolveSize(is_row ? box->style.row_gap : box->style.column_gap,
+      ResolveSize(is_row ? box->style().row_gap : box->style().column_gap,
                   is_row ? content_h : content_w);
   {
     bool is_first = true;
@@ -2055,47 +2062,49 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   int resolved_height = my_height;
   if (auto_width) {
     int needed_w = is_row ? max_line_main_resolved : total_cross_lines;
-    resolved_width = needed_w + box->style.border.Horiz() +
-                     box->style.padding.Horiz() + scrollbar_spacing_x;
+    resolved_width = needed_w + box->style().border.Horiz() +
+                     box->style().padding.Horiz() + scrollbar_spacing_x;
   }
   if (auto_height) {
     int needed_h = is_row ? total_cross_lines : max_line_main_resolved;
-    resolved_height = needed_h + box->style.border.Vert() +
-                      box->style.padding.Vert() + scrollbar_spacing_y;
+    resolved_height = needed_h + box->style().border.Vert() +
+                      box->style().padding.Vert() + scrollbar_spacing_y;
   }
 
   // Apply min/max constraints to the container size
   {
-    int max_w = ResolveBoxWidth(box->style, box->style.max_width, parent_w);
+    int max_w = ResolveBoxWidth(box->style(), box->style().max_width, parent_w);
     if (max_w != -1 && resolved_width > max_w) {
       resolved_width = max_w;
     }
-    int min_w = ResolveBoxWidth(box->style, box->style.min_width, parent_w);
+    int min_w = ResolveBoxWidth(box->style(), box->style().min_width, parent_w);
     if (min_w != -1 && resolved_width < min_w) {
       resolved_width = min_w;
     }
-    int max_h = ResolveBoxHeight(box->style, box->style.max_height, parent_h);
+    int max_h =
+        ResolveBoxHeight(box->style(), box->style().max_height, parent_h);
     if (max_h != -1 && resolved_height > max_h) {
       resolved_height = max_h;
     }
-    int min_h = ResolveBoxHeight(box->style, box->style.min_height, parent_h);
+    int min_h =
+        ResolveBoxHeight(box->style(), box->style().min_height, parent_h);
     if (min_h != -1 && resolved_height < min_h) {
       resolved_height = min_h;
     }
   }
 
   int final_content_w =
-      std::max(0, resolved_width - box->style.border.Horiz() -
-                      box->style.padding.Horiz() - scrollbar_spacing_x);
+      std::max(0, resolved_width - box->style().border.Horiz() -
+                      box->style().padding.Horiz() - scrollbar_spacing_x);
   int final_content_h =
-      std::max(0, resolved_height - box->style.border.Vert() -
-                      box->style.padding.Vert() - scrollbar_spacing_y);
+      std::max(0, resolved_height - box->style().border.Vert() -
+                      box->style().padding.Vert() - scrollbar_spacing_y);
   int container_main_final = is_row ? final_content_w : final_content_h;
   int container_cross_final = is_row ? final_content_h : final_content_w;
 
   bool cross_is_definite = is_row ? !auto_height : !auto_width;
   if (cross_is_definite && !lines.empty() &&
-      box->style.align_content == AlignContent::Stretch) {
+      box->style().align_content == AlignContent::Stretch) {
     int remaining_cross = container_cross_final - total_cross_lines;
     if (remaining_cross > 0) {
       int extra_per_line = remaining_cross / static_cast<int>(lines.size());
@@ -2110,51 +2119,53 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   auto fragment = MakeArenaFragment(resolved_width, resolved_height);
   fragment->dom_node = box->dom_node;
   fragment->paint_fields = kPaintAll;
-  fragment->visibility = box->style.visibility;
-  fragment->background_color = box->style.background_color;
-  fragment->foreground_color = box->style.foreground_color;
-  fragment->opacity = box->style.opacity;
-  fragment->bold = box->style.bold;
-  fragment->dim = box->style.dim;
-  fragment->italic = box->style.italic;
-  fragment->underlined = box->style.underlined;
-  fragment->underlined_double = box->style.underlined_double;
-  fragment->strikethrough = box->style.strikethrough;
-  fragment->overlined = box->style.overlined;
-  fragment->blink = box->style.blink;
-  fragment->border_style = box->style.border_style;
-  fragment->border_color_top = box->style.border_color_top;
-  fragment->border_color_right = box->style.border_color_right;
-  fragment->border_color_bottom = box->style.border_color_bottom;
-  fragment->border_color_left = box->style.border_color_left;
-  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
-      box->style.border_style != BorderStyle::None) {
+  fragment->visibility = box->style().visibility;
+  fragment->background_color = box->style().background_color;
+  fragment->foreground_color = box->text.fg;
+  fragment->opacity = box->style().opacity;
+  fragment->bold = box->text.bold;
+  fragment->dim = box->text.dim;
+  fragment->italic = box->text.italic;
+  fragment->underlined = box->text.underlined;
+  fragment->underlined_double = box->text.underlined_double;
+  fragment->strikethrough = box->text.strikethrough;
+  fragment->overlined = box->text.overlined;
+  fragment->blink = box->text.blink;
+  fragment->border_style = box->style().border_style;
+  fragment->border_color_top = box->style().border_color_top;
+  fragment->border_color_right = box->style().border_color_right;
+  fragment->border_color_bottom = box->style().border_color_bottom;
+  fragment->border_color_left = box->style().border_color_left;
+  if ((box->style().border.Horiz() > 0 || box->style().border.Vert() > 0) &&
+      box->style().border_style != BorderStyle::None) {
     fragment->has_border = true;
-    fragment->border_width = box->style.border;
+    fragment->border_width = box->style().border;
   }
 
-  int main_start = is_row ? (box->style.padding.left + box->style.border.left)
-                          : (box->style.padding.top + box->style.border.top);
-  int cross_start = is_row ? (box->style.padding.top + box->style.border.top)
-                           : (box->style.padding.left + box->style.border.left);
+  int main_start = is_row
+                       ? (box->style().padding.left + box->style().border.left)
+                       : (box->style().padding.top + box->style().border.top);
+  int cross_start =
+      is_row ? (box->style().padding.top + box->style().border.top)
+             : (box->style().padding.left + box->style().border.left);
 
   // Determine line cross offsets
   std::vector<int> line_cross_offsets(lines.size(), 0);
   if (cross_is_definite && !lines.empty() &&
-      box->style.align_content != AlignContent::Stretch) {
+      box->style().align_content != AlignContent::Stretch) {
     int total_lines_cross = 0;
     for (const auto& line : lines) {
       total_lines_cross += line.cross_size;
     }
     int remaining = container_cross_final - total_lines_cross;
 
-    if (box->style.align_content == AlignContent::FlexStart) {
+    if (box->style().align_content == AlignContent::FlexStart) {
       int cur_line_offset = 0;
       for (size_t l = 0; l < lines.size(); ++l) {
         line_cross_offsets[l] = cur_line_offset;
         cur_line_offset += lines[l].cross_size + resolved_cross_gap;
       }
-    } else if (box->style.align_content == AlignContent::FlexEnd) {
+    } else if (box->style().align_content == AlignContent::FlexEnd) {
       int total_occupied =
           total_lines_cross + (lines.size() - 1) * resolved_cross_gap;
       int start_offset = std::max(0, container_cross_final - total_occupied);
@@ -2163,7 +2174,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         line_cross_offsets[l] = cur_line_offset;
         cur_line_offset += lines[l].cross_size + resolved_cross_gap;
       }
-    } else if (box->style.align_content == AlignContent::Center) {
+    } else if (box->style().align_content == AlignContent::Center) {
       int total_occupied =
           total_lines_cross + (lines.size() - 1) * resolved_cross_gap;
       int start_offset =
@@ -2173,7 +2184,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         line_cross_offsets[l] = cur_line_offset;
         cur_line_offset += lines[l].cross_size + resolved_cross_gap;
       }
-    } else if (box->style.align_content == AlignContent::SpaceBetween) {
+    } else if (box->style().align_content == AlignContent::SpaceBetween) {
       if (lines.size() == 1) {
         line_cross_offsets[0] = 0;
       } else {
@@ -2184,14 +2195,14 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
           current += lines[l].cross_size + gap;
         }
       }
-    } else if (box->style.align_content == AlignContent::SpaceAround) {
+    } else if (box->style().align_content == AlignContent::SpaceAround) {
       float gap = static_cast<float>(remaining) / lines.size();
       float current = gap / 2.0f;
       for (size_t l = 0; l < lines.size(); ++l) {
         line_cross_offsets[l] = static_cast<int>(current + 0.5f);
         current += lines[l].cross_size + gap;
       }
-    } else if (box->style.align_content == AlignContent::SpaceEvenly) {
+    } else if (box->style().align_content == AlignContent::SpaceEvenly) {
       float gap = static_cast<float>(remaining) / (lines.size() + 1);
       float current = gap;
       for (size_t l = 0; l < lines.size(); ++l) {
@@ -2214,7 +2225,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
     int line_cross_pos =
         cross_start +
-        (box->style.flex_wrap == FlexWrap::WrapReverse
+        (box->style().flex_wrap == FlexWrap::WrapReverse
              ? (container_cross_final - line_offset - line.cross_size)
              : line_offset);
 
@@ -2225,19 +2236,19 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     std::vector<int> item_positions(line.items.size(), 0);
     int cur_pos = main_start;
     if (justify_free_space > 0) {
-      if (box->style.justify_content == JustifyContent::FlexEnd) {
+      if (box->style().justify_content == JustifyContent::FlexEnd) {
         cur_pos += justify_free_space;
         for (size_t i = 0; i < line.items.size(); ++i) {
           item_positions[i] = cur_pos;
           cur_pos += line.items[i].main_resolved_size + resolved_gap;
         }
-      } else if (box->style.justify_content == JustifyContent::Center) {
+      } else if (box->style().justify_content == JustifyContent::Center) {
         cur_pos += justify_free_space / 2;
         for (size_t i = 0; i < line.items.size(); ++i) {
           item_positions[i] = cur_pos;
           cur_pos += line.items[i].main_resolved_size + resolved_gap;
         }
-      } else if (box->style.justify_content == JustifyContent::SpaceBetween) {
+      } else if (box->style().justify_content == JustifyContent::SpaceBetween) {
         if (line.items.size() > 1) {
           int extra_gap =
               justify_free_space / static_cast<int>(line.items.size() - 1);
@@ -2251,7 +2262,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         } else {
           item_positions[0] = cur_pos;
         }
-      } else if (box->style.justify_content == JustifyContent::SpaceAround) {
+      } else if (box->style().justify_content == JustifyContent::SpaceAround) {
         int spacing = justify_free_space / static_cast<int>(line.items.size());
         size_t remainder =
             static_cast<size_t>(justify_free_space) % line.items.size();
@@ -2261,7 +2272,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
           cur_pos += line.items[i].main_resolved_size + resolved_gap + spacing +
                      (i < remainder ? 1 : 0);
         }
-      } else if (box->style.justify_content == JustifyContent::SpaceEvenly) {
+      } else if (box->style().justify_content == JustifyContent::SpaceEvenly) {
         int spacing =
             justify_free_space / static_cast<int>(line.items.size() + 1);
         size_t remainder =
@@ -2293,8 +2304,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       int effective_container_main =
           main_is_indefinite ? line.total_main_resolved : container_main_final;
       int container_start =
-          is_row ? (box->style.padding.left + box->style.border.left)
-                 : (box->style.padding.top + box->style.border.top);
+          is_row ? (box->style().padding.left + box->style().border.left)
+                 : (box->style().padding.top + box->style().border.top);
       int container_end = container_start + effective_container_main;
       for (size_t i = 0; i < line.items.size(); ++i) {
         int pos = item_positions[i];
@@ -2306,12 +2317,12 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     for (size_t i = 0; i < line.items.size(); ++i) {
       auto& item = line.items[i];
       LayoutConstraints final_c;
-      int m_horiz = item.child_ptr->style.margin.Horiz();
-      int m_vert = item.child_ptr->style.margin.Vert();
+      int m_horiz = item.child_ptr->style().margin.Horiz();
+      int m_vert = item.child_ptr->style().margin.Vert();
 
-      AlignItems effective_align = box->style.align_items;
-      if (item.child_ptr->style.align_self != AlignSelf::Auto) {
-        switch (item.child_ptr->style.align_self) {
+      AlignItems effective_align = box->style().align_items;
+      if (item.child_ptr->style().align_self != AlignSelf::Auto) {
+        switch (item.child_ptr->style().align_self) {
           case AlignSelf::Stretch:
             effective_align = AlignItems::Stretch;
             break;
@@ -2336,26 +2347,26 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         final_c.width = {item.main_resolved_size - m_horiz,
                          MeasureMode::Exactly};
         if (effective_align == AlignItems::Stretch &&
-            item.child_ptr->style.height.unit == Unit::Auto) {
+            item.child_ptr->style().height.unit == Unit::Auto) {
           final_c.height = {line.cross_size - m_vert, MeasureMode::Exactly};
         } else if (auto_height &&
                    constraints.height.mode == MeasureMode::Undefined) {
           final_c.height = {item.cross_size - m_vert, MeasureMode::Exactly};
         } else {
-          int max_h = (box->style.overflow_y == Overflow::Scroll)
+          int max_h = (box->style().overflow_y == Overflow::Scroll)
                           ? 10000
                           : final_content_h;
           final_c.height = {max_h, MeasureMode::AtMost};
         }
       } else {
         if (effective_align == AlignItems::Stretch &&
-            item.child_ptr->style.width.unit == Unit::Auto) {
+            item.child_ptr->style().width.unit == Unit::Auto) {
           final_c.width = {line.cross_size - m_horiz, MeasureMode::Exactly};
         } else if (auto_width &&
                    constraints.width.mode == MeasureMode::Undefined) {
           final_c.width = {item.cross_size - m_horiz, MeasureMode::Exactly};
         } else {
-          int max_w = (box->style.overflow_x == Overflow::Scroll)
+          int max_w = (box->style().overflow_x == Overflow::Scroll)
                           ? 10000
                           : final_content_w;
           final_c.width = {max_w, MeasureMode::AtMost};
@@ -2376,10 +2387,10 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         }
       }
 
-      int x = is_row ? item_positions[i] + item.child_ptr->style.margin.left
-                     : item_cross_pos + item.child_ptr->style.margin.left;
-      int y = is_row ? item_cross_pos + item.child_ptr->style.margin.top
-                     : item_positions[i] + item.child_ptr->style.margin.top;
+      int x = is_row ? item_positions[i] + item.child_ptr->style().margin.left
+                     : item_cross_pos + item.child_ptr->style().margin.left;
+      int y = is_row ? item_cross_pos + item.child_ptr->style().margin.top
+                     : item_positions[i] + item.child_ptr->style().margin.top;
 
       LayoutContext child_context = CreateChildContext(
           box, resolved_width, resolved_height, x, y, context);
@@ -2390,16 +2401,16 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
       int rx = x;
       int ry = y;
 
-      if (item.child_ptr->style.position == PositionType::Relative) {
-        if (item.child_ptr->style.left.unit != Unit::Auto) {
-          rx += item.child_ptr->style.left.Resolve(resolved_width);
-        } else if (item.child_ptr->style.right.unit != Unit::Auto) {
-          rx -= item.child_ptr->style.right.Resolve(resolved_width);
+      if (item.child_ptr->style().position == PositionType::Relative) {
+        if (item.child_ptr->style().left.unit != Unit::Auto) {
+          rx += item.child_ptr->style().left.Resolve(resolved_width);
+        } else if (item.child_ptr->style().right.unit != Unit::Auto) {
+          rx -= item.child_ptr->style().right.Resolve(resolved_width);
         }
-        if (item.child_ptr->style.top.unit != Unit::Auto) {
-          ry += item.child_ptr->style.top.Resolve(resolved_height);
-        } else if (item.child_ptr->style.bottom.unit != Unit::Auto) {
-          ry -= item.child_ptr->style.bottom.Resolve(resolved_height);
+        if (item.child_ptr->style().top.unit != Unit::Auto) {
+          ry += item.child_ptr->style().top.Resolve(resolved_height);
+        } else if (item.child_ptr->style().bottom.unit != Unit::Auto) {
+          ry -= item.child_ptr->style().bottom.Resolve(resolved_height);
         }
       }
 
@@ -2410,18 +2421,18 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   LayoutOutOfFlowChildren(box, fragment, context);
 
   int total_content_height =
-      is_row ? (total_cross_lines + box->style.padding.Vert() +
-                box->style.border.Vert())
-             : (max_line_main_resolved + box->style.padding.Vert() +
-                box->style.border.Vert());
+      is_row ? (total_cross_lines + box->style().padding.Vert() +
+                box->style().border.Vert())
+             : (max_line_main_resolved + box->style().padding.Vert() +
+                box->style().border.Vert());
   int total_content_width =
-      is_row ? (max_line_main_resolved + box->style.padding.Horiz() +
-                box->style.border.Horiz())
-             : (total_cross_lines + box->style.padding.Horiz() +
-                box->style.border.Horiz());
+      is_row ? (max_line_main_resolved + box->style().padding.Horiz() +
+                box->style().border.Horiz())
+             : (total_cross_lines + box->style().padding.Horiz() +
+                box->style().border.Horiz());
 
-  if (box->style.overflow_y != Overflow::Visible ||
-      box->style.overflow_x != Overflow::Visible) {
+  if (box->style().overflow_y != Overflow::Visible ||
+      box->style().overflow_x != Overflow::Visible) {
     fragment->clips_descendants = true;
   }
 
@@ -2433,11 +2444,11 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
                              child_link.y, &max_child_right, &max_child_bottom);
     }
     total_content_width = std::max(
-        total_content_width,
-        max_child_right + box->style.padding.right + box->style.border.right);
+        total_content_width, max_child_right + box->style().padding.right +
+                                 box->style().border.right);
     total_content_height = std::max(
-        total_content_height, max_child_bottom + box->style.padding.bottom +
-                                  box->style.border.bottom);
+        total_content_height, max_child_bottom + box->style().padding.bottom +
+                                  box->style().border.bottom);
 
     ApplyScrollExtent(box, fragment.get(), context, total_content_width,
                       total_content_height);
@@ -2460,7 +2471,8 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     width = avail_width;
     is_fixed_width = true;
   } else {
-    int resolved = ResolveBoxWidth(box->style, box->style.width, avail_width);
+    int resolved =
+        ResolveBoxWidth(box->style(), box->style().width, avail_width);
     if (resolved != -1) {
       width = resolved;
       is_fixed_width = true;
@@ -2468,20 +2480,20 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       is_auto_width = true;
       width = (constraints.width.mode == MeasureMode::Undefined)
                   ? 0
-                  : std::max(0, avail_width - box->style.margin.Horiz());
+                  : std::max(0, avail_width - box->style().margin.Horiz());
     }
   }
 
   // Apply max-width constraint
   int max_width_resolved =
-      ResolveBoxWidth(box->style, box->style.max_width, avail_width);
+      ResolveBoxWidth(box->style(), box->style().max_width, avail_width);
   if (max_width_resolved != -1 && width > max_width_resolved) {
     width = max_width_resolved;
     is_auto_width = false;
   }
 
   int content_width_limit = std::max(
-      0, width - box->style.padding.Horiz() - box->style.border.Horiz());
+      0, width - box->style().padding.Horiz() - box->style().border.Horiz());
 
   // Helper to recursively find rows
   auto FindRows = [](auto& self, LayoutBox* curr,
@@ -2620,14 +2632,14 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     auto fragment = MakeArenaFragment(width, 0);
     fragment->dom_node = box->dom_node;
     fragment->paint_fields = kPaintBackground | kPaintForeground;
-    fragment->visibility = box->style.visibility;
-    fragment->background_color = box->style.background_color;
-    fragment->foreground_color = box->style.foreground_color;
-    fragment->border_style = box->style.border_style;
-    if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
-        box->style.border_style != BorderStyle::None) {
+    fragment->visibility = box->style().visibility;
+    fragment->background_color = box->style().background_color;
+    fragment->foreground_color = box->text.fg;
+    fragment->border_style = box->style().border_style;
+    if ((box->style().border.Horiz() > 0 || box->style().border.Vert() > 0) &&
+        box->style().border_style != BorderStyle::None) {
       fragment->has_border = true;
-      fragment->border_width = box->style.border;
+      fragment->border_width = box->style().border;
     }
     if (box->dom_node && !context.is_measurement) {
       box->dom_node->set_layout_width(fragment->width);
@@ -2643,7 +2655,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     for (size_t col = 0; col < num_cols; ++col) {
       if (row[col].is_top_left && row[col].box) {
         auto* cell = row[col].box;
-        int cell_w = ResolveBoxWidth(cell->style, cell->style.width,
+        int cell_w = ResolveBoxWidth(cell->style(), cell->style().width,
                                      content_width_limit);
         int measured_width = 0;
         if (cell_w != -1) {
@@ -2678,8 +2690,8 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   // Distribute width
   if (is_auto_width && constraints.width.mode == MeasureMode::Undefined) {
     content_width_limit = total_preferred_width;
-    width = content_width_limit + box->style.padding.Horiz() +
-            box->style.border.Horiz();
+    width = content_width_limit + box->style().padding.Horiz() +
+            box->style().border.Horiz();
   } else {
     if (total_preferred_width <= content_width_limit) {
       // If table is fixed-width or exactly constrained, stretch columns
@@ -2702,8 +2714,8 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       } else {
         // Auto-width fits preferred width
         content_width_limit = total_preferred_width;
-        width = content_width_limit + box->style.padding.Horiz() +
-                box->style.border.Horiz();
+        width = content_width_limit + box->style().padding.Horiz() +
+                box->style().border.Horiz();
       }
     } else {
       // Shrink columns to fit content_width_limit
@@ -2731,11 +2743,11 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   // width has to be distributed across columns, mirroring the "table is
   // wider than its preferred content" stretch above.
   int min_width_resolved =
-      ResolveBoxWidth(box->style, box->style.min_width, avail_width);
+      ResolveBoxWidth(box->style(), box->style().min_width, avail_width);
   if (min_width_resolved != -1 && width < min_width_resolved) {
     int new_content_width_limit = min_width_resolved -
-                                  box->style.padding.Horiz() -
-                                  box->style.border.Horiz();
+                                  box->style().padding.Horiz() -
+                                  box->style().border.Horiz();
     int extra = std::max(0, new_content_width_limit - content_width_limit);
     if (extra > 0 && total_preferred_width > 0) {
       for (size_t col = 0; col < num_cols; ++col) {
@@ -2759,23 +2771,23 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   auto fragment = MakeArenaFragment(width, 0);
   fragment->dom_node = box->dom_node;
   fragment->paint_fields = kPaintAll;
-  fragment->visibility = box->style.visibility;
-  fragment->background_color = box->style.background_color;
-  fragment->foreground_color = box->style.foreground_color;
-  fragment->opacity = box->style.opacity;
-  fragment->border_style = box->style.border_style;
-  fragment->border_color_top = box->style.border_color_top;
-  fragment->border_color_right = box->style.border_color_right;
-  fragment->border_color_bottom = box->style.border_color_bottom;
-  fragment->border_color_left = box->style.border_color_left;
-  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
-      box->style.border_style != BorderStyle::None) {
+  fragment->visibility = box->style().visibility;
+  fragment->background_color = box->style().background_color;
+  fragment->foreground_color = box->text.fg;
+  fragment->opacity = box->style().opacity;
+  fragment->border_style = box->style().border_style;
+  fragment->border_color_top = box->style().border_color_top;
+  fragment->border_color_right = box->style().border_color_right;
+  fragment->border_color_bottom = box->style().border_color_bottom;
+  fragment->border_color_left = box->style().border_color_left;
+  if ((box->style().border.Horiz() > 0 || box->style().border.Vert() > 0) &&
+      box->style().border_style != BorderStyle::None) {
     fragment->has_border = true;
-    fragment->border_width = box->style.border;
+    fragment->border_width = box->style().border;
   }
 
-  int cur_y = box->style.border.top + box->style.padding.top;
-  int start_x = box->style.border.left + box->style.padding.left;
+  int cur_y = box->style().border.top + box->style().padding.top;
+  int start_x = box->style().border.left + box->style().padding.left;
 
   std::vector<int> col_x(num_cols + 1, 0);
   for (size_t col = 0; col < num_cols; ++col) {
@@ -2828,30 +2840,30 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       row_content_total += h;
     }
 
-    int resolved_height = ResolveBoxHeight(box->style, box->style.height,
+    int resolved_height = ResolveBoxHeight(box->style(), box->style().height,
                                            constraints.height.value);
     int target_fragment_height = (resolved_height != -1)
                                      ? resolved_height
                                      : row_content_total +
-                                           box->style.padding.Vert() +
-                                           box->style.border.Vert();
+                                           box->style().padding.Vert() +
+                                           box->style().border.Vert();
 
     int max_height_resolved = ResolveBoxHeight(
-        box->style, box->style.max_height, constraints.height.value);
+        box->style(), box->style().max_height, constraints.height.value);
     if (max_height_resolved != -1 &&
         target_fragment_height > max_height_resolved) {
       target_fragment_height = max_height_resolved;
     }
     int min_height_resolved = ResolveBoxHeight(
-        box->style, box->style.min_height, constraints.height.value);
+        box->style(), box->style().min_height, constraints.height.value);
     if (min_height_resolved != -1 &&
         target_fragment_height < min_height_resolved) {
       target_fragment_height = min_height_resolved;
     }
 
     int target_row_content_total = target_fragment_height -
-                                   box->style.padding.Vert() -
-                                   box->style.border.Vert();
+                                   box->style().padding.Vert() -
+                                   box->style().border.Vert();
     if (target_row_content_total > row_content_total && row_content_total > 0 &&
         !row_heights.empty()) {
       int extra = target_row_content_total - row_content_total;
@@ -2880,19 +2892,19 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     if (row_box) {
       row_bg_frag->dom_node = row_box->dom_node;
       row_bg_frag->paint_fields = kPaintAll;
-      row_bg_frag->background_color = row_box->style.background_color;
-      row_bg_frag->foreground_color = row_box->style.foreground_color;
-      row_bg_frag->opacity = row_box->style.opacity;
-      row_bg_frag->border_style = row_box->style.border_style;
-      row_bg_frag->border_color_top = row_box->style.border_color_top;
-      row_bg_frag->border_color_right = row_box->style.border_color_right;
-      row_bg_frag->border_color_bottom = row_box->style.border_color_bottom;
-      row_bg_frag->border_color_left = row_box->style.border_color_left;
-      if ((row_box->style.border.Horiz() > 0 ||
-           row_box->style.border.Vert() > 0) &&
-          row_box->style.border_style != BorderStyle::None) {
+      row_bg_frag->background_color = row_box->style().background_color;
+      row_bg_frag->foreground_color = row_box->text.fg;
+      row_bg_frag->opacity = row_box->style().opacity;
+      row_bg_frag->border_style = row_box->style().border_style;
+      row_bg_frag->border_color_top = row_box->style().border_color_top;
+      row_bg_frag->border_color_right = row_box->style().border_color_right;
+      row_bg_frag->border_color_bottom = row_box->style().border_color_bottom;
+      row_bg_frag->border_color_left = row_box->style().border_color_left;
+      if ((row_box->style().border.Horiz() > 0 ||
+           row_box->style().border.Vert() > 0) &&
+          row_box->style().border_style != BorderStyle::None) {
         row_bg_frag->has_border = true;
-        row_bg_frag->border_width = row_box->style.border;
+        row_bg_frag->border_width = row_box->style().border;
       }
       if (row_box->dom_node && !context.is_measurement) {
         row_box->dom_node->set_layout_width(content_width_limit);
@@ -2901,7 +2913,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
 
       row_cells_frag->dom_node = row_box->dom_node;
       row_cells_frag->paint_fields = kPaintOpacity;
-      row_cells_frag->opacity = row_box->style.opacity;
+      row_cells_frag->opacity = row_box->style().opacity;
     }
 
     for (size_t col = 0; col < num_cols; ++col) {
@@ -2964,11 +2976,11 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
     // visually spilling.
     int total_col_extent = num_cols > 0 ? col_x.back() + col_widths.back() : 0;
     box->dom_node->set_scroll_width(std::max(
-        fragment->width, total_col_extent + box->style.padding.Horiz() +
-                             box->style.border.Horiz()));
-    box->dom_node->set_scroll_height(
-        std::max(fragment->height,
-                 cur_y + box->style.padding.bottom + box->style.border.bottom));
+        fragment->width, total_col_extent + box->style().padding.Horiz() +
+                             box->style().border.Horiz()));
+    box->dom_node->set_scroll_height(std::max(
+        fragment->height,
+        cur_y + box->style().padding.bottom + box->style().border.bottom));
   }
 
   return fragment;
@@ -2997,10 +3009,10 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
                                              LayoutContext context) {
   auto* box = node.box;
 
-  int border_h = box->style.border.Horiz();
-  int border_v = box->style.border.Vert();
-  int padding_h = box->style.padding.Horiz();
-  int padding_v = box->style.padding.Vert();
+  int border_h = box->style().border.Horiz();
+  int border_v = box->style().border.Vert();
+  int padding_h = box->style().padding.Horiz();
+  int padding_v = box->style().padding.Vert();
 
   // Resolved independently of width, so it's safe to consult before width is
   // known: lets aspect-ratio derive an auto width from a definite height,
@@ -3009,18 +3021,18 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   int early_resolved_height =
       (constraints.height.mode == MeasureMode::Exactly)
           ? constraints.height.value
-          : ResolveBoxHeight(box->style, box->style.height,
+          : ResolveBoxHeight(box->style(), box->style().height,
                              constraints.height.value);
 
   int parent_width = constraints.width.value;
   if (constraints.width.mode != MeasureMode::Exactly) {
-    int resolved =
-        ResolveBoxWidth(box->style, box->style.width, constraints.width.value);
+    int resolved = ResolveBoxWidth(box->style(), box->style().width,
+                                   constraints.width.value);
     if (resolved != -1) {
       parent_width = resolved;
-    } else if (early_resolved_height != -1 && box->style.aspect_ratio > 0) {
+    } else if (early_resolved_height != -1 && box->style().aspect_ratio > 0) {
       parent_width = static_cast<int>(
-          early_resolved_height * box->style.aspect_ratio + 0.5f);
+          early_resolved_height * box->style().aspect_ratio + 0.5f);
     }
   }
   int avail_width = parent_width - border_h - padding_h;
@@ -3029,7 +3041,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   if (constraints.height.mode != MeasureMode::Undefined) {
     parent_height = constraints.height.value;
   } else {
-    int resolved = ResolveBoxHeight(box->style, box->style.height,
+    int resolved = ResolveBoxHeight(box->style(), box->style().height,
                                     constraints.height.value);
     if (resolved != -1) {
       parent_height = resolved;
@@ -3038,14 +3050,14 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   int avail_height = std::max(0, parent_height - border_v - padding_v);
 
   // 1. Determine columns template. If empty, default to one 1fr column.
-  std::vector<Length> cols_template = box->style.grid_template_columns;
+  std::vector<Length> cols_template = box->style().grid_template_columns;
   if (cols_template.empty()) {
     cols_template.push_back(Length::Fr(1.0f));
   }
   int C = cols_template.size();
 
   // 2. Resolve Column Widths
-  int col_gap_val = box->style.column_gap.Resolve(avail_width);
+  int col_gap_val = box->style().column_gap.Resolve(avail_width);
   int total_col_gaps = std::max(0, C - 1) * col_gap_val;
   int remaining_width = std::max(0, avail_width - total_col_gaps);
 
@@ -3089,8 +3101,8 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   // Count the number of non-absolute/non-fixed children
   int num_children = 0;
   for (const auto& child : box->children) {
-    if (child->style.position != PositionType::Absolute &&
-        child->style.position != PositionType::Fixed) {
+    if (child->style().position != PositionType::Absolute &&
+        child->style().position != PositionType::Fixed) {
       num_children++;
     }
   }
@@ -3155,13 +3167,13 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   int cursor_c = 0;
 
   for (auto& child : box->children) {
-    if (child->style.position == PositionType::Absolute ||
-        child->style.position == PositionType::Fixed) {
+    if (child->style().position == PositionType::Absolute ||
+        child->style().position == PositionType::Fixed) {
       continue;
     }
 
-    int r_span = std::max(1, child->style.grid_row_span);
-    int c_span = std::max(1, child->style.grid_column_span);
+    int r_span = std::max(1, child->style().grid_row_span);
+    int c_span = std::max(1, child->style().grid_column_span);
     c_span = std::min(c_span, C);
 
     int placed_r = -1;
@@ -3206,10 +3218,10 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   for (const auto& pc : placed_children) {
     R = std::max(R, pc.row + pc.r_span);
   }
-  R = std::max(R, static_cast<int>(box->style.grid_template_rows.size()));
+  R = std::max(R, static_cast<int>(box->style().grid_template_rows.size()));
 
   // 5. Resolve Row Heights
-  int row_gap_val = box->style.row_gap.Resolve(avail_height);
+  int row_gap_val = box->style().row_gap.Resolve(avail_height);
   int total_row_gaps = std::max(0, R - 1) * row_gap_val;
   int remaining_height = std::max(0, avail_height - total_row_gaps);
 
@@ -3217,7 +3229,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   std::vector<bool> is_row_fr(R, false);
   float total_row_fr = 0.0f;
 
-  const auto& rows_template = box->style.grid_template_rows;
+  const auto& rows_template = box->style().grid_template_rows;
   for (int r = 0; r < R; ++r) {
     if (r < static_cast<int>(rows_template.size())) {
       if (rows_template[r].unit == Unit::Fr) {
@@ -3243,9 +3255,9 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
     // (an aspect-ratio height must derive from the used width, not the
     // track width).
     bool stretch_x =
-        EffectiveAlign(pc.box->style.justify_self, box->style.justify_items) ==
-            AlignItems::Stretch &&
-        pc.box->style.width.unit == Unit::Auto;
+        EffectiveAlign(pc.box->style().justify_self,
+                       box->style().justify_items) == AlignItems::Stretch &&
+        pc.box->style().width.unit == Unit::Auto;
     child_c.width = {child_width,
                      stretch_x ? MeasureMode::Exactly : MeasureMode::AtMost};
 
@@ -3345,38 +3357,38 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   auto container_frag = MakeArenaFragment(parent_width, 0);
   container_frag->dom_node = box->dom_node;
   container_frag->paint_fields = kPaintAll;
-  container_frag->visibility = box->style.visibility;
-  container_frag->background_color = box->style.background_color;
-  container_frag->foreground_color = box->style.foreground_color;
-  container_frag->opacity = box->style.opacity;
-  container_frag->bold = box->style.bold;
-  container_frag->dim = box->style.dim;
-  container_frag->italic = box->style.italic;
-  container_frag->underlined = box->style.underlined;
-  container_frag->underlined_double = box->style.underlined_double;
-  container_frag->strikethrough = box->style.strikethrough;
-  container_frag->overlined = box->style.overlined;
-  container_frag->blink = box->style.blink;
-  container_frag->border_style = box->style.border_style;
-  container_frag->border_color_top = box->style.border_color_top;
-  container_frag->border_color_right = box->style.border_color_right;
-  container_frag->border_color_bottom = box->style.border_color_bottom;
-  container_frag->border_color_left = box->style.border_color_left;
-  if ((box->style.border.Horiz() > 0 || box->style.border.Vert() > 0) &&
-      box->style.border_style != BorderStyle::None) {
+  container_frag->visibility = box->style().visibility;
+  container_frag->background_color = box->style().background_color;
+  container_frag->foreground_color = box->text.fg;
+  container_frag->opacity = box->style().opacity;
+  container_frag->bold = box->text.bold;
+  container_frag->dim = box->text.dim;
+  container_frag->italic = box->text.italic;
+  container_frag->underlined = box->text.underlined;
+  container_frag->underlined_double = box->text.underlined_double;
+  container_frag->strikethrough = box->text.strikethrough;
+  container_frag->overlined = box->text.overlined;
+  container_frag->blink = box->text.blink;
+  container_frag->border_style = box->style().border_style;
+  container_frag->border_color_top = box->style().border_color_top;
+  container_frag->border_color_right = box->style().border_color_right;
+  container_frag->border_color_bottom = box->style().border_color_bottom;
+  container_frag->border_color_left = box->style().border_color_left;
+  if ((box->style().border.Horiz() > 0 || box->style().border.Vert() > 0) &&
+      box->style().border_style != BorderStyle::None) {
     container_frag->has_border = true;
-    container_frag->border_width = box->style.border;
+    container_frag->border_width = box->style().border;
   }
 
   std::vector<int> col_offsets(C, 0);
-  int cur_x = box->style.padding.left + box->style.border.left;
+  int cur_x = box->style().padding.left + box->style().border.left;
   for (int c = 0; c < C; ++c) {
     col_offsets[c] = cur_x;
     cur_x += col_widths[c] + col_gap_val;
   }
 
   std::vector<int> row_offsets(R, 0);
-  int cur_y = box->style.padding.top + box->style.border.top;
+  int cur_y = box->style().padding.top + box->style().border.top;
   for (int r = 0; r < R; ++r) {
     row_offsets[r] = cur_y;
     cur_y += row_heights[r] + row_gap_val;
@@ -3398,15 +3410,15 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
     }
     final_h += (pc.r_span - 1) * row_gap_val;
 
-    AlignItems justify =
-        EffectiveAlign(pc.box->style.justify_self, box->style.justify_items);
+    AlignItems justify = EffectiveAlign(pc.box->style().justify_self,
+                                        box->style().justify_items);
     AlignItems align =
-        EffectiveAlign(pc.box->style.align_self, box->style.align_items);
+        EffectiveAlign(pc.box->style().align_self, box->style().align_items);
 
     bool stretch_x = (justify == AlignItems::Stretch) &&
-                     pc.box->style.width.unit == Unit::Auto;
+                     pc.box->style().width.unit == Unit::Auto;
     bool stretch_y = (align == AlignItems::Stretch) &&
-                     pc.box->style.height.unit == Unit::Auto;
+                     pc.box->style().height.unit == Unit::Auto;
 
     LayoutConstraints final_c;
     final_c.width = {final_w,
@@ -3444,12 +3456,12 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   int content_w = 0;
   if (!col_offsets.empty()) {
     content_w = col_offsets.back() + col_widths.back() -
-                (box->style.padding.left + box->style.border.left);
+                (box->style().padding.left + box->style().border.left);
   }
   int content_h = 0;
   if (!row_offsets.empty()) {
     content_h = row_offsets.back() + row_heights.back() -
-                (box->style.padding.top + box->style.border.top);
+                (box->style().padding.top + box->style().border.top);
   }
 
   container_frag->width = content_w + border_h + padding_h;
@@ -3464,8 +3476,8 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
     // silently growing/shrinking the container to match track content.
     // Previously only min-width/max-width (a range) clamped this; a plain
     // `width` had no effect at all on the container's own reported size.
-    int resolved_w =
-        ResolveBoxWidth(box->style, box->style.width, constraints.width.value);
+    int resolved_w = ResolveBoxWidth(box->style(), box->style().width,
+                                     constraints.width.value);
     if (resolved_w != -1) {
       container_frag->width = resolved_w;
     }
@@ -3477,12 +3489,12 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   // constraint (the true containing block), not the local `parent_width`
   // above (this grid's own resolved width, used for track sizing).
   if (constraints.width.mode != MeasureMode::Exactly) {
-    int max_w = ResolveBoxWidth(box->style, box->style.max_width,
+    int max_w = ResolveBoxWidth(box->style(), box->style().max_width,
                                 constraints.width.value);
     if (max_w != -1 && container_frag->width > max_w) {
       container_frag->width = max_w;
     }
-    int min_w = ResolveBoxWidth(box->style, box->style.min_width,
+    int min_w = ResolveBoxWidth(box->style(), box->style().min_width,
                                 constraints.width.value);
     if (min_w != -1 && container_frag->width < min_w) {
       container_frag->width = min_w;
@@ -3496,26 +3508,26 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
     // Same "explicit size wins over track content" rule as width above -
     // previously a plain `height` had no effect on the container's own
     // reported size at all, only min-height/max-height did.
-    int resolved_h = ResolveBoxHeight(box->style, box->style.height,
+    int resolved_h = ResolveBoxHeight(box->style(), box->style().height,
                                       constraints.height.value);
     if (resolved_h != -1) {
       container_frag->height = resolved_h;
-    } else if (box->style.aspect_ratio > 0) {
+    } else if (box->style().aspect_ratio > 0) {
       // aspect-ratio derives the grid container's auto height from its used
       // width; rows taller than the ratio height overflow.
       container_frag->height = static_cast<int>(
-          container_frag->width / box->style.aspect_ratio + 0.5f);
+          container_frag->width / box->style().aspect_ratio + 0.5f);
     }
   }
 
   // Apply min-height/max-height constraints, same rule as width above.
   if (constraints.height.mode != MeasureMode::Exactly) {
-    int max_h = ResolveBoxHeight(box->style, box->style.max_height,
+    int max_h = ResolveBoxHeight(box->style(), box->style().max_height,
                                  constraints.height.value);
     if (max_h != -1 && container_frag->height > max_h) {
       container_frag->height = max_h;
     }
-    int min_h = ResolveBoxHeight(box->style, box->style.min_height,
+    int min_h = ResolveBoxHeight(box->style(), box->style().min_height,
                                  constraints.height.value);
     if (min_h != -1 && container_frag->height < min_h) {
       container_frag->height = min_h;
@@ -3541,12 +3553,12 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
       AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
                              child_link.y, &max_child_right, &max_child_bottom);
     }
-    total_scroll_width = std::max(
-        total_scroll_width,
-        max_child_right + box->style.padding.right + box->style.border.right);
+    total_scroll_width = std::max(total_scroll_width,
+                                  max_child_right + box->style().padding.right +
+                                      box->style().border.right);
     total_scroll_height = std::max(
-        total_scroll_height, max_child_bottom + box->style.padding.bottom +
-                                 box->style.border.bottom);
+        total_scroll_height, max_child_bottom + box->style().padding.bottom +
+                                 box->style().border.bottom);
 
     ApplyScrollExtent(box, container_frag.get(), context, total_scroll_width,
                       total_scroll_height);
