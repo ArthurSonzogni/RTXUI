@@ -74,8 +74,6 @@ EnableHotReload("view", "src/panels/my_panel.cpp");
   reactive/interpolated state, not just file-watched hot reload) also prints
   to stderr by default. Since an RTXUI app typically owns the terminal in raw
   mode, that print lands mid-frame instead of a scrollback the user could
-  read — call `rtxui::SetCssErrorHandler(handler)` once (e.g. in `main()`) to
-  redirect these into your own UI (an app that renders arbitrary/live-edited
-  CSS, like a playground, should do this). `handler` receives a
-  `rtxui::CssError{message, line, column}`; pass `nullptr` to restore the
-  default stderr behavior.
+  read. Both are [diagnostics](/guide/diagnostics): an app that renders
+  live-edited markup or CSS, like a playground, should route them into its
+  own UI with `rtxui::SetDiagnosticHandler`.

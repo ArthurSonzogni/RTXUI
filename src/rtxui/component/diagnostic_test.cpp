@@ -194,5 +194,45 @@ TEST_CASE("Clicking a handler that is not bound is reported", "[diagnostic]") {
   CHECK(recorder.Has("handler 'Missing' is not bound"));
 }
 
+class BrokenStyle : public Component<BrokenStyle> {
+ public:
+  std::string rule = "color: red;";
+  BrokenStyle() { Bind(rule); }
+  std::string_view view = R"(
+    <div class="box">hi</div>
+    <style>
+      .box { {rule} }
+    </style>
+  )";
+};
+
+TEST_CASE("A syntax error is a diagnostic that says where it is",
+          "[diagnostic]") {
+  std::vector<Diagnostic> seen;
+  SetDiagnosticHandler([&](const Diagnostic& d) { seen.push_back(d); });
+  auto app = Ref<BrokenStyle>::New();
+  app->Mount();
+  app->rule = "color: red; }}";
+  app->Digest();
+  REQUIRE(seen.size() == 1);
+  CHECK(seen[0].kind == Diagnostic::Kind::CssSyntax);
+  CHECK(seen[0].line >= 0);
+  CHECK(seen[0].column >= 0);
+
+  // Reported again each time it is made again, unlike an unsupported
+  // construct: a live editor has to hear about every attempt.
+  app->rule = "color: blue;";
+  app->Digest();
+  app->rule = "color: red; }}";
+  app->Digest();
+  CHECK(seen.size() == 2);
+
+  ReportDiagnostic("something unsupported");
+  REQUIRE(seen.size() == 3);
+  CHECK(seen[2].kind == Diagnostic::Kind::Unsupported);
+  CHECK(seen[2].line == -1);
+  SetDiagnosticHandler(nullptr);
+}
+
 }  // namespace
 }  // namespace rtxui

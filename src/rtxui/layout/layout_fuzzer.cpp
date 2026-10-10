@@ -41,8 +41,7 @@ void TestLayout(const std::string& html, uint8_t width, uint8_t height) {
   // input. Swallowing them here keeps the session alive to reach layout, which
   // is what this target is actually for.
   static const int install_handler = [] {
-    rtxui::SetXmlErrorHandler([](const rtxui::XmlError&) {});
-    rtxui::SetCssErrorHandler([](const rtxui::CssError&) {});
+    rtxui::SetDiagnosticHandler([](const rtxui::Diagnostic&) {});
     return 0;
   }();
   (void)install_handler;

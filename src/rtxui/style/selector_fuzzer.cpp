@@ -56,8 +56,7 @@ void TestSelector(const std::string& selector) {
   // on the first input. Swallowing them keeps the session alive to reach the
   // matcher, which is what this target is for.
   static const int install_handler = [] {
-    rtxui::SetXmlErrorHandler([](const rtxui::XmlError&) {});
-    rtxui::SetCssErrorHandler([](const rtxui::CssError&) {});
+    rtxui::SetDiagnosticHandler([](const rtxui::Diagnostic&) {});
     return 0;
   }();
   (void)install_handler;

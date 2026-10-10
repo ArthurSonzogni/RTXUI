@@ -20,6 +20,19 @@ RTXUI reports each one as a diagnostic.
 Each distinct message is reported once per run, even though styles are
 re-applied on every frame.
 
+Markup or CSS that does not parse is reported too, with where the error is:
+
+| Mistake | `kind` | `line`, `column` |
+|---|---|---|
+| A `<style>` block that does not parse, such as one built from bound state | `CssSyntax` | In that `<style>` block, 0-based |
+| A template that does not parse, on hot reload, or markup built at run time such as a `<markdown>` component's | `XmlSyntax` | In that markup, 0-based |
+
+A syntax error is reported each time the text fails to parse, not once, so
+that an app showing live-edited markup hears about every attempt. Without a
+handler it is printed with the lines around it, and a component's own
+template that does not parse ends the process: it is usually a literal in
+the source, and the message is then the last thing on the terminal.
+
 ## Where They Go
 
 By default each diagnostic is printed to stderr, prefixed with `rtxui:`.
@@ -39,6 +52,9 @@ interface, since printing to stderr disturbs a running frame:
 #include <rtxui/rtxui.hpp>
 
 rtxui::SetDiagnosticHandler([](const rtxui::Diagnostic& d) {
+  if (d.kind == rtxui::Diagnostic::Kind::CssSyntax) {
+    log_file << "line " << d.line + 1 << ": ";
+  }
   log_file << d.message << '\n';
 });
 ```

@@ -230,14 +230,23 @@ int main() {
   // and corrupt the running frame -- Screen owns the terminal in raw mode,
   // so that output lands in the middle of the app instead of a scrollback
   // the user could read anyway. Route it into the status line instead. XML
-  // parse errors from HotReload() get the same treatment.
-  SetCssErrorHandler([app](const CssError& error) {
-    app->status = "CSS error, line " + std::to_string(error.line + 1) + ": " +
-                  error.message;
-  });
-  SetXmlErrorHandler([app](const XmlError& error) {
-    app->status = "Parse error, line " + std::to_string(error.line + 1) + ": " +
-                  error.message;
+  // parse errors from HotReload(), and constructs RTXUI does not support, get
+  // the same treatment.
+  SetDiagnosticHandler([app](const Diagnostic& diagnostic) {
+    switch (diagnostic.kind) {
+      case Diagnostic::Kind::CssSyntax:
+        app->status = "CSS error, line " + std::to_string(diagnostic.line + 1) +
+                      ": " + diagnostic.message;
+        break;
+      case Diagnostic::Kind::XmlSyntax:
+        app->status = "Parse error, line " +
+                      std::to_string(diagnostic.line + 1) + ": " +
+                      diagnostic.message;
+        break;
+      case Diagnostic::Kind::Unsupported:
+        app->status = diagnostic.message;
+        break;
+    }
   });
 
   Screen screen(app);
