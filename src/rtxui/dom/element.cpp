@@ -742,30 +742,79 @@ void Element::TriggerTransitions(double current_time_ms) {
     UpdateAnimations(current_time_ms);
     return;
   }
-  auto old_style = style;
+  // The properties a transition animates keep their current values, for the
+  // handlers below to move from; everything else takes the target's at once.
+  // Only those values are kept aside, rather than a copy of the whole style.
+  const struct {
+    decltype(ComputedStyle::background_color) background_color;
+    decltype(ComputedStyle::foreground_color) foreground_color;
+    decltype(ComputedStyle::border_color_top) border_color_top;
+    decltype(ComputedStyle::border_color_right) border_color_right;
+    decltype(ComputedStyle::border_color_bottom) border_color_bottom;
+    decltype(ComputedStyle::border_color_left) border_color_left;
+    decltype(ComputedStyle::width) width;
+    decltype(ComputedStyle::height) height;
+    decltype(ComputedStyle::top) top;
+    decltype(ComputedStyle::right) right;
+    decltype(ComputedStyle::bottom) bottom;
+    decltype(ComputedStyle::left) left;
+    decltype(ComputedStyle::translate_x) translate_x;
+    decltype(ComputedStyle::translate_y) translate_y;
+    decltype(ComputedStyle::flex_grow) flex_grow;
+    decltype(ComputedStyle::flex_shrink) flex_shrink;
+    decltype(ComputedStyle::opacity) opacity;
+    decltype(ComputedStyle::has_scrollbar_color_thumb)
+        has_scrollbar_color_thumb;
+    decltype(ComputedStyle::scrollbar_color_thumb) scrollbar_color_thumb;
+    decltype(ComputedStyle::has_scrollbar_color_track)
+        has_scrollbar_color_track;
+    decltype(ComputedStyle::scrollbar_color_track) scrollbar_color_track;
+  } old{
+      style.background_color,
+      style.foreground_color,
+      style.border_color_top,
+      style.border_color_right,
+      style.border_color_bottom,
+      style.border_color_left,
+      style.width,
+      style.height,
+      style.top,
+      style.right,
+      style.bottom,
+      style.left,
+      style.translate_x,
+      style.translate_y,
+      style.flex_grow,
+      style.flex_shrink,
+      style.opacity,
+      style.has_scrollbar_color_thumb,
+      style.scrollbar_color_thumb,
+      style.has_scrollbar_color_track,
+      style.scrollbar_color_track,
+  };
   style = target_style;
 
-  style.background_color = old_style.background_color;
-  style.foreground_color = old_style.foreground_color;
-  style.border_color_top = old_style.border_color_top;
-  style.border_color_right = old_style.border_color_right;
-  style.border_color_bottom = old_style.border_color_bottom;
-  style.border_color_left = old_style.border_color_left;
-  style.width = old_style.width;
-  style.height = old_style.height;
-  style.top = old_style.top;
-  style.right = old_style.right;
-  style.bottom = old_style.bottom;
-  style.left = old_style.left;
-  style.translate_x = old_style.translate_x;
-  style.translate_y = old_style.translate_y;
-  style.flex_grow = old_style.flex_grow;
-  style.flex_shrink = old_style.flex_shrink;
-  style.opacity = old_style.opacity;
-  style.has_scrollbar_color_thumb = old_style.has_scrollbar_color_thumb;
-  style.scrollbar_color_thumb = old_style.scrollbar_color_thumb;
-  style.has_scrollbar_color_track = old_style.has_scrollbar_color_track;
-  style.scrollbar_color_track = old_style.scrollbar_color_track;
+  style.background_color = old.background_color;
+  style.foreground_color = old.foreground_color;
+  style.border_color_top = old.border_color_top;
+  style.border_color_right = old.border_color_right;
+  style.border_color_bottom = old.border_color_bottom;
+  style.border_color_left = old.border_color_left;
+  style.width = old.width;
+  style.height = old.height;
+  style.top = old.top;
+  style.right = old.right;
+  style.bottom = old.bottom;
+  style.left = old.left;
+  style.translate_x = old.translate_x;
+  style.translate_y = old.translate_y;
+  style.flex_grow = old.flex_grow;
+  style.flex_shrink = old.flex_shrink;
+  style.opacity = old.opacity;
+  style.has_scrollbar_color_thumb = old.has_scrollbar_color_thumb;
+  style.scrollbar_color_thumb = old.scrollbar_color_thumb;
+  style.has_scrollbar_color_track = old.has_scrollbar_color_track;
+  style.scrollbar_color_track = old.scrollbar_color_track;
 
   auto HandleColorProperty = [&](std::string_view prop_name,
                                  std::optional<Color>& current_val,
