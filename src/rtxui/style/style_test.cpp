@@ -1926,3 +1926,51 @@ TEST_CASE("transition reads a delay and any timing function",
   rtxui::SetDiagnosticHandler(nullptr);
   CHECK(messages.size() == 2);
 }
+
+TEST_CASE("currentColor makes a border or outline follow the text color",
+          "[style][color]") {
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"border-color", "red"});
+  rtxui::ApplyStyle(style, {"outline-color", "red"});
+  rtxui::ApplyStyle(style, {"color", "blue"});
+  // No color of their own: they are painted in the text color, whatever it
+  // turns out to be, transitions included.
+  rtxui::ApplyStyle(style, {"border-color", "currentColor"});
+  rtxui::ApplyStyle(style, {"outline-color", "currentcolor"});
+  CHECK_FALSE(style.border_color_top);
+  CHECK_FALSE(style.border_color_left);
+  CHECK_FALSE(style.outline_color);
+
+  rtxui::ApplyStyle(style, {"border-color-top", "red"});
+  rtxui::ApplyStyle(style, {"border-color-top", "CURRENTCOLOR"});
+  CHECK_FALSE(style.border_color_top);
+
+  rtxui::ApplyStyle(style, {"outline", "double red"});
+  rtxui::ApplyStyle(style, {"outline", "double currentColor"});
+  CHECK(style.outline_style == rtxui::BorderStyle::Double);
+  CHECK_FALSE(style.outline_color);
+
+  // `color: currentColor` is the parent's color, as in CSS.
+  rtxui::ApplyStyle(style, {"color", "currentColor"});
+  CHECK_FALSE(style.foreground_color);
+}
+
+TEST_CASE("An invalid or unsupported color is reported, not applied",
+          "[style][color]") {
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler(
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"background-color", "red"});
+  rtxui::ApplyStyle(style, {"color", "red"});
+  rtxui::ApplyStyle(style, {"border-color", "red"});
+  rtxui::ApplyStyle(style, {"background-color", "currentColor"});
+  rtxui::ApplyStyle(style, {"background-color", "rouge"});
+  rtxui::ApplyStyle(style, {"color", "rouge"});
+  rtxui::ApplyStyle(style, {"border-color", "rouge"});
+  rtxui::SetDiagnosticHandler(nullptr);
+  CHECK(messages.size() == 4);
+  CHECK(style.background_color == rtxui::Color::RGB(255, 0, 0));
+  CHECK(style.foreground_color == rtxui::Color::RGB(255, 0, 0));
+  CHECK(style.border_color_top == rtxui::Color::RGB(255, 0, 0));
+}
