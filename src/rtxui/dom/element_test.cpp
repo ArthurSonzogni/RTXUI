@@ -325,5 +325,14 @@ TEST_CASE("Element interaction flags default to false", "[dom][element]") {
   CHECK(element->disabled());
 }
 
+TEST_CASE("An empty transition map iterates over nothing", "[element]") {
+  const ActiveTransitionsMap empty;
+  int count = 0;
+  for ([[maybe_unused]] const auto& entry : empty) {
+    ++count;
+  }
+  CHECK(count == 0);
+}
+
 }  // namespace
 }  // namespace rtxui
