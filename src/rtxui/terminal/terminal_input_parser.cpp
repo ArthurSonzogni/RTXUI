@@ -417,9 +417,11 @@ TerminalInputParser::Output TerminalInputParser::ParseDCS() {
         return UNCOMPLETED;
       }
       if (Current() == '\\') {
+        // A terminal's reply to a cursor shape query (DECRQSS). RTXUI
+        // never asks, so one can only be stray.
         if (pending_.size() == 10 && pending_[2] == '1' && pending_[3] == '$' &&
             pending_[4] == 'r') {
-          return Event::CursorShape{pending_[5] - '0'};
+          return DROP;
         }
         if (auto event = ToEvent(pending_)) {
           return *event;
@@ -524,19 +526,16 @@ TerminalInputParser::Output TerminalInputParser::ParseMouse(
   mouse.y = arguments[2];
   return mouse;
 }
+// `ESC[row;colR` is a terminal's reply to a cursor position query. RTXUI
+// never asks, so one can only be stray.
 TerminalInputParser::Output TerminalInputParser::ParseCursorPosition(
     std::vector<int> arguments) {
   if (arguments.size() != 2) {
     if (auto event = ToEvent(pending_)) {
       return *event;
-    } else {
-      return DROP;
     }
   }
-  Event::CursorPosition cursor_position;
-  cursor_position.y = arguments[0];
-  cursor_position.x = arguments[1];
-  return cursor_position;
+  return DROP;
 }
 void TerminalInputParser::AddEvent(Event event) {
   events_.push_back(std::move(event));

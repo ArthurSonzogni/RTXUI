@@ -114,16 +114,6 @@ struct RTXUI_EXPORT Event {
     std::strong_ordering operator<=>(const Resized&) const = default;
     std::string Print() const;
   };
-  struct CursorShape {
-    int shape;
-    std::strong_ordering operator<=>(const CursorShape&) const = default;
-    std::string Print() const;
-  };
-  struct CursorPosition {
-    int x, y;
-    std::strong_ordering operator<=>(const CursorPosition&) const = default;
-    std::string Print() const;
-  };
 
   Event() = delete;
   Event(const Event& other) = default;
@@ -138,11 +128,8 @@ struct RTXUI_EXPORT Event {
   // the end of its enclosing class". A requires-clause is checked during
   // overload resolution instead, by which point Event is complete.
   template <typename T>
-    requires(
-        !std::is_same_v<std::decay_t<T>, Event> &&
-        std::is_constructible_v<
-            std::variant<Keyboard, Mouse, Resized, CursorShape, CursorPosition>,
-            T>)
+    requires(!std::is_same_v<std::decay_t<T>, Event> &&
+             std::is_constructible_v<std::variant<Keyboard, Mouse, Resized>, T>)
   Event(T&& value) : data_(std::forward<T>(value)) {}
 
   // --- Singleton Events ---
@@ -242,7 +229,7 @@ struct RTXUI_EXPORT Event {
   }
 
  private:
-  std::variant<Keyboard, Mouse, Resized, CursorShape, CursorPosition> data_;
+  std::variant<Keyboard, Mouse, Resized> data_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Event& event) {

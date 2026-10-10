@@ -148,13 +148,6 @@ std::string Event::Resized::Print() const {
   return "Event::Resized(" + std::to_string(width) + ", " +
          std::to_string(height) + ")";
 }
-std::string Event::CursorShape::Print() const {
-  return "Event::CursorShape(" + std::to_string(shape) + ")";
-}
-std::string Event::CursorPosition::Print() const {
-  return "Event::CursorPosition(" + std::to_string(x) + ", " +
-         std::to_string(y) + ")";
-}
 
 std::string Event::Print() const {
   return std::visit([](const auto& data) { return data.Print(); }, data_);
