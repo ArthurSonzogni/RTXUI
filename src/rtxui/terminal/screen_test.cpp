@@ -5654,4 +5654,42 @@ TEST_CASE("Declaring a screen background makes reversal exact",
     CHECK(ground(unknown) == ground(declared));
   }
 }
+
+namespace {
+class GlassOnQ : public Component<GlassOnQ> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <div class="glass">x</div>
+      <div>plain</div>
+    </div>
+    <style>
+      .glass { background-color: rgba(255, 255, 255, 0.5); width: 4; }
+    </style>
+  )";
+  std::function<void()> quit;
+
+  bool OnEvent(Event event) override {
+    if (auto* key = event.get_if<Event::Keyboard>();
+        key && key->codepoint == 'q') {
+      quit();
+      return true;
+    }
+    return false;
+  }
+};
+}  // namespace
+
+TEST_CASE("A translucent background blends with the screen background",
+          "[terminal]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(10, 3);
+  Screen screen(Ref<GlassOnQ>::New(), device);
+  screen.SetBackgroundColor(Color::RGB(0, 0, 0));
+  device->ClearOutput();
+  screen.Draw();
+  // Half white over black, rather than white.
+  CHECK(device->GetOutput().find("48;2;127;127;127m") != std::string::npos);
+}
+
 }  // namespace rtxui
