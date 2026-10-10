@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/paint/texture.hpp"
 
+#include <algorithm>
 #include <sstream>
 
 #include "rtxui/base/likely.hpp"
@@ -10,6 +11,11 @@
 namespace rtxui {
 
 namespace {
+// Opens the hyperlink `url`, or closes the open one when it is empty.
+void LinkTransition(std::stringstream& ss, std::string_view url) {
+  ss << "\x1B]8;;" << url << "\x1B\\";
+}
+
 void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
   // Bold
   if (UNLIKELY((next->bold ^ prev->bold) | (next->dim ^ prev->dim))) {
@@ -109,11 +115,17 @@ std::string Texture::Render() const {
 
   const Cell default_cell;
   const Cell* prev = &default_cell;
+  auto transition = [&](const Cell* next) {
+    if (UNLIKELY(next->link != prev->link)) {
+      LinkTransition(ss, LinkUrl(next->link));
+    }
+    Transition(ss, prev, next);
+  };
 
   for (int y = 0; y < height_; ++y) {
     // New line in between two lines.
     if (y != 0) {
-      Transition(ss, prev, &default_cell);
+      transition(&default_cell);
       prev = &default_cell;
       ss << "\n";
     }
@@ -126,7 +138,7 @@ std::string Texture::Render() const {
       if (cell.is_continuation) {
         continue;
       }
-      Transition(ss, prev, &cell);
+      transition(&cell);
       prev = &cell;
       if (cell.character.size() == 0) {
         ss << " ";
@@ -137,7 +149,7 @@ std::string Texture::Render() const {
   }
 
   // Reset the style at the end of the output.
-  Transition(ss, prev, &default_cell);
+  transition(&default_cell);
 
   return ss.str();
 }
@@ -151,6 +163,12 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
 
   const Cell default_cell;
   const Cell* prev = &default_cell;
+  auto transition = [&](const Cell* next) {
+    if (UNLIKELY(next->link != prev->link)) {
+      LinkTransition(ss, LinkUrl(next->link));
+    }
+    Transition(ss, prev, next);
+  };
 
   int cursor_x = 0;
   int cursor_y = 0;
@@ -182,7 +200,10 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
       const Cell& cell = cells_[y * width_ + x];
       const Cell& old_cell = old_texture.cells_[y * width_ + x];
 
-      if (cell == old_cell) {
+      // Link ids are per texture, so equal ids may name different URLs.
+      if (cell == old_cell &&
+          (cell.link == 0 ||
+           LinkUrl(cell.link) == old_texture.LinkUrl(old_cell.link))) {
         continue;
       }
 
@@ -192,7 +213,7 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
 
       MoveCursor(x, y);
 
-      Transition(ss, prev, &cell);
+      transition(&cell);
       prev = &cell;
 
       if (cell.character.empty()) {
@@ -211,9 +232,36 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
   MoveCursor(0, height_ - 1);
 
   // Reset the style at the end of the output.
-  Transition(ss, prev, &default_cell);
+  transition(&default_cell);
 
   return ss.str();
+}
+
+uint16_t Texture::AddLink(std::string_view url) {
+  if (url.empty() || std::ranges::any_of(url, [](char c) {
+        return static_cast<unsigned char>(c) < 0x20 ||
+               static_cast<unsigned char>(c) > 0x7E;
+      })) {
+    return 0;
+  }
+  // A screen holds a handful of links, so a scan beats a map.
+  for (size_t i = 0; i < links_.size(); ++i) {
+    if (links_[i] == url) {
+      return static_cast<uint16_t>(i + 1);
+    }
+  }
+  if (links_.size() >= UINT16_MAX) {
+    return 0;
+  }
+  links_.emplace_back(url);
+  return static_cast<uint16_t>(links_.size());
+}
+
+std::string_view Texture::LinkUrl(uint16_t link) const {
+  if (link == 0 || link > links_.size()) {
+    return {};
+  }
+  return links_[link - 1];
 }
 
 }  // namespace rtxui

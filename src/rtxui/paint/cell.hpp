@@ -34,6 +34,10 @@ struct Cell {
   // The terminal cursor is already past this cell; nothing should be printed.
   bool is_continuation : 1 = false;
 
+  // The hyperlink the cell belongs to, as an index into its Texture's links
+  // (Texture::LinkUrl). 0 for none.
+  uint16_t link = 0;
+
   // The graphemes stored into the pixel. To support combining characters,
   // like: á, this can potentially contain multiple codepoints.
   std::string character = "";
@@ -48,7 +52,7 @@ inline bool operator==(const Cell& lhs, const Cell& rhs) noexcept {
          lhs.underlined_double == rhs.underlined_double &&
          lhs.strikethrough == rhs.strikethrough &&
          lhs.overlined == rhs.overlined &&
-         lhs.is_continuation == rhs.is_continuation &&
+         lhs.is_continuation == rhs.is_continuation && lhs.link == rhs.link &&
          lhs.character == rhs.character;
 }
 

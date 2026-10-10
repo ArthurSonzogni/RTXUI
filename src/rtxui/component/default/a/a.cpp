@@ -3,7 +3,19 @@
 // the LICENSE file.
 #include "rtxui/component/default/a/a.hpp"
 
+#include "rtxui/paint/paint.hpp"
+
 namespace rtxui {
+
+// Painting turns the text of a link into a terminal hyperlink, and only looks
+// for one while a link exists.
+a::a() {
+  CountLinkElements(1);
+}
+
+a::~a() {
+  CountLinkElements(-1);
+}
 
 const std::string_view a::view = R"html(
     <slot></slot>

@@ -12,6 +12,10 @@ namespace rtxui {
 
 class a : public Component<a> {
  public:
+  a();
+  ~a();
+  a(const a&) = delete;
+  a& operator=(const a&) = delete;
   static const std::string_view view;
 };
 

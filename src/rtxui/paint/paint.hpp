@@ -22,6 +22,11 @@ void Paint(const PhysicalFragment* frag,
            int off_x = 0,
            int off_y = 0,
            Color screen_background = Color());
+
+/// Counts the `<a>` elements in existence, +1 as one is created and -1 as it
+/// goes. Painting looks for the link around each text only while there is
+/// one, so that a screen without links does not pay for them.
+void CountLinkElements(int delta);
 }  // namespace rtxui
 
 #endif  // RTXUI_PAINT_PAINT_HPP
