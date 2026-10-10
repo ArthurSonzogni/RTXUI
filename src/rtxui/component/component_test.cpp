@@ -5760,9 +5760,12 @@ TEST_CASE(
   container->Mount();
   container->Digest();
 
-  std::optional<rtxui::XmlError> reported_error;
-  rtxui::SetXmlErrorHandler(
-      [&](const rtxui::XmlError& error) { reported_error = error; });
+  std::optional<rtxui::Diagnostic> reported_error;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
+    if (error.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+      reported_error = error;
+    }
+  });
 
   // A stylesheet that closes its own <style> element leaves the rest of the
   // generated document unbalanced, so xml::Parse() fails and markdown must
@@ -5770,7 +5773,7 @@ TEST_CASE(
   container->stylesheet = "h1 { color: red; } </style> <unclosed>";
   container->Digest();
 
-  rtxui::SetXmlErrorHandler(nullptr);
+  rtxui::SetDiagnosticHandler(nullptr);
 
   REQUIRE(reported_error.has_value());
   CHECK_FALSE(reported_error->message.empty());
@@ -5785,14 +5788,17 @@ TEST_CASE("Markdown Component accepts tag-like sequences in its stylesheet",
   container->Mount();
   container->Digest();
 
-  std::optional<rtxui::XmlError> reported_error;
-  rtxui::SetXmlErrorHandler(
-      [&](const rtxui::XmlError& error) { reported_error = error; });
+  std::optional<rtxui::Diagnostic> reported_error;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
+    if (error.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+      reported_error = error;
+    }
+  });
 
   container->stylesheet = "/* <textarea> */ h1 { color: red; }";
   container->Digest();
 
-  rtxui::SetXmlErrorHandler(nullptr);
+  rtxui::SetDiagnosticHandler(nullptr);
 
   CHECK_FALSE(reported_error.has_value());
 }
@@ -7353,7 +7359,7 @@ TEST_CASE("Invalid interpolated CSS does not crash the process",
   REQUIRE(target != nullptr);
 }
 
-TEST_CASE("SetCssErrorHandler redirects CSS errors instead of printing",
+TEST_CASE("A CSS syntax error reaches the diagnostic handler",
           "[component][style]") {
   class DynamicStyleComp : public rtxui::Component<DynamicStyleComp> {
    public:
@@ -7371,16 +7377,19 @@ TEST_CASE("SetCssErrorHandler redirects CSS errors instead of printing",
     )xml";
   };
 
-  std::optional<rtxui::CssError> captured;
-  rtxui::SetCssErrorHandler(
-      [&](const rtxui::CssError& error) { captured = error; });
+  std::optional<rtxui::Diagnostic> captured;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
+    if (error.kind == rtxui::Diagnostic::Kind::CssSyntax) {
+      captured = error;
+    }
+  });
 
   auto component = rtxui::Ref<DynamicStyleComp>::New();
   component->Mount();
   component->rule = "not valid css {{{ ]]]";
   component->Digest();
 
-  rtxui::SetCssErrorHandler(nullptr);  // Don't leak into other tests.
+  rtxui::SetDiagnosticHandler(nullptr);  // Don't leak into other tests.
 
   REQUIRE(captured.has_value());
   CHECK_FALSE(captured->message.empty());
@@ -9235,21 +9244,24 @@ class MalformedTemplateApp : public Component<MalformedTemplateApp> {
 }  // namespace
 
 TEST_CASE(
-    "A malformed template reaches the XML error handler instead of exiting",
+    "A malformed template reaches the diagnostic handler instead of exiting",
     "[component][error]") {
   // Regression: the template parse path called std::exit(1) unconditionally,
-  // ignoring the handler SetXmlErrorHandler installs -- so an app that had
+  // ignoring the error handler the app installed -- so an app that had
   // asked to surface XML errors through its own UI was killed instead. Found
   // by the layout fuzzer, which could not survive its own first malformed
   // input.
-  std::vector<rtxui::XmlError> seen;
-  rtxui::SetXmlErrorHandler(
-      [&](const rtxui::XmlError& e) { seen.push_back(e); });
+  std::vector<rtxui::Diagnostic> seen;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& e) {
+    if (e.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+      seen.push_back(e);
+    }
+  });
 
   auto app = Ref<MalformedTemplateApp>::New();
   app->Mount();  // Must return rather than terminate the process.
 
-  rtxui::SetXmlErrorHandler(nullptr);
+  rtxui::SetDiagnosticHandler(nullptr);
 
   REQUIRE(seen.size() == 1);
   CHECK_FALSE(seen[0].message.empty());
@@ -10850,11 +10862,14 @@ TEST_CASE("HotReload reports a parse error to the XML error handler",
   auto app = rtxui::Ref<HotReloadTarget>::New();
   app->Mount();
 
-  std::optional<rtxui::XmlError> reported_error;
-  rtxui::SetXmlErrorHandler(
-      [&](const rtxui::XmlError& error) { reported_error = error; });
+  std::optional<rtxui::Diagnostic> reported_error;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
+    if (error.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+      reported_error = error;
+    }
+  });
   app->HotReload("<div>\n  <span>\n</div>");
-  rtxui::SetXmlErrorHandler(nullptr);
+  rtxui::SetDiagnosticHandler(nullptr);
 
   REQUIRE(reported_error.has_value());
   CHECK_FALSE(reported_error->message.empty());

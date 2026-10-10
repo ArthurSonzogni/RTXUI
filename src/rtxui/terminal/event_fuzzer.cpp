@@ -128,8 +128,7 @@ void TestEvents(const std::string& input) {
   // fuzzes the template, but the handlers keep an unrelated diagnostic from
   // ending the run.
   static const int install_handler = [] {
-    rtxui::SetXmlErrorHandler([](const rtxui::XmlError&) {});
-    rtxui::SetCssErrorHandler([](const rtxui::CssError&) {});
+    rtxui::SetDiagnosticHandler([](const rtxui::Diagnostic&) {});
     return 0;
   }();
   (void)install_handler;

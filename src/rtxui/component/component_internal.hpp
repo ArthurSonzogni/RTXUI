@@ -89,10 +89,11 @@ void SyncDisabled(Element* root, bool disabled);
 // :checked CSS matching.
 void SyncChecked(Element* root, bool checked);
 
-/// Routes an XML/HTML parse error to the handler installed via
-/// SetXmlErrorHandler, or prints it to stderr if none was installed.
-RTXUI_EXPORT void ReportXmlError(const XmlError& error,
-                                 std::string_view xml_string);
+/// Reports a syntax error in `source`: to the diagnostic handler when one is
+/// installed, otherwise printed to stderr with the lines around it (and an
+/// abort under RTXUI_STRICT=1).
+RTXUI_EXPORT void ReportSyntaxError(const Diagnostic& diagnostic,
+                                    std::string_view source);
 
 struct HotReloadInfo {
   ComponentBase* component;

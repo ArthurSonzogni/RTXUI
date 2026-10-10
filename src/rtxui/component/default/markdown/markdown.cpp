@@ -59,7 +59,9 @@ bool markdown::Digest() {
       xml_nodes_ = std::move(nodes.value());
     } else {
       const xml::Error& error = nodes.error();
-      ReportXmlError({error.message, error.line, error.column}, xml_string_);
+      ReportSyntaxError({error.message, Diagnostic::Kind::XmlSyntax, error.line,
+                         error.column},
+                        xml_string_);
     }
     this->Render();
   }

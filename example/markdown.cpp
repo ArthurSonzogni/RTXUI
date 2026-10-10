@@ -112,8 +112,8 @@ class MarkdownPlayground : public Component<MarkdownPlayground> {
   }
 
   // Resets `status` to "OK" right before the reactive re-render triggered by
-  // an edit -- if the new stylesheet is malformed, SetCssErrorHandler's
-  // callback (wired up in main()) overwrites it again with the real error
+  // an edit -- if the new stylesheet is malformed, the diagnostic handler
+  // (wired up in main()) overwrites it again with the real error
   // during that same render, same recovery pattern as playground.cpp.
   bool Digest() override {
     if (markdown_source != last_markdown_ || stylesheet != last_stylesheet_) {
@@ -244,19 +244,24 @@ int main() {
   // mid-keystroke, before the user finishes typing a rule) would print
   // straight to stderr and corrupt the running frame -- Screen owns the
   // terminal in raw mode, so route it into the status line instead.
-  SetCssErrorHandler([app](const CssError& error) {
-    app->status = "CSS error, line " + std::to_string(error.line + 1) + ": " +
-                  error.message;
-  });
-
-  // The <markdown> component wraps the stylesheet and rendered Markdown body
-  // into one document and re-parses it as XML on every keystroke (see
-  // markdown.cpp's Digest()); a malformed stylesheet (e.g. a literal <tag>
-  // inside a CSS comment, same bug class as playground.cpp) can break that
-  // parse. Route it into the status line, same recovery pattern as the CSS
-  // handler above.
-  SetXmlErrorHandler([app](const XmlError& error) {
-    app->status = "HTML error: " + error.message;
+  //
+  // The <markdown> component also wraps the stylesheet and rendered Markdown
+  // body into one document and re-parses it as XML on every keystroke (see
+  // markdown.cpp's Digest()), and a malformed stylesheet can break that parse
+  // too. Same recovery.
+  SetDiagnosticHandler([app](const Diagnostic& diagnostic) {
+    switch (diagnostic.kind) {
+      case Diagnostic::Kind::CssSyntax:
+        app->status = "CSS error, line " + std::to_string(diagnostic.line + 1) +
+                      ": " + diagnostic.message;
+        break;
+      case Diagnostic::Kind::XmlSyntax:
+        app->status = "HTML error: " + diagnostic.message;
+        break;
+      case Diagnostic::Kind::Unsupported:
+        app->status = diagnostic.message;
+        break;
+    }
   });
 
   Screen screen(app);

@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "rtxui/base/diagnostic_internal.hpp"
 #include "rtxui/base/string.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component/component_internal.hpp"
@@ -679,39 +680,16 @@ void PrintCompilerStyleError(std::string_view source_string,
   std::cerr << std::flush;
 }
 
-namespace {
-
-std::function<void(const CssError&)>& GetCssErrorHandler() {
-  static std::function<void(const CssError&)> handler;
-  return handler;
-}
-
-}  // namespace
-
-void SetCssErrorHandler(std::function<void(const CssError&)> handler) {
-  GetCssErrorHandler() = std::move(handler);
-}
-
-namespace {
-
-std::function<void(const XmlError&)>& GetXmlErrorHandler() {
-  static std::function<void(const XmlError&)> handler;
-  return handler;
-}
-
-}  // namespace
-
-void SetXmlErrorHandler(std::function<void(const XmlError&)> handler) {
-  GetXmlErrorHandler() = std::move(handler);
-}
-
-void ReportXmlError(const XmlError& error, std::string_view xml_string) {
-  if (const auto& handler = GetXmlErrorHandler()) {
-    handler(error);
+void ReportSyntaxError(const Diagnostic& diagnostic, std::string_view source) {
+  if (DeliverDiagnostic(diagnostic)) {
     return;
   }
-  PrintCompilerStyleError(xml_string, error.line, error.column, error.message,
-                          "XML");
+  PrintCompilerStyleError(
+      source, diagnostic.line, diagnostic.column, diagnostic.message,
+      diagnostic.kind == Diagnostic::Kind::CssSyntax ? "CSS" : "XML");
+  if (StrictDiagnostics()) {
+    std::abort();
+  }
 }
 
 namespace {
@@ -719,13 +697,14 @@ namespace {
 // A component's own template is normally a compile-time literal, so a parse
 // failure is a programmer error and exiting is the most useful default: the
 // message is the last thing on the terminal instead of scrolling past. An app
-// that installed an XML error handler has said otherwise, though -- that is
-// what SetXmlErrorHandler is for -- and killing its process would defeat the
-// point of letting it surface the error through its own UI. Mount() returns
-// without nodes in that case, so the component renders empty.
+// that installed a diagnostic handler has said otherwise, though, and killing
+// its process would defeat the point of letting it surface the error through
+// its own UI. Mount() returns without nodes in that case, so the component
+// renders empty.
 void XmlParseError(const xml::Error& error, std::string_view xml_string) {
-  if (const auto& handler = GetXmlErrorHandler()) {
-    handler(XmlError{error.message, error.line, error.column});
+  const Diagnostic diagnostic{error.message, Diagnostic::Kind::XmlSyntax,
+                              error.line, error.column};
+  if (DeliverDiagnostic(diagnostic)) {
     return;
   }
   PrintCompilerStyleError(xml_string, error.line, error.column, error.message,
@@ -735,17 +714,11 @@ void XmlParseError(const xml::Error& error, std::string_view xml_string) {
 
 // Unlike XmlParseError, this is reachable every time a <style> block's text
 // is re-interpolated with changed bound state (i.e. on every Digest()), so it
-// must not crash the running process on a malformed value. Defaults to
-// printing to stderr (see PrintCompilerStyleError), but that corrupts a
-// running frame for any app that owns the terminal in raw mode -- see
-// SetCssErrorHandler.
+// must not end the running process on a malformed value.
 void CssParseError(const css::Error& error, std::string_view css_string) {
-  if (const auto& handler = GetCssErrorHandler()) {
-    handler(CssError{error.message, error.line, error.column});
-    return;
-  }
-  PrintCompilerStyleError(css_string, error.line, error.column, error.message,
-                          "CSS");
+  ReportSyntaxError(
+      {error.message, Diagnostic::Kind::CssSyntax, error.line, error.column},
+      css_string);
 }
 
 bool IsStyledByComponent(const Element* element,
@@ -4187,9 +4160,9 @@ void ComponentBase::HotReload(std::string_view new_template) {
 
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(xml_string_);
   if (!nodes) {
-    ReportXmlError(
-        {nodes.error().message, nodes.error().line, nodes.error().column},
-        xml_string_);
+    ReportSyntaxError({nodes.error().message, Diagnostic::Kind::XmlSyntax,
+                       nodes.error().line, nodes.error().column},
+                      xml_string_);
     return;
   }
   xml_nodes_ = std::move(nodes.value());

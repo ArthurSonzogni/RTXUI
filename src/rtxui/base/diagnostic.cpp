@@ -9,6 +9,8 @@
 #include <string_view>
 #include <utility>
 
+#include "rtxui/base/diagnostic_internal.hpp"
+
 namespace rtxui {
 
 namespace {
@@ -25,12 +27,20 @@ std::set<std::string, std::less<>>& Reported() {
   return reported;
 }
 
-bool IsStrict() {
+}  // namespace
+
+bool StrictDiagnostics() {
   const char* strict = std::getenv("RTXUI_STRICT");
   return strict && std::string_view(strict) == "1";
 }
 
-}  // namespace
+bool DeliverDiagnostic(const Diagnostic& diagnostic) {
+  if (const auto& handler = Handler()) {
+    handler(diagnostic);
+    return true;
+  }
+  return false;
+}
 
 void SetDiagnosticHandler(std::function<void(const Diagnostic&)> handler) {
   Handler() = std::move(handler);
@@ -43,12 +53,11 @@ void ReportDiagnostic(std::string message) {
   if (!Reported().insert(message).second) {
     return;
   }
-  if (const auto& handler = Handler()) {
-    handler(Diagnostic{std::move(message)});
+  if (DeliverDiagnostic(Diagnostic{message})) {
     return;
   }
   std::cerr << "rtxui: " << message << '\n';
-  if (IsStrict()) {
+  if (StrictDiagnostics()) {
     std::abort();
   }
 }
