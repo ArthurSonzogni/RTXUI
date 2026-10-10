@@ -1,4 +1,4 @@
-import { withMermaid } from 'vitepress-plugin-mermaid'
+import { defineConfig } from 'vitepress'
 import { bundledLanguages } from 'shiki'
 
 // Highlight templates embedded in C++ raw strings, e.g. R"html( ... )html",
@@ -24,7 +24,7 @@ const cppRawStringInjection = {
   }))
 }
 
-export default withMermaid({
+export default defineConfig({
   markdown: {
     languages: [
       bundledLanguages.html,
@@ -131,13 +131,6 @@ export default withMermaid({
     ]
   },
   vite: {
-    // fastdom is CommonJS; pre-bundle it so mermaid can import it in dev.
-    optimizeDeps: {
-      include: [
-        'mermaid > fastdom',
-        'mermaid > fastdom/extensions/fastdom-promised.js'
-      ]
-    },
     build: {
       chunkSizeWarningLimit: 1500
     }
