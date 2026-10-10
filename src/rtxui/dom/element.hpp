@@ -147,23 +147,22 @@ class ActiveTransitionsMap {
     return map_->end();
   }
 
+  // Both from the same empty map when there is none: iterators into two
+  // different ones never meet.
   typename MapType::const_iterator begin() const {
-    if (!map_) {
-      static const MapType empty_map;
-      return empty_map.begin();
-    }
-    return map_->begin();
+    return map_ ? map_->begin() : EmptyMap().begin();
   }
 
   typename MapType::const_iterator end() const {
-    if (!map_) {
-      static const MapType empty_map;
-      return empty_map.end();
-    }
-    return map_->end();
+    return map_ ? map_->end() : EmptyMap().end();
   }
 
  private:
+  static const MapType& EmptyMap() {
+    static const MapType empty_map;
+    return empty_map;
+  }
+
   std::unique_ptr<std::map<std::string, ActiveTransition>> map_;
 };
 
