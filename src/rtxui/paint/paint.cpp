@@ -1089,6 +1089,15 @@ void Paint(const PhysicalFragment* frag,
            int off_y,
            Color screen_background) {
   g_pending_outlines.clear();
+  // The ground every cell starts from, so that a translucent color painted
+  // straight onto the screen blends with it rather than with nothing.
+  if (screen_background.a != 0) {
+    for (int y = 0; y < texture.height(); ++y) {
+      for (int x = 0; x < texture.width(); ++x) {
+        texture[x, y].background_color = screen_background;
+      }
+    }
+  }
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y, texture.width(),
             texture.height(), Color::RGB(255, 255, 255), screen_background,
             false, false, false, false, false, false, false, false,
