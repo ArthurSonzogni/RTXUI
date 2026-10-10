@@ -1,5 +1,6 @@
 #include <charconv>
 #include <iostream>
+#include <utility>
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
@@ -23,6 +24,12 @@ class Parser {
   auto ParseAttribute() -> Expected<Attributes, Error>;
   auto ParseWhiteSpaces() -> void;
   auto ParseComment() -> Expected<Node, Error>;
+  // ParseNode's branches that do not recurse, kept out of its stack frame:
+  // it recurses once per level of nesting.
+  [[gnu::noinline]] auto ParseText(size_t start) -> Node;
+  [[gnu::noinline]] auto ParseStyleContent(std::string_view tag,
+                                           Attributes& attributes)
+      -> Expected<Node, Error>;
 
   auto MakeError(std::string message) -> Error;
   auto MakeErrorExpected(std::string expected) -> Error;
@@ -34,8 +41,10 @@ class Parser {
   /// template is not always written by the developer: hot reload re-reads one
   /// at runtime, and the playground lets one be typed. Documents people write
   /// nest tens of levels, so this leaves hand-written markup untouched while
-  /// staying well inside the stack.
-  static constexpr int kMaxDepth = 256;
+  /// staying well inside the stack: a level takes about 0.8KB of it in a
+  /// release build, so the deepest template fits in 128KB, the stack of a
+  /// small thread.
+  static constexpr int kMaxDepth = 128;
 
  private:
   /// Counts ParseNode's recursion for kMaxDepth, and unwinds with it.
@@ -297,32 +306,8 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
   int ws_start = pos_;
   ParseWhiteSpaces();
 
-  // Parse text node.
   if (Get() != '<') {
-    pos_ = ws_start;
-    int start = pos_;
-    while (!IsTextTerminator(Get())) {
-      Advance();
-    }
-
-    std::string_view text = xml_.substr(start, pos_ - start);
-    text = TrimWhitespaceWithNewlines(text);
-
-    if (text.empty()) {
-      return Node{
-          .type = Node::kText,
-          .text = "",
-          .attributes = {},
-          .children = {},
-      };
-    }
-
-    return Node{
-        .type = Node::kText,
-        .text = Unescape(text),
-        .attributes = {},
-        .children = {},
-    };
+    return ParseText(ws_start);
   }
 
   // Parse Comment:
@@ -354,7 +339,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
     return Node{
         .type = Node::kElement,
         .tag = std::string(tag_opening.value()),
-        .attributes = attributes.value(),
+        .attributes = std::move(attributes.value()),
     };
   }
 
@@ -364,59 +349,8 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
   }
   Advance();  // Skip '>'.
 
-  // <style> holds CSS, not markup. Per HTML's raw-text element rules its
-  // content runs verbatim to the matching </style>: parsing it as markup made
-  // any '<' inside a CSS comment or selector look like the start of a tag,
-  // which aborted the whole template. CSS carries no XML entities either, so
-  // the content is kept exactly as written rather than unescaped.
   if (tag_opening.value() == "style") {
-    const size_t content_start = pos_;
-    const size_t close = xml_.find("</style", content_start);
-    if (close == std::string_view::npos) {
-      pos_ = xml_.size();
-      return MakeErrorExpected("</style>");
-    }
-    std::string_view raw = xml_.substr(content_start, close - content_start);
-    pos_ = close;
-
-    Nodes style_children;
-    if (!TrimWhitespaceWithNewlines(raw).empty()) {
-      style_children.push_back(Node{
-          .type = Node::kText,
-          .text = std::string(raw),
-          .attributes = {},
-          .children = {},
-      });
-    }
-
-    Advance();  // Skip '<'.
-    Advance();  // Skip '/'.
-    ParseWhiteSpaces();
-    auto style_closing = ParseTag();
-    if (!style_closing) {
-      return style_closing.error();
-    }
-    ParseWhiteSpaces();
-    if (Get() != '>') {
-      return MakeErrorExpected(">");
-    }
-    Advance();  // Skip '>'.
-
-    // The scan above looks for the "</style" prefix, so a longer tag name
-    // beginning with it -- </stylesheet> -- lands here and has to be rejected
-    // exactly as the general path rejects a mismatched closing tag.
-    if (style_closing.value() != tag_opening.value()) {
-      return MakeError("Expected closing tag to match opening tag, got " +
-                       std::string(style_closing.value()) + " instead of " +
-                       std::string(tag_opening.value()));
-    }
-
-    return Node{
-        .type = Node::kElement,
-        .tag = std::string(tag_opening.value()),
-        .attributes = attributes.value(),
-        .children = style_children,
-    };
+    return ParseStyleContent(tag_opening.value(), attributes.value());
   }
 
   Nodes children;
@@ -442,7 +376,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
       return node.error();
     }
     if (node.value().type != Node::kText || !node.value().text.empty()) {
-      children.push_back(node.value());
+      children.push_back(std::move(node.value()));
     }
   }
 
@@ -467,8 +401,79 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
   return Node{
       .type = Node::kElement,
       .tag = std::string(tag_opening.value()),
-      .attributes = attributes.value(),
-      .children = children,
+      .attributes = std::move(attributes.value()),
+      .children = std::move(children),
+  };
+}
+
+auto Parser::ParseText(size_t start) -> Node {
+  pos_ = start;
+  while (!IsTextTerminator(Get())) {
+    Advance();
+  }
+  std::string_view text =
+      TrimWhitespaceWithNewlines(xml_.substr(start, pos_ - start));
+  return Node{
+      .type = Node::kText,
+      .text = text.empty() ? std::string() : Unescape(text),
+      .attributes = {},
+      .children = {},
+  };
+}
+
+// <style> holds CSS, not markup. Per HTML's raw-text element rules its
+// content runs verbatim to the matching </style>: parsing it as markup made
+// any '<' inside a CSS comment or selector look like the start of a tag,
+// which aborted the whole template. CSS carries no XML entities either, so
+// the content is kept exactly as written rather than unescaped.
+auto Parser::ParseStyleContent(std::string_view tag, Attributes& attributes)
+    -> Expected<Node, Error> {
+  const size_t content_start = pos_;
+  const size_t close = xml_.find("</style", content_start);
+  if (close == std::string_view::npos) {
+    pos_ = xml_.size();
+    return MakeErrorExpected("</style>");
+  }
+  std::string_view raw = xml_.substr(content_start, close - content_start);
+  pos_ = close;
+
+  Nodes style_children;
+  if (!TrimWhitespaceWithNewlines(raw).empty()) {
+    style_children.push_back(Node{
+        .type = Node::kText,
+        .text = std::string(raw),
+        .attributes = {},
+        .children = {},
+    });
+  }
+
+  Advance();  // Skip '<'.
+  Advance();  // Skip '/'.
+  ParseWhiteSpaces();
+  auto style_closing = ParseTag();
+  if (!style_closing) {
+    return style_closing.error();
+  }
+  ParseWhiteSpaces();
+  if (Get() != '>') {
+    return MakeErrorExpected(">");
+  }
+  Advance();  // Skip '>'.
+
+  // The scan above looks for the "</style" prefix, so a longer tag name
+  // beginning with it -- </stylesheet> -- lands here and has to be rejected
+  // exactly as the general path rejects a mismatched closing tag.
+  if (style_closing.value() != tag) {
+    return MakeError("Expected closing tag to match opening tag, got " +
+                     std::string(style_closing.value()) + " instead of " +
+                     std::string(tag));
+  }
+
+  return Node{
+      .type = Node::kElement,
+      .tag = std::string(tag),
+      .attributes = std::move(attributes),
+      .children = std::move(style_children),
   };
 }
 
