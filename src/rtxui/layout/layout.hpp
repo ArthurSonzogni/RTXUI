@@ -35,8 +35,15 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
 
 // Moves every box by its `translate`, once the tree under `root` is laid out:
 // each box's link in its parent, so painting and hit-testing both follow and
-// nothing around it moves.
+// nothing around it moves. Called again, it moves each box by what its
+// `translate` changed since.
 void ApplyTranslate(PhysicalFragment& root);
+
+// Sets the paint fields of the tree under `root` (PhysicalFragment's
+// paint_fields) from their elements' styles again, as laying the tree out
+// again would: for a frame whose only changes are animated colors and
+// opacity, which move nothing. ApplyTranslate() does the same for `translate`.
+void RefreshPaint(PhysicalFragment& root);
 
 void ResetLayoutArena();
 

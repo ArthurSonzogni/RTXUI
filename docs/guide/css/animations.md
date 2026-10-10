@@ -59,6 +59,8 @@ transition: background-color 0.2s ease-in-out, width 0.3s ease-out;
 *   **Colors & Opacities**: `color`, `background-color`, `opacity`.
 *   **Flex Constraints**: `flex-grow`, `flex-shrink`.
 
+Colors, opacities and `translate` are the cheapest to animate: they move or resize nothing else, so while they are all that is animating, each frame keeps the last layout and only repaints. Prefer them to sizes and offsets when either would do.
+
 ### Easing Functions
 *   `linear`
 *   `ease` (Default curve)

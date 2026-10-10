@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -1040,7 +1041,9 @@ class ScreenImpl {
   void Step();
   void Exit() { running_ = false; }
   void Dispatch(Event event);
-  void Draw();
+  // `reuse_layout`: when nothing but paint-only animations changed since the
+  // last layout (layout_reusable_), keep it and refresh its colors instead.
+  void Draw(bool reuse_layout = false);
   void RequestDraw();
   void UpdateLayout();
 
@@ -1102,6 +1105,11 @@ class ScreenImpl {
   LayoutArenas layout_arenas_;
   std::shared_ptr<PhysicalFragment> root_fragment_;
   std::shared_ptr<LayoutBox> root_box_;
+  // Whether root_fragment_ still fits the application, but for the colors,
+  // opacities and translations animations changed since: set by each layout,
+  // cleared by anything else that can change what is drawn -- an event, a task,
+  // a resize, or an animation of anything else.
+  bool layout_reusable_ = false;
   std::unique_ptr<Texture> last_texture_;
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
@@ -1323,6 +1331,7 @@ void ScreenImpl::Step() {
   bool executed_task = false;
   task_runner_.RunUntilNextDelayedTask(&executed_task);
   if (executed_task) {
+    layout_reusable_ = false;
     // Tasks posted from other threads (or delayed tasks) commonly mutate
     // component state; digest so those changes reach the terminal without
     // waiting for the next input event.
@@ -1330,7 +1339,7 @@ void ScreenImpl::Step() {
   }
 
   if (TickTransitions(time::GetTimeMs())) {
-    Draw();
+    Draw(/*reuse_layout=*/true);
   }
 
   if (HotReloadManager::PollChanges()) {
@@ -1379,7 +1388,11 @@ bool ScreenImpl::TickTransitions(double current_time_ms) {
     } else if (!hidden && element->animations_suspended) {
       element->animations_suspended = false;
       element->UpdateAnimations(current_time_ms);
+      layout_reusable_ = false;
       updated = true;
+    }
+    if (element->IsAnimating() && element->AnimatesLayout()) {
+      layout_reusable_ = false;
     }
     updated |= element->TickTransitions(current_time_ms);
     for (size_t i = 0; i < element->ChildCount(); ++i) {
@@ -1391,6 +1404,7 @@ bool ScreenImpl::TickTransitions(double current_time_ms) {
   };
   bool updated = TickAll(component_->Root(), false);
   if (DispatchAnimationEnds()) {
+    layout_reusable_ = false;
     component_->Digest();
     updated = true;
   }
@@ -1443,6 +1457,7 @@ void ScreenImpl::Dispatch(Event event) {
 }
 
 void ScreenImpl::HandleEvent(Event event) {
+  layout_reusable_ = false;
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
 
@@ -2456,12 +2471,22 @@ void ScreenImpl::UpdateLayout() {
     UpdateLayout();
     relayout_for_virtual_lists_ = false;
   }
+  layout_reusable_ = true;
 }
 
-void ScreenImpl::Draw() {
+void ScreenImpl::Draw(bool reuse_layout) {
   ScopedLayoutArenas arenas(layout_arenas_);
   draw_pending_ = false;
-  UpdateLayout();
+  // A DOM changed from outside the loop (a test calling Digest()) shows as
+  // stale styles.
+  reuse_layout = reuse_layout && layout_reusable_ && root_fragment_ &&
+                 !component_->StylesNeedResolve();
+  if (reuse_layout) {
+    RefreshPaint(*root_fragment_);
+    ApplyTranslate(*root_fragment_);
+  } else {
+    UpdateLayout();
+  }
 
   auto root = component_->Root();
   const auto& root_fragment = root_fragment_;
@@ -2469,6 +2494,22 @@ void ScreenImpl::Draw() {
   Texture texture(width_, height_);
   if (root_fragment) {
     Paint(root_fragment.get(), texture, 0, 0, background_color_);
+  }
+
+  // RTXUI_VERIFY_LAYOUT_REUSE (set for the tests) lays out again anyway, and
+  // stops if that draws anything else.
+  if (reuse_layout && std::getenv("RTXUI_VERIFY_LAYOUT_REUSE")) {
+    UpdateLayout();
+    Texture fresh(width_, height_);
+    if (root_fragment_) {
+      Paint(root_fragment_.get(), fresh, 0, 0, background_color_);
+    }
+    if (fresh.Render() != texture.Render()) {
+      std::cerr << "rtxui: the reused layout drew\n"
+                << texture.Render() << "\ninstead of\n"
+                << fresh.Render() << "\n";
+      std::abort();
+    }
   }
 
   std::string new_output;
@@ -2556,6 +2597,7 @@ void ScreenImpl::UpdateSize() {
   int new_height = height_;
   if (device_->GetSize(new_width, new_height)) {
     if (new_width != width_ || new_height != height_) {
+      layout_reusable_ = false;
       width_ = new_width;
       height_ = new_height;
       css::g_terminal_width = width_;

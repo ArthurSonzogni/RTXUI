@@ -243,8 +243,10 @@ if(RTXUI_BUILD_TESTS)
       # to work through the burst.
       # RTXUI_STRICT aborts on the first diagnostic (unknown CSS, unbound
       # name, ...), so an example cannot teach a construct that does nothing.
+      # RTXUI_VERIFY_LAYOUT_REUSE aborts when a frame that kept the last
+      # layout draws anything a fresh one would not.
       set_tests_properties(smoke_examples PROPERTIES TIMEOUT 600
-                           ENVIRONMENT RTXUI_STRICT=1)
+                           ENVIRONMENT "RTXUI_STRICT=1;RTXUI_VERIFY_LAYOUT_REUSE=1")
 
       # Compare what each example draws with example/snapshots/, so a
       # change that alters an interface shows up as a text diff.
@@ -296,6 +298,7 @@ if(RTXUI_BUILD_TESTS)
   add_executable(rtxui_test
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
     "src/rtxui/terminal/headless_test.cpp"
+    "src/rtxui/terminal/layout_reuse_test.cpp"
     "src/rtxui/terminal/screen_test.cpp"
     "src/rtxui/component/animation_test.cpp"
     "src/rtxui/component/binding_test.cpp"
@@ -357,6 +360,7 @@ if(RTXUI_BUILD_TESTS)
   include(Catch)
   catch_discover_tests(rtxui_test
     PROPERTIES SKIP_RETURN_CODE 4
+               ENVIRONMENT RTXUI_VERIFY_LAYOUT_REUSE=1
   )
 
   add_executable(rtxui_terminal_input_parser

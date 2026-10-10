@@ -378,10 +378,55 @@ void ApplyTranslate(PhysicalFragment& root) {
       continue;
     }
     if (const Element* element = child.fragment->dom_node) {
-      child.x += element->style.translate_x.Resolve(child.fragment->width);
-      child.y += element->style.translate_y.Resolve(child.fragment->height);
+      const int x = element->style.translate_x.Resolve(child.fragment->width);
+      const int y = element->style.translate_y.Resolve(child.fragment->height);
+      child.x += x - child.fragment->translated_x;
+      child.y += y - child.fragment->translated_y;
+      child.fragment->translated_x = x;
+      child.fragment->translated_y = y;
     }
     ApplyTranslate(*child.fragment);
+  }
+}
+
+namespace {
+
+// The color `element`'s text is drawn in: its own, or the one it inherits, as
+// LayoutTreeBuilder::Build resolves it.
+std::optional<Color> ResolvedForeground(const Element* element) {
+  for (; element; element = element->Parent()) {
+    if (element->style.foreground_color) {
+      return element->style.foreground_color;
+    }
+  }
+  return std::nullopt;
+}
+
+}  // namespace
+
+void RefreshPaint(PhysicalFragment& root) {
+  if (const Element* element = root.dom_node) {
+    const ComputedStyle& style = element->style;
+    if (root.paint_fields & kPaintBackground) {
+      root.background_color = style.background_color;
+    }
+    if (root.paint_fields & kPaintForeground) {
+      root.foreground_color = ResolvedForeground(element);
+    }
+    if (root.paint_fields & kPaintOpacity) {
+      root.opacity = style.opacity;
+    }
+    if (root.paint_fields & kPaintBorderColors) {
+      root.border_color_top = style.border_color_top;
+      root.border_color_right = style.border_color_right;
+      root.border_color_bottom = style.border_color_bottom;
+      root.border_color_left = style.border_color_left;
+    }
+  }
+  for (auto& child : root.children) {
+    if (child.fragment) {
+      RefreshPaint(*child.fragment);
+    }
   }
 }
 
@@ -676,6 +721,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
   auto fragment = MakeArenaFragment(width, 0);
   fragment->children.reserve(box->children.size());
   fragment->dom_node = box->dom_node;
+  fragment->paint_fields = kPaintAll;
   fragment->visibility = box->style.visibility;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
@@ -961,6 +1007,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
   }
   container_frag->children.reserve(estimated_children + 8);
   container_frag->dom_node = box->dom_node;
+  container_frag->paint_fields = kPaintAll;
   container_frag->visibility = box->style.visibility;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
@@ -1049,6 +1096,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
       }
       auto text_frag = MakeArenaFragment(col_width, 1);
       text_frag->dom_node = dom_node;
+      text_frag->paint_fields = kPaintBackground | kPaintForeground;
       text_frag->is_text = true;
       text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
 
@@ -2061,6 +2109,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
   // Pass 3: Final Measurement & Positioning
   auto fragment = MakeArenaFragment(resolved_width, resolved_height);
   fragment->dom_node = box->dom_node;
+  fragment->paint_fields = kPaintAll;
   fragment->visibility = box->style.visibility;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
@@ -2570,6 +2619,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   if (grid.empty() || num_cols == 0) {
     auto fragment = MakeArenaFragment(width, 0);
     fragment->dom_node = box->dom_node;
+    fragment->paint_fields = kPaintBackground | kPaintForeground;
     fragment->visibility = box->style.visibility;
     fragment->background_color = box->style.background_color;
     fragment->foreground_color = box->style.foreground_color;
@@ -2708,6 +2758,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
   // Create table fragment
   auto fragment = MakeArenaFragment(width, 0);
   fragment->dom_node = box->dom_node;
+  fragment->paint_fields = kPaintAll;
   fragment->visibility = box->style.visibility;
   fragment->background_color = box->style.background_color;
   fragment->foreground_color = box->style.foreground_color;
@@ -2828,6 +2879,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
 
     if (row_box) {
       row_bg_frag->dom_node = row_box->dom_node;
+      row_bg_frag->paint_fields = kPaintAll;
       row_bg_frag->background_color = row_box->style.background_color;
       row_bg_frag->foreground_color = row_box->style.foreground_color;
       row_bg_frag->opacity = row_box->style.opacity;
@@ -2848,6 +2900,7 @@ std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
       }
 
       row_cells_frag->dom_node = row_box->dom_node;
+      row_cells_frag->paint_fields = kPaintOpacity;
       row_cells_frag->opacity = row_box->style.opacity;
     }
 
@@ -3291,6 +3344,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
   // 6. Final Layout Pass
   auto container_frag = MakeArenaFragment(parent_width, 0);
   container_frag->dom_node = box->dom_node;
+  container_frag->paint_fields = kPaintAll;
   container_frag->visibility = box->style.visibility;
   container_frag->background_color = box->style.background_color;
   container_frag->foreground_color = box->style.foreground_color;
