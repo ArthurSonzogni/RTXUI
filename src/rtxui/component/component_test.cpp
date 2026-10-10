@@ -11625,3 +11625,53 @@ TEST_CASE("A selector names a tag as the template wrote it",
   CHECK(counter->style.padding.left == 1);
   CHECK(pane->style.padding.left == 2);
 }
+
+namespace {
+class FocusWithinApp : public rtxui::Component<FocusWithinApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <div class="panel" id="first"><div><button>one</button></div></div>
+      <div class="panel" id="second"><input/></div>
+    </div>
+    <style>
+      .panel:focus-within { padding-left: 2; }
+      .panel:not(:focus-within) { padding-right: 1; }
+      button:focus-within { margin-left: 3; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("The :focus-within selector", "[component][css][selector]") {
+  auto app = rtxui::Ref<FocusWithinApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(40, 10);
+  rtxui::Screen screen(app, device);
+  screen.Draw();
+
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+  CHECK(at("#first")->style.padding.left == 0);
+  CHECK(at("#first")->style.padding.right == 1);
+  CHECK(at("#second")->style.padding.left == 0);
+
+  // A focused grandchild.
+  screen.Dispatch(rtxui::Event::Tab());
+  screen.Draw();
+  CHECK(at("#first")->style.padding.left == 2);
+  CHECK(at("#first")->style.padding.right == 0);
+  CHECK(at("#second")->style.padding.left == 0);
+  // The focused element itself matches too.
+  CHECK(at("button")->style.margin.left == 3);
+
+  // Focus inside another component's internals counts as well.
+  screen.Dispatch(rtxui::Event::Tab());
+  screen.Draw();
+  CHECK(at("#first")->style.padding.left == 0);
+  CHECK(at("#second")->style.padding.left == 2);
+  CHECK(at("#second")->style.padding.right == 0);
+}

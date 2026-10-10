@@ -1071,6 +1071,19 @@ bool MatchOnePseudo(const Element* element,
   if (pseudo == "focus") {
     return element->focused();
   }
+  if (pseudo == "focus-within") {
+    // Unlike :has(), this looks through every component's internals: focus
+    // usually lands inside one, such as the field of an <input>.
+    auto any_focused = [](auto& self, const Element* e) -> bool {
+      if (e->focused()) {
+        return true;
+      }
+      return std::ranges::any_of(e->children(), [&](const auto& child) {
+        return self(self, child.get());
+      });
+    };
+    return any_focused(any_focused, element);
+  }
   if (pseudo == "active") {
     return element->active();
   }
