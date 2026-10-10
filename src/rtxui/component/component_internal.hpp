@@ -73,6 +73,12 @@ ComponentBase* GetParentComponent(ComponentBase* comp);
 // document, so only one element is ever focused at a time.
 void FocusExclusive(Element* element);
 
+// Records how the user last interacted: with the mouse (true) or the
+// keyboard (false). `:focus-visible` hides the focus of an element focused by
+// a click, as browsers do, except on text fields.
+void SetPointerInteraction(bool pointer);
+bool PointerInteraction();
+
 // Syncs a component's bound `disabled` state onto its root Element, for
 // :disabled CSS matching and Screen's tab-navigation/click gating (both
 // keyed off Element::disabled()) - and drops focus if the element is

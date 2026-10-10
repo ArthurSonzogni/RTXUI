@@ -63,6 +63,18 @@ ComponentBase* GetParentComponent(ComponentBase* comp) {
   return GetOwningComponent(comp->Root()->Parent());
 }
 
+namespace {
+thread_local bool g_pointer_interaction = false;
+}  // namespace
+
+void SetPointerInteraction(bool pointer) {
+  g_pointer_interaction = pointer;
+}
+
+bool PointerInteraction() {
+  return g_pointer_interaction;
+}
+
 void FocusExclusive(Element* element) {
   if (!element) {
     return;
@@ -1135,6 +1147,13 @@ bool MatchOnePseudo(const Element* element,
   }
   if (pseudo == "focus") {
     return element->focused();
+  }
+  if (pseudo == "focus-visible") {
+    // A text field reads the keyboard, so its focus matters even when a
+    // click gave it.
+    return element->focused() &&
+           (!PointerInteraction() || element->tag() == "input" ||
+            element->tag() == "textarea");
   }
   if (pseudo == "focus-within") {
     // Unlike :has(), this looks through every component's internals: focus

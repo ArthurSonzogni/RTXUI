@@ -1479,6 +1479,19 @@ void ScreenImpl::HandleEvent(Event event) {
     }
   }
 
+  // `:focus-visible` follows the last kind of input. Typing after a click
+  // brings the focus ring back without moving focus, so nothing else would
+  // re-match it.
+  if (event.is<Event::Keyboard>()) {
+    if (PointerInteraction()) {
+      SetPointerInteraction(false);
+      component_->ResolveTargetStyles();
+    }
+  } else if (event.is<Event::Mouse>() && event.get<Event::Mouse>().motion ==
+                                             Event::Mouse::Motion::Pressed) {
+    SetPointerInteraction(true);
+  }
+
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
 

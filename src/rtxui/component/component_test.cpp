@@ -11762,6 +11762,56 @@ TEST_CASE("An element matching two entries of one :is() takes the rule once",
 }
 
 namespace {
+class FocusVisibleApp : public rtxui::Component<FocusVisibleApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <button id="button">press</button>
+      <input id="field"/>
+    </div>
+    <style>
+      button:focus { margin-left: 1; }
+      button:focus-visible { margin-right: 2; }
+      input:focus-visible { margin-left: 3; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("The :focus-visible selector", "[component][css][selector]") {
+  auto app = rtxui::Ref<FocusVisibleApp>::New();
+  rtxui::HeadlessScreen screen(app, 40, 10);
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+  auto click = [&](const char* sel) {
+    auto* e = at(sel);
+    screen.Click(e->absolute_x() + 1, e->absolute_y());
+  };
+
+  // Focus from the keyboard shows.
+  screen.Input("\t");
+  CHECK(at("#button")->style.margin.left == 1);
+  CHECK(at("#button")->style.margin.right == 2);
+
+  // Focus from a click does not...
+  screen.Input("\t");  // Away from the button, to click back onto it.
+  click("#button");
+  CHECK(at("#button")->style.margin.left == 1);
+  CHECK(at("#button")->style.margin.right == 0);
+
+  // ...until the keyboard is used again.
+  screen.Input("x");
+  CHECK(at("#button")->style.margin.right == 2);
+
+  // A text field shows its focus however it got it: it reads the keyboard.
+  click("#field");
+  CHECK(at("#field")->style.margin.left == 3);
+}
+
+namespace {
 class ClickFocusApp : public rtxui::Component<ClickFocusApp> {
  public:
   std::string_view view = R"(
