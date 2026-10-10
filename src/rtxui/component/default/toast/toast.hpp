@@ -24,6 +24,7 @@ class toast : public Component<toast> {
   std::string placement = "bottom-right";
   std::string toast_class = "closed";
   std::string toast_part = "toast";
+  std::string toast_style;
 
   void Close();
   void AnimationEnded();
@@ -35,6 +36,10 @@ class toast : public Component<toast> {
  private:
   // Hides the toast once it has closed, its closing animation done.
   void FinishClosing();
+  // The inline style that starts the slide about to begin where the one it
+  // interrupts has got to: empty when that one has finished, or is not ours.
+  std::string MirrorSlide(std::string_view interrupted_prefix,
+                          double next_duration_ms) const;
 
   bool was_open_ = false;
   // Closed, but still on screen while its closing animation plays.

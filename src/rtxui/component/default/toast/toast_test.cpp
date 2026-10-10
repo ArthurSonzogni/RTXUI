@@ -291,3 +291,57 @@ TEST_CASE("A toast's opening and closing animations can both be replaced",
 
 }  // namespace
 }  // namespace rtxui
+
+namespace rtxui {
+namespace {
+
+// The column of the toast's left border on the first row, or -1 when the
+// toast is out of sight.
+int ToastLeft(const std::string& frame) {
+  const std::string first_row = frame.substr(0, frame.find('\n'));
+  const size_t border = first_row.find("▊");
+  return border == std::string::npos ? -1 : static_cast<int>(border);
+}
+
+TEST_CASE("A toast reopened while sliding out slides back from where it is",
+          "[component][toast]") {
+  auto app = Ref<Placed>::New();
+  TimelineScreen screen(app, 20, 4);
+  screen.Advance(400);
+  PostTask([&] { app->shown = false; });
+  screen.Advance(0);
+  const int sliding_out = ToastLeft(screen.Advance(100));
+  REQUIRE(sliding_out > 9);
+
+  PostTask([&] { app->shown = true; });
+  const std::vector<std::string> frames = screen.Record(400, 20);
+  // It never goes back out of sight, nor further out than it had got...
+  for (const std::string& frame : frames) {
+    CHECK(ToastLeft(frame) != -1);
+    CHECK(ToastLeft(frame) <= sliding_out + 1);
+  }
+  // ...and ends in place.
+  CHECK(ToastLeft(frames.back()) == 9);
+}
+
+TEST_CASE("A toast closed while sliding in slides back from where it is",
+          "[component][toast]") {
+  auto app = Ref<Placed>::New();
+  TimelineScreen screen(app, 20, 4);
+  screen.Advance(0);
+  const int sliding_in = ToastLeft(screen.Advance(100));
+  REQUIRE(sliding_in > 9);
+
+  PostTask([&] { app->shown = false; });
+  const std::vector<std::string> frames = screen.Record(400, 20);
+  // It never reaches its place, and slides out from where it was.
+  for (const std::string& frame : frames) {
+    if (ToastLeft(frame) != -1) {
+      CHECK(ToastLeft(frame) >= sliding_in - 1);
+    }
+  }
+  CHECK(ToastLeft(frames.back()) == -1);
+}
+
+}  // namespace
+}  // namespace rtxui
