@@ -13,6 +13,16 @@
 namespace rtxui {
 class Element;
 
+// The paint fields of a fragment that only animations can change between two
+// layouts: see RefreshPaint().
+enum PaintField : uint8_t {
+  kPaintBackground = 1 << 0,
+  kPaintForeground = 1 << 1,
+  kPaintOpacity = 1 << 2,
+  kPaintBorderColors = 1 << 3,
+  kPaintAll = 0b1111,
+};
+
 struct PhysicalFragment {
   Element* dom_node = nullptr;
   // A fragment's position lives in its parent's ChildLink, not here: layout
@@ -51,6 +61,11 @@ struct PhysicalFragment {
   std::optional<bool> overlined;
   std::optional<bool> blink;
   Visibility visibility = Visibility::Visible;
+  // The PaintField bits layout set from `dom_node`'s style.
+  uint8_t paint_fields = 0;
+  // How far ApplyTranslate() moved this fragment: included in its position in
+  // its parent's ChildLink.
+  int translated_x = 0, translated_y = 0;
 
   struct ChildLink {
     std::shared_ptr<PhysicalFragment> fragment;

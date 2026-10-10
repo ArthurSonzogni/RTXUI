@@ -504,6 +504,10 @@ class RTXUI_EXPORT Element : public RefCounted {
     return !active_transitions.empty() || IsAnimatingScroll() ||
            HasPlayingAnimations(include_infinite);
   }
+  /// Whether what is moving can move or resize a box: anything but a color,
+  /// the opacity or `translate`, applied after layout. When it cannot, the
+  /// next frame keeps the last layout.
+  bool AnimatesLayout() const;
   /// Whether an animation finished since TakeEndedAnimations() last ran.
   bool HasEndedAnimations() const;
   /// Whether an animation finished since the last call, clearing it.

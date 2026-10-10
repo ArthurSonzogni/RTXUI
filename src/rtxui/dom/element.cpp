@@ -1382,6 +1382,40 @@ bool Element::HasPlayingAnimations(bool include_infinite) const {
       });
 }
 
+bool Element::AnimatesLayout() const {
+  if (IsAnimatingScroll()) {
+    return true;
+  }
+  static constexpr std::string_view kPaintOnly[] = {
+      "background-color",      "color",
+      "foreground-color",      "border-top-color",
+      "border-right-color",    "border-bottom-color",
+      "border-left-color",     "opacity",
+      "scrollbar-color-thumb", "scrollbar-color-track",
+      "translate-x",           "translate-y",
+  };
+  for (const auto& [property, transition] : active_transitions) {
+    if (std::ranges::find(kPaintOnly, property) == std::end(kPaintOnly)) {
+      return true;
+    }
+  }
+  constexpr uint32_t kPaintOnlyBits =
+      Bit(kBackgroundColor) | Bit(kColor) | Bit(kBorderTopColor) |
+      Bit(kBorderRightColor) | Bit(kBorderBottomColor) | Bit(kBorderLeftColor) |
+      Bit(kOpacity) | Bit(kTranslateX) | Bit(kTranslateY);
+  for (const RunningAnimation& animation : running_animations) {
+    if (animation.finished) {
+      continue;
+    }
+    for (const AnimationFrame& frame : animation.frames) {
+      if (frame.properties & ~kPaintOnlyBits) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool Element::HasEndedAnimations() const {
   return std::ranges::any_of(running_animations,
                              &RunningAnimation::end_pending);
