@@ -6,13 +6,21 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <format>
 #include <string>
 
+#include "rtxui/base/clock.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/task.hpp"
 
 namespace rtxui {
+
+namespace {
+// The durations of the slides in Setup()'s style.
+constexpr double kSlideInMs = 300.0;
+constexpr double kSlideOutMs = 200.0;
+}  // namespace
 
 void toast::Close() {
   open = false;
@@ -32,12 +40,39 @@ void toast::FinishClosing() {
   toast_part = "toast";
 }
 
+std::string toast::MirrorSlide(std::string_view interrupted_prefix,
+                               double next_duration_ms) const {
+  const Element* box = Root()->QuerySelector(".toast");
+  if (!box) {
+    return "";
+  }
+  for (const RunningAnimation& animation : box->running_animations) {
+    if (animation.finished ||
+        !animation.config.name.starts_with(interrupted_prefix)) {
+      continue;
+    }
+    const double duration_ms = animation.config.duration_seconds * 1000.0;
+    const double elapsed_ms = time::GetTimeMs() - animation.start_time_ms -
+                              animation.config.delay_seconds * 1000.0;
+    if (duration_ms <= 0.0) {
+      return "";
+    }
+    // ease-out-cubic is ease-in-cubic played backwards, so the slide in at
+    // progress 1 - p is where the slide out at progress p is, and conversely.
+    const double progress = std::clamp(elapsed_ms / duration_ms, 0.0, 1.0);
+    return std::format("animation-delay: {:.6f}s",
+                       -(1.0 - progress) * next_duration_ms / 1000.0);
+  }
+  return "";
+}
+
 void toast::InitReflection() {
   Bind(open);
   Bind(duration);
   Bind(placement);
   Bind(toast_class);
   Bind(toast_part);
+  Bind(toast_style);
   Bind(Close);
   Bind(AnimationEnded);
   Component<toast>::InitReflection();
@@ -45,7 +80,8 @@ void toast::InitReflection() {
 
 std::string_view toast::Setup() {
   return R"html(
-    <div class="toast {toast_class}" part="{toast_part}" onclick="Close"
+    <div class="toast {toast_class}" part="{toast_part}" style="{toast_style}"
+         onclick="Close"
          onanimationend="AnimationEnded">
       <slot></slot>
     </div>
@@ -107,6 +143,8 @@ bool toast::Digest() {
 
   // Each opening starts its own timer.
   if (open && !was_open_) {
+    // Reopened while sliding out: it slides back in from where it is.
+    toast_style = MirrorSlide("toast-out-", kSlideInMs);
     ++generation_;
     closing_ = false;
     if (duration > 0) {
@@ -122,6 +160,8 @@ bool toast::Digest() {
   // Closing keeps the toast on screen until its closing animation ends. Once
   // this frame's styles say whether there is one: none hides it at once.
   if (!open && was_open_) {
+    // Closed while sliding in: it slides back out from where it is.
+    toast_style = MirrorSlide("toast-in-", kSlideOutMs);
     closing_ = true;
     PostTask([self = Ref<toast>(this), generation = generation_] {
       if (!self->closing_ || self->generation_ != generation) {
