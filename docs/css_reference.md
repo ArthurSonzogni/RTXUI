@@ -179,6 +179,13 @@ RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing 
 - `darken(amount)`: Interpolates toward `#000000` in sRGB space.
 - `alpha(amount)`: Sets the alpha transparency channel to `amount`.
 
+### `currentColor`
+`currentColor` (any case) is accepted by `color`, `border-color` and its
+per-side longhands, `outline-color` and `outline`. A border or outline with
+it is drawn in the element's text color and follows it, through transitions
+too; `color: currentColor` takes the parent's color. Other properties, such as
+`background-color`, do not accept it and report it as unsupported.
+
 ---
 
 ## 6. Custom Properties (`--*` and `var()`)

@@ -525,6 +525,16 @@ Color MixToward(const std::optional<Color>& base, Color target, float amount) {
                      c.a);
 }
 
+// `currentColor`, in any case. Borders and outlines without a color of their
+// own are drawn in the text color, so this keyword resets them to that.
+bool IsCurrentColor(std::string_view v) {
+  constexpr std::string_view kKeyword = "currentcolor";
+  return v.size() == kKeyword.size() &&
+         std::ranges::equal(v, kKeyword, [](char a, char b) {
+           return std::tolower(static_cast<unsigned char>(a)) == b;
+         });
+}
+
 std::optional<Color> TransformColor(std::optional<Color> current,
                                     std::string_view v) {
   while (!v.empty() && std::isspace(static_cast<unsigned char>(v.front()))) {
@@ -1699,13 +1709,22 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "background-color") {
-    style.background_color = TransformColor(style.background_color, v);
-    return;
+    if (auto color = TransformColor(style.background_color, v)) {
+      style.background_color = color;
+      return;
+    }
   }
 
   if (p == "color" || p == "foreground-color") {
-    style.foreground_color = TransformColor(style.foreground_color, v);
-    return;
+    // As in CSS, the text color's own `currentColor` is the parent's.
+    if (IsCurrentColor(v)) {
+      style.foreground_color.reset();
+      return;
+    }
+    if (auto color = TransformColor(style.foreground_color, v)) {
+      style.foreground_color = color;
+      return;
+    }
   }
 
   if (p == "font-weight") {
@@ -2008,6 +2027,8 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         outline_style = parsed_style;
       } else if (auto width = ParseWholeInt(word)) {
         zero_width = *width == 0;
+      } else if (IsCurrentColor(word)) {
+        outline_color.reset();
       } else if (auto color = TransformColor(std::nullopt, word)) {
         outline_color = color;
       } else {
@@ -2031,6 +2052,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "outline-color") {
+    if (IsCurrentColor(v)) {
+      style.outline_color.reset();
+      return;
+    }
     if (auto color = TransformColor(style.outline_color, v)) {
       style.outline_color = color;
       return;
@@ -2051,31 +2076,42 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  // Sets one border side's color. False when `v` is not a color.
+  auto ApplyBorderColor = [&v](std::optional<Color>& side) {
+    if (IsCurrentColor(v)) {
+      side.reset();
+      return true;
+    }
+    if (auto color = TransformColor(side, v)) {
+      side = color;
+      return true;
+    }
+    return false;
+  };
+
   if (p == "border-color") {
-    style.border_color_top = TransformColor(style.border_color_top, v);
-    style.border_color_right = TransformColor(style.border_color_right, v);
-    style.border_color_bottom = TransformColor(style.border_color_bottom, v);
-    style.border_color_left = TransformColor(style.border_color_left, v);
+    if (ApplyBorderColor(style.border_color_top)) {
+      ApplyBorderColor(style.border_color_right);
+      ApplyBorderColor(style.border_color_bottom);
+      ApplyBorderColor(style.border_color_left);
+      return;
+    }
+  }
+
+  if (p == "border-color-top" && ApplyBorderColor(style.border_color_top)) {
     return;
   }
 
-  if (p == "border-color-top") {
-    style.border_color_top = TransformColor(style.border_color_top, v);
+  if (p == "border-color-right" && ApplyBorderColor(style.border_color_right)) {
     return;
   }
 
-  if (p == "border-color-right") {
-    style.border_color_right = TransformColor(style.border_color_right, v);
+  if (p == "border-color-bottom" &&
+      ApplyBorderColor(style.border_color_bottom)) {
     return;
   }
 
-  if (p == "border-color-bottom") {
-    style.border_color_bottom = TransformColor(style.border_color_bottom, v);
-    return;
-  }
-
-  if (p == "border-color-left") {
-    style.border_color_left = TransformColor(style.border_color_left, v);
+  if (p == "border-color-left" && ApplyBorderColor(style.border_color_left)) {
     return;
   }
 
