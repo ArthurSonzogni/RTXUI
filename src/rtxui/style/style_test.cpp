@@ -1821,6 +1821,23 @@ TEST_CASE("animation shorthand reads its parts in any order",
   CHECK(style.animations->front().name == "none");
 }
 
+TEST_CASE("an animation delay can be negative, not a duration",
+          "[css][animation]") {
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"animation", "a 1s -250ms"});
+  REQUIRE(style.animations);
+  CHECK(style.animations->front().delay_seconds == -0.25f);
+
+  rtxui::ApplyStyle(style, {"animation-delay", "-2s"});
+  CHECK(style.animations->front().delay_seconds == -2.0f);
+
+  // A negative duration leaves the animation as it was.
+  rtxui::ApplyStyle(style, {"animation-duration", "-1s"});
+  CHECK(style.animations->front().duration_seconds == 1.0f);
+  rtxui::ApplyStyle(style, {"animation", "b -1s"});
+  CHECK(style.animations->front().name == "a");
+}
+
 TEST_CASE("animation longhands repeat over the names", "[css][animation]") {
   rtxui::ComputedStyle style;
   rtxui::ApplyStyle(style, {"animation-duration", "2s"});
