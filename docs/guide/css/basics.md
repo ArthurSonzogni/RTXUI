@@ -35,7 +35,10 @@ The CSS parser supports a wide range of standard selectors and combinators:
 *   **ID Selectors**: Targets unique identifiers (e.g., `#submit-btn { background-color: green; }`).
 *   **Compound Selectors**: Combine tags, classes, and IDs simultaneously (e.g., `div.card#active { border-color: red; }`).
 *   **Pseudo-classes**: Targets interactive states (`:hover`, `:focus`, `:active`,
-    `:disabled`, `:checked`, `:read-only`) and scrollbars.
+    `:disabled`, `:checked`, `:read-only`) and scrollbars. `:focus-within`
+    matches the focused element and every element containing it, so
+    `.panel:focus-within` lights up the panel holding the focused field, even
+    when the focus is inside another component such as an `<input>`.
 *   **Structural Pseudo-classes**:
     *   `:first-child`: Matches the first element among its siblings.
     *   `:last-child`: Matches the last element among its siblings.
