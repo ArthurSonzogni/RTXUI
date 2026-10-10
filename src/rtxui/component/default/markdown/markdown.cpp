@@ -36,12 +36,12 @@ std::string_view markdown::GetView() const {
 bool markdown::Digest() {
   StyleResolutionScope scope(this);
   bool changed = false;
-  for (auto& entry : entries_) {
+  for (auto& entry : data_->entries_) {
     if (entry.check_and_update && entry.check_and_update()) {
       changed = true;
     }
   }
-  for (auto& range_entry : range_entries_) {
+  for (auto& range_entry : data_->range_entries_) {
     if (range_entry.range->CheckAndUpdate()) {
       changed = true;
     }
@@ -52,20 +52,20 @@ bool markdown::Digest() {
   // but a template still built from the old content.
   if (content != built_content_ || stylesheet != built_stylesheet_) {
     changed = true;
-    template_.clear();
-    template_ = Template();
-    xml_string_ = StripIndent(template_);
-    if (auto nodes = xml::Parse(xml_string_)) {
-      xml_nodes_ = std::move(nodes.value());
+    data_->template_.clear();
+    data_->template_ = Template();
+    data_->xml_string_ = StripIndent(data_->template_);
+    if (auto nodes = xml::Parse(data_->xml_string_)) {
+      data_->xml_nodes_ = std::move(nodes.value());
     } else {
       const xml::Error& error = nodes.error();
       ReportSyntaxError({error.message, Diagnostic::Kind::XmlSyntax, error.line,
                          error.column},
-                        xml_string_);
+                        data_->xml_string_);
     }
     this->Render();
   }
-  for (auto& child : children_) {
+  for (auto& child : data_->children_) {
     if (child->Digest()) {
       changed = true;
     }
