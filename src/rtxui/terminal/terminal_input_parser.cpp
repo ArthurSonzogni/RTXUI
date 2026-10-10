@@ -4,11 +4,13 @@
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
 #include <algorithm>  // for std::min
+#include <charconv>   // for from_chars
 #include <cstdint>    // for uint32_t
 #include <map>
 #include <memory>    // for unique_ptr, allocator
 #include <optional>  // for std::optional
-#include <utility>   // for move
+#include <string_view>
+#include <utility>  // for move
 #include <vector>
 
 #include "rtxui/base/string.hpp"  // for EatCodePoint
@@ -382,27 +384,74 @@ TerminalInputParser::Output TerminalInputParser::ParseESC() {
 }
 // Operating System Command: ESC ] ... terminated by BEL or by ST (ESC \).
 //
-// These are replies to queries the application made -- the terminal's
-// background color, the clipboard, the window title. Nothing consumes one
-// today, but they have to be recognised regardless: without this they fell
-// through to the "some escape sequence we do not know" path and were handed to
-// the application one byte at a time, so a terminal answering a question
-// typed its answer into whatever had focus.
+namespace {
+// One channel of an X11 color spec: 1 to 4 hex digits, scaled to 0..255.
+std::optional<uint8_t> ParseColorChannel(std::string_view hex) {
+  if (hex.empty() || hex.size() > 4) {
+    return std::nullopt;
+  }
+  unsigned int value = 0;
+  auto [ptr, ec] = std::from_chars(hex.data(), hex.data() + hex.size(), value,
+                                   /*base=*/16);
+  if (ec != std::errc() || ptr != hex.data() + hex.size()) {
+    return std::nullopt;
+  }
+  const unsigned int max = (1U << (4 * hex.size())) - 1;
+  return static_cast<uint8_t>((value * 255 + max / 2) / max);
+}
+
+// The color in the body of an OSC 11 reply: `11;rgb:RRRR/GGGG/BBBB`.
+std::optional<Color> ParseBackgroundReply(std::string_view body) {
+  constexpr std::string_view kPrefix = "11;rgb:";
+  if (!body.starts_with(kPrefix)) {
+    return std::nullopt;
+  }
+  body.remove_prefix(kPrefix.size());
+  const size_t first = body.find('/');
+  const size_t second = body.find('/', first + 1);
+  if (first == std::string_view::npos || second == std::string_view::npos) {
+    return std::nullopt;
+  }
+  auto r = ParseColorChannel(body.substr(0, first));
+  auto g = ParseColorChannel(body.substr(first + 1, second - first - 1));
+  auto b = ParseColorChannel(body.substr(second + 1));
+  if (!r || !g || !b) {
+    return std::nullopt;
+  }
+  return Color::RGB(*r, *g, *b);
+}
+}  // namespace
+
+// These are replies to queries made of the terminal -- its background color,
+// the clipboard, the window title. They have to be recognised whatever they
+// answer: without this they fell through to the "some escape sequence we do
+// not know" path and were handed to the application one byte at a time, so a
+// terminal answering a question typed its answer into whatever had focus.
+// The background color is kept for the Screen, which asks for it.
 TerminalInputParser::Output TerminalInputParser::ParseOSC() {
   while (true) {
     if (!Eat()) {
       return UNCOMPLETED;
     }
+    size_t terminator = 0;
     if (Current() == '\x07') {  // BEL
-      return DROP;
-    }
-    if (Current() == '\x1B') {
+      terminator = 1;
+    } else if (Current() == '\x1B') {
       if (!Eat()) {
         return UNCOMPLETED;
       }
       if (Current() == '\\') {  // ST
-        return DROP;
+        terminator = 2;
       }
+    }
+    if (terminator != 0) {
+      // `pending_` holds the whole sequence, from its "\x1B]".
+      const std::string_view sequence(pending_);
+      if (auto color = ParseBackgroundReply(
+              sequence.substr(2, sequence.size() - 2 - terminator))) {
+        background_color_ = color;
+      }
+      return DROP;
     }
   }
 }

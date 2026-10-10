@@ -9,8 +9,10 @@
 #include <vector>  // for vector
 
 #include "catch2/catch_test_macros.hpp"  // for TEST_CASE, REQUIRE, CHECK, CHECK_FALSE
+#include "rtxui/color.hpp"
 #include "rtxui/event.hpp"  // for Event, Event::Return(), Event::ArrowDown(), Event::ArrowLeft(), Event::ArrowRight(), Event::ArrowUp(), Event::Backspace(), Event::End(), Event::Home(), Event::Delete(), Event::F1(), Event::F10(), Event::F11(), Event::F12(), Event::F2(), Event::F3(), Event::F4(), Event::F5(), Event::F6(), Event::F7(), Event::F8(), Event::F9(), Event::PageDown(), Event::PageUp(), Event::Tab(), Event::TabReverse(), Event::Escape()
 
+using rtxui::Color;
 using rtxui::Event;
 using rtxui::TerminalInputParser;
 
@@ -638,6 +640,40 @@ TEST_CASE("Event.OSCRepliesAreSwallowed", "[terminal][osc]") {
   SECTION("an unterminated reply consumes the rest rather than emitting it") {
     CHECK(events_for("\x1B]11;rgb:0d0d").empty());
   }
+}
+
+TEST_CASE("The terminal's background color is read from its OSC 11 reply",
+          "[terminal][parser]") {
+  auto background_for = [](std::string_view sequence) {
+    TerminalInputParser parser;
+    for (char c : sequence) {
+      parser.Add(c);
+    }
+    return parser.TakeBackgroundColor();
+  };
+  CHECK(background_for("\x1B]11;rgb:0d0d/1111/1717\x1B\\") ==
+        Color::RGB(0x0d, 0x11, 0x17));
+  CHECK(background_for("\x1B]11;rgb:ff/80/00\x07") ==
+        Color::RGB(0xff, 0x80, 0x00));
+  // One to four hex digits a channel, each scaled to the full range.
+  CHECK(background_for("\x1B]11;rgb:f/8/0\x07") ==
+        Color::RGB(0xff, 0x88, 0x00));
+  CHECK(background_for("\x1B]11;rgb:ffff/0000/8000\x07") ==
+        Color::RGB(0xff, 0x00, 0x80));
+
+  CHECK_FALSE(background_for("\x1B]11;rgb:0d0d/1111\x07"));
+  CHECK_FALSE(background_for("\x1B]11;rgb:0g/00/00\x07"));
+  CHECK_FALSE(background_for("\x1B]11;rgb:00000/00/00\x07"));
+  CHECK_FALSE(background_for("\x1B]10;rgb:00/00/00\x07"));  // Foreground.
+  CHECK_FALSE(background_for("x"));
+
+  // Taken once.
+  TerminalInputParser parser;
+  for (char c : std::string_view("\x1B]11;rgb:00/00/00\x07")) {
+    parser.Add(c);
+  }
+  CHECK(parser.TakeBackgroundColor());
+  CHECK_FALSE(parser.TakeBackgroundColor());
 }
 
 // --- Event construction ---

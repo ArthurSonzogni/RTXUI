@@ -179,6 +179,15 @@ RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing 
 - `darken(amount)`: Interpolates toward `#000000` in sRGB space.
 - `alpha(amount)`: Sets the alpha transparency channel to `amount`.
 
+### Translucent colors
+A color with alpha blends with whatever is painted beneath it. Painted straight
+onto the screen, it blends with the terminal's background: RTXUI asks the
+terminal for that color on startup (OSC 11), uses it for the blending only,
+and still leaves the rest of the screen at the terminal's own background, so a
+translucent or themed terminal shows through. A terminal that does not answer
+gets the color unblended. `Screen::SetBackgroundColor` names the background
+instead, and paints it everywhere.
+
 ### `currentColor`
 `currentColor` (any case) is accepted by `color`, `border-color` and its
 per-side longhands, `outline-color` and `outline`. A border or outline with

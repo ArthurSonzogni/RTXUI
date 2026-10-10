@@ -5680,6 +5680,36 @@ class GlassOnQ : public Component<GlassOnQ> {
 };
 }  // namespace
 
+TEST_CASE("Screen blends against the background the terminal reports",
+          "[terminal]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(10, 3);
+  auto app = Ref<GlassOnQ>::New();
+  Screen screen(app, device);
+  app->quit = [&screen] { screen.Exit(); };
+
+  SECTION("asked for, and used") {
+    device->PushInput("\x1b]11;rgb:1010/2020/3030\x1b\\q");
+    screen.Loop();
+    const std::string output = device->GetOutput();
+    const size_t query = output.find("\x1b]11;?\x1b\\");
+    REQUIRE(query != std::string::npos);
+    // Half white over #102030.
+    CHECK(output.find("48;2;135;143;151m", query) != std::string::npos);
+    // The terminal's own background is not stamped over the rest.
+    CHECK(output.find("48;2;16;32;48m") == std::string::npos);
+  }
+
+  SECTION("not asked for when the app names one") {
+    screen.SetBackgroundColor(Color::RGB(0, 0, 0));
+    device->PushInput("\x1b]11;rgb:1010/2020/3030\x1b\\q");
+    screen.Loop();
+    const std::string output = device->GetOutput();
+    CHECK(output.find("\x1b]11;?") == std::string::npos);
+    CHECK(output.find("48;2;135;143;151m") == std::string::npos);
+  }
+}
+
 TEST_CASE("A translucent background blends with the screen background",
           "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
