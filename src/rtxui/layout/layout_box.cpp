@@ -2,8 +2,23 @@
 
 namespace rtxui {
 
-// LayoutBox constructor
-LayoutBox::LayoutBox() = default;
+namespace {
+const ComputedStyle& DefaultStyle() {
+  static const ComputedStyle style;
+  return style;
+}
+}  // namespace
+
+// An anonymous box has no element, and takes the initial values.
+LayoutBox::LayoutBox() : style_(&DefaultStyle()) {}
+
+ComputedStyle& LayoutBox::mutable_style() {
+  if (!owned_style_) {
+    owned_style_.emplace(*style_);
+    style_ = &*owned_style_;
+  }
+  return *owned_style_;
+}
 
 std::string AlgorithmToString(LayoutBox::Algorithm algo) {
   switch (algo) {
