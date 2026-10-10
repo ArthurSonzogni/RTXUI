@@ -11675,3 +11675,87 @@ TEST_CASE("The :focus-within selector", "[component][css][selector]") {
   CHECK(at("#second")->style.padding.left == 2);
   CHECK(at("#second")->style.padding.right == 0);
 }
+
+namespace {
+class IsWhereApp : public rtxui::Component<IsWhereApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <span id="a" class="a">a</span>
+      <span id="b" class="b">b</span>
+      <span id="c" class="c">c</span>
+    </div>
+    <style>
+      span:is(.a, #b) { padding-left: 1; }
+      span:is(.c:first-child, .c:last-child) { padding-right: 2; }
+      :where(.a, .b) { margin-left: 4; }
+      span { margin-left: 5; }
+      .a { margin-bottom: 1; }
+      span:where(.a) { margin-bottom: 2; }
+      span:is(div span, .a) { margin-top: 9; }
+      span:is() { margin-top: 9; }
+      span:where(.a, ) { margin-top: 9; }
+      span:not(:is(.a)) { padding-bottom: 1; }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("The :is() and :where() selectors", "[component][css][selector]") {
+  auto app = rtxui::Ref<IsWhereApp>::New();
+  app->Mount();
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+
+  SECTION("any entry of the list matches") {
+    CHECK(at("#a")->style.padding.left == 1);
+    CHECK(at("#b")->style.padding.left == 1);
+    CHECK(at("#c")->style.padding.left == 0);
+    CHECK(at("#c")->style.padding.right == 2);
+    CHECK(at("#a")->style.padding.right == 0);
+  }
+
+  SECTION(":where() adds no specificity") {
+    // `span` (0,0,1) outweighs `:where(.a, .b)` (0,0,0) wherever it appears.
+    CHECK(at("#a")->style.margin.left == 5);
+    // `.a` (0,1,0) outweighs the later `span:where(.a)` (0,0,1).
+    CHECK(at("#a")->style.margin.bottom == 1);
+  }
+
+  SECTION("a malformed list matches nothing") {
+    CHECK(at("#a")->style.margin.top == 0);
+  }
+
+  SECTION("nested in :not()") {
+    CHECK(at("#a")->style.padding.bottom == 0);
+    CHECK(at("#b")->style.padding.bottom == 1);
+  }
+}
+
+namespace {
+class IsTwiceApp : public rtxui::Component<IsTwiceApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <span id="both" class="a b">x</span>
+    </div>
+    <style>
+      span { background-color: #000000; }
+      span:is(.a, .b) { background-color: lighten(50%); }
+    </style>
+  )";
+};
+}  // namespace
+
+TEST_CASE("An element matching two entries of one :is() takes the rule once",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<IsTwiceApp>::New();
+  app->Mount();
+  auto* both = app->Root()->QuerySelector("#both");
+  REQUIRE(both != nullptr);
+  REQUIRE(both->style.background_color);
+  CHECK(both->style.background_color->r == 127);
+}

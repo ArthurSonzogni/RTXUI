@@ -1974,3 +1974,45 @@ TEST_CASE("An invalid or unsupported color is reported, not applied",
   CHECK(style.foreground_color == rtxui::Color::RGB(255, 0, 0));
   CHECK(style.border_color_top == rtxui::Color::RGB(255, 0, 0));
 }
+
+TEST_CASE(":is() and :where() expand into plain selectors", "[css][selector]") {
+  auto sheet = css::Parse(
+      "span:is(.a, #b:hover) { color: red; }"
+      ".x:where(div.y, [z]) { color: red; }"
+      "span:is(div) { color: red; }"
+      ".x:is(.a div) { color: red; }");
+  REQUIRE(sheet);
+  const css::StyleSheet& rules = sheet.value();
+  REQUIRE(rules.size() == 6);
+
+  // :is() weighs as its argument does.
+  CHECK(rules[0].parsed_selector.base == "span");
+  CHECK(rules[0].parsed_selector.classes == std::vector<std::string>{"a"});
+  CHECK(rules[0].parsed_selector.pseudo_classes.empty());
+  CHECK(rules[0].parsed_selector.specificity == css::MakeSpecificity(0, 1, 1));
+  CHECK(rules[1].parsed_selector.id == "b");
+  CHECK(rules[1].parsed_selector.pseudo_classes ==
+        std::vector<std::string>{"hover"});
+  CHECK(rules[1].parsed_selector.specificity == css::MakeSpecificity(1, 1, 1));
+
+  // :where() weighs nothing.
+  CHECK(rules[2].parsed_selector.base == "div");
+  CHECK(rules[2].parsed_selector.classes == std::vector<std::string>{"x", "y"});
+  CHECK(rules[2].parsed_selector.specificity == css::MakeSpecificity(0, 1, 0));
+  CHECK(rules[3].parsed_selector.attributes.size() == 1);
+  CHECK(rules[3].parsed_selector.specificity == css::MakeSpecificity(0, 1, 0));
+
+  // What cannot be expanded is left to the matcher.
+  CHECK(rules[4].parsed_selector.pseudo_classes ==
+        std::vector<std::string>{"is(div)"});
+  CHECK(rules[5].parsed_selector.pseudo_classes ==
+        std::vector<std::string>{"is(.a div)"});
+}
+
+TEST_CASE("Print writes an expanded :is() rule back out once",
+          "[css][selector]") {
+  auto sheet = css::Parse("a:is(.b, .c) { color: red; }");
+  REQUIRE(sheet);
+  CHECK(sheet.value().size() == 2);
+  CHECK(css::Print(sheet.value()) == "a:is(.b, .c) {\n  color: red;\n}\n\n");
+}

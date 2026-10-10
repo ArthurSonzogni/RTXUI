@@ -114,6 +114,9 @@ struct Ruleset {
   /// printing. Empty for an ordinary ruleset.
   std::string keyframes_name;
   float keyframe_offset = 0.0f;
+  /// Set on all but the first of the rulesets an `:is()` or `:where()`
+  /// expands into: they repeat the same source rule, so Print skips them.
+  bool expansion = false;
 };
 
 /// The keyframe blocks of one `@keyframes` rule, sorted by offset. They point

@@ -1045,6 +1045,71 @@ int MaxParenDepth(std::string_view text) {
   return deepest;
 }
 
+// Whether `element` matches any entry of `list`, the argument of :not(),
+// :is() or :where(): a comma-separated list of compound selectors,
+// pseudo-classes included (`.a:first-child, #b`). Nothing when the list is
+// malformed, which every caller treats as matching nothing. Combinators inside
+// the list are not supported and make it malformed.
+std::optional<bool> MatchCompoundList(const Element* element,
+                                      std::string_view list,
+                                      int depth,
+                                      const ComponentBase* scope) {
+  auto trim = [](std::string_view text) {
+    while (!text.empty() &&
+           std::isspace(static_cast<unsigned char>(text.front()))) {
+      text.remove_prefix(1);
+    }
+    while (!text.empty() &&
+           std::isspace(static_cast<unsigned char>(text.back()))) {
+      text.remove_suffix(1);
+    }
+    return text;
+  };
+
+  std::string_view rest = trim(list);
+  if (rest.empty()) {
+    return std::nullopt;
+  }
+  // Every entry is checked before any is matched, so that a malformed list
+  // matches nothing whatever its first entries say.
+  std::vector<std::string_view> entries;
+  while (true) {
+    const size_t comma = css::FindTopLevel(rest, ",");
+    const std::string_view one =
+        trim(comma == std::string_view::npos ? rest : rest.substr(0, comma));
+    // An empty entry means a stray or trailing comma. Treat the whole
+    // argument as malformed rather than silently ignoring the gap.
+    if (one.empty()) {
+      return std::nullopt;
+    }
+    // A combinator makes the entry a complex selector, which this matcher
+    // cannot evaluate. Rejecting it explicitly matters: ParseSinglePart
+    // would fold `div span` into the single base name "div span", which
+    // matches no tag, so a negation would come out true and the rule
+    // would apply to everything -- the wrong direction for a selector the
+    // engine does not understand. (Until the selector splitter learned to
+    // skip nested groups this was unreachable, because the space split the
+    // selector before it ever got here.)
+    if (css::FindTopLevel(one, " \n\r\t>+~") != std::string_view::npos) {
+      return std::nullopt;
+    }
+    entries.push_back(one);
+    if (comma == std::string_view::npos) {
+      break;
+    }
+    rest = rest.substr(comma + 1);
+  }
+  return std::ranges::any_of(entries, [&](std::string_view one) {
+    // `root` is only needed by the `self` base, which is meaningless in such
+    // a list -- an element either is the component root or is not, and
+    // negating that is not something a stylesheet can usefully say.
+    std::vector<std::string> inner_pseudos;
+    const css::SelectorPart inner_part = css::ParseCompound(one, inner_pseudos);
+    return MatchSelectorPart(element, nullptr, inner_part) &&
+           MatchPseudos(element, inner_pseudos, depth + 1, scope);
+  });
+}
+
 // Whether `element` matches one pseudo-class token: the text after the ':',
 // argument included -- `hover`, `nth-child(2)`, `not(.x:first-child)`.
 //
@@ -1171,65 +1236,30 @@ bool MatchOnePseudo(const Element* element,
     // depending on the parity of the nesting. Refusing the whole token up
     // front means a selector nested past the cap matches nothing, like any
     // other selector this matcher cannot evaluate. Checked only at the top
-    // level, and only for the one token kind that can recurse, so the scan
+    // level, and only for the token kinds that can recurse, so the scan
     // does not land on every pseudo-class of every element.
     if (depth == 0 && MaxParenDepth(pseudo) > kMaxPseudoDepth) {
       return false;
     }
-    // A comma-separated list of compound selectors, pseudo-classes included
-    // (`:not(.a:first-child, #b)`). Each entry must be a single compound:
-    // combinators inside the negation are not supported and match nothing.
-    auto trim = [](std::string_view text) {
-      while (!text.empty() &&
-             std::isspace(static_cast<unsigned char>(text.front()))) {
-        text.remove_prefix(1);
-      }
-      while (!text.empty() &&
-             std::isspace(static_cast<unsigned char>(text.back()))) {
-        text.remove_suffix(1);
-      }
-      return text;
-    };
+    const std::optional<bool> any = MatchCompoundList(
+        element, std::string_view(pseudo).substr(4, pseudo.size() - 5), depth,
+        scope);
+    return any && !*any;
+  }
 
-    std::string_view rest =
-        trim(std::string_view(pseudo).substr(4, pseudo.size() - 5));
-    if (rest.empty()) {
-      return false;
-    }
-    while (true) {
-      const size_t comma = css::FindTopLevel(rest, ",");
-      const std::string_view one =
-          trim(comma == std::string_view::npos ? rest : rest.substr(0, comma));
-      // An empty entry means a stray or trailing comma. Treat the whole
-      // argument as malformed rather than silently ignoring the gap.
-      if (one.empty()) {
+  // `:is()` and `:where()` match the same elements; they differ only in
+  // specificity, which the selector parser accounts for.
+  for (std::string_view name : {"is(", "where("}) {
+    if (pseudo.starts_with(name) && pseudo.ends_with(")")) {
+      if (depth == 0 && MaxParenDepth(pseudo) > kMaxPseudoDepth) {
         return false;
       }
-      // A combinator makes the entry a complex selector, which this matcher
-      // cannot evaluate. Rejecting it explicitly matters: ParseSinglePart
-      // would fold `div span` into the single base name "div span", which
-      // matches no tag, so the negation would come out true and the rule
-      // would apply to everything -- the wrong direction for a selector the
-      // engine does not understand. (Until the selector splitter learned to
-      // skip nested groups this was unreachable, because the space split the
-      // selector before it ever got here.)
-      if (css::FindTopLevel(one, " \n\r\t>+~") != std::string_view::npos) {
-        return false;
-      }
-      // `root` is only needed by the `self` base, which is meaningless inside
-      // :not() -- an element either is the component root or is not, and
-      // negating that is not something a stylesheet can usefully say.
-      std::vector<std::string> inner_pseudos;
-      const css::SelectorPart inner_part =
-          css::ParseCompound(one, inner_pseudos);
-      if (MatchSelectorPart(element, nullptr, inner_part) &&
-          MatchPseudos(element, inner_pseudos, depth + 1, scope)) {
-        return false;
-      }
-      if (comma == std::string_view::npos) {
-        return true;
-      }
-      rest = rest.substr(comma + 1);
+      const std::optional<bool> any =
+          MatchCompoundList(element,
+                            std::string_view(pseudo).substr(
+                                name.size(), pseudo.size() - name.size() - 1),
+                            depth, scope);
+      return any && *any;
     }
   }
 
@@ -1920,6 +1950,28 @@ void ResolveElementStyle(Element* element,
         // already specificity order, so the check almost always scans and then
         // sorts anyway.
         std::sort(matched.begin(), matched.end(), precedes);
+
+        // An element matching several entries of one `:is()` takes that rule
+        // once, at its strongest: applying `lighten(10%)` twice would darken
+        // nothing but lighten twice. The selectors an :is() expands into sit
+        // together in the sheet, after the one that is not marked.
+        if (std::ranges::any_of(matched, &css::Ruleset::expansion)) {
+          auto source = [](const css::Ruleset* ruleset) {
+            while (ruleset->expansion) {
+              --ruleset;
+            }
+            return ruleset;
+          };
+          std::vector<const css::Ruleset*> seen;
+          for (size_t i = matched.size(); i-- > 0;) {
+            const css::Ruleset* from = source(matched[i]);
+            if (std::ranges::contains(seen, from)) {
+              matched.erase(matched.begin() + static_cast<std::ptrdiff_t>(i));
+            } else {
+              seen.push_back(from);
+            }
+          }
+        }
       }
 
       // ::before and ::after rules style the boxes generated inside the
