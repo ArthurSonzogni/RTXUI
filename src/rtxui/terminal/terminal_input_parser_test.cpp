@@ -233,12 +233,7 @@ TEST_CASE("Event.MouseReporting", "[terminal]") {
   parser.Add('2');
   parser.Add('R');
 
-  auto event = parser.GetEvent();
-  REQUIRE(event.has_value());
-  auto* cursor_position = event->get_if<Event::CursorPosition>();
-  CHECK(cursor_position);
-  CHECK(cursor_position->x == 42);
-  CHECK(cursor_position->y == 12);
+  // A cursor position report: RTXUI never asks for one, so it is dropped.
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -531,11 +526,7 @@ TEST_CASE("Event.DeviceControlString", "[terminal]") {
   parser.Add(27);   // ESC
   parser.Add(92);   // (backslash)
 
-  auto event = parser.GetEvent();
-  REQUIRE(event.has_value());
-  auto* cursor_shape = event->get_if<Event::CursorShape>();
-  CHECK(cursor_shape);
-  CHECK(cursor_shape->shape == 1);
+  // A cursor shape report: RTXUI never asks for one, so it is dropped.
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -670,7 +661,6 @@ TEST_CASE("Event's converting constructor accepts only its alternatives",
   static_assert(std::is_constructible_v<Event, Event::Keyboard>);
   static_assert(std::is_constructible_v<Event, Event::Mouse>);
   static_assert(std::is_constructible_v<Event, Event::Resized>);
-  static_assert(std::is_constructible_v<Event, Event::CursorShape>);
 
   // Things that are not an alternative do not, rather than failing somewhere
   // deeper with a variant error.
