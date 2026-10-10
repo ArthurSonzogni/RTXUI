@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/style/style.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <optional>
 #include <string_view>
@@ -349,6 +350,8 @@ SelectorPart ParseCompound(std::string_view text,
 
 namespace {
 
+int Specificity(const ParsedSelector& parsed);
+
 auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   while (!current.empty() && IsWhiteSpace(current.front())) {
     current.remove_prefix(1);
@@ -447,10 +450,149 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
     parsed.parents.push_back(std::move(parent_part));
   }
 
-  // Specificity is summed over every compound in the selector, ancestors
-  // included, exactly as CSS does it. `*` contributes nothing, and a `base` of
-  // "self" is the component's own root rather than an element name, so it does
-  // not count as a type either.
+  parsed.specificity = Specificity(parsed);
+  return parsed;
+}
+
+// The weight of a :where() argument, which `parsed` must not count.
+struct Weight {
+  int ids = 0;
+  int classes = 0;
+  int types = 0;
+};
+
+// Rewrites each `:is()` / `:where()` of the selector's own compound into the
+// selectors it stands for: `span:is(.a, #b)` becomes `span.a` and `span#b`.
+//
+// Without this they would stay pseudo-classes, and every rule with a
+// pseudo-class is applied in the second, interactive-state pass, on top of
+// all the others -- so `:where(.card) { ... }`, written to be the weakest of
+// rules, would have beaten even an id. Expanded, each selector keeps only the
+// pseudo-classes its arguments actually use, and the cascade weighs it like
+// any other: by its argument's specificity for :is(), with none at all for
+// :where().
+//
+// An argument the expansion cannot express (a combinator, a malformed list,
+// a `self` base) leaves the selector as it is, for the matcher to evaluate.
+std::vector<ParsedSelector> ExpandIsWhere(const ParsedSelector& parsed) {
+  // Bounds on the work one rule may cause, nested :is() included. A rule past
+  // them is handed to the matcher unexpanded, which evaluates it all the same.
+  constexpr size_t kMaxExpansion = 64;
+  constexpr int kMaxSteps = 1024;
+
+  // Selectors still holding an :is() or :where(), and those that no longer do.
+  std::vector<std::pair<ParsedSelector, Weight>> pending = {{parsed, {}}};
+  std::vector<std::pair<ParsedSelector, Weight>> done;
+  for (int step = 0; !pending.empty(); ++step) {
+    if (step > kMaxSteps) {
+      return {parsed};
+    }
+    auto [selector, weight] = std::move(pending.back());
+    pending.pop_back();
+    const auto token_it =
+        std::ranges::find_if(selector.pseudo_classes, [](const auto& token) {
+          return (token.starts_with("is(") || token.starts_with("where(")) &&
+                 token.ends_with(")");
+        });
+    if (token_it == selector.pseudo_classes.end()) {
+      done.emplace_back(std::move(selector), weight);
+      continue;
+    }
+    const std::string token = *token_it;
+    selector.pseudo_classes.erase(token_it);
+    const bool is_where = token.starts_with("where(");
+    const size_t open = token.find('(');
+    std::string_view rest =
+        std::string_view(token).substr(open + 1, token.size() - open - 2);
+    size_t added = 0;
+    while (true) {
+      const size_t comma = FindTopLevel(rest, ",");
+      std::string_view entry =
+          comma == std::string_view::npos ? rest : rest.substr(0, comma);
+      while (!entry.empty() && IsWhiteSpace(entry.front())) {
+        entry.remove_prefix(1);
+      }
+      while (!entry.empty() && IsWhiteSpace(entry.back())) {
+        entry.remove_suffix(1);
+      }
+      if (entry.empty() ||
+          FindTopLevel(entry, " \n\r\t>+~") != std::string_view::npos) {
+        return {parsed};
+      }
+
+      std::vector<std::string> pseudos;
+      const SelectorPart part = ParseCompound(entry, pseudos);
+      ParsedSelector merged = selector;
+      bool matchable = true;
+      if (!part.base.empty() && part.base != "*") {
+        if (part.base == "self" || merged.base == "self") {
+          return {parsed};
+        }
+        // `span:is(div)` matches nothing.
+        matchable = merged.base.empty() || merged.base == "*" ||
+                    merged.base == part.base;
+        merged.base = part.base;
+      }
+      if (!part.id.empty()) {
+        matchable = matchable && (merged.id.empty() || merged.id == part.id);
+        merged.id = part.id;
+      }
+      if (matchable) {
+        merged.classes.insert(merged.classes.end(), part.classes.begin(),
+                              part.classes.end());
+        merged.attributes.insert(merged.attributes.end(),
+                                 part.attributes.begin(),
+                                 part.attributes.end());
+        Weight merged_weight = weight;
+        if (is_where) {
+          // Everything the argument brings, except what a :where() inside
+          // it brings, which that one subtracts itself once expanded.
+          merged_weight.ids += part.id.empty() ? 0 : 1;
+          merged_weight.classes += static_cast<int>(
+              part.classes.size() + part.attributes.size() +
+              std::ranges::count_if(pseudos, [](const auto& pseudo) {
+                return !pseudo.starts_with("where(");
+              }));
+          merged_weight.types +=
+              (part.base.empty() || part.base == "*") ? 0 : 1;
+        }
+        merged.pseudo_classes.insert(merged.pseudo_classes.end(),
+                                     pseudos.begin(), pseudos.end());
+        pending.emplace_back(std::move(merged), merged_weight);
+        ++added;
+        if (pending.size() + done.size() > kMaxExpansion) {
+          return {parsed};
+        }
+      }
+      if (comma == std::string_view::npos) {
+        break;
+      }
+      rest = rest.substr(comma + 1);
+    }
+    if (added == 0) {
+      return {parsed};
+    }
+  }
+
+  // Popped from the back, so the expansions came out last entry first.
+  std::ranges::reverse(done);
+  std::vector<ParsedSelector> expanded;
+  for (auto& [selector, weight] : done) {
+    const int full = Specificity(selector);
+    selector.specificity =
+        MakeSpecificity(std::max(0, (full >> 20) - weight.ids),
+                        std::max(0, ((full >> 10) & 1023) - weight.classes),
+                        std::max(0, (full & 1023) - weight.types));
+    expanded.push_back(std::move(selector));
+  }
+  return expanded;
+}
+
+// Specificity is summed over every compound in the selector, ancestors
+// included, exactly as CSS does it. `*` contributes nothing, and a `base` of
+// "self" is the component's own root rather than an element name, so it does
+// not count as a type either.
+int Specificity(const ParsedSelector& parsed) {
   int ids = 0;
   int classes = 0;
   int types = 0;
@@ -465,16 +607,16 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   count_compound(parsed.base, parsed.id, parsed.classes.size(),
                  parsed.attributes.size());
   // Pseudo-classes weigh the same as a class in CSS, pseudo-elements the
-  // same as a type.
-  classes += static_cast<int>(parsed.pseudo_classes.size());
+  // same as a type. `:where()` weighs nothing, which is what it is for.
+  classes += static_cast<int>(std::ranges::count_if(
+      parsed.pseudo_classes,
+      [](const std::string& pseudo) { return !pseudo.starts_with("where("); }));
   types += parsed.pseudo_element.empty() ? 0 : 1;
   for (const SelectorPart& parent : parsed.parents) {
     count_compound(parent.base, parent.id, parent.classes.size(),
                    parent.attributes.size());
   }
-  parsed.specificity = MakeSpecificity(ids, classes, types);
-
-  return parsed;
+  return MakeSpecificity(ids, classes, types);
 }
 
 std::string CombineSelectors(const std::string& parent,
@@ -632,9 +774,12 @@ auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
       ruleset.selector = sel;
       ruleset.declarations = declarations;
       ruleset.media_query = std::string(media_query);
-      rulesets.push_back(std::move(ruleset));
-      rulesets.back().parsed_selector =
-          ParseSelectorString(rulesets.back().selector);
+      for (ParsedSelector& parsed :
+           ExpandIsWhere(ParseSelectorString(ruleset.selector))) {
+        rulesets.push_back(ruleset);
+        rulesets.back().parsed_selector = std::move(parsed);
+        ruleset.expansion = true;
+      }
     }
   }
 
@@ -936,6 +1081,9 @@ auto EvaluateMediaQuery(std::string_view query) -> bool {
 auto Print(const StyleSheet& stylesheet) -> std::string {
   std::string result;
   for (const auto& ruleset : stylesheet) {
+    if (ruleset.expansion) {
+      continue;
+    }
     if (!ruleset.keyframes_name.empty()) {
       result += "@keyframes " + ruleset.keyframes_name + " {\n  " +
                 ruleset.selector + " {\n";
