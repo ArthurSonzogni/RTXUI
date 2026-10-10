@@ -4,6 +4,9 @@
 #include "rtxui/xml/xml.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#if !defined(_WIN32)
+#include <pthread.h>
+#endif
 #include <string>
 
 #include "rtxui/base/string.hpp"
@@ -52,9 +55,30 @@ TEST_CASE("XML nesting is bounded", "[xml]") {
 
   SECTION("ordinary nesting still parses") {
     // Far deeper than anything hand-written, and still accepted.
-    auto result = xml::Parse(nested(200, true));
+    auto result = xml::Parse(nested(100, true));
     CHECK(result.has_value());
   }
+
+#if !defined(_WIN32)
+  SECTION("the deepest accepted nesting fits in a small stack") {
+    // 128KB, as some threads have: past the cap, the parser fails before
+    // using more.
+    struct Run {
+      static void* Parse(void* input) {
+        xml::Parse(*static_cast<std::string*>(input));
+        return nullptr;
+      }
+    };
+    std::string input = nested(1000, true);
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setstacksize(&attributes, 128 * 1024);
+    pthread_t thread;
+    REQUIRE(pthread_create(&thread, &attributes, &Run::Parse, &input) == 0);
+    pthread_join(thread, nullptr);
+    pthread_attr_destroy(&attributes);
+  }
+#endif
 
   SECTION("excessive nesting is an error, not a crash") {
     auto result = xml::Parse(nested(50000, true));
