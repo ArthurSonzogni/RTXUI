@@ -1133,9 +1133,11 @@ std::pair<std::string_view, std::string_view> SplitScrollbarColors(
   return {first, rest};
 }
 
-// A time value: `2s`, `150ms`. Negative times are refused, as CSS refuses a
-// negative duration.
-std::optional<float> ParseTimeSeconds(std::string_view text) {
+// A time value: `2s`, `150ms`. Negative times are refused unless
+// `allow_negative`: as in CSS, a duration cannot be negative, but a delay can,
+// starting the animation part way through.
+std::optional<float> ParseTimeSeconds(std::string_view text,
+                                      bool allow_negative = false) {
   float scale = 1.0f;
   if (text.ends_with("ms")) {
     text.remove_suffix(2);
@@ -1149,10 +1151,12 @@ std::optional<float> ParseTimeSeconds(std::string_view text) {
   const auto [ptr, ec] =
       std::from_chars(text.data(), text.data() + text.size(), value);
   if (text.empty() || ec != std::errc() || ptr != text.data() + text.size() ||
-      value < 0.0f) {
+      (value < 0.0f && !allow_negative)) {
     return std::nullopt;
   }
-  return std::min(value, static_cast<float>(kMaxCssNumber)) * scale;
+  return std::clamp(value, -static_cast<float>(kMaxCssNumber),
+                    static_cast<float>(kMaxCssNumber)) *
+         scale;
 }
 
 // Whether `text` names an easing curve ApplyEasing understands.
@@ -1279,8 +1283,11 @@ std::optional<TransitionConfig> ParseTransitionShorthand(
   bool has_delay = false;
   bool has_timing = false;
   for (std::string_view word : SplitWords(text)) {
-    if (auto time = ParseTimeSeconds(word)) {
+    if (auto time = ParseTimeSeconds(word, /*allow_negative=*/true)) {
       if (!has_duration) {
+        if (*time < 0.0f) {
+          return std::nullopt;
+        }
         config.duration_seconds = *time;
         has_duration = true;
       } else if (!has_delay) {
@@ -1323,8 +1330,11 @@ std::optional<AnimationConfig> ParseAnimationShorthand(std::string_view text) {
   bool has_state = false;
   bool has_name = false;
   for (std::string_view word : SplitWords(text)) {
-    if (auto time = ParseTimeSeconds(word)) {
+    if (auto time = ParseTimeSeconds(word, /*allow_negative=*/true)) {
       if (!has_duration) {
+        if (*time < 0.0f) {
+          return std::nullopt;
+        }
         config.duration_seconds = *time;
         has_duration = true;
       } else if (!has_delay) {
@@ -1607,7 +1617,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     const bool is_duration = p == "animation-duration";
     if (ApplyAnimationLonghand(
             style, v, [&](AnimationConfig& config, std::string_view value) {
-              auto time = ParseTimeSeconds(value);
+              auto time = ParseTimeSeconds(value, !is_duration);
               if (!time) {
                 return false;
               }
