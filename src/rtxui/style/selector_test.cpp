@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "catch2/catch_message.hpp"
 #include "rtxui/base/clock.hpp"
@@ -1184,4 +1185,135 @@ TEST_CASE("A pseudo-class rule takes its place in the cascade",
   CHECK(at("#important")->style.margin.left == 3);
   // A pseudo-class rule still outranks a less specific one written after it.
   CHECK(at("#later")->style.margin.left == 5);
+}
+
+namespace {
+
+class SiblingRemovalApp : public rtxui::Component<SiblingRemovalApp> {
+ public:
+  bool shown = true;
+  SiblingRemovalApp() { Bind(shown); }
+  std::string_view view = R"(
+    <div>
+      <if condition="{shown}"><span class="a">A</span></if>
+      <span id="next" class="b">B</span>
+      <span id="last" class="c">C</span>
+    </div>
+    <style>
+      .a + .b { margin-left: 1; }
+      .a ~ .c { margin-right: 2; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Removing an element restyles the siblings after it",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<SiblingRemovalApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(20, 3);
+  rtxui::Screen screen(app, device);
+  screen.Draw();
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+  CHECK(at("#next")->style.margin.left == 1);
+  CHECK(at("#last")->style.margin.right == 2);
+
+  rtxui::PostTask([&] { app->shown = false; });
+  screen.Step();
+  CHECK(at("#next")->style.margin.left == 0);
+  CHECK(at("#last")->style.margin.right == 0);
+
+  rtxui::PostTask([&] { app->shown = true; });
+  screen.Step();
+  CHECK(at("#next")->style.margin.left == 1);
+  CHECK(at("#last")->style.margin.right == 2);
+}
+
+namespace {
+
+class KeyedListRemovalApp : public rtxui::Component<KeyedListRemovalApp> {
+ public:
+  std::vector<std::string> items = {"a", "x", "b", "c"};
+  KeyedListRemovalApp() { Bind(items); }
+  std::string_view view = R"(
+    <div>
+      <for each="{items}" as="item" key="{item}"><span class="{item}">{item}</span></for>
+    </div>
+    <style>
+      .a + .b { margin-left: 1; }
+      .x + .b { margin-left: 3; }
+      .x ~ .c { margin-right: 2; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Removing a keyed list item restyles the items after it",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<KeyedListRemovalApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(20, 3);
+  rtxui::Screen screen(app, device);
+  screen.Draw();
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+  CHECK(at(".b")->style.margin.left == 3);
+  CHECK(at(".c")->style.margin.right == 2);
+  Element* const b = at(".b");
+
+  // Removing `x` keeps the elements of `b` and `c`, which now follow `a`.
+  rtxui::PostTask([&] { std::erase(app->items, "x"); });
+  screen.Step();
+  CHECK(at(".b") == b);
+  CHECK(at(".b")->style.margin.left == 1);
+  CHECK(at(".c")->style.margin.right == 0);
+}
+
+namespace {
+
+class ListRemovalApp : public rtxui::Component<ListRemovalApp> {
+ public:
+  std::vector<std::string> items = {"a", "b", "c"};
+  ListRemovalApp() { Bind(items); }
+  std::string_view view = R"(
+    <div>
+      <for each="{items}" as="item"><span class="{item}">{item}</span></for>
+    </div>
+    <style>
+      .a + .b { margin-left: 1; }
+      .a ~ .c { margin-right: 2; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Removing a list item restyles the items after it",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<ListRemovalApp>::New();
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(20, 3);
+  rtxui::Screen screen(app, device);
+  screen.Draw();
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+  CHECK(at(".b")->style.margin.left == 1);
+  CHECK(at(".c")->style.margin.right == 2);
+
+  rtxui::PostTask([&] { app->items.erase(app->items.begin()); });
+  screen.Step();
+  CHECK(at(".b")->style.margin.left == 0);
+  CHECK(at(".c")->style.margin.right == 0);
 }

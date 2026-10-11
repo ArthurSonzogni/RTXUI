@@ -578,7 +578,9 @@ void Element::DetachFromParent() {
   auto& siblings = parent_->children_;
   for (auto it = siblings.begin(); it != siblings.end(); ++it) {
     if (it->get() == this) {
+      const auto index = static_cast<size_t>(it - siblings.begin());
       siblings.erase(it);
+      parent_->PrecedingSiblingsChanged(index);
       break;
     }
   }
@@ -597,6 +599,7 @@ void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
   children_[index]->parent_ = nullptr;
   new_child->parent_ = this;
   children_[index] = std::move(new_child);
+  PrecedingSiblingsChanged(index + 1);
 }
 
 void Element::MoveChild(size_t from, size_t to) {
@@ -608,6 +611,14 @@ void Element::MoveChild(size_t from, size_t to) {
   Ref<Element> child = std::move(children_[from]);
   children_.erase(children_.begin() + from);
   children_.insert(children_.begin() + to, std::move(child));
+  PrecedingSiblingsChanged(std::min(from, to));
+}
+
+void Element::PrecedingSiblingsChanged(size_t index) {
+  if (index < children_.size()) {
+    children_[index]->ClearResolvedStyles();
+    children_[index]->selector_inputs_changed = true;
+  }
 }
 
 void Element::TruncateChildren(size_t count) {

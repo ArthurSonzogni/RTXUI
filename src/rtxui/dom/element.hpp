@@ -382,6 +382,11 @@ class RTXUI_EXPORT Element : public RefCounted {
   }
 
  private:
+  /// Marks the child at `index`, if any, whose preceding siblings just
+  /// changed: a `+` or `~` selector may now match it, and the children after
+  /// it, differently.
+  void PrecedingSiblingsChanged(size_t index);
+
   /// FNV-1a over the class list. Only ever compared against itself, so the
   /// choice of hash matters only for collisions, and a collision costs a
   /// skipped restyle rather than anything unsafe.
