@@ -22,6 +22,7 @@
 #include <meta>
 #endif
 
+#include <rtxui/bind.hpp>
 #include <rtxui/diagnostic.hpp>
 #include <rtxui/rtxui_export.hpp>
 
@@ -684,13 +685,6 @@ class Component : public ComponentBase {
               nullptr, nullptr});
   }
 };
-
-// Bind(x) registers state variables, computed properties, or callbacks.
-#define Bind(x, ...) \
-  this->Import(#x, &std::decay_t<decltype(*this)>::x, ##__VA_ARGS__)
-
-// BindCollection(name, x) registers a collection with an explicit name.
-#define BindCollection(name, ...) this->Import(name, ##__VA_ARGS__)
 
 RTXUI_EXPORT void RegisterGlobalComponent(std::string_view name,
                                           ComponentFactory factory);
