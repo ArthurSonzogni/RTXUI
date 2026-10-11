@@ -141,6 +141,36 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  # C++26 reflection: GCC 16 builds RTXUI with RTXUI_HAS_REFLECTION, which no
+  # other job does. Fails if CMake did not enable it: the probe once failed
+  # under every compiler, and the reflection code went unbuilt unnoticed.
+  test-reflection:
+    name: GCC 16 Reflection
+    runs-on: ubuntu-latest
+    container: gcc:16
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: apt-get update && apt-get install -y cmake ninja-build
+
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DRTXUI_BUILD_TESTS=ON -DRTXUI_BUILD_EXAMPLES=ON \
+            -DRTXUI_BUILD_BENCHMARKS=OFF | tee configure.log
+          grep -q "C++26 Reflection enabled" configure.log ||
+            { echo "::error::GCC 16 did not enable C++26 reflection"; exit 1; }
+
+      - name: Build
+        run: cmake --build build
+
+      # The PTY sweep of the examples takes minutes and does not depend on
+      # reflection; the other Linux jobs run it.
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -E smoke_examples
+
   benchmarks:
     name: Benchmarks (smoke)
     runs-on: ubuntu-latest
