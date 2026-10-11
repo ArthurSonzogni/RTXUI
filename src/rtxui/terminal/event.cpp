@@ -149,6 +149,8 @@ std::string Event::Resized::Print() const {
          std::to_string(height) + ")";
 }
 
+bool Event::operator==(const Event&) const = default;
+
 std::string Event::Print() const {
   return std::visit([](const auto& data) { return data.Print(); }, data_);
 }
