@@ -15,9 +15,9 @@
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
-#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
+#include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
 
@@ -47,18 +47,7 @@ TEST_CASE("A flex item that refuses to shrink is not overlapped",
   // size they took, so an item held at its min-width had the next one drawn
   // on top of its last cell.
   auto container = rtxui::Ref<FlexMinWidthComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {16, rtxui::MeasureMode::Exactly},
-      {4, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-  Texture texture(16, 4);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 16, 4);
 
   auto* first = container->Root()->QuerySelector("#a");
   auto* second = container->Root()->QuerySelector("#b");
@@ -111,18 +100,7 @@ TEST_CASE("A block in an inline context takes its own line",
   // pushes the next down anyway, so it only showed once a block had a width
   // small enough for two to fit.
   auto container = rtxui::Ref<BlockInInlineComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {30, rtxui::MeasureMode::Exactly},
-      {10, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-  Texture texture(30, 10);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 30, 10);
 
   auto row_text = [&](int y) {
     std::string row;
@@ -201,18 +179,7 @@ TEST_CASE("Extreme sizes lay out without overflowing", "[component][limits]") {
   // measuring wrong, which is what makes it a guard rather than a check of
   // one number.
   auto container = rtxui::Ref<ExtremeSizeComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {40, rtxui::MeasureMode::Exactly},
-      {12, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-  Texture texture(40, 12);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 40, 12);
 
   // Whatever the engine settles on, it must be a size rather than a wrapped
   // one: the failure this guards against produced INT_MIN.
@@ -349,19 +316,7 @@ TEST_CASE("Inline span background-color is applied when painted",
   // unaffected). This is what made textarea/input's .selection highlight
   // invisible.
   auto container = rtxui::Ref<InlineSpanBackgroundTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {40, rtxui::MeasureMode::Exactly},
-      {3, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(40, 3);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 40, 3);
 
   std::string rendered = texture.Render();
   auto pos = rendered.find("highlighted");

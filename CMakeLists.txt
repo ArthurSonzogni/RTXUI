@@ -304,6 +304,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/component/animation_test.cpp"
     "src/rtxui/component/binding_test.cpp"
     "src/rtxui/component/component_test.cpp"
+    "src/rtxui/testing/render.cpp"
     "src/rtxui/component/default/checkbox/checkbox_test.cpp"
     "src/rtxui/component/default/default_components_test.cpp"
     "src/rtxui/component/default/details/details_test.cpp"

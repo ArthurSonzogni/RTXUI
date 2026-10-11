@@ -35,14 +35,12 @@
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
-#include "rtxui/layout/layout.hpp"
-#include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
-#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
 
@@ -565,17 +563,7 @@ TEST_CASE("Anchor component registration and default styling",
   REQUIRE(href != nullptr);
   CHECK(*href == "https://example.com");
 
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = PaintComponent(*container, 80, 24);
 
   bool found = false;
   for (int y = 0; y < texture.height(); ++y) {

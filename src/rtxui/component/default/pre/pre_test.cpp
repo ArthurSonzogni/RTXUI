@@ -4,18 +4,14 @@
 #include "rtxui/component/default/pre/pre.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <memory>
 #include <string>
 #include <string_view>
 
 #include "rtxui/component.hpp"
 #include "rtxui/component/default/code/code.hpp"
-#include "rtxui/layout/layout.hpp"
-#include "rtxui/layout/layout_tree_builder.hpp"
-#include "rtxui/layout/style.hpp"
-#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
+#include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
 
@@ -39,20 +35,7 @@ Line 3</pre>
 
 TEST_CASE("Pre component whitespace preservation", "[component][pre]") {
   auto container = rtxui::Ref<PreTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   std::string rendered = texture.Render();
   CHECK(rendered.find("Line 1") != std::string::npos);
@@ -81,20 +64,7 @@ struct PreCodeTestComponent : public rtxui::Component<PreCodeTestComponent> {
 
 TEST_CASE("Pre code newlines preserved", "[component][pre]") {
   auto container = rtxui::Ref<PreCodeTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   // Each source line must land on its own row.
   std::string rendered = texture.Render();
@@ -139,18 +109,7 @@ TEST_CASE("Pre code newlines preserved through interpolation",
     container->Digest();
   }
 
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = PaintComponent(*container, 80, 24);
 
   std::string rendered = texture.Render();
   auto pos_main = rendered.find("int main()");

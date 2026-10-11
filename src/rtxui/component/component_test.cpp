@@ -36,16 +36,15 @@
 #include "rtxui/component/default/ul/ul.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/dom/text_element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
-#include "rtxui/layout/layout.hpp"
-#include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
-#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/render.hpp"
 
 using rtxui::Color;
 using rtxui::Event;
@@ -485,17 +484,7 @@ TEST_CASE(
   // started with a stray non-breaking space before its first real
   // character.
   auto container = rtxui::Ref<LetterSpacingWrapTestComponent>::New();
-  container->Mount();
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   // "ab cd" at letter-spacing:1, width:5 wraps as "a\xC2\xA0b\xC2\xA0" then
   // "c\xC2\xA0d" - the second line must start with 'c', not an NBSP.
@@ -784,38 +773,14 @@ TEST_CASE(
   // the characters typed since the space. The resulting fragment's declared
   // width undercounted its actual text, corrupting the following wrap.
   auto container = rtxui::Ref<WordWrapStaleSpaceTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
-
-  auto row_text = [&](int y) {
-    std::string row;
-    for (int x = 0; x < texture.width(); ++x) {
-      row += texture[x, y].character;
-    }
-    while (!row.empty() && row.back() == ' ') {
-      row.pop_back();
-    }
-    return row;
-  };
+  auto texture = RenderComponent(container, 80, 24);
 
   // "ab abcdefgh" in a width:6 box: "ab" fits, then "abcdefgh" doesn't fit
   // after it and overflow isn't detected until the 4th character of that
   // word ("ab abc|d"), several characters past the space.
-  CHECK(row_text(0) == "ab");
-  CHECK(row_text(1) == "abcdef");
-  CHECK(row_text(2) == "gh");
+  CHECK(RowText(texture, 0) == "ab");
+  CHECK(RowText(texture, 1) == "abcdef");
+  CHECK(RowText(texture, 2) == "gh");
 }
 
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {

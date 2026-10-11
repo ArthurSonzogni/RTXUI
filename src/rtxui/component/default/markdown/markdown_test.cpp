@@ -14,15 +14,14 @@
 #include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/dom/text_element.hpp"
 #include "rtxui/headless.hpp"
-#include "rtxui/layout/layout.hpp"
-#include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
-#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
 
@@ -206,18 +205,7 @@ TEST_CASE("Markdown code block newlines preserved",
   container->Mount();
   container->Digest();
 
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = PaintComponent(*container, 80, 24);
 
   std::string rendered = texture.Render();
   auto pos_main = rendered.find("int main()");

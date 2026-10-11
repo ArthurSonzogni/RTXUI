@@ -4,7 +4,6 @@
 #include "rtxui/component/default/tabs/tabs.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -15,13 +14,11 @@
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
-#include "rtxui/layout/layout.hpp"
-#include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
-#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
 
@@ -147,17 +144,7 @@ TEST_CASE("Tabs header divider renders as a line under the headers",
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {40, rtxui::MeasureMode::Exactly},
-      {10, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(40, 10);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = PaintComponent(*container, 40, 10);
 
   auto* headers = container->Root()->QuerySelector(".tabs-headers");
   REQUIRE(headers != nullptr);

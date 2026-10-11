@@ -3,7 +3,6 @@
 // the LICENSE file.
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
-#include <memory>
 #include <string>
 #include <string_view>
 
@@ -14,12 +13,9 @@
 #include "rtxui/component/default/i/i.hpp"
 #include "rtxui/component/default/span/span.hpp"
 #include "rtxui/component/default/strong/strong.hpp"
-#include "rtxui/layout/layout.hpp"
-#include "rtxui/layout/layout_tree_builder.hpp"
-#include "rtxui/layout/style.hpp"
-#include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
+#include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
 
@@ -43,20 +39,7 @@ class BoldTestComponent : public rtxui::Component<BoldTestComponent> {
 TEST_CASE("Bold and Strong Components cell.bold rendering",
           "[component][b][strong][paint]") {
   auto container = rtxui::Ref<BoldTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   bool found_bold = false;
   bool found_strong = false;
@@ -123,20 +106,7 @@ class ItalicTestComponent : public rtxui::Component<ItalicTestComponent> {
 TEST_CASE("Italic and Em Components cell.italic rendering",
           "[component][i][em][paint]") {
   auto container = rtxui::Ref<ItalicTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   auto find_italic_run = [&](const std::string& expected) {
     for (int y = 0; y < texture.height(); ++y) {
@@ -188,20 +158,7 @@ class DimTestComponent : public rtxui::Component<DimTestComponent> {
 TEST_CASE("Dim text rendering via font-weight lighter",
           "[component][font-weight][paint]") {
   auto container = rtxui::Ref<DimTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   bool found = false;
   const std::string expected = "Dim text";
@@ -252,20 +209,7 @@ class TextTransformTestComponent
 
 TEST_CASE("Text transform rendering", "[component][text-transform][paint]") {
   auto container = rtxui::Ref<TextTransformTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   std::string all_text;
   for (int y = 0; y < texture.height(); ++y) {
@@ -306,20 +250,7 @@ class LetterSpacingTestComponent
 
 TEST_CASE("Letter spacing rendering", "[component][letter-spacing][paint]") {
   auto container = rtxui::Ref<LetterSpacingTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   std::string all_text;
   for (int y = 0; y < texture.height(); ++y) {
@@ -391,55 +322,25 @@ class EllipsisTestComponent : public rtxui::Component<EllipsisTestComponent> {
 
 TEST_CASE("text-overflow: ellipsis truncates a block", "[component][paint]") {
   auto container = rtxui::Ref<EllipsisTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {30, rtxui::MeasureMode::Exactly},
-      {12, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-  Texture texture(30, 12);
-  rtxui::Paint(root_fragment.get(), texture);
-
-  auto row_text = [&](int y) {
-    std::string row;
-    for (int x = 0; x < texture.width(); ++x) {
-      row += texture[x, y].character;
-    }
-    while (!row.empty() && row.back() == ' ') {
-      row.pop_back();
-    }
-    return row;
-  };
-  auto find_row = [&](std::string_view needle) {
-    for (int y = 0; y < texture.height(); ++y) {
-      if (row_text(y).find(needle) != std::string::npos) {
-        return y;
-      }
-    }
-    return -1;
-  };
+  auto texture = RenderComponent(container, 30, 12);
 
   SECTION("text too wide is truncated and marked") {
-    const int row = find_row("abc.");
+    const int row = FindRow(texture, "abc.");
     REQUIRE(row != -1);
-    CHECK(row_text(row) == "abc...");
+    CHECK(RowText(texture, row) == "abc...");
   }
 
   SECTION("text that fits is left alone") {
-    CHECK(find_row("abcdef") != -1);  // the exact-fit block, unmarked
-    CHECK(find_row("abc") != -1);     // and the short one
+    CHECK(FindRow(texture, "abcdef") != -1);  // the exact-fit block, unmarked
+    CHECK(FindRow(texture, "abc") != -1);     // and the short one
   }
 
   SECTION("truncation lands on a character boundary") {
     // Three double-width glyphs do not fit in six cells alongside the marker,
     // and half a glyph is not an option -- so one whole glyph and the marker.
-    const int row = find_row("\u4f60.");
+    const int row = FindRow(texture, "\u4f60.");
     REQUIRE(row != -1);
-    CHECK(row_text(row) == "\u4f60...");
+    CHECK(RowText(texture, row) == "\u4f60...");
   }
 
   SECTION("a container too narrow for the marker shows what fits") {
@@ -448,14 +349,14 @@ TEST_CASE("text-overflow: ellipsis truncates a block", "[component][paint]") {
     // ".." too.
     bool found = false;
     for (int y = 0; y < texture.height(); ++y) {
-      found = found || row_text(y) == "..";
+      found = found || RowText(texture, y) == "..";
     }
     CHECK(found);
   }
 
   SECTION("clip is unaffected") {
-    CHECK(find_row("abcdefghij") == -1);  // clipped to the container
-    const int row = find_row("abcdef");
+    CHECK(FindRow(texture, "abcdefghij") == -1);  // clipped to the container
+    const int row = FindRow(texture, "abcdef");
     REQUIRE(row != -1);
   }
 }
@@ -482,65 +383,35 @@ class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
 
 TEST_CASE("Tabs expand to tab stops", "[component][tab-size][paint]") {
   auto container = rtxui::Ref<TabStopTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  rtxui::LayoutConstraints viewport = {
-      {40, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-  Texture texture(40, 24);
-  rtxui::Paint(root_fragment.get(), texture);
-
-  auto row_text = [&](int y) {
-    std::string row;
-    for (int x = 0; x < texture.width(); ++x) {
-      row += texture[x, y].character;
-    }
-    while (!row.empty() && row.back() == ' ') {
-      row.pop_back();
-    }
-    return row;
-  };
-  auto find_row = [&](std::string_view needle) {
-    for (int y = 0; y < texture.height(); ++y) {
-      if (row_text(y).find(needle) != std::string::npos) {
-        return y;
-      }
-    }
-    return -1;
-  };
+  auto texture = RenderComponent(container, 40, 24);
 
   SECTION("a tab advances to the next multiple of tab-size") {
     // Not a fixed number of spaces: 'a' sits at column 0 so its tab fills 7,
     // while "abcdefgh" already ends on a stop so its tab fills a whole 8.
-    int row = find_row("a");
+    int row = FindRow(texture, "a");
     REQUIRE(row != -1);
-    CHECK(row_text(row) == "a       b");
-    CHECK(row_text(row + 1) == "xy      z");
-    CHECK(row_text(row + 2) == "abcdefgh        i");
+    CHECK(RowText(texture, row) == "a       b");
+    CHECK(RowText(texture, row + 1) == "xy      z");
+    CHECK(RowText(texture, row + 2) == "abcdefgh        i");
   }
 
   SECTION("the column is counted in cells, not codepoints") {
     // A full-width glyph occupies two cells, so the next stop is 6 away.
-    int row = find_row("\u4f60");
+    int row = FindRow(texture, "\u4f60");
     REQUIRE(row != -1);
-    CHECK(row_text(row) == "\u4f60      w");
+    CHECK(RowText(texture, row) == "\u4f60      w");
   }
 
   SECTION("tab-size moves the stops") {
-    int row = find_row("a   b");
+    int row = FindRow(texture, "a   b");
     REQUIRE(row != -1);
-    CHECK(row_text(row) == "a   b");
+    CHECK(RowText(texture, row) == "a   b");
   }
 
   SECTION("a tab is collapsible whitespace outside pre") {
-    int row = find_row("a b");
+    int row = FindRow(texture, "a b");
     REQUIRE(row != -1);
-    CHECK(row_text(row) == "a b");
+    CHECK(RowText(texture, row) == "a b");
   }
 
   SECTION("no literal tab survives into the painted cells") {
@@ -548,43 +419,22 @@ TEST_CASE("Tabs expand to tab stops", "[component][tab-size][paint]") {
     // own stop, so one reaching the screen would shift the rest of the line
     // and leave the cell diff describing a screen that does not exist.
     for (int y = 0; y < texture.height(); ++y) {
-      CHECK(row_text(y).find('\t') == std::string::npos);
+      CHECK(RowText(texture, y).find('\t') == std::string::npos);
     }
   }
 }
 
 TEST_CASE("Line height rendering", "[component][line-height][paint]") {
   auto container = rtxui::Ref<LineHeightTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
-
-  auto row_text = [&](int y) {
-    std::string row;
-    for (int x = 0; x < texture.width(); ++x) {
-      row += texture[x, y].character;
-    }
-    return row;
-  };
+  auto texture = RenderComponent(container, 80, 24);
 
   int first_row = -1;
   int second_row = -1;
   for (int y = 0; y < texture.height(); ++y) {
-    if (row_text(y).find("first") != std::string::npos) {
+    if (RowText(texture, y).find("first") != std::string::npos) {
       first_row = y;
     }
-    if (row_text(y).find("second") != std::string::npos) {
+    if (RowText(texture, y).find("second") != std::string::npos) {
       second_row = y;
     }
   }
@@ -616,40 +466,16 @@ class OverflowWrapTestComponent
 
 TEST_CASE("Overflow wrap rendering", "[component][overflow-wrap][paint]") {
   auto container = rtxui::Ref<OverflowWrapTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
-
-  auto row_text = [&](int y) {
-    std::string row;
-    for (int x = 0; x < texture.width(); ++x) {
-      row += texture[x, y].character;
-    }
-    while (!row.empty() && row.back() == ' ') {
-      row.pop_back();
-    }
-    return row;
-  };
+  auto texture = RenderComponent(container, 80, 24);
 
   // Default: the word emergency-breaks at the container edge, and each
   // line stays within the specified width (regression: the break used to
   // land one column too late).
-  CHECK(row_text(0) == "abcdef");
-  CHECK(row_text(1) == "ghijkl");
-  CHECK(row_text(2) == "mno");
+  CHECK(RowText(texture, 0) == "abcdef");
+  CHECK(RowText(texture, 1) == "ghijkl");
+  CHECK(RowText(texture, 2) == "mno");
   // overflow-wrap: normal keeps the word intact and lets it overflow.
-  CHECK(row_text(3) == "abcdefghijklmno");
+  CHECK(RowText(texture, 3) == "abcdefghijklmno");
 }
 
 class WordBreakTestComponent : public rtxui::Component<WordBreakTestComponent> {
@@ -674,42 +500,18 @@ class WordBreakTestComponent : public rtxui::Component<WordBreakTestComponent> {
 TEST_CASE("word-break: break-all wraps mid-word",
           "[component][word-break][paint]") {
   auto container = rtxui::Ref<WordBreakTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
-
-  auto row_text = [&](int y) {
-    std::string row;
-    for (int x = 0; x < texture.width(); ++x) {
-      row += texture[x, y].character;
-    }
-    while (!row.empty() && row.back() == ' ') {
-      row.pop_back();
-    }
-    return row;
-  };
+  auto texture = RenderComponent(container, 80, 24);
 
   // Default: "abcdefgh" (a separate inline <b> child) doesn't fit after
   // "Ab " on line 0, so it's pushed whole to line 1, then emergency-broken
   // there like any overflowing unbreakable word.
-  CHECK(row_text(0) == "Ab");
-  CHECK(row_text(1) == "abcdef");
-  CHECK(row_text(2) == "gh");
+  CHECK(RowText(texture, 0) == "Ab");
+  CHECK(RowText(texture, 1) == "abcdef");
+  CHECK(RowText(texture, 2) == "gh");
   // word-break: break-all fills line 0 to the edge (breaking right after
   // "Ab abc") instead of pushing "abcdefgh" whole to the next line.
-  CHECK(row_text(3) == "Ab abc");
-  CHECK(row_text(4) == "defgh");
+  CHECK(RowText(texture, 3) == "Ab abc");
+  CHECK(RowText(texture, 4) == "defgh");
 }
 
 class StyleDecorationTestComponent
@@ -739,20 +541,7 @@ class StyleDecorationTestComponent
 TEST_CASE("Text Decoration rendering onto cells",
           "[component][style][paint][decoration]") {
   auto container = rtxui::Ref<StyleDecorationTestComponent>::New();
-  container->Mount();
-
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-
-  rtxui::LayoutConstraints viewport = {
-      {80, rtxui::MeasureMode::Exactly},
-      {24, rtxui::MeasureMode::Exactly},
-  };
-  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(80, 24);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = RenderComponent(container, 80, 24);
 
   bool found_u = false;
   bool found_ud = false;
@@ -814,15 +603,7 @@ TEST_CASE("text-decoration: overline reaches the cells and inherits",
           "[component][style][paint][decoration]") {
   auto container = rtxui::Ref<OverlineTestComponent>::New();
   container->Mount();
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
-  REQUIRE(root_box != nullptr);
-  auto root_fragment = rtxui::RunLayout(
-      {root_box.get()},
-      {{20, rtxui::MeasureMode::Exactly}, {4, rtxui::MeasureMode::Exactly}});
-  REQUIRE(root_fragment != nullptr);
-
-  Texture texture(20, 4);
-  rtxui::Paint(root_fragment.get(), texture);
+  auto texture = PaintComponent(*container, 20, 4);
 
   int found = 0;
   for (int y = 0; y < texture.height(); ++y) {

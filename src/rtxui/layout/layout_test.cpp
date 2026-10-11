@@ -27,6 +27,7 @@
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
+#include "rtxui/testing/render.hpp"
 
 namespace rtxui {
 namespace {
@@ -78,28 +79,6 @@ std::string CheckGrid(const std::vector<std::string>& expected) {
     result += line + "\n";
   }
   return result;
-}
-
-// Renders a component into a texture of a fixed size.
-Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
-  // Mount performs the initial Setup() and DOM tree construction.
-  component->Mount();
-
-  // Convert DOM to Layout Tree.
-  auto layout_box = LayoutTreeBuilder::Build(component->Root());
-
-  Texture texture(width, height);
-  if (layout_box) {
-    // Execute Layout algorithm.
-    LayoutConstraints constraints;
-    constraints.width = {width, MeasureMode::Exactly};
-    constraints.height = {height, MeasureMode::Exactly};
-    auto fragment = RunLayout({layout_box.get()}, constraints);
-
-    // Paint the resulting fragments into a texture.
-    Paint(fragment.get(), texture);
-  }
-  return texture;
 }
 
 }  // namespace
