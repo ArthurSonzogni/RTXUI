@@ -1145,3 +1145,43 @@ TEST_CASE("The :focus-visible selector", "[component][css][selector]") {
   click("#field");
   CHECK(at("#field")->style.margin.left == 3);
 }
+
+namespace {
+
+class PseudoCascadeApp : public rtxui::Component<PseudoCascadeApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <span id="first" class="row">a</span>
+      <span id="important" class="row">b</span>
+      <span id="later" class="row">c</span>
+    </div>
+    <style>
+      #first { margin-left: 1; }
+      .row:first-child { margin-left: 2; }
+      #important { margin-left: 3 !important; }
+      .row:nth-child(2) { margin-left: 4; }
+      span:last-child { margin-left: 5; }
+      .row { margin-left: 6; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("A pseudo-class rule takes its place in the cascade",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<PseudoCascadeApp>::New();
+  app->Mount();
+  auto at = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e;
+  };
+  // `#first` (1,0,0) outranks `.row:first-child` (0,2,0).
+  CHECK(at("#first")->style.margin.left == 1);
+  // An !important declaration outranks a normal one from a pseudo-class rule.
+  CHECK(at("#important")->style.margin.left == 3);
+  // A pseudo-class rule still outranks a less specific one written after it.
+  CHECK(at("#later")->style.margin.left == 5);
+}

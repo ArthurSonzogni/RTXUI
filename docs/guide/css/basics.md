@@ -257,20 +257,9 @@ Appending `!important` to a declaration makes it win over normal
 declarations from later rules and over inline styles, as in standard CSS.
 Reach for it rarely; more specific selectors usually express intent better.
 
-::: warning Architectural detail
-An `!important` declaration does not survive a matching pseudo-class rule on the same element: given
-
-```css
-.row       { color: green !important; }
-.row:focus { color: blue; }
-```
-
-a focused `.row` renders blue, where CSS would keep it green. Interactive
-state is resolved in a second pass layered on top of the resting style, and
-that pass applies its normal declarations after the first pass has already
-applied its important ones. Avoid combining `!important` with pseudo-class
-rules for the same property.
-:::
+Rules with a pseudo-class (`:hover`, `:focus`, `:first-child`, …) take part
+in the same cascade: `#save` outranks `.button:hover`, and an `!important`
+declaration outranks a normal one from a `:focus` rule.
 
 ## `inherit`, `initial` and `unset`
 

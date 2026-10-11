@@ -1848,16 +1848,29 @@ void ResolveKeyframes(std::vector<AnimationConfig>& animations,
   }
 }
 
+// The rules a call to ResolveElementStyle considers, and what it does with
+// them.
+enum class StylePass {
+  // The rules without a pseudo-class, into `base_style`.
+  kBase,
+  // Only finds whether a rule with a pseudo-class matches, setting
+  // `matched_pseudo_rule`. Applies nothing.
+  kPseudo,
+  // Every rule, into `target_style`: for an element matching a pseudo-class
+  // rule, which has to take its place in the cascade among the others.
+  kAll,
+};
+
 // Resolves `element` against the rules of one `component` that can style it:
 // the component it is the root of, the one whose template wrote it, or one
 // reaching in through ::part(). ResolveStylesInTree picks which, and in what
 // order.
 void ResolveElementStyle(Element* element,
                          const ComponentBase* component,
-                         bool check_pseudos) {
+                         StylePass pass) {
   const auto* categorized_for_parts =
       ComponentInternals::categorized_rules(*component);
-  if (check_pseudos &&
+  if (pass == StylePass::kPseudo &&
       (!categorized_for_parts || !categorized_for_parts->has_pseudo_classes)) {
     return;
   }
@@ -1865,13 +1878,13 @@ void ResolveElementStyle(Element* element,
   // ::part() rules can match elements the component neither owns nor is the
   // root of. In the base pass, a pseudo ::part() rule still counts: that pass
   // is also what marks the element resolved and rebuilds custom properties.
-  bool has_part_rules =
-      categorized_for_parts &&
-      (!categorized_for_parts->pseudo.part_rules.empty() ||
-       (!check_pseudos && !categorized_for_parts->base.part_rules.empty()));
+  bool has_part_rules = categorized_for_parts &&
+                        (!categorized_for_parts->pseudo.part_rules.empty() ||
+                         (pass != StylePass::kPseudo &&
+                          !categorized_for_parts->base.part_rules.empty()));
 
   if (is_styled || has_part_rules) {
-    if (!check_pseudos) {
+    if (pass == StylePass::kBase) {
       if (element->IsStyleResolvedFor(component)) {
         return;
       }
@@ -1897,144 +1910,152 @@ void ResolveElementStyle(Element* element,
       std::vector<const css::Ruleset*> matched;
       const auto* categorized =
           ComponentInternals::categorized_rules(*component);
-      const RuleBuckets* buckets = nullptr;
+      std::array<const RuleBuckets*, 2> bucket_sets = {};
       if (categorized) {
-        buckets = check_pseudos ? &categorized->pseudo : &categorized->base;
+        switch (pass) {
+          case StylePass::kBase:
+            bucket_sets = {&categorized->base, nullptr};
+            break;
+          case StylePass::kPseudo:
+            bucket_sets = {&categorized->pseudo, nullptr};
+            break;
+          case StylePass::kAll:
+            bucket_sets = {&categorized->base, &categorized->pseudo};
+            break;
+        }
       }
-      if (buckets && is_styled) {
-        auto match_and_apply =
-            [&](const std::vector<const css::Ruleset*>& rulesets,
-                bool is_universal) {
-              for (const auto* ruleset : rulesets) {
-                if (!css::EvaluateMediaQuery(ruleset->media_query)) {
-                  continue;
-                }
-                const auto& parsed = ruleset->parsed_selector;
-                if (is_universal && parsed.base == "self" &&
-                    element != component->Root()) {
-                  continue;
-                }
+      for (const RuleBuckets* buckets : bucket_sets) {
+        if (buckets && is_styled) {
+          auto match_and_apply =
+              [&](const std::vector<const css::Ruleset*>& rulesets,
+                  bool is_universal) {
+                for (const auto* ruleset : rulesets) {
+                  if (!css::EvaluateMediaQuery(ruleset->media_query)) {
+                    continue;
+                  }
+                  const auto& parsed = ruleset->parsed_selector;
+                  if (is_universal && parsed.base == "self" &&
+                      element != component->Root()) {
+                    continue;
+                  }
 
-                if (!parsed.base.empty() && parsed.base != "self" &&
-                    element->tag() != parsed.base) {
-                  continue;
-                }
+                  if (!parsed.base.empty() && parsed.base != "self" &&
+                      element->tag() != parsed.base) {
+                    continue;
+                  }
 
-                if (!parsed.id.empty() && element->id != parsed.id) {
-                  continue;
-                }
+                  if (!parsed.id.empty() && element->id != parsed.id) {
+                    continue;
+                  }
 
-                bool classes_match = true;
-                for (const auto& required_class : parsed.classes) {
-                  bool found = false;
-                  for (const auto& el_class : element->classes) {
-                    if (el_class == required_class) {
-                      found = true;
+                  bool classes_match = true;
+                  for (const auto& required_class : parsed.classes) {
+                    bool found = false;
+                    for (const auto& el_class : element->classes) {
+                      if (el_class == required_class) {
+                        found = true;
+                        break;
+                      }
+                    }
+                    if (!found) {
+                      classes_match = false;
                       break;
                     }
                   }
-                  if (!found) {
-                    classes_match = false;
-                    break;
-                  }
-                }
 
-                if (!classes_match) {
-                  continue;
-                }
-
-                bool attributes_match = true;
-                for (const auto& attr : parsed.attributes) {
-                  const std::string* el_attr = element->GetAttribute(attr.name);
-                  if (!el_attr) {
-                    attributes_match = false;
-                    break;
+                  if (!classes_match) {
+                    continue;
                   }
-                  if (attr.has_value) {
-                    if (*el_attr != attr.value) {
+
+                  bool attributes_match = true;
+                  for (const auto& attr : parsed.attributes) {
+                    const std::string* el_attr =
+                        element->GetAttribute(attr.name);
+                    if (!el_attr) {
                       attributes_match = false;
                       break;
                     }
+                    if (attr.has_value) {
+                      if (*el_attr != attr.value) {
+                        attributes_match = false;
+                        break;
+                      }
+                    }
                   }
-                }
-                if (!attributes_match) {
-                  continue;
-                }
-
-                // Combinators and :has() see only this component's own
-                // template, as the rule's target does.
-                if (!parsed.parents.empty()) {
-                  if (!MatchSelectorParents(element, component->Root(),
-                                            parsed.parents, component)) {
+                  if (!attributes_match) {
                     continue;
                   }
+
+                  // Combinators and :has() see only this component's own
+                  // template, as the rule's target does.
+                  if (!parsed.parents.empty()) {
+                    if (!MatchSelectorParents(element, component->Root(),
+                                              parsed.parents, component)) {
+                      continue;
+                    }
+                  }
+
+                  if (MatchPseudos(element, parsed.pseudo_classes, 0,
+                                   component)) {
+                    matched.push_back(ruleset);
+                  }
                 }
+              };
 
-                if (!check_pseudos ||
-                    MatchPseudos(element, parsed.pseudo_classes, 0,
-                                 component)) {
-                  matched.push_back(ruleset);
-                }
-              }
-            };
+          match_and_apply(buckets->universal, true);
 
-        match_and_apply(buckets->universal, true);
+          auto it_tag = buckets->by_tag.find(element->tag());
+          if (it_tag != buckets->by_tag.end()) {
+            match_and_apply(it_tag->second, false);
+          }
 
-        auto it_tag = buckets->by_tag.find(element->tag());
-        if (it_tag != buckets->by_tag.end()) {
-          match_and_apply(it_tag->second, false);
-        }
+          // Buckets are visited in ascending specificity, because a later
+          // declaration overwrites an earlier one: tag, then class, then id.
+          // Class used to be visited last, which let `.c` override `#t`
+          // whichever order the two rules were written in -- the opposite of
+          // the CSS cascade.
+          for (const auto& cls : element->classes) {
+            auto it_class = buckets->by_class.find(cls);
+            if (it_class != buckets->by_class.end()) {
+              match_and_apply(it_class->second, false);
+            }
+          }
 
-        // Buckets are visited in ascending specificity, because a later
-        // declaration overwrites an earlier one: tag, then class, then id.
-        // Class used to be visited last, which let `.c` override `#t` whichever
-        // order the two rules were written in -- the opposite of the CSS
-        // cascade.
-        for (const auto& cls : element->classes) {
-          auto it_class = buckets->by_class.find(cls);
-          if (it_class != buckets->by_class.end()) {
-            match_and_apply(it_class->second, false);
+          if (!element->id.empty()) {
+            auto it_id = buckets->by_id.find(element->id);
+            if (it_id != buckets->by_id.end()) {
+              match_and_apply(it_id->second, false);
+            }
           }
         }
 
-        if (!element->id.empty()) {
-          auto it_id = buckets->by_id.find(element->id);
-          if (it_id != buckets->by_id.end()) {
-            match_and_apply(it_id->second, false);
+        // ::part() rules: unlike every bucket above, these can match `element`
+        // even when `is_styled` is false (see MatchPartSelector) -- checked
+        // regardless of `buckets && is_styled` above.
+        if (buckets) {
+          for (const auto* ruleset : buckets->part_rules) {
+            if (!css::EvaluateMediaQuery(ruleset->media_query)) {
+              continue;
+            }
+            const auto& parsed = ruleset->parsed_selector;
+            if (!MatchPartSelector(element, component, parsed)) {
+              continue;
+            }
+            // The part belongs to the template that wrote it, so that is
+            // where its pseudo-classes look.
+            if (MatchPseudos(element, parsed.pseudo_classes, 0,
+                             element->owner_component())) {
+              matched.push_back(ruleset);
+            }
           }
         }
       }
 
-      // ::part() rules: unlike every bucket above, these can match `element`
-      // even when `is_styled` is false (see MatchPartSelector) -- checked
-      // regardless of `buckets && is_styled` above.
-      if (buckets) {
-        for (const auto* ruleset : buckets->part_rules) {
-          if (!css::EvaluateMediaQuery(ruleset->media_query)) {
-            continue;
-          }
-          const auto& parsed = ruleset->parsed_selector;
-          if (!MatchPartSelector(element, component, parsed)) {
-            continue;
-          }
-          // The part belongs to the template that wrote it, so that is
-          // where its pseudo-classes look.
-          if (!check_pseudos || MatchPseudos(element, parsed.pseudo_classes, 0,
-                                             element->owner_component())) {
-            matched.push_back(ruleset);
-          }
+      if (pass == StylePass::kPseudo) {
+        if (!matched.empty()) {
+          element->matched_pseudo_rule = true;
         }
-      }
-
-      // The pseudo pass only ever layers matched rules (and the inline style
-      // that must keep outranking them) on top of the base style, so with
-      // nothing matched there is nothing left to do. Stopping here skips
-      // re-parsing the inline style of every element on every pass.
-      if (check_pseudos && matched.empty()) {
         return;
-      }
-      if (check_pseudos) {
-        element->matched_pseudo_rule = true;
       }
 
       // Order the cascade. Declarations are applied in sequence and a later one
@@ -2121,7 +2142,7 @@ void ResolveElementStyle(Element* element,
       // pass matters: an element hosting a nested component is styled by the
       // nested component first, before the outer component has applied the
       // parent's --* declarations.
-      if (!check_pseudos) {
+      if (pass == StylePass::kBase) {
         auto collect_custom_properties =
             [&](const css::Declaration& declaration) {
               if (declaration.property.starts_with("--")) {
@@ -2150,13 +2171,14 @@ void ResolveElementStyle(Element* element,
         }
       }
 
-      // In the pseudo pass, --* declarations from matching pseudo-class rules
-      // (e.g. ":hover { --glow: ...; }") overlay the element's resolved map
-      // for this element's own substitutions. The overlay is intentionally not
-      // stored: it must not leak into descendants or later frames.
+      // Rebuilding the target, the --* declarations of the matching rules,
+      // pseudo-class ones included (e.g. ":hover { --glow: ...; }"), overlay
+      // the element's resolved map in cascade order for this element's own
+      // substitutions. The overlay is intentionally not stored: it must not
+      // leak into descendants or later frames.
       css::CustomProperties pseudo_props;
       bool has_pseudo_props = false;
-      if (check_pseudos) {
+      if (pass == StylePass::kAll) {
         for (const auto* ruleset : matched) {
           for (const auto& declaration : ruleset->declarations) {
             if (declaration.property.starts_with("--")) {
@@ -2175,7 +2197,7 @@ void ResolveElementStyle(Element* element,
 
       // Phase 2: apply regular declarations, expanding var() references.
       ComputedStyle& style_out =
-          check_pseudos ? element->target_style : element->base_style;
+          pass == StylePass::kAll ? element->target_style : element->base_style;
       // Declaring any animation property replaces the list, which is how the
       // animations this component's rules declare are told from the others.
       // Compared around each declaration, not across them all: a list freed
@@ -2209,18 +2231,9 @@ void ResolveElementStyle(Element* element,
             }
           }
         }
-        // Style resolution runs twice per element: once for rules without a
-        // pseudo-class, then once for those with. The inline style has to be
-        // re-applied in the pseudo pass so it still outranks, say, a matching
-        // `.a:hover` rule -- but only when that pass actually matched
-        // something. Re-applying it unconditionally clobbered anything the base
-        // pass had set from an `!important` declaration, since the base pass's
-        // important round runs before the pseudo pass begins.
-        if (!check_pseudos || !matched.empty()) {
-          for (const auto& declaration : inline_declarations) {
-            if (declaration.important == important) {
-              visit(declaration);
-            }
+        for (const auto& declaration : inline_declarations) {
+          if (declaration.important == important) {
+            visit(declaration);
           }
         }
       };
@@ -2252,13 +2265,14 @@ void ResolveElementStyle(Element* element,
       }
 
       if (!generated_rules.empty()) {
-        ApplyGeneratedContent(
-            element, generated_rules, active_props,
-            check_pseudos ? element->generated : element->base_generated);
+        ApplyGeneratedContent(element, generated_rules, active_props,
+                              pass == StylePass::kAll
+                                  ? element->generated
+                                  : element->base_generated);
       }
     }  // matched/inline declarations scope (bypassed by the goto above).
 
-    if (!check_pseudos) {
+    if (pass == StylePass::kBase) {
       element->MarkStyleResolvedFor(component);
       element->needs_style_seed = true;
     }
@@ -2277,10 +2291,11 @@ void CopyGenerated(const std::unique_ptr<GeneratedContents>& from,
 }
 
 // Whether `component` has ::part() rules that this pass would use.
-bool HasPartRules(const ComponentBase* component, bool check_pseudos) {
+bool HasPartRules(const ComponentBase* component, StylePass pass) {
   const auto* rules = ComponentInternals::categorized_rules(*component);
-  return rules && (!rules->pseudo.part_rules.empty() ||
-                   (!check_pseudos && !rules->base.part_rules.empty()));
+  return rules &&
+         (!rules->pseudo.part_rules.empty() ||
+          (pass != StylePass::kPseudo && !rules->base.part_rules.empty()));
 }
 
 // Resolves the styles of `element` and its subtree, visiting each element
@@ -2300,9 +2315,10 @@ bool HasPartRules(const ComponentBase* component, bool check_pseudos) {
 // returns whether something a selector tests on `element` itself changed,
 // which can change what matches its later siblings too.
 //
-// The pseudo-class pass (`check_pseudos`) layers the pseudo-class rules over
-// each element's base style into `target_style`, then starts the transitions
-// towards it, at `current_time_ms`.
+// The pseudo-class pass (`check_pseudos`) sets each element's `target_style`:
+// its base style, or, when a pseudo-class rule matches, every matching rule
+// again in cascade order. It then starts the transitions towards it, at
+// `current_time_ms`.
 bool ResolveStylesInTree(Element* element,
                          std::vector<const ComponentBase*>& enclosing,
                          bool check_pseudos,
@@ -2363,19 +2379,35 @@ bool ResolveStylesInTree(Element* element,
     enclosing.push_back(own);
   }
   const ComponentBase* owner = element->owner_component();
-  bool owner_applied = !owner;
-  for (const ComponentBase* component : std::views::reverse(enclosing)) {
-    if (component == owner) {
-      owner_applied = true;
-    } else if (component != own && !HasPartRules(component, check_pseudos)) {
-      continue;
+  auto resolve = [&](StylePass pass) {
+    bool owner_applied = !owner;
+    for (const ComponentBase* component : std::views::reverse(enclosing)) {
+      if (component == owner) {
+        owner_applied = true;
+      } else if (component != own && !HasPartRules(component, pass)) {
+        continue;
+      }
+      ResolveElementStyle(element, component, pass);
     }
-    ResolveElementStyle(element, component, check_pseudos);
-  }
-  // An owner whose root is not above the element still styles it, last, as
-  // the outermost of the components involved.
-  if (!owner_applied) {
-    ResolveElementStyle(element, owner, check_pseudos);
+    // An owner whose root is not above the element still styles it, last, as
+    // the outermost of the components involved.
+    if (!owner_applied) {
+      ResolveElementStyle(element, owner, pass);
+    }
+  };
+  if (!check_pseudos) {
+    resolve(StylePass::kBase);
+  } else {
+    resolve(StylePass::kPseudo);
+    // A pseudo-class rule ranks among the others by specificity and source
+    // order: `#id` beats `.a:hover`, and so does an !important declaration.
+    // Layering it over the base style would put it above them all, so the
+    // target is rebuilt from every matching rule instead.
+    if (element->matched_pseudo_rule) {
+      element->target_style = ComputedStyle();
+      element->generated.reset();
+      resolve(StylePass::kAll);
+    }
   }
   if (must_update_target || element->matched_pseudo_rule) {
     element->TriggerTransitions(current_time_ms);
