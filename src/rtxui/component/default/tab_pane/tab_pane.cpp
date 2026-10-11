@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/tab_pane/tab_pane.hpp"
 
+#include <string_view>
+
 namespace rtxui {
 
 const std::string_view tab_pane::view = R"html(

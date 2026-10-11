@@ -4,6 +4,7 @@
 //
 // Text decoration: bold, dim, italic, underline and strikethrough.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

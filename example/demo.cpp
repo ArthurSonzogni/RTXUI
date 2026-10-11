@@ -5,9 +5,13 @@
 // A kitchen-sink dashboard combining most of the library in one program.
 //
 // For a smaller, more readable application see app_dashboard.cpp.
+#include <cstddef>
+#include <functional>
+#include <map>
 #include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

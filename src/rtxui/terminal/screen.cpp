@@ -3,9 +3,25 @@
 // the LICENSE file.
 #include "rtxui/screen.hpp"
 
+#include <cctype>
 #include <charconv>
 #include <cmath>
+#include <functional>
+#include <memory>
 #include <ranges>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <vector>
+
+#include "rtxui/base/clock.hpp"
+#include "rtxui/color.hpp"
+#include "rtxui/event.hpp"
+#include "rtxui/layout/layout_arena.hpp"
+#include "rtxui/layout/layout_box.hpp"
+#include "rtxui/layout/style.hpp"
+#include "rtxui/paint/cell.hpp"
+#include "rtxui/refcounted.hpp"
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -20,7 +36,6 @@
 #include <emscripten.h>
 #else
 #include <fcntl.h>
-#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <unistd.h>
 #endif
@@ -29,7 +44,6 @@
 #include <cerrno>
 #include <chrono>
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <optional>

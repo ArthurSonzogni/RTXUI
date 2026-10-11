@@ -10,8 +10,11 @@
 #include <string>
 
 #include "rtxui/base/clock.hpp"
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/task.hpp"
 
 namespace rtxui {

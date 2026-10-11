@@ -3,6 +3,11 @@
 // the LICENSE file.
 #include "rtxui/component/default/hr/hr.hpp"
 
+#include <string>
+#include <string_view>
+
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/style/style.hpp"
 

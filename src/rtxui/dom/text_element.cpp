@@ -1,5 +1,8 @@
 #include "rtxui/dom/text_element.hpp"
 
+#include <string>
+#include <utility>
+
 namespace rtxui {
 
 TextElement::TextElement(std::string text) {

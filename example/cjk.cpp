@@ -7,6 +7,7 @@
 // CJK ideographs and emoji occupy two terminal cells. Layout measures text in
 // cells, not code points, so alignment holds for mixed-width content.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

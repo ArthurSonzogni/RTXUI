@@ -4,6 +4,8 @@
 //
 // <radio> buttons sharing a `name`, with the selection bound to a C++ string.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

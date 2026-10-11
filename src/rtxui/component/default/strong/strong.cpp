@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/strong/strong.hpp"
 
+#include <string_view>
+
 namespace rtxui {
 
 const std::string_view strong::view = R"html(

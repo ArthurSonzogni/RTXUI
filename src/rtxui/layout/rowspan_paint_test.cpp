@@ -1,12 +1,13 @@
-#include <catch2/catch_all.hpp>
-#include <iostream>
 #include <map>
 #include <string>
-#include <vector>
+#include <string_view>
 
-#include "rtxui/component/default_components_internal.hpp"
+#include "catch2/catch_message.hpp"
+#include "catch2/catch_test_macros.hpp"
+#include "rtxui/color.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
+#include "rtxui/layout/style.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/rtxui.hpp"

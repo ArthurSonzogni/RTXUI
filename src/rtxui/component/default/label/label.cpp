@@ -3,8 +3,12 @@
 // the LICENSE file.
 #include "rtxui/component/default/label/label.hpp"
 
-#include "rtxui/component/component_internal.hpp"
+#include <string>
+#include <string_view>
+
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/event.hpp"
 
 namespace rtxui {
 

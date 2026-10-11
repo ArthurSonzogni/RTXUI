@@ -3,7 +3,11 @@
 // the LICENSE file.
 #include "rtxui/component/default/tooltip/tooltip.hpp"
 
-#include "rtxui/component/component_internal.hpp"
+#include <string>
+#include <string_view>
+
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
 
 namespace rtxui {

@@ -96,7 +96,7 @@ if [[ ! -f "$BUILD_DIR/compile_commands.json" ]]; then
 else
   # Fuzzers are only in the compile database of a fuzzing build.
   changed=$(git diff --name-only --diff-filter=d "$BASE" -- 'src/*.cpp' \
-    ':!*_fuzzer.cpp')
+    'example/*.cpp' ':!*_fuzzer.cpp')
   if [[ -n "$changed" ]]; then
     echo "$changed" |
       xargs -P "$TIDY_JOBS" -n 1 clang-tidy -p "$BUILD_DIR" --quiet \

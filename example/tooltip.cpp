@@ -5,6 +5,7 @@
 // The <tooltip> component, shown on hover in each of four directions.
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 
 using namespace rtxui;
 

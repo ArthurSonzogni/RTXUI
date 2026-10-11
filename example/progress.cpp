@@ -4,6 +4,7 @@
 //
 // The <progress> component driven by bound state.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

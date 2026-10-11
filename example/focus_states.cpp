@@ -11,6 +11,8 @@
 //
 // Try it: Tab through the fields and buttons, then click a button.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

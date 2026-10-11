@@ -9,7 +9,7 @@
 //
 // Try it: click the links in the index to jump between sections.
 #include <rtxui/rtxui.hpp>
-#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

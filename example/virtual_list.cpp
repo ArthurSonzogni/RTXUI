@@ -11,8 +11,12 @@
 //
 // Try it: scroll with the mouse wheel, or Tab to the log and use the arrows,
 // PageUp/PageDown and Home/End.
+#include <functional>
+#include <map>
+#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

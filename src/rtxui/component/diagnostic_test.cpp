@@ -5,11 +5,14 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default_components_internal.hpp"
+#include "rtxui/component/default/button/button.hpp"
+#include "rtxui/component/default/div/div.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 

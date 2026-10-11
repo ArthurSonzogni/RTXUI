@@ -4,13 +4,22 @@
 #include "rtxui/component/default/input/text_input_base.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <chrono>
 #include <cmath>
+#include <cstddef>
+#include <iterator>
 #include <ranges>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "rtxui/base/string.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/dom/text_element.hpp"
+#include "rtxui/event.hpp"
+#include "rtxui/layout/style.hpp"
 
 namespace rtxui {
 

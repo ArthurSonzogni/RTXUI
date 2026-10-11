@@ -6,6 +6,8 @@
 //
 // Try it: focus it and press Enter or Space to open, then arrows to choose.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -7,6 +7,7 @@
 // An inner container consumes wheel events until it reaches its end, then the
 // event propagates to its parent.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

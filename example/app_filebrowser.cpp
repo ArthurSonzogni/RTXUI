@@ -13,8 +13,13 @@
 //
 // Try it: move with the arrow keys (or j/k via the buttons), Enter to open a
 // directory, Backspace to go up. The list scrolls to follow the selection.
+#include <cstddef>
+#include <functional>
+#include <map>
+#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

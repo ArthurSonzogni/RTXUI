@@ -7,6 +7,7 @@
 // The preview re-parses on every keystroke using the same template engine that
 // powers every RTXUI app, which is also why this is the docs homepage demo.
 #include <string>
+#include <string_view>
 
 #include "rtxui/rtxui.hpp"
 

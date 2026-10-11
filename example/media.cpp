@@ -6,6 +6,7 @@
 //
 // Try it: resize the terminal and watch the layout change breakpoint.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

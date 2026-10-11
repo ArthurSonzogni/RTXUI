@@ -3,12 +3,20 @@
 // the LICENSE file.
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "rtxui/base/string.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default_components_internal.hpp"
+#include "rtxui/component/default/div/div.hpp"
+#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace {
 

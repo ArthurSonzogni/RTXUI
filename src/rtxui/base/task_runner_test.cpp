@@ -6,9 +6,10 @@
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
-#include <rtxui/task.hpp>
 #include <thread>
 #include <vector>
+
+#include "rtxui/task.hpp"
 
 namespace {
 

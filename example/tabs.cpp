@@ -6,6 +6,8 @@
 //
 // The active pane is selected by the `value` attribute bound to a C++ string.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

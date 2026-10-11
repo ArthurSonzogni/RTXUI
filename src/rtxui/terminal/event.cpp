@@ -3,9 +3,11 @@
 // the LICENSE file.
 #include "rtxui/event.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <string>
-#include <utility>
+#include <string_view>
 #include <variant>
 
 #include "rtxui/base/string.hpp"

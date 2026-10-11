@@ -4,6 +4,7 @@
 //
 // The <hr> separator, and how border styles apply to it.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

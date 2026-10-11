@@ -3,8 +3,14 @@
 // the LICENSE file.
 #include "rtxui/component/default/radio/radio.hpp"
 
+#include <string>
+#include <string_view>
+
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/event.hpp"
 
 namespace rtxui {
 

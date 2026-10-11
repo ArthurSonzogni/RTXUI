@@ -11,8 +11,13 @@
 //
 // Try it: click a service row to select it, use the filter buttons to narrow
 // the list, and press Restart to watch a row transition back to healthy.
+#include <cstddef>
+#include <functional>
+#include <map>
+#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace rtxui;

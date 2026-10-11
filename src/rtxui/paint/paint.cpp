@@ -1,18 +1,21 @@
 #include "rtxui/paint/paint.hpp"
 
 #include <algorithm>
-#include <array>
 #include <atomic>
 #include <cctype>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/color.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/sticky.hpp"
+#include "rtxui/layout/style.hpp"
 #include "rtxui/paint/texture.hpp"
 
 namespace rtxui {

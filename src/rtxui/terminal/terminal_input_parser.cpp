@@ -5,16 +5,20 @@
 
 #include <algorithm>  // for std::min
 #include <charconv>   // for from_chars
-#include <cstdint>    // for uint32_t
+#include <cstddef>
+#include <cstdint>  // for uint32_t
 #include <map>
-#include <memory>    // for unique_ptr, allocator
 #include <optional>  // for std::optional
+#include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>  // for move
+#include <variant>
 #include <vector>
 
 #include "rtxui/base/string.hpp"  // for EatCodePoint
-#include "rtxui/event.hpp"        // for Event
+#include "rtxui/color.hpp"
+#include "rtxui/event.hpp"  // for Event
 
 namespace rtxui {
 

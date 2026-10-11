@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/legend/legend.hpp"
 
+#include <string_view>
+
 namespace rtxui {
 
 const std::string_view legend::view = R"html(

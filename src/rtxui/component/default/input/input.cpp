@@ -3,6 +3,12 @@
 // the LICENSE file.
 #include "rtxui/component/default/input/input.hpp"
 
+#include <string_view>
+
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
+#include "rtxui/event.hpp"
+
 namespace rtxui {
 
 void input::InitReflection() {

@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/a/a.hpp"
 
+#include <string_view>
+
 #include "rtxui/paint/paint.hpp"
 
 namespace rtxui {

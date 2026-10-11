@@ -7,8 +7,13 @@
 #include <charconv>
 #include <functional>
 #include <string>
+#include <string_view>
+#include <system_error>
 
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/layout/style.hpp"
 
 namespace rtxui {
 

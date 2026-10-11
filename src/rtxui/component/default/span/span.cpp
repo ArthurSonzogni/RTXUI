@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/span/span.hpp"
 
+#include <string_view>
+
 namespace rtxui {
 
 const std::string_view span::view = R"html(

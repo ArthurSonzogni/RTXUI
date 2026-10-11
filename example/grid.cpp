@@ -7,6 +7,7 @@
 // grid-template sets the track sizes; items span tracks with grid-column and
 // grid-row.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

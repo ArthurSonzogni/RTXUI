@@ -1,5 +1,7 @@
 #include "rtxui/color.hpp"
 
+#include <cstdint>
+
 // static
 namespace rtxui {
 

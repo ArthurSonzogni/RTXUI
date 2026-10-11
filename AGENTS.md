@@ -40,6 +40,10 @@ These are enforced by `scripts/check.sh` and CI unless noted.
   overloads (e.g. `std::filesystem::last_write_time` with `std::error_code`)
   and parser checks (e.g. `std::from_chars`).
 - **clang-tidy clean**: no warnings. A `NOLINT` needs a reason on the same line.
+- **Include what you use** (clang-tidy's `misc-include-cleaner`, in `src/`
+  and `example/`): include the header that declares each name you use,
+  rather than counting on another header to bring it in. The examples are
+  also built with `import rtxui;`, which brings in no standard header.
 - **Regression tests** (enforced by review): every bug fix comes with a test
   that fails before the fix and passes after, typically in
   `src/rtxui/component/component_test.cpp` or `src/rtxui/style/style_test.cpp`.

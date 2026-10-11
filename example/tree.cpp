@@ -11,6 +11,9 @@
 //
 // Try it: Tab into the tree, then use the arrows and Enter.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
+#include <utility>
 
 using namespace rtxui;
 

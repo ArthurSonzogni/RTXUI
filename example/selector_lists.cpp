@@ -11,6 +11,7 @@
 //
 // Try it: hover the badges and Tab between them.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

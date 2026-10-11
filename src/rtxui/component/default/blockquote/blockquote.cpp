@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/blockquote/blockquote.hpp"
 
+#include <string_view>
+
 namespace rtxui {
 
 const std::string_view blockquote::view = R"html(

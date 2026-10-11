@@ -3,12 +3,16 @@
 // the LICENSE file.
 #include "rtxui/base/task_runner.hpp"
 
-#include <algorithm>
 #include <cassert>
+#include <chrono>
+#include <functional>
 #include <mutex>
 #include <thread>
+#include <utility>
+#include <variant>
 #include <vector>
 
+#include "rtxui/base/task.hpp"
 #include "rtxui/task.hpp"
 
 namespace task {

@@ -6,6 +6,7 @@
 //
 // Try it: click the box, or focus it and press Space.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

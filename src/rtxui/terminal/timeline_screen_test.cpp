@@ -4,10 +4,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "rtxui/component.hpp"
 #include "rtxui/headless.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/task.hpp"
 
 namespace rtxui {

@@ -9,6 +9,7 @@
 //
 // Try it: hold Tab and watch the list follow the focus ring.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -10,6 +10,7 @@
 // Try it: move the mouse over the buttons, Tab between them, and hold the
 // mouse button down to see all three states.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -3,6 +3,9 @@
 // the LICENSE file.
 #include "rtxui/base/clock.hpp"
 
+#include <chrono>
+#include <ratio>
+
 namespace rtxui::time {
 
 namespace {

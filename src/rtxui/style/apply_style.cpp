@@ -4,15 +4,22 @@
 #include <cctype>
 #include <charconv>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
+#include <string_view>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 #include "rtxui/color.hpp"
 #include "rtxui/diagnostic.hpp"
+#include "rtxui/layout/style.hpp"
+#include "rtxui/style/style.hpp"
 
 namespace rtxui {
 namespace {

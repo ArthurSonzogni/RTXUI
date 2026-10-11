@@ -11,10 +11,13 @@
 // Try it: press Ctrl+P (or click the button), type "th", then press Enter.
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

@@ -6,6 +6,7 @@
 //
 // Try it: drag the thumb, or focus it and use the arrow keys.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

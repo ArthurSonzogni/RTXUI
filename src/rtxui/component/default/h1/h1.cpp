@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/h1/h1.hpp"
 
+#include <string_view>
+
 namespace rtxui {
 
 const std::string_view h1::view = R"html(

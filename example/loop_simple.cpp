@@ -8,8 +8,10 @@
 // to a parameterized callback.
 //
 // Try it: add a fruit, then remove one.
+#include <cstddef>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

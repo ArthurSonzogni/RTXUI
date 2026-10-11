@@ -1,17 +1,36 @@
 #include "rtxui/screen.hpp"
 
+#include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 
+#include "catch2/catch_message.hpp"
 #include "catch2/catch_test_macros.hpp"
+#include "rtxui/base/clock.hpp"
+#include "rtxui/base/string.hpp"
 #include "rtxui/base/task_runner.hpp"
+#include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default_components_internal.hpp"
+#include "rtxui/component/default/button/button.hpp"
+#include "rtxui/component/default/checkbox/checkbox.hpp"
+#include "rtxui/component/default/div/div.hpp"
+#include "rtxui/component/default/input/input.hpp"
+#include "rtxui/component/default/radio/radio.hpp"
+#include "rtxui/component/default/textarea/textarea.hpp"
+#include "rtxui/component/default/tooltip/tooltip.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/event.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
+#include "rtxui/layout/style.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 

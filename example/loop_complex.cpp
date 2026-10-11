@@ -8,8 +8,13 @@
 // dot notation on the loop variable.
 //
 // Try it: toggle a task to see only that row re-render.
+#include <cstddef>
+#include <functional>
+#include <map>
+#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

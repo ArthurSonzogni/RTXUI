@@ -22,7 +22,7 @@
 #include <meta>
 #endif
 
-#include <rtxui/bind.hpp>
+#include <rtxui/bind.hpp>  // IWYU pragma: export
 #include <rtxui/diagnostic.hpp>
 #include <rtxui/rtxui_export.hpp>
 

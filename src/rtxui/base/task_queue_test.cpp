@@ -3,10 +3,15 @@
 // the LICENSE file.
 #include "rtxui/base/task_queue.hpp"
 
+#include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <string>
 #include <thread>
+#include <variant>
 #include <vector>
+
+#include "rtxui/base/task.hpp"
 
 namespace {
 

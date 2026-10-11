@@ -11,6 +11,7 @@
 //
 // Try it: click the buttons, or Tab to them and press Enter.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

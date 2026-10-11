@@ -4,8 +4,10 @@
 #include "rtxui/diagnostic.hpp"
 
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <set>
+#include <string>
 #include <string_view>
 #include <utility>
 
