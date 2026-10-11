@@ -8,7 +8,6 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/div/div.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
@@ -25,12 +24,9 @@ class TooltipTestComponent : public rtxui::Component<TooltipTestComponent> {
   std::string tooltip_text = "Helpful Info";
   std::string tooltip_place = "top";
 
-  void InitReflection() override {
+  TooltipTestComponent() {
     Bind(tooltip_text);
     Bind(tooltip_place);
-    Import<rtxui::tooltip>();
-    Import<rtxui::div>();
-    rtxui::Component<TooltipTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <div>

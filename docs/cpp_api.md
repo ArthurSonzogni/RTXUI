@@ -90,7 +90,7 @@ class CounterCard : public rtxui::Component<CounterCard> {
   int count = 0;
   void Increment() { count++; }
 
-  void InitReflection() override {
+  CounterCard() {
     Bind(count);
     Bind(Increment);
   }
@@ -105,7 +105,7 @@ class CounterCard : public rtxui::Component<CounterCard> {
 ```
 
 ### 3.2 Registration & Binding Interface
-Bindings are registered during component initialization (`InitReflection()` or constructor):
+Bindings are registered in the constructor. A component that cannot bind there can override `virtual void InitReflection()` instead: it runs once, before the first render.
 
 | Method Signature | Semantics |
 | :--- | :--- |

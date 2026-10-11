@@ -12,9 +12,6 @@
 #include "rtxui/base/clock.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/p/p.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -30,10 +27,6 @@ namespace {
 
 class PseudoVarTestComponent : public rtxui::Component<PseudoVarTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<PseudoVarTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div id="box">Box</div>
     <style>
@@ -70,12 +63,6 @@ TEST_CASE("Custom properties in pseudo-class rules",
 
 class ComplexSelectorTestApp : public Component<ComplexSelectorTestApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::p>();
-    Component<ComplexSelectorTestApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div>
@@ -127,11 +114,6 @@ namespace {
 class AdvancedCSSFeaturesTestApp
     : public Component<AdvancedCSSFeaturesTestApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Component<AdvancedCSSFeaturesTestApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div>
@@ -212,11 +194,6 @@ namespace {
 
 class StructuralPseudoTestApp : public Component<StructuralPseudoTestApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Component<StructuralPseudoTestApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div id="many">
@@ -291,11 +268,6 @@ namespace {
 
 class NotSelectorApp : public rtxui::Component<NotSelectorApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<NotSelectorApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <span id="a" class="keep">a</span>
@@ -356,11 +328,6 @@ namespace {
 
 class NotWithPseudoApp : public rtxui::Component<NotWithPseudoApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<NotWithPseudoApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <span id="i1" class="x" data-k="a:b">1</span>
@@ -495,11 +462,6 @@ namespace {
 
 class NotListApp : public rtxui::Component<NotListApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<NotListApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <span id="l1" class="a">1</span>
@@ -575,11 +537,6 @@ namespace {
 
 class AnPlusBApp : public rtxui::Component<AnPlusBApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<AnPlusBApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <span id="n1">1</span>
@@ -666,11 +623,6 @@ namespace {
 
 class UnknownPseudoApp : public rtxui::Component<UnknownPseudoApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<UnknownPseudoApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <span id="u1">1</span>
@@ -725,12 +677,6 @@ namespace {
 
 class OfTypeSelectorApp : public rtxui::Component<OfTypeSelectorApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Import<rtxui::p>();
-    rtxui::Component<OfTypeSelectorApp>::InitReflection();
-  }
   // The interleaving matters: span #s1 is the parent's 1st child but so is
   // nothing else of its type, and #p1 is the 2nd child yet the 1st <p>.
   std::string_view view = R"(

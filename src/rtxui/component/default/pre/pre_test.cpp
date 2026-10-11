@@ -1,14 +1,12 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/component/default/pre/pre.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <string>
 #include <string_view>
 
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/code/code.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/testing/render.hpp"
@@ -18,10 +16,6 @@ using namespace rtxui;
 namespace {
 
 struct PreTestComponent : public rtxui::Component<PreTestComponent> {
-  void InitReflection() override {
-    Import<rtxui::pre>();
-    rtxui::Component<PreTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <pre>Line 1
@@ -46,11 +40,6 @@ TEST_CASE("Pre component whitespace preservation", "[component][pre]") {
 namespace {
 
 struct PreCodeTestComponent : public rtxui::Component<PreCodeTestComponent> {
-  void InitReflection() override {
-    Import<rtxui::pre>();
-    Import<rtxui::code>();
-    rtxui::Component<PreCodeTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <pre><code>int main() {
@@ -83,12 +72,7 @@ namespace {
 struct PreCodeBindingTestComponent
     : public rtxui::Component<PreCodeBindingTestComponent> {
   std::string source = "int main() {\n  return 0;\n}";
-  void InitReflection() override {
-    Bind(source);
-    Import<rtxui::pre>();
-    Import<rtxui::code>();
-    rtxui::Component<PreCodeBindingTestComponent>::InitReflection();
-  }
+  PreCodeBindingTestComponent() { Bind(source); }
   std::string_view view = R"(
     <div>
       <pre><code>{source}</code></pre>

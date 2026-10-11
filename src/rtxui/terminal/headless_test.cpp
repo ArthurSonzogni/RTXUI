@@ -10,11 +10,6 @@
 #include "catch2/catch_message.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/button/button.hpp"
-#include "rtxui/component/default/dialog/dialog.hpp"
-#include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/input/input.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/refcounted.hpp"
 
 namespace rtxui {
@@ -23,10 +18,7 @@ namespace {
 class Greeting : public Component<Greeting> {
  public:
   std::string name = "world";
-  void InitReflection() override {
-    Bind(name);
-    Import<div>();
-  }
+  Greeting() { Bind(name); }
   std::string_view view = R"html(
     <div>Hello {name}</div>
   )html";
@@ -40,7 +32,6 @@ TEST_CASE("RenderToString returns the screen as text", "[headless]") {
 
 class RightAligned : public Component<RightAligned> {
  public:
-  void InitReflection() override { Import<div>(); }
   std::string_view view = R"html(
     <div style="text-align: right">end</div>
   )html";
@@ -58,13 +49,10 @@ class Form : public Component<Form> {
   std::string text;
   int clicks = 0;
   void Add() { clicks++; }
-  void InitReflection() override {
+  Form() {
     Bind(text);
     Bind(clicks);
     Bind(Add);
-    Import<div>();
-    Import<input>();
-    Import<button>();
   }
   std::string_view view = R"html(
     <div>
@@ -109,13 +97,7 @@ namespace {
 class ConfirmDialog : public Component<ConfirmDialog> {
  public:
   bool open = true;
-  void InitReflection() override {
-    Bind(open);
-    Import<div>();
-    Import<span>();
-    Import<button>();
-    Import<dialog>();
-  }
+  ConfirmDialog() { Bind(open); }
   std::string_view view = R"html(
     <div>
       <span>Status</span>

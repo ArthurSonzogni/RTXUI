@@ -21,19 +21,13 @@
 #include "rtxui/base/string.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component/component_internal.hpp"
-#include "rtxui/component/default/b/b.hpp"
-#include "rtxui/component/default/button/button.hpp"
 #include "rtxui/component/default/checkbox/checkbox.hpp"
 #include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/li/li.hpp"
-#include "rtxui/component/default/option/option.hpp"
 #include "rtxui/component/default/p/p.hpp"
 #include "rtxui/component/default/radio/radio.hpp"
 #include "rtxui/component/default/select/select.hpp"
 #include "rtxui/component/default/slider/slider.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/component/default/tab_pane/tab_pane.hpp"
-#include "rtxui/component/default/ul/ul.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -68,10 +62,9 @@ class World : public rtxui::Component<World> {
 
 class HelloWorld : public rtxui::Component<HelloWorld> {
  public:
-  void InitReflection() override {
+  HelloWorld() {
     Import<Hello>();
     Import<World>();
-    rtxui::Component<HelloWorld>::InitReflection();
   }
 
   std::string_view view = R"(
@@ -114,6 +107,25 @@ TEST_CASE("Mount", "[component]") {
   REQUIRE(component->Root()->Print() == StripIndent(expected));
 }
 
+class LateBinding : public rtxui::Component<LateBinding> {
+ public:
+  int count = 3;
+  void InitReflection() override { Bind(count); }
+  std::string_view view = R"(<span>{count}</span>)";
+};
+
+TEST_CASE("InitReflection binds before the first render", "[component]") {
+  auto component = rtxui::Ref<LateBinding>::New();
+  component->Mount();
+  CHECK(component->Root()->Print() == StripIndent(R"(
+    <LateBinding>
+      <span>
+        3
+      </span>
+    </LateBinding>
+  )"));
+}
+
 class Page : public rtxui::Component<Page> {
  public:
   std::string_view view = R"(
@@ -125,11 +137,7 @@ class Page : public rtxui::Component<Page> {
 
 class MyPage : public rtxui::Component<MyPage> {
  public:
-  void InitReflection() override {
-    Import<rtxui::p>();
-    Import<Page>();
-    rtxui::Component<MyPage>::InitReflection();
-  }
+  MyPage() { Import<Page>(); }
 
   std::string_view view = R"(
       <p>This is a page:</p>
@@ -181,10 +189,9 @@ TEST_CASE("Component with named slots", "[component]") {
 
 class Inverted : public rtxui::Component<Inverted> {
  public:
-  void InitReflection() override {
+  Inverted() {
     Import<rtxui::p>("div");
     Import<rtxui::div>("p");
-    rtxui::Component<Inverted>::InitReflection();
   }
 
   std::string_view view = R"(
@@ -246,13 +253,6 @@ class Counter : public rtxui::Component<Counter> {
   }
 
   void increment() { count++; }
-
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::ul>();
-    Import<rtxui::li>();
-    rtxui::Component<Counter>::InitReflection();
-  }
 
   std::string_view view = R"(
       <ul>
@@ -323,12 +323,6 @@ TEST_CASE("Screen Drawing", "[terminal]") {
 
 class SelectorTest : public rtxui::Component<SelectorTest> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<SelectorTest>::InitReflection();
-  }
-
   std::string_view view = R"(
       <div id="container" class="main-box panel">
         <span id="label" class="text-bold text-red">Hello Selector</span>
@@ -384,11 +378,9 @@ class ChildWithProps : public rtxui::Component<ChildWithProps> {
     int value = 0;
   } props;
 
-  void InitReflection() override {
+  ChildWithProps() {
     Bind(props.message);
     Bind(props.value);
-    Import<rtxui::div>();
-    rtxui::Component<ChildWithProps>::InitReflection();
   }
 
   // Directly name the props without the "props." prefix:
@@ -402,11 +394,10 @@ class ParentOfProps : public rtxui::Component<ParentOfProps> {
   std::string parent_msg = "hello";
   int parent_val = 42;
 
-  void InitReflection() override {
+  ParentOfProps() {
     Bind(parent_msg);
     Bind(parent_val);
     Import<ChildWithProps>();
-    rtxui::Component<ParentOfProps>::InitReflection();
   }
 
   // Can pass using props. prefix or direct name
@@ -437,10 +428,9 @@ class ParentOfPropsShortName : public rtxui::Component<ParentOfPropsShortName> {
  public:
   std::string parent_msg = "short";
 
-  void InitReflection() override {
+  ParentOfPropsShortName() {
     Bind(parent_msg);
     Import<ChildWithProps>();
-    rtxui::Component<ParentOfPropsShortName>::InitReflection();
   }
 
   std::string_view view = R"(
@@ -462,10 +452,6 @@ TEST_CASE("ComponentPropsShortNames", "[component]") {
 class LetterSpacingWrapTestComponent
     : public rtxui::Component<LetterSpacingWrapTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<LetterSpacingWrapTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div class="spaced">ab cd</div>
     <style>
@@ -499,10 +485,6 @@ TEST_CASE(
 
 class FallbackCard : public rtxui::Component<FallbackCard> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<FallbackCard>::InitReflection();
-  }
   std::string_view view =
       R"(<div><slot.header>DEFHEAD</slot.header>|<slot>DEFBODY</slot>|)"
       R"(<slot.footer>DEFFOOT</slot.footer></div>)";
@@ -510,21 +492,16 @@ class FallbackCard : public rtxui::Component<FallbackCard> {
 
 class NoProjection : public rtxui::Component<NoProjection> {
  public:
-  void InitReflection() override {
-    Import<FallbackCard>();
-    rtxui::Component<NoProjection>::InitReflection();
-  }
+  NoProjection() { Import<FallbackCard>(); }
   std::string_view view = R"(<FallbackCard></FallbackCard>)";
 };
 
 class BodyProjection : public rtxui::Component<BodyProjection> {
  public:
   bool show = true;
-  void InitReflection() override {
+  BodyProjection() {
     Bind(show);
     Import<FallbackCard>();
-    Import<rtxui::span>();
-    rtxui::Component<BodyProjection>::InitReflection();
   }
   std::string_view view =
       R"(<FallbackCard><if condition="{show}"><span>BODY</span></if></FallbackCard>)";
@@ -578,10 +555,6 @@ TEST_CASE("A slot shows its own content when nothing is projected",
 
 class SlotCard : public rtxui::Component<SlotCard> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<SlotCard>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div>H<slot.header></slot.header></div>
@@ -596,12 +569,10 @@ class ConditionalTemplateComponent
  public:
   bool with_header = true;
   bool with_footer = false;
-  void InitReflection() override {
+  ConditionalTemplateComponent() {
     Bind(with_header);
     Bind(with_footer);
     Import<SlotCard>();
-    Import<rtxui::span>();
-    rtxui::Component<ConditionalTemplateComponent>::InitReflection();
   }
   std::string_view view = R"(
     <SlotCard>
@@ -670,13 +641,10 @@ class NestedLoopComponent : public rtxui::Component<NestedLoopComponent> {
   std::vector<std::string> outer{"a", "b"};
   std::vector<std::string> inner{"1", "2", "3"};
   bool show = true;
-  void InitReflection() override {
+  NestedLoopComponent() {
     Bind(outer);
     Bind(inner);
     Bind(show);
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<NestedLoopComponent>::InitReflection();
   }
   // The inner loop reads the outer loop's variable as well as its own, and
   // both use $index -- so a $index that leaked between scopes, or an outer
@@ -751,10 +719,6 @@ TEST_CASE("Nested loops keep their own variable and index",
 class WordWrapStaleSpaceTestComponent
     : public rtxui::Component<WordWrapStaleSpaceTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<WordWrapStaleSpaceTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div class="box">ab abcdefgh</div>
     <style>
@@ -785,10 +749,6 @@ TEST_CASE(
 
 class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::b>();
-    rtxui::Component<SpaceTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>This text is a <b>bold</b> statement</div>
   )";
@@ -827,10 +787,7 @@ class ChildPropsTest : public rtxui::Component<ChildPropsTest> {
     int value = 0;
   } props;
 
-  void InitReflection() override {
-    rtxui::Component<ChildPropsTest>::InitReflection();
-    Bind(props.value);
-  }
+  ChildPropsTest() { Bind(props.value); }
 
   std::string_view view = R"(
     <div>Value: {props.value}</div>
@@ -841,9 +798,8 @@ class ParentPropsTest : public rtxui::Component<ParentPropsTest> {
  public:
   int parent_value = 10;
 
-  void InitReflection() override {
+  ParentPropsTest() {
     Import<ChildPropsTest>();
-    rtxui::Component<ParentPropsTest>::InitReflection();
     Bind(parent_value);
   }
 
@@ -1040,12 +996,6 @@ class DynamicTagsTestComponent
     : public rtxui::Component<DynamicTagsTestComponent> {
  public:
   bool show_span_first = true;
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    Bind(show_span_first);
-    rtxui::Component<DynamicTagsTestComponent>::InitReflection();
-  }
   std::string_view view = R"html(
     <div id="container">
       <if condition="{show_span_first}">
@@ -1101,11 +1051,6 @@ class StandardTagsTestComponent
     : public rtxui::Component<StandardTagsTestComponent> {
  public:
   bool show_section_first = true;
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Bind(show_section_first);
-    rtxui::Component<StandardTagsTestComponent>::InitReflection();
-  }
   std::string_view view = R"html(
     <div id="container">
       <if condition="{show_section_first}">
@@ -1159,10 +1104,6 @@ TEST_CASE("Standard elements are reused and reordered during reconciliation",
 // --- Hot Reload ---
 class HotReloadTestComponent : public rtxui::Component<HotReloadTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<HotReloadTestComponent>::InitReflection();
-  }
   std::string_view view = R"html(
     <div id="target">Initial Content</div>
   )html";
@@ -1296,10 +1237,6 @@ namespace {
 
 class ControlFlowNoAttrApp : public Component<ControlFlowNoAttrApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Component<ControlFlowNoAttrApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <if><div>a</div></if>
@@ -1310,10 +1247,6 @@ class ControlFlowNoAttrApp : public Component<ControlFlowNoAttrApp> {
 
 class ElifNoAttrApp : public Component<ElifNoAttrApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Component<ElifNoAttrApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <if condition="false"><div>a</div></if>
@@ -1354,19 +1287,12 @@ class DisabledInteractiveTestComponent
   int slider_val = 50;
   bool button_clicked = false;
 
-  void InitReflection() override {
+  DisabledInteractiveTestComponent() {
     Bind(cb_checked);
     Bind(radio_checked);
     Bind(select_value);
     Bind(slider_val);
-    Import<rtxui::checkbox>();
-    Import<rtxui::radio>();
-    Import<rtxui::select>();
-    Import<rtxui::option>();
-    Import<rtxui::slider>();
-    Import<rtxui::button>();
     Import("OnButtonClick", [this]() { button_clicked = true; });
-    rtxui::Component<DisabledInteractiveTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <checkbox id="cb" checked="{cb_checked}" disabled="true">Check</checkbox>
@@ -1458,10 +1384,9 @@ namespace {
 
 class TwiceImportingApp : public rtxui::Component<TwiceImportingApp> {
  public:
-  void InitReflection() override {
+  TwiceImportingApp() {
     Import<rtxui::div>();
     Import<rtxui::div>();  // Same component again.
-    rtxui::Component<TwiceImportingApp>::InitReflection();
   }
   std::string_view view = R"(<div id="a">hello</div>)";
 };
@@ -1512,10 +1437,9 @@ class RenderCountedChild : public rtxui::Component<RenderCountedChild> {
 class RenderCountedParent : public rtxui::Component<RenderCountedParent> {
  public:
   int value = 0;
-  void InitReflection() override {
+  RenderCountedParent() {
     Bind(value);
     Import<RenderCountedChild>();
-    rtxui::Component<RenderCountedParent>::InitReflection();
   }
   std::string_view view = R"(
     <div>

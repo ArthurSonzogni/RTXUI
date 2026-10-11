@@ -8,8 +8,6 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/p/p.hpp"
-#include "rtxui/component/default/summary/summary.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/event.hpp"
@@ -25,13 +23,7 @@ class DetailsTestComponent : public rtxui::Component<DetailsTestComponent> {
  public:
   bool open = false;
 
-  void InitReflection() override {
-    Bind(open);
-    Import<rtxui::details>();
-    Import<rtxui::summary>();
-    Import<rtxui::p>();
-    rtxui::Component<DetailsTestComponent>::InitReflection();
-  }
+  DetailsTestComponent() { Bind(open); }
   std::string_view view = R"(
     <details open="{open}">
       <summary>My Title</summary>
@@ -43,11 +35,6 @@ class DetailsTestComponent : public rtxui::Component<DetailsTestComponent> {
 class DetailsDefaultTestComponent
     : public rtxui::Component<DetailsDefaultTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::details>();
-    Import<rtxui::p>();
-    rtxui::Component<DetailsDefaultTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <details>
       <p>Secret content</p>

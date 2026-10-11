@@ -20,18 +20,11 @@
 #include "rtxui/component/default/h1/h1.hpp"
 #include "rtxui/component/default/hr/hr.hpp"
 #include "rtxui/component/default/kbd/kbd.hpp"
-#include "rtxui/component/default/legend/legend.hpp"
-#include "rtxui/component/default/li/li.hpp"
-#include "rtxui/component/default/ol/ol.hpp"
-#include "rtxui/component/default/p/p.hpp"
 #include "rtxui/component/default/progress/progress.hpp"
 #include "rtxui/component/default/radio/radio.hpp"
 #include "rtxui/component/default/s/s.hpp"
-#include "rtxui/component/default/semantic/semantic.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/component/default/strong/strong.hpp"
 #include "rtxui/component/default/u/u.hpp"
-#include "rtxui/component/default/ul/ul.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -58,18 +51,6 @@ std::string RemoveWhitespace(std::string_view str) {
 
 class SemanticTestComponent : public rtxui::Component<SemanticTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::header>();
-    Import<rtxui::footer>();
-    Import<rtxui::main>();
-    Import<rtxui::nav>();
-    Import<rtxui::aside>();
-    Import<rtxui::section>();
-    Import<rtxui::article>();
-    Import<rtxui::kbd>();
-    Import<rtxui::span>();
-    rtxui::Component<SemanticTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <header><span>Head</span></header>
     <nav><span>Nav</span></nav>
@@ -108,11 +89,7 @@ class ProgressTestComponent : public rtxui::Component<ProgressTestComponent> {
  public:
   double my_progress = 25.0;
 
-  void InitReflection() override {
-    Bind(my_progress);
-    Import<rtxui::progress>();
-    rtxui::Component<ProgressTestComponent>::InitReflection();
-  }
+  ProgressTestComponent() { Bind(my_progress); }
   std::string_view view = R"(
     <progress value="{my_progress}" max="100" width="10" />
   )";
@@ -173,10 +150,6 @@ TEST_CASE(
 
 class HrTestComponent : public rtxui::Component<HrTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::hr>();
-    rtxui::Component<HrTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <hr />
   )";
@@ -219,11 +192,6 @@ TEST_CASE("Horizontal Rule paints on the first frame", "[component][hr]") {
 
 class BoldTestComponent : public rtxui::Component<BoldTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::b>();
-    Import<rtxui::strong>();
-    rtxui::Component<BoldTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <b>Bold text</b>
@@ -273,14 +241,6 @@ TEST_CASE("Default Components Registration", "[component]") {
 
 class ListTestComponent : public rtxui::Component<ListTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::ul>();
-    Import<rtxui::ol>();
-    Import<rtxui::li>();
-    rtxui::Component<ListTestComponent>::InitReflection();
-  }
-
   std::string_view view = R"(
       <div>
         <ul id="ul_disc">
@@ -462,12 +422,6 @@ TEST_CASE("Heading Tags Rendering h1-h6", "[component]") {
 
 struct FormattingTestComponent
     : public rtxui::Component<FormattingTestComponent> {
-  void InitReflection() override {
-    Import<rtxui::u>();
-    Import<rtxui::s>();
-    Import<rtxui::code>();
-    rtxui::Component<FormattingTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <u>Underlined</u>
@@ -534,10 +488,6 @@ namespace {
 // every other simple inline tag here (underline, matching u/s/code above),
 // plus a link-colored foreground.
 struct AnchorTestComponent : public rtxui::Component<AnchorTestComponent> {
-  void InitReflection() override {
-    Import<rtxui::a>();
-    rtxui::Component<AnchorTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <a href="https://example.com">Link</a>
   )";
@@ -584,12 +534,6 @@ namespace {
 // --- Fieldset & Legend ---
 class FieldsetTestComponent : public rtxui::Component<FieldsetTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::fieldset>();
-    Import<rtxui::legend>();
-    Import<rtxui::p>();
-    rtxui::Component<FieldsetTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <fieldset>
       <legend>User Profile</legend>
@@ -661,11 +605,9 @@ class RadioTestComponent : public rtxui::Component<RadioTestComponent> {
   bool opt_a = false;
   bool opt_b = false;
 
-  void InitReflection() override {
+  RadioTestComponent() {
     Bind(opt_a);
     Bind(opt_b);
-    Import<rtxui::radio>();
-    rtxui::Component<RadioTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <div>

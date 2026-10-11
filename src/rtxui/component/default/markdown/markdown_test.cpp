@@ -1,7 +1,6 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/component/default/markdown/markdown.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cctype>
@@ -39,11 +38,6 @@ std::string RemoveWhitespace(std::string_view str) {
 
 class MarkdownTestContainer : public rtxui::Component<MarkdownTestContainer> {
  public:
-  void InitReflection() override {
-    Import<rtxui::markdown>();
-    rtxui::Component<MarkdownTestContainer>::InitReflection();
-  }
-
   std::string_view view = R"(
     <markdown id="md" content="# Title" stylesheet="h1 { color: red; }"></markdown>
   )";
@@ -55,11 +49,7 @@ class ChangingMarkdownComponent
     : public rtxui::Component<ChangingMarkdownComponent> {
  public:
   std::string text = "# First";
-  void InitReflection() override {
-    Bind(text);
-    Import<rtxui::markdown>();
-    rtxui::Component<ChangingMarkdownComponent>::InitReflection();
-  }
+  ChangingMarkdownComponent() { Bind(text); }
   std::string_view view = R"(<markdown id="md" content="{text}"></markdown>)";
 };
 
@@ -124,11 +114,7 @@ class MarkdownLinkInjectionTestContainer
     : public rtxui::Component<MarkdownLinkInjectionTestContainer> {
  public:
   std::string content = "[click](\" onclick=\"Evil)";
-  void InitReflection() override {
-    Bind(content);
-    Import<rtxui::markdown>();
-    rtxui::Component<MarkdownLinkInjectionTestContainer>::InitReflection();
-  }
+  MarkdownLinkInjectionTestContainer() { Bind(content); }
 
   std::string_view view = R"(
     <markdown id="md" content="{content}"></markdown>
@@ -155,11 +141,6 @@ TEST_CASE(
 class MarkdownListTestContainer
     : public rtxui::Component<MarkdownListTestContainer> {
  public:
-  void InitReflection() override {
-    Import<rtxui::markdown>();
-    rtxui::Component<MarkdownListTestContainer>::InitReflection();
-  }
-
   std::string_view view = R"(
     <markdown id="md" content="- list item 1\n- list item 2"></markdown>
   )";
@@ -188,11 +169,7 @@ class MarkdownCodeBlockTestContainer
     : public rtxui::Component<MarkdownCodeBlockTestContainer> {
  public:
   std::string content = "```\nint main() {\n  return 0;\n}\n```";
-  void InitReflection() override {
-    Bind(content);
-    Import<rtxui::markdown>();
-    rtxui::Component<MarkdownCodeBlockTestContainer>::InitReflection();
-  }
+  MarkdownCodeBlockTestContainer() { Bind(content); }
 
   std::string_view view = R"(
     <markdown id="md" content="{content}"></markdown>
@@ -226,11 +203,9 @@ class MarkdownStyledCodeBlockTestContainer
   std::string stylesheet =
       "code { color: #94a3b8; }\n"
       "pre { background-color: #1e293b; border: tall; display: block; }";
-  void InitReflection() override {
+  MarkdownStyledCodeBlockTestContainer() {
     Bind(content);
     Bind(stylesheet);
-    Import<rtxui::markdown>();
-    rtxui::Component<MarkdownStyledCodeBlockTestContainer>::InitReflection();
   }
 
   std::string_view view = R"html(
@@ -273,11 +248,7 @@ class MarkdownStylesheetErrorTestContainer
     : public rtxui::Component<MarkdownStylesheetErrorTestContainer> {
  public:
   std::string stylesheet = "h1 { color: red; }";
-  void InitReflection() override {
-    Bind(stylesheet);
-    Import<rtxui::markdown>();
-    rtxui::Component<MarkdownStylesheetErrorTestContainer>::InitReflection();
-  }
+  MarkdownStylesheetErrorTestContainer() { Bind(stylesheet); }
 
   std::string_view view = R"(
     <markdown id="md" content="# Title" stylesheet="{stylesheet}"></markdown>

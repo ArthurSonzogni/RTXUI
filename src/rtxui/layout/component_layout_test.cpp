@@ -9,8 +9,6 @@
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
@@ -25,10 +23,6 @@ namespace {
 
 class FlexMinWidthComponent : public rtxui::Component<FlexMinWidthComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<FlexMinWidthComponent>::InitReflection();
-  }
   // The container is narrower than the two items together, so the flex
   // distribution asks each to shrink to 4 -- and min-width refuses, leaving
   // each 5 wide.
@@ -73,11 +67,6 @@ TEST_CASE("A flex item that refuses to shrink is not overlapped",
 
 class BlockInInlineComponent : public rtxui::Component<BlockInInlineComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<BlockInInlineComponent>::InitReflection();
-  }
   // A component's own root is inline-level, so these sit in an inline
   // formatting context -- which is the situation the widths expose. Each is
   // narrow enough that two would fit side by side if nothing broke the line.
@@ -152,10 +141,6 @@ TEST_CASE("A block in an inline context takes its own line",
 
 class ExtremeSizeComponent : public rtxui::Component<ExtremeSizeComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<ExtremeSizeComponent>::InitReflection();
-  }
   // calc() bounds each operand when it is parsed, but not their product, so
   // this reaches layout as a float far too large for the int it is narrowed
   // to. That narrowing is undefined behaviour and produced INT_MIN, which then
@@ -192,9 +177,6 @@ TEST_CASE("Extreme sizes lay out without overflowing", "[component][limits]") {
 class MarginAutoTestComponent
     : public rtxui::Component<MarginAutoTestComponent> {
  public:
-  void InitReflection() override {
-    rtxui::Component<MarginAutoTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <box id="parent">
       <box id="child">centered</box>
@@ -238,9 +220,6 @@ TEST_CASE("Block layout max-width and margin auto centering",
 
 class MaxHeightTestComponent : public rtxui::Component<MaxHeightTestComponent> {
  public:
-  void InitReflection() override {
-    rtxui::Component<MaxHeightTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <box id="parent">
       <box id="child">
@@ -289,11 +268,6 @@ TEST_CASE("Block layout max-height constraint",
 
 struct InlineSpanBackgroundTestComponent
     : public rtxui::Component<InlineSpanBackgroundTestComponent> {
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<InlineSpanBackgroundTestComponent>::InitReflection();
-  }
   std::string_view view = R"html(
     <div>before <span class="hl">highlighted</span> after</div>
     <style>

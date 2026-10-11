@@ -14,7 +14,7 @@ This specification documents the reactivity model, snapshot-based dirty detectio
 
 ## 2. Binding Classification & Contracts
 
-Members are registered via `Bind()` within the component constructor or `InitReflection()`:
+Members are registered via `Bind()` in the component constructor:
 
 ```cpp
 class Counter : public rtxui::Component<Counter> {

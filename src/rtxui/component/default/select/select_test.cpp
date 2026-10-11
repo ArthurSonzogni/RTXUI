@@ -31,12 +31,7 @@ class SelectTestComponent : public rtxui::Component<SelectTestComponent> {
  public:
   std::string my_theme = "light";
 
-  void InitReflection() override {
-    Bind(my_theme);
-    Import<rtxui::select>();
-    Import<rtxui::option>();
-    rtxui::Component<SelectTestComponent>::InitReflection();
-  }
+  SelectTestComponent() { Bind(my_theme); }
   std::string_view view = R"(
     <select value="{my_theme}">
       <option value="dark">Dark Theme</option>
@@ -157,12 +152,7 @@ class SelectDisabledOptionTestComponent
  public:
   std::string my_value = "a";
 
-  void InitReflection() override {
-    Bind(my_value);
-    Import<rtxui::select>();
-    Import<rtxui::option>();
-    rtxui::Component<SelectDisabledOptionTestComponent>::InitReflection();
-  }
+  SelectDisabledOptionTestComponent() { Bind(my_value); }
   std::string_view view = R"(
     <select value="{my_value}">
       <option value="a">A</option>
@@ -371,12 +361,7 @@ class SelectZIndexTestComponent
  public:
   std::string my_theme = "light";
 
-  void InitReflection() override {
-    Bind(my_theme);
-    Import<rtxui::select>();
-    Import<rtxui::option>();
-    rtxui::Component<SelectZIndexTestComponent>::InitReflection();
-  }
+  SelectZIndexTestComponent() { Bind(my_theme); }
   std::string_view view = R"(
     <div style="display: block; width: 40; height: 10;">
       <select value="{my_theme}">
@@ -436,12 +421,7 @@ class SelectPreservationTestComponent
     : public rtxui::Component<SelectPreservationTestComponent> {
  public:
   std::string theme = "light";
-  void InitReflection() override {
-    Bind(theme);
-    Import<rtxui::select>();
-    Import<rtxui::option>();
-    rtxui::Component<SelectPreservationTestComponent>::InitReflection();
-  }
+  SelectPreservationTestComponent() { Bind(theme); }
   std::string_view view = R"(
     <select value="{theme}">
       <option class="custom-class" value="dark">Dark Theme</option>

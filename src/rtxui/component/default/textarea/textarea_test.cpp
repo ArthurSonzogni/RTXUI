@@ -31,11 +31,7 @@ namespace {
 class TextareaTestComponent : public rtxui::Component<TextareaTestComponent> {
  public:
   std::string my_text = "line one\nline two\nline three";
-  void InitReflection() override {
-    Bind(my_text);
-    Import<rtxui::textarea>();
-    rtxui::Component<TextareaTestComponent>::InitReflection();
-  }
+  TextareaTestComponent() { Bind(my_text); }
   std::string_view view = R"(
     <textarea value="{my_text}" />
   )";
@@ -131,11 +127,7 @@ class GutterTextareaTestComponent
     : public rtxui::Component<GutterTextareaTestComponent> {
  public:
   std::string my_text = "";
-  void InitReflection() override {
-    Bind(my_text);
-    Import<rtxui::textarea>();
-    rtxui::Component<GutterTextareaTestComponent>::InitReflection();
-  }
+  GutterTextareaTestComponent() { Bind(my_text); }
   std::string_view view = R"(
     <textarea value="{my_text}" linenumbers="true" />
   )";
@@ -328,11 +320,7 @@ class MultiClickTextareaTestComponent
       "First line of p2\n"
       "Second line of p2";
 
-  void InitReflection() override {
-    Bind(my_text);
-    Import<rtxui::textarea>();
-    rtxui::Component<MultiClickTextareaTestComponent>::InitReflection();
-  }
+  MultiClickTextareaTestComponent() { Bind(my_text); }
   std::string_view view = R"(
     <textarea value="{my_text}" />
   )";
@@ -520,11 +508,7 @@ TEST_CASE("Textarea ComputeRowStarts correctly wraps past the second line",
    public:
     std::string text =
         "word01 word02 word03 word04 word05 word06 word07 word08";
-    void InitReflection() override {
-      Bind(text);
-      Import<rtxui::textarea>();
-      rtxui::Component<NarrowTextareaComponent>::InitReflection();
-    }
+    NarrowTextareaComponent() { Bind(text); }
     std::string_view view = R"(
       <textarea value="{text}" style="width: 17; padding: 0 1;" />
     )";
@@ -1259,12 +1243,11 @@ namespace {
 class SmallTextarea : public rtxui::Component<SmallTextarea>,
                       public rtxui::TextInputBase {
  public:
-  void InitReflection() override {
+  SmallTextarea() {
     Bind(left_text);
     Bind(cursor_char);
     Bind(right_text);
     Bind(cursor_class);
-    rtxui::Component<SmallTextarea>::InitReflection();
   }
   std::string_view Setup() {
     return R"html(
@@ -1305,10 +1288,9 @@ class SmallTextareaTestComponent
     : public rtxui::Component<SmallTextareaTestComponent> {
  public:
   std::string my_text = "";
-  void InitReflection() override {
+  SmallTextareaTestComponent() {
     Bind(my_text);
     Import<SmallTextarea>();
-    rtxui::Component<SmallTextareaTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <SmallTextarea value="{my_text}" />

@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/tab_pane/tab_pane.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -29,12 +28,7 @@ class TabsTestComponent : public rtxui::Component<TabsTestComponent> {
  public:
   std::string active_tab = "tab1";
 
-  void InitReflection() override {
-    Bind(active_tab);
-    Import<rtxui::tabs>();
-    Import<rtxui::tab_pane>();
-    rtxui::Component<TabsTestComponent>::InitReflection();
-  }
+  TabsTestComponent() { Bind(active_tab); }
   std::string_view view = R"(
     <tabs value="{active_tab}">
       <tab-pane label="Tab One" name="tab1">Content One</tab-pane>
@@ -315,12 +309,7 @@ class TabsCrashPreventionTestComponent
  public:
   std::string active_tab = "tab1";
 
-  void InitReflection() override {
-    Bind(active_tab);
-    Import<rtxui::tabs>();
-    Import<rtxui::tab_pane>();
-    rtxui::Component<TabsCrashPreventionTestComponent>::InitReflection();
-  }
+  TabsCrashPreventionTestComponent() { Bind(active_tab); }
   std::string_view view = R"(
     <tabs value="{active_tab}">
       <tab-pane label="Tab One" name="tab1">Content One</tab-pane>

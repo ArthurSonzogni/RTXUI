@@ -15,7 +15,6 @@
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/input/input.hpp"
 #include "rtxui/headless.hpp"
 #include "rtxui/refcounted.hpp"
 
@@ -27,11 +26,10 @@ class Numbers : public Component<Numbers> {
   double price = 2.5;
   float ratio = 0.1f;
   std::vector<int> scores{3, 14, 15};
-  void InitReflection() override {
+  Numbers() {
     Bind(price);
     Bind(ratio);
     Bind(scores);
-    Import<div>();
   }
   std::string_view view = R"html(
     <div>
@@ -56,11 +54,9 @@ class NumberInputs : public Component<NumberInputs> {
  public:
   int count = 0;
   double amount = 0.0;
-  void InitReflection() override {
+  NumberInputs() {
     Bind(count);
     Bind(amount);
-    Import<div>();
-    Import<input>();
   }
   std::string_view view = R"html(
     <div>

@@ -64,7 +64,7 @@ class AnchorDemo : public Component<AnchorDemo> {
           <div id="sec-usage" class="section sec-even">
             <div class="section-title">Usage</div>
             <p>Initialize a component class, define its view property with HTML/XML markup,</p>
-            <p>implement InitReflection(), and start the main Screen loop.</p>
+            <p>bind its members in the constructor, and start the Screen loop.</p>
             <p>Bind C++ states to reactive template properties for dynamic UI updates.</p>
           </div>
 

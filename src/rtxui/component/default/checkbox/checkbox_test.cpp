@@ -24,11 +24,9 @@ class CheckboxTestComponent : public rtxui::Component<CheckboxTestComponent> {
   bool my_checked = false;
   bool onchange_called = false;
 
-  void InitReflection() override {
+  CheckboxTestComponent() {
     Bind(my_checked);
-    Import<rtxui::checkbox>();
     Import("ToggleEnabled", [this]() { onchange_called = true; });
-    rtxui::Component<CheckboxTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <checkbox checked="{my_checked}" onchange="ToggleEnabled">Click Me</checkbox>
@@ -75,11 +73,7 @@ class CheckboxCheckedStyleComponent
  public:
   bool my_checked = false;
 
-  void InitReflection() override {
-    Bind(my_checked);
-    Import<rtxui::checkbox>();
-    rtxui::Component<CheckboxCheckedStyleComponent>::InitReflection();
-  }
+  CheckboxCheckedStyleComponent() { Bind(my_checked); }
   std::string_view view = R"(
     <checkbox checked="{my_checked}">Option</checkbox>
     <style>

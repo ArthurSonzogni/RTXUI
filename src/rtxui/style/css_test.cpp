@@ -12,10 +12,8 @@
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/component/component_internal.hpp"
-#include "rtxui/component/default/button/button.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/component/default/input/input.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
@@ -31,10 +29,6 @@ namespace {
 
 class ImportantTestComponent : public rtxui::Component<ImportantTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<ImportantTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div id="a" class="base">A</div>
@@ -68,11 +62,6 @@ TEST_CASE("CSS !important wins over later rules and inline styles",
 
 class VarTestComponent : public rtxui::Component<VarTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<VarTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div class="theme">
       <div id="direct">Direct</div>
@@ -146,20 +135,12 @@ TEST_CASE("CSS custom properties resolve through the DOM tree",
 
 class SharedSheetA : public rtxui::Component<SharedSheetA> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<SharedSheetA>::InitReflection();
-  }
   std::string_view view =
       R"(<div id="x">x</div><style>#x { padding-left: 3; }</style>)";
 };
 
 class SharedSheetB : public rtxui::Component<SharedSheetB> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<SharedSheetB>::InitReflection();
-  }
   // Deliberately a different stylesheet with the same selector, so a cache
   // that keyed or shared wrongly would show up as B being styled like A.
   std::string_view view =
@@ -211,10 +192,6 @@ TEST_CASE("Components sharing a stylesheet keep their own styles",
 class TwoStyleBlocksComponent
     : public rtxui::Component<TwoStyleBlocksComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<TwoStyleBlocksComponent>::InitReflection();
-  }
   // Splitting a stylesheet in two, or putting an override below a base, is an
   // ordinary thing to write. Each block used to overwrite the last, so only
   // the final one survived.
@@ -678,10 +655,6 @@ namespace {
 class StyledParentTestComponent
     : public rtxui::Component<StyledParentTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::input>();
-    rtxui::Component<StyledParentTestComponent>::InitReflection();
-  }
   std::string value = "initial";
   std::string_view view = R"html(
     <div>
@@ -733,10 +706,6 @@ TEST_CASE("Child component style is preserved when parent stylesheet styles it",
 TEST_CASE("Component.InlineStyleParsingRegression", "[component][style]") {
   class InlineStyleComp : public rtxui::Component<InlineStyleComp> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      rtxui::Component<InlineStyleComp>::InitReflection();
-    }
     std::string_view view = R"xml(
       <div id="target" style="display: flex; width: 15; height: 10; background-color: rgb(255, 0, 0);"></div>
     )xml";
@@ -758,11 +727,7 @@ TEST_CASE("Invalid interpolated CSS does not crash the process",
   class DynamicStyleComp : public rtxui::Component<DynamicStyleComp> {
    public:
     std::string rule = "color: red;";
-    void InitReflection() override {
-      Bind(rule);
-      Import<rtxui::div>();
-      rtxui::Component<DynamicStyleComp>::InitReflection();
-    }
+    DynamicStyleComp() { Bind(rule); }
     std::string_view view = R"xml(
       <div id="target" class="box">hi</div>
       <style>
@@ -789,11 +754,7 @@ TEST_CASE("A CSS syntax error reaches the diagnostic handler",
   class DynamicStyleComp : public rtxui::Component<DynamicStyleComp> {
    public:
     std::string rule = "color: red;";
-    void InitReflection() override {
-      Bind(rule);
-      Import<rtxui::div>();
-      rtxui::Component<DynamicStyleComp>::InitReflection();
-    }
+    DynamicStyleComp() { Bind(rule); }
     std::string_view view = R"xml(
       <div id="target" class="box">hi</div>
       <style>
@@ -824,10 +785,6 @@ namespace {
 
 class ClassMutationApp : public rtxui::Component<ClassMutationApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<ClassMutationApp>::InitReflection();
-  }
   std::string_view view = R"(
     <div id="box">x</div>
     <style>
@@ -873,11 +830,7 @@ namespace {
 class LateElementApp : public rtxui::Component<LateElementApp> {
  public:
   bool add_late = false;
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Bind(add_late);
-    rtxui::Component<LateElementApp>::InitReflection();
-  }
+  LateElementApp() { Bind(add_late); }
   std::string_view view = R"(
     <div id="host"></div>
     <style>
@@ -934,10 +887,6 @@ class HostStyledButtonsApp : public rtxui::Component<HostStyledButtonsApp> {
   int mode = 0;
   std::string a_class() const { return mode == 0 ? "active" : ""; }
   std::string b_class() const { return mode == 1 ? "active" : ""; }
-  void InitReflection() override {
-    Import<rtxui::button>();
-    rtxui::Component<HostStyledButtonsApp>::InitReflection();
-  }
   // `self { button { … } }` compiles to the descendant selector `self button`,
   // so matching it needs the button to still be reachable from this root.
   std::string_view view = R"(
@@ -1101,10 +1050,7 @@ class HoverCard : public rtxui::Component<HoverCard> {
 
 class HoverCardHost : public rtxui::Component<HoverCardHost> {
  public:
-  void InitReflection() override {
-    Import<HoverCard>();
-    rtxui::Component<HoverCardHost>::InitReflection();
-  }
+  HoverCardHost() { Import<HoverCard>(); }
   std::string_view view = R"(
     <div>
       <HoverCard/>
@@ -1128,10 +1074,7 @@ class PartLabel : public rtxui::Component<PartLabel> {
 
 class PartLabelMiddle : public rtxui::Component<PartLabelMiddle> {
  public:
-  void InitReflection() override {
-    Import<PartLabel>();
-    rtxui::Component<PartLabelMiddle>::InitReflection();
-  }
+  PartLabelMiddle() { Import<PartLabel>(); }
   std::string_view view = R"(
     <div>
       <PartLabel/>
@@ -1142,10 +1085,7 @@ class PartLabelMiddle : public rtxui::Component<PartLabelMiddle> {
 // The rule reaches through PartLabelMiddle, two components above the span.
 class PartLabelHost : public rtxui::Component<PartLabelHost> {
  public:
-  void InitReflection() override {
-    Import<PartLabelMiddle>();
-    rtxui::Component<PartLabelHost>::InitReflection();
-  }
+  PartLabelHost() { Import<PartLabelMiddle>(); }
   std::string_view view = R"(
     <div>
       <PartLabelMiddle/>
@@ -1202,10 +1142,9 @@ class CountedChild : public rtxui::Component<CountedChild> {
 class CountedParent : public rtxui::Component<CountedParent> {
  public:
   int value = 0;
-  void InitReflection() override {
+  CountedParent() {
     Bind(value);
     Import<CountedChild>();
-    rtxui::Component<CountedParent>::InitReflection();
   }
   std::string_view view = R"(
     <div class="v{value}">

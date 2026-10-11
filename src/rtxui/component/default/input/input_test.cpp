@@ -29,11 +29,7 @@ namespace {
 class InputTestComponent : public rtxui::Component<InputTestComponent> {
  public:
   std::string my_text = "hello world";
-  void InitReflection() override {
-    Bind(my_text);
-    Import<rtxui::input>();
-    rtxui::Component<InputTestComponent>::InitReflection();
-  }
+  InputTestComponent() { Bind(my_text); }
   std::string_view view = R"(
     <input value="{my_text}" />
   )";
@@ -145,11 +141,9 @@ class PasswordInputTestComponent
  public:
   std::string pass = "secret123";
   std::string input_type = "password";
-  void InitReflection() override {
+  PasswordInputTestComponent() {
     Bind(pass);
     Bind(input_type);
-    Import<rtxui::input>();
-    rtxui::Component<PasswordInputTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <input type="{input_type}" value="{pass}" />
@@ -562,10 +556,6 @@ TEST_CASE(
 class DisabledReadonlyInputTestComponent
     : public rtxui::Component<DisabledReadonlyInputTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::input>();
-    rtxui::Component<DisabledReadonlyInputTestComponent>::InitReflection();
-  }
   std::string_view view = R"(<input disabled="true" readonly="true" />)";
 };
 
@@ -640,11 +630,7 @@ TEST_CASE("Input Component Placeholder Attribute Parsed From XML",
       : public rtxui::Component<PlaceholderInputTestComponent> {
    public:
     std::string my_text = "";
-    void InitReflection() override {
-      Bind(my_text);
-      Import<rtxui::input>();
-      rtxui::Component<PlaceholderInputTestComponent>::InitReflection();
-    }
+    PlaceholderInputTestComponent() { Bind(my_text); }
     std::string_view view = R"(
       <input value="{my_text}" placeholder="Search..." />
     )";
@@ -789,11 +775,7 @@ TEST_CASE("Input Component Maxlength Attribute Parsed From XML",
       : public rtxui::Component<MaxlengthInputTestComponent> {
    public:
     std::string my_text = "";
-    void InitReflection() override {
-      Bind(my_text);
-      Import<rtxui::input>();
-      rtxui::Component<MaxlengthInputTestComponent>::InitReflection();
-    }
+    MaxlengthInputTestComponent() { Bind(my_text); }
     std::string_view view = R"(
       <input value="{my_text}" maxlength="5" />
     )";
@@ -1172,11 +1154,7 @@ TEST_CASE("Input Click Does Not Resize", "[component][input]") {
 class TextareaTestComponent : public rtxui::Component<TextareaTestComponent> {
  public:
   std::string my_text = "line one\nline two\nline three";
-  void InitReflection() override {
-    Bind(my_text);
-    Import<rtxui::textarea>();
-    rtxui::Component<TextareaTestComponent>::InitReflection();
-  }
+  TextareaTestComponent() { Bind(my_text); }
   std::string_view view = R"(
     <textarea value="{my_text}" />
   )";
@@ -1288,12 +1266,11 @@ namespace {
 class SmallInput : public rtxui::Component<SmallInput>,
                    public rtxui::TextInputBase {
  public:
-  void InitReflection() override {
+  SmallInput() {
     Bind(left_text);
     Bind(cursor_char);
     Bind(right_text);
     Bind(cursor_class);
-    rtxui::Component<SmallInput>::InitReflection();
   }
   std::string_view Setup() {
     return R"html(
@@ -1334,10 +1311,9 @@ class SmallInputTestComponent
     : public rtxui::Component<SmallInputTestComponent> {
  public:
   std::string my_text = "";
-  void InitReflection() override {
+  SmallInputTestComponent() {
     Bind(my_text);
     Import<SmallInput>();
-    rtxui::Component<SmallInputTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <SmallInput value="{my_text}" />
@@ -1397,10 +1373,6 @@ namespace {
 class InputReuseTestComponent
     : public rtxui::Component<InputReuseTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::input>();
-    rtxui::Component<InputReuseTestComponent>::InitReflection();
-  }
   std::string value = "initial";
   std::string_view view = R"(
     <div>
@@ -1479,10 +1451,6 @@ namespace {
 class StyledParentTestComponent
     : public rtxui::Component<StyledParentTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::input>();
-    rtxui::Component<StyledParentTestComponent>::InitReflection();
-  }
   std::string value = "initial";
   std::string_view view = R"html(
     <div>
@@ -1531,10 +1499,6 @@ namespace {
 class SelectionHighlightTestComponent
     : public rtxui::Component<SelectionHighlightTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::input>();
-    rtxui::Component<SelectionHighlightTestComponent>::InitReflection();
-  }
   std::string_view view = R"html(
     <input id="test-input" class="custom-input" />
     <style>

@@ -8,11 +8,6 @@
 
 #include "catch2/catch_message.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/b/b.hpp"
-#include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/i/i.hpp"
-#include "rtxui/component/default/span/span.hpp"
-#include "rtxui/component/default/strong/strong.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/testing/render.hpp"
@@ -23,11 +18,6 @@ namespace {
 
 class BoldTestComponent : public rtxui::Component<BoldTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::b>();
-    Import<rtxui::strong>();
-    rtxui::Component<BoldTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <b>Bold text</b>
@@ -90,11 +80,6 @@ TEST_CASE("Bold and Strong Components cell.bold rendering",
 
 class ItalicTestComponent : public rtxui::Component<ItalicTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::i>();
-    Import<rtxui::em>();
-    rtxui::Component<ItalicTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <i>Italic text</i>
@@ -141,10 +126,6 @@ TEST_CASE("Italic and Em Components cell.italic rendering",
 
 class DimTestComponent : public rtxui::Component<DimTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<DimTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div class="light">Dim text</div>
@@ -187,11 +168,6 @@ TEST_CASE("Dim text rendering via font-weight lighter",
 class TextTransformTestComponent
     : public rtxui::Component<TextTransformTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<TextTransformTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div class="up">hello wörld</div>
@@ -230,11 +206,6 @@ TEST_CASE("Text transform rendering", "[component][text-transform][paint]") {
 class LetterSpacingTestComponent
     : public rtxui::Component<LetterSpacingTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<LetterSpacingTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div class="spaced">ab cd</div>
@@ -276,10 +247,6 @@ TEST_CASE("Letter spacing rendering", "[component][letter-spacing][paint]") {
 class LineHeightTestComponent
     : public rtxui::Component<LineHeightTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<LineHeightTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div class="lh">first
 second</div>
@@ -291,10 +258,6 @@ second</div>
 
 class EllipsisTestComponent : public rtxui::Component<EllipsisTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<EllipsisTestComponent>::InitReflection();
-  }
   // Plain blocks, which is what a <div> is and what the property did nothing
   // on: the ellipsis check reads the style of the box running the inline flow,
   // and a block's text sits in an anonymous wrapper that was not given it.
@@ -363,10 +326,6 @@ TEST_CASE("text-overflow: ellipsis truncates a block", "[component][paint]") {
 
 class TabStopTestComponent : public rtxui::Component<TabStopTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<TabStopTestComponent>::InitReflection();
-  }
   // Each line starts at a different column so the tab lands on a different
   // stop, which is what distinguishes real tab stops from a fixed run of
   // spaces. The wide-glyph line checks the column is counted in cells.
@@ -448,10 +407,6 @@ TEST_CASE("Line height rendering", "[component][line-height][paint]") {
 class OverflowWrapTestComponent
     : public rtxui::Component<OverflowWrapTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<OverflowWrapTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div class="break">abcdefghijklmno</div>
@@ -480,11 +435,6 @@ TEST_CASE("Overflow wrap rendering", "[component][overflow-wrap][paint]") {
 
 class WordBreakTestComponent : public rtxui::Component<WordBreakTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Import<rtxui::b>();
-    rtxui::Component<WordBreakTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>
       <div class="normal">Ab <b>abcdefgh</b></div>
@@ -517,9 +467,6 @@ TEST_CASE("word-break: break-all wraps mid-word",
 class StyleDecorationTestComponent
     : public rtxui::Component<StyleDecorationTestComponent> {
  public:
-  void InitReflection() override {
-    rtxui::Component<StyleDecorationTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <box>
       <item id="u">u</item>
@@ -584,10 +531,6 @@ TEST_CASE("Text Decoration rendering onto cells",
 
 class OverlineTestComponent : public rtxui::Component<OverlineTestComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    rtxui::Component<OverlineTestComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div class="over">ab<div class="plain">cd</div></div>
     <style>

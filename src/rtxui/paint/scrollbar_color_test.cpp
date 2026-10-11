@@ -7,7 +7,6 @@
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
@@ -162,11 +161,7 @@ namespace {
 // height/width so the scrollbar column position (x = width - 1) is known.
 struct TextareaScrollbarApp : Component<TextareaScrollbarApp> {
   std::string text;
-  void InitReflection() override {
-    Bind(text);
-    Import<textarea>();
-    Component<TextareaScrollbarApp>::InitReflection();
-  }
+  TextareaScrollbarApp() { Bind(text); }
   std::string_view view = R"html(<textarea value="{text}" />)html";
 };
 

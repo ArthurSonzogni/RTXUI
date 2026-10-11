@@ -14,7 +14,6 @@
 #include "catch2/catch_message.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/blockquote/blockquote.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/component/default/span/span.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
@@ -1568,10 +1567,6 @@ TEST_CASE("Layout: position sticky layout and scrolling",
 TEST_CASE("Layout: position sticky direct child of scroll container",
           "[layout][sticky][scroll]") {
   struct StickyDirectComponent : Component<StickyDirectComponent> {
-    void InitReflection() override {
-      Import<div>();
-      Component<StickyDirectComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div class="scrollable">
         <div class="sticky-element">S</div>
@@ -1873,10 +1868,6 @@ TEST_CASE("Layout: min-width is enforced on a table",
 TEST_CASE("Layout: a table wider than its box reports its true scroll_width",
           "[layout][table][scroll]") {
   struct T : Component<T> {
-    void InitReflection() override {
-      Import<div>();
-      Component<T>::InitReflection();
-    }
     std::string_view Setup() {
       return R"html(
         <div class="wrap" style="width: 5; overflow-x: scroll;">
@@ -3050,11 +3041,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
           "[layout][sticky][scroll]") {
   struct TestMonthSection : Component<TestMonthSection> {
     std::string name;
-    void InitReflection() override {
-      Import<div>();
-      Bind(name);
-      Component<TestMonthSection>::InitReflection();
-    }
+    TestMonthSection() { Bind(name); }
     std::string_view view = R"html(
       <div class="month-container">
         <div class="sticky-header">{name}</div>
@@ -3079,11 +3066,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
   };
 
   struct TestStickyDemo : Component<TestStickyDemo> {
-    void InitReflection() override {
-      Import<TestMonthSection>("month-section");
-      Import<div>();
-      Component<TestStickyDemo>::InitReflection();
-    }
+    TestStickyDemo() { Import<TestMonthSection>("month-section"); }
     std::string_view view = R"html(
       <div class="scroll-window">
         <month-section name="J" />
@@ -3215,10 +3198,6 @@ TEST_CASE("Layout: position sticky pushing calendar test",
 TEST_CASE("Layout: InlineFlow respects height and min-height",
           "[layout][inline][height]") {
   struct TestInlineHeight : Component<TestInlineHeight> {
-    void InitReflection() override {
-      Import<div>();
-      Component<TestInlineHeight>::InitReflection();
-    }
     std::string_view view = R"html(
       <div class="container">
         <div class="inline-box">Item</div>
@@ -3258,10 +3237,6 @@ TEST_CASE("Layout: InlineFlow respects height and min-height",
 TEST_CASE("Layout: Absolute position centering via margin auto",
           "[layout][absolute][margin-auto]") {
   struct TestAbsoluteCentering : Component<TestAbsoluteCentering> {
-    void InitReflection() override {
-      Import<div>();
-      Component<TestAbsoluteCentering>::InitReflection();
-    }
     std::string_view view = R"html(
       <div class="container">
         <div class="child">X</div>
@@ -3960,10 +3935,6 @@ TEST_CASE(
     "nowrap text",
     "[layout][inline-block][scroll]") {
   struct T : Component<T> {
-    void InitReflection() override {
-      Import<div>();
-      Component<T>::InitReflection();
-    }
     std::string_view Setup() {
       return R"html(
         <div class="ib" style="display: inline-block; width: 3; overflow-x: scroll; white-space: nowrap;">HelloWorldLongText</div>
@@ -4080,10 +4051,6 @@ TEST_CASE(
     "wrapper to a further block ancestor",
     "[layout][scroll][anonymous-wrapper]") {
   struct T : Component<T> {
-    void InitReflection() override {
-      Import<div>();
-      Component<T>::InitReflection();
-    }
     std::string_view Setup() {
       return R"html(
         <div class="wrap" style="width: 5; overflow-x: scroll;">
@@ -4116,10 +4083,6 @@ TEST_CASE(
     "component",
     "[layout][blockquote]") {
   struct T : Component<T> {
-    void InitReflection() override {
-      Import<blockquote>();
-      Component<T>::InitReflection();
-    }
     std::string_view Setup() {
       return R"html(
         <blockquote>Quoted text</blockquote>

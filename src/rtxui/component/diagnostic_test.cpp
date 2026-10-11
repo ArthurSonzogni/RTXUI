@@ -10,8 +10,6 @@
 
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/button/button.hpp"
-#include "rtxui/component/default/div/div.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
@@ -57,13 +55,11 @@ class Valid : public Component<Valid> {
   std::vector<std::string> items{"a", "b"};
   bool shown = true;
   void Go() {}
-  void InitReflection() override {
+  Valid() {
     Bind(title);
     Bind(items);
     Bind(shown);
     Bind(Go);
-    Import<div>();
-    Import<button>();
   }
   std::string_view view = R"html(
     <div class="box" style="padding: 1">
@@ -88,7 +84,6 @@ TEST_CASE("A valid template reports nothing", "[diagnostic]") {
 
 class UnknownCss : public Component<UnknownCss> {
  public:
-  void InitReflection() override { Import<div>(); }
   std::string_view view = R"html(
     <div class="box">x</div>
     <style>
@@ -111,10 +106,7 @@ TEST_CASE("Unsupported CSS declarations are reported once", "[diagnostic]") {
 class UnboundName : public Component<UnboundName> {
  public:
   int count = 0;
-  void InitReflection() override {
-    Bind(count);
-    Import<div>();
-  }
+  UnboundName() { Bind(count); }
   std::string_view view = R"html(
     <div>{titel} {count == 1}</div>
   )html";
@@ -131,7 +123,6 @@ TEST_CASE("Unbound names and expressions in {} are reported", "[diagnostic]") {
 
 class ForeignSyntax : public Component<ForeignSyntax> {
  public:
-  void InitReflection() override { Import<div>(); }
   std::string_view view = R"html(
     <div v-if="shown" className="box" onClick="Go">
       <div for="item in items">x</div>
@@ -155,7 +146,6 @@ class Card : public Component<Card> {
 
 class UnknownTags : public Component<UnknownTags> {
  public:
-  void InitReflection() override { Import<div>(); }
   std::string_view view = R"html(
     <div>
       <View>x</View>
@@ -179,7 +169,6 @@ TEST_CASE("Unknown tags and nested <style> are reported", "[diagnostic]") {
 
 class UnboundHandler : public Component<UnboundHandler> {
  public:
-  void InitReflection() override { Import<div>(); }
   std::string_view view = R"html(
     <div onclick="Missing">click</div>
   )html";

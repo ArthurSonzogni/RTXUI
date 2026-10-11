@@ -10,7 +10,6 @@
 #include <type_traits>
 
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/button/button.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -27,12 +26,7 @@ class DialogTestComponent : public rtxui::Component<DialogTestComponent> {
  public:
   bool dialog_open = false;
 
-  void InitReflection() override {
-    Bind(dialog_open);
-    Import<rtxui::dialog>();
-    Import<rtxui::button>();
-    rtxui::Component<DialogTestComponent>::InitReflection();
-  }
+  DialogTestComponent() { Bind(dialog_open); }
   std::string_view view = R"(
     <dialog open="{dialog_open}" title="Confirm Dialog">
       Body Content
@@ -88,12 +82,9 @@ class DialogClickTestComponent
 
   void Confirm() { confirmed++; }
 
-  void InitReflection() override {
+  DialogClickTestComponent() {
     Bind(dialog_open);
     Bind(Confirm);
-    Import<rtxui::dialog>();
-    Import<rtxui::button>();
-    rtxui::Component<DialogClickTestComponent>::InitReflection();
   }
   // The wrapper matters: it offsets the dialog's parent away from the
   // viewport origin, which is what made the overlay's contents hit-test in

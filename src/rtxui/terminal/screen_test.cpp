@@ -15,11 +15,7 @@
 #include "rtxui/base/task_runner.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/button/button.hpp"
-#include "rtxui/component/default/checkbox/checkbox.hpp"
-#include "rtxui/component/default/div/div.hpp"
 #include "rtxui/component/default/input/input.hpp"
-#include "rtxui/component/default/radio/radio.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/component/default/tooltip/tooltip.hpp"
 #include "rtxui/dom/element.hpp"
@@ -39,10 +35,6 @@ namespace {
 
 class DummyComponent : public Component<DummyComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Component<DummyComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div>Hello Mock</div>
   )";
@@ -143,10 +135,6 @@ TEST_CASE("Screen.BracketedPasteInsertsTextIntoFocusedInput",
   // Screen's event dispatch, landing as text in a focused <input>.
   class PasteInputComponent : public Component<PasteInputComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::input>();
-      Component<PasteInputComponent>::InitReflection();
-    }
     std::string_view view = R"(<input id="in" />)";
   };
 
@@ -176,10 +164,6 @@ TEST_CASE("Screen.PasteNewlineIntoInputIsDropped", "[terminal][paste]") {
   // be dropped rather than doing something undefined.
   class PasteInputComponent : public Component<PasteInputComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::input>();
-      Component<PasteInputComponent>::InitReflection();
-    }
     std::string_view view = R"(<input id="in" />)";
   };
 
@@ -214,10 +198,6 @@ TEST_CASE("Screen.PastingIntoTextareaDoesNotDoubleIndentation",
   // previous one's.
   class PasteTextareaComponent : public Component<PasteTextareaComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::textarea>();
-      Component<PasteTextareaComponent>::InitReflection();
-    }
     std::string_view view = R"(<textarea id="ta" />)";
   };
 
@@ -263,10 +243,7 @@ TEST_CASE("Screen.PasteAppliesAsOneRedrawNotOnePerCharacter",
   class BoundTrackerComponent : public Component<BoundTrackerComponent> {
    public:
     std::string typed;
-    void InitReflection() override {
-      Bind(typed);
-      Component<BoundTrackerComponent>::InitReflection();
-    }
+    BoundTrackerComponent() { Bind(typed); }
     bool OnEvent(Event event) override {
       if (auto* kb = event.get_if<Event::Keyboard>()) {
         typed += static_cast<char>(kb->codepoint);
@@ -310,10 +287,6 @@ TEST_CASE("Screen.WheelBurstAppliesAsOneRedrawNotOnePerTick",
   // wheel ticks in one read painted and wrote a full frame per tick.
   class WheelBurstComponent : public Component<WheelBurstComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<WheelBurstComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
@@ -364,13 +337,11 @@ class BurstClickComponent : public Component<BurstClickComponent> {
   int clicks = 0;
   void Hide() { shown = false; }
   void Bump() { ++clicks; }
-  void InitReflection() override {
+  BurstClickComponent() {
     Bind(shown);
     Bind(clicks);
     Bind(Hide);
     Bind(Bump);
-    Import<rtxui::div>();
-    Component<BurstClickComponent>::InitReflection();
   }
   std::string_view view = R"(
     <div>
@@ -391,11 +362,7 @@ namespace {
 class ControlCharComponent : public Component<ControlCharComponent> {
  public:
   std::string text;
-  void InitReflection() override {
-    Bind(text);
-    Import<rtxui::div>();
-    Component<ControlCharComponent>::InitReflection();
-  }
+  ControlCharComponent() { Bind(text); }
   std::string_view view = R"(<div>{text}</div>)";
 };
 
@@ -539,13 +506,11 @@ class HandlerArgComponent : public Component<HandlerArgComponent> {
   std::string log;
   void Pick(std::string which) { log += "[" + which + "]"; }
   void Plain() { log += "(plain)"; }
-  void InitReflection() override {
+  HandlerArgComponent() {
     Bind(items);
     Bind(log);
     Bind(Pick);
     Bind(Plain);
-    Import<rtxui::div>();
-    Component<HandlerArgComponent>::InitReflection();
   }
   // A custom raw-string delimiter is needed: `onclick="Pick({$index})">`
   // contains the )" that would end a plain R"( ... )".
@@ -646,11 +611,6 @@ TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
     int clicked_count = 0;
     void on_click() { clicked_count++; }
 
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ClickableComponent>::InitReflection();
-    }
-
     ClickableComponent() {
       Import("on_click", [this]() { on_click(); });
       Bind(clicked_count);
@@ -694,10 +654,6 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
 
   class ScrollTestComponent : public Component<ScrollTestComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ScrollTestComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div>Line 1</div>
@@ -790,10 +746,6 @@ TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
 
   class ScrollTestComponent : public Component<ScrollTestComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ScrollTestComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div class="wide-child">Very long text that overflows horizontally</div>
@@ -865,10 +817,6 @@ TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
 
   class NestedScrollComponent : public Component<NestedScrollComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<NestedScrollComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="outer" class="outer-scroll">
         <div>Outer 1</div>
@@ -1011,12 +959,6 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
 
   class FocusCyclingComponent : public Component<FocusCyclingComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Import<rtxui::input>();
-      Import<rtxui::checkbox>();
-      Component<FocusCyclingComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div>
         <input id="input1" />
@@ -1090,11 +1032,6 @@ TEST_CASE("Screen.DisabledInputExcludedFromTabOrder",
   class DisabledFocusCyclingComponent
       : public Component<DisabledFocusCyclingComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Import<rtxui::input>();
-      Component<DisabledFocusCyclingComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div>
         <input id="input1" />
@@ -1138,11 +1075,6 @@ TEST_CASE("Screen.RadioFocusCyclingAndNavigation", "[terminal][focus][radio]") {
 
   class RadioFocusComponent : public Component<RadioFocusComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Import<rtxui::radio>();
-      Component<RadioFocusComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <style>
         #root { display: flex; flex-direction: column; }
@@ -1217,10 +1149,6 @@ TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
 
   class TransitionTestComponent : public Component<TransitionTestComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<TransitionTestComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="btn">Click me</div>
       <style>
@@ -1282,10 +1210,6 @@ TEST_CASE("Transitions.EasingFunctions", "[transitions][easing]") {
 
   class EasingTestComponent : public Component<EasingTestComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<EasingTestComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="btn">Click me</div>
       <style>
@@ -1345,10 +1269,6 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
   class InterruptionTestComponent
       : public Component<InterruptionTestComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<InterruptionTestComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="btn">Click me</div>
       <style>
@@ -1418,10 +1338,6 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
 
   class MouseTransitionComponent : public Component<MouseTransitionComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<MouseTransitionComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="btn">Button</div>
       <style>
@@ -1511,10 +1427,6 @@ TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
   class FlexGrowTransitionComponent
       : public Component<FlexGrowTransitionComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<FlexGrowTransitionComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div class="row">
         <div id="item1">Item 1</div>
@@ -1592,10 +1504,6 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
   class ActiveTransitionComponent
       : public Component<ActiveTransitionComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ActiveTransitionComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="btn">Button</div>
       <style>
@@ -1699,10 +1607,6 @@ TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
 
   class FocusTransitionComponent : public Component<FocusTransitionComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<FocusTransitionComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="input" focusable="true"></div>
       <style>
@@ -1770,11 +1674,6 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
 
     void on_fixed_click() { fixed_clicks++; }
     void on_scroll_click() { scroll_clicks++; }
-
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<HitTestFixedComponent>::InitReflection();
-    }
 
     HitTestFixedComponent() {
       Import("on_fixed_click", [this]() { on_fixed_click(); });
@@ -1863,11 +1762,6 @@ TEST_CASE("Screen.AnchorLinkScrolling", "[terminal][mouse][anchor]") {
 
   class AnchorTestComponent : public Component<AnchorTestComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<AnchorTestComponent>::InitReflection();
-    }
-
     std::string_view view = R"html(
       <div id="container">
         <div id="scroller">
@@ -1924,10 +1818,6 @@ TEST_CASE("Screen.KeyboardFocusTabindexNavigation", "[terminal][focus]") {
 
   class FocusTabindexComponent : public Component<FocusTabindexComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<FocusTabindexComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div>
         <div id="first" tabindex="2">Item 1 (tabindex=2)</div>
@@ -2016,10 +1906,6 @@ TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
 
   class ResponsiveComponent : public Component<ResponsiveComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ResponsiveComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="target">Content</div>
       <style>
@@ -2077,10 +1963,6 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
 
   class ScrollFocusComponent : public Component<ScrollFocusComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ScrollFocusComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div class="spacer">Spacer 1</div>
@@ -2176,10 +2058,6 @@ TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
   // hidden.
   class ScrollCursorComponent : public Component<ScrollCursorComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::textarea>();
-      Component<ScrollCursorComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <textarea id="ta" />
       <style>
@@ -2224,10 +2102,6 @@ TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
 TEST_CASE("Screen.CopySelectionWritesOSC52", "[terminal][clipboard]") {
   class ClipboardInputComponent : public Component<ClipboardInputComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::input>();
-      Component<ClipboardInputComponent>::InitReflection();
-    }
     std::string_view view = R"(<input id="in" />)";
   };
 
@@ -2262,10 +2136,6 @@ TEST_CASE("Screen.CutSelectionWritesOSC52AndDeletesSelection",
           "[terminal][clipboard]") {
   class ClipboardInputComponent : public Component<ClipboardInputComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::input>();
-      Component<ClipboardInputComponent>::InitReflection();
-    }
     std::string_view view = R"(<input id="in" />)";
   };
 
@@ -2305,10 +2175,6 @@ TEST_CASE("Screen.CopyWithNoSelectionLeavesEventUnhandled",
   // otherwise make quitting the app that way stop working entirely.
   class ClipboardInputComponent : public Component<ClipboardInputComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::input>();
-      Component<ClipboardInputComponent>::InitReflection();
-    }
     std::string_view view = R"(<input id="in" />)";
   };
 
@@ -2344,10 +2210,6 @@ TEST_CASE("Screen.ScrollIntoViewWithBorder", "[terminal][focus][scroll]") {
   class ScrollFocusBorderComponent
       : public Component<ScrollFocusBorderComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ScrollFocusBorderComponent>::InitReflection();
-    }
     std::string_view view = R"xml(
       <div id="scrollable">
         <div id="item0" class="spacer" tabindex="0">Spacer 1</div>
@@ -2417,10 +2279,6 @@ TEST_CASE("Screen.ScrollIntoViewWithMargin", "[terminal][focus][scroll]") {
   class ScrollFocusMarginComponent
       : public Component<ScrollFocusMarginComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ScrollFocusMarginComponent>::InitReflection();
-    }
     std::string_view view = R"xml(
       <div id="scrollable">
         <div id="item0" class="spacer" tabindex="0">Spacer 1</div>
@@ -2499,10 +2357,6 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
 
   class ScrollAnimComponent : public Component<ScrollAnimComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ScrollAnimComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable_auto">
         <div>Line 1</div>
@@ -2873,10 +2727,6 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
   class DynamicComponent : public Component<DynamicComponent> {
    public:
     std::string text = "A";
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<DynamicComponent>::InitReflection();
-    }
     DynamicComponent() { Bind(text); }
     std::string_view view = R"(
       <div>{text}</div>
@@ -3031,10 +2881,6 @@ TEST_CASE("Screen.SpatialNavigation", "[terminal][focus][spatial]") {
 
   class SpatialNavComponent : public Component<SpatialNavComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<SpatialNavComponent>::InitReflection();
-    }
     std::string_view view = R"(
       <style>
         #root { display: flex; flex-direction: column; }
@@ -3115,10 +2961,6 @@ TEST_CASE("Screen.SpaceEnterActivation", "[terminal][focus][activation]") {
    public:
     int count = 0;
     void on_click() { count++; }
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ActivationComponent>::InitReflection();
-    }
     ActivationComponent() {
       Import("on_click", [this]() { on_click(); });
     }
@@ -3152,10 +2994,6 @@ TEST_CASE("Screen.ParameterizedActivationWithSpaceAndReturn",
    public:
     std::string last_arg = "";
     void on_click(std::string arg) { last_arg = arg; }
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ParameterizedActivationComponent>::InitReflection();
-    }
     ParameterizedActivationComponent() {
       Import("on_click", [this](std::string arg) { on_click(arg); });
     }
@@ -3189,11 +3027,6 @@ TEST_CASE("Screen.CheckboxActivationWithSpaceAndReturn", "[terminal][focus]") {
       : public Component<CheckboxActivationComponent> {
    public:
     bool checked = false;
-    void InitReflection() override {
-      Import<rtxui::checkbox>();
-      Import<rtxui::div>();
-      Component<CheckboxActivationComponent>::InitReflection();
-    }
     CheckboxActivationComponent() { Bind(checked); }
     std::string_view view = R"xml(
       <checkbox id="chk" checked="{checked}">Check</checkbox>
@@ -3228,11 +3061,6 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
 
   class InputComponent : public Component<InputComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::input>();
-      Import<rtxui::div>();
-      Component<InputComponent>::InitReflection();
-    }
     std::string_view view = R"(
       <style>
         #root { display: flex; }
@@ -3308,10 +3136,6 @@ TEST_CASE("Transitions.NulloptTargetReverts",
 
   class TransitionTestComponent : public Component<TransitionTestComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<TransitionTestComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="btn">Click me</div>
       <style>
@@ -3384,10 +3208,6 @@ TEST_CASE("Screen.TransitionForegroundColorAlias",
   class ForegroundColorTransitionComponent
       : public Component<ForegroundColorTransitionComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ForegroundColorTransitionComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="btn">Click me</div>
       <style>
@@ -3432,10 +3252,6 @@ TEST_CASE("Screen.TransitionBorderColorTopAlias",
   class BorderColorTransitionComponent
       : public Component<BorderColorTransitionComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<BorderColorTransitionComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="box">Box</div>
       <style>
@@ -3475,10 +3291,6 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
 
   class AnchorDemoTest : public Component<AnchorDemoTest> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<AnchorDemoTest>::InitReflection();
-    }
     std::string_view view = R"xml(
     <div class="container">
       <div class="header">
@@ -3716,10 +3528,6 @@ TEST_CASE("Screen.ScrollbarTrackClick", "[terminal][scroll][scrollbar]") {
 
   class TrackClickComponent : public Component<TrackClickComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<TrackClickComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div>Line 1</div>
@@ -3795,10 +3603,6 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
 
   class ThumbDragComponent : public Component<ThumbDragComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ThumbDragComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div>Line 1</div>
@@ -3886,10 +3690,6 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
 
   class ThumbDragPixelComponent : public Component<ThumbDragPixelComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<ThumbDragPixelComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div>Line 1</div>
@@ -3981,10 +3781,6 @@ TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
 
   class PseudoClassComponent : public Component<PseudoClassComponent> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<PseudoClassComponent>::InitReflection();
-    }
     std::string_view view = R"html(
       <div id="scrollable">
         <div>Line 1</div>
@@ -4109,10 +3905,7 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
       : public Component<ScreenTooltipHoverRegressionTest> {
    public:
     std::string tooltip_text = "regression-test";
-    void InitReflection() override {
-      Bind(tooltip_text);
-      Import<tooltip>();
-    }
+    ScreenTooltipHoverRegressionTest() { Bind(tooltip_text); }
     std::string_view view = R"xml(
       <div id="container" style="width: 10; height: 3;">
         <tooltip id="tt" content="{tooltip_text}">
@@ -4168,11 +3961,7 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   class ScreenTooltipVisibleTest : public Component<ScreenTooltipVisibleTest> {
    public:
     std::string tooltip_text = "regression-test";
-    void InitReflection() override {
-      Bind(tooltip_text);
-      Import<tooltip>();
-      Import<div>();
-    }
+    ScreenTooltipVisibleTest() { Bind(tooltip_text); }
     std::string_view view = R"xml(
       <div id="container" style="padding-top: 4; height: 10; width: 40; display: block;">
         <tooltip id="tt" content="{tooltip_text}" placement="top">
@@ -4227,10 +4016,7 @@ TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
   class TooltipDemoTest : public Component<TooltipDemoTest> {
    public:
     std::string custom_text = "Press any key to modify this text!";
-    void InitReflection() override {
-      Bind(custom_text);
-      rtxui::Component<TooltipDemoTest>::InitReflection();
-    }
+    TooltipDemoTest() { Bind(custom_text); }
     std::string_view view = R"html(
       <div class="container">
         <h2>RTXUI Tooltip Component Demo</h2>
@@ -4322,11 +4108,7 @@ TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
   class TooltipMarginAutoTest : public Component<TooltipMarginAutoTest> {
    public:
     std::string tooltip_text = "regression-test";
-    void InitReflection() override {
-      Bind(tooltip_text);
-      Import<tooltip>();
-      Import<div>();
-    }
+    TooltipMarginAutoTest() { Bind(tooltip_text); }
     std::string_view view = R"xml(
       <div id="container" style="width: 40; height: 10; display: block;">
         <div id="showcase" style="width: 20; margin: auto; display: block;">
@@ -4374,10 +4156,6 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
 
   class TooltipPlacementsTest : public Component<TooltipPlacementsTest> {
    public:
-    void InitReflection() override {
-      Import<tooltip>();
-      Import<div>();
-    }
     std::string_view view = R"xml(
       <div id="container" style="padding: 5; display: block; width: 60; height: 15;">
         <tooltip id="tt_bottom" content="bottom-popup" placement="bottom">
@@ -4479,7 +4257,6 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
       Import("OnStickyClick", [this]() { sticky_clicks++; });
     }
 
-    void InitReflection() override { Import<div>(); }
     std::string_view view = R"xml(
       <div id="scrollable" style="width: 40; height: 5; overflow-y: scroll; display: block;">
         <div id="month-container" style="display: block;">
@@ -4542,10 +4319,6 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
 TEST_CASE("Screen.FocusDisplayNone", "[screen][focus][display_none]") {
   class FocusDisplayNoneTest : public Component<FocusDisplayNoneTest> {
    public:
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Component<FocusDisplayNoneTest>::InitReflection();
-    }
     std::string_view view = R"xml(
       <div>
         <div id="first" tabindex="0">Visible 1</div>
@@ -4596,12 +4369,9 @@ TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
 
     void SelectBorder(std::string name) { border_style = name; }
 
-    void InitReflection() override {
-      Import<rtxui::div>();
-      Import<rtxui::button>();
+    BorderUpdateComponent() {
       Bind(border_style);
       Bind(SelectBorder);
-      Component<BorderUpdateComponent>::InitReflection();
     }
 
     std::string_view view = R"xml(
@@ -4692,11 +4462,7 @@ class PostedTaskComponent : public Component<PostedTaskComponent> {
  public:
   std::string text = "one";
 
-  void InitReflection() override {
-    Bind(text);
-    Import<div>();
-    Component<PostedTaskComponent>::InitReflection();
-  }
+  PostedTaskComponent() { Bind(text); }
   std::string_view view = R"html(<div>{text}</div>)html";
 };
 
@@ -4831,10 +4597,6 @@ TEST_CASE("Screen.ClickFixedPositionOverlay", "[terminal][mouse][dialog]") {
 namespace {
 class OverlineScreenComponent : public Component<OverlineScreenComponent> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Component<OverlineScreenComponent>::InitReflection();
-  }
   std::string_view view = R"(
     <div><div class="o">over</div><div>plain</div></div>
     <style>
@@ -5598,10 +5360,6 @@ TEST_CASE("A fieldset projects its legend and styles itself accordingly",
 namespace {
 class ScreenBackgroundApp : public Component<ScreenBackgroundApp> {
  public:
-  void InitReflection() override {
-    Import<rtxui::div>();
-    Component<ScreenBackgroundApp>::InitReflection();
-  }
   // No background anywhere: whatever is behind the interface shows through.
   std::string_view view = R"html(
     <div class="box">hi</div>

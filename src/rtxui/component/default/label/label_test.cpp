@@ -1,14 +1,11 @@
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/component/default/label/label.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <string_view>
 
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/checkbox/checkbox.hpp"
-#include "rtxui/component/default/div/div.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -25,13 +22,9 @@ class LabelTestComponent : public rtxui::Component<LabelTestComponent> {
   bool cb1_checked = false;
   bool cb2_checked = false;
 
-  void InitReflection() override {
+  LabelTestComponent() {
     Bind(cb1_checked);
     Bind(cb2_checked);
-    Import<rtxui::label>();
-    Import<rtxui::checkbox>();
-    Import<rtxui::div>();
-    rtxui::Component<LabelTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <div>
@@ -115,12 +108,7 @@ class DisabledLabelTestComponent
     : public rtxui::Component<DisabledLabelTestComponent> {
  public:
   bool cb_checked = false;
-  void InitReflection() override {
-    Bind(cb_checked);
-    Import<rtxui::label>();
-    Import<rtxui::checkbox>();
-    rtxui::Component<DisabledLabelTestComponent>::InitReflection();
-  }
+  DisabledLabelTestComponent() { Bind(cb_checked); }
   std::string_view view = R"(
     <label id="lbl" for="cb">Label</label>
     <checkbox id="cb" checked="{cb_checked}" disabled="true">CB</checkbox>

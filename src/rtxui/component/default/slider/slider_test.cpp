@@ -14,8 +14,6 @@
 #include "catch2/catch_message.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/component/component_internal.hpp"
-#include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -33,10 +31,6 @@ TEST_CASE("Slider squashed layout regression", "[component][slider][layout]") {
 
   class SliderTest : public rtxui::Component<SliderTest> {
    public:
-    void InitReflection() override {
-      Import<rtxui::slider>();
-      rtxui::Component<SliderTest>::InitReflection();
-    }
     std::string_view view = R"(
       <div style="display: flex; width: 5;">
         <slider id="slider" width="20" value="50" />
@@ -73,11 +67,9 @@ class SliderTestComponent : public rtxui::Component<SliderTestComponent> {
   int my_val = 50;
   bool onchange_called = false;
 
-  void InitReflection() override {
+  SliderTestComponent() {
     Bind(my_val);
-    Import<rtxui::slider>();
     Import("OnSliderChange", [this]() { onchange_called = true; });
-    rtxui::Component<SliderTestComponent>::InitReflection();
   }
   std::string_view view = R"(
     <slider value="{my_val}" min="0" max="100" step="10" width="11" onchange="OnSliderChange" />
@@ -124,11 +116,7 @@ class SliderStepZeroTestComponent
     : public rtxui::Component<SliderStepZeroTestComponent> {
  public:
   int my_val = 50;
-  void InitReflection() override {
-    Bind(my_val);
-    Import<rtxui::slider>();
-    rtxui::Component<SliderStepZeroTestComponent>::InitReflection();
-  }
+  SliderStepZeroTestComponent() { Bind(my_val); }
   std::string_view view = R"(
     <slider value="{my_val}" min="0" max="100" step="0" width="11" />
   )";
@@ -275,10 +263,6 @@ TEST_CASE("Vertical slider layout regression", "[component][slider][layout]") {
 
   class VerticalSliderTest : public rtxui::Component<VerticalSliderTest> {
    public:
-    void InitReflection() override {
-      Import<rtxui::slider>();
-      rtxui::Component<VerticalSliderTest>::InitReflection();
-    }
     std::string_view view = R"(
       <slider direction="vertical" width="5" value="50" min="0" max="100" />
     )";
@@ -313,13 +297,7 @@ class SliderDemoSquashTestComponent
  public:
   int slider_val = 50;
 
-  void InitReflection() override {
-    ComponentBase::InitReflection();
-    Bind(slider_val);
-    Import<rtxui::slider>();
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-  }
+  SliderDemoSquashTestComponent() { Bind(slider_val); }
 
   std::string_view view = R"html(
     <div class="container">

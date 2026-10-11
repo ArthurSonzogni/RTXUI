@@ -12,8 +12,6 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
-#include "rtxui/component/default/div/div.hpp"
-#include "rtxui/component/default/span/span.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/refcounted.hpp"
@@ -33,14 +31,10 @@ class InterpolationComponent : public rtxui::Component<InterpolationComponent> {
   std::string get_greeting() const { return "Hello " + name; }
   int get_next_version() const { return version + 1; }
 
-  void InitReflection() override {
+  InterpolationComponent() {
     RegisterProperties();
     Import("get_greeting", &InterpolationComponent::get_greeting);
     Import("get_next_version", &InterpolationComponent::get_next_version);
-
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<InterpolationComponent>::InitReflection();
   }
 
   std::string_view view = R"(
@@ -92,11 +86,7 @@ class NestedInterpolation : public rtxui::Component<NestedInterpolation> {
  public:
   std::string color = "red";
 
-  void InitReflection() override {
-    RegisterState("color", &color);
-    Import<rtxui::div>();
-    rtxui::Component<NestedInterpolation>::InitReflection();
-  }
+  NestedInterpolation() { RegisterState("color", &color); }
 
   std::string_view view = R"(
     <div style="background-color: {color};">
@@ -117,12 +107,7 @@ class LoopInterpolation : public rtxui::Component<LoopInterpolation> {
  public:
   std::vector<std::string> items = {"a", "b", "c"};
 
-  void InitReflection() override {
-    BindCollection("items", &items);
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<LoopInterpolation>::InitReflection();
-  }
+  LoopInterpolation() { BindCollection("items", &items); }
 
   std::string_view view = R"(
     <div>
@@ -154,14 +139,11 @@ class StructLoopInterpolation
  public:
   std::vector<SubItem> items = {{"x"}, {"y"}};
 
-  void InitReflection() override {
+  StructLoopInterpolation() {
     BindCollection("items", &items, [](const SubItem& s) {
       return std::make_shared<rtxui::ManualStructVisitor>(
           std::map<std::string, std::string, std::less<>>{{"val", s.val}});
     });
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<StructLoopInterpolation>::InitReflection();
   }
 
   std::string_view view = R"(
@@ -193,13 +175,12 @@ class ReactiveStructCollection
  public:
   std::vector<BoundRow> rows = {{"one", "hot"}, {"two", "cold"}};
 
-  void InitReflection() override {
+  ReactiveStructCollection() {
     BindCollection("rows", &rows, [](const BoundRow& row) {
       return std::make_shared<rtxui::ManualStructVisitor>(
           std::map<std::string, std::string, std::less<>>{{"name", row.name},
                                                           {"cls", row.cls}});
     });
-    rtxui::Component<ReactiveStructCollection>::InitReflection();
   }
 
   // A field in text, a field in an attribute, $index alongside them, and a
@@ -289,12 +270,7 @@ class AutoLoopInterpolation : public rtxui::Component<AutoLoopInterpolation> {
  public:
   std::vector<AutoItem> items = {{"Apple"}, {"Banana"}};
 
-  void InitReflection() override {
-    Bind(items);
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<AutoLoopInterpolation>::InitReflection();
-  }
+  AutoLoopInterpolation() { Bind(items); }
 
   std::string_view view = R"(
     <div>
@@ -323,12 +299,7 @@ class ConditionalApp : public rtxui::Component<ConditionalApp> {
  public:
   int value = 1;
 
-  void InitReflection() override {
-    Bind(value);
-    Import<rtxui::div>();
-    Import<rtxui::span>();
-    rtxui::Component<ConditionalApp>::InitReflection();
-  }
+  ConditionalApp() { Bind(value); }
 
   std::string_view view = R"(
     <div>
