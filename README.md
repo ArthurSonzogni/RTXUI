@@ -189,7 +189,7 @@ ctest --test-dir build --output-on-failure
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) for coding standards (Chromium style, no `try/catch`, mandatory regression tests) and formatting instructions.
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) for coding standards (Chromium style, no `try`/`catch`, mandatory regression tests) and formatting instructions.
 
 ## 📄 License
 
