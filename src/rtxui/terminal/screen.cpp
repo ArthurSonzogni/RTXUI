@@ -1199,7 +1199,15 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
   css::g_terminal_height = height_;
   component_->Mount();
   component_->Digest();
-  Draw();
+  // A real terminal is drawn on once Loop() has switched it to the alternate
+  // screen. A frame written now would land on the normal screen and stay in
+  // the scrollback after the application quits. Laying out is enough for
+  // events to be hit-tested until then.
+  if (dynamic_cast<SystemTerminalDevice*>(device_.get())) {
+    UpdateLayout();
+  } else {
+    Draw();
+  }
 }
 
 ScreenImpl::~ScreenImpl() {
@@ -1357,7 +1365,7 @@ void ScreenImpl::Step() {
     Draw(/*reuse_layout=*/true);
   }
 
-  if (HotReloadManager::PollChanges()) {
+  if (HotReloadManager::PollChanges() || !has_drawn_) {
     Draw();
   }
 }
