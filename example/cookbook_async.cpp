@@ -8,6 +8,8 @@
 // the task runner, which applies them between frames.
 #include <chrono>
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 #include <thread>
 
 using namespace rtxui;

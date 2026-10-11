@@ -10,6 +10,7 @@
 // Try it: switch tabs to swap the rendered branch.
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 
 using namespace rtxui;
 

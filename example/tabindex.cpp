@@ -4,6 +4,7 @@
 //
 // Controlling focus order with tabindex.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

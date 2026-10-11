@@ -6,8 +6,6 @@
 #include <unistd.h>
 
 #include <iostream>
-#include <string>
-#include <vector>
 
 #include "rtxui/event.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"

@@ -1,17 +1,22 @@
 #include "rtxui/layout/layout.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <charconv>
-#include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <numeric>
-#include <sstream>
+#include <optional>
+#include <string_view>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/color.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"

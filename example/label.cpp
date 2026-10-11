@@ -4,6 +4,7 @@
 //
 // <label> delegating clicks and focus to the control it names.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

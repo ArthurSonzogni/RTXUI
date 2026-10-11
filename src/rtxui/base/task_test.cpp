@@ -4,9 +4,12 @@
 #include "rtxui/base/task.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <utility>
+#include <vector>
 
 #include "rtxui/base/task_runner.hpp"
 

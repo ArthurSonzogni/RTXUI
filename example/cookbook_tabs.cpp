@@ -8,6 +8,7 @@
 // bound string -- useful when you want full control of the markup.
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 
 using namespace rtxui;
 

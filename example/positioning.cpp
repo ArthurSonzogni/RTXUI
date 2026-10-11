@@ -5,6 +5,7 @@
 // position: relative, absolute and fixed, plus z-index stacking.
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -10,6 +10,7 @@
 //
 // Try it: hover each card and watch them settle at different speeds.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

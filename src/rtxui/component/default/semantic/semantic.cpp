@@ -3,6 +3,8 @@
 // the LICENSE file.
 #include "rtxui/component/default/semantic/semantic.hpp"
 
+#include <string_view>
+
 namespace rtxui {
 
 const std::string_view header::view = R"html(

@@ -3,7 +3,11 @@
 // the LICENSE file.
 #include "rtxui/component/default/tree_item/tree_item.hpp"
 
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/event.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace rtxui {
 

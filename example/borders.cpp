@@ -6,6 +6,8 @@
 //
 // Each tile names the style it draws, so this doubles as a lookup table.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

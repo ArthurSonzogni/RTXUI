@@ -40,6 +40,10 @@ These are enforced by `scripts/check.sh` and CI unless noted.
   overloads (e.g. `std::filesystem::last_write_time` with `std::error_code`)
   and parser checks (e.g. `std::from_chars`).
 - **clang-tidy clean**: no warnings. A `NOLINT` needs a reason on the same line.
+- **Include what you use** (clang-tidy's `misc-include-cleaner`, in `src/`
+  and `example/`): include the header that declares each name you use,
+  rather than counting on another header to bring it in. The examples are
+  also built with `import rtxui;`, which brings in no standard header.
 - **Regression tests** (enforced by review): every bug fix comes with a test
   that fails before the fix and passes after, typically in
   `src/rtxui/component/component_test.cpp` or `src/rtxui/style/style_test.cpp`.
@@ -105,6 +109,12 @@ In C++, `HeadlessScreen` (`include/rtxui/headless.hpp`) does the same.
 - FuzzTest fuzzers: configure with `-DRTXUI_BUILD_FUZZERS=ON
   -DFUZZTEST_FUZZING_MODE=ON` and run `./build_fuzz/rtxui_fuzzer`. Turn every
   crash into a regression test.
+- C++ module (experimental): `-DRTXUI_BUILD_MODULE=ON` with Ninja and CMake
+  3.28+ builds `rtxui::module` from `src/rtxui/rtxui.cppm`, plus every example
+  rewritten to `import rtxui;` (`scripts/modularize_example.py`), checked by
+  the `snapshot_module_examples` test. A name an example needs must be
+  exported there; nothing else should be. `Bind()` lives in
+  `include/rtxui/bind.hpp`, since a module cannot export macros.
 - Emscripten/WASM build of examples into `docs/public/wasm/` via
   `emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON`.
 - Examples build as `build/rtxui_example_<name>` (interactive TUIs — they take

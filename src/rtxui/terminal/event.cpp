@@ -3,9 +3,11 @@
 // the LICENSE file.
 #include "rtxui/event.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <string>
-#include <utility>
+#include <string_view>
 #include <variant>
 
 #include "rtxui/base/string.hpp"
@@ -148,6 +150,8 @@ std::string Event::Resized::Print() const {
   return "Event::Resized(" + std::to_string(width) + ", " +
          std::to_string(height) + ")";
 }
+
+bool Event::operator==(const Event&) const = default;
 
 std::string Event::Print() const {
   return std::visit([](const auto& data) { return data.Print(); }, data_);

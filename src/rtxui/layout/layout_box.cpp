@@ -1,5 +1,9 @@
 #include "rtxui/layout/layout_box.hpp"
 
+#include <string>
+
+#include "rtxui/layout/style.hpp"
+
 namespace rtxui {
 
 namespace {

@@ -4,9 +4,14 @@
 #include "rtxui/paint/texture.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <sstream>
+#include <string>
+#include <string_view>
 
 #include "rtxui/base/likely.hpp"
+#include "rtxui/paint/cell.hpp"
 
 namespace rtxui {
 

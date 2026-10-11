@@ -4,6 +4,8 @@
 //
 // The <textarea> component: multi-line editing with a line-number gutter.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

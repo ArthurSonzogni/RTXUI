@@ -8,6 +8,7 @@
 // on screen.
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

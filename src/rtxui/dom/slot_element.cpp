@@ -1,5 +1,7 @@
 #include "rtxui/dom/slot_element.hpp"
 
+#include <string>
+
 namespace rtxui {
 
 SlotElement::SlotElement() {

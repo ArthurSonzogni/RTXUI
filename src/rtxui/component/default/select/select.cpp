@@ -4,12 +4,18 @@
 #include "rtxui/component/default/select/select.hpp"
 
 #include <algorithm>
-#include <iostream>
+#include <cstddef>
+#include <string>
+#include <string_view>
+#include <vector>
 
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/option/option.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
+#include "rtxui/event.hpp"
 
 namespace rtxui {
 

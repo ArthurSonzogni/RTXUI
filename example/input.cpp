@@ -7,6 +7,8 @@
 // Editing the field writes straight back into the bound std::string, and the
 // interpolated value below updates on the same frame.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

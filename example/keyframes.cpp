@@ -13,6 +13,8 @@
 // Try it: click the button, or Tab to it and press Enter, to pause and resume
 // every animation.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

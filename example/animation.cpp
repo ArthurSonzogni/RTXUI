@@ -7,6 +7,7 @@
 // @keyframes plus the `animation` property drive a property through a cycle
 // without any C++ state changing between frames.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

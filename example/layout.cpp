@@ -7,6 +7,8 @@
 // A flex row distributing three child components, each its own component with
 // bound props.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

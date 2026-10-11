@@ -7,6 +7,8 @@
 // Colors accept rgb(), #rrggbb and named forms, and are composed into a swatch
 // grid by a small reusable child component.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

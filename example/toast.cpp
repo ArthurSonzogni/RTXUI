@@ -15,6 +15,7 @@
 //
 // Try it: press Save or Fail, then wait, or click a toast to dismiss it.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

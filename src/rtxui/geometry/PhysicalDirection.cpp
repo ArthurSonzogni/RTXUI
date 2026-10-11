@@ -4,7 +4,6 @@
 
 #include "rtxui/geometry/PhysicalDirection.hpp"
 
-#include <format>
 #include <ostream>
 
 namespace rtxui {

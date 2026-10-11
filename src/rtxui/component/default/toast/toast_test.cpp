@@ -1,16 +1,18 @@
 // Copyright 2026 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include "rtxui/component/default/toast/toast.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/task.hpp"
 
 namespace rtxui {

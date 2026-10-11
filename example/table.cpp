@@ -5,6 +5,7 @@
 // Table elements: <table>, <thead>, <tr>, <th>, <td>, with colspan, rowspan and
 // a sticky header row.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -5,15 +5,19 @@
 // A frame whose only changes are animated colors and opacities keeps the last
 // layout. Each test here plays such animations with RTXUI_VERIFY_LAYOUT_REUSE
 // set, which lays out again anyway and aborts if that draws anything else.
+#include <stdlib.h>
+
 #include <catch2/catch_test_macros.hpp>
-#include <cstdlib>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/task.hpp"
 
 namespace rtxui {

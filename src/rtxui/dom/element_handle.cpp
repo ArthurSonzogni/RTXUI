@@ -2,12 +2,16 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 #include <algorithm>
-#include <rtxui/element.hpp>
+#include <cstddef>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "rtxui/dom/element.hpp"
+#include "rtxui/element.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace rtxui {
 

@@ -5,9 +5,11 @@
 // The <details>/<summary> disclosure widget.
 //
 // Try it: click a summary row, or focus it and press Enter.
-#include <memory>
+#include <string>
+#include <string_view>
 
 #include "rtxui/component.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 
 namespace {

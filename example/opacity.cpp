@@ -4,6 +4,7 @@
 //
 // Opacity and alpha blending, including how nested opacity compounds.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

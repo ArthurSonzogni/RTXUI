@@ -5,10 +5,21 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <functional>
 #include <map>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
+#include "rtxui/component/default/input/text_input_base.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/event.hpp"
+#include "rtxui/layout/style.hpp"
 
 namespace rtxui {
 

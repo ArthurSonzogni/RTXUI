@@ -9,6 +9,8 @@
 //
 // Try it: open the dialog, then dismiss it with either button or Escape.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

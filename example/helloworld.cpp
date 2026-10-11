@@ -9,6 +9,7 @@
 // own root element, and custom properties declared there (--bg, --accent, ...)
 // inherit into every descendant, so a single palette styles the whole tree.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

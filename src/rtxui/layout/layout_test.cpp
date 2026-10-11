@@ -2,16 +2,28 @@
 
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include <cstddef>
+#include <functional>
 #include <map>
+#include <memory>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
-#include "rtxui/base/string.hpp"
+#include "catch2/catch_message.hpp"
+#include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default_components_internal.hpp"
+#include "rtxui/component/default/blockquote/blockquote.hpp"
+#include "rtxui/component/default/div/div.hpp"
+#include "rtxui/component/default/span/span.hpp"
+#include "rtxui/component/default/textarea/textarea.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
+#include "rtxui/layout/physical_fragment.hpp"
+#include "rtxui/layout/style.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"

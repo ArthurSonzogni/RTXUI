@@ -4,6 +4,7 @@
 //
 // text-align: left, center and right.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -11,6 +11,7 @@
 //
 // Try it: Ctrl-click a link, or Tab to one and look at the focus style.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

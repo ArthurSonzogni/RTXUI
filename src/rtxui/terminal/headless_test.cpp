@@ -4,11 +4,18 @@
 #include "rtxui/headless.hpp"
 
 #include <string>
+#include <string_view>
 #include <utility>
 
+#include "catch2/catch_message.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/component.hpp"
-#include "rtxui/component/default_components_internal.hpp"
+#include "rtxui/component/default/button/button.hpp"
+#include "rtxui/component/default/dialog/dialog.hpp"
+#include "rtxui/component/default/div/div.hpp"
+#include "rtxui/component/default/input/input.hpp"
+#include "rtxui/component/default/span/span.hpp"
+#include "rtxui/refcounted.hpp"
 
 namespace rtxui {
 namespace {

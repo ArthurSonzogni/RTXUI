@@ -22,6 +22,7 @@
                     google-upgrade-googletest-case,
                     misc-misleading-identifier,
                     misc-homoglyph,
+                    misc-include-cleaner,
                     modernize-avoid-bind,
                     modernize-concat-nested-namespaces,
                     modernize-loop-convert,
@@ -66,7 +67,10 @@
     # starting from repository root in replacement suggestion.
     # 'build/linux/debian' excludes system headers as they don't have
     # appropriate IWYU pragmas.
+    # 'bits/' and 'sys/types.h' are where libstdc++ and glibc define some
+    # symbols (chrono literals, timeval, ssize_t) that their public headers
+    # provide: they must not be included directly.
     # https://clang.llvm.org/extra/clang-tidy/checks/misc/include-cleaner.html
     - key: misc-include-cleaner.IgnoreHeaders
-      value:        (gmock/gmock|gtest/gtest|third_party|build/linux/debian).*
+      value:        (gmock/gmock|gtest/gtest|third_party|build/linux/debian|bits/|sys/types\.h).*
 ...

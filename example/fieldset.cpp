@@ -6,6 +6,7 @@
 //
 // The legend is nested into the top border of the group it captions.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

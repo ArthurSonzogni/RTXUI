@@ -7,6 +7,8 @@
 // A scrollbar is laid out inside the border box, so it has to coexist with the
 // border. Switch border styles to see each combination.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -9,12 +9,14 @@
 //   http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c
 #include "rtxui/base/string.hpp"
 
+#include <algorithm>
 #include <array>    // for array
 #include <cstddef>  // for size_t
 #include <cstdint>  // for uint32_t, uint8_t, uint16_t, int32_t
 #include <limits>
 #include <string>  // for string, basic_string
-#include <tuple>   // for _Swallow_assign, ignore
+#include <string_view>
+#include <tuple>  // for _Swallow_assign, ignore
 #include <vector>
 
 // Forward declarations

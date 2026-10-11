@@ -4,6 +4,7 @@
 //
 // The <markdown> component: a live editor and rendered preview, side by side.
 #include <string>
+#include <string_view>
 
 #include "rtxui/rtxui.hpp"
 

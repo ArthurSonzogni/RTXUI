@@ -3,7 +3,10 @@
 // the LICENSE file.
 #include "rtxui/component/default/fieldset/fieldset.hpp"
 
-#include "rtxui/component/component_internal.hpp"
+#include <string_view>
+
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
 
 namespace rtxui {

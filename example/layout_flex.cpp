@@ -7,8 +7,12 @@
 // Every flex property is driven from the UI: change flex-direction,
 // justify-content, align-items, and each item's grow/shrink/basis, and watch
 // the boxes redistribute.
+#include <functional>
+#include <map>
+#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rtxui;

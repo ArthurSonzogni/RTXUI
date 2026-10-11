@@ -9,6 +9,7 @@
 //
 // Try it: scroll with Shift+wheel, or drag the scrollbar.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

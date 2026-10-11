@@ -12,6 +12,7 @@
 //
 // Try it: run it in a dark and in a light terminal theme.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -37,9 +37,9 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DRTXUI_BUILD_TESTS=ON
-          -DRTXUI_BUILD_EXAMPLES=OFF
+          -DRTXUI_BUILD_EXAMPLES=ON
           -DRTXUI_BUILD_BENCHMARKS=OFF
 
       - name: Lint
         # Diffing against the empty tree makes clang-tidy check every file.
-        run: BASE=$(git hash-object -t tree /dev/null) JOBS=4 scripts/check.sh --lint-only
+        run: BASE=$(git hash-object -t tree /dev/null) TIDY_JOBS=4 scripts/check.sh --lint-only

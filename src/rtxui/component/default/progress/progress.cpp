@@ -5,6 +5,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string_view>
+
+#include "rtxui/bind.hpp"
+#include "rtxui/component.hpp"
 
 namespace rtxui {
 

@@ -5,6 +5,8 @@
 // <ul>, <ol> and <li>, including nesting, `start`/`reversed`, per-item `value`,
 // and the list-style-type property.
 #include <rtxui/rtxui.hpp>
+#include <string>
+#include <string_view>
 
 using namespace rtxui;
 

@@ -12,6 +12,7 @@
 // Try it: click the jump links above each box, or Tab through the items, and
 // compare how each column travels.
 #include <rtxui/rtxui.hpp>
+#include <string_view>
 
 using namespace rtxui;
 

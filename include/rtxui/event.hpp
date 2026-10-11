@@ -210,6 +210,10 @@ struct RTXUI_EXPORT Event {
 #undef RTXUI_DECLARE_LETTER
 
   std::string Print() const;
+  // Defined in event.cpp, not defaulted here: a defaulted == is generated
+  // wherever it is used, which needs std::variant's operators in scope, and
+  // code that does `import rtxui;` does not have them.
+  bool operator==(const Event&) const;
   std::strong_ordering operator<=>(const Event&) const = default;
   template <typename T>
   bool is() const {

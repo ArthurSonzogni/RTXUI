@@ -12,11 +12,13 @@
 //
 // Try it: hover or Tab through the cards and click one, then click the tasks,
 // or focus one and press Enter.
-#include <algorithm>
+#include <functional>
 #include <map>
 #include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace rtxui;

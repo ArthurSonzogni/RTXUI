@@ -3,6 +3,12 @@
 // the LICENSE file.
 #include "rtxui/base/task_queue.hpp"
 
+#include <mutex>
+#include <variant>
+
+#include "rtxui/base/clock.hpp"
+#include "rtxui/base/task.hpp"
+
 namespace task {
 
 auto TaskQueue::PostTask(PendingTask task) -> void {

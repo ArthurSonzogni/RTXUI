@@ -11,6 +11,7 @@
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
 
 namespace rtxui {

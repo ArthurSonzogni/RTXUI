@@ -1,6 +1,9 @@
 #include <charconv>
-#include <iostream>
+#include <cstddef>
+#include <string>
+#include <system_error>
 #include <utility>
+#include <vector>
 // Copyright 2024 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.

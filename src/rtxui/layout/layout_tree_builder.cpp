@@ -1,8 +1,19 @@
 
 #include "rtxui/layout/layout_tree_builder.hpp"
 
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 #include "rtxui/base/string.hpp"
+#include "rtxui/dom/element.hpp"
+#include "rtxui/dom/text_element.hpp"
 #include "rtxui/layout/layout_arena.hpp"
+#include "rtxui/layout/layout_box.hpp"
+#include "rtxui/layout/style.hpp"
 
 namespace rtxui {
 

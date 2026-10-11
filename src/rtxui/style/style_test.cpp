@@ -6,11 +6,10 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
-#include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "rtxui/base/string.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/layout/style.hpp"

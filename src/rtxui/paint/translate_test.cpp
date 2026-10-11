@@ -3,12 +3,14 @@
 // the LICENSE file.
 #include <catch2/catch_test_macros.hpp>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "rtxui/component.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
+#include "rtxui/refcounted.hpp"
 #include "rtxui/style/apply_style.hpp"
 
 namespace rtxui {
