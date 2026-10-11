@@ -146,7 +146,11 @@ The template reads the mapped fields with dot notation on the loop variable:
 `BindCollection("name", &collection, mapper)` is equivalent when you want the
 template name to differ from the member name.
 
-When compiled with C++26 static reflection (`RTXUI_HAS_REFLECTION`), struct fields are mapped automatically and explicit mappers are not required.
+When compiled with C++26 static reflection (`RTXUI_HAS_REFLECTION`), the
+template can read a struct's fields without a mapper: `Bind(tasks)` alone
+makes `{task.name}` work. The fields are read only, and a field shown under
+another name or format, like `status` above, still needs a mapper. The
+collection itself still needs its `Bind()`.
 
 This demo loops over a `std::vector<Task>` through a mapper, toggling each
 item's `completed` field from the template:

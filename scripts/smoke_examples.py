@@ -51,6 +51,10 @@ RESIZE_STEPS = ((1, 1), (100, 30))
 # A first frame is at minimum a few escape sequences plus content; anything
 # this small means the app died before drawing.
 MIN_FRAME_BYTES = 20
+# What the example writes to switch to the alternate screen, and what opens
+# each frame it draws.
+ALTERNATE_SCREEN = b"\x1b[?1049h"
+FRAME_START = b"\x1b[?2026h"
 # After the input burst, keep reading until the example has been silent this
 # long. Waiting for quiet rather than for a fixed duration is what makes this
 # work under the sanitizer build: the heaviest examples take over ten seconds
@@ -305,6 +309,14 @@ def run_one(program, error_path):
                 ": " + detail[-1] if detail else "")
     if len(first_frame) < MIN_FRAME_BYTES:
         return "drew no frame (%d bytes before exit)" % len(first_frame)
+    # Every frame opens with the synchronized-output marker. One before the
+    # switch to the alternate screen is drawn on the normal screen, and stays
+    # in the scrollback once the example quits.
+    alternate = first_frame.find(ALTERNATE_SCREEN)
+    if alternate == -1:
+        return "never switched to the alternate screen"
+    if FRAME_START in first_frame[:alternate]:
+        return "drew a frame before switching to the alternate screen"
     return None
 
 

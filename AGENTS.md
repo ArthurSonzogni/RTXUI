@@ -26,6 +26,11 @@ Every change must pass `scripts/check.sh` before it reaches `main`. It runs:
 check automatically before `git push` (see `.claude/settings.json`) and blocks
 the push if it fails. Do not bypass it; fix the cause.
 
+The hook shows nothing until the check ends. To follow it, have your Claude
+Code status line print `tools/claude/check_progress.sh` (the step, a progress
+bar, the tests still running, then the result) and set its
+`"refreshInterval": 1`.
+
 ## Rules
 
 These are enforced by `scripts/check.sh` and CI unless noted.
@@ -153,8 +158,9 @@ parser).
   link examples/apps against `rtxui`, tests against `rtxui_lib`.
 - **C++26 reflection (optional)** — CMake probes for `<meta>` support
   (`-freflection-latest` on Clang, `-freflection` on GCC) and defines
-  `RTXUI_HAS_REFLECTION`, which enables automatic member binding without
-  `Bind()` calls. Code must still work without it.
+  `RTXUI_HAS_REFLECTION`. It is only used to read the fields of structs in
+  bound collections without a mapper; components still call `Bind()`. Code
+  must still work without it.
 - **Hot reload** — `EnableHotReload()` uses `std::source_location` to watch the
   component's own source file and re-parse the `view` template at runtime
   without recompiling.
