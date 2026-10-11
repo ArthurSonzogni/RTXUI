@@ -85,6 +85,10 @@ testing helpers are not exported yet: test with the headers for now.
 
 ## Known issues
 
+- **GCC 15 crashes** ("internal compiler error: in nonnull_arg_p") at `-O2`
+  and above on a file that imports `rtxui` but includes neither `<string>`
+  nor `<memory>`. Include `<memory>` before the import.
+
 - **GCC 16 with C++26 reflection**: the 2026-03-22 snapshot of GCC 16 rejects
   an importer that includes `<string>` when `-freflection` is on ("conflicting
   imported declaration"), even with a module that has nothing to do with

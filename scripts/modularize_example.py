@@ -11,11 +11,10 @@ checks each one draws exactly what its header-based build does. The examples
 are the module's specification: a name they need that the module does not
 export fails to compile, and the module exports nothing they do not need.
 
-<rtxui/rtxui.hpp> brings in the standard headers it uses, and the examples
-count on that. A module does not: its importers see none of them. So the
-rewrite includes the ones the examples use, as an application would. They
-come before the import, as GCC requires a header to be included before a
-module that also includes it is imported.
+The examples include every standard header they use (clang-tidy's
+misc-include-cleaner checks it), as an importer must: the module makes none
+of them visible. The import goes after them, as GCC requires a header to be
+included before a module that also includes it is imported.
 """
 import pathlib
 import re
@@ -25,13 +24,6 @@ import sys
 RTXUI_INCLUDE = re.compile(r'#include\s*[<"]rtxui/[a-z_]+\.hpp[>"]')
 # The opening of a raw string literal, R"delimiter(.
 RAW_STRING_START = re.compile(r'R"([^(\s]*)\(')
-
-STANDARD_HEADERS = [
-    "algorithm", "array", "chrono", "cmath", "cstdint", "cstdio", "deque",
-    "functional", "map", "memory", "numeric", "optional", "set", "sstream",
-    "string", "string_view", "thread", "utility", "vector",
-]
-
 
 def outside_raw_strings(lines):
     """Yields whether each line is code, rather than inside a raw string.
@@ -69,9 +61,10 @@ def main(source, output):
                        default=-1)
     insert_at = last_include + 1 if last_include >= 0 else next(
         i for i, line in enumerate(lines) if not line.startswith("//"))
-    block = [f"#include <{name}>" for name in STANDARD_HEADERS]
-    block += ["#include <rtxui/bind.hpp>", "import rtxui;"]
-    lines[insert_at:insert_at] = block
+    # <memory>: GCC 15 crashes at -O2 (in nonnull_arg_p) on an importer that
+    # includes neither it nor <string>. See docs/guide/modules.md.
+    lines[insert_at:insert_at] = [
+        "#include <memory>", "#include <rtxui/bind.hpp>", "import rtxui;"]
 
     out = pathlib.Path(output)
     out.parent.mkdir(parents=True, exist_ok=True)
