@@ -7,7 +7,8 @@
 # Environment:
 #   BUILD_DIR  build directory to use (default: build)
 #   BASE       ref to diff against for clang-tidy (default: origin/main)
-#   JOBS       parallelism (default: 2)
+#   JOBS       build and test parallelism (default: 2)
+#   TIDY_JOBS  clang-tidy parallelism (default: 8; about 0.7 GB each at most)
 #
 # Progress goes to $BUILD_DIR/check-progress as it runs, for
 # tools/claude/check_progress.sh to show in Claude Code's status line.
@@ -17,6 +18,7 @@ cd "$(dirname "$0")/.."
 BUILD_DIR=${BUILD_DIR:-build}
 BASE=${BASE:-origin/main}
 JOBS=${JOBS:-2}
+TIDY_JOBS=${TIDY_JOBS:-8}
 LINT_ONLY=0
 [[ "${1:-}" == "--lint-only" ]] && LINT_ONLY=1
 
@@ -97,7 +99,7 @@ else
     ':!*_fuzzer.cpp')
   if [[ -n "$changed" ]]; then
     echo "$changed" |
-      xargs -P "$JOBS" -n 1 clang-tidy -p "$BUILD_DIR" --quiet \
+      xargs -P "$TIDY_JOBS" -n 1 clang-tidy -p "$BUILD_DIR" --quiet \
         --warnings-as-errors='*' 2>/dev/null || fail "clang-tidy"
   fi
 fi

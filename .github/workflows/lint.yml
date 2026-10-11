@@ -42,4 +42,4 @@ jobs:
 
       - name: Lint
         # Diffing against the empty tree makes clang-tidy check every file.
-        run: BASE=$(git hash-object -t tree /dev/null) JOBS=4 scripts/check.sh --lint-only
+        run: BASE=$(git hash-object -t tree /dev/null) TIDY_JOBS=4 scripts/check.sh --lint-only
