@@ -105,6 +105,12 @@ In C++, `HeadlessScreen` (`include/rtxui/headless.hpp`) does the same.
 - FuzzTest fuzzers: configure with `-DRTXUI_BUILD_FUZZERS=ON
   -DFUZZTEST_FUZZING_MODE=ON` and run `./build_fuzz/rtxui_fuzzer`. Turn every
   crash into a regression test.
+- C++ module (experimental): `-DRTXUI_BUILD_MODULE=ON` with Ninja and CMake
+  3.28+ builds `rtxui::module` from `src/rtxui/rtxui.cppm`, plus every example
+  rewritten to `import rtxui;` (`scripts/modularize_example.py`), checked by
+  the `snapshot_module_examples` test. A name an example needs must be
+  exported there; nothing else should be. `Bind()` lives in
+  `include/rtxui/bind.hpp`, since a module cannot export macros.
 - Emscripten/WASM build of examples into `docs/public/wasm/` via
   `emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON`.
 - Examples build as `build/rtxui_example_<name>` (interactive TUIs — they take

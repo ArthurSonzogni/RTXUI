@@ -103,6 +103,7 @@ export default defineConfig({
           { text: 'HTML/CSS Hot-Reloading', link: '/guide/hot-reload' },
           { text: 'Diagnostics', link: '/guide/diagnostics' },
           { text: 'Headless Rendering', link: '/guide/headless' },
+          { text: 'C++ Modules', link: '/guide/modules' },
           { text: 'Coding Agents', link: '/guide/coding-agents' },
           { text: 'Editor Syntax Highlighting', link: '/guide/editor-setup' },
           { text: 'Playground Guide', link: '/guide/playground' },

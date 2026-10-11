@@ -1,20 +1,16 @@
-option(RTXUI_BUILD_TESTS "Build tests" OFF)
-option(RTXUI_BUILD_EXAMPLES "Build examples" OFF)
-option(RTXUI_BUILD_MODULE "Build module" OFF)
-option(RTXUI_BUILD_FUZZERS "Build fuzzers" OFF)
-option(RTXUI_SANITIZE "Build with Address and UndefinedBehavior sanitizers" OFF)
-
-if (RTXUI_BUILD_MODULE)
-  cmake_minimum_required(VERSION 3.28.2)
-else()
-  cmake_minimum_required(VERSION 3.24)
-endif()
+cmake_minimum_required(VERSION 3.24)
 
 project(rtxui
   LANGUAGES CXX
   VERSION 0.1.0
   DESCRIPTION "C++ reactive terminal rendering"
 )
+
+option(RTXUI_BUILD_TESTS "Build tests" OFF)
+option(RTXUI_BUILD_EXAMPLES "Build examples" OFF)
+option(RTXUI_BUILD_MODULE "Build the rtxui C++ module (CMake 3.28+, Ninja)" OFF)
+option(RTXUI_BUILD_FUZZERS "Build fuzzers" OFF)
+option(RTXUI_SANITIZE "Build with Address and UndefinedBehavior sanitizers" OFF)
 
 include(FetchContent)
 include(cmake/compiler.cmake)
@@ -210,7 +206,6 @@ if(RTXUI_BUILD_EXAMPLES)
 endif()
 
 include(cmake/install.cmake)
-include(cmake/modules.cmake)
 
 option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" OFF)
 if(RTXUI_BUILD_BENCHMARKS)
@@ -428,3 +423,5 @@ if (RTXUI_BUILD_FUZZERS)
   target_compile_definitions(rtxui_fuzzer PRIVATE FUZZTEST_FUZZING_ENABLED)
 
 endif()
+
+include(cmake/modules.cmake)

@@ -171,6 +171,48 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure -E smoke_examples
 
+  # The `rtxui` C++ module: every example, rewritten to `import rtxui;`, must
+  # draw the same snapshot as its header-based build. See cmake/modules.cmake.
+  test-module:
+    name: Clang Module
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build ccache
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
+          sudo apt-get install -y clang-tools-20
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-module-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-module-${{ runner.os }}-
+
+      - name: Configure
+        env:
+          CC: clang-20
+          CXX: clang++-20
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DRTXUI_BUILD_MODULE=ON
+          -DRTXUI_BUILD_EXAMPLES=ON
+          -DRTXUI_BUILD_TESTS=ON
+          -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=clang-scan-deps-20
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -R snapshot_module_examples
+
   benchmarks:
     name: Benchmarks (smoke)
     runs-on: ubuntu-latest
