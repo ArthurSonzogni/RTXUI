@@ -48,8 +48,10 @@ class TranslucentDemo : public Component<TranslucentDemo> {
           height: 100%;
         }
         .card {
-          border: rounded;
+          border: tall;
+          color: rgba(128, 128, 128, 0.5);
           background-color: rgba(128, 128, 128, 0.1);
+          border-color: rgba(128, 128, 128, 0.15);
           padding: 1 3;
         }
         h1 {
@@ -67,6 +69,7 @@ class TranslucentDemo : public Component<TranslucentDemo> {
           width: 12;
           text-align: center;
           padding: 1 0;
+          color: rgba(255, 255, 255, 1.0);
         }
         .blue { background-color: rgba(88, 166, 255, 0.1); }
         .blue.strong { background-color: rgba(88, 166, 255, 0.25); }
