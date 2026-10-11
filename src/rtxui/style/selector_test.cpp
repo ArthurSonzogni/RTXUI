@@ -20,6 +20,7 @@
 #include "rtxui/screen.hpp"
 #include "rtxui/task.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -898,8 +899,8 @@ TEST_CASE("A :has() rule follows its elements projected into a component",
     return count;
   };
   CHECK(form_padding() == 4);
-  auto* reveal = dynamic_cast<HasReveal*>(const_cast<rtxui::ComponentBase*>(
-      app->Root()->QuerySelector("HasReveal")->component()));
+  auto* reveal =
+      ComponentAs<HasReveal>(app->Root()->QuerySelector("HasReveal"));
   REQUIRE(reveal != nullptr);
 
   rtxui::PostTask([&] { reveal->shown = false; });

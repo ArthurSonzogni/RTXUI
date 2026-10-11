@@ -38,6 +38,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 #include "rtxui/testing/render.hpp"
 
 using rtxui::Color;
@@ -1325,24 +1326,21 @@ TEST_CASE(
   auto* root = container->Root();
 
   auto* cb_el = root->QuerySelector("#cb");
-  auto* cb_ptr = dynamic_cast<rtxui::checkbox*>(
-      const_cast<rtxui::ComponentBase*>(cb_el->component()));
+  auto* cb_ptr = ComponentAs<rtxui::checkbox>(cb_el);
   REQUIRE(cb_ptr != nullptr);
   cb_el->set_focused(true);
   cb_ptr->OnEvent(Event::Keyboard::From(' '));
   CHECK_FALSE(cb_ptr->checked);
 
   auto* rd_el = root->QuerySelector("#rd");
-  auto* rd_ptr = dynamic_cast<rtxui::radio*>(
-      const_cast<rtxui::ComponentBase*>(rd_el->component()));
+  auto* rd_ptr = ComponentAs<rtxui::radio>(rd_el);
   REQUIRE(rd_ptr != nullptr);
   rd_el->set_focused(true);
   rd_ptr->OnEvent(Event::Keyboard::From(' '));
   CHECK_FALSE(rd_ptr->checked);
 
   auto* sel_el = root->QuerySelector("#sel");
-  auto* sel_ptr = dynamic_cast<rtxui::select*>(
-      const_cast<rtxui::ComponentBase*>(sel_el->component()));
+  auto* sel_ptr = ComponentAs<rtxui::select>(sel_el);
   REQUIRE(sel_ptr != nullptr);
   sel_el->set_focused(true);
   sel_ptr->OnEvent(Event::Keyboard({
@@ -1352,8 +1350,7 @@ TEST_CASE(
   CHECK_FALSE(sel_ptr->is_open);
 
   auto* sl_el = root->QuerySelector("#sl");
-  auto* sl_ptr = dynamic_cast<rtxui::slider*>(
-      const_cast<rtxui::ComponentBase*>(sl_el->component()));
+  auto* sl_ptr = ComponentAs<rtxui::slider>(sl_el);
   REQUIRE(sl_ptr != nullptr);
   Event::Mouse mouse;
   mouse.button = Event::Mouse::Button::Left;
@@ -1520,8 +1517,8 @@ TEST_CASE("A slot a component shows again gets its projected content back",
   auto app = rtxui::Ref<SlotToggleUser>::New();
   app->Mount();
   REQUIRE(app->Root()->QuerySelector("#projected") != nullptr);
-  auto* toggle = dynamic_cast<SlotToggle*>(const_cast<rtxui::ComponentBase*>(
-      app->Root()->QuerySelector("SlotToggle")->component()));
+  auto* toggle =
+      ComponentAs<SlotToggle>(app->Root()->QuerySelector("SlotToggle"));
   REQUIRE(toggle != nullptr);
 
   // Only <SlotToggle> changes, so only it re-renders: the content it

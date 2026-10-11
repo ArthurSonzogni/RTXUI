@@ -21,6 +21,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -42,10 +43,7 @@ TEST_CASE("Input Component Basic Interactions", "[component]") {
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
 
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-
-  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   // Verify initial state
@@ -158,10 +156,7 @@ TEST_CASE("Password Input Component Interaction and Masking",
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
 
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-
-  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   CHECK(input_ptr->value == "secret123");
@@ -218,10 +213,7 @@ TEST_CASE("Input Component Advanced Selection and Editing",
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
 
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-
-  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_el->set_focused(true);
@@ -436,9 +428,7 @@ TEST_CASE("Input Component State Preservation", "[component]") {
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   // Focus and type 'a'
@@ -463,8 +453,7 @@ TEST_CASE("Input Component Disabled Blocks All Interaction",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_el->set_focused(true);
@@ -488,8 +477,7 @@ TEST_CASE("Input Component Disabled Ignores Mouse Click Focus",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
   input_ptr->disabled = true;
   input_ptr->Digest();
@@ -513,8 +501,7 @@ TEST_CASE(
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_el->set_focused(true);
@@ -567,8 +554,7 @@ TEST_CASE("Input Component disabled/readonly Attributes Parsed From XML",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   CHECK(input_ptr->disabled);
@@ -600,8 +586,7 @@ TEST_CASE("Input Component Placeholder Shows Only When Value Is Empty",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->placeholder = "Type here...";
@@ -642,8 +627,7 @@ TEST_CASE("Input Component Placeholder Attribute Parsed From XML",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   CHECK(input_ptr->placeholder == "Search...");
@@ -657,8 +641,7 @@ TEST_CASE("Input Component Placeholder Uses A Dim Fixed Color",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->placeholder = "hint";
@@ -679,8 +662,7 @@ TEST_CASE("Input Component Maxlength Blocks Typing Past The Limit",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -727,8 +709,7 @@ TEST_CASE("Input Component Maxlength Truncates A Paste To Fit",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -751,8 +732,7 @@ TEST_CASE("Input Component Maxlength Allows Replacing A Selection At The Limit",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "abc";
@@ -787,8 +767,7 @@ TEST_CASE("Input Component Maxlength Attribute Parsed From XML",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   CHECK(input_ptr->maxlength == 5);
@@ -801,8 +780,7 @@ TEST_CASE("Input Component Undo/Redo Basic Single Character",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -833,8 +811,7 @@ TEST_CASE("Input Component Undo/Redo Via Ctrl+Shift+Z",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -864,8 +841,7 @@ TEST_CASE("Input Component Undo Groups Contiguous Typing Into One Step",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -898,8 +874,7 @@ TEST_CASE("Input Component Cursor Move Breaks The Undo Group",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -939,8 +914,7 @@ TEST_CASE(
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "abc";
@@ -968,8 +942,7 @@ TEST_CASE("Input Component New Edit After Undo Clears The Redo Stack",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -1003,8 +976,7 @@ TEST_CASE(
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -1049,8 +1021,7 @@ TEST_CASE("Input Component Undo/Redo Blocked While Readonly Or Disabled",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "";
@@ -1084,8 +1055,7 @@ TEST_CASE("Input Component Undo With Empty History Is A No-op",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_el->set_focused(true);
@@ -1104,8 +1074,7 @@ TEST_CASE("Input Component Cut Is Undoable", "[component][input][undo]") {
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "hello world";
@@ -1169,8 +1138,7 @@ TEST_CASE(
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->selection_start = 0;
@@ -1232,10 +1200,7 @@ TEST_CASE("Input Cursor Vertical Line Regression Test",
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
 
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-
-  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   // Set cursor position to the end of the text
@@ -1331,10 +1296,7 @@ TEST_CASE("Input Scrolling Regression Test",
   auto* input_el = container->Root()->QuerySelector("SmallInput");
   REQUIRE(input_el != nullptr);
 
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-
-  auto* input_ptr = dynamic_cast<SmallInput*>(input_comp);
+  auto* input_ptr = ComponentAs<SmallInput>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   screen.Draw();
@@ -1434,9 +1396,7 @@ TEST_CASE("Flickering transition is not triggered on input navigation",
   CHECK(input_el->active_transitions.empty());
 
   // Simulate navigating with ArrowLeft
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
   input_ptr->OnEvent(Event::ArrowLeft());
   input_ptr->Digest();
@@ -1527,8 +1487,7 @@ TEST_CASE(
 
   auto* input_el = container->Root()->QuerySelector("#test-input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_el->set_focused(true);
@@ -1557,8 +1516,7 @@ TEST_CASE("TextInputBase Ctrl+Home and Ctrl+End",
   container->Mount();
   auto* textarea_el = container->Root()->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
-  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
-      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
 
   textarea_ptr->value = "line 1\nline 2\nline 3";
@@ -1607,8 +1565,7 @@ TEST_CASE("TextInputBase Smart Home", "[component][input][navigation]") {
   container->Mount();
   auto* textarea_el = container->Root()->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
-  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
-      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
 
   textarea_ptr->value = "    code here";
@@ -1655,8 +1612,7 @@ TEST_CASE("TextInputBase Duplicate Line and Selection",
   container->Mount();
   auto* textarea_el = container->Root()->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
-  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
-      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
 
   textarea_ptr->value = "hello\nworld";
@@ -1697,8 +1653,7 @@ TEST_CASE("TextInputBase Delete Entire Line",
   container->Mount();
   auto* textarea_el = container->Root()->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
-  auto* textarea_ptr = dynamic_cast<rtxui::textarea*>(
-      const_cast<rtxui::ComponentBase*>(textarea_el->component()));
+  auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
 
   textarea_ptr->value = "line 1\nline 2\nline 3";
@@ -1720,8 +1675,7 @@ TEST_CASE("TextInputBase Delete Entire Line",
   input_cont->Mount();
   auto* input_el = input_cont->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "clear me";
@@ -1740,8 +1694,7 @@ TEST_CASE("TextInputBase Auto-wrap Selection With Delimiters",
   container->Mount();
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "hello world";
@@ -1784,8 +1737,7 @@ TEST_CASE("TextInputBase Select On Focus",
 
   auto* input_el = container->Root()->QuerySelector("input");
   REQUIRE(input_el != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(
-      const_cast<rtxui::ComponentBase*>(input_el->component()));
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
 
   input_ptr->value = "quick test";

@@ -29,6 +29,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 namespace rtxui {
 namespace {
@@ -153,8 +154,7 @@ TEST_CASE("Screen.BracketedPasteInsertsTextIntoFocusedInput",
     screen.Step();
   }
 
-  auto* in_ptr =
-      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
   CHECK(in_ptr->value == "hi there");
 }
@@ -182,8 +182,7 @@ TEST_CASE("Screen.PasteNewlineIntoInputIsDropped", "[terminal][paste]") {
     screen.Step();
   }
 
-  auto* in_ptr =
-      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
   CHECK(in_ptr->value == "foobar");
 }
@@ -210,8 +209,7 @@ TEST_CASE("Screen.PastingIntoTextareaDoesNotDoubleIndentation",
   REQUIRE(ta_el != nullptr);
   ta_el->set_focused(true);
 
-  auto* ta_ptr =
-      dynamic_cast<textarea*>(const_cast<ComponentBase*>(ta_el->component()));
+  auto* ta_ptr = ComponentAs<textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
   // The cursor sits on an already-indented line before pasting.
   ta_ptr->value = "  ";
@@ -2072,8 +2070,7 @@ TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
 
   auto* ta_el = container->Root()->QuerySelector("#ta");
   REQUIRE(ta_el != nullptr);
-  auto* ta_ptr =
-      dynamic_cast<textarea*>(const_cast<ComponentBase*>(ta_el->component()));
+  auto* ta_ptr = ComponentAs<textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
 
   screen.Draw();
@@ -2112,8 +2109,7 @@ TEST_CASE("Screen.CopySelectionWritesOSC52", "[terminal][clipboard]") {
 
   auto* in_el = container->Root()->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
-  auto* in_ptr =
-      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
 
   in_el->set_focused(true);
@@ -2146,8 +2142,7 @@ TEST_CASE("Screen.CutSelectionWritesOSC52AndDeletesSelection",
 
   auto* in_el = container->Root()->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
-  auto* in_ptr =
-      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
 
   in_el->set_focused(true);
@@ -2185,8 +2180,7 @@ TEST_CASE("Screen.CopyWithNoSelectionLeavesEventUnhandled",
 
   auto* in_el = container->Root()->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
-  auto* in_ptr =
-      dynamic_cast<input*>(const_cast<ComponentBase*>(in_el->component()));
+  auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
 
   in_el->set_focused(true);
@@ -3924,8 +3918,7 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   REQUIRE(tt_el != nullptr);
   REQUIRE(trigger_el != nullptr);
 
-  auto* tt_comp = const_cast<ComponentBase*>(tt_el->component());
-  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  auto* tt_ptr = ComponentAs<tooltip>(tt_el);
   REQUIRE(tt_ptr != nullptr);
 
   // Initial state: hidden
@@ -3986,8 +3979,7 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   hover_in.y = 5;  // inside trigger
   screen.Dispatch(hover_in);
 
-  auto* tt_comp = const_cast<ComponentBase*>(tt_el->component());
-  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  auto* tt_ptr = ComponentAs<tooltip>(tt_el);
   REQUIRE(tt_ptr != nullptr);
   CHECK(tt_ptr->tooltip_class == "visible");
 
@@ -4092,8 +4084,7 @@ TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
   hover_in.y = btn_y + 1;  // 1-indexed
   screen.Dispatch(hover_in);
 
-  auto* tt_comp = const_cast<ComponentBase*>(tt->component());
-  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  auto* tt_ptr = ComponentAs<tooltip>(tt);
   REQUIRE(tt_ptr != nullptr);
   CHECK(tt_ptr->tooltip_class == "visible");
 
@@ -4141,8 +4132,7 @@ TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
   hover_in.y = trigger_y + 1;  // 1-indexed
   screen.Dispatch(hover_in);
 
-  auto* tt_comp = const_cast<ComponentBase*>(tt->component());
-  auto* tt_ptr = static_cast<tooltip*>(tt_comp);
+  auto* tt_ptr = ComponentAs<tooltip>(tt);
   REQUIRE(tt_ptr != nullptr);
   CHECK(tt_ptr->tooltip_class == "visible");
 

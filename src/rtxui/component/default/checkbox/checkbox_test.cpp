@@ -14,6 +14,7 @@
 #include "rtxui/event.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -39,9 +40,7 @@ TEST_CASE("Checkbox Component Basic Interactions", "[component][checkbox]") {
 
   auto* cb_el = container->Root()->QuerySelector("checkbox");
   REQUIRE(cb_el != nullptr);
-  auto* cb_comp = const_cast<rtxui::ComponentBase*>(cb_el->component());
-  REQUIRE(cb_comp != nullptr);
-  auto* cb_ptr = dynamic_cast<rtxui::checkbox*>(cb_comp);
+  auto* cb_ptr = ComponentAs<rtxui::checkbox>(cb_el);
   REQUIRE(cb_ptr != nullptr);
 
   // Initial state
@@ -94,9 +93,7 @@ TEST_CASE("Checkbox Component :checked CSS Pseudo-Class",
 
   auto* cb_el = container->Root()->QuerySelector("checkbox");
   REQUIRE(cb_el != nullptr);
-  auto* cb_comp = const_cast<rtxui::ComponentBase*>(cb_el->component());
-  REQUIRE(cb_comp != nullptr);
-  auto* cb_ptr = dynamic_cast<rtxui::checkbox*>(cb_comp);
+  auto* cb_ptr = ComponentAs<rtxui::checkbox>(cb_el);
   REQUIRE(cb_ptr != nullptr);
 
   // Initial state: unchecked -> white

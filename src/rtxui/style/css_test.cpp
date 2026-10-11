@@ -22,6 +22,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -691,9 +692,7 @@ TEST_CASE("Child component style is preserved when parent stylesheet styles it",
 
   // Simulate navigating with ArrowLeft which triggers input's Digest() and
   // re-render of input
-  auto* input_comp = const_cast<rtxui::ComponentBase*>(input_el->component());
-  REQUIRE(input_comp != nullptr);
-  auto* input_ptr = dynamic_cast<rtxui::input*>(input_comp);
+  auto* input_ptr = ComponentAs<rtxui::input>(input_el);
   REQUIRE(input_ptr != nullptr);
   input_ptr->OnEvent(Event::ArrowLeft());
   input_ptr->Digest();
@@ -1113,9 +1112,8 @@ TEST_CASE("A ::part() rule survives the inner component re-rendering itself",
   };
   CHECK(label()->style.padding.left == 3);
 
-  auto* inner = const_cast<rtxui::ComponentBase*>(
-      app->Root()->QuerySelector("PartLabel")->component());
-  dynamic_cast<PartLabel*>(inner)->kind = "after";
+  ComponentAs<PartLabel>(app->Root()->QuerySelector("PartLabel"))->kind =
+      "after";
   bool changed = app->Digest();
   CHECK(changed);
   CHECK(label()->classes == std::vector<std::string>{"after"});

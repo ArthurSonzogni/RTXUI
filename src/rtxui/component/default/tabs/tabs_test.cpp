@@ -17,6 +17,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/testing/component_as.hpp"
 #include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
@@ -63,8 +64,7 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
 
   auto* tabs_el = container->Root()->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
-  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(
-      const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);
 
   // Initial tab: tab1
@@ -163,8 +163,7 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
 
   auto* tabs_el = container->Root()->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
-  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(
-      const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);
 
   // Initial tab: tab1
@@ -225,8 +224,7 @@ TEST_CASE("Tabs Component keyboard focus survives an intervening Digest",
   screen.Draw();
 
   auto* tabs_el = container->Root()->QuerySelector("tabs");
-  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(
-      const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   auto headers = TabHeaderButtons(tabs_ptr->Root());
   REQUIRE(headers.size() == 2);
   auto* tab2_header = headers[1];
@@ -268,8 +266,7 @@ TEST_CASE(
 
   auto* tabs_el = container->Root()->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
-  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(
-      const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);
 
   auto* container_el = tabs_el->QuerySelector(".tabs-container");
@@ -326,8 +323,7 @@ TEST_CASE("Tabs SelectTab Crash Prevention", "[component][tabs][bug]") {
 
   auto* tabs_el = container->Root()->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
-  auto* tabs_ptr = dynamic_cast<rtxui::tabs*>(
-      const_cast<rtxui::ComponentBase*>(tabs_el->component()));
+  auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);
 
   CHECK_NOTHROW(tabs_ptr->SelectTab(""));

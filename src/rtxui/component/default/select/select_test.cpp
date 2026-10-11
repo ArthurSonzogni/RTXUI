@@ -22,6 +22,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -48,9 +49,7 @@ TEST_CASE("Select and Option Components", "[component][select]") {
 
   auto* select_el = container->Root()->QuerySelector("select");
   REQUIRE(select_el != nullptr);
-  auto* select_comp = const_cast<rtxui::ComponentBase*>(select_el->component());
-  REQUIRE(select_comp != nullptr);
-  auto* select_ptr = dynamic_cast<rtxui::select*>(select_comp);
+  auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
 
   // Check initial state
@@ -123,10 +122,7 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   // Let's find the "dark" option element
   auto* dark_option_el = container->Root()->QuerySelector("option");
   REQUIRE(dark_option_el != nullptr);
-  auto* dark_option_comp =
-      const_cast<rtxui::ComponentBase*>(dark_option_el->component());
-  REQUIRE(dark_option_comp != nullptr);
-  auto* dark_option_ptr = dynamic_cast<rtxui::option*>(dark_option_comp);
+  auto* dark_option_ptr = ComponentAs<rtxui::option>(dark_option_el);
   REQUIRE(dark_option_ptr != nullptr);
   CHECK(dark_option_ptr->value == "dark");
 
@@ -171,8 +167,7 @@ TEST_CASE(
   screen.Draw();
 
   auto* select_el = container->Root()->QuerySelector("select");
-  auto* select_ptr = dynamic_cast<rtxui::select*>(
-      const_cast<rtxui::ComponentBase*>(select_el->component()));
+  auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
 
   // Open the dropdown by clicking the select button (hovered_index starts
@@ -282,9 +277,7 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
 
   auto* select_el = container->Root()->QuerySelector("select");
   REQUIRE(select_el != nullptr);
-  auto* select_comp = const_cast<rtxui::ComponentBase*>(select_el->component());
-  REQUIRE(select_comp != nullptr);
-  auto* select_ptr = dynamic_cast<rtxui::select*>(select_comp);
+  auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
 
   // Click on the select element to open it
@@ -388,9 +381,7 @@ TEST_CASE("Select Component Z-index sibling overlap",
 
   auto* select_el = container->Root()->QuerySelector("select");
   REQUIRE(select_el != nullptr);
-  auto* select_comp = const_cast<rtxui::ComponentBase*>(select_el->component());
-  REQUIRE(select_comp != nullptr);
-  auto* select_ptr = dynamic_cast<rtxui::select*>(select_comp);
+  auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
 
   // Click on the select element to open it

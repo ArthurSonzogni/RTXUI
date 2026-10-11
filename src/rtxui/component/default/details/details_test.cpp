@@ -14,6 +14,7 @@
 #include "rtxui/headless.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -51,10 +52,7 @@ TEST_CASE("Details and Summary Components", "[component][details]") {
 
   auto* details_el = container->Root()->QuerySelector("details");
   REQUIRE(details_el != nullptr);
-  auto* details_comp =
-      const_cast<rtxui::ComponentBase*>(details_el->component());
-  REQUIRE(details_comp != nullptr);
-  auto* details_ptr = dynamic_cast<rtxui::details*>(details_comp);
+  auto* details_ptr = ComponentAs<rtxui::details>(details_el);
   REQUIRE(details_ptr != nullptr);
 
   // 1. Initial State (open is false)
@@ -132,10 +130,7 @@ TEST_CASE("Details Component Default Summary", "[component][details]") {
 
   auto* details_el = container->Root()->QuerySelector("details");
   REQUIRE(details_el != nullptr);
-  auto* details_comp =
-      const_cast<rtxui::ComponentBase*>(details_el->component());
-  REQUIRE(details_comp != nullptr);
-  auto* details_ptr = dynamic_cast<rtxui::details*>(details_comp);
+  auto* details_ptr = ComponentAs<rtxui::details>(details_el);
   REQUIRE(details_ptr != nullptr);
 
   // With no <summary> projected, the summary line falls back to the label

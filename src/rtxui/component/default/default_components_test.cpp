@@ -33,6 +33,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 #include "rtxui/testing/render.hpp"
 
 using namespace rtxui;
@@ -102,10 +103,7 @@ TEST_CASE("Progress Component Basic Rendering", "[component][progress]") {
 
   auto* progress_el = container->Root()->QuerySelector("progress");
   REQUIRE(progress_el != nullptr);
-  auto* progress_comp =
-      const_cast<rtxui::ComponentBase*>(progress_el->component());
-  REQUIRE(progress_comp != nullptr);
-  auto* progress_ptr = dynamic_cast<rtxui::progress*>(progress_comp);
+  auto* progress_ptr = ComponentAs<rtxui::progress>(progress_el);
   REQUIRE(progress_ptr != nullptr);
 
   // Initial state (value = 25.0) -> width is 10, so 2.5 rounded to 3 characters
@@ -162,9 +160,7 @@ TEST_CASE("Horizontal Rule Component", "[component][hr]") {
 
   auto* hr_el = container->Root()->QuerySelector("hr");
   REQUIRE(hr_el != nullptr);
-  auto* hr_comp = const_cast<rtxui::ComponentBase*>(hr_el->component());
-  REQUIRE(hr_comp != nullptr);
-  auto* hr_ptr = dynamic_cast<rtxui::hr*>(hr_comp);
+  auto* hr_ptr = ComponentAs<rtxui::hr>(hr_el);
   REQUIRE(hr_ptr != nullptr);
 
   container->Digest();
@@ -207,16 +203,12 @@ TEST_CASE("Bold and Strong Components", "[component][b][strong]") {
 
   auto* b_el = container->Root()->QuerySelector("b");
   REQUIRE(b_el != nullptr);
-  auto* b_comp = const_cast<rtxui::ComponentBase*>(b_el->component());
-  REQUIRE(b_comp != nullptr);
-  auto* b_ptr = dynamic_cast<rtxui::b*>(b_comp);
+  auto* b_ptr = ComponentAs<rtxui::b>(b_el);
   REQUIRE(b_ptr != nullptr);
 
   auto* strong_el = container->Root()->QuerySelector("strong");
   REQUIRE(strong_el != nullptr);
-  auto* strong_comp = const_cast<rtxui::ComponentBase*>(strong_el->component());
-  REQUIRE(strong_comp != nullptr);
-  auto* strong_ptr = dynamic_cast<rtxui::strong*>(strong_comp);
+  auto* strong_ptr = ComponentAs<rtxui::strong>(strong_el);
   REQUIRE(strong_ptr != nullptr);
 }
 
@@ -443,37 +435,27 @@ TEST_CASE("Underline, Strikethrough, and Code Components",
 
   auto* u_el = container->Root()->QuerySelector("u");
   REQUIRE(u_el != nullptr);
-  auto* u_comp = const_cast<rtxui::ComponentBase*>(u_el->component());
-  REQUIRE(u_comp != nullptr);
-  auto* u_ptr = dynamic_cast<rtxui::u*>(u_comp);
+  auto* u_ptr = ComponentAs<rtxui::u>(u_el);
   REQUIRE(u_ptr != nullptr);
 
   auto* s_el = container->Root()->QuerySelector("s");
   REQUIRE(s_el != nullptr);
-  auto* s_comp = const_cast<rtxui::ComponentBase*>(s_el->component());
-  REQUIRE(s_comp != nullptr);
-  auto* s_ptr = dynamic_cast<rtxui::s*>(s_comp);
+  auto* s_ptr = ComponentAs<rtxui::s>(s_el);
   REQUIRE(s_ptr != nullptr);
 
   auto* strike_el = container->Root()->QuerySelector("strike");
   REQUIRE(strike_el != nullptr);
-  auto* strike_comp = const_cast<rtxui::ComponentBase*>(strike_el->component());
-  REQUIRE(strike_comp != nullptr);
-  auto* strike_ptr = dynamic_cast<rtxui::strike*>(strike_comp);
+  auto* strike_ptr = ComponentAs<rtxui::strike>(strike_el);
   REQUIRE(strike_ptr != nullptr);
 
   auto* del_el = container->Root()->QuerySelector("del");
   REQUIRE(del_el != nullptr);
-  auto* del_comp = const_cast<rtxui::ComponentBase*>(del_el->component());
-  REQUIRE(del_comp != nullptr);
-  auto* del_ptr = dynamic_cast<rtxui::del*>(del_comp);
+  auto* del_ptr = ComponentAs<rtxui::del>(del_el);
   REQUIRE(del_ptr != nullptr);
 
   auto* code_el = container->Root()->QuerySelector("code");
   REQUIRE(code_el != nullptr);
-  auto* code_comp = const_cast<rtxui::ComponentBase*>(code_el->component());
-  REQUIRE(code_comp != nullptr);
-  auto* code_ptr = dynamic_cast<rtxui::code*>(code_comp);
+  auto* code_ptr = ComponentAs<rtxui::code>(code_el);
   REQUIRE(code_ptr != nullptr);
 }
 
@@ -502,9 +484,7 @@ TEST_CASE("Anchor component registration and default styling",
 
   auto* a_el = container->Root()->QuerySelector("a");
   REQUIRE(a_el != nullptr);
-  auto* a_comp = const_cast<rtxui::ComponentBase*>(a_el->component());
-  REQUIRE(a_comp != nullptr);
-  auto* a_ptr = dynamic_cast<rtxui::a*>(a_comp);
+  auto* a_ptr = ComponentAs<rtxui::a>(a_el);
   REQUIRE(a_ptr != nullptr);
 
   // href must still land on the underlying Element's generic attribute map -
@@ -551,10 +531,7 @@ TEST_CASE("Fieldset and Legend Components", "[component][fieldset]") {
 
   auto* fieldset_el = container->Root()->QuerySelector("fieldset");
   REQUIRE(fieldset_el != nullptr);
-  auto* fieldset_comp =
-      const_cast<rtxui::ComponentBase*>(fieldset_el->component());
-  REQUIRE(fieldset_comp != nullptr);
-  auto* fieldset_ptr = dynamic_cast<rtxui::fieldset*>(fieldset_comp);
+  auto* fieldset_ptr = ComponentAs<rtxui::fieldset>(fieldset_el);
   REQUIRE(fieldset_ptr != nullptr);
 
   // The legend slot should contain a legend component
@@ -629,10 +606,8 @@ TEST_CASE("Radio Component Grouping", "[component][radio]") {
   REQUIRE(radioA_el != nullptr);
   REQUIRE(radioB_el != nullptr);
 
-  auto* radioA_ptr = dynamic_cast<rtxui::radio*>(
-      const_cast<rtxui::ComponentBase*>(radioA_el->component()));
-  auto* radioB_ptr = dynamic_cast<rtxui::radio*>(
-      const_cast<rtxui::ComponentBase*>(radioB_el->component()));
+  auto* radioA_ptr = ComponentAs<rtxui::radio>(radioA_el);
+  auto* radioB_ptr = ComponentAs<rtxui::radio>(radioB_el);
   REQUIRE(radioA_ptr != nullptr);
   REQUIRE(radioB_ptr != nullptr);
 

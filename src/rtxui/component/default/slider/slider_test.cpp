@@ -20,6 +20,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -82,9 +83,7 @@ TEST_CASE("Slider Component Basic Interactions", "[component][slider]") {
 
   auto* slider_el = container->Root()->QuerySelector("slider");
   REQUIRE(slider_el != nullptr);
-  auto* slider_comp = const_cast<rtxui::ComponentBase*>(slider_el->component());
-  REQUIRE(slider_comp != nullptr);
-  auto* slider_ptr = dynamic_cast<rtxui::slider*>(slider_comp);
+  auto* slider_ptr = ComponentAs<rtxui::slider>(slider_el);
   REQUIRE(slider_ptr != nullptr);
 
   // Initial state (value = 50)
@@ -165,9 +164,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
 
   auto* slider_el = container->Root()->QuerySelector("slider");
   REQUIRE(slider_el != nullptr);
-  auto* slider_comp = const_cast<rtxui::ComponentBase*>(slider_el->component());
-  REQUIRE(slider_comp != nullptr);
-  auto* slider_ptr = dynamic_cast<rtxui::slider*>(slider_comp);
+  auto* slider_ptr = ComponentAs<rtxui::slider>(slider_el);
   REQUIRE(slider_ptr != nullptr);
 
   // width=11, min=0, max=100, step=10. Root() is an inline <span> whose

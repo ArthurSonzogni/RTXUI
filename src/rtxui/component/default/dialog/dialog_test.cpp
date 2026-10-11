@@ -16,6 +16,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -44,8 +45,7 @@ TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
 
   auto* dialog_el = container->Root()->QuerySelector("dialog");
   REQUIRE(dialog_el != nullptr);
-  auto* dialog_ptr = dynamic_cast<rtxui::dialog*>(
-      const_cast<rtxui::ComponentBase*>(dialog_el->component()));
+  auto* dialog_ptr = ComponentAs<rtxui::dialog>(dialog_el);
   REQUIRE(dialog_ptr != nullptr);
 
   // Initial State: closed

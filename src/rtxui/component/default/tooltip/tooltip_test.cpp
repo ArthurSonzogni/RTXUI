@@ -13,6 +13,7 @@
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
 
@@ -49,8 +50,7 @@ TEST_CASE("Tooltip Component Interaction", "[component][tooltip]") {
   REQUIRE(tt_el != nullptr);
   REQUIRE(trigger_el != nullptr);
 
-  auto* tt_comp = const_cast<rtxui::ComponentBase*>(tt_el->component());
-  auto* tt_ptr = static_cast<rtxui::tooltip*>(tt_comp);
+  auto* tt_ptr = ComponentAs<rtxui::tooltip>(tt_el);
   REQUIRE(tt_ptr != nullptr);
 
   // Initial state: not hovered, class is hidden
