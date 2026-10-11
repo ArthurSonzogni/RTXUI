@@ -96,7 +96,8 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
           padding: 0 1;
           margin: 0;
         }
-        .item-row button:hover { background-color: var(--danger);
+        .item-row button:hover {
+          background-color: var(--danger);
           color: white;
           border-color: var(--danger);
         }

@@ -55,9 +55,22 @@ class ConfirmApp : public Component<ConfirmApp> {
     </div>
 
     <style>
-      .main { padding: 1; width: 60; height: 10; }
-      .actions { display: flex; flex-direction: row; justify-content: flex-end; gap: 1; margin-top: 1; }
-      .danger { background-color: #ef4444; color: #fff; }
+      .main {
+        padding: 1;
+        width: 60;
+        height: 10;
+      }
+      .actions {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 1;
+        margin-top: 1;
+      }
+      .danger {
+        background-color: #ef4444;
+        color: #fff;
+      }
     </style>
   )html";
 };

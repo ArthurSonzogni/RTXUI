@@ -61,20 +61,36 @@ class KeyframesDemo : public Component<KeyframesDemo> {
 
       <style>
         @keyframes pulse {
-          from { color: rgb(35, 134, 54); }
-          to { color: rgb(126, 231, 135); }
+          from {
+            color: rgb(35, 134, 54);
+          }
+          to {
+            color: rgb(126, 231, 135);
+          }
         }
         @keyframes load {
-          from { width: 0; }
-          to { width: 20; }
+          from {
+            width: 0;
+          }
+          to {
+            width: 20;
+          }
         }
         @keyframes blink {
-          from { opacity: 1; }
-          50% { opacity: 0; }
+          from {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0;
+          }
         }
         @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
 
         self {

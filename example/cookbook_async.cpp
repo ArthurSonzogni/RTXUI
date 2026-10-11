@@ -63,8 +63,14 @@ class AsyncApp : public Component<AsyncApp> {
     </div>
 
     <style>
-      .panel { padding: 1; border: solid; width: 40; }
-      .loader { color: #f59e0b; }
+      .panel {
+        padding: 1;
+        border: solid;
+        width: 40;
+      }
+      .loader {
+        color: #f59e0b;
+      }
     </style>
   )html";
 };

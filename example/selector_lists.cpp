@@ -89,10 +89,18 @@ class SelectorListsDemo : public Component<SelectorListsDemo> {
           font-weight: bold;
           transition: color 0.2s ease;
         }
-        .info { color: rgb(88, 166, 255); }
-        .ok { color: rgb(63, 185, 80); }
-        .warn { color: rgb(210, 153, 34); }
-        .error { color: rgb(248, 81, 73); }
+        .info {
+          color: rgb(88, 166, 255);
+        }
+        .ok {
+          color: rgb(63, 185, 80);
+        }
+        .warn {
+          color: rgb(210, 153, 34);
+        }
+        .error {
+          color: rgb(248, 81, 73);
+        }
 
         .badge:is(.info, .ok, .warn, .error):is(:hover, :focus) {
           color: var(--text);

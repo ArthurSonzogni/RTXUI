@@ -77,8 +77,12 @@ Selector precedence is determined by a 3-component specificity vector `(A, B, C)
 ### `calc()` Expressions
 Length properties accept `calc()` expressions combining discrete cells and percentages:
 ```css
-.sidebar { width: calc(100% - 20); }
-.split   { height: calc((100% - 1) / 2); }
+.sidebar {
+  width: calc(100% - 20);
+}
+.split {
+  height: calc((100% - 1) / 2);
+}
 ```
 
 ### `min()`, `max()`, and `clamp()`
@@ -86,7 +90,9 @@ Length properties accept `calc()` expressions combining discrete cells and perce
 - `max(a, b)`: Evaluates to the larger resolved length.
 - `clamp(min, preferred, max)`: Clamps `preferred` between lower and upper bounds.
 ```css
-.responsive-box { width: clamp(20, 50%, 80); }
+.responsive-box {
+  width: clamp(20, 50%, 80);
+}
 ```
 
 ---
@@ -285,9 +291,16 @@ self {
 
 ```css
 @keyframes pulse {
-  from { opacity: 0.4; }
-  50% { opacity: 1; animation-timing-function: ease-out; }
-  to { opacity: 0.4; }
+  from {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+    animation-timing-function: ease-out;
+  }
+  to {
+    opacity: 0.4;
+  }
 }
 ```
 

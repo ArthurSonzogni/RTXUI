@@ -256,7 +256,12 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
 
             <div class="flex-container">
               <for each="{items}" as="b">
-                <div class="demo-box" style="background-color: {b.color}; width: {b.width}; height: {b.height}; border-color: {b.color};">
+                <div class="demo-box" style="
+                    background-color: {b.color};
+                    border-color: {b.color};
+                    width: {b.width};
+                    height: {b.height};
+                  ">
                   <span>Box {b.label}</span>
                   <span class="box-dims">{b.width}x{b.height}</span>
                 </div>

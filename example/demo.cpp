@@ -424,35 +424,107 @@ class SectionColors : public Component<SectionColors> {
         border-color: black;
       }
       /* Curated Palette: 6 Columns, 4 Rows */
-      .r1 { background-color: #fecdd3; color: black; }
-      .r2 { background-color: #fb7185; color: black; }
-      .r3 { background-color: #e11d48; color: white; }
-      .r4 { background-color: #9f1239; color: white; }
+      .r1 {
+        background-color: #fecdd3;
+        color: black;
+      }
+      .r2 {
+        background-color: #fb7185;
+        color: black;
+      }
+      .r3 {
+        background-color: #e11d48;
+        color: white;
+      }
+      .r4 {
+        background-color: #9f1239;
+        color: white;
+      }
       
-      .o1 { background-color: #fef08a; color: black; }
-      .o2 { background-color: #fbbf24; color: black; }
-      .o3 { background-color: #d97706; color: white; }
-      .o4 { background-color: #7c2d12; color: white; }
+      .o1 {
+        background-color: #fef08a;
+        color: black;
+      }
+      .o2 {
+        background-color: #fbbf24;
+        color: black;
+      }
+      .o3 {
+        background-color: #d97706;
+        color: white;
+      }
+      .o4 {
+        background-color: #7c2d12;
+        color: white;
+      }
       
-      .g1 { background-color: #a7f3d0; color: black; }
-      .g2 { background-color: #34d399; color: black; }
-      .g3 { background-color: #059669; color: white; }
-      .g4 { background-color: #064e3b; color: white; }
+      .g1 {
+        background-color: #a7f3d0;
+        color: black;
+      }
+      .g2 {
+        background-color: #34d399;
+        color: black;
+      }
+      .g3 {
+        background-color: #059669;
+        color: white;
+      }
+      .g4 {
+        background-color: #064e3b;
+        color: white;
+      }
       
-      .c1 { background-color: #cffafe; color: black; }
-      .c2 { background-color: #22d3ee; color: black; }
-      .c3 { background-color: #0891b2; color: white; }
-      .c4 { background-color: #164e63; color: white; }
+      .c1 {
+        background-color: #cffafe;
+        color: black;
+      }
+      .c2 {
+        background-color: #22d3ee;
+        color: black;
+      }
+      .c3 {
+        background-color: #0891b2;
+        color: white;
+      }
+      .c4 {
+        background-color: #164e63;
+        color: white;
+      }
       
-      .b1 { background-color: #e0e7ff; color: black; }
-      .b2 { background-color: #818cf8; color: black; }
-      .b3 { background-color: #4f46e5; color: white; }
-      .b4 { background-color: #312e81; color: white; }
+      .b1 {
+        background-color: #e0e7ff;
+        color: black;
+      }
+      .b2 {
+        background-color: #818cf8;
+        color: black;
+      }
+      .b3 {
+        background-color: #4f46e5;
+        color: white;
+      }
+      .b4 {
+        background-color: #312e81;
+        color: white;
+      }
       
-      .p1 { background-color: #fae8ff; color: black; }
-      .p2 { background-color: #e879f9; color: black; }
-      .p3 { background-color: #c084fc; color: white; }
-      .p4 { background-color: #701a75; color: white; }
+      .p1 {
+        background-color: #fae8ff;
+        color: black;
+      }
+      .p2 {
+        background-color: #e879f9;
+        color: black;
+      }
+      .p3 {
+        background-color: #c084fc;
+        color: white;
+      }
+      .p4 {
+        background-color: #701a75;
+        color: white;
+      }
     </style>
   )html";
 };
@@ -539,30 +611,83 @@ class SectionBorders : public Component<SectionBorders> {
         border-color: #38bdf8;
       }
       /* 24 styles */
-      .b-solid { border: solid; }
-      .b-double { border: double; border-color: #fbbf24; }
-      .b-heavy { border: heavy; border-color: #34d399; }
-      .b-rounded { border: rounded; }
-      .b-ascii { border: ascii; border-color: #a7f3d0; }
-      .b-shadow { border: shadow; border-color: #f87171; }
-      .b-dashed { border: dashed; }
-      .b-dotted { border: dotted; }
-      .b-wide { border: wide; }
-      .b-tall { border: tall; }
-      .b-squiggle { border: squiggle; }
-      .b-panel { border: panel; }
-      .b-inner { border: inner; }
-      .b-outer { border: outer; }
-      .b-hkey { border: hkey; }
-      .b-vkey { border: vkey; }
-      .b-shade-l { border: shade-light; }
-      .b-shade-m { border: shade-medium; }
-      .b-shade-d { border: shade-dark; }
-      .b-dbl-h { border: double-horizontal; }
-      .b-dbl-v { border: double-vertical; }
-      .b-blank { border: blank; }
-      .b-none { border: none; }
-      .b-solid-red { border: solid; border-color: red; }
+      .b-solid {
+        border: solid;
+      }
+      .b-double {
+        border: double;
+        border-color: #fbbf24;
+      }
+      .b-heavy {
+        border: heavy;
+        border-color: #34d399;
+      }
+      .b-rounded {
+        border: rounded;
+      }
+      .b-ascii {
+        border: ascii;
+        border-color: #a7f3d0;
+      }
+      .b-shadow {
+        border: shadow;
+        border-color: #f87171;
+      }
+      .b-dashed {
+        border: dashed;
+      }
+      .b-dotted {
+        border: dotted;
+      }
+      .b-wide {
+        border: wide;
+      }
+      .b-tall {
+        border: tall;
+      }
+      .b-squiggle {
+        border: squiggle;
+      }
+      .b-panel {
+        border: panel;
+      }
+      .b-inner {
+        border: inner;
+      }
+      .b-outer {
+        border: outer;
+      }
+      .b-hkey {
+        border: hkey;
+      }
+      .b-vkey {
+        border: vkey;
+      }
+      .b-shade-l {
+        border: shade-light;
+      }
+      .b-shade-m {
+        border: shade-medium;
+      }
+      .b-shade-d {
+        border: shade-dark;
+      }
+      .b-dbl-h {
+        border: double-horizontal;
+      }
+      .b-dbl-v {
+        border: double-vertical;
+      }
+      .b-blank {
+        border: blank;
+      }
+      .b-none {
+        border: none;
+      }
+      .b-solid-red {
+        border: solid;
+        border-color: red;
+      }
     </style>
   )html";
 };
@@ -609,9 +734,15 @@ class SectionAlign : public Component<SectionAlign> {
         border-color: #475569;
         height: 3;
       }
-      .align-l { text-align: left; }
-      .align-c { text-align: center; }
-      .align-r { text-align: right; }
+      .align-l {
+        text-align: left;
+      }
+      .align-c {
+        text-align: center;
+      }
+      .align-r {
+        text-align: right;
+      }
     </style>
   )html";
 };

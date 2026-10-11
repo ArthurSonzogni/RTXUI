@@ -124,6 +124,42 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
         border-top: light;
         padding-top: 1;
       }
+
+      .slider-column {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .slider-box {
+        display: flex;
+        gap: 1;
+        align-items: center;
+        border: solid;
+        border-color: #1e293b;
+        padding: 1;
+      }
+      .hint {
+        color: #64748b;
+      }
+      .wide-slider {
+        width: 20;
+      }
+      .search {
+        width: 15;
+      }
+      .nested-label {
+        color: #94a3b8;
+      }
+      .core {
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: tall;
+        border-color: #334155;
+        height: 7;
+        background-color: #111827;
+      }
     </style>
 
     <div>
@@ -146,25 +182,25 @@ class SpatialNavDemo : public Component<SpatialNavDemo> {
 
       <div class="row">
         <checkbox>Feature</checkbox>
-        <div style="display: flex; flex-direction: column; align-items: center;">
-          <span style="color: #64748b;">Horizontal</span>
-          <slider value="50" style="width: 20;" />
+        <div class="slider-column">
+          <span class="hint">Horizontal</span>
+          <slider value="50" class="wide-slider" />
         </div>
-        <div style="display: flex; gap: 1; align-items: center; border: solid; border-color: #1e293b; padding: 1;">
-           <span style="color: #64748b;">Vertical</span>
+        <div class="slider-box">
+           <span class="hint">Vertical</span>
            <slider direction="vertical" value="30" width="5" />
         </div>
-        <input value="Search..." style="width: 15;" />
+        <input value="Search..." class="search" />
       </div>
 
       <div class="section-title">Complex Layout</div>
       <div class="row">
         <div class="nested-container">
-          <p style="color: #94a3b8;">Nested</p>
+          <p class="nested-label">Nested</p>
           <button onclick="OnButtonClick('Nested 1')">Action 1</button>
           <button onclick="OnButtonClick('Nested 2')">Action 2</button>
         </div>
-        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; border: tall; border-color: #334155; height: 7; background-color: #111827;">
+        <div class="core">
            <div class="card" focusable="true" onclick="OnButtonClick('Core Card')">Core Card</div>
         </div>
       </div>

@@ -204,9 +204,15 @@ class Dashboard : public Component<Dashboard> {
           padding: 0 1;
           font-weight: bold;
         }
-        .pill.healthy { color: var(--healthy); }
-        .pill.degraded { color: var(--degraded); }
-        .pill.down { color: var(--down); }
+        .pill.healthy {
+          color: var(--healthy);
+        }
+        .pill.degraded {
+          color: var(--degraded);
+        }
+        .pill.down {
+          color: var(--down);
+        }
 
         .body {
           display: flex;
@@ -270,9 +276,15 @@ class Dashboard : public Component<Dashboard> {
         .row.hidden {
           display: none;
         }
-        .dot.healthy { color: var(--healthy); }
-        .dot.degraded { color: var(--degraded); }
-        .dot.down { color: var(--down); }
+        .dot.healthy {
+          color: var(--healthy);
+        }
+        .dot.degraded {
+          color: var(--degraded);
+        }
+        .dot.down {
+          color: var(--down);
+        }
         .name {
           width: 18;
           font-weight: bold;
@@ -309,8 +321,12 @@ class Dashboard : public Component<Dashboard> {
           justify-content: space-between;
           width: 100%;
         }
-        .k { color: var(--muted); }
-        .v { font-weight: bold; }
+        .k {
+          color: var(--muted);
+        }
+        .v {
+          font-weight: bold;
+        }
         .meter {
           margin-top: 1;
         }

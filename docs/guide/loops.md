@@ -80,7 +80,10 @@ the loop `virtual` to render only the items around what the container shows:
   </for>
 </div>
 <style>
-  .log { height: 20; overflow-y: scroll; }
+  .log {
+    height: 20;
+    overflow-y: scroll;
+  }
 </style>
 ```
 

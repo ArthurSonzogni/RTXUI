@@ -15,7 +15,9 @@ class Counter : public rtxui::Component<Counter> {
   std::string_view view = R"html(
     <div class="counter">Hello</div>
     <style>
-      .counter { color: rgb(59, 130, 246); }
+      .counter {
+        color: rgb(59, 130, 246);
+      }
     </style>
   )html";
 };

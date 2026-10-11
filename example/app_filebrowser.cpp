@@ -312,8 +312,12 @@ class FileBrowser : public Component<FileBrowser> {
           justify-content: space-between;
           width: 100%;
         }
-        .k { color: var(--muted); }
-        .v { font-weight: bold; }
+        .k {
+          color: var(--muted);
+        }
+        .v {
+          font-weight: bold;
+        }
 
         button {
           border: tall;

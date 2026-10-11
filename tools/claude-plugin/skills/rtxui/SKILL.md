@@ -42,7 +42,10 @@ class Counter : public Component<Counter> {
       </for>
     </div>
     <style>
-      .card { border: rounded; padding: 1; }
+      .card {
+        border: rounded;
+        padding: 1;
+      }
     </style>
   )html";
 };

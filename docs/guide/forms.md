@@ -133,11 +133,21 @@ the cursor cell, and `part="placeholder"` on the placeholder text.
 ```
 
 ```css
-textarea::part(gutter)       { color: rgb(100, 116, 139); }
-textarea::part(active)       { color: rgb(129, 140, 248); }
-textarea::part(current-line) { background-color: rgb(49, 55, 79); }
-textarea::part(selection)    { background-color: rgb(67, 56, 202); }
-textarea::part(placeholder)  { color: rgb(100, 116, 139); }
+textarea::part(gutter) {
+  color: rgb(100, 116, 139);
+}
+textarea::part(active) {
+  color: rgb(129, 140, 248);
+}
+textarea::part(current-line) {
+  background-color: rgb(49, 55, 79);
+}
+textarea::part(selection) {
+  background-color: rgb(67, 56, 202);
+}
+textarea::part(placeholder) {
+  color: rgb(100, 116, 139);
+}
 ```
 
 ```cpp

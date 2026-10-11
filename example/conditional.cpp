@@ -78,7 +78,7 @@ class ConditionalApp : public Component<ConditionalApp> {
             </div>
             <div class="card">
               <span>Disclaimer:</span>
-              <span>Side effects may include excessive use of <span style="color: #6366f1;">Indigo</span> and a sudden urge to refactor everything.</span>
+              <span>Side effects may include excessive use of <span class="indigo">Indigo</span> and a sudden urge to refactor everything.</span>
             </div>
           </if>
 
@@ -145,6 +145,10 @@ class ConditionalApp : public Component<ConditionalApp> {
             margin-top: 2;
             color: rgb(139, 148, 158);
             font-style: italic;
+          }
+
+          .indigo {
+            color: #6366f1;
           }
         }
       </style>

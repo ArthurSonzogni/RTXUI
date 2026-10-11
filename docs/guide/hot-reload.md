@@ -37,7 +37,9 @@ class MyPanel : public rtxui::Component<MyPanel> {
         border-color: rgb(59, 130, 246);
         padding: 1;
       }
-      h1 { color: rgb(234, 179, 8); }
+      h1 {
+        color: rgb(234, 179, 8);
+      }
     </style>
   )html";
 

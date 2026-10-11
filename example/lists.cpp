@@ -40,7 +40,7 @@ class ListsDemo : public Component<ListsDemo> {
             <span class="section-title">Interactive Preview</span>
             
             <p class="preview-label">1. Custom Styled List (Dynamic list-style-type)</p>
-            <ul style="list-style-type: {selected_style};">
+            <ul class="dynamic-list">
               <li>Dynamic list item A</li>
               <li>Dynamic list item B</li>
               <li>Dynamic list item C</li>
@@ -136,6 +136,9 @@ class ListsDemo : public Component<ListsDemo> {
         }
         ul, ol {
           margin-bottom: 1;
+        }
+        .dynamic-list {
+          list-style-type: {selected_style};
         }
       </style>
     )html";

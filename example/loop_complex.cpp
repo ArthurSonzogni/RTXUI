@@ -76,17 +76,60 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
           background-color: rgb(13, 17, 23);
           color: white;
         }
-        .container { padding: 1; }
-        .input-row { display: flex; gap: 1; margin-bottom: 1; }
-        input { width: 25; padding: 0 1; }
-        .list { display: flex; flex-direction: column; gap: 0; border: tall; border-color: var(--border); }
-        .item { display: flex; gap: 2; padding: 0 1; align-items: center; }
-        .status { width: 10; color: rgb(56, 189, 248); }
-        .name { flex-grow: 1; color: white; }
-        .remove-btn { color: var(--danger); border: none; padding: 0 1; background-color: transparent; }
-        .remove-btn:hover { color: white; background-color: var(--danger); }
-        button { background-color: rgb(22, 27, 34); color: white; border: tall; border-color: var(--border); padding: 0 1; }
-        button:hover { background-color: rgb(88, 166, 255); border-color: rgb(121, 192, 255); }
+        .container {
+          padding: 1;
+        }
+        .input-row {
+          display: flex;
+          gap: 1;
+          margin-bottom: 1;
+        }
+        input {
+          width: 25;
+          padding: 0 1;
+        }
+        .list {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          border: tall;
+          border-color: var(--border);
+        }
+        .item {
+          display: flex;
+          gap: 2;
+          padding: 0 1;
+          align-items: center;
+        }
+        .status {
+          width: 10;
+          color: rgb(56, 189, 248);
+        }
+        .name {
+          flex-grow: 1;
+          color: white;
+        }
+        .remove-btn {
+          color: var(--danger);
+          border: none;
+          padding: 0 1;
+          background-color: transparent;
+        }
+        .remove-btn:hover {
+          color: white;
+          background-color: var(--danger);
+        }
+        button {
+          background-color: rgb(22, 27, 34);
+          color: white;
+          border: tall;
+          border-color: var(--border);
+          padding: 0 1;
+        }
+        button:hover {
+          background-color: rgb(88, 166, 255);
+          border-color: rgb(121, 192, 255);
+        }
       </style>
     )html";
 

@@ -146,10 +146,25 @@ self {
   opacity: 0.85;
   transition: background-color 0.1s linear, opacity 0.1s linear, color 0.1s linear;
 }
-self:hover    { background-color: rgb(59, 130, 246); color: white; opacity: 0.95; }
-self:focus    { background-color: rgb(37, 99, 235); color: white; opacity: 1.0; }
-self:active   { background-color: rgb(29, 78, 216); color: white; opacity: 1.0; }
-self:disabled { cursor: default; opacity: 0.4; }
+self:hover {
+  background-color: rgb(59, 130, 246);
+  color: white;
+  opacity: 0.95;
+}
+self:focus {
+  background-color: rgb(37, 99, 235);
+  color: white;
+  opacity: 1.0;
+}
+self:active {
+  background-color: rgb(29, 78, 216);
+  color: white;
+  opacity: 1.0;
+}
+self:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
 ```
 
 ---
@@ -246,11 +261,22 @@ self {
   padding-right: 1;
   transition: background-color 0.1s linear;
 }
-self:hover    { background-color: lighten(10%); }
-self:focus    { background-color: lighten(25%); }
-self:active   { background-color: lighten(35%); }
-self:disabled { cursor: default; opacity: 0.4; }
-.checkmark    { margin-right: 1; }
+self:hover {
+  background-color: lighten(10%);
+}
+self:focus {
+  background-color: lighten(25%);
+}
+self:active {
+  background-color: lighten(35%);
+}
+self:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.checkmark {
+  margin-right: 1;
+}
 ```
 
 ---
@@ -501,10 +527,22 @@ animation ends. Replace either animation with your own `@keyframes`, declared
 in your component:
 
 ```css
-@keyframes fade-in { from { opacity: 0; } }
-@keyframes fade-out { to { opacity: 0; } }
-toast::part(toast) { animation: fade-in 200ms; }
-toast::part(closing) { animation: fade-out 200ms forwards; }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+toast::part(toast) {
+  animation: fade-in 200ms;
+}
+toast::part(closing) {
+  animation: fade-out 200ms forwards;
+}
 ```
 
 Write the `closing` rule after the `toast` one: the closing box is both

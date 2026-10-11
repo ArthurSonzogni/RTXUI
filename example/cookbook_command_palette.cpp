@@ -144,9 +144,19 @@ class CommandPalette : public Component<CommandPalette> {
     </div>
 
     <style>
-      .main { padding: 1; width: 60; height: 16; }
-      .list { margin-top: 1; height: 9; }
-      .selected { background-color: rgb(37, 99, 235); color: white; }
+      .main {
+        padding: 1;
+        width: 60;
+        height: 16;
+      }
+      .list {
+        margin-top: 1;
+        height: 9;
+      }
+      .selected {
+        background-color: rgb(37, 99, 235);
+        color: white;
+      }
     </style>
   )html";
 };

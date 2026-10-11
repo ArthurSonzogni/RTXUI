@@ -59,7 +59,7 @@ class TableDemo : public Component<TableDemo> {
             <tr>
               <td>#104</td>
               <td>Widget D</td>
-              <td style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 15;">Consumer Electronics</td>
+              <td class="truncated">Consumer Electronics</td>
               <td>$129.00</td>
               <td class="status active">Active</td>
             </tr>
@@ -167,7 +167,7 @@ class TableDemo : public Component<TableDemo> {
             <tr>
               <td>#120</td>
               <td>Phone T</td>
-              <td style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 15;">Consumer Electronics</td>
+              <td class="truncated">Consumer Electronics</td>
               <td>$699.99</td>
               <td class="status active">Active</td>
             </tr>
@@ -244,6 +244,12 @@ class TableDemo : public Component<TableDemo> {
           top: 0;
           z-index: 10;
           background-color: rgb(15, 23, 42);
+        }
+        .truncated {
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          max-width: 15;
         }
       </style>
     )html";

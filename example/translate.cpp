@@ -152,7 +152,9 @@ class TranslateDemo : public Component<TranslateDemo> {
         background-color: rgb(31, 111, 235);
       }
       @keyframes leave {
-        to { translate: calc(100% + 2); }
+        to {
+          translate: calc(100% + 2);
+        }
       }
       .task.leaving {
         animation: leave 300ms ease-in forwards;

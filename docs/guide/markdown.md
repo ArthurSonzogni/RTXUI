@@ -64,9 +64,19 @@ Markdown pipe-tables are parsed into standard HTML table elements (`<table>`,
 ```
 
 ```css
-table { border: solid; border-color: #334155; }
-th { font-weight: bold; border-bottom: solid; border-color: #334155; padding-left: 1; }
-td { padding-left: 1; }
+table {
+  border: solid;
+  border-color: #334155;
+}
+th {
+  font-weight: bold;
+  border-bottom: solid;
+  border-color: #334155;
+  padding-left: 1;
+}
+td {
+  padding-left: 1;
+}
 ```
 
 Escaped pipes (`\|`) inside cells and inline formatting inside cells are

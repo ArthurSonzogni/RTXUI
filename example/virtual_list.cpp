@@ -95,10 +95,23 @@ class LogViewer : public Component<LogViewer> {
           text-align: right;
           color: rgb(110, 118, 129);
         }
-        .INFO { color: rgb(63, 185, 80); width: 5; }
-        .DEBUG { color: rgb(139, 148, 158); width: 5; }
-        .WARN { color: rgb(210, 153, 34); width: 5; }
-        .ERROR { color: rgb(248, 81, 73); width: 5; font-weight: bold; }
+        .INFO {
+          color: rgb(63, 185, 80);
+          width: 5;
+        }
+        .DEBUG {
+          color: rgb(139, 148, 158);
+          width: 5;
+        }
+        .WARN {
+          color: rgb(210, 153, 34);
+          width: 5;
+        }
+        .ERROR {
+          color: rgb(248, 81, 73);
+          width: 5;
+          font-weight: bold;
+        }
       </style>
     )html";
 };

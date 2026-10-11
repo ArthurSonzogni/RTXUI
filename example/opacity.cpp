@@ -33,7 +33,7 @@ class OpacityDemo : public Component<OpacityDemo> {
           <!-- 1. Opacity Box & Inheritance -->
           <div class="card box-card">
             <h3>1. Alpha Blending & Inheritance</h3>
-            <div class="parent-box" style="opacity: {opacity_float};">
+            <div class="parent-box">
               <span class="parent-label">Parent Container (opacity: {opacity_float})</span>
               <div class="child-box">
                 <span class="child-label">Nested Child (inherits/accumulates opacity)</span>
@@ -121,6 +121,7 @@ class OpacityDemo : public Component<OpacityDemo> {
           border-color: var(--accent);
           background-color: rgb(30, 58, 138);
           padding: 1;
+          opacity: {opacity_float};
         }
         .parent-label {
           color: white;

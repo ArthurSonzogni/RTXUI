@@ -74,8 +74,12 @@ sets how many rows each line occupies. Both take whole numbers of cells and
 are inherited:
 
 ```css
-h1 { letter-spacing: 1; }   /* H E A D I N G */
-p  { line-height: 2; }      /* one blank row between lines */
+h1 {
+  letter-spacing: 1;  /* H E A D I N G */
+}
+p {
+  line-height: 2;  /* One blank row between lines. */
+}
 ```
 
 The cells added by `letter-spacing` are non-breaking: a spaced word never
@@ -171,7 +175,9 @@ long words overflow). Set `overflow-wrap: normal` to keep such words intact
 and let them overflow instead:
 
 ```css
-.url { overflow-wrap: normal; }
+.url {
+  overflow-wrap: normal;
+}
 ```
 
 ---

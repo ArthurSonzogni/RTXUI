@@ -66,14 +66,48 @@ class GridDemo : public Component<GridDemo> {
           padding: 1;
           border: tall;
         }
-        .item-1 { background-color: rgb(248, 81, 73); color: white; border-color: rgb(185, 28, 28); grid-column: span 2; }
-        .item-3 { background-color: rgb(234, 179, 8); color: black; border-color: rgb(161, 98, 7); }
-        .item-4 { background-color: rgb(34, 197, 94); color: white; border-color: rgb(21, 128, 61); }
-        .item-5 { background-color: rgb(88, 166, 255); color: white; border-color: rgb(29, 78, 216); grid-row: span 2; }
-        .item-6 { background-color: rgb(168, 85, 247); color: white; border-color: rgb(126, 34, 206); }
-        .item-7 { background-color: rgb(236, 72, 153); color: white; border-color: rgb(190, 24, 74); }
-        .item-8 { background-color: rgb(20, 184, 166); color: white; border-color: rgb(13, 148, 136); }
-        .item-9 { background-color: rgb(100, 116, 139); color: white; border-color: var(--border); }
+        .item-1 {
+          background-color: rgb(248, 81, 73);
+          color: white;
+          border-color: rgb(185, 28, 28);
+          grid-column: span 2;
+        }
+        .item-3 {
+          background-color: rgb(234, 179, 8);
+          color: black;
+          border-color: rgb(161, 98, 7);
+        }
+        .item-4 {
+          background-color: rgb(34, 197, 94);
+          color: white;
+          border-color: rgb(21, 128, 61);
+        }
+        .item-5 {
+          background-color: rgb(88, 166, 255);
+          color: white;
+          border-color: rgb(29, 78, 216);
+          grid-row: span 2;
+        }
+        .item-6 {
+          background-color: rgb(168, 85, 247);
+          color: white;
+          border-color: rgb(126, 34, 206);
+        }
+        .item-7 {
+          background-color: rgb(236, 72, 153);
+          color: white;
+          border-color: rgb(190, 24, 74);
+        }
+        .item-8 {
+          background-color: rgb(20, 184, 166);
+          color: white;
+          border-color: rgb(13, 148, 136);
+        }
+        .item-9 {
+          background-color: rgb(100, 116, 139);
+          color: white;
+          border-color: var(--border);
+        }
       </style>
     )html";
 };

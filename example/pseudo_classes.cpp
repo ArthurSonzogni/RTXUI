@@ -105,9 +105,15 @@ class PseudoClassesDemo : public Component<PseudoClassesDemo> {
         .swatch {
           width: 2;
         }
-        .swatch.hover { background-color: var(--accent); }
-        .swatch.focus { background-color: var(--focus); }
-        .swatch.active { background-color: var(--active); }
+        .swatch.hover {
+          background-color: var(--accent);
+        }
+        .swatch.focus {
+          background-color: var(--focus);
+        }
+        .swatch.active {
+          background-color: var(--active);
+        }
       </style>
     )html";
 };

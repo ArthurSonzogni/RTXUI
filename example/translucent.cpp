@@ -72,15 +72,33 @@ class TranslucentDemo : public Component<TranslucentDemo> {
           padding: 1 0;
           color: rgba(255, 255, 255, 1.0);
         }
-        .blue { background-color: rgba(88, 166, 255, 0.1); }
-        .blue.strong { background-color: rgba(88, 166, 255, 0.25); }
-        .blue.stronger { background-color: rgba(88, 166, 255, 0.5); }
-        .green { background-color: rgba(63, 185, 80, 0.1); }
-        .green.strong { background-color: rgba(63, 185, 80, 0.25); }
-        .green.stronger { background-color: rgba(63, 185, 80, 0.5); }
-        .red { background-color: rgba(248, 81, 73, 0.1); }
-        .red.strong { background-color: rgba(248, 81, 73, 0.25); }
-        .red.stronger { background-color: rgba(248, 81, 73, 0.5); }
+        .blue {
+          background-color: rgba(88, 166, 255, 0.1);
+        }
+        .blue.strong {
+          background-color: rgba(88, 166, 255, 0.25);
+        }
+        .blue.stronger {
+          background-color: rgba(88, 166, 255, 0.5);
+        }
+        .green {
+          background-color: rgba(63, 185, 80, 0.1);
+        }
+        .green.strong {
+          background-color: rgba(63, 185, 80, 0.25);
+        }
+        .green.stronger {
+          background-color: rgba(63, 185, 80, 0.5);
+        }
+        .red {
+          background-color: rgba(248, 81, 73, 0.1);
+        }
+        .red.strong {
+          background-color: rgba(248, 81, 73, 0.25);
+        }
+        .red.stronger {
+          background-color: rgba(248, 81, 73, 0.5);
+        }
       </style>
     )html";
 };
