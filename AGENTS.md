@@ -45,8 +45,11 @@ These are enforced by `scripts/check.sh` and CI unless noted.
   rather than counting on another header to bring it in. The examples are
   also built with `import rtxui;`, which brings in no standard header.
 - **Regression tests** (enforced by review): every bug fix comes with a test
-  that fails before the fix and passes after, typically in
-  `src/rtxui/component/component_test.cpp` or `src/rtxui/style/style_test.cpp`.
+  that fails before the fix and passes after, in the test file of what it
+  fixes: `component/default/<tag>/<tag>_test.cpp` for a built-in tag,
+  `style/css_test.cpp` or `style/selector_test.cpp` for CSS,
+  `paint/text_paint_test.cpp`, `layout/component_layout_test.cpp`, and
+  `component/component_test.cpp` for the component machinery itself.
 - **Docs stay in sync**: every CSS property handled in
   `src/rtxui/style/apply_style.cpp` (each `p == "property-name"` branch) must
   be documented in `docs/css_reference.md` (`scripts/verify_docs.py`). When

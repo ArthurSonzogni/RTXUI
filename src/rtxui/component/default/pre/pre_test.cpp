@@ -1,0 +1,161 @@
+// Copyright 2024 Arthur Sonzogni. All rights reserved.
+// Use of this source code is governed by the MIT license that can be found in
+// the LICENSE file.
+#include "rtxui/component/default/pre/pre.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+#include <memory>
+#include <string>
+#include <string_view>
+
+#include "rtxui/component.hpp"
+#include "rtxui/component/default/code/code.hpp"
+#include "rtxui/layout/layout.hpp"
+#include "rtxui/layout/layout_tree_builder.hpp"
+#include "rtxui/layout/style.hpp"
+#include "rtxui/paint/paint.hpp"
+#include "rtxui/paint/texture.hpp"
+#include "rtxui/refcounted.hpp"
+
+using namespace rtxui;
+
+namespace {
+
+struct PreTestComponent : public rtxui::Component<PreTestComponent> {
+  void InitReflection() override {
+    Import<rtxui::pre>();
+    rtxui::Component<PreTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <pre>Line 1
+  Line 2 with spaces
+Line 3</pre>
+    </div>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Pre component whitespace preservation", "[component][pre]") {
+  auto container = rtxui::Ref<PreTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string rendered = texture.Render();
+  CHECK(rendered.find("Line 1") != std::string::npos);
+  CHECK(rendered.find("  Line 2 with spaces") != std::string::npos);
+  CHECK(rendered.find("Line 3") != std::string::npos);
+}
+
+namespace {
+
+struct PreCodeTestComponent : public rtxui::Component<PreCodeTestComponent> {
+  void InitReflection() override {
+    Import<rtxui::pre>();
+    Import<rtxui::code>();
+    rtxui::Component<PreCodeTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <pre><code>int main() {
+  return 0;
+}</code></pre>
+    </div>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Pre code newlines preserved", "[component][pre]") {
+  auto container = rtxui::Ref<PreCodeTestComponent>::New();
+  container->Mount();
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  // Each source line must land on its own row.
+  std::string rendered = texture.Render();
+  CHECK(rendered.find("int main() {") != std::string::npos);
+  CHECK(rendered.find("  return 0;") != std::string::npos);
+  CHECK(rendered.find("int main() {   return 0; }") == std::string::npos);
+  auto pos_main = rendered.find("int main()");
+  auto pos_return = rendered.find("return 0;");
+  REQUIRE(pos_main != std::string::npos);
+  REQUIRE(pos_return != std::string::npos);
+  CHECK(rendered.find('\n', pos_main) < pos_return);
+}
+
+namespace {
+
+struct PreCodeBindingTestComponent
+    : public rtxui::Component<PreCodeBindingTestComponent> {
+  std::string source = "int main() {\n  return 0;\n}";
+  void InitReflection() override {
+    Bind(source);
+    Import<rtxui::pre>();
+    Import<rtxui::code>();
+    rtxui::Component<PreCodeBindingTestComponent>::InitReflection();
+  }
+  std::string_view view = R"(
+    <div>
+      <pre><code>{source}</code></pre>
+    </div>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Pre code newlines preserved through interpolation",
+          "[component][pre]") {
+  auto container = rtxui::Ref<PreCodeBindingTestComponent>::New();
+  container->Mount();
+
+  SECTION("initial value") {}
+  SECTION("value updated after mount") {
+    container->source = "// updated\nint main() {\n  return 0;\n}";
+    container->Digest();
+  }
+
+  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  REQUIRE(root_box != nullptr);
+
+  rtxui::LayoutConstraints viewport = {
+      {80, rtxui::MeasureMode::Exactly},
+      {24, rtxui::MeasureMode::Exactly},
+  };
+  auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
+  REQUIRE(root_fragment != nullptr);
+
+  Texture texture(80, 24);
+  rtxui::Paint(root_fragment.get(), texture);
+
+  std::string rendered = texture.Render();
+  auto pos_main = rendered.find("int main()");
+  auto pos_return = rendered.find("return 0;");
+  REQUIRE(pos_main != std::string::npos);
+  REQUIRE(pos_return != std::string::npos);
+  CHECK(rendered.find('\n', pos_main) < pos_return);
+}
