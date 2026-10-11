@@ -8,6 +8,9 @@
 #   BUILD_DIR  build directory to use (default: build)
 #   BASE       ref to diff against for clang-tidy (default: origin/main)
 #   JOBS       parallelism (default: 2)
+#
+# Progress goes to $BUILD_DIR/check-progress as it runs, for
+# tools/claude/check_progress.sh to show in Claude Code's status line.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,8 +21,57 @@ LINT_ONLY=0
 [[ "${1:-}" == "--lint-only" ]] && LINT_ONLY=1
 
 failed=()
-step() { echo; echo "==> $1"; }
+total_steps=5
+[[ $LINT_ONLY == 1 ]] && total_steps=3
+step_index=0
+step_name=""
+started=$(date +%s)
+progress_file="$BUILD_DIR/check-progress"
+mkdir -p "$BUILD_DIR"
+
+# Rewrites the progress file whole, through a rename, so a reader never sees
+# half of it. Arguments: state, then done/total within the step (optional).
+progress() {
+  local failures
+  failures=$(IFS=,; echo "${failed[*]:-}")
+  printf 'pid=%s\nstate=%s\nstep=%s\nstep_index=%s\nsteps=%s\ndone=%s\ntotal=%s\nrunning=%s\nstarted=%s\nupdated=%s\nfailed=%s\n' \
+    "$$" "$1" "$step_name" "$step_index" "$total_steps" "${2:-}" "${3:-}" \
+    "${4:-}" "$started" "$(date +%s)" "$failures" >"$progress_file.tmp" &&
+    mv -f "$progress_file.tmp" "$progress_file"
+}
+
+# Passes a command's output through, recording the "[done/total]" ninja
+# prints and the "done/total Test #n" ctest prints, and which tests ctest has
+# started but not finished: the last one can take minutes on its own.
+track() {
+  local line done="" total="" running
+  local -A started_tests=()
+  while IFS= read -r line; do
+    printf '%s\n' "$line"
+    if [[ $line =~ ^\[([0-9]+)/([0-9]+)\] ]]; then
+      done=${BASH_REMATCH[1]} total=${BASH_REMATCH[2]}
+    elif [[ $line =~ ^\ *Start\ +([0-9]+):\ (.*)$ ]]; then
+      started_tests[${BASH_REMATCH[1]}]=${BASH_REMATCH[2]}
+    elif [[ $line =~ ^\ *([0-9]+)/([0-9]+)\ Test\ +#([0-9]+): ]]; then
+      done=${BASH_REMATCH[1]} total=${BASH_REMATCH[2]}
+      unset "started_tests[${BASH_REMATCH[3]}]"
+    else
+      continue
+    fi
+    running=$(IFS=,; echo "${started_tests[*]:-}")
+    progress running "$done" "$total" "$running"
+  done
+}
+
+step() {
+  echo; echo "==> $1"
+  step_name=$1
+  step_index=$((step_index + 1))
+  progress running
+}
 fail() { echo "FAILED: $1"; failed+=("$1"); }
+# An interrupted run is not left showing as running.
+trap 'progress interrupted; exit 130' INT TERM
 
 cpp_files() {
   git ls-files -- src include example benchmarks |
@@ -52,9 +104,10 @@ fi
 
 if [[ $LINT_ONLY == 0 ]]; then
   step "Build"
-  if ninja -C "$BUILD_DIR" -j "$JOBS"; then
+  if NINJA_STATUS='[%f/%t] ' ninja -C "$BUILD_DIR" -j "$JOBS" | track; then
     step "Tests (unit, docs, examples, headers)"
-    ctest --test-dir "$BUILD_DIR" -j "$JOBS" --output-on-failure || fail "ctest"
+    ctest --test-dir "$BUILD_DIR" -j "$JOBS" --output-on-failure | track ||
+      fail "ctest"
   else
     fail "build"
   fi
@@ -63,6 +116,8 @@ fi
 echo
 if [[ ${#failed[@]} -gt 0 ]]; then
   printf 'check.sh: %s\n' "${failed[@]}"
+  progress failed
   exit 1
 fi
+progress passed
 echo "check.sh: all checks passed"
