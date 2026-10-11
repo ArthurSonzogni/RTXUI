@@ -186,7 +186,8 @@ terminal for that color on startup (OSC 11), uses it for the blending only,
 and still leaves the rest of the screen at the terminal's own background, so a
 translucent or themed terminal shows through. A terminal that does not answer
 gets the color unblended. `Screen::SetBackgroundColor` names the background
-instead, and paints it everywhere.
+instead, and paints it everywhere. See the
+[translucent example](/guide/examples/translucent).
 
 ### `currentColor`
 `currentColor` (any case) is accepted by `color`, `border-color` and its

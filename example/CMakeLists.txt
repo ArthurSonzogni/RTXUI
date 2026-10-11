@@ -101,6 +101,18 @@ target_link_libraries(rtxui_example_hr PRIVATE rtxui)
 add_executable(rtxui_example_pseudo_classes pseudo_classes.cpp)
 target_link_libraries(rtxui_example_pseudo_classes PRIVATE rtxui)
 
+add_executable(rtxui_example_focus_states focus_states.cpp)
+target_link_libraries(rtxui_example_focus_states PRIVATE rtxui)
+
+add_executable(rtxui_example_selector_lists selector_lists.cpp)
+target_link_libraries(rtxui_example_selector_lists PRIVATE rtxui)
+
+add_executable(rtxui_example_hyperlinks hyperlinks.cpp)
+target_link_libraries(rtxui_example_hyperlinks PRIVATE rtxui)
+
+add_executable(rtxui_example_translucent translucent.cpp)
+target_link_libraries(rtxui_example_translucent PRIVATE rtxui)
+
 add_executable(rtxui_example_transitions transitions.cpp)
 target_link_libraries(rtxui_example_transitions PRIVATE rtxui)
 

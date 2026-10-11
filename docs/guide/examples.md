@@ -77,13 +77,16 @@ Colors, text decorations, pseudo-classes, transitions, and keyframe animations.
 | :--- | :--- | :--- |
 | [animation.cpp](/guide/examples/animation) | Keyframe animations. | [Guide](/guide/css/animations) |
 | [colors.cpp](/guide/examples/colors) | Foreground and background colors. | [Guide](/guide/typography) |
+| [focus_states.cpp](/guide/examples/focus_states) | Focus styling: :focus-within, :focus-visible and currentColor. | [Guide](/guide/css/basics) |
 | [keyframes.cpp](/guide/examples/keyframes) | CSS keyframe animations. | [Guide](/guide/css/animations) |
 | [opacity.cpp](/guide/examples/opacity) | Opacity and alpha blending, including how nested opacity compounds. | [Guide](/guide/typography) |
 | [pseudo_classes.cpp](/guide/examples/pseudo_classes) | The interactive pseudo-classes: :hover, :focus and :active. | [Guide](/guide/css/basics) |
+| [selector_lists.cpp](/guide/examples/selector_lists) | Selector lists: :is() and :where(). | [Guide](/guide/css/basics) |
 | [text_align.cpp](/guide/examples/text_align) | text-align: left, center and right. | [Guide](/guide/typography) |
 | [text_decoration.cpp](/guide/examples/text_decoration) | Text decoration: bold, dim, italic, underline and strikethrough. | [Guide](/guide/typography) |
 | [transitions.cpp](/guide/examples/transitions) | CSS transitions. | [Guide](/guide/css/animations) |
 | [translate.cpp](/guide/examples/translate) | Moving boxes with translate. | [Guide](/guide/css/animations) |
+| [translucent.cpp](/guide/examples/translucent) | Translucent colors over the terminal's own background. | [Reference](/css_reference) |
 
 ## Components & Advanced Features
 
@@ -99,6 +102,7 @@ Built-in HTML elements, CJK text, Markdown rendering, spatial nav, and cookbook 
 | [details.cpp](/guide/examples/details) | The `<details>`/`<summary>` disclosure widget. | [Reference](/html_reference) |
 | [dialog.cpp](/guide/examples/dialog) | The built-in `<dialog>` element. | [Reference](/html_reference) |
 | [hr.cpp](/guide/examples/hr) | The `<hr>` separator, and how border styles apply to it. | [Reference](/html_reference) |
+| [hyperlinks.cpp](/guide/examples/hyperlinks) | Terminal hyperlinks: an `<a href>` to a URL becomes a clickable link. | [Reference](/html_reference) |
 | [lists.cpp](/guide/examples/lists) | `<ul>`, `<ol>` and `<li>`, including nesting, `start`/`reversed`, per-item `value`, and the list-style-type property. | [Reference](/html_reference) |
 | [markdown.cpp](/guide/examples/markdown) | The `<markdown>` component: a live editor and rendered preview, side by side. | [Guide](/guide/markdown) |
 | [media.cpp](/guide/examples/media) | `@media` queries reacting to terminal size. | [Guide](/guide/css/media-queries) |

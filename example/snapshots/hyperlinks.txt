@@ -1,0 +1,24 @@
+
+
+
+
+          ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+          ▊                                                          ▎
+          ▊   Hyperlinks                                             ▎
+          ▊                                                          ▎
+          ▊   Ctrl-click (or Cmd-click) a link in a terminal that    ▎
+          ▊   supports it.                                           ▎
+          ▊                                                          ▎
+          ▊   https    RTXUI on GitHub                               ▎
+          ▊   https    The documentation                             ▎
+          ▊   mailto   someone@example.com                           ▎
+          ▊   file     /etc/hosts                                    ▎
+          ▊                                                          ▎
+          ▊   A link that wraps stays one link: the escape codes     ▎
+          ▊   behind it are on Wikipedia.                            ▎
+          ▊                                                          ▎
+          ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+
+
+
+
