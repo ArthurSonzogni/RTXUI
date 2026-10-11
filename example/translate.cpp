@@ -63,18 +63,21 @@ class TranslateDemo : public Component<TranslateDemo> {
 
   TranslateDemo() {
     Bind(picked);
-    Bind(tasks, [](const Task& task) {
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"id", task.id},
-              {"name", task.name},
-              {"state", task.leaving ? "leaving" : ""}});
-    });
+    Bind(tasks, &TranslateDemo::TaskFields);
     Bind(Pick);
     Bind(Done);
     Bind(Remove);
     Bind(Reset);
     Bind(AllDone);
+  }
+
+  // The fields a <for> over `tasks` reads from each item.
+  std::shared_ptr<ManualStructVisitor> TaskFields(const Task& task) const {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"id", task.id},
+            {"name", task.name},
+            {"state", task.leaving ? "leaving" : ""}});
   }
 
   std::string_view view = R"html(

@@ -456,21 +456,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
     Bind(child_basis);
     Bind(container_width);
     Bind(container_height);
-    Bind(items, [this](const DemoBox& b) {
-      bool should_stretch_h =
-          (align == "stretch" &&
-           (direction == "row" || direction == "row-reverse"));
-      bool should_stretch_w =
-          (align == "stretch" &&
-           (direction == "column" || direction == "column-reverse"));
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"label", b.label},
-              {"color", b.color},
-              {"width", should_stretch_w ? "auto" : std::to_string(b.width)},
-              {"height",
-               should_stretch_h ? "auto" : std::to_string(b.height)}});
-    });
+    Bind(items, &LayoutFlexDemo::DemoBoxFields);
     Bind(CycleDirection);
     Bind(CycleWrap);
     Bind(CycleJustify);
@@ -489,6 +475,22 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
     AddItem();
     AddItem();
     AddItem();
+  }
+
+  // The fields a <for> over `items` reads from each item.
+  std::shared_ptr<ManualStructVisitor> DemoBoxFields(const DemoBox& b) const {
+    bool should_stretch_h =
+        (align == "stretch" &&
+         (direction == "row" || direction == "row-reverse"));
+    bool should_stretch_w =
+        (align == "stretch" &&
+         (direction == "column" || direction == "column-reverse"));
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"label", b.label},
+            {"color", b.color},
+            {"width", should_stretch_w ? "auto" : std::to_string(b.width)},
+            {"height", should_stretch_h ? "auto" : std::to_string(b.height)}});
   }
 };
 

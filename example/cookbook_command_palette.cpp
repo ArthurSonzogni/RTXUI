@@ -64,11 +64,14 @@ class CommandPalette : public Component<CommandPalette> {
     Bind(last);
     Bind(Open);
     Bind(Run);
-    Bind(matches, [](const Match& match) {
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"name", match.name}, {"row_class", match.row_class}});
-    });
+    Bind(matches, &CommandPalette::MatchFields);
+  }
+
+  // The fields a <for> over `matches` reads from each item.
+  std::shared_ptr<ManualStructVisitor> MatchFields(const Match& match) const {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"name", match.name}, {"row_class", match.row_class}});
   }
 
   // Whether `pattern`'s letters appear in `text` in order, ignoring case:

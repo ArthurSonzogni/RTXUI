@@ -120,6 +120,7 @@ mapper returns a `ManualStructVisitor` built from a field-name → value map:
 struct Task {
   std::string name;
   bool completed;
+  bool operator==(const Task&) const = default;  // To detect changes.
 };
 
 std::vector<Task> tasks;
@@ -141,6 +142,39 @@ The template reads the mapped fields with dot notation on the loop variable:
     <li>{task.name} — {task.status}</li>
   </for>
 </ul>
+```
+
+The mapper can also be a `const` member function, passed by address. It
+keeps the constructor short, and reads the component's state without a
+capture:
+
+```cpp
+struct Task {
+  std::string name;
+  bool completed;
+  bool operator==(const Task&) const = default;  // To detect changes.
+};
+
+class TaskList : public Component<TaskList> {
+ public:
+  std::vector<Task> tasks;
+  std::string done_label = "Done";
+
+  TaskList() { Bind(tasks, &TaskList::TaskFields); }
+
+  std::shared_ptr<ManualStructVisitor> TaskFields(const Task& t) const {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"name", t.name},
+            {"status", t.completed ? done_label : "Pending"}});
+  }
+
+  std::string_view view = R"html(
+    <ul>
+      <for each="{tasks}" as="task"><li>{task.name} — {task.status}</li></for>
+    </ul>
+  )html";
+};
 ```
 
 `BindCollection("name", &collection, mapper)` is equivalent when you want the

@@ -111,7 +111,7 @@ Bindings are registered in the constructor. A component that cannot bind there c
 | :--- | :--- |
 | `void Bind(T& member)` | Binds primitive member as reactive state. Auto-snapshots for dirty detection during `Digest()`. |
 | `void Bind(const T& method)` | Registers a `const` member method as a computed property in templates. |
-| `void Bind(T& container, Mapper mapper)` | Binds a collection of structs for repetition in `<for>` loops. |
+| `void Bind(T& container, Mapper mapper)` | Binds a collection of structs for repetition in `<for>` loops. The mapper is a callable or a `const` member function (`&MyApp::RowFields`). |
 | `void Import(std::string name, Callback cb)` | Registers an event handler (invoked by `onclick="name"`). |
 | `template <typename C> void Import()` | Registers component type `C` as an XML/HTML tag available within this template. |
 

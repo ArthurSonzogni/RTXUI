@@ -27,9 +27,11 @@ struct Task {
 
 class ComplexLoopApp : public Component<ComplexLoopApp> {
  public:
-  std::vector<Task> tasks = {{"Setup Project", true},
-                             {"Implement Loops", true},
-                             {"Write Docs", false}};
+  std::vector<Task> tasks = {
+      Task{"Setup Project", true},
+      Task{"Implement Loops", true},
+      Task{"Write Docs", false},
+  };
   std::string new_task_name = "";
 
   void AddTask() {
@@ -86,15 +88,18 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
     )html";
 
   ComplexLoopApp() {
-    Bind(tasks, [](const Task& t) {
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"name", t.name},
-              {"status", t.completed ? "✅ Done" : "⏳ Pending"}});
-    });
+    Bind(tasks, &ComplexLoopApp::TaskFields);
     Bind(new_task_name);
     Bind(AddTask);
     Bind(RemoveTask);
+  }
+
+  // The fields a <for> over `tasks` reads from each item.
+  std::shared_ptr<ManualStructVisitor> TaskFields(const Task& t) const {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"name", t.name},
+            {"status", t.completed ? "✅ Done" : "⏳ Pending"}});
   }
 };
 

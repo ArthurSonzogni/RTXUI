@@ -38,11 +38,14 @@ class LogViewer : public Component<LogViewer> {
           {kLevels[i % 7], "request " + std::to_string(i) + " served in " +
                                std::to_string(3 + (i * 37) % 250) + "ms"});
     }
-    Bind(lines, [](const Line& line) {
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{{"level", line.level},
-                                                          {"text", line.text}});
-    });
+    Bind(lines, &LogViewer::LineFields);
+  }
+
+  // The fields a <for> over `lines` reads from each item.
+  std::shared_ptr<ManualStructVisitor> LineFields(const Line& line) const {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{{"level", line.level},
+                                                        {"text", line.text}});
   }
 
   std::string_view view = R"html(

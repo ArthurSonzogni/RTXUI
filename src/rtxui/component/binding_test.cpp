@@ -140,5 +140,34 @@ TEST_CASE("A struct collection reads fields through its mapper", "[binding]") {
   CHECK(text.find("nuts: out\n") != std::string::npos);
 }
 
+class Restock : public Component<Restock> {
+ public:
+  std::vector<Row> rows{{"bolts", 12}, {"nuts", 0}};
+  std::string unit = "pcs";
+  Restock() {
+    Bind(rows, &Restock::RowFields);
+    Bind(unit);
+  }
+  // A member function, so it can read the component's state.
+  std::shared_ptr<StructVisitor> RowFields(const Row& row) const {
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"name", row.name},
+            {"stock", std::to_string(row.stock) + " " + unit},
+        });
+  }
+  std::string_view view = R"html(
+    <div>
+      <for each="{rows}" as="row"><div>{row.name}: {row.stock}</div></for>
+    </div>
+  )html";
+};
+
+TEST_CASE("A collection's mapper can be a member function", "[binding]") {
+  std::string text = RenderToString(Ref<Restock>::New(), 20, 3);
+  CHECK(text.find("bolts: 12 pcs\n") != std::string::npos);
+  CHECK(text.find("nuts: 0 pcs\n") != std::string::npos);
+}
+
 }  // namespace
 }  // namespace rtxui

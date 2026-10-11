@@ -353,23 +353,7 @@ class Dashboard : public Component<Dashboard> {
     )html";
 
   Dashboard() {
-    BindCollection("services", &services, [this](const Service& service) {
-      const bool visible = filter == "all" || filter == service.state;
-      std::string row_class = service.name == selected ? "selected" : "";
-      if (!visible) {
-        row_class += " hidden";
-      }
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"name", service.name},
-              {"region", service.region},
-              {"state", service.state},
-              {"row_class", row_class},
-              {"latency", service.state == "down"
-                              ? std::string("--")
-                              : std::to_string(service.latency_ms) + " ms"},
-          });
-    });
+    Bind(services, &Dashboard::ServiceFields);
 
     Bind(filter);
     Bind(selected);
@@ -397,6 +381,26 @@ class Dashboard : public Component<Dashboard> {
         selected = services[index].name;
       }
     });
+  }
+
+  // The fields a <for> over `services` reads from each item.
+  std::shared_ptr<ManualStructVisitor> ServiceFields(
+      const Service& service) const {
+    const bool visible = filter == "all" || filter == service.state;
+    std::string row_class = service.name == selected ? "selected" : "";
+    if (!visible) {
+      row_class += " hidden";
+    }
+    return std::make_shared<ManualStructVisitor>(
+        std::map<std::string, std::string, std::less<>>{
+            {"name", service.name},
+            {"region", service.region},
+            {"state", service.state},
+            {"row_class", row_class},
+            {"latency", service.state == "down"
+                            ? std::string("--")
+                            : std::to_string(service.latency_ms) + " ms"},
+        });
   }
 
  private:

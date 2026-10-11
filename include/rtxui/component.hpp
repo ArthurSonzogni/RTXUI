@@ -650,6 +650,21 @@ class Component : public ComponentBase {
               std::make_shared<TypeErasedRangeImpl<Container>>(ptr, mapper)});
   }
 
+  // A const member function as the mapper: Bind(rows, &MyApp::RowFields).
+  template <typename Container, typename C, typename R>
+    requires std::derived_from<Derived, C>
+  void RegisterCollection(
+      std::string name,
+      const Container* ptr,
+      R (C::*mapper)(const std::ranges::range_value_t<Container>&) const) {
+    RegisterCollection(
+        std::move(name), ptr,
+        [this, mapper](const std::ranges::range_value_t<Container>& item) {
+          return std::shared_ptr<StructVisitor>(
+              (static_cast<const Derived*>(this)->*mapper)(item));
+        });
+  }
+
  protected:
   template <typename T>
   void RegisterState(std::string name, T* ptr) {
