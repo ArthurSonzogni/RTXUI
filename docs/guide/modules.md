@@ -78,7 +78,7 @@ snapshot: see `cmake/modules.cmake`.
 
 ## What the module exports
 
-`Component`, `Ref`, `Screen`, `Event`, `ManualStructVisitor`, `PostTask`,
+`Component`, `Ref`, `Screen`, `Event`, `FieldSink`, `PostTask`,
 `PostDelayedTask`, `Diagnostic` and `SetDiagnosticHandler`. That is what the
 examples use, and engine internals stay out. `HeadlessScreen` and the other
 testing helpers are not exported yet: test with the headers for now.

@@ -382,35 +382,83 @@ class ReflectedStructVisitor : public StructVisitor {
 };
 #endif
 
-class RTXUI_EXPORT ManualStructVisitor : public StructVisitor {
-  std::map<std::string, std::string, std::less<>> fields_;
+/// The fields of one item of a bound collection, as a template reads them:
+/// `{book.title}` in `<for each="{books}" as="book">`. A type describes its
+/// fields once with a function found next to it:
+///
+///   void Fields(const Book& book, FieldSink& out) {
+///     out("title", book.title);
+///     out("length", book.pages > 300 ? "long" : "short");
+///   }
+///
+/// and `Bind(books)` alone then binds a collection of it. A binding can give
+/// its own instead, with a function or a const member function of the same
+/// shape: `Bind(books, &Library::BookFields)`.
+class FieldSink {
+ public:
+  /// Adds the field `name`, converted to text as `{name}` would be.
+  template <typename T>
+  void operator()(std::string_view name, const T& value) {
+    fields_.emplace_back(std::string(name), reflection::to_string(value));
+  }
+
+  /// The value of the field `name`, or "" when there is none.
+  std::string_view Get(std::string_view name) const {
+    for (const auto& [field, value] : fields_) {
+      if (field == name) {
+        return value;
+      }
+    }
+    return {};
+  }
+
+  bool operator==(const FieldSink&) const = default;
+
+ private:
+  std::vector<std::pair<std::string, std::string>> fields_;
+};
+
+class FieldSinkVisitor : public StructVisitor {
+  FieldSink fields_;
 
  public:
-  ManualStructVisitor(std::map<std::string, std::string, std::less<>> fields)
-      : fields_(std::move(fields)) {}
+  explicit FieldSinkVisitor(FieldSink fields) : fields_(std::move(fields)) {}
 
   std::string GetFieldValue(std::string_view field_name) const override {
-    auto it = fields_.find(field_name);
-    return (it != fields_.end()) ? it->second : "";
+    return std::string(fields_.Get(field_name));
   }
 };
 
+// Whether `T` describes its fields with a Fields(const T&, FieldSink&)
+// function, found by argument-dependent lookup.
+template <typename T>
+concept HasFields =
+    requires(const T& item, FieldSink& out) { Fields(item, out); };
+
 template <typename Container>
 class TypeErasedRangeImpl : public TypeErasedRange {
+  using Item = std::ranges::range_value_t<Container>;
+  using FieldsMapper = std::function<void(const Item&, FieldSink&)>;
+
   const Container* container_ptr_;
   std::decay_t<Container> snapshot_;
-  std::function<std::shared_ptr<StructVisitor>(
-      const std::ranges::range_value_t<Container>&)>
-      mapper_;
+  // The binding's own fields, which take precedence over the type's.
+  FieldsMapper fields_mapper_;
+  // For items without operator==: their fields, to find what changed.
+  std::vector<FieldSink> fields_snapshot_;
 
  public:
   TypeErasedRangeImpl(const Container* ptr)
-      : container_ptr_(ptr), snapshot_(*ptr) {}
+      : container_ptr_(ptr), snapshot_(*ptr) {
+    fields_snapshot_ = CurrentFields();
+  }
 
-  TypeErasedRangeImpl(const Container* ptr,
-                      std::function<std::shared_ptr<StructVisitor>(
-                          const std::ranges::range_value_t<Container>&)> mapper)
-      : container_ptr_(ptr), snapshot_(*ptr), mapper_(mapper) {}
+  TypeErasedRangeImpl(const Container* ptr, FieldsMapper fields_mapper)
+      : container_ptr_(ptr),
+        snapshot_(*ptr),
+        fields_mapper_(std::move(fields_mapper)) {
+    fields_snapshot_ = CurrentFields();
+  }
 
   size_t Size() const override { return std::ranges::size(*container_ptr_); }
 
@@ -438,8 +486,10 @@ class TypeErasedRangeImpl : public TypeErasedRange {
     auto it = std::ranges::begin(*container_ptr_);
     std::advance(it, index);
 
-    if (mapper_) {
-      return mapper_(*it);
+    if (HasItemFields()) {
+      FieldSink fields;
+      ItemFields(*it, fields);
+      return std::make_shared<FieldSinkVisitor>(std::move(fields));
     }
 
 #if defined(RTXUI_HAS_REFLECTION)
@@ -453,7 +503,18 @@ class TypeErasedRangeImpl : public TypeErasedRange {
   }
 
   bool CheckAndUpdate() override {
-    if constexpr (requires { *container_ptr_ != snapshot_; }) {
+    if constexpr (!std::equality_comparable<Item>) {
+      // Without operator==, compare what the template reads of each item.
+      if (HasItemFields()) {
+        std::vector<FieldSink> fields = CurrentFields();
+        if (fields != fields_snapshot_) {
+          fields_snapshot_ = std::move(fields);
+          return true;
+        }
+        return false;
+      }
+    }
+    if constexpr (std::equality_comparable<Item>) {
       if (*container_ptr_ != snapshot_) {
         if constexpr (requires {
                         snapshot_.size();
@@ -480,6 +541,29 @@ class TypeErasedRangeImpl : public TypeErasedRange {
       }
     }
     return false;
+  }
+
+ private:
+  bool HasItemFields() const { return fields_mapper_ || HasFields<Item>; }
+
+  void ItemFields(const Item& item, FieldSink& out) const {
+    if (fields_mapper_) {
+      fields_mapper_(item, out);
+    } else if constexpr (HasFields<Item>) {
+      Fields(item, out);
+    }
+  }
+
+  std::vector<FieldSink> CurrentFields() const {
+    std::vector<FieldSink> fields;
+    if constexpr (!std::equality_comparable<Item>) {
+      if (HasItemFields()) {
+        for (const auto& item : *container_ptr_) {
+          ItemFields(item, fields.emplace_back());
+        }
+      }
+    }
+    return fields;
   }
 };
 
@@ -636,33 +720,36 @@ class Component : public ComponentBase {
               std::make_shared<TypeErasedRangeImpl<Container>>(ptr)});
   }
 
+  // The binding's own fields: Bind(books, [](const Book&, FieldSink&) {...}).
   template <typename Container>
   void RegisterCollection(
       std::string name,
       const Container* ptr,
-      std::function<std::shared_ptr<StructVisitor>(
-          const std::ranges::range_value_t<Container>&)> mapper) {
-    std::string clean_name = name;
-    if (clean_name.starts_with("props.")) {
-      clean_name = clean_name.substr(6);
+      std::function<void(const std::ranges::range_value_t<Container>&,
+                         FieldSink&)> fields) {
+    if (name.starts_with("props.")) {
+      name = name.substr(6);
     }
-    AddRange({std::move(clean_name),
-              std::make_shared<TypeErasedRangeImpl<Container>>(ptr, mapper)});
+    AddRange({std::move(name), std::make_shared<TypeErasedRangeImpl<Container>>(
+                                   ptr, std::move(fields))});
   }
 
-  // A const member function as the mapper: Bind(rows, &MyApp::RowFields).
-  template <typename Container, typename C, typename R>
+  // The same, from a const member function: Bind(books, &App::BookFields).
+  template <typename Container, typename C>
     requires std::derived_from<Derived, C>
   void RegisterCollection(
       std::string name,
       const Container* ptr,
-      R (C::*mapper)(const std::ranges::range_value_t<Container>&) const) {
+      void (C::*fields)(const std::ranges::range_value_t<Container>&,
+                        FieldSink&) const) {
     RegisterCollection(
         std::move(name), ptr,
-        [this, mapper](const std::ranges::range_value_t<Container>& item) {
-          return std::shared_ptr<StructVisitor>(
-              (static_cast<const Derived*>(this)->*mapper)(item));
-        });
+        std::function<void(const std::ranges::range_value_t<Container>&,
+                           FieldSink&)>(
+            [this, fields](const std::ranges::range_value_t<Container>& item,
+                           FieldSink& out) {
+              (static_cast<const Derived*>(this)->*fields)(item, out);
+            }));
   }
 
  protected:

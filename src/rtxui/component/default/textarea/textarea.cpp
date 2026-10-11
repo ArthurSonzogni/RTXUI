@@ -6,9 +6,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <functional>
-#include <map>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -62,19 +59,14 @@ void textarea::InitReflection() {
   Bind(show_gutter);
   Bind(gutter_width);
   Bind(highlight_current_line);
-  BindCollection("gutter_lines", &gutter_lines, [](const GutterLine& line) {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"text", line.text},
-            {"css_class", line.css_class},
-        });
-  });
+  BindCollection("gutter_lines", &gutter_lines,
+                 [](const GutterLine& line, FieldSink& out) {
+                   out("text", line.text);
+                   out("css_class", line.css_class);
+                 });
   BindCollection("content_line_highlights", &content_line_highlights,
-                 [](const LineRow& row) {
-                   return std::make_shared<ManualStructVisitor>(
-                       std::map<std::string, std::string, std::less<>>{
-                           {"css_class", row.css_class},
-                       });
+                 [](const LineRow& row, FieldSink& out) {
+                   out("css_class", row.css_class);
                  });
   Bind(selection_start);
   Bind(left_text);

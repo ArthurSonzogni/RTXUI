@@ -16,7 +16,7 @@ export namespace rtxui {
 using rtxui::Component;
 using rtxui::Diagnostic;
 using rtxui::Event;
-using rtxui::ManualStructVisitor;
+using rtxui::FieldSink;
 using rtxui::PostDelayedTask;
 using rtxui::PostTask;
 using rtxui::Ref;

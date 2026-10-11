@@ -113,61 +113,25 @@ screen of items does.
 ## Collections of structs
 
 A collection of plain values stringifies each item directly. For a collection
-of structs, provide a mapper that exposes named fields to the template. The
-mapper returns a `ManualStructVisitor` built from a field-name → value map:
+of structs, say once what a template reads of the type, with a `Fields()`
+function next to it. `Bind(tasks)` then needs nothing more:
 
 ```cpp
 struct Task {
   std::string name;
   bool completed;
-  bool operator==(const Task&) const = default;  // To detect changes.
 };
 
-std::vector<Task> tasks;
-
-// In the constructor:
-Bind(tasks, [](const Task& t) {
-  return std::make_shared<ManualStructVisitor>(
-      std::map<std::string, std::string, std::less<>>{
-          {"name", t.name},
-          {"status", t.completed ? "Done" : "Pending"}});
-});
-```
-
-The template reads the mapped fields with dot notation on the loop variable:
-
-```html
-<ul>
-  <for each="{tasks}" as="task">
-    <li>{task.name} — {task.status}</li>
-  </for>
-</ul>
-```
-
-The mapper can also be a `const` member function, passed by address. It
-keeps the constructor short, and reads the component's state without a
-capture:
-
-```cpp
-struct Task {
-  std::string name;
-  bool completed;
-  bool operator==(const Task&) const = default;  // To detect changes.
-};
+// What a template reads of a Task: {task.name} and {task.status}.
+void Fields(const Task& task, FieldSink& out) {
+  out("name", task.name);
+  out("status", task.completed ? "Done" : "Pending");
+}
 
 class TaskList : public Component<TaskList> {
  public:
-  std::vector<Task> tasks;
-  std::string done_label = "Done";
-
-  TaskList() { Bind(tasks, &TaskList::TaskFields); }
-
-  std::shared_ptr<ManualStructVisitor> TaskFields(const Task& t) const {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"name", t.name},
-            {"status", t.completed ? done_label : "Pending"}});
-  }
+  std::vector<Task> tasks{{"Write docs", true}, {"Ship", false}};
+  TaskList() { Bind(tasks); }
 
   std::string_view view = R"html(
     <ul>
@@ -177,16 +141,51 @@ class TaskList : public Component<TaskList> {
 };
 ```
 
-`BindCollection("name", &collection, mapper)` is equivalent when you want the
-template name to differ from the member name.
+- `out(name, value)` converts the value to text as `{name}` would: no
+  `std::to_string` needed.
+- Declare `Fields()` in the same namespace as the type, before the component
+  that binds the collection: it is found the way `operator<<` is.
+- A field the type does not give reads as empty.
 
-When compiled with C++26 static reflection (`RTXUI_HAS_REFLECTION`), the
-template can read a struct's fields without a mapper: `Bind(tasks)` alone
-makes `{task.name}` work. The fields are read only, and a field shown under
-another name or format, like `status` above, still needs a mapper. The
-collection itself still needs its `Bind()`.
+### Fields that depend on the component
 
-This demo loops over a `std::vector<Task>` through a mapper, toggling each
+`Fields()` sees only the item. When what a template shows also depends on the
+component, like a row hidden by a filter, give the binding its own fields,
+with a `const` member function of the same shape. It takes precedence over
+the type's `Fields()`:
+
+<!-- snippet: fragment -->
+```cpp
+std::string filter = "all";
+
+TaskList() { Bind(tasks, &TaskList::TaskFields); }
+
+void TaskFields(const Task& task, FieldSink& out) const {
+  out("name", task.name);
+  out("hidden", filter == "done" && !task.completed ? "hidden" : "");
+}
+```
+
+A lambda of the same shape works too: `Bind(tasks, [](const Task& task,
+FieldSink& out) { ... })`. `BindCollection("name", &collection, fields)` is
+the same, for a template name that differs from the member name.
+
+### Changes
+
+A collection is compared with its last render to find what changed. When the
+type has an `operator==`, items are compared with it, which is the cheapest.
+Without one, the fields from `Fields()` or the binding are compared
+instead.
+
+### With C++26 reflection
+
+When compiled with C++26 static reflection (`RTXUI_HAS_REFLECTION`), a struct
+without `Fields()` exposes its members under their own names: `Bind(tasks)`
+alone makes `{task.name}` work. A `Fields()` function, or the binding's own
+fields, still decide when there is one: to rename, format or compute a field
+such as `status` above.
+
+This demo loops over a `std::vector<Task>` described by `Fields()`, toggling each
 item's `completed` field from the template:
 
 <ExampleTabs src="/wasm/rtxui_example_loop_complex.js">

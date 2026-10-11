@@ -9,9 +9,6 @@
 //
 // Try it: toggle a task to see only that row re-render.
 #include <cstddef>
-#include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -24,6 +21,12 @@ struct Task {
   bool completed;
   bool operator==(const Task& other) const = default;
 };
+
+// What a template reads of a Task: {task.name} and {task.status}.
+void Fields(const Task& task, FieldSink& out) {
+  out("name", task.name);
+  out("status", task.completed ? "✅ Done" : "⏳ Pending");
+}
 
 class ComplexLoopApp : public Component<ComplexLoopApp> {
  public:
@@ -88,18 +91,10 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
     )html";
 
   ComplexLoopApp() {
-    Bind(tasks, &ComplexLoopApp::TaskFields);
+    Bind(tasks);
     Bind(new_task_name);
     Bind(AddTask);
     Bind(RemoveTask);
-  }
-
-  // The fields a <for> over `tasks` reads from each item.
-  std::shared_ptr<ManualStructVisitor> TaskFields(const Task& t) const {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"name", t.name},
-            {"status", t.completed ? "✅ Done" : "⏳ Pending"}});
   }
 };
 

@@ -14,9 +14,6 @@
 // Try it: move with the arrow keys (or j/k via the buttons), Enter to open a
 // directory, Backspace to go up. The list scrolls to follow the selection.
 #include <cstddef>
-#include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -362,17 +359,15 @@ class FileBrowser : public Component<FileBrowser> {
     )html";
 
   FileBrowser() {
-    BindCollection("entries", &entries, [](const FileEntry& entry) {
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"name", entry.name},
-              {"kind", entry.kind},
-              {"size", entry.size},
-              {"modified", entry.modified},
-              {"glyph", entry.kind == "dir" ? "/" : "."},
-              {"row_class", entry.selected ? "selected" : ""},
-          });
-    });
+    BindCollection("entries", &entries,
+                   [](const FileEntry& entry, FieldSink& out) {
+                     out("name", entry.name);
+                     out("kind", entry.kind);
+                     out("size", entry.size);
+                     out("modified", entry.modified);
+                     out("glyph", entry.kind == "dir" ? "/" : ".");
+                     out("row_class", entry.selected ? "selected" : "");
+                   });
 
     Bind(path);
     Bind(cursor);

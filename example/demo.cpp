@@ -7,8 +7,6 @@
 // For a smaller, more readable application see app_dashboard.cpp.
 #include <cstddef>
 #include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -954,11 +952,9 @@ int main() {
     Bind(show_secret);
     Bind(text_input);
     Bind(textarea_input);
-    BindCollection("todos", &todos, [](const Todo& item) {
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"text", item.text},
-              {"appearing_class", item.appearing ? "appearing" : ""}});
+    BindCollection("todos", &todos, [](const Todo& item, FieldSink& out) {
+      out("text", item.text);
+      out("appearing_class", item.appearing ? "appearing" : "");
     });
     Bind(markdown_content);
 

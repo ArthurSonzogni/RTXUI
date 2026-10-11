@@ -4,8 +4,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <functional>
-#include <map>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -140,10 +138,9 @@ class StructLoopInterpolation
   std::vector<SubItem> items = {{"x"}, {"y"}};
 
   StructLoopInterpolation() {
-    BindCollection("items", &items, [](const SubItem& s) {
-      return std::make_shared<rtxui::ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{{"val", s.val}});
-    });
+    BindCollection(
+        "items", &items,
+        [](const SubItem& s, rtxui::FieldSink& out) { out("val", s.val); });
   }
 
   std::string_view view = R"(
@@ -176,11 +173,11 @@ class ReactiveStructCollection
   std::vector<BoundRow> rows = {{"one", "hot"}, {"two", "cold"}};
 
   ReactiveStructCollection() {
-    BindCollection("rows", &rows, [](const BoundRow& row) {
-      return std::make_shared<rtxui::ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{{"name", row.name},
-                                                          {"cls", row.cls}});
-    });
+    BindCollection("rows", &rows,
+                   [](const BoundRow& row, rtxui::FieldSink& out) {
+                     out("name", row.name);
+                     out("cls", row.cls);
+                   });
   }
 
   // A field in text, a field in an attribute, $index alongside them, and a

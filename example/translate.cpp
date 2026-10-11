@@ -12,9 +12,6 @@
 //
 // Try it: hover or Tab through the cards and click one, then click the tasks,
 // or focus one and press Enter.
-#include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -30,6 +27,13 @@ struct Task {
   // Bound state is compared each frame to find what changed.
   bool operator==(const Task&) const = default;
 };
+
+// What a template reads of a Task: {task.id}, {task.name} and {task.state}.
+void Fields(const Task& task, FieldSink& out) {
+  out("id", task.id);
+  out("name", task.name);
+  out("state", task.leaving ? "leaving" : "");
+}
 
 std::vector<Task> AllTasks() {
   return {
@@ -63,21 +67,12 @@ class TranslateDemo : public Component<TranslateDemo> {
 
   TranslateDemo() {
     Bind(picked);
-    Bind(tasks, &TranslateDemo::TaskFields);
+    Bind(tasks);
     Bind(Pick);
     Bind(Done);
     Bind(Remove);
     Bind(Reset);
     Bind(AllDone);
-  }
-
-  // The fields a <for> over `tasks` reads from each item.
-  std::shared_ptr<ManualStructVisitor> TaskFields(const Task& task) const {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"id", task.id},
-            {"name", task.name},
-            {"state", task.leaving ? "leaving" : ""}});
   }
 
   std::string_view view = R"html(

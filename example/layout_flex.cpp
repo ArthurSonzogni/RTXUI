@@ -7,9 +7,6 @@
 // Every flex property is driven from the UI: change flex-direction,
 // justify-content, align-items, and each item's grow/shrink/basis, and watch
 // the boxes redistribute.
-#include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -477,20 +474,19 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
     AddItem();
   }
 
-  // The fields a <for> over `items` reads from each item.
-  std::shared_ptr<ManualStructVisitor> DemoBoxFields(const DemoBox& b) const {
+  // What a template reads of each box. Not a Fields() function of DemoBox:
+  // the size depends on this component's alignment.
+  void DemoBoxFields(const DemoBox& b, FieldSink& out) const {
     bool should_stretch_h =
         (align == "stretch" &&
          (direction == "row" || direction == "row-reverse"));
     bool should_stretch_w =
         (align == "stretch" &&
          (direction == "column" || direction == "column-reverse"));
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"label", b.label},
-            {"color", b.color},
-            {"width", should_stretch_w ? "auto" : std::to_string(b.width)},
-            {"height", should_stretch_h ? "auto" : std::to_string(b.height)}});
+    out("label", b.label);
+    out("color", b.color);
+    out("width", should_stretch_w ? "auto" : std::to_string(b.width));
+    out("height", should_stretch_h ? "auto" : std::to_string(b.height));
   }
 };
 

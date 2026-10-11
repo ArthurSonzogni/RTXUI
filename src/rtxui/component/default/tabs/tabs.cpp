@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <functional>
 #include <map>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -56,18 +55,16 @@ void tabs::SelectTab(std::string index_str) {
 void tabs::InitReflection() {
   Bind(value);
   Bind(SelectTab);
-  BindCollection("headers", &headers_, [](const TabHeader& header) {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"label", header.label},
-            {"active_class", header.active_class},
-            // `part` mirrors the class list, so a host can still reach the
-            // selected header with `tabs::part(active-tab)`.
-            {"part", header.active_class.empty()
-                         ? std::string("tab-header-btn")
-                         : "tab-header-btn " + header.active_class},
-        });
-  });
+  BindCollection("headers", &headers_,
+                 [](const TabHeader& header, FieldSink& out) {
+                   out("label", header.label);
+                   out("active_class", header.active_class);
+                   // `part` mirrors the class list, so a host can still reach
+                   // the selected header with `tabs::part(active-tab)`.
+                   out("part", header.active_class.empty()
+                                   ? std::string("tab-header-btn")
+                                   : "tab-header-btn " + header.active_class);
+                 });
   Component<tabs>::InitReflection();
 }
 

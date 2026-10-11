@@ -71,6 +71,10 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
   `v-for` or `for="x in xs"`. When items move or disappear, give the loop a
   key, `<for each="{tasks}" as="task" key="{task.id}">`, so each item keeps
   its own element: its focus, its running animation.
+- A loop over structs reads the fields a `Fields()` function gives, declared
+  next to the struct and before the component:
+  `void Fields(const Task& t, rtxui::FieldSink& out) { out("id", t.id); }`,
+  then `Bind(tasks)` and `{task.id}`.
 - Handlers: `onclick="Method"` or `onclick="Method(arg)"`, one string argument;
   `@click`, `@change` are aliases. No braces, statements or camelCase
   (`onClick`). Use `class`, not `className`.

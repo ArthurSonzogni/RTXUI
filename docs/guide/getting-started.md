@@ -7,7 +7,7 @@ project, and how to build the repository itself.
 
 - **A C++23 compiler.** C++23 is required to build and use RTXUI. A compiler with C++26
   reflection also lets loops read the fields of your own structs without a
-  mapper (see [Loops](/guide/loops)).
+  `Fields()` function (see [Loops](/guide/loops)).
 - **Linux or macOS.** The terminal backend requires POSIX termios and
   `SIGWINCH`. Windows is not supported (no ConPTY backend); CMake terminates
   configuration on Windows platforms with an explicit error. RTXUI also

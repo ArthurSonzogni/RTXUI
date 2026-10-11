@@ -5,9 +5,6 @@
 // What bound members of each supported type look like on screen, and what a
 // two-way binding writes back into them. The string and int cases are covered
 // throughout the suite; these are the types only apps used.
-#include <functional>
-#include <map>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -117,12 +114,9 @@ class Inventory : public Component<Inventory> {
  public:
   std::vector<Row> rows{{"bolts", 12}, {"nuts", 0}};
   Inventory() {
-    BindCollection("rows", &rows, [](const Row& row) {
-      return std::make_shared<ManualStructVisitor>(
-          std::map<std::string, std::string, std::less<>>{
-              {"name", row.name},
-              {"stock", row.stock ? std::to_string(row.stock) : "out"},
-          });
+    BindCollection("rows", &rows, [](const Row& row, FieldSink& out) {
+      out("name", row.name);
+      out("stock", row.stock ? std::to_string(row.stock) : "out");
     });
     Import<div>();
   }
@@ -140,33 +134,88 @@ TEST_CASE("A struct collection reads fields through its mapper", "[binding]") {
   CHECK(text.find("nuts: out\n") != std::string::npos);
 }
 
-class Restock : public Component<Restock> {
+// Described once for the type, so binding a collection of it needs nothing
+// more. No operator==: changes are found by comparing the fields.
+struct Book {
+  std::string title;
+  int pages;
+};
+
+void Fields(const Book& book, FieldSink& out) {
+  out("title", book.title);
+  out("pages", book.pages);
+  out("length", book.pages > 300 ? "long" : "short");
+}
+
+class Shelf : public Component<Shelf> {
  public:
-  std::vector<Row> rows{{"bolts", 12}, {"nuts", 0}};
-  std::string unit = "pcs";
-  Restock() {
-    Bind(rows, &Restock::RowFields);
-    Bind(unit);
-  }
-  // A member function, so it can read the component's state.
-  std::shared_ptr<StructVisitor> RowFields(const Row& row) const {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"name", row.name},
-            {"stock", std::to_string(row.stock) + " " + unit},
-        });
-  }
+  std::vector<Book> books{{"Dune", 412}, {"Ubik", 202}};
+  Shelf() { Bind(books); }
   std::string_view view = R"html(
     <div>
-      <for each="{rows}" as="row"><div>{row.name}: {row.stock}</div></for>
+      <for each="{books}" as="book"><div>{book.title} {book.pages} {book.length}</div></for>
     </div>
   )html";
 };
 
-TEST_CASE("A collection's mapper can be a member function", "[binding]") {
-  std::string text = RenderToString(Ref<Restock>::New(), 20, 3);
-  CHECK(text.find("bolts: 12 pcs\n") != std::string::npos);
-  CHECK(text.find("nuts: 0 pcs\n") != std::string::npos);
+TEST_CASE("A collection binds alone when its type describes its fields",
+          "[binding]") {
+  std::string text = RenderToString(Ref<Shelf>::New(), 30, 3);
+  CHECK(text.find("Dune 412 long\n") != std::string::npos);
+  CHECK(text.find("Ubik 202 short\n") != std::string::npos);
+}
+
+TEST_CASE("An item without operator== is seen to change", "[binding]") {
+  auto app = Ref<Shelf>::New();
+  HeadlessScreen screen(app, 30, 3);
+  CHECK(screen.Text().find("Ubik 202 short") != std::string::npos);
+
+  app->books[1].pages = 900;
+  screen.Input("");  // Let the change render.
+  CHECK(screen.Text().find("Ubik 900 long") != std::string::npos);
+}
+
+class ShelfByAuthor : public Component<ShelfByAuthor> {
+ public:
+  std::vector<Book> books{{"Dune", 412}};
+  std::string unit = "p.";
+  ShelfByAuthor() { Bind(books, &ShelfByAuthor::BookFields); }
+  // The binding's own fields replace the type's.
+  void BookFields(const Book& book, FieldSink& out) const {
+    out("title", book.title);
+    out("pages", std::to_string(book.pages) + " " + unit);
+  }
+  std::string_view view = R"html(
+    <div>
+      <for each="{books}" as="book"><div>{book.title}, {book.pages}{book.length}</div></for>
+    </div>
+  )html";
+};
+
+TEST_CASE("A binding's fields take precedence over the type's", "[binding]") {
+  std::string text = RenderToString(Ref<ShelfByAuthor>::New(), 30, 3);
+  CHECK(text.find("Dune, 412 p.\n") != std::string::npos);
+}
+
+class Tally : public Component<Tally> {
+ public:
+  std::vector<Row> rows{{"bolts", 12}};
+  Tally() {
+    Bind(rows, [](const Row& row, FieldSink& out) {
+      out("name", row.name);
+      out("stock", row.stock);
+    });
+  }
+  std::string_view view = R"html(
+    <div>
+      <for each="{rows}" as="row"><div>{row.name}={row.stock}</div></for>
+    </div>
+  )html";
+};
+
+TEST_CASE("A collection's fields can come from a lambda", "[binding]") {
+  std::string text = RenderToString(Ref<Tally>::New(), 30, 3);
+  CHECK(text.find("bolts=12\n") != std::string::npos);
 }
 
 }  // namespace

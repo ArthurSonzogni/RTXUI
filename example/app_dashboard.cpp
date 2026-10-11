@@ -12,9 +12,6 @@
 // Try it: click a service row to select it, use the filter buttons to narrow
 // the list, and press Restart to watch a row transition back to healthy.
 #include <cstddef>
-#include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <utility>
@@ -383,24 +380,21 @@ class Dashboard : public Component<Dashboard> {
     });
   }
 
-  // The fields a <for> over `services` reads from each item.
-  std::shared_ptr<ManualStructVisitor> ServiceFields(
-      const Service& service) const {
+  // What a template reads of each service. Not a Fields() function of
+  // Service: the row's class depends on this component's filter.
+  void ServiceFields(const Service& service, FieldSink& out) const {
     const bool visible = filter == "all" || filter == service.state;
     std::string row_class = service.name == selected ? "selected" : "";
     if (!visible) {
       row_class += " hidden";
     }
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"name", service.name},
-            {"region", service.region},
-            {"state", service.state},
-            {"row_class", row_class},
-            {"latency", service.state == "down"
-                            ? std::string("--")
-                            : std::to_string(service.latency_ms) + " ms"},
-        });
+    out("name", service.name);
+    out("region", service.region);
+    out("state", service.state);
+    out("row_class", row_class);
+    out("latency", service.state == "down"
+                       ? std::string("--")
+                       : std::to_string(service.latency_ms) + " ms");
   }
 
  private:

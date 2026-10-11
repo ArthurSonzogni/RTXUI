@@ -11,9 +11,6 @@
 //
 // Try it: scroll with the mouse wheel, or Tab to the log and use the arrows,
 // PageUp/PageDown and Home/End.
-#include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -21,13 +18,20 @@
 
 using namespace rtxui;
 
+struct Line {
+  std::string level;
+  std::string text;
+  bool operator==(const Line&) const = default;
+};
+
+// What a template reads of a Line: {line.level} and {line.text}.
+void Fields(const Line& line, FieldSink& out) {
+  out("level", line.level);
+  out("text", line.text);
+}
+
 class LogViewer : public Component<LogViewer> {
  public:
-  struct Line {
-    std::string level;
-    std::string text;
-    bool operator==(const Line&) const = default;
-  };
   std::vector<Line> lines;
 
   LogViewer() {
@@ -38,14 +42,7 @@ class LogViewer : public Component<LogViewer> {
           {kLevels[i % 7], "request " + std::to_string(i) + " served in " +
                                std::to_string(3 + (i * 37) % 250) + "ms"});
     }
-    Bind(lines, &LogViewer::LineFields);
-  }
-
-  // The fields a <for> over `lines` reads from each item.
-  std::shared_ptr<ManualStructVisitor> LineFields(const Line& line) const {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{{"level", line.level},
-                                                        {"text", line.text}});
+    Bind(lines);
   }
 
   std::string_view view = R"html(

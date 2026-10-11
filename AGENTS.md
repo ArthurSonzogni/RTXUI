@@ -172,7 +172,8 @@ parser).
 - **C++26 reflection (optional)** — CMake probes for `<meta>` support
   (`-freflection-latest` on Clang, `-freflection` on GCC) and defines
   `RTXUI_HAS_REFLECTION`. It is only used to read the fields of structs in
-  bound collections without a mapper; components still call `Bind()`. Code
+  bound collections that have no `Fields()` function; components still call
+  `Bind()`. Code
   must still work without it.
 - **Hot reload** — `EnableHotReload()` uses `std::source_location` to watch the
   component's own source file and re-parse the `view` template at runtime

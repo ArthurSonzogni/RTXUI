@@ -12,9 +12,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
-#include <functional>
-#include <map>
-#include <memory>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -22,14 +19,20 @@
 
 using namespace rtxui;
 
+struct Match {
+  std::string name;
+  std::string row_class;
+  bool operator==(const Match&) const = default;
+};
+
+// What a template reads of a Match: {match.name} and {match.row_class}.
+void Fields(const Match& match, FieldSink& out) {
+  out("name", match.name);
+  out("row_class", match.row_class);
+}
+
 class CommandPalette : public Component<CommandPalette> {
  public:
-  struct Match {
-    std::string name;
-    std::string row_class;
-    bool operator==(const Match&) const = default;
-  };
-
   const std::vector<std::string> commands = {
       "Open file",     "Save file",           "Close tab",
       "Toggle theme",  "Toggle line numbers", "Go to line",
@@ -64,14 +67,7 @@ class CommandPalette : public Component<CommandPalette> {
     Bind(last);
     Bind(Open);
     Bind(Run);
-    Bind(matches, &CommandPalette::MatchFields);
-  }
-
-  // The fields a <for> over `matches` reads from each item.
-  std::shared_ptr<ManualStructVisitor> MatchFields(const Match& match) const {
-    return std::make_shared<ManualStructVisitor>(
-        std::map<std::string, std::string, std::less<>>{
-            {"name", match.name}, {"row_class", match.row_class}});
+    Bind(matches);
   }
 
   // Whether `pattern`'s letters appear in `text` in order, ignoring case:
