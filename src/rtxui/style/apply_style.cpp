@@ -2162,12 +2162,16 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       return;
     }
     auto parts = SplitWords(v);
+    // A bare number is a factor; a basis is anything else: `auto`, `20%`,
+    // `calc(...)`.
+    auto is_basis = [](std::string_view part) {
+      return std::isdigit(static_cast<unsigned char>(part.back())) == 0;
+    };
     if (parts.size() == 1) {
-      if (parts[0] == "auto") {
-        style.flex_basis = Length::Auto();
-      } else if (parts[0].back() == '%' ||
-                 std::isdigit(static_cast<unsigned char>(parts[0].back())) ==
-                     0) {
+      if (is_basis(parts[0])) {
+        // `flex: <basis>` is `1 1 <basis>`.
+        style.flex_grow = 1.0f;
+        style.flex_shrink = 1.0f;
         style.flex_basis = ParseLength(parts[0]);
       } else {
         float val = StoF(parts[0]);
@@ -2176,7 +2180,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         style.flex_basis = Length::Cells(0.0f);
       }
     } else if (parts.size() == 2) {
-      if (parts[1] == "auto" || parts[1].back() == '%') {
+      if (is_basis(parts[1])) {
         style.flex_grow = StoF(parts[0]);
         style.flex_shrink = 1.0f;
         style.flex_basis = ParseLength(parts[1]);

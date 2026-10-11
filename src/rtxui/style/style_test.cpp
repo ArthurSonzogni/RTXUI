@@ -1299,6 +1299,14 @@ TEST_CASE("Flex basis and shorthand parsing in ApplyStyle", "[style][flex]") {
     CHECK(style.flex_basis == rtxui::Length::Cells(0.0f));
   }
 
+  SECTION("flex shorthand basis only") {
+    // A lone basis grows and shrinks: `flex: 20%` is `1 1 20%`.
+    rtxui::ApplyStyle(style, {"flex", "20%"});
+    CHECK(style.flex_grow == 1.0f);
+    CHECK(style.flex_shrink == 1.0f);
+    CHECK(style.flex_basis == rtxui::Length::Pct(20.0f));
+  }
+
   SECTION("flex shorthand grow and shrink") {
     rtxui::ApplyStyle(style, {"flex", "2 3"});
     CHECK(style.flex_grow == 2.0f);
@@ -1311,6 +1319,13 @@ TEST_CASE("Flex basis and shorthand parsing in ApplyStyle", "[style][flex]") {
     CHECK(style.flex_grow == 2.0f);
     CHECK(style.flex_shrink == 1.0f);
     CHECK(style.flex_basis.unit == rtxui::Unit::Auto);
+  }
+
+  SECTION("flex shorthand grow and a basis of any form") {
+    rtxui::ApplyStyle(style, {"flex", "2 calc(50% - 1)"});
+    CHECK(style.flex_grow == 2.0f);
+    CHECK(style.flex_shrink == 1.0f);
+    CHECK(style.flex_basis.unit == rtxui::Unit::Calc);
   }
 
   SECTION("flex shorthand grow, shrink and basis") {
