@@ -158,8 +158,9 @@ parser).
   link examples/apps against `rtxui`, tests against `rtxui_lib`.
 - **C++26 reflection (optional)** — CMake probes for `<meta>` support
   (`-freflection-latest` on Clang, `-freflection` on GCC) and defines
-  `RTXUI_HAS_REFLECTION`, which enables automatic member binding without
-  `Bind()` calls. Code must still work without it.
+  `RTXUI_HAS_REFLECTION`. It is only used to read the fields of structs in
+  bound collections without a mapper; components still call `Bind()`. Code
+  must still work without it.
 - **Hot reload** — `EnableHotReload()` uses `std::source_location` to watch the
   component's own source file and re-parse the `view` template at runtime
   without recompiling.

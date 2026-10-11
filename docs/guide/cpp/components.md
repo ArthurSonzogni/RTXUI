@@ -113,7 +113,8 @@ class Counter : public rtxui::Component<Counter> {
 };
 ```
 
-When compiled with C++26 static reflection (`RTXUI_HAS_REFLECTION`), struct members and method callbacks are bound automatically without explicit `Bind()` calls.
+Every member the template uses needs its `Bind()` call, with or without C++26
+reflection.
 
 ---
 

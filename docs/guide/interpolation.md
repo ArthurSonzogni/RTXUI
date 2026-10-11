@@ -1,6 +1,6 @@
 # Value Interpolation & Data Binding
 
-RTXUI matches standard web templates by using compile-time reflection to bind C++ variables directly into your HTML templates.
+RTXUI binds C++ members into HTML templates, as web frameworks bind their state: register a member with `Bind()`, then use it by name in the template.
 
 ---
 
