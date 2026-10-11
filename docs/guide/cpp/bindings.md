@@ -1,6 +1,6 @@
 # State Bindings & Reflection
 
-To make C++ member variables accessible inside your HTML templates, you must register them in the reflection system.
+To make C++ member variables accessible inside your HTML templates, register them with `Bind()`.
 
 ## Component Constructor & Binding
 

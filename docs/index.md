@@ -67,7 +67,7 @@ class Counter : public rtxui::Component<Counter> {
   )html";
 
   Counter() {
-    // Explicit bindings (optional when C++26 reflection is enabled).
+    // Makes each member usable from the template by name.
     Bind(count);
     Bind(label);
     Bind(double_count);

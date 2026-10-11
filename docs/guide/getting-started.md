@@ -5,7 +5,9 @@ project, and how to build the repository itself.
 
 ## Requirements
 
-- **A C++23 compiler.** C++23 is required to build and use RTXUI. If available, C++26 enables reflection, which avoids having to bind C++ members manually.
+- **A C++23 compiler.** C++23 is required to build and use RTXUI. A compiler with C++26
+  reflection also lets loops read the fields of your own structs without a
+  mapper (see [Loops](/guide/loops)).
 - **Linux or macOS.** The terminal backend requires POSIX termios and
   `SIGWINCH`. Windows is not supported (no ConPTY backend); CMake terminates
   configuration on Windows platforms with an explicit error. RTXUI also
@@ -39,7 +41,7 @@ The simplest integration downloads RTXUI at configure time:
 cmake_minimum_required(VERSION 3.24)
 project(my_app LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 23)  # Use 26 to enable automatic static reflection.
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
