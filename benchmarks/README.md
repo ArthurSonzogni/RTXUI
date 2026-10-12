@@ -9,7 +9,7 @@ stdout consumed by [`tools/benchmark.py`](../tools/benchmark.py).
 | `rtxui_steady_state_benchmark`  | 500-item grid, nothing mutating (early-out / idle cost).    |
 | `rtxui_layout_benchmark`        | 500-item grid, one item mutated per frame (reconciliation). |
 | `rtxui_xml_benchmark`           | XML template parse throughput.                              |
-| `rtxui_nesting_benchmark`       | Fixed leaf under N levels of block/flex/grid: nesting cost. |
+| `rtxui_nesting_benchmark`       | Fixed leaf under N levels of block/flex/grid: nesting cost of laying out from scratch. |
 
 Shared code (timing, stats, JSON format, the stress component) lives in
 [`benchmark_common.hpp`](benchmark_common.hpp).
