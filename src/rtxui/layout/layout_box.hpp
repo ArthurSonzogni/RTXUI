@@ -36,6 +36,8 @@ struct InheritedTextStyle {
   int line_height = 1;
   OverflowWrap overflow_wrap = OverflowWrap::Anywhere;
   WordBreak word_break = WordBreak::Normal;
+
+  bool operator==(const InheritedTextStyle&) const = default;
 };
 
 // The "Input Node" for algorithms. Wraps a LayoutBox.
@@ -83,6 +85,11 @@ class LayoutBox {
   // read only by out-of-flow positioning, so a subtree without any is a pure
   // function of its constraints -- which is what makes `measure_cache` sound.
   bool has_out_of_flow = false;
+
+  // Whether `children` is still to be built: LayoutTreeBuilder leaves them out
+  // of a box whose fragments the last layout can likely provide, and
+  // RunLayout builds them if it cannot.
+  bool children_deferred = false;
 
   // Fragments produced by measurement passes, keyed by the constraints that
   // produced them. Flex and grid measure a child before laying it out for

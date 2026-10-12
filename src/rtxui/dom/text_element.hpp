@@ -12,7 +12,12 @@ class TextElement : public Element {
   std::string Print(int depth) const final;
   std::string_view tag() const final { return "#text"; }
   const std::string& text() const { return text_; }
-  void set_text(std::string text) { text_ = std::move(text); }
+  void set_text(std::string text) {
+    if (text != text_) {
+      text_ = std::move(text);
+      InvalidateLayout();
+    }
+  }
 
  private:
   std::string text_;

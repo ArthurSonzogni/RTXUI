@@ -12,8 +12,13 @@ namespace rtxui {
 
 class LayoutTreeBuilder {
  public:
+  // `may_defer`: whether the parent lays out this box through RunLayout, which
+  // lets Build() leave its children for RunLayout to build, if it needs them.
   static std::shared_ptr<LayoutBox> Build(Element* dom_node,
-                                          InheritedTextStyle parent = {});
+                                          InheritedTextStyle parent = {},
+                                          bool may_defer = false);
+  // Builds the children Build() left out of `box` (children_deferred).
+  static void BuildChildren(LayoutBox& box);
 };
 }  // namespace rtxui
 #endif  // RTXUI_LAYOUT_LAYOUT_TREE_BUILDER_HPP

@@ -4,6 +4,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -17,8 +18,10 @@
 
 #include "rtxui/base/string.hpp"
 #include "rtxui/color.hpp"
+#include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_box.hpp"
+#include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/style.hpp"
 
@@ -32,7 +35,12 @@ LayoutArenas& CurrentLayoutArenas() {
   return g_layout_arenas ? *g_layout_arenas : g_default_layout_arenas;
 }
 thread_local int g_layout_run_count = 0;
+thread_local int g_layout_reuse_count = 0;
 }  // namespace
+
+int LayoutReuseCount() {
+  return g_layout_reuse_count;
+}
 
 int LayoutRunCount() {
   return g_layout_run_count;
@@ -40,6 +48,7 @@ int LayoutRunCount() {
 
 void ResetLayoutRunCount() {
   g_layout_run_count = 0;
+  g_layout_reuse_count = 0;
 }
 
 // Grid cell alignment: justify-items/justify-self control the inline axis,
@@ -53,9 +62,57 @@ LayoutArena& ActiveLayoutArena() {
   return arenas.arenas[arenas.active];
 }
 
+struct LayoutCache {
+  struct Entry {
+    LayoutConstraints constraints;
+    bool is_measurement = false;
+    InheritedTextStyle text;
+    std::shared_ptr<PhysicalFragment> fragment;
+    // The element's next entry, or -1.
+    int32_t next = -1;
+  };
+  // The epoch of the layout that filled it.
+  uint64_t epoch = 0;
+  // Chained per element from its Element::layout_cache_slots.
+  std::vector<Entry> entries;
+
+  void Add(Element& element, int index, Entry entry) {
+    Element::LayoutCacheSlot& slot = element.layout_cache_slots[index];
+    if (slot.epoch != epoch) {
+      slot.epoch = epoch;
+      slot.head = -1;
+    }
+    entry.next = slot.head;
+    slot.head = static_cast<int32_t>(entries.size());
+    entries.push_back(std::move(entry));
+  }
+};
+
+LayoutArenas::LayoutArenas() {
+  caches[0] = std::make_unique<LayoutCache>();
+  caches[1] = std::make_unique<LayoutCache>();
+}
+
+LayoutArenas::~LayoutArenas() = default;
+
+bool HasLayoutToReuse(const Element& element) {
+  const LayoutArenas& arenas = CurrentLayoutArenas();
+  if (!arenas.reuse_fragments) {
+    return false;
+  }
+  const int previous_index = arenas.active ^ 1;
+  const LayoutCache& previous = *arenas.caches[previous_index];
+  return element.layout_cache_slots[previous_index].epoch == previous.epoch &&
+         element.layout_changed_epoch() < previous.epoch;
+}
+
 void ResetLayoutArena() {
   LayoutArenas& arenas = CurrentLayoutArenas();
   arenas.active ^= 1;
+  AdvanceLayoutEpoch();
+  LayoutCache& cache = *arenas.caches[arenas.active];
+  cache.entries.clear();
+  cache.epoch = LayoutEpoch();
   arenas.arenas[arenas.active].Reset();
 }
 
@@ -323,6 +380,26 @@ void ApplyScrollExtent(LayoutBox* box,
   }
 }
 
+// Copies the tree under `fragment` into the active arena, text included: a
+// fragment reused from the last layout lives in the other arena, which the
+// next layout resets.
+std::shared_ptr<PhysicalFragment> CopyFragmentTree(
+    const PhysicalFragment& fragment) {
+  auto copy = MakeArenaFragment(fragment);
+  if (!copy->text_content.empty()) {
+    auto* text = static_cast<char*>(
+        ActiveLayoutArena().Allocate(copy->text_content.size(), 1));
+    std::memcpy(text, copy->text_content.data(), copy->text_content.size());
+    copy->text_content = std::string_view(text, copy->text_content.size());
+  }
+  for (auto& child : copy->children) {
+    if (child.fragment) {
+      child.fragment = CopyFragmentTree(*child.fragment);
+    }
+  }
+  return copy;
+}
+
 // --- Dispatcher ---
 std::shared_ptr<PhysicalFragment> RunLayoutUncached(
     LayoutInputNode node,
@@ -460,10 +537,55 @@ std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
     }
   }
 
+  // Across layouts: an element nothing changed in since the last layout, asked
+  // for under the same constraints, lays out the same way. Out-of-flow boxes
+  // are excluded for the reason given on LayoutBox::has_out_of_flow, and
+  // because their position is adjusted after the fact.
+  LayoutArenas& arenas = CurrentLayoutArenas();
+  Element* element = box->dom_node;
+  const bool reusable =
+      arenas.reuse_fragments && element && !box->has_out_of_flow;
+  if (reusable) {
+    const int previous_index = arenas.active ^ 1;
+    const LayoutCache& previous = *arenas.caches[previous_index];
+    const Element::LayoutCacheSlot& slot =
+        element->layout_cache_slots[previous_index];
+    if (slot.epoch == previous.epoch &&
+        element->layout_changed_epoch() < previous.epoch) {
+      for (int32_t i = slot.head; i >= 0; i = previous.entries[i].next) {
+        const LayoutCache::Entry& entry = previous.entries[i];
+        if (entry.constraints == constraints &&
+            entry.is_measurement == context.is_measurement &&
+            entry.text == box->text) {
+          auto fragment = CopyFragmentTree(*entry.fragment);
+          // Its parent's link is new, and does not include its translate.
+          fragment->translated_x = 0;
+          fragment->translated_y = 0;
+          g_layout_reuse_count++;
+          arenas.caches[arenas.active]->Add(
+              *element, arenas.active,
+              {constraints, context.is_measurement, box->text, fragment});
+          if (cacheable) {
+            box->measure_cache.push_back({constraints, fragment});
+          }
+          return fragment;
+        }
+      }
+    }
+  }
+
+  if (box->children_deferred) {
+    LayoutTreeBuilder::BuildChildren(*box);
+  }
   auto fragment = RunLayoutUncached(node, constraints, context);
 
   if (cacheable) {
     box->measure_cache.push_back({constraints, fragment});
+  }
+  if (reusable) {
+    arenas.caches[arenas.active]->Add(
+        *element, arenas.active,
+        {constraints, context.is_measurement, box->text, fragment});
   }
   return fragment;
 }

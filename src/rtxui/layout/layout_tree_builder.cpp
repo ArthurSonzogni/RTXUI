@@ -11,6 +11,7 @@
 #include "rtxui/base/string.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
+#include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/style.hpp"
@@ -294,11 +295,37 @@ void ApplyLetterSpacing(std::string& text, int spacing) {
   }
   text = std::move(result);
 }
+// The algorithm laying out `box`, which depends only on its own element.
+LayoutBox::Algorithm SelectAlgorithm(const LayoutBox& box) {
+  if (box.dom_node->tag() == "table") {
+    return LayoutBox::Algorithm::Table;
+  }
+  if (box.style().display_inside == DisplayInside::Flex) {
+    return LayoutBox::Algorithm::Flex;
+  }
+  if (box.style().display_inside == DisplayInside::Grid) {
+    return LayoutBox::Algorithm::Grid;
+  }
+  if (box.style().display_outside == DisplayOutside::Block ||
+      box.dom_node->is_slot()) {
+    return LayoutBox::Algorithm::BlockFlow;
+  }
+  return LayoutBox::Algorithm::InlineFlow;
+}
+
+// Tables find their rows and cells by walking the boxes below them, rather
+// than through RunLayout.
+bool IsTablePart(std::string_view tag) {
+  return tag == "table" || tag == "thead" || tag == "tbody" || tag == "tfoot" ||
+         tag == "tr" || tag == "td" || tag == "th";
+}
+
 }  // namespace
 
 // Static Build method implementation
 std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
-                                                    InheritedTextStyle parent) {
+                                                    InheritedTextStyle parent,
+                                                    bool may_defer) {
   if (!dom_node || dom_node->style.display_none) {
     return nullptr;
   }
@@ -393,6 +420,39 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     return box;
   }
 
+  box->algorithm = SelectAlgorithm(*box);
+  if (box->algorithm == LayoutBox::Algorithm::Table) {
+    box->mutable_style().display_outside = DisplayOutside::Block;
+  }
+
+  // A block-level box that the last layout can lay out again unchanged gets
+  // its children only if it turns out to need them (RunLayout). Its parent's
+  // algorithm, being one that lays out each child through RunLayout, never
+  // reaches below it. Nothing in it changed, and the last layout had it in
+  // its cache, which it does only for a subtree without out-of-flow boxes.
+  if (may_defer && box->style().display_outside == DisplayOutside::Block &&
+      box->style().position != PositionType::Absolute &&
+      box->style().position != PositionType::Fixed &&
+      !IsTablePart(dom_node->tag()) && HasLayoutToReuse(*dom_node)) {
+    box->children_deferred = true;
+    return box;
+  }
+
+  BuildChildren(*box);
+  return box;
+}
+
+void LayoutTreeBuilder::BuildChildren(LayoutBox& layout_box) {
+  LayoutBox* box = &layout_box;
+  box->children_deferred = false;
+  Element* dom_node = box->dom_node;
+  const InheritedTextStyle& resolved = box->text;
+  const bool children_may_defer =
+      (box->algorithm == LayoutBox::Algorithm::BlockFlow ||
+       box->algorithm == LayoutBox::Algorithm::Flex ||
+       box->algorithm == LayoutBox::Algorithm::Grid) &&
+      !IsTablePart(dom_node->tag());
+
   std::vector<std::shared_ptr<LayoutBox>> raw_children;
   // ::before is the element's first child, ::after its last.
   auto add_generated = [&](bool after) {
@@ -441,7 +501,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       slot.word_break = slot_style.word_break.value_or(resolved.word_break);
 
       for (auto& grandchild_dom : child_dom.get()->children()) {
-        auto grandchild_box = Build(grandchild_dom.get(), slot);
+        auto grandchild_box =
+            Build(grandchild_dom.get(), slot, children_may_defer);
         if (grandchild_box) {
           raw_children.push_back(std::move(grandchild_box));
         }
@@ -449,7 +510,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       continue;
     }
 
-    auto child_box = Build(child_dom.get(), resolved);
+    auto child_box = Build(child_dom.get(), resolved, children_may_defer);
     if (child_box) {
       raw_children.push_back(std::move(child_box));
     }
@@ -465,32 +526,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     box->has_out_of_flow |= child_box->has_out_of_flow;
   }
 
-  // --- Algorithm Selection & Tree Refinement ---
-  if (dom_node->tag() == "table") {
-    box->children = std::move(raw_children);
-    box->algorithm = LayoutBox::Algorithm::Table;
-    box->mutable_style().display_outside = DisplayOutside::Block;
-
-    return box;
-  }
-
-  if (box->style().display_inside == DisplayInside::Flex) {
-    box->children = std::move(raw_children);
-    box->algorithm = LayoutBox::Algorithm::Flex;
-
-    return box;
-  }
-
-  if (box->style().display_inside == DisplayInside::Grid) {
-    box->children = std::move(raw_children);
-    box->algorithm = LayoutBox::Algorithm::Grid;
-
-    return box;
-  }
-
-  if (box->style().display_outside == DisplayOutside::Block ||
-      dom_node->is_slot()) {
-    box->algorithm = LayoutBox::Algorithm::BlockFlow;
+  // --- Tree Refinement ---
+  if (box->algorithm == LayoutBox::Algorithm::BlockFlow) {
     std::vector<std::shared_ptr<LayoutBox>> refined_children;
     std::shared_ptr<LayoutBox> anonymous_box = nullptr;
     for (const auto& child_box : raw_children) {
@@ -533,12 +570,9 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       }
     }
     box->children = std::move(refined_children);
-  } else {  // Inline
-    box->algorithm = LayoutBox::Algorithm::InlineFlow;
+  } else {
     box->children = std::move(raw_children);
   }
-
-  return box;
 }
 
 }  // namespace rtxui

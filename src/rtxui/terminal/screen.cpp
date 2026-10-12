@@ -1059,7 +1059,9 @@ class ScreenImpl {
   // last layout (layout_reusable_), keep it and refresh its colors instead.
   void Draw(bool reuse_layout = false);
   void RequestDraw();
-  void UpdateLayout();
+  // `reuse_fragments`: lay out again only what changed since the last layout,
+  // reusing the rest of its fragments.
+  void UpdateLayout(bool reuse_fragments = true);
 
   void UpdateSize();
   void DigestAndDraw();
@@ -1128,6 +1130,12 @@ class ScreenImpl {
   // cleared by anything else that can change what is drawn -- an event, a task,
   // a resize, or an animation of anything else.
   bool layout_reusable_ = false;
+  // The size the last layout was for. Its fragments are reused only at that
+  // size: viewport units reach anywhere in the tree.
+  int laid_out_width_ = -1;
+  int laid_out_height_ = -1;
+  // Whether the last layout reused any fragment from the one before it.
+  bool reused_fragments_ = false;
   std::unique_ptr<Texture> last_texture_;
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
@@ -2444,7 +2452,7 @@ void ScreenImpl::HandleEvent(Event event) {
 // so letting it go stale across a reconciliation is a use-after-free rather
 // than merely a wrong answer -- reconciliation destroys the elements it
 // replaces, and the fragments still point at them.
-void ScreenImpl::UpdateLayout() {
+void ScreenImpl::UpdateLayout(bool reuse_fragments) {
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
 
@@ -2502,9 +2510,17 @@ void ScreenImpl::UpdateLayout() {
     FindFocused(root);
   }
 
-  root_fragment_ = nullptr;
-  root_box_ = nullptr;
+  // The last tree stays alive until this one is laid out: the fragments
+  // reused from it are copied, and its text fragments view its boxes' text.
+  auto previous_fragment = std::move(root_fragment_);
+  auto previous_box = std::move(root_box_);
   ResetLayoutArena();
+  layout_arenas_.reuse_fragments = reuse_fragments &&
+                                   width_ == laid_out_width_ &&
+                                   height_ == laid_out_height_;
+  laid_out_width_ = width_;
+  laid_out_height_ = height_;
+  const int reuse_count = LayoutReuseCount();
 
   auto root_box = LayoutTreeBuilder::Build(root);
 
@@ -2520,6 +2536,10 @@ void ScreenImpl::UpdateLayout() {
   }
   root_fragment_ = root_fragment;
   root_box_ = root_box;
+  reused_fragments_ = LayoutReuseCount() != reuse_count;
+  // Before laying out again below, which resets the arena they are in.
+  previous_fragment = nullptr;
+  previous_box = nullptr;
 
   // A `<for virtual="">` renders the items around what its scroll container
   // shows. Layout is what sizes and scrolls that container, so once laid out,
@@ -2529,7 +2549,7 @@ void ScreenImpl::UpdateLayout() {
       ComponentInternals::HasVirtualLists(*component_) &&
       component_->Digest()) {
     relayout_for_virtual_lists_ = true;
-    UpdateLayout();
+    UpdateLayout(reuse_fragments);
     relayout_for_virtual_lists_ = false;
   }
   layout_reusable_ = true;
@@ -2557,10 +2577,11 @@ void ScreenImpl::Draw(bool reuse_layout) {
     PaintScreen(*root_fragment, texture);
   }
 
-  // RTXUI_VERIFY_LAYOUT_REUSE (set for the tests) lays out again anyway, and
-  // stops if that draws anything else.
-  if (reuse_layout && std::getenv("RTXUI_VERIFY_LAYOUT_REUSE")) {
-    UpdateLayout();
+  // RTXUI_VERIFY_LAYOUT_REUSE (set for the tests) lays out again anyway,
+  // from scratch, and stops if that draws anything else.
+  if ((reuse_layout || reused_fragments_) &&
+      std::getenv("RTXUI_VERIFY_LAYOUT_REUSE")) {
+    UpdateLayout(/*reuse_fragments=*/false);
     Texture fresh(width_, height_);
     if (root_fragment_) {
       PaintScreen(*root_fragment_, fresh);

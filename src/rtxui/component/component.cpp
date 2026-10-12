@@ -614,7 +614,10 @@ void RestoreElementStates(
       el->set_scrollbar_active(pair.second.scrollbar_active);
       el->set_scrollbar_thumb_hovered(pair.second.scrollbar_thumb_hovered);
       el->set_scrollbar_thumb_active(pair.second.scrollbar_thumb_active);
-      el->style = pair.second.style;
+      {
+        const Element::StyleChangeScope style_change(*el);
+        el->style = pair.second.style;
+      }
       el->target_stale = true;
       el->active_transitions = pair.second.active_transitions;
       // A re-render builds new elements: carry on the animations of the old
@@ -2424,6 +2427,7 @@ bool ResolveStylesInTree(Element* element,
       if (element->style_seeded && element->base_style.transitions) {
         element->TriggerTransitions(time::GetTimeMs());
       } else {
+        const Element::StyleChangeScope style_change(*element);
         element->style = element->base_style;
         element->UpdateAnimations(time::GetTimeMs());
       }

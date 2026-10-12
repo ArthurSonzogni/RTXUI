@@ -92,8 +92,25 @@ class LayoutArena {
 // Draw() (e.g. locals held across Draw() in event handlers) release into
 // intact memory instead of corrupting the new tree's control blocks. Such
 // copies must still not outlive two frames.
+// The fragments one layout produced, for the next one to reuse. Defined in
+// layout.cpp.
+struct LayoutCache;
+
 struct LayoutArenas {
+  LayoutArenas();
+  ~LayoutArenas();
+  LayoutArenas(const LayoutArenas&) = delete;
+  LayoutArenas& operator=(const LayoutArenas&) = delete;
+
   LayoutArena arenas[2];
+  // What was laid out in each arena. Emptied before its arena is reset, since
+  // it holds fragments allocated there. Declared after `arenas`, so destroyed
+  // before them.
+  std::unique_ptr<LayoutCache> caches[2];
+  // Whether a layout may reuse the last one's fragments. A Screen turns it
+  // on; code laying out by hand, which changes styles without telling the
+  // elements, does not.
+  bool reuse_fragments = false;
   int active = 0;
 };
 

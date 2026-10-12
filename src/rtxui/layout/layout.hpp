@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/style.hpp"
@@ -47,12 +48,19 @@ void RefreshPaint(PhysicalFragment& root);
 
 void ResetLayoutArena();
 
+// Whether the last layout has fragments for `element` that the current one
+// may reuse: nothing in the element changed since.
+bool HasLayoutToReuse(const Element& element);
+
 // Number of layout algorithm executions since ResetLayoutRunCount(); calls
 // served from the measurement cache are not counted. Unlike wall-clock time
 // this is deterministic, which is what makes it worth asserting on: it pins
 // how layout cost scales with the shape of the tree.
 int LayoutRunCount();
 void ResetLayoutRunCount();
+// Number of RunLayout calls answered with a fragment from the last layout,
+// since ResetLayoutRunCount().
+int LayoutReuseCount();
 }  // namespace rtxui
 
 #endif  // RTXUI_LAYOUT_LAYOUT_HPP

@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <functional>
 #include <iterator>
 #include <map>
@@ -33,6 +34,8 @@ std::atomic<int> g_elements_destroyed{0};
 namespace rtxui {
 
 namespace {
+
+uint64_t g_layout_epoch = 0;
 
 float SolveCubicBezier(float x1, float y1, float x2, float y2, float t) {
   if (t <= 0.0f) {
@@ -511,6 +514,57 @@ Element::Element(const ComponentBase* component)
   g_elements_created++;
 }
 
+uint64_t LayoutEpoch() {
+  return g_layout_epoch;
+}
+
+void AdvanceLayoutEpoch() {
+  ++g_layout_epoch;
+}
+
+void Element::InvalidateLayout() {
+  // An ancestor already stamped in this epoch had its own ancestors stamped
+  // with it, by the call that stamped it or by the attach that followed.
+  for (Element* element = this;
+       element && element->layout_changed_epoch_ != g_layout_epoch;
+       element = element->parent_) {
+    element->layout_changed_epoch_ = g_layout_epoch;
+  }
+}
+
+void Element::set_parent(Element* parent) {
+  if (parent == parent_) {
+    return;
+  }
+  if (parent_) {
+    parent_->InvalidateLayout();
+  }
+  parent_ = parent;
+  if (parent_) {
+    parent_->InvalidateLayout();
+  }
+}
+
+Element::StyleChangeScope::StyleChangeScope(Element& element)
+    : element_(element),
+      core_(element.style),
+      grid_template_columns_(element.style.grid_template_columns),
+      grid_template_rows_(element.style.grid_template_rows) {}
+
+Element::StyleChangeScope::~StyleChangeScope() {
+  const ComputedStyle& style = element_.style;
+  // Byte equality is enough to know nothing changed: equal bytes are equal
+  // values. Padding or a disengaged optional's payload can differ between
+  // equal styles, which costs one layout, never a stale one.
+  // NOLINTNEXTLINE(bugprone-suspicious-memory-comparison): see above.
+  if (std::memcmp(&core_, static_cast<const ComputedStyleCore*>(&style),
+                  sizeof(ComputedStyleCore)) != 0 ||
+      grid_template_columns_ != style.grid_template_columns ||
+      grid_template_rows_ != style.grid_template_rows) {
+    element_.InvalidateLayout();
+  }
+}
+
 Element* Element::GeneratedBox(bool after) {
   Ref<Element>& box = generated_boxes_[after ? 1 : 0];
   const GeneratedContent* content = nullptr;
@@ -518,7 +572,10 @@ Element* Element::GeneratedBox(bool after) {
     content = after ? &generated->after : &generated->before;
   }
   if (!content || !content->content) {
-    box = nullptr;
+    if (box) {
+      box = nullptr;
+      InvalidateLayout();
+    }
     return nullptr;
   }
   if (!box) {
@@ -527,7 +584,10 @@ Element* Element::GeneratedBox(bool after) {
   } else {
     static_cast<TextElement*>(box->ChildAt(0))->set_text(*content->content);
   }
-  box->style = content->style;
+  {
+    const StyleChangeScope style_change(*box);
+    box->style = content->style;
+  }
   // Not one of this element's children, so selectors and DOM walks never
   // meet it, but events on it reach this element.
   box->set_parent(this);
@@ -569,6 +629,7 @@ void Element::AddChild(Ref<Element> child) {
   child->DetachFromParent();
   child->parent_ = this;
   children_.push_back(std::move(child));
+  InvalidateLayout();
 }
 
 void Element::DetachFromParent() {
@@ -581,6 +642,7 @@ void Element::DetachFromParent() {
       const auto index = static_cast<size_t>(it - siblings.begin());
       siblings.erase(it);
       parent_->PrecedingSiblingsChanged(index);
+      parent_->InvalidateLayout();
       break;
     }
   }
@@ -592,6 +654,7 @@ void Element::RemoveChildren() {
     child->parent_ = nullptr;
   }
   children_.clear();
+  InvalidateLayout();
 }
 
 void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
@@ -600,6 +663,7 @@ void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
   new_child->parent_ = this;
   children_[index] = std::move(new_child);
   PrecedingSiblingsChanged(index + 1);
+  InvalidateLayout();
 }
 
 void Element::MoveChild(size_t from, size_t to) {
@@ -612,6 +676,7 @@ void Element::MoveChild(size_t from, size_t to) {
   children_.erase(children_.begin() + from);
   children_.insert(children_.begin() + to, std::move(child));
   PrecedingSiblingsChanged(std::min(from, to));
+  InvalidateLayout();
 }
 
 void Element::PrecedingSiblingsChanged(size_t index) {
@@ -627,6 +692,7 @@ void Element::TruncateChildren(size_t count) {
       children_[i]->parent_ = nullptr;
     }
     children_.resize(count);
+    InvalidateLayout();
   }
 }
 
@@ -642,6 +708,7 @@ void Element::SetAttribute(std::string name, std::string value) {
   if (const std::string* previous = GetAttribute(name);
       !previous || *previous != value) {
     selector_inputs_changed = true;
+    InvalidateLayout();
   }
   if (name == "id") {
     id = value;
@@ -674,6 +741,7 @@ void Element::RemoveAttribute(const std::string& name) {
   ClearResolvedStyles();
   if (GetAttribute(name)) {
     selector_inputs_changed = true;
+    InvalidateLayout();
   }
   if (name == "id") {
     id.clear();
@@ -761,6 +829,7 @@ Element* Element::QuerySelector(std::string_view selector) {
 }
 
 void Element::TriggerTransitions(double current_time_ms) {
+  const StyleChangeScope style_change(*this);
   if (!target_style.transitions && active_transitions.empty()) {
     style = target_style;
     UpdateAnimations(current_time_ms);
@@ -1380,6 +1449,7 @@ bool ApplyAnimations(Element& element, double current_time_ms) {
 }  // namespace
 
 void Element::UpdateAnimations(double current_time_ms) {
+  const StyleChangeScope style_change(*this);
   // As in CSS, an element with `display: none` runs no animation: they start
   // over once it is displayed, rather than having played out unseen.
   const std::vector<AnimationConfig>* declared =
@@ -1510,6 +1580,8 @@ bool Element::TickTransitions(double current_time_ms) {
     return false;
   }
 
+  const StyleChangeScope style_change(*this);
+  const ScrollChangeScope scroll_change(*this);
   bool updated = false;
 
   if (scroll_y_animating_ || visual_scroll_y_animating_) {
@@ -1702,6 +1774,7 @@ bool Element::TickTransitions(double current_time_ms) {
 }
 
 void Element::set_scroll_y(int y, bool smooth) {
+  const ScrollChangeScope scroll_change(*this);
   ScrollAxis axis_y{scroll_y_,
                     scroll_height_,
                     target_scroll_y_,
@@ -1718,6 +1791,7 @@ void Element::set_scroll_y(int y, bool smooth) {
 }
 
 void Element::set_scroll_x(int x, bool smooth) {
+  const ScrollChangeScope scroll_change(*this);
   ScrollAxis axis_x{scroll_x_,
                     scroll_width_,
                     target_scroll_x_,
@@ -1734,6 +1808,7 @@ void Element::set_scroll_x(int x, bool smooth) {
 }
 
 void Element::ClampScrollY(int max_scroll) {
+  const ScrollChangeScope scroll_change(*this);
   ScrollAxis axis_y{scroll_y_,
                     scroll_height_,
                     target_scroll_y_,
@@ -1750,6 +1825,7 @@ void Element::ClampScrollY(int max_scroll) {
 }
 
 void Element::ClampScrollX(int max_scroll) {
+  const ScrollChangeScope scroll_change(*this);
   ScrollAxis axis_x{scroll_x_,
                     scroll_width_,
                     target_scroll_x_,

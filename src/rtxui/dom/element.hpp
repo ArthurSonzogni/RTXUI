@@ -1,6 +1,7 @@
 #ifndef DOM_ElEMENT_HPP_
 #define DOM_ElEMENT_HPP_
 
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -176,6 +177,13 @@ struct ElementHandleTarget : public RefCounted {
   Element* element = nullptr;
 };
 
+/// Counts layouts. Layout advances it before each one, and an element that
+/// changes is stamped with it (Element::InvalidateLayout()), so a fragment laid
+/// out in epoch N still describes an element while the element's stamp is
+/// below N.
+RTXUI_EXPORT uint64_t LayoutEpoch();
+RTXUI_EXPORT void AdvanceLayoutEpoch();
+
 class RTXUI_EXPORT Element : public RefCounted {
  public:
   Element();
@@ -205,17 +213,88 @@ class RTXUI_EXPORT Element : public RefCounted {
   // heap allocation -- once per node of the subtree.
   void Visit(const std::function<void(Element&)>& f);
 
+  /// Records that something layout reads here changed -- the style, the
+  /// children, the text, an attribute, the scroll offset -- so that layout
+  /// lays this element out again rather than reusing last frame's fragments.
+  /// The ancestors are marked too: their fragments contain this one.
+  void InvalidateLayout();
+  /// The layout epoch in which this element, or anything below it, last
+  /// changed.
+  uint64_t layout_changed_epoch() const { return layout_changed_epoch_; }
+
+  /// Where layout finds this element's fragments from a layout, one slot per
+  /// layout arena: the epoch of the layout that filled the slot, and its first
+  /// entry in that arena's LayoutCache. Only layout reads or writes them.
+  struct LayoutCacheSlot {
+    uint64_t epoch = 0;
+    int32_t head = -1;
+  };
+  LayoutCacheSlot layout_cache_slots[2];
+
+  /// Invalidates the element's layout when its `style` differs at the end of
+  /// the scope from what it was at the start. Every pass that may restyle an
+  /// element runs again over elements whose style ends up the same, so
+  /// invalidating on every write would leave nothing to reuse.
+  class StyleChangeScope {
+   public:
+    explicit StyleChangeScope(Element& element);
+    ~StyleChangeScope();
+    StyleChangeScope(const StyleChangeScope&) = delete;
+    StyleChangeScope& operator=(const StyleChangeScope&) = delete;
+
+   private:
+    Element& element_;
+    ComputedStyleCore core_;
+    std::vector<Length> grid_template_columns_;
+    std::vector<Length> grid_template_rows_;
+  };
+
+ private:
+  /// Same as StyleChangeScope, for the scroll offsets: layout copies them
+  /// into the scroll container's fragment.
+  class ScrollChangeScope {
+   public:
+    explicit ScrollChangeScope(Element& element)
+        : element_(element),
+          scroll_x_(element.scroll_x_),
+          scroll_y_(element.scroll_y_),
+          visual_scroll_x_(element.visual_scroll_x_),
+          visual_scroll_y_(element.visual_scroll_y_) {}
+    ~ScrollChangeScope() {
+      if (scroll_x_ != element_.scroll_x_ || scroll_y_ != element_.scroll_y_ ||
+          visual_scroll_x_ != element_.visual_scroll_x_ ||
+          visual_scroll_y_ != element_.visual_scroll_y_) {
+        element_.InvalidateLayout();
+      }
+    }
+    ScrollChangeScope(const ScrollChangeScope&) = delete;
+    ScrollChangeScope& operator=(const ScrollChangeScope&) = delete;
+
+   private:
+    Element& element_;
+    int scroll_x_;
+    int scroll_y_;
+    float visual_scroll_x_;
+    float visual_scroll_y_;
+  };
+
+ public:
   // Hierarchical accessors.
   Element* Parent() { return parent_; }
   const Element* Parent() const { return parent_; }
-  void set_parent(Element* parent) { parent_ = parent; }
+  void set_parent(Element* parent);
   size_t ChildCount() const { return children_.size(); }
   Element* ChildAt(size_t index) { return children_[index].get(); }
   const std::vector<Ref<Element>>& children() const { return children_; }
 
   // Virtual tag.
   virtual std::string_view tag() const;
-  void SetTag(std::string tag) { tag_ = std::move(tag); }
+  void SetTag(std::string tag) {
+    if (tag != tag_) {
+      tag_ = std::move(tag);
+      InvalidateLayout();
+    }
+  }
 
   // Attributes.
   void SetAttribute(std::string name, std::string value);
@@ -576,6 +655,7 @@ class RTXUI_EXPORT Element : public RefCounted {
   std::unique_ptr<std::map<std::string, std::string>> attributes_;
   std::vector<Ref<Element>> children_;
   Element* parent_ = nullptr;
+  uint64_t layout_changed_epoch_ = LayoutEpoch();
   const ComponentBase* component_ = nullptr;
   const ComponentBase* owner_component_ = nullptr;
   // Built on demand by GeneratedBox(); index 0 is ::before, 1 is ::after.
