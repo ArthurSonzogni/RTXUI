@@ -249,6 +249,19 @@ class RTXUI_EXPORT Element : public RefCounted {
     std::vector<Length> grid_template_rows_;
   };
 
+  /// Same as StyleChangeScope, for `generated`.
+  class GeneratedChangeScope {
+   public:
+    explicit GeneratedChangeScope(Element& element);
+    ~GeneratedChangeScope();
+    GeneratedChangeScope(const GeneratedChangeScope&) = delete;
+    GeneratedChangeScope& operator=(const GeneratedChangeScope&) = delete;
+
+   private:
+    Element& element_;
+    std::unique_ptr<GeneratedContents> generated_;
+  };
+
  private:
   /// Same as StyleChangeScope, for the scroll offsets: layout copies them
   /// into the scroll container's fragment.

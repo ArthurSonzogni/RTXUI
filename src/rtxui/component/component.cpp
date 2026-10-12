@@ -2361,6 +2361,13 @@ bool ResolveStylesInTree(Element* element,
     }
   }
 
+  // Layout reads `generated`, which the pseudo-class pass resets to the base
+  // contents and builds again: compared once it is done.
+  std::optional<Element::GeneratedChangeScope> generated_change;
+  if (check_pseudos) {
+    generated_change.emplace(*element);
+  }
+
   // Every div has pseudo-class rules, so this pass runs on nearly every
   // render. Most elements match none of them, before or now: their target is
   // still their base style and their style has settled, so there is nothing
@@ -2421,7 +2428,10 @@ bool ResolveStylesInTree(Element* element,
     // would overwrite a transition-blended `style` with its unanimated value.
     if (element->needs_style_seed) {
       element->target_style = element->base_style;
-      CopyGenerated(element->base_generated, element->generated);
+      {
+        const Element::GeneratedChangeScope generated_change(*element);
+        CopyGenerated(element->base_generated, element->generated);
+      }
       // An element already on screen that declares transitions moves to its
       // new style through them, from the one it has, rather than jumping.
       if (element->style_seeded && element->base_style.transitions) {

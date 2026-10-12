@@ -207,11 +207,13 @@ class Page : public Component<Page> {
   std::string deep = "deep";
   bool wide = false;
   bool marked = false;
+  bool starred = false;
   std::string width() const { return wide ? "wide" : ""; }
   std::string mark() const { return marked ? "marked" : ""; }
+  std::string stars() const { return starred ? "starred" : ""; }
 
   std::string_view view = R"html(
-    <div class="row">
+    <div class="row {stars}">
       <div class="card {width}">card</div>
       <div class="card"><div><div><span>{deep}</span></div></div></div>
       <div class="card {mark}">mark</div>
@@ -224,6 +226,7 @@ class Page : public Component<Page> {
       .card { width: 8; border: rounded; background-color: #202060; }
       .card.wide { width: 14; }
       .card.marked::before { content: "> "; }
+      .starred .card::after { content: "*"; }
       .list { height: 5; overflow-y: scroll; border: rounded; }
     </style>
   )html";
@@ -233,8 +236,10 @@ class Page : public Component<Page> {
     Bind(deep);
     Bind(wide);
     Bind(marked);
+    Bind(starred);
     Bind(width);
     Bind(mark);
+    Bind(stars);
   }
 };
 
@@ -297,6 +302,8 @@ TEST_CASE("A reused layout follows a style change", "[screen][layout-reuse]") {
 TEST_CASE("A reused layout follows generated content",
           "[screen][layout-reuse]") {
   CheckChange([](Page& page) { page.marked = true; });
+  // Through an ancestor's class: nothing about the cards themselves changes.
+  CheckChange([](Page& page) { page.starred = true; });
 }
 
 TEST_CASE("A reused layout follows an added and a removed child",

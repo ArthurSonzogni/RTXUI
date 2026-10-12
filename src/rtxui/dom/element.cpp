@@ -35,7 +35,8 @@ namespace rtxui {
 
 namespace {
 
-uint64_t g_layout_epoch = 0;
+// Atomic like the element counters: elements may be built off the UI thread.
+std::atomic<uint64_t> g_layout_epoch{0};
 
 float SolveCubicBezier(float x1, float y1, float x2, float y2, float t) {
   if (t <= 0.0f) {
@@ -515,20 +516,21 @@ Element::Element(const ComponentBase* component)
 }
 
 uint64_t LayoutEpoch() {
-  return g_layout_epoch;
+  return g_layout_epoch.load(std::memory_order_relaxed);
 }
 
 void AdvanceLayoutEpoch() {
-  ++g_layout_epoch;
+  g_layout_epoch.fetch_add(1, std::memory_order_relaxed);
 }
 
 void Element::InvalidateLayout() {
+  const uint64_t epoch = LayoutEpoch();
   // An ancestor already stamped in this epoch had its own ancestors stamped
   // with it, by the call that stamped it or by the attach that followed.
   for (Element* element = this;
-       element && element->layout_changed_epoch_ != g_layout_epoch;
+       element && element->layout_changed_epoch_ != epoch;
        element = element->parent_) {
-    element->layout_changed_epoch_ = g_layout_epoch;
+    element->layout_changed_epoch_ = epoch;
   }
 }
 
@@ -545,6 +547,48 @@ void Element::set_parent(Element* parent) {
   }
 }
 
+namespace {
+
+// Whether `style` still is the style `core` and the grid templates were taken
+// from. Byte equality of the core is enough to say so: equal bytes are equal
+// values. Padding or a disengaged optional's payload can differ between equal
+// styles, which only costs a layout, never a stale one.
+bool SameStyle(const ComputedStyleCore& core,
+               const std::vector<Length>& grid_template_columns,
+               const std::vector<Length>& grid_template_rows,
+               const ComputedStyle& style) {
+  // NOLINTNEXTLINE(bugprone-suspicious-memory-comparison): see above.
+  return std::memcmp(&core, static_cast<const ComputedStyleCore*>(&style),
+                     sizeof(ComputedStyleCore)) == 0 &&
+         grid_template_columns == style.grid_template_columns &&
+         grid_template_rows == style.grid_template_rows;
+}
+
+bool SameGenerated(const GeneratedContent& a, const GeneratedContent& b) {
+  return a.content == b.content &&
+         SameStyle(a.style, a.style.grid_template_columns,
+                   a.style.grid_template_rows, b.style);
+}
+
+}  // namespace
+
+Element::GeneratedChangeScope::GeneratedChangeScope(Element& element)
+    : element_(element),
+      generated_(element.generated
+                     ? std::make_unique<GeneratedContents>(*element.generated)
+                     : nullptr) {}
+
+Element::GeneratedChangeScope::~GeneratedChangeScope() {
+  const GeneratedContents* now = element_.generated.get();
+  const bool same = generated_ && now
+                        ? SameGenerated(generated_->before, now->before) &&
+                              SameGenerated(generated_->after, now->after)
+                        : !generated_ && !now;
+  if (!same) {
+    element_.InvalidateLayout();
+  }
+}
+
 Element::StyleChangeScope::StyleChangeScope(Element& element)
     : element_(element),
       core_(element.style),
@@ -552,15 +596,8 @@ Element::StyleChangeScope::StyleChangeScope(Element& element)
       grid_template_rows_(element.style.grid_template_rows) {}
 
 Element::StyleChangeScope::~StyleChangeScope() {
-  const ComputedStyle& style = element_.style;
-  // Byte equality is enough to know nothing changed: equal bytes are equal
-  // values. Padding or a disengaged optional's payload can differ between
-  // equal styles, which costs one layout, never a stale one.
-  // NOLINTNEXTLINE(bugprone-suspicious-memory-comparison): see above.
-  if (std::memcmp(&core_, static_cast<const ComputedStyleCore*>(&style),
-                  sizeof(ComputedStyleCore)) != 0 ||
-      grid_template_columns_ != style.grid_template_columns ||
-      grid_template_rows_ != style.grid_template_rows) {
+  if (!SameStyle(core_, grid_template_columns_, grid_template_rows_,
+                 element_.style)) {
     element_.InvalidateLayout();
   }
 }
