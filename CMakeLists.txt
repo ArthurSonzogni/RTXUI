@@ -25,6 +25,9 @@ if(EMSCRIPTEN)
     "-fno-exceptions"
     "-sEXPORTED_RUNTIME_METHODS=[ccall,cwrap]"
     "-sASYNCIFY_IMPORTS=[emscripten_asm_const_int]"
+    # The default heap is a fixed 16 MB, which virtual_list's 100,000 lines
+    # outgrow.
+    "-sALLOW_MEMORY_GROWTH=1"
   )
   string(TOLOWER "${CMAKE_BUILD_TYPE}" cmake_build_type_lower)
   if(cmake_build_type_lower MATCHES "release|relwithdebinfo")
