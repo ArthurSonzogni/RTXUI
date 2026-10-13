@@ -670,7 +670,9 @@ auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
   // Generate current selectors
   std::vector<std::string> current_selectors;
   std::string_view rest_selectors = selector_full.value();
-  while (!rest_selectors.empty()) {
+  // After a comma, even with nothing left, comes another selector.
+  bool after_comma = false;
+  while (!rest_selectors.empty() || after_comma) {
     // Nested, so the commas in `:not(.a, .b)` do not end a selector.
     size_t comma = FindTopLevel(rest_selectors, ",");
     std::string_view part = (comma == std::string_view::npos)
@@ -681,6 +683,10 @@ auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
     }
     while (!part.empty() && IsWhiteSpace(part.back())) {
       part.remove_suffix(1);
+    }
+    // `, .a` or `.a, {`: kept, it would match every element, text included.
+    if (part.empty()) {
+      return MakeError("Empty selector in a selector list");
     }
 
     if (parent_selectors.empty()) {
@@ -695,6 +701,7 @@ auto Parser::ParseRuleset(const std::vector<std::string>& parent_selectors,
       break;
     }
     rest_selectors = rest_selectors.substr(comma + 1);
+    after_comma = true;
   }
 
   ParseWhiteSpaces();

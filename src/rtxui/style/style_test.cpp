@@ -139,6 +139,17 @@ TEST_CASE("CSS error handling - Missing brace", "[css]") {
   CHECK(stylesheet.error().message == "Expected '}', but got end of file");
 }
 
+TEST_CASE("CSS error handling - Empty selector in a list", "[css]") {
+  // Regression (layout fuzzer): kept, the empty selector matched every
+  // element, text nodes included.
+  for (const char* input : {", .a { color: red; }", ".a, { color: red; }",
+                            ".a, , .b { color: red; }"}) {
+    auto stylesheet = css::Parse(input);
+    CHECK(!stylesheet);
+    CHECK(stylesheet.error().message == "Empty selector in a selector list");
+  }
+}
+
 TEST_CASE("CSS error handling - Missing colon", "[css]") {
   const std::string input = R"(
     div {
