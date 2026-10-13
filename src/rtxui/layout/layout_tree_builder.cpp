@@ -335,6 +335,13 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       LayoutArenaAllocator<LayoutBox>());
   box->set_style(dom_node->style);
   box->dom_node = dom_node;
+  // Text is laid out where it flows. A rule reaching a text node (`div *`,
+  // `:not(.x)`) can still give it a position, and an out-of-flow text box was
+  // laid out as its own out-of-flow child, without end.
+  if (is_text && (box->style().position == PositionType::Absolute ||
+                  box->style().position == PositionType::Fixed)) {
+    box->mutable_style().position = PositionType::Static;
+  }
 
   InheritedTextStyle resolved;
   resolved.align = dom_node->style.text_align.value_or(parent.align);

@@ -174,6 +174,28 @@ TEST_CASE("Extreme sizes lay out without overflowing", "[component][limits]") {
   CHECK(big->layout_width() <= 1000000);
 }
 
+class PositionedTextComponent
+    : public rtxui::Component<PositionedTextComponent> {
+ public:
+  // `:not(.x)` reaches the text node too.
+  std::string_view view = R"(
+    <div class="box">text</div>
+    <style>
+      .box { position: relative; }
+      :not(.x) { position: absolute; }
+    </style>
+  )";
+};
+
+TEST_CASE("Text a rule positions out of flow stays in flow",
+          "[component][layout][position]") {
+  // Regression (layout fuzzer): an absolutely positioned text box was laid
+  // out as its own out-of-flow child, recursing until the stack ran out.
+  auto container = rtxui::Ref<PositionedTextComponent>::New();
+  auto texture = RenderComponent(container, 10, 2);
+  CHECK(texture.Render().find("text") != std::string::npos);
+}
+
 class MarginAutoTestComponent
     : public rtxui::Component<MarginAutoTestComponent> {
  public:
