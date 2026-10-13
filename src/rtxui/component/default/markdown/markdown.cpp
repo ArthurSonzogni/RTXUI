@@ -62,7 +62,7 @@ bool markdown::Digest() {
     data_->template_ = Template();
     data_->xml_string_ = StripIndent(data_->template_);
     if (auto nodes = xml::Parse(data_->xml_string_)) {
-      data_->xml_nodes_ = std::move(nodes.value());
+      data_->SetXmlNodes(std::move(nodes.value()));
     } else {
       const xml::Error& error = nodes.error();
       ReportSyntaxError({error.message, Diagnostic::Kind::XmlSyntax, error.line,

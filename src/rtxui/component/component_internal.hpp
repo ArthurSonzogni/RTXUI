@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "rtxui/component.hpp"
@@ -48,7 +49,34 @@ struct ComponentBase::Data {
 
   std::string template_;
   std::string xml_string_;
+  // Sets xml_nodes_, and what follows from it.
+  void SetXmlNodes(xml::Nodes nodes);
   xml::Nodes xml_nodes_;
+  // What Render() reconciles: xml_nodes_ without its <style>s. Built when
+  // xml_nodes_ is set rather than per render, so that its nodes keep their
+  // addresses, which for_memos_ is keyed by.
+  xml::Node render_template_;
+
+  // What reconciling one <for> item read and produced last time. Reconciling
+  // it again is skipped while it would read the same, and its elements are
+  // still where it left them. See RenderReconcile().
+  struct ForItemMemo {
+    // Each interpolation it evaluated, in order, and the result.
+    std::vector<std::pair<std::string, std::string>> reads;
+    // What it produced, in order. Empty when it cannot be skipped.
+    std::vector<Ref<Element>> elements;
+  };
+  struct ForMemos {
+    std::vector<ForItemMemo> items;
+    bool preserve_newlines = false;
+    int terminal_width = -1;
+    int terminal_height = -1;
+    // Whether the current Render() reached the loop. Those it did not are
+    // dropped once it ends, with the elements they hold.
+    bool visited = false;
+  };
+  // Per <for> node of render_template_ and the element it renders into.
+  std::map<std::pair<const xml::Node*, const Element*>, ForMemos> for_memos_;
   Ref<Element> root_;
   std::map<std::string, Ref<Element>, std::less<>> slots_;
   // Set when rendering created a slot element afresh, cleared once the
@@ -81,6 +109,9 @@ struct ComponentBase::Data {
   std::string created_tag_;
   std::vector<Ref<ComponentBase>> children_;
   std::vector<Ref<ComponentBase>> old_children_;
+  // Reuse takes old_children_ out in order, leaving nulls behind: those
+  // before this index are all taken. Reset whenever old_children_ is.
+  size_t old_children_taken_ = 0;
   std::string id_;
   std::vector<std::string> classes_;
 };
@@ -127,6 +158,11 @@ struct ComponentInternals {
 // can flag any growth in how much work style resolution does.
 int StyleVisitCount();
 void ResetStyleVisitCount();
+
+// Number of <for> items a render found unchanged, and did not reconcile,
+// since ResetForItemSkipCount().
+int ForItemSkipCount();
+void ResetForItemSkipCount();
 
 // Whether a base style pass has resolved any element since the last call,
 // which then starts over. A :has() rule can depend on any of them, wherever

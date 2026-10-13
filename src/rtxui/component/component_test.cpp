@@ -717,6 +717,99 @@ TEST_CASE("Nested loops keep their own variable and index",
   }
 }
 
+// A label with state of its own, which only its Digest() picks up.
+class ItemLabel : public rtxui::Component<ItemLabel> {
+ public:
+  std::string suffix;
+  ItemLabel() { Bind(suffix); }
+  std::string_view view = R"(<span>{suffix}</span>)";
+};
+
+// Items reading their own value, the component's state, and through <if>.
+class SkippedItemsComponent : public rtxui::Component<SkippedItemsComponent> {
+ public:
+  std::vector<std::string> items{"a", "b", "c"};
+  std::string marker = "-";
+  bool loud = false;
+  SkippedItemsComponent() {
+    Import<ItemLabel>("item-label");
+    Bind(items);
+    Bind(marker);
+    Bind(loud);
+  }
+  std::string_view view = R"(
+    <div id="root">
+      <for each="{items}" as="item">
+        <div class="row">{marker}{item}<if condition="{loud}">!</if><item-label/></div>
+      </for>
+    </div>
+  )";
+};
+
+TEST_CASE("A render skips the loop items that read nothing new",
+          "[component][for]") {
+  auto app = rtxui::Ref<SkippedItemsComponent>::New();
+  app->Mount();
+  app->Digest();
+
+  auto text = [&]() {
+    std::string out;
+    app->Root()->Visit([&out](rtxui::Element& element) {
+      if (element.is_text()) {
+        out += static_cast<rtxui::TextElement&>(element).text();
+      }
+    });
+    return out;
+  };
+  REQUIRE(text() == "-a-b-c");
+  rtxui::ResetForItemSkipCount();
+
+  SECTION("an item that changed is rendered, the others are skipped") {
+    app->items[1] = "B";
+    app->Digest();
+    CHECK(text() == "-a-B-c");
+    CHECK(rtxui::ForItemSkipCount() == 2);
+  }
+
+  SECTION("state every item reads renders them all") {
+    app->marker = "+";
+    app->Digest();
+    CHECK(text() == "+a+b+c");
+    app->loud = true;
+    app->Digest();
+    CHECK(text() == "+a!+b!+c!");
+    CHECK(rtxui::ForItemSkipCount() == 0);
+  }
+
+  SECTION("items removed and added around skipped ones") {
+    app->items.erase(app->items.begin() + 1);
+    app->Digest();
+    CHECK(text() == "-a-c");
+    app->items.insert(app->items.begin(), "z");
+    app->Digest();
+    CHECK(text() == "-z-a-c");
+    app->items.push_back("d");
+    app->Digest();
+    CHECK(text() == "-z-a-c-d");
+  }
+
+  SECTION("a component in a skipped item still takes its own changes") {
+    std::vector<ItemLabel*> labels;
+    app->Root()->Visit([&labels](rtxui::Element& element) {
+      if (const auto* label =
+              dynamic_cast<const ItemLabel*>(element.component())) {
+        labels.push_back(const_cast<ItemLabel*>(label));
+      }
+    });
+    REQUIRE(labels.size() == 3);
+    labels[0]->suffix = "?";
+    app->items[2] = "C";
+    app->Digest();
+    CHECK(text() == "-a?-b-C");
+    CHECK(rtxui::ForItemSkipCount() == 2);
+  }
+}
+
 class WordWrapStaleSpaceTestComponent
     : public rtxui::Component<WordWrapStaleSpaceTestComponent> {
  public:

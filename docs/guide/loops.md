@@ -67,6 +67,17 @@ Keys must be unique within the loop, and stable across frames: keying by
 position matching described above, which stays the cheaper option for a list
 that never reorders.
 
+## What a change renders
+
+When the component renders again, an item whose interpolations all give what
+they gave last time (its own value, `{$index}`, and anything else it reads) is
+left as it is: changing one item of a long list renders that item only. Its
+components still pick up their own changes.
+
+An item renders every time when its output depends on more than what it
+interpolates: when it holds a nested `<for>` or a `<slot>`, or passes a value
+to a component's bound property, such as `<input value="{item.name}">`.
+
 ## Long lists: `virtual`
 
 A loop renders every item, and every item costs something each frame: a few

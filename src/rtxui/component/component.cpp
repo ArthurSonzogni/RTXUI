@@ -674,9 +674,9 @@ void RestoreElementFocusHoverActive(
   }
 }
 
-std::string Interpolate(std::string_view text,
-                        ComponentBase* source,
-                        const LocalScope* scope) {
+std::string InterpolateUntraced(std::string_view text,
+                                ComponentBase* source,
+                                const LocalScope* scope) {
   if (text.find('{') == std::string_view::npos) {
     return std::string(text);
   }
@@ -766,6 +766,55 @@ std::string Interpolate(std::string_view text,
 
   if (last_pos < text.size()) {
     result.append(text.substr(last_pos));
+  }
+  return result;
+}
+
+// What reconciling one <for> item has read so far, while it runs. Its result
+// depends on these and on the template alone, unless something marked it not
+// `cacheable`: then it depends on more than the trace can see.
+struct ItemTrace {
+  ComponentBase* source = nullptr;
+  std::vector<std::pair<std::string, std::string>> reads;
+  bool cacheable = true;
+};
+thread_local ItemTrace* g_item_trace = nullptr;
+
+// Marks the item being reconciled, if any, as one that cannot be skipped.
+void ItemNotCacheable() {
+  if (g_item_trace) {
+    g_item_trace->cacheable = false;
+  }
+}
+
+// Not the reconcile of an item: what a component renders of its own depends
+// on its own state, which its Digest() checks.
+class ItemTraceSuspension {
+ public:
+  ItemTraceSuspension() : outer_(std::exchange(g_item_trace, nullptr)) {}
+  ~ItemTraceSuspension() { g_item_trace = outer_; }
+  ItemTraceSuspension(const ItemTraceSuspension&) = delete;
+  ItemTraceSuspension& operator=(const ItemTraceSuspension&) = delete;
+
+ private:
+  ItemTrace* outer_;
+};
+
+// Reconciling a slot's fallback goes through a copy of the template kept on
+// the slot, whose nodes do not keep their addresses: no memo is keyed by them.
+thread_local int g_fallback_depth = 0;
+
+std::string Interpolate(std::string_view text,
+                        ComponentBase* source,
+                        const LocalScope* scope) {
+  std::string result = InterpolateUntraced(text, source, scope);
+  if (g_item_trace && g_item_trace->cacheable &&
+      text.find('{') != std::string_view::npos) {
+    if (source == g_item_trace->source) {
+      g_item_trace->reads.emplace_back(text, result);
+    } else {
+      g_item_trace->cacheable = false;
+    }
   }
   return result;
 }
@@ -1764,6 +1813,7 @@ bool IsCssWideKeyword(std::string_view value) {
 }  // namespace
 
 thread_local int g_style_visit_count = 0;
+thread_local int g_for_item_skip_count = 0;
 thread_local Ref<Element> g_pending_autofocus;
 
 thread_local bool g_base_styles_resolved = false;
@@ -2501,6 +2551,14 @@ void ResetStyleVisitCount() {
   g_style_visit_count = 0;
 }
 
+int ForItemSkipCount() {
+  return g_for_item_skip_count;
+}
+
+void ResetForItemSkipCount() {
+  g_for_item_skip_count = 0;
+}
+
 namespace {
 // How many components have a slot their consumer has yet to fill. Almost
 // always zero, which keeps ConsumesRecreatedSlots() from walking anything.
@@ -2841,6 +2899,30 @@ void CheckTemplate(const xml::Nodes& nodes,
 
 }  // namespace
 
+namespace {
+
+// What Render() reconciles out of a parsed template: all but its <style>s.
+xml::Node RenderTemplate(const xml::Nodes& nodes) {
+  xml::Node render_template;
+  render_template.type = xml::Node::Type::kElement;
+  render_template.tag = "template";
+  for (const auto& node : nodes) {
+    if (node.type == xml::Node::Type::kText ||
+        (node.type == xml::Node::Type::kElement && node.tag != "style")) {
+      render_template.children.push_back(node);
+    }
+  }
+  return render_template;
+}
+
+}  // namespace
+
+void ComponentBase::Data::SetXmlNodes(xml::Nodes nodes) {
+  xml_nodes_ = std::move(nodes);
+  render_template_ = RenderTemplate(xml_nodes_);
+  for_memos_.clear();  // Keyed by the nodes just freed.
+}
+
 void ComponentBase::Mount() {
   InitReflection();
   data_->template_ = Template();
@@ -2855,11 +2937,11 @@ void ComponentBase::Mount() {
     XmlParseError(nodes.error(), data_->xml_string_);
     // Only reached when a handler chose not to exit. Falling through would
     // read nodes.value() on an empty optional.
-    data_->xml_nodes_ = {};
+    data_->SetXmlNodes({});
     Render();
     return;
   }
-  data_->xml_nodes_ = std::move(nodes.value());
+  data_->SetXmlNodes(std::move(nodes.value()));
   CheckTemplate(data_->xml_nodes_, Tag());
   Render();
 }
@@ -2948,6 +3030,7 @@ bool ComponentBase::VirtualWindowsStale() {
 
 void ComponentBase::Render() {
   StyleResolutionScope scope(this);
+  const ItemTraceSuspension not_an_item;
   // Each virtual loop records what it renders below.
   data_->virtual_windows_.clear();
   // What is rendered is the current state, so that is what the next Digest()
@@ -3003,6 +3086,7 @@ void ComponentBase::Render() {
   }
 
   data_->old_children_ = std::move(data_->children_);
+  data_->old_children_taken_ = 0;
   data_->children_.clear();
   data_->slots_.clear();
 
@@ -3014,11 +3098,6 @@ void ComponentBase::Render() {
   data_->root_->ClearResolvedStyles();
   data_->root_->id = data_->id_;
   data_->root_->SetClasses(data_->classes_);
-
-  xml::Node template_node;
-  template_node.type = xml::Node::Type::kElement;
-  template_node.tag = "template";
-  template_node.children.reserve(data_->xml_nodes_.size());
 
   std::vector<std::string> new_css_strings;
   for (const auto& node : data_->xml_nodes_) {
@@ -3050,20 +3129,12 @@ void ComponentBase::Render() {
     }
   }
 
-  for (const auto& node : data_->xml_nodes_) {
-    if (node.type == xml::Node::Type::kElement) {
-      if (node.tag == "style") {
-        continue;
-      }
-      template_node.children.push_back(node);
-    } else if (node.type == xml::Node::Type::kText) {
-      template_node.children.push_back(node);
-    } else if (node.type == xml::Node::Type::kComment) {
-      // Ignore
-    }
+  for (auto& [key, memos] : data_->for_memos_) {
+    memos.visited = false;
   }
-
-  Render(template_node, data_->root_.get(), this);
+  Render(data_->render_template_, data_->root_.get(), this);
+  std::erase_if(data_->for_memos_,
+                [](const auto& entry) { return !entry.second.visited; });
 
   // Restore projected slot children
   for (auto& [name, children] : saved_slot_children) {
@@ -3475,6 +3546,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         if (child_node.tag == "for") {
+          // What it renders depends on the collection, which no interpolation
+          // reads.
+          ItemNotCacheable();
           // Same for a <for> with nothing to iterate: render no items rather
           // than throwing out of Render().
           if (!child_node.attributes.contains("each")) {
@@ -3582,6 +3656,100 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             child_idx++;
           };
 
+          // An item whose reconcile would read the same as last time, and
+          // whose elements are still where it left them, would leave them as
+          // they are: it is skipped. A virtual loop's items move, a filtered
+          // pass renders only part of each, and a fallback's nodes are a
+          // copy, so those reconcile every item.
+          Data::ForMemos* memos = nullptr;
+          if (range && !is_virtual && !filter && g_fallback_depth == 0) {
+            memos = &import_source->data_->for_memos_[{&child_node, slot}];
+            memos->visited = true;
+            if (memos->preserve_newlines != preserve_newlines ||
+                memos->terminal_width != css::g_terminal_width ||
+                memos->terminal_height != css::g_terminal_height) {
+              memos->items.clear();
+              memos->preserve_newlines = preserve_newlines;
+              memos->terminal_width = css::g_terminal_width;
+              memos->terminal_height = css::g_terminal_height;
+            }
+          }
+          // The components a skipped item uses, found in old_children_.
+          std::unordered_map<const ComponentBase*, size_t> old_index;
+          bool old_index_built = false;
+          auto skip_item = [&](const Data::ForItemMemo& memo,
+                               const LocalScope* item_scope) -> bool {
+            const std::vector<Ref<Element>>& elements = memo.elements;
+            if (elements.empty() ||
+                child_idx + elements.size() > slot->ChildCount()) {
+              return false;
+            }
+            for (size_t j = 0; j < elements.size(); ++j) {
+              if (slot->ChildAt(child_idx + j) != elements[j].get()) {
+                return false;
+              }
+            }
+            // In order, so that the first that differs stops it before any
+            // other is evaluated in a branch the item no longer takes.
+            for (const auto& [text, value] : memo.reads) {
+              if (InterpolateUntraced(text, import_source, item_scope) !=
+                  value) {
+                return false;
+              }
+            }
+            if (!old_index_built) {
+              old_index_built = true;
+              for (size_t k = data_->old_children_taken_;
+                   k < data_->old_children_.size(); ++k) {
+                if (data_->old_children_[k]) {
+                  old_index.emplace(data_->old_children_[k].get(), k);
+                }
+              }
+            }
+            // Reconciling would have taken these out of old_children_, and
+            // digested them. Each owns what is projected into it, so the
+            // search stops at them.
+            std::vector<size_t> used;
+            bool owned = true;
+            auto collect = [&](auto& self, Element* el) -> void {
+              if (const ComponentBase* component = el->component()) {
+                const auto it = old_index.find(component);
+                if (it == old_index.end() ||
+                    data_->old_children_[it->second].get() != component) {
+                  owned = false;
+                } else {
+                  used.push_back(it->second);
+                }
+                return;
+              }
+              for (size_t k = 0; k < el->ChildCount(); ++k) {
+                self(self, el->ChildAt(k));
+              }
+            };
+            for (const Ref<Element>& element : elements) {
+              collect(collect, element.get());
+            }
+            if (!owned) {
+              return false;
+            }
+            for (const size_t k : used) {
+              data_->old_children_[k]->Digest();
+            }
+            // One that rendered again and made a slot afresh needs its
+            // content projected again.
+            for (const size_t k : used) {
+              if (data_->old_children_[k]->data_->slots_recreated_) {
+                return false;
+              }
+            }
+            for (const size_t k : used) {
+              data_->children_.push_back(std::move(data_->old_children_[k]));
+            }
+            child_idx += elements.size();
+            ++g_for_item_skip_count;
+            return true;
+          };
+
           if (range) {
             place_spacer(first * static_cast<size_t>(item_height));
             for (size_t i = first; i < last; ++i) {
@@ -3632,10 +3800,36 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                 }
               }
 
+              if (memos && i < memos->items.size()) {
+                const ItemTraceSuspension not_reconciling;
+                if (skip_item(memos->items[i], &item_scope)) {
+                  continue;
+                }
+              }
+
               const size_t run_start = child_idx;
+              ItemTrace trace;
+              trace.source = import_source;
+              ItemTrace* const outer_trace =
+                  std::exchange(g_item_trace, memos ? &trace : nullptr);
               RenderReconcile(child_node, slot, import_source, &item_scope,
                               child_idx, preserve_newlines, filter,
                               item_key.empty() ? nullptr : &item_key);
+              g_item_trace = outer_trace;
+              if (memos) {
+                if (memos->items.size() <= i) {
+                  memos->items.resize(i + 1);
+                }
+                Data::ForItemMemo& memo = memos->items[i];
+                memo.elements.clear();
+                memo.reads.clear();
+                if (trace.cacheable) {
+                  memo.reads = std::move(trace.reads);
+                  for (size_t j = run_start; j < child_idx; ++j) {
+                    memo.elements.push_back(slot->children()[j]);
+                  }
+                }
+              }
 
               // Stamp the identity on what this iteration produced, so the
               // next frame can find it again.
@@ -3649,11 +3843,15 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
             place_spacer((range->Size() - last) *
                          static_cast<size_t>(item_height));
+            if (memos && memos->items.size() > last) {
+              memos->items.resize(last);
+            }
           }
           break;
         }
 
         if (child_node.tag == "slot" || child_node.tag.starts_with("slot.")) {
+          ItemNotCacheable();
           std::string slot_name = child_node.tag == "slot"
                                       ? ""
                                       : std::string(child_node.tag.substr(5));
@@ -3711,6 +3909,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         if (child_node.tag.starts_with("template.")) {
+          ItemNotCacheable();  // It renders outside the item.
           std::string template_name = std::string(child_node.tag.substr(9));
           Ref<Element> target_slot = Slot(template_name);
           if (target_slot) {
@@ -3738,22 +3937,27 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // above: the element is put back and merely rewritten in place.
           // A reused instance is taken out by leaving a null behind: erasing
           // it would shift the rest, once per child of a long list.
+          auto& old_children = data_->old_children_;
+          size_t& taken = data_->old_children_taken_;
+          while (taken < old_children.size() && !old_children[taken]) {
+            ++taken;
+          }
           if (item_key && !item_key->empty()) {
-            for (auto& old_child : data_->old_children_) {
-              if (old_child &&
-                  old_child->data_->created_tag_ == child_node.tag &&
-                  old_child->Root() &&
-                  old_child->Root()->for_key == *item_key) {
-                child = std::move(old_child);
+            for (size_t i = taken; i < old_children.size(); ++i) {
+              if (old_children[i] &&
+                  old_children[i]->data_->created_tag_ == child_node.tag &&
+                  old_children[i]->Root() &&
+                  old_children[i]->Root()->for_key == *item_key) {
+                child = std::move(old_children[i]);
                 break;
               }
             }
           }
           if (!child) {
-            for (auto& old_child : data_->old_children_) {
-              if (old_child &&
-                  old_child->data_->created_tag_ == child_node.tag) {
-                child = std::move(old_child);
+            for (size_t i = taken; i < old_children.size(); ++i) {
+              if (old_children[i] &&
+                  old_children[i]->data_->created_tag_ == child_node.tag) {
+                child = std::move(old_children[i]);
                 break;
               }
             }
@@ -3899,6 +4103,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                 echo->second == interpolated_value) {
               // The child's own edit, reformatted by the parent: keep the
               // child's text (see PropagateBinding).
+              ItemNotCacheable();
             } else {
               if (echo != child->data_->binding_echoes_.end()) {
                 child->data_->binding_echoes_.erase(echo);
@@ -3979,17 +4184,27 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
               std::unordered_set<const ComponentBase*> projected;
               std::vector<Ref<ComponentBase>> slot_components;
+              // An owned component's subtree holds none of the others: what
+              // is projected into it, it owns itself. So the walk stops at
+              // each one it finds, rather than going through a whole list's
+              // worth of nested content.
+              auto collect = [&](auto& self, Element* el) -> void {
+                auto it = owned.find(el->component());
+                if (it != owned.end()) {
+                  if (projected.insert(el->component()).second) {
+                    slot_components.push_back(
+                        child->data_->children_[it->second]);
+                  }
+                  return;
+                }
+                for (size_t i = 0; i < el->ChildCount(); ++i) {
+                  self(self, el->ChildAt(i));
+                }
+              };
               for (auto& [name, slot_el] : child->slots()) {
                 if (slot_el) {
                   for (auto& child_el : slot_el->children()) {
-                    child_el->Visit([&](Element& el) {
-                      auto it = owned.find(el.component());
-                      if (it != owned.end() &&
-                          projected.insert(el.component()).second) {
-                        slot_components.push_back(
-                            child->data_->children_[it->second]);
-                      }
-                    });
+                    collect(collect, child_el.get());
                   }
                 }
               }
@@ -3997,6 +4212,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                 return projected.contains(comp.get());
               });
               child->data_->old_children_ = std::move(slot_components);
+              child->data_->old_children_taken_ = 0;
             }
 
             // Fill each `<slot.name select="tag">` from the projected content
@@ -4014,9 +4230,11 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               auto* as_slot = static_cast<SlotElement*>(slot_el.get());
               size_t fallback_idx = 0;
               if (!as_slot->fallback().children.empty()) {
+                ++g_fallback_depth;
                 child->RenderReconcile(as_slot->fallback(), slot_el.get(),
                                        child, nullptr, fallback_idx,
                                        preserve_newlines);
+                --g_fallback_depth;
               }
               slot_el->TruncateChildren(fallback_idx);
             };
@@ -4081,6 +4299,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
             if (!needs_render) {
               child->data_->old_children_.clear();
+              child->data_->old_children_taken_ = 0;
             }
           }
           // Whatever slots rendering the child created, this pass filled.
@@ -4229,6 +4448,9 @@ void ComponentBase::SetProperty(std::string_view name, std::string_view value) {
   }
   for (auto& entry : data_->entries_) {
     if (entry.name == target && entry.set_value) {
+      // A parent re-asserts its props each time it reconciles, over whatever
+      // the child made of them since: an item doing so cannot be skipped.
+      ItemNotCacheable();
       entry.set_value(value);
       PropagateBinding(target, value);
       return;
@@ -4321,7 +4543,7 @@ void ComponentBase::HotReload(std::string_view new_template) {
                       data_->xml_string_);
     return;
   }
-  data_->xml_nodes_ = std::move(nodes.value());
+  data_->SetXmlNodes(std::move(nodes.value()));
   CheckTemplate(data_->xml_nodes_, Tag());
   Render();
 }
