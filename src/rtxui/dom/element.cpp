@@ -633,8 +633,8 @@ bool SameStyle(const ComputedStyleCore& core,
                      sizeof(ComputedStyleCore)) == 0 &&
          grid.template_columns == style.grid_template_columns &&
          grid.template_rows == style.grid_template_rows &&
-         grid.template_areas == style.grid_template_areas &&
-         grid.area == style.grid_area;
+         (grid.details ? *grid.details == style.grid()
+                       : !style.grid_details || style.grid() == GridDetails());
 }
 
 bool SameGenerated(const GeneratedContent& a, const GeneratedContent& b) {
@@ -667,8 +667,9 @@ Element::StyleChangeScope::StyleChangeScope(Element& element)
 Element::StyleChangeScope::Grid::Grid(const ComputedStyle& style)
     : template_columns(style.grid_template_columns),
       template_rows(style.grid_template_rows),
-      template_areas(style.grid_template_areas),
-      area(style.grid_area) {}
+      details(style.grid_details
+                  ? std::make_unique<GridDetails>(*style.grid_details)
+                  : nullptr) {}
 
 Element::StyleChangeScope::~StyleChangeScope() {
   if (!SameStyle(core_, grid_, element_.style)) {

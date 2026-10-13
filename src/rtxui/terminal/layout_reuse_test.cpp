@@ -326,7 +326,12 @@ class Areas : public Component<Areas> {
       <div><div>unchanged</div></div>
     </div>
     <style>
-      .grid { display: grid; grid-template-areas: "a b"; width: 20; }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: "a b";
+        width: 20;
+      }
       .item { grid-area: a; }
       .swapped .item { grid-area: b; }
     </style>

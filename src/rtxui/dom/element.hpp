@@ -1,6 +1,7 @@
 #ifndef DOM_ElEMENT_HPP_
 #define DOM_ElEMENT_HPP_
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -247,8 +248,7 @@ class RTXUI_EXPORT Element : public RefCounted {
       explicit Grid(const ComputedStyle& style);
       std::vector<Length> template_columns;
       std::vector<Length> template_rows;
-      std::vector<std::vector<std::string>> template_areas;
-      std::string area;
+      std::unique_ptr<GridDetails> details;
     };
 
    private:

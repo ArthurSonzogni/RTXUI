@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/style/style.hpp"
 
+#include <array>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
@@ -1464,24 +1465,97 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle",
     CHECK(style.grid_row_end == rtxui::GridLine());
     CHECK(style.grid_column_end == rtxui::GridLine());
 
+    // A name alone is that name on all four edges.
     rtxui::ApplyStyle(style, {"grid-area", "sidebar"});
-    CHECK(style.grid_area == "sidebar");
+    CHECK(
+        style.grid().line_names ==
+        std::array<std::string, 4>{"sidebar", "sidebar", "sidebar", "sidebar"});
     CHECK(style.grid_row_start == rtxui::GridLine());
     CHECK(style.grid_column_start == rtxui::GridLine());
+
+    // An edge left out copies a name, and is auto after a number.
+    rtxui::ApplyStyle(style, {"grid-area", "a / 2"});
+    CHECK(style.grid().line_names ==
+          std::array<std::string, 4>{"a", "", "a", ""});
+    CHECK(style.grid_column_start == rtxui::GridLine{.line = 2, .span = 0});
+  }
+
+  SECTION("grid-column with names") {
+    rtxui::ApplyStyle(style, {"grid-column", "main"});
+    CHECK(style.grid().line_names[1] == "main");
+    CHECK(style.grid().line_names[3] == "main");
+    rtxui::ApplyStyle(style, {"grid-column-end", "full-end"});
+    CHECK(style.grid().line_names[3] == "full-end");
+    rtxui::ApplyStyle(style, {"grid-column", "2"});
+    CHECK(style.grid().line_names[1].empty());
+    CHECK(style.grid().line_names[3].empty());
+  }
+
+  SECTION("line names in a template") {
+    rtxui::ApplyStyle(style, {"grid-template-columns",
+                              "[full-start] 1 [main-start] repeat(2, 3 [x]) "
+                              "[main-end full-end]"});
+    REQUIRE(style.grid_template_columns.size() == 3);
+    const auto& names = style.grid().template_column_names;
+    REQUIRE(names.size() == 4);
+    CHECK(names[0] == std::vector<std::string>{"full-start"});
+    CHECK(names[1] == std::vector<std::string>{"main-start"});
+    CHECK(names[2] == std::vector<std::string>{"x"});
+    CHECK(names[3] == std::vector<std::string>{"x", "main-end", "full-end"});
+  }
+
+  SECTION("grid-template with areas") {
+    rtxui::ApplyStyle(style, {"grid-template",
+                              "\"head head\" 1 [body] \"nav main\" / 10 1fr"});
+    REQUIRE(style.grid().template_areas.size() == 2);
+    CHECK(style.grid().template_areas[1] ==
+          std::vector<std::string>{"nav", "main"});
+    REQUIRE(style.grid_template_rows.size() == 2);
+    CHECK(style.grid_template_rows[0] == rtxui::Length::Cells(1.0f));
+    CHECK(style.grid_template_rows[1].unit == rtxui::Unit::Auto);
+    REQUIRE(style.grid().template_row_names.size() >= 2);
+    CHECK(style.grid().template_row_names[1] ==
+          std::vector<std::string>{"body"});
+    REQUIRE(style.grid_template_columns.size() == 2);
+    CHECK(style.grid_template_columns[1] == rtxui::Length::Fr(1.0f));
+
+    rtxui::ApplyStyle(style, {"grid-template", "none"});
+    CHECK(style.grid().template_areas.empty());
+    CHECK(style.grid_template_rows.empty());
+  }
+
+  SECTION("grid-auto-flow, grid-auto-rows and grid-auto-columns") {
+    rtxui::ApplyStyle(style, {"grid-auto-flow", "column dense"});
+    CHECK(style.grid_auto_flow_column);
+    CHECK(style.grid_auto_flow_dense);
+    rtxui::ApplyStyle(style, {"grid-auto-flow", "row"});
+    CHECK(!style.grid_auto_flow_column);
+    CHECK(!style.grid_auto_flow_dense);
+
+    rtxui::ApplyStyle(style, {"grid-auto-rows", "2 3"});
+    CHECK(style.grid().auto_rows ==
+          std::vector<rtxui::Length>{rtxui::Length::Cells(2.0f),
+                                     rtxui::Length::Cells(3.0f)});
+    rtxui::ApplyStyle(style, {"grid-auto-rows", "auto"});
+    CHECK(style.grid().auto_rows.empty());
+    rtxui::ApplyStyle(style, {"grid-auto-columns", "1fr"});
+    CHECK(style.grid().auto_columns ==
+          std::vector<rtxui::Length>{rtxui::Length::Fr(1.0f)});
   }
 
   SECTION("grid-template-areas") {
     rtxui::ApplyStyle(style, {"grid-template-areas",
                               "\"head head\"\n  \"side .\" 'side main'"});
-    REQUIRE(style.grid_template_areas.size() == 3);
-    CHECK(style.grid_template_areas[0] ==
+    REQUIRE(style.grid().template_areas.size() == 3);
+    CHECK(style.grid().template_areas[0] ==
           std::vector<std::string>{"head", "head"});
-    CHECK(style.grid_template_areas[1] == std::vector<std::string>{"side", ""});
-    CHECK(style.grid_template_areas[2] ==
+    CHECK(style.grid().template_areas[1] ==
+          std::vector<std::string>{"side", ""});
+    CHECK(style.grid().template_areas[2] ==
           std::vector<std::string>{"side", "main"});
 
     rtxui::ApplyStyle(style, {"grid-template-areas", "none"});
-    CHECK(style.grid_template_areas.empty());
+    CHECK(style.grid().template_areas.empty());
   }
 
   SECTION("grid-template with repeat()") {
@@ -1591,7 +1665,7 @@ TEST_CASE("CSS style parsing handles invalid values robustly",
     rtxui::ApplyStyle(style, {"grid-template-areas", "\"a b\" \"b b\""});
     rtxui::ApplyStyle(style, {"grid-template-areas", "a b"});
     rtxui::ApplyStyle(style, {"grid-template-areas", "\"a b"});
-    CHECK(style.grid_template_areas.empty());
+    CHECK(style.grid().template_areas.empty());
 
     style.grid_template_columns.clear();
     rtxui::ApplyStyle(style, {"grid-template-columns", "repeat(abc, 10px)"});

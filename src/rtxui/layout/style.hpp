@@ -2,6 +2,7 @@
 #define RTXUI_LAYOUT_STYLE_HPP
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <memory>
@@ -509,6 +510,10 @@ struct ComputedStyleCore {
   GridLine grid_column_end;
   GridLine grid_row_start;
   GridLine grid_row_end;
+  // grid-auto-flow: whether auto-placement fills rows or columns, and
+  // whether it goes back to fill earlier holes.
+  bool grid_auto_flow_column = false;
+  bool grid_auto_flow_dense = false;
 
   Cursor cursor = Cursor::Auto;
   Visibility visibility = Visibility::Visible;
@@ -525,6 +530,27 @@ static_assert(std::is_trivially_copyable_v<ComputedStyleCore>,
               "per-element, per-frame hot path that relies on being a memcpy. "
               "Add fields needing a non-trivial copy (containers, strings, "
               "smart pointers) to ComputedStyle instead.");
+
+// The grid properties outside the track sizes: line names, areas, the tracks
+// past the template, and the names an item's edges give.
+struct GridDetails {
+  // The names of each line of the templates, `[name]`: one list per line,
+  // or empty when no line is named.
+  std::vector<std::vector<std::string>> template_column_names;
+  std::vector<std::vector<std::string>> template_row_names;
+  // grid-template-areas: the area name of each cell, row by row. Empty for a
+  // cell in no area (`.`).
+  std::vector<std::vector<std::string>> template_areas;
+  // grid-auto-columns / grid-auto-rows: the sizes of the tracks past the
+  // templates, repeated. Empty for `auto`.
+  std::vector<Length> auto_columns;
+  std::vector<Length> auto_rows;
+  // The line names an item's edges give in place of a number, in grid-area
+  // order: row start, column start, row end, column end. Empty when unnamed.
+  std::array<std::string, 4> line_names;
+
+  bool operator==(const GridDetails&) const = default;
+};
 
 // Represents the "Computed CSS values"
 struct ComputedStyle : ComputedStyleCore {
@@ -545,12 +571,20 @@ struct ComputedStyle : ComputedStyleCore {
   // by field copy their presence in the core would force on every element.
   std::vector<Length> grid_template_columns;
   std::vector<Length> grid_template_rows;
-  // grid-template-areas: the area name of each cell, row by row. Empty for a
-  // cell in no area (`.`).
-  std::vector<std::vector<std::string>> grid_template_areas;
-  // `grid-area: <name>`: the area of the container's grid-template-areas the
-  // item goes in, on each axis whose edges are both auto.
-  std::string grid_area;
+  // The rest of the grid properties, which fewer elements still set: null
+  // for those that set none. See grid() and mutable_grid().
+  std::unique_ptr<GridDetails> grid_details;
+
+  const GridDetails& grid() const {
+    static const GridDetails kNone;
+    return grid_details ? *grid_details : kNone;
+  }
+  GridDetails& mutable_grid() {
+    if (!grid_details) {
+      grid_details = std::make_unique<GridDetails>();
+    }
+    return *grid_details;
+  }
 
   ComputedStyle() = default;
 
@@ -558,8 +592,9 @@ struct ComputedStyle : ComputedStyleCore {
       : ComputedStyleCore(other),
         grid_template_columns(other.grid_template_columns),
         grid_template_rows(other.grid_template_rows),
-        grid_template_areas(other.grid_template_areas),
-        grid_area(other.grid_area) {
+        grid_details(other.grid_details
+                         ? std::make_unique<GridDetails>(*other.grid_details)
+                         : nullptr) {
     if (other.transitions) {
       transitions =
           std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
@@ -596,8 +631,15 @@ struct ComputedStyle : ComputedStyleCore {
     }
     grid_template_columns = other.grid_template_columns;
     grid_template_rows = other.grid_template_rows;
-    grid_template_areas = other.grid_template_areas;
-    grid_area = other.grid_area;
+    if (other.grid_details) {
+      if (grid_details) {
+        *grid_details = *other.grid_details;
+      } else {
+        grid_details = std::make_unique<GridDetails>(*other.grid_details);
+      }
+    } else {
+      grid_details.reset();
+    }
     ComputedStyleCore::operator=(other);
     return *this;
   }

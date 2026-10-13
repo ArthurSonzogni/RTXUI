@@ -26,6 +26,8 @@ Track sizes accept:
   space is divided proportionally.
 - **`repeat(count, size)`** — shorthand for repeated tracks.
 - **`calc()` expressions** — e.g. `calc(50% - 5)`.
+- **`auto`** — as wide as the widest item in the track. Auto tracks share
+  the space left over when no `fr` track takes it.
 
 `grid-template` combines both axes as `rows / columns`:
 
@@ -55,9 +57,43 @@ back from the end:
 .corner { grid-area: 1 / 1 / 3 / 3; }   /* row-start / col-start / row-end / col-end */
 ```
 
+Lines can also be named, in brackets in the track list, and items placed by
+name. A name standing for both edges, as in `grid-column: main`, means the
+lines `main-start` and `main-end`:
+
+```css
+.page {
+  display: grid;
+  grid-template-columns: [full-start] 2 [main-start] 1fr [main-end] 2 [full-end];
+}
+.text  { grid-column: main; }
+.photo { grid-column: full-start / full-end; }
+```
+
 Items placed on both axes are placed first, then those placed on their row
-only, then the others fill the gaps in order, as in CSS. Placing an item past
-the last column adds columns, sized as `auto`.
+only, then the others fill the gaps in order, as in CSS.
+
+## Implicit tracks and auto-placement
+
+Rows past the template are added as items need them, and columns too when an
+item is placed past the last one. They are sized by `grid-auto-rows` and
+`grid-auto-columns`: `auto` by default, or a list of sizes that repeats.
+
+`grid-auto-flow` decides how auto-placed items fill the grid: `row` (the
+default) fills each row and adds rows, `column` fills each column and adds
+columns. Adding `dense` puts each item in the first hole it fits, rather than
+after the last item placed, so a small item can come before a large one that
+did not fit:
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 3;
+  grid-auto-flow: row dense;
+}
+.wide { grid-column: span 2; }
+```
 
 ## Named areas
 
@@ -81,6 +117,21 @@ the last column adds columns, sized as `auto`.
 
 `.` leaves a cell empty. Each name must cover a rectangle, and every row must
 have as many cells; a template breaking either rule is reported and ignored.
+Each area also names its lines `<name>-start` and `<name>-end`, so
+`grid-column: head-start / main-end` works too.
+
+`grid-template` sets the areas, the row sizes and the columns in one go, each
+row's size after its string:
+
+```css
+.app {
+  display: grid;
+  grid-template:
+    "head head" 1
+    "nav  main" 1fr
+    / 20 1fr;
+}
+```
 
 ## Aligning items in their cells
 

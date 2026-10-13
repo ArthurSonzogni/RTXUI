@@ -623,6 +623,85 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
           CheckGrid({"AA  BB"}));
   }
 
+  SECTION("named lines") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:[full-start] 2 [main-start] 2 [main-end] 2 [full-end];width:6;}.m{grid-column:main;}.f{grid-column:full;}</style><div class="g"><div class="m">MM</div><div class="f">FFFFFF</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 2)) ==
+          CheckGrid({"  MM  ", "FFFFFF"}));
+  }
+
+  SECTION("an area's implicit start and end lines") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2 2;grid-template-areas:"a b c";width:6;}.s{grid-column:b-start / c-end;}</style><div class="g"><div class="s">SSSS</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"  SSSS"}));
+  }
+
+  SECTION("grid-template with areas, row sizes and columns") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .g {
+            display: grid;
+            grid-template: "head head" 1 "side main" 2 / 2 4;
+            width: 6;
+          }
+          .h { grid-area: head; }
+          .s { grid-area: side; }
+          .m { grid-area: main; }
+        </style>
+        <div class="g">
+          <div class="m">MM</div><div class="s">S</div><div class="h">HH</div>
+        </div>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 3)) ==
+          CheckGrid({"HH    ", "S MM  ", "      "}));
+  }
+
+  SECTION("grid-auto-flow: column fills columns first") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-rows:1 1;grid-auto-flow:column;grid-auto-columns:2;width:6;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 2)) ==
+          CheckGrid({"AACC  ", "BB    "}));
+  }
+
+  SECTION("grid-auto-flow: dense fills earlier holes") {
+    // The wide item cannot fit after A, so it goes to the next row; dense
+    // puts C back in the hole it left.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2 2;width:6;}.dense{grid-auto-flow:dense;}.w{grid-column:span 3;}</style><div class="g dense"><div>AA</div><div class="w">WWWWWW</div><div>CC</div></div><div class="g"><div>aa</div><div class="w">wwwwww</div><div>cc</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 4)) ==
+          CheckGrid({"AACC  ", "WWWWWW", "aa    ", "wwwwww"}));
+  }
+
+  SECTION("grid-auto-rows sizes the rows past the template") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-rows:1;grid-auto-rows:2;width:2;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 5)) ==
+          CheckGrid({"AA", "BB", "  ", "CC", "  "}));
+  }
+
+  SECTION("auto tracks fit their content, then share what is left") {
+    // They used to share the width equally, whatever their content.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:auto auto;width:8;}</style><div class="g"><div>AAAA</div><div>B</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1)) ==
+          CheckGrid({"AAAA  B "}));
+  }
+
   SECTION("an unknown area name is auto-placed") {
     struct T : Component<T> {
       std::string_view view =

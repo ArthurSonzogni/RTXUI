@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -3176,41 +3177,100 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   int avail_height = std::max(0, parent_height - border_v - padding_v);
 
   // 1. The explicit grid: the tracks of the templates and of the areas.
-  const auto& areas = box->style().grid_template_areas;
+  const ComputedStyle& grid_style = box->style();
+  const GridDetails& grid_details = grid_style.grid();
+  const auto& areas = grid_details.template_areas;
   const int explicit_columns =
-      std::max(static_cast<int>(box->style().grid_template_columns.size()),
+      std::max(static_cast<int>(grid_style.grid_template_columns.size()),
                areas.empty() ? 0 : static_cast<int>(areas[0].size()));
   const int explicit_rows =
-      std::max(static_cast<int>(box->style().grid_template_rows.size()),
+      std::max(static_cast<int>(grid_style.grid_template_rows.size()),
                static_cast<int>(areas.size()));
 
+  // The named lines of each axis, by name: those of the templates, and the
+  // `<area>-start` / `<area>-end` lines every area implies. A name naming
+  // several lines stands for the first.
+  using LineNames = std::map<std::string, int, std::less<>>;
+  LineNames row_lines;
+  LineNames column_lines;
+  auto name_line = [](LineNames& lines, std::string name, int line) {
+    auto [it, inserted] = lines.try_emplace(std::move(name), line);
+    it->second = std::min(it->second, line);
+  };
+  for (int line = 0;
+       line < static_cast<int>(grid_details.template_row_names.size());
+       ++line) {
+    for (const auto& name : grid_details.template_row_names[line]) {
+      name_line(row_lines, name, line);
+    }
+  }
+  for (int line = 0;
+       line < static_cast<int>(grid_details.template_column_names.size());
+       ++line) {
+    for (const auto& name : grid_details.template_column_names[line]) {
+      name_line(column_lines, name, line);
+    }
+  }
+  for (int r = 0; r < static_cast<int>(areas.size()); ++r) {
+    for (int c = 0; c < static_cast<int>(areas[r].size()); ++c) {
+      const std::string& name = areas[r][c];
+      if (name.empty()) {
+        continue;
+      }
+      // Areas are rectangles: the first cell of a name is its top left, the
+      // last its bottom right.
+      name_line(row_lines, name + "-start", r);
+      name_line(column_lines, name + "-start", c);
+      auto& row_end = row_lines[name + "-end"];
+      row_end = std::max(row_end, r + 1);
+      auto& column_end = column_lines[name + "-end"];
+      column_end = std::max(column_end, c + 1);
+    }
+  }
+
+  // One edge of an item: a line, counted from 0, or a span to auto-place.
+  struct Edge {
+    int line = -1;
+    int span = 0;
+  };
+  auto to_edge = [](GridLine line, const std::string& name, bool start,
+                    const LineNames& lines, int explicit_tracks) {
+    if (!name.empty()) {
+      // `head` on a start edge is the line head-start, else the line head.
+      auto it = lines.find(name + (start ? "-start" : "-end"));
+      if (it == lines.end()) {
+        it = lines.find(name);
+      }
+      return it == lines.end() ? Edge() : Edge{it->second, 0};
+    }
+    // Lines are numbered from 1, and from -1 back from the end. Lines before
+    // the first are taken as the first.
+    if (line.line > 0) {
+      return Edge{line.line - 1, 0};
+    }
+    if (line.line < 0) {
+      return Edge{std::max(0, explicit_tracks + 1 + line.line), 0};
+    }
+    return Edge{-1, line.span};
+  };
   // Where an item goes on one axis: tracks [start, start + span), or only a
   // span when it is auto-placed (start -1).
   struct AxisPlacement {
     int start = -1;
     int span = 1;
   };
-  auto resolve_axis = [](GridLine from, GridLine to, int explicit_tracks) {
-    // Lines are numbered from 1, and from -1 back from the end. Lines before
-    // the first are taken as the first.
-    auto track = [&](int line) {
-      return line > 0 ? line - 1 : std::max(0, explicit_tracks + 1 + line);
-    };
-    if (from.line != 0 && to.line != 0) {
-      int start = track(from.line);
-      int end = track(to.line);
-      if (start > end) {
-        std::swap(start, end);
-      }
+  auto resolve_axis = [](Edge from, Edge to) {
+    if (from.line != -1 && to.line != -1) {
+      const int start = std::min(from.line, to.line);
+      const int end = std::max(from.line, to.line);
       return AxisPlacement{start, std::max(1, end - start)};
     }
-    if (from.line != 0) {
-      return AxisPlacement{track(from.line), std::max(1, to.span)};
+    if (from.line != -1) {
+      return AxisPlacement{from.line, std::max(1, to.span)};
     }
-    if (to.line != 0) {
-      const int end = track(to.line);
-      const int start = std::max(0, end - std::max(1, from.span));
-      return AxisPlacement{start, std::max(1, end - start)};
+    if (to.line != -1) {
+      const int start = std::max(0, to.line - std::max(1, from.span));
+      return AxisPlacement{start, std::max(1, to.line - start)};
     }
     return AxisPlacement{-1, std::max({1, from.span, to.span})};
   };
@@ -3235,51 +3295,22 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   std::vector<PlacedChild> placed_children;
   placed_children.reserve(num_children);
 
-  // 2. Each item's placement, as far as its own style says. The grid has as
-  // many columns as the explicit grid or the items placed past it need.
-  int C = std::max(1, explicit_columns);
+  // 2. Each item's placement, as far as its own style says.
   for (auto& child : box->children) {
     const ComputedStyle& style = child->style();
     if (style.position == PositionType::Absolute ||
         style.position == PositionType::Fixed) {
       continue;
     }
-    AxisPlacement row =
-        resolve_axis(style.grid_row_start, style.grid_row_end, explicit_rows);
-    AxisPlacement col = resolve_axis(style.grid_column_start,
-                                     style.grid_column_end, explicit_columns);
-    // A named area places the axes the edges leave both auto.
-    if (!style.grid_area.empty() && !areas.empty()) {
-      int r0 = -1;
-      int c0 = 0;
-      int r1 = 0;
-      int c1 = 0;
-      for (int r = 0; r < static_cast<int>(areas.size()); ++r) {
-        for (int c = 0; c < static_cast<int>(areas[r].size()); ++c) {
-          if (areas[r][c] == style.grid_area) {
-            if (r0 == -1) {
-              r0 = r;
-              c0 = c;
-            }
-            r1 = r;
-            c1 = c;
-          }
-        }
-      }
-      if (r0 != -1) {
-        if (style.grid_row_start == GridLine() &&
-            style.grid_row_end == GridLine()) {
-          row = {r0, r1 - r0 + 1};
-        }
-        if (style.grid_column_start == GridLine() &&
-            style.grid_column_end == GridLine()) {
-          col = {c0, c1 - c0 + 1};
-        }
-      }
-    }
-    if (col.start != -1) {
-      C = std::max(C, col.start + col.span);
-    }
+    const auto& names = style.grid().line_names;
+    const AxisPlacement row = resolve_axis(
+        to_edge(style.grid_row_start, names[0], true, row_lines, explicit_rows),
+        to_edge(style.grid_row_end, names[2], false, row_lines, explicit_rows));
+    const AxisPlacement col =
+        resolve_axis(to_edge(style.grid_column_start, names[1], true,
+                             column_lines, explicit_columns),
+                     to_edge(style.grid_column_end, names[3], false,
+                             column_lines, explicit_columns));
     PlacedChild pc;
     pc.box = child.get();
     pc.row = row.start;
@@ -3288,18 +3319,34 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     pc.c_span = col.span;
     placed_children.push_back(pc);
   }
+
+  // 3. Placement. Auto-placement fills rows, or columns with
+  // `grid-auto-flow: column`: the code below fills rows, so the axes are
+  // swapped around it for columns. The axis it fills has as many tracks as
+  // the explicit grid or the items placed past it need; the other grows.
+  const bool flow_column = grid_style.grid_auto_flow_column;
+  const bool dense = grid_style.grid_auto_flow_dense;
+  auto swap_axes = [&] {
+    for (auto& pc : placed_children) {
+      std::swap(pc.row, pc.col);
+      std::swap(pc.r_span, pc.c_span);
+    }
+  };
+  if (flow_column) {
+    swap_axes();
+  }
+  int fill_tracks = std::max(1, flow_column ? explicit_rows : explicit_columns);
+  for (auto& pc : placed_children) {
+    if (pc.col != -1) {
+      fill_tracks = std::max(fill_tracks, pc.col + pc.c_span);
+    }
+  }
   for (auto& pc : placed_children) {
     if (pc.col == -1) {
-      pc.c_span = std::min(pc.c_span, C);
+      pc.c_span = std::min(pc.c_span, fill_tracks);
     }
   }
 
-  // Tracks past the column template are sized as `auto`.
-  std::vector<Length> cols_template = box->style().grid_template_columns;
-  cols_template.resize(
-      C, explicit_columns == 0 && C == 1 ? Length::Fr(1.0f) : Length::Auto());
-
-  // 3. Placement using the sparse algorithm with an occupancy grid.
   struct OccupancyGrid {
     int C;
     std::vector<std::vector<bool>> grid;
@@ -3342,11 +3389,12 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       return true;
     }
   };
-  OccupancyGrid occupancy(C);
+  OccupancyGrid occupancy(fill_tracks);
 
-  // As in CSS: first the items placed on both axes, then those placed on
-  // their row only, each after the last one in its row, then the others in
-  // order.
+  // As in CSS: first the items placed on both axes, then those placed on the
+  // track they fill along only, each after the last one there, then the
+  // others in order. Dense placement looks for the first hole each time
+  // instead of going on from the last item.
   for (const auto& pc : placed_children) {
     if (pc.row != -1 && pc.col != -1) {
       occupancy.SetOccupied(pc.row, pc.col, pc.r_span, pc.c_span);
@@ -3358,12 +3406,12 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       continue;
     }
     int& cursor = row_cursors[pc.row];
-    int c = cursor;
-    while (c + pc.c_span <= C &&
+    int c = dense ? 0 : cursor;
+    while (c + pc.c_span <= fill_tracks &&
            !occupancy.CanFit(pc.row, c, pc.r_span, pc.c_span)) {
       ++c;
     }
-    if (c + pc.c_span > C) {
+    if (c + pc.c_span > fill_tracks) {
       c = 0;  // No room left in its row: overlap the start of it.
     }
     pc.col = c;
@@ -3375,6 +3423,10 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   for (auto& pc : placed_children) {
     if (pc.row != -1) {
       continue;
+    }
+    if (dense) {
+      cursor_r = 0;
+      cursor_c = 0;
     }
     if (pc.col != -1) {
       // Placed on its column only: the next row, from the cursor, it fits in.
@@ -3390,7 +3442,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       int c = cursor_c;
       while (!occupancy.CanFit(r, c, pc.r_span, pc.c_span)) {
         c++;
-        if (c + pc.c_span > C) {
+        if (c + pc.c_span > fill_tracks) {
           c = 0;
           r++;
         }
@@ -3401,14 +3453,45 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     occupancy.SetOccupied(pc.row, pc.col, pc.r_span, pc.c_span);
     cursor_r = pc.row;
     cursor_c = pc.col + pc.c_span;
-    if (cursor_c >= C) {
+    if (cursor_c >= fill_tracks) {
       cursor_c = 0;
       cursor_r++;
     }
   }
+  if (flow_column) {
+    swap_axes();
+  }
+
+  // The tracks: the template's, then those of grid-auto-columns /
+  // grid-auto-rows, repeated, for the tracks past it.
+  int C = std::max(1, explicit_columns);
+  int R = std::max(1, explicit_rows);
+  for (const auto& pc : placed_children) {
+    C = std::max(C, pc.col + pc.c_span);
+    R = std::max(R, pc.row + pc.r_span);
+  }
+  auto tracks = [](const std::vector<Length>& templ,
+                   const std::vector<Length>& implicit, int count) {
+    std::vector<Length> all(
+        templ.begin(), templ.begin() + std::min<size_t>(templ.size(), count));
+    while (static_cast<int>(all.size()) < count) {
+      const size_t i = all.size() - std::min(all.size(), templ.size());
+      all.push_back(implicit.empty() ? Length::Auto()
+                                     : implicit[i % implicit.size()]);
+    }
+    return all;
+  };
+  // A grid with no column tracks at all has one, taking the whole width.
+  const std::vector<Length> cols_template =
+      explicit_columns == 0 && C == 1 && grid_details.auto_columns.empty()
+          ? std::vector<Length>{Length::Fr(1.0f)}
+          : tracks(grid_style.grid_template_columns, grid_details.auto_columns,
+                   C);
+  const std::vector<Length> rows_template =
+      tracks(grid_style.grid_template_rows, grid_details.auto_rows, R);
 
   // 4. Resolve Column Widths
-  int col_gap_val = box->style().column_gap.Resolve(avail_width);
+  int col_gap_val = grid_style.column_gap.Resolve(avail_width);
   int total_col_gaps = std::max(0, C - 1) * col_gap_val;
   int remaining_width = std::max(0, avail_width - total_col_gaps);
 
@@ -3424,29 +3507,40 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     }
   }
   int free_col_width = std::max(0, remaining_width - non_fr_col_width);
-  if (total_col_fr > 0.0f) {
-    // An auto track is as wide as the widest item in it alone, out of the
-    // space the fixed tracks leave; the fr tracks share what remains.
-    for (int c = 0; c < C; ++c) {
-      if (cols_template[c].unit != Unit::Auto) {
+
+  // An auto track is as wide as the widest item in it alone, out of the space
+  // the other tracks leave.
+  std::vector<int> auto_content(C, 0);
+  int auto_count = 0;
+  int auto_total = 0;
+  for (int c = 0; c < C; ++c) {
+    if (cols_template[c].unit != Unit::Auto) {
+      continue;
+    }
+    ++auto_count;
+    for (const auto& pc : placed_children) {
+      if (pc.col != c || pc.c_span != 1) {
         continue;
       }
-      int widest = 0;
-      for (const auto& pc : placed_children) {
-        if (pc.col != c || pc.c_span != 1) {
-          continue;
-        }
-        LayoutContext measure_context =
-            CreateChildContext(box, parent_width, parent_height, 0, 0, context);
-        measure_context.is_measurement = true;
-        const LayoutConstraints measure_c = {
-            {free_col_width, MeasureMode::Undefined},
-            {0, MeasureMode::Undefined}};
-        widest = std::max(
-            widest, RunLayout({pc.box}, measure_c, measure_context)->width);
+      LayoutContext measure_context =
+          CreateChildContext(box, parent_width, parent_height, 0, 0, context);
+      measure_context.is_measurement = true;
+      const LayoutConstraints measure_c = {
+          {free_col_width, MeasureMode::Undefined},
+          {0, MeasureMode::Undefined}};
+      auto_content[c] =
+          std::max(auto_content[c],
+                   RunLayout({pc.box}, measure_c, measure_context)->width);
+    }
+    auto_total += auto_content[c];
+  }
+  if (total_col_fr > 0.0f) {
+    // The fr tracks share what the auto tracks leave.
+    for (int c = 0; c < C; ++c) {
+      if (cols_template[c].unit == Unit::Auto) {
+        col_widths[c] = std::min(auto_content[c], free_col_width);
+        free_col_width -= col_widths[c];
       }
-      col_widths[c] = std::min(widest, free_col_width);
-      free_col_width -= col_widths[c];
     }
     for (int c = 0; c < C; ++c) {
       if (cols_template[c].unit == Unit::Fr) {
@@ -3454,28 +3548,28 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
             free_col_width * (cols_template[c].value / total_col_fr));
       }
     }
-  } else {
-    // If all tracks are Auto, distribute equally
-    int num_auto = 0;
+  } else if (auto_count > 0) {
+    // Without fr tracks, the auto tracks stretch to fill the width, sharing
+    // what their content leaves equally; or shrink in proportion to it when
+    // it does not fit.
+    const int extra = free_col_width - auto_total;
+    int nth = 0;
     for (int c = 0; c < C; ++c) {
-      if (cols_template[c].unit == Unit::Auto) {
-        num_auto++;
+      if (cols_template[c].unit != Unit::Auto) {
+        continue;
       }
-    }
-    if (num_auto > 0) {
-      int auto_width = free_col_width / num_auto;
-      for (int c = 0; c < C; ++c) {
-        if (cols_template[c].unit == Unit::Auto) {
-          col_widths[c] = auto_width;
-        }
+      if (extra >= 0) {
+        col_widths[c] = auto_content[c] + extra / auto_count +
+                        (nth < extra % auto_count ? 1 : 0);
+      } else {
+        col_widths[c] =
+            auto_total > 0
+                ? static_cast<int>(static_cast<int64_t>(auto_content[c]) *
+                                   free_col_width / auto_total)
+                : 0;
       }
+      ++nth;
     }
-  }
-
-  // 5. Resolve total rows needed
-  int R = std::max(1, explicit_rows);
-  for (const auto& pc : placed_children) {
-    R = std::max(R, pc.row + pc.r_span);
   }
 
   // 6. Resolve Row Heights
@@ -3487,7 +3581,6 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   std::vector<bool> is_row_fr(R, false);
   float total_row_fr = 0.0f;
 
-  const auto& rows_template = box->style().grid_template_rows;
   for (int r = 0; r < R; ++r) {
     if (r < static_cast<int>(rows_template.size())) {
       if (rows_template[r].unit == Unit::Fr) {
