@@ -2515,7 +2515,8 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
 
   // The last tree stays alive until this one is laid out: the fragments
   // reused from it are copied, and its text fragments view its boxes' text.
-  auto previous_fragment = std::move(root_fragment_);
+  // Its fragments are in the other arena, which ResetLayoutArena() keeps; its
+  // boxes are held here.
   auto previous_box = std::move(root_box_);
   ResetLayoutArena();
   layout_arenas_.reuse_fragments = reuse_fragments &&
@@ -2545,7 +2546,6 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
     laid_out_since_paint_ = true;
   }
   // Before laying out again below, which resets the arena they are in.
-  previous_fragment = nullptr;
   previous_box = nullptr;
 
   // A `<for virtual="">` renders the items around what its scroll container
