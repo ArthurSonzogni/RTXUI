@@ -242,6 +242,11 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
   return ss.str();
 }
 
+std::string Texture::RenderUnchanged() const {
+  // RenderDiff() ends at the bottom-left, from the top-left.
+  return height_ > 1 ? std::string(height_ - 1, '\n') + "\r" : "";
+}
+
 uint16_t Texture::AddLink(std::string_view url) {
   if (url.empty() || std::ranges::any_of(url, [](char c) {
         return static_cast<unsigned char>(c) < 0x20 ||

@@ -2515,6 +2515,16 @@ TEST_CASE("Screen.ExitStopsTheLoop", "[terminal]") {
   REQUIRE(app->keys == 3);
 }
 
+TEST_CASE("Texture::RenderUnchanged is the diff of an identical texture",
+          "[terminal]") {
+  for (const int height : {1, 2, 5}) {
+    Texture texture(4, height);
+    texture[1, 0].character = "x";
+    texture[1, 0].foreground_color = Color::RGB(255, 0, 0);
+    CHECK(texture.RenderUnchanged() == texture.RenderDiff(texture));
+  }
+}
+
 TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
   struct VirtualTerminal {
     int width;
@@ -5487,6 +5497,20 @@ TEST_CASE("A translucent background blends with the screen background",
   screen.Draw();
   // Half white over black, rather than white.
   CHECK(device->GetOutput().find("48;2;127;127;127m") != std::string::npos);
+}
+
+TEST_CASE("A new screen background repaints a frame that changed nothing else",
+          "[terminal]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(10, 3);
+  Screen screen(Ref<GlassOnQ>::New(), device);
+  screen.SetBackgroundColor(Color::RGB(0, 0, 0));
+  screen.Draw();
+  device->ClearOutput();
+  // The layout is reused whole, so only the background tells it to paint.
+  screen.SetBackgroundColor(Color::RGB(10, 20, 30));
+  screen.Draw();
+  CHECK(device->GetOutput().find("48;2;10;20;30m") != std::string::npos);
 }
 
 }  // namespace rtxui

@@ -1136,6 +1136,15 @@ class ScreenImpl {
   int laid_out_height_ = -1;
   // Whether the last layout reused any fragment from the one before it.
   bool reused_fragments_ = false;
+  // Whether a layout since the last paint ran anything, rather than reuse the
+  // whole of the one before it. Nothing painted can have changed otherwise,
+  // but the colors the screen paints over. A burst of input lays out without
+  // painting (suppress_draw_), so this spans layouts.
+  bool laid_out_since_paint_ = true;
+  // The colors last_texture_ was painted over.
+  bool painted_background_set_ = false;
+  Color painted_background_;
+  Color painted_terminal_background_;
   std::unique_ptr<Texture> last_texture_;
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
@@ -2491,7 +2500,7 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
   }
 
   focused_element_ = nullptr;
-  if (root) {
+  if (root && Element::FocusedCount() > 0) {
     std::function<void(Element*)> FindFocused = [&](Element* el) {
       if (!el) {
         return;
@@ -2521,8 +2530,9 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
   laid_out_width_ = width_;
   laid_out_height_ = height_;
   const int reuse_count = LayoutReuseCount();
+  const int run_count = LayoutRunCount();
 
-  auto root_box = LayoutTreeBuilder::Build(root);
+  auto root_box = LayoutTreeBuilder::Build(root, {}, /*may_defer=*/true);
 
   LayoutConstraints viewport = {
       {width_, MeasureMode::Exactly},
@@ -2537,6 +2547,9 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
   root_fragment_ = root_fragment;
   root_box_ = root_box;
   reused_fragments_ = LayoutReuseCount() != reuse_count;
+  if (!root_fragment_ || !reused_fragments_ || LayoutRunCount() != run_count) {
+    laid_out_since_paint_ = true;
+  }
   // Before laying out again below, which resets the arena they are in.
   previous_fragment = nullptr;
   previous_box = nullptr;
@@ -2572,10 +2585,21 @@ void ScreenImpl::Draw(bool reuse_layout) {
   auto root = component_->Root();
   const auto& root_fragment = root_fragment_;
 
-  Texture texture(width_, height_);
-  if (root_fragment) {
+  // A layout reused whole paints what the last frame painted.
+  const bool repaint = reuse_layout || laid_out_since_paint_ ||
+                       !last_texture_ || last_texture_->width() != width_ ||
+                       last_texture_->height() != height_ ||
+                       painted_background_set_ != background_color_set_ ||
+                       painted_background_ != background_color_ ||
+                       painted_terminal_background_ != terminal_background_;
+  Texture texture = repaint ? Texture(width_, height_) : *last_texture_;
+  if (repaint && root_fragment) {
     PaintScreen(*root_fragment, texture);
   }
+  laid_out_since_paint_ = false;
+  painted_background_set_ = background_color_set_;
+  painted_background_ = background_color_;
+  painted_terminal_background_ = terminal_background_;
 
   // RTXUI_VERIFY_LAYOUT_REUSE (set for the tests) lays out again anyway,
   // from scratch, and stops if that draws anything else.
@@ -2599,7 +2623,8 @@ void ScreenImpl::Draw(bool reuse_layout) {
                   last_texture_->width() == width_ &&
                   last_texture_->height() == height_;
   if (use_diff) {
-    new_output = texture.RenderDiff(*last_texture_);
+    new_output = repaint ? texture.RenderDiff(*last_texture_)
+                         : texture.RenderUnchanged();
   } else {
     new_output = texture.Render();
   }

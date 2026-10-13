@@ -193,8 +193,8 @@ class RTXUI_EXPORT Element : public RefCounted {
   // Non-copyable, non-movable.
   Element(const Element&) = delete;
   Element& operator=(const Element&) = delete;
-  Element(Element&&) = default;
-  Element& operator=(Element&&) = default;
+  Element(Element&&) = delete;
+  Element& operator=(Element&&) = delete;
 
   /// Attaches `child`, detaching it from its current parent first if it has
   /// one. Reconciliation can hand back an element that is still where it was
@@ -517,7 +517,10 @@ class RTXUI_EXPORT Element : public RefCounted {
   void set_layout_height(int h) { layout_height_ = h; }
 
   bool focused() const { return focused_; }
-  void set_focused(bool f) { focused_ = f; }
+  void set_focused(bool f);
+  /// How many elements are focused, in any tree. Zero spares a frame from
+  /// searching its tree for one.
+  static int FocusedCount();
 
   bool hovered() const { return hovered_; }
   void set_hovered(bool h) { hovered_ = h; }

@@ -430,10 +430,14 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
   // algorithm, being one that lays out each child through RunLayout, never
   // reaches below it. Nothing in it changed, and the last layout had it in
   // its cache, which it does only for a subtree without out-of-flow boxes.
-  if (may_defer && box->style().display_outside == DisplayOutside::Block &&
-      box->style().position != PositionType::Absolute &&
-      box->style().position != PositionType::Fixed &&
-      !IsTablePart(dom_node->tag()) && HasLayoutToReuse(*dom_node)) {
+  // The root, whatever its display, is laid out by RunLayout itself.
+  const bool laid_out_by_run_layout =
+      !dom_node->Parent() ||
+      (box->style().display_outside == DisplayOutside::Block &&
+       box->style().position != PositionType::Absolute &&
+       box->style().position != PositionType::Fixed);
+  if (may_defer && laid_out_by_run_layout && !IsTablePart(dom_node->tag()) &&
+      HasLayoutToReuse(*dom_node)) {
     box->children_deferred = true;
     return box;
   }

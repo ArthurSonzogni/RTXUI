@@ -23,6 +23,9 @@ class Texture {
   int height() const { return height_; }
   std::string Render() const;
   std::string RenderDiff(const Texture& old_texture) const;
+  /// What RenderDiff() returns from an identical texture, without comparing
+  /// every cell: the cursor moved where it leaves it.
+  std::string RenderUnchanged() const;
 
   /// The id for Cell::link of a hyperlink to `url`, which the terminal makes
   /// clickable (OSC 8). 0, meaning no link, for an empty URL or one holding a

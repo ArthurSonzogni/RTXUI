@@ -37,6 +37,7 @@ namespace {
 
 // Atomic like the element counters: elements may be built off the UI thread.
 std::atomic<uint64_t> g_layout_epoch{0};
+std::atomic<int> g_focused_count{0};
 
 float SolveCubicBezier(float x1, float y1, float x2, float y2, float t) {
   if (t <= 0.0f) {
@@ -515,6 +516,17 @@ Element::Element(const ComponentBase* component)
   g_elements_created++;
 }
 
+void Element::set_focused(bool f) {
+  if (f != focused_) {
+    g_focused_count.fetch_add(f ? 1 : -1, std::memory_order_relaxed);
+    focused_ = f;
+  }
+}
+
+int Element::FocusedCount() {
+  return g_focused_count.load(std::memory_order_relaxed);
+}
+
 uint64_t LayoutEpoch() {
   return g_layout_epoch.load(std::memory_order_relaxed);
 }
@@ -663,6 +675,7 @@ Element::~Element() {
   if (handle_target_) {
     handle_target_->element = nullptr;
   }
+  set_focused(false);
   g_elements_destroyed++;
 }
 
