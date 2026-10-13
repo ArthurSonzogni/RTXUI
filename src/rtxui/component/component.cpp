@@ -1978,6 +1978,10 @@ void ResolveElementStyle(Element* element,
         }
       }
       for (const RuleBuckets* buckets : bucket_sets) {
+        // As in CSS, no selector matches text: it takes what it inherits.
+        if (element->is_text()) {
+          break;
+        }
         if (buckets && is_styled) {
           auto match_and_apply =
               [&](const std::vector<const css::Ruleset*>& rulesets,

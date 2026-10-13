@@ -290,6 +290,41 @@ class NotSelectorApp : public rtxui::Component<NotSelectorApp> {
 
 }  // namespace
 
+namespace {
+
+class TextSelectorApp : public rtxui::Component<TextSelectorApp> {
+ public:
+  std::string_view view = R"(
+    <div id="box">text</div>
+    <style>
+      #box * { color: rgb(1, 1, 1); }
+      :not(.x) { margin-left: 2; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("No selector matches text", "[component][css][selector]") {
+  // Regression: `#box *` and `:not(.x)` reached the text node itself, which
+  // CSS never does. A text node given position: absolute that way crashed
+  // layout.
+  auto app = rtxui::Ref<TextSelectorApp>::New();
+  app->Mount();
+  auto* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+  CHECK(box->style.margin.left == 2);
+  int texts = 0;
+  box->Visit([&texts](rtxui::Element& element) {
+    if (element.is_text()) {
+      ++texts;
+      CHECK_FALSE(element.style.foreground_color.has_value());
+      CHECK(element.style.margin.left == 0);
+    }
+  });
+  CHECK(texts == 1);
+}
+
 TEST_CASE("The :not() selector", "[component][css][selector]") {
   auto app = rtxui::Ref<NotSelectorApp>::New();
   app->Mount();
