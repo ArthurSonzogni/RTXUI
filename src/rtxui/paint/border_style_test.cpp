@@ -257,8 +257,8 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
     std::string output = GetTextLayer(texture);
     std::vector<std::string> expected = {
         "                                                  ",
-        " █▀▀▀▀▀█  ▏    ▕  ▁▁▁▁▁▁  none  ········          ",
-        " █thick█  ▏vkey▕  ▎wide▊        ·dotted·          ",
+        " █▀▀▀▀▀█  ▏    ▕  ▁▁▁▁▁▁        ········          ",
+        " █thick█  ▏vkey▕  ▎wide▊  none  ·dotted·          ",
         " █▄▄▄▄▄█  ▏    ▕  ▔▔▔▔▔▔        ········          ",
         "                                                  ",
         "                                                  ",
@@ -279,6 +279,8 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
         "                                                  ",
         "                                                  ",
     };
+    // `none` has no border: it sits on the baseline its neighbours' text
+    // gives the line, as vertical-align: baseline does in CSS.
     // Fix the U+2556 character manually if needed (it matches exactly U+2556)
     CHECK(output == CheckGrid(expected));
   }
@@ -307,8 +309,8 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
 
     std::vector<std::string> expected = {
         "00000000000000000000000000000000000000000000000000",
-        "01111111001111110000000000111100111111110000000000",
-        "01111111001111110011111200000000111111110000000000",
+        "01111111001111110000000000000000111111110000000000",
+        "01111111001111110011111200111100111111110000000000",
         "01111111001111110000000000000000111111110000000000",
         "00000000000000000000000000000000000000000000000000",
         "00000000000000000000000000000000000000000000000000",

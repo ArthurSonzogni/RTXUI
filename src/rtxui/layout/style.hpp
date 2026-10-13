@@ -378,6 +378,15 @@ struct AnimationConfig {
   bool operator==(const AnimationConfig&) const = default;
 };
 
+// vertical-align: where an inline-level box sits in its line, or a table cell's
+// content in its cell.
+enum class VerticalAlign : uint8_t {
+  Baseline,
+  Top,
+  Middle,
+  Bottom,
+};
+
 // One edge of a grid item's placement: `auto`, a line number counted from 1
 // (negative counts back from the end of the explicit grid), or `span N`.
 struct GridLine {
@@ -523,6 +532,7 @@ struct ComputedStyleCore {
 
   Cursor cursor = Cursor::Auto;
   Visibility visibility = Visibility::Visible;
+  VerticalAlign vertical_align = VerticalAlign::Baseline;
   // pointer-events: whether the mouse passes through the element (true, for
   // `none`) or targets it (false, for `auto`); inherited when unset.
   std::optional<bool> pointer_events_none;

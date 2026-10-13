@@ -4696,4 +4696,68 @@ TEST_CASE("Layout: line-clamp shows the first lines and an ellipsis",
   }
 }
 
+TEST_CASE("Layout: vertical-align places inline boxes in their line",
+          "[layout][vertical-align]") {
+  // A three-row box, its text on the middle row, beside one-row text.
+  SECTION("baseline: text lines up with the box's last line of text") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{display:inline-block;border:solid;}</style><div>ab<div class="b">OK</div>cd</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 3)) ==
+          CheckGrid({"  ┌──┐  ", "ab│OK│cd", "  └──┘  "}));
+  }
+
+  SECTION("top, middle and bottom") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{display:inline-block;width:1;}.tall{height:3;}.t{vertical-align:top;}.m{vertical-align:middle;}.o{vertical-align:bottom;}</style><div><div class="b tall">|</div><span class="t">T</span><div class="b t">t</div><div class="b m">m</div><div class="b o">o</div></div>)html";
+    };
+    // The first box makes the line three rows tall; its text, on its first
+    // row, is the baseline.
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 5, 3)) ==
+          CheckGrid({"|Tt  ", "   m ", "    o"}));
+  }
+
+  SECTION("a box without text sits on the baseline by its bottom row") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{display:inline-block;width:2;height:2;background-color:red;}</style><div>a<div class="b"></div>b</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"    ", "a  b"}));
+  }
+
+  SECTION("table cells: top, middle and bottom") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          td { width: 2; }
+          .tall { height: 5; }
+          .m { vertical-align: middle; }
+          .o { vertical-align: bottom; }
+        </style>
+        <table><tr>
+          <td class="tall">a</td><td>t</td><td class="m">m</td>
+          <td class="o">o</td>
+        </tr></table>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 5)) ==
+          CheckGrid(
+              {"a t     ", "        ", "    m   ", "        ", "      o "}));
+  }
+
+  SECTION("a box's out-of-flow content is not one of its lines") {
+    // A tooltip's popup appearing used to move the baseline, and the
+    // tooltip with it, away from the mouse hovering it.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{display:inline-block;position:relative;}.pop{position:absolute;top:2;left:0;}</style><div>a<div class="b">x<div class="pop">popup</div></div>b</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 3)) ==
+          CheckGrid({"axb   ", "      ", " popup"}));
+  }
+}
+
 }  // namespace rtxui

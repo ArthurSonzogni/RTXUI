@@ -13,6 +13,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -171,6 +172,98 @@ std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
   std::memcpy(dst, text.data(), truncate_byte_index);
   std::memcpy(dst + truncate_byte_index, "...", 3);
   return std::string_view(dst, result_size);
+}
+
+// The row of an inline-level box's baseline: that of its last line of text in
+// flow, or its bottom row when it has none or clips its content, as in CSS.
+int FragmentBaseline(const PhysicalFragment* fragment) {
+  const int bottom = std::max(0, fragment->height - 1);
+  if (fragment->clips_descendants) {
+    return bottom;
+  }
+  int last = -1;
+  auto find = [&last](auto& self, const PhysicalFragment* at, int y) -> void {
+    for (const auto& child : at->children) {
+      if (child.fragment->is_text) {
+        last = std::max(last, y + child.y);
+        continue;
+      }
+      // Out-of-flow boxes, a tooltip's popup say, are no line of the box.
+      const Element* element = child.fragment->dom_node;
+      if (element && (element->style.position == PositionType::Absolute ||
+                      element->style.position == PositionType::Fixed)) {
+        continue;
+      }
+      self(self, child.fragment, y + child.y);
+    }
+  };
+  find(find, fragment, 0);
+  return last >= 0 ? last : bottom;
+}
+
+// An inline-level box placed on a line, which vertical-align moves once the
+// line is complete.
+struct LineBox {
+  // Its index among the line container's children.
+  size_t index;
+  // Its height and top margin.
+  int height;
+  int margin_top;
+  VerticalAlign align;
+};
+
+// Aligns the items of the line starting at `children[begin]` as
+// vertical-align asks, and returns the line's height. Text, and every box
+// left at `baseline`, sits on one baseline; top, middle and bottom boxes are
+// placed in the line those make.
+int AlignLine(std::span<PhysicalFragment::ChildLink> children,
+              const std::vector<LineBox>& boxes,
+              size_t begin,
+              int min_height) {
+  struct Item {
+    int height = 1;
+    int baseline = 0;
+    VerticalAlign align = VerticalAlign::Baseline;
+  };
+  std::vector<Item> items(children.size() - begin);
+  for (const LineBox& box : boxes) {
+    Item& item = items[box.index - begin];
+    item.height = box.height;
+    item.align = box.align;
+    if (box.align == VerticalAlign::Baseline) {
+      item.baseline =
+          box.margin_top + FragmentBaseline(children[box.index].fragment);
+    }
+  }
+  int baseline = 0;
+  for (const Item& item : items) {
+    if (item.align == VerticalAlign::Baseline) {
+      baseline = std::max(baseline, item.baseline);
+    }
+  }
+  int height = min_height;
+  for (const Item& item : items) {
+    height = std::max(height, item.align == VerticalAlign::Baseline
+                                  ? baseline - item.baseline + item.height
+                                  : item.height);
+  }
+  for (size_t i = 0; i < items.size(); ++i) {
+    const Item& item = items[i];
+    switch (item.align) {
+      case VerticalAlign::Baseline:
+        children[begin + i].y += baseline - item.baseline;
+        break;
+      case VerticalAlign::Top:
+        break;
+      case VerticalAlign::Middle:
+        children[begin + i].y += (height - item.height) / 2;
+        break;
+      case VerticalAlign::Bottom:
+        children[begin + i].y += height - item.height;
+        break;
+    }
+  }
+  return height;
 }
 
 // --- Forward Declarations ---
@@ -1193,9 +1286,18 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   };
   std::vector<LineInfo> lines;
   size_t line_start_index = 0;
+  // The inline-level boxes on the current line.
+  std::vector<LineBox> line_boxes;
 
   auto commit_line = [&](bool hard_break = false) {
     max_line_width = std::max(max_line_width, cursor_x);
+    // A line of text alone, or of one box, has nothing to align.
+    if (!line_boxes.empty() &&
+        container_frag->children.size() - line_start_index > 1) {
+      line_height = AlignLine(container_frag->children, line_boxes,
+                              line_start_index, min_line_height);
+    }
+    line_boxes.clear();
     lines.push_back({line_start_index, container_frag->children.size(),
                      cursor_x, hard_break, cursor_y, line_height});
     cursor_x = 0;
@@ -1512,6 +1614,9 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     }
 
     container_frag->children.push_back({child_frag, rx, ry});
+    line_boxes.push_back({container_frag->children.size() - 1,
+                          child_frag->height + child_m_vert, m_top,
+                          elem->style().vertical_align});
     line_height = std::max(line_height, child_frag->height + child_m_vert);
     cursor_x += child_frag->width + child_m_horiz;
   };
@@ -3165,7 +3270,33 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
 
         LayoutContext child_context = CreateChildContext(
             row_box, content_width_limit, row_height, col_x[col], 0, context);
+        // vertical-align: middle or bottom moves the cell's content down by
+        // what the row has to spare.
+        const VerticalAlign align = cell->style().vertical_align;
+        int shift = 0;
+        if (align == VerticalAlign::Middle || align == VerticalAlign::Bottom) {
+          LayoutContext measure_context = child_context;
+          measure_context.is_measurement = true;
+          const int natural_height =
+              RunLayout({cell},
+                        {{cell_width, MeasureMode::Exactly},
+                         {0, MeasureMode::Undefined}},
+                        measure_context)
+                  ->height;
+          const int spare = std::max(0, cell_height - natural_height);
+          shift = align == VerticalAlign::Middle ? spare / 2 : spare;
+        }
         auto final_cell_frag = RunLayout({cell}, final_c, child_context);
+        if (shift > 0) {
+          // A copy is moved: the layout cache may hand the cell's own
+          // fragment out again.
+          auto* aligned = MakeArenaFragment(0, 0);
+          *aligned = *final_cell_frag;
+          for (auto& link : aligned->children) {
+            link.y += shift;
+          }
+          final_cell_frag = aligned;
+        }
 
         row_cells_frag->children.push_back({final_cell_frag, col_x[col], 0});
       }

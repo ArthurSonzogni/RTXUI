@@ -3180,6 +3180,25 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "vertical-align") {
+    if (v == "baseline") {
+      style.vertical_align = VerticalAlign::Baseline;
+      return;
+    }
+    if (v == "top" || v == "text-top") {
+      style.vertical_align = VerticalAlign::Top;
+      return;
+    }
+    if (v == "middle") {
+      style.vertical_align = VerticalAlign::Middle;
+      return;
+    }
+    if (v == "bottom" || v == "text-bottom") {
+      style.vertical_align = VerticalAlign::Bottom;
+      return;
+    }
+  }
+
   if (p == "pointer-events") {
     if (v == "none" || v == "auto") {
       style.pointer_events_none = v == "none";
