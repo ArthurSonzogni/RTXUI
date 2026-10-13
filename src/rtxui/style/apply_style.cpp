@@ -1691,9 +1691,114 @@ ContentValue ParseContent(
   return {true, std::move(text)};
 }
 
+namespace {
+
+// Logical properties, for the one writing mode a terminal has: horizontal,
+// left to right. The inline axis runs left to right, the block axis top to
+// bottom. Also the standard spellings of the per-side border longhands.
+// Applies `declaration` through the physical properties it stands for, and
+// returns whether it was one.
+bool ApplyLogicalProperty(ComputedStyle& style,
+                          const css::Declaration& declaration) {
+  static constexpr std::pair<std::string_view, std::string_view> kRenames[] = {
+      {"margin-inline-start", "margin-left"},
+      {"margin-inline-end", "margin-right"},
+      {"margin-block-start", "margin-top"},
+      {"margin-block-end", "margin-bottom"},
+      {"padding-inline-start", "padding-left"},
+      {"padding-inline-end", "padding-right"},
+      {"padding-block-start", "padding-top"},
+      {"padding-block-end", "padding-bottom"},
+      {"inset-inline-start", "left"},
+      {"inset-inline-end", "right"},
+      {"inset-block-start", "top"},
+      {"inset-block-end", "bottom"},
+      {"inline-size", "width"},
+      {"block-size", "height"},
+      {"min-inline-size", "min-width"},
+      {"max-inline-size", "max-width"},
+      {"min-block-size", "min-height"},
+      {"max-block-size", "max-height"},
+      {"border-inline-start", "border-left"},
+      {"border-inline-end", "border-right"},
+      {"border-block-start", "border-top"},
+      {"border-block-end", "border-bottom"},
+      {"border-inline-start-width", "border-left"},
+      {"border-inline-end-width", "border-right"},
+      {"border-block-start-width", "border-top"},
+      {"border-block-end-width", "border-bottom"},
+      {"border-inline-start-color", "border-color-left"},
+      {"border-inline-end-color", "border-color-right"},
+      {"border-block-start-color", "border-color-top"},
+      {"border-block-end-color", "border-color-bottom"},
+      {"border-top-width", "border-top"},
+      {"border-right-width", "border-right"},
+      {"border-bottom-width", "border-bottom"},
+      {"border-left-width", "border-left"},
+      {"border-top-color", "border-color-top"},
+      {"border-right-color", "border-color-right"},
+      {"border-bottom-color", "border-color-bottom"},
+      {"border-left-color", "border-color-left"},
+  };
+  // <start> <end>?, the end taking the start's value when left out.
+  static constexpr std::array<std::string_view, 3> kPairs[] = {
+      {"margin-inline", "margin-left", "margin-right"},
+      {"margin-block", "margin-top", "margin-bottom"},
+      {"padding-inline", "padding-left", "padding-right"},
+      {"padding-block", "padding-top", "padding-bottom"},
+      {"inset-inline", "left", "right"},
+      {"inset-block", "top", "bottom"},
+      {"border-inline-width", "border-left", "border-right"},
+      {"border-block-width", "border-top", "border-bottom"},
+      {"border-inline-color", "border-color-left", "border-color-right"},
+      {"border-block-color", "border-color-top", "border-color-bottom"},
+  };
+  // One value for both sides.
+  static constexpr std::array<std::string_view, 3> kBoth[] = {
+      {"border-inline", "border-left", "border-right"},
+      {"border-block", "border-top", "border-bottom"},
+  };
+  const std::string_view p = declaration.property;
+  for (const auto& [logical, physical] : kRenames) {
+    if (p == logical) {
+      ApplyStyle(style, {physical, declaration.value, declaration.important});
+      return true;
+    }
+  }
+  for (const auto& [logical, start, end] : kPairs) {
+    if (p != logical) {
+      continue;
+    }
+    const auto values = SplitWords(declaration.value);
+    if (values.empty() || values.size() > 2) {
+      ReportDiagnostic("invalid '" + std::string(p) + ": " +
+                       std::string(declaration.value) +
+                       "': expected one or two values");
+      return true;
+    }
+    ApplyStyle(style, {start, values[0], declaration.important});
+    ApplyStyle(style, {end, values.back(), declaration.important});
+    return true;
+  }
+  for (const auto& [logical, start, end] : kBoth) {
+    if (p == logical) {
+      ApplyStyle(style, {start, declaration.value, declaration.important});
+      ApplyStyle(style, {end, declaration.value, declaration.important});
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
+
 void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   auto p = declaration.property;
   auto v = declaration.value;
+
+  if (ApplyLogicalProperty(style, declaration)) {
+    return;
+  }
 
   if (p == "transition") {
     auto transitions = std::make_unique<std::vector<TransitionConfig>>();

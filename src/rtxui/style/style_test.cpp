@@ -1786,6 +1786,43 @@ TEST_CASE("flex-flow sets the direction and the wrapping", "[style][flex]") {
   rtxui::SetDiagnosticHandler(nullptr);
 }
 
+TEST_CASE("Logical properties map onto the physical sides",
+          "[style][logical]") {
+  // A terminal writes left to right, top to bottom: inline is left/right,
+  // block is top/bottom.
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"margin-inline", "1 2"});
+  rtxui::ApplyStyle(style, {"margin-block", "3"});
+  CHECK(style.margin.left == 1);
+  CHECK(style.margin.right == 2);
+  CHECK(style.margin.top == 3);
+  CHECK(style.margin.bottom == 3);
+
+  rtxui::ApplyStyle(style, {"padding-inline-start", "4"});
+  rtxui::ApplyStyle(style, {"padding-block-end", "5"});
+  CHECK(style.padding.left == 4);
+  CHECK(style.padding.bottom == 5);
+
+  rtxui::ApplyStyle(style, {"inline-size", "calc(50% - 1)"});
+  rtxui::ApplyStyle(style, {"max-block-size", "6"});
+  CHECK(style.width.unit == rtxui::Unit::Calc);
+  CHECK(style.max_height == rtxui::Length::Cells(6));
+
+  rtxui::ApplyStyle(style, {"inset-inline", "7 8"});
+  CHECK(style.left == rtxui::Length::Cells(7));
+  CHECK(style.right == rtxui::Length::Cells(8));
+
+  rtxui::ApplyStyle(style, {"border-block", "solid"});
+  CHECK(style.border.top == 1);
+  CHECK(style.border.bottom == 1);
+  CHECK(style.border.left == 0);
+
+  rtxui::ApplyStyle(style, {"border-inline-start-color", "red"});
+  rtxui::ApplyStyle(style, {"border-bottom-color", "blue"});
+  CHECK(style.border_color_left == rtxui::Color::RGB(255, 0, 0));
+  CHECK(style.border_color_bottom == rtxui::Color::RGB(0, 0, 255));
+}
+
 TEST_CASE("justify-content and align-content accept start/end",
           "[style][flex]") {
   // align-items/align-self took the CSS box-alignment spellings `start`/`end`

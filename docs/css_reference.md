@@ -74,6 +74,27 @@ Selector precedence is determined by a 3-component specificity vector `(A, B, C)
 <CssProperty name="max-height" values="<length>" description="Initial: `none`. Maximum layout height constraint." />
 <CssProperty name="box-sizing" values="content-box | border-box" description="Initial: `border-box`. Whether width/height (and their min/max variants) describe the content box or the border box. Default is border-box, unlike web CSS." />
 
+### Logical properties
+
+A terminal writes left to right and top to bottom, so the logical properties
+map onto fixed sides: the **inline** axis is left (start) to right (end), the
+**block** axis top (start) to bottom (end). Each takes the values of the
+physical property it stands for.
+
+| Logical | Physical |
+|---|---|
+| `margin-inline` / `padding-inline` / `inset-inline` (`<start> <end>?`) | `-left`, `-right` (`left`, `right`) |
+| `margin-block` / `padding-block` / `inset-block` (`<start> <end>?`) | `-top`, `-bottom` (`top`, `bottom`) |
+| `margin-inline-start`, `-inline-end`, `-block-start`, `-block-end` (also `padding-`, `inset-`) | `margin-left`, `-right`, `-top`, `-bottom` |
+| `inline-size`, `min-inline-size`, `max-inline-size` | `width`, `min-width`, `max-width` |
+| `block-size`, `min-block-size`, `max-block-size` | `height`, `min-height`, `max-height` |
+| `border-inline`, `border-block` (one value for both sides) | `border-left` + `border-right`, `border-top` + `border-bottom` |
+| `border-inline-start`, `-inline-end`, `-block-start`, `-block-end` (also `-width`, `-color`) | the same side's border, width or color |
+| `border-inline-width`, `border-block-width`, `border-inline-color`, `border-block-color` (`<start> <end>?`) | both sides |
+
+The standard per-side longhands `border-top-width` … `border-left-width` and
+`border-top-color` … `border-left-color` are accepted too.
+
 ### `calc()` Expressions
 Length properties accept `calc()` expressions combining discrete cells and percentages:
 ```css
