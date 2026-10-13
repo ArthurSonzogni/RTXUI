@@ -278,6 +278,7 @@ class RTXUI_EXPORT Element : public RefCounted {
           visual_scroll_x_ != element_.visual_scroll_x_ ||
           visual_scroll_y_ != element_.visual_scroll_y_) {
         element_.InvalidateLayout();
+        element_.NoteState();
       }
     }
     ScrollChangeScope(const ScrollChangeScope&) = delete;
@@ -426,6 +427,25 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// MarkStyleSubtreeStale() does for styles: the pass reaches the element.
   void MarkPseudoSubtreeStale();
 
+  /// Whether the element holds state a re-render must carry over: a scroll
+  /// offset, focus, hover, a pressed state, running transitions or
+  /// animations.
+  bool HasState() const {
+    return scroll_x_ != 0 || scroll_y_ != 0 || focused_ || hovered_ ||
+           active_ || scrollbar_hovered_ || scrollbar_active_ ||
+           scrollbar_thumb_hovered_ || scrollbar_thumb_active_ ||
+           !active_transitions.empty() || !running_animations.empty();
+  }
+  /// Whether this element or one below may hold state (HasState()). Set up
+  /// the ancestors when an element gains some, and recomputed by the walk
+  /// that collects it, which skips the subtrees without.
+  bool subtree_has_state = false;
+  /// Sets subtree_has_state up the ancestors if the element holds state.
+  void NoteState();
+  /// Sets subtree_has_state here and up the ancestors, up to the first that
+  /// already has it.
+  void MarkStateBelow();
+
   /// Set when something a selector can test on this element -- its id, its
   /// classes, any attribute -- actually changed. Selectors also test
   /// ancestors (`.on span`), so the next base style pass re-resolves the
@@ -486,6 +506,7 @@ class RTXUI_EXPORT Element : public RefCounted {
     if (field != value) {
       field = value;
       MarkPseudoInputsChanged();
+      NoteState();
     }
   }
 

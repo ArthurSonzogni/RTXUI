@@ -153,6 +153,39 @@ TEST_CASE("Element::Visit walks the whole subtree in document order",
   CHECK(seen == std::vector<std::string>{"root", "a", "a1", "b"});
 }
 
+TEST_CASE("An element gaining state marks its ancestors", "[dom][element]") {
+  // A re-render collects the state of the elements that hold some, and
+  // walks only the subtrees marked as possibly holding it.
+  auto root = MakeElement("root");
+  auto child = MakeElement("div");
+  auto leaf = MakeElement("span");
+  child->AddChild(leaf);
+  root->AddChild(child);
+  CHECK_FALSE(root->subtree_has_state);
+
+  SECTION("scroll") {
+    leaf->set_scroll_y(2);
+  }
+  SECTION("hover") {
+    leaf->set_hovered(true);
+  }
+  SECTION("focus") {
+    leaf->set_focused(true);
+  }
+  CHECK(leaf->subtree_has_state);
+  CHECK(child->subtree_has_state);
+  CHECK(root->subtree_has_state);
+}
+
+TEST_CASE("Attaching an element with state marks its new ancestors",
+          "[dom][element]") {
+  auto root = MakeElement("root");
+  auto leaf = MakeElement("span");
+  leaf->set_hovered(true);
+  root->AddChild(leaf);
+  CHECK(root->subtree_has_state);
+}
+
 TEST_CASE("Element::QuerySelector resolves by id, class and tag",
           "[dom][element]") {
   auto root = MakeElement("root");

@@ -520,6 +520,7 @@ void Element::set_focused(bool f) {
   if (f != focused_) {
     g_focused_count.fetch_add(f ? 1 : -1, std::memory_order_relaxed);
     focused_ = f;
+    NoteState();
     // :focus-within, on every ancestor.
     for (Element* element = this; element; element = element->parent_) {
       element->MarkPseudoInputsChanged();
@@ -566,6 +567,9 @@ void Element::set_parent(Element* parent) {
     if (subtree_needs_pseudo) {
       parent_->MarkPseudoSubtreeStale();
     }
+    if (subtree_has_state) {
+      parent_->MarkStateBelow();
+    }
   }
 }
 
@@ -581,6 +585,19 @@ void Element::MarkPseudoSubtreeStale() {
   for (Element* element = this; element && !element->subtree_needs_pseudo;
        element = element->parent_) {
     element->subtree_needs_pseudo = true;
+  }
+}
+
+void Element::NoteState() {
+  if (HasState()) {
+    MarkStateBelow();
+  }
+}
+
+void Element::MarkStateBelow() {
+  for (Element* element = this; element && !element->subtree_has_state;
+       element = element->parent_) {
+    element->subtree_has_state = true;
   }
 }
 
@@ -652,6 +669,8 @@ Element::StyleChangeScope::~StyleChangeScope() {
                  element_.style)) {
     element_.InvalidateLayout();
   }
+  // What changes the style is also what starts transitions and animations.
+  element_.NoteState();
 }
 
 Element* Element::GeneratedBox(bool after) {
@@ -721,6 +740,9 @@ void Element::AddChild(Ref<Element> child) {
   if (child->subtree_needs_style_resolve) {
     MarkStyleSubtreeStale();
   }
+  if (child->subtree_has_state) {
+    MarkStateBelow();
+  }
   children_.push_back(std::move(child));
   InvalidateLayout();
   // :empty, :last-child and the like: the whole list is evaluated again.
@@ -760,6 +782,9 @@ void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
   new_child->parent_ = this;
   if (new_child->subtree_needs_style_resolve) {
     MarkStyleSubtreeStale();
+  }
+  if (new_child->subtree_has_state) {
+    MarkStateBelow();
   }
   children_[index] = std::move(new_child);
   PrecedingSiblingsChanged(index + 1);

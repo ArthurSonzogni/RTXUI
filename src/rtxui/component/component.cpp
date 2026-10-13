@@ -549,12 +549,7 @@ void CollectElementStates(
   if (!el) {
     return;
   }
-  bool has_state =
-      el->scroll_x() != 0 || el->scroll_y() != 0 || el->focused() ||
-      el->hovered() || el->active() || el->scrollbar_hovered() ||
-      el->scrollbar_active() || el->scrollbar_thumb_hovered() ||
-      el->scrollbar_thumb_active() || !el->active_transitions.empty() ||
-      !el->running_animations.empty();
+  const bool has_state = el->HasState();
   if (has_state) {
     states.push_back(
         {path,
@@ -564,11 +559,19 @@ void CollectElementStates(
           el->style, el->active_transitions, el->running_animations,
           el->for_key}});
   }
+  // Below, only the subtrees that may hold some, recomputing which do.
+  bool below = has_state;
   for (size_t i = 0; i < el->ChildCount(); ++i) {
+    Element* child = el->ChildAt(i);
+    if (!child->subtree_has_state) {
+      continue;
+    }
     path.push_back(static_cast<int>(i));
-    CollectElementStates(el->ChildAt(i), path, states);
+    CollectElementStates(child, path, states);
     path.pop_back();
+    below = below || child->subtree_has_state;
   }
+  el->subtree_has_state = below;
 }
 
 Element* FindElementByPath(Element* root, const ElementPath& path) {
@@ -629,6 +632,7 @@ void RestoreElementStates(
       // A re-render builds new elements: carry on the animations of the old
       // ones rather than starting them over.
       el->running_animations = pair.second.running_animations;
+      el->NoteState();
     }
   }
 }
