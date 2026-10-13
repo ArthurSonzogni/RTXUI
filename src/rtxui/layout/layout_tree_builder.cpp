@@ -358,6 +358,8 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
 
   resolved.line_height =
       dom_node->style.line_height.value_or(parent.line_height);
+  resolved.text_indent =
+      dom_node->style.text_indent.value_or(parent.text_indent);
 
   resolved.overflow_wrap =
       dom_node->style.overflow_wrap.value_or(parent.overflow_wrap);
@@ -507,6 +509,7 @@ void LayoutTreeBuilder::BuildChildren(LayoutBox& layout_box) {
           slot_style.letter_spacing.value_or(resolved.letter_spacing);
       slot.tab_size = slot_style.tab_size.value_or(resolved.tab_size);
       slot.line_height = slot_style.line_height.value_or(resolved.line_height);
+      slot.text_indent = slot_style.text_indent.value_or(resolved.text_indent);
       slot.overflow_wrap =
           slot_style.overflow_wrap.value_or(resolved.overflow_wrap);
       slot.word_break = slot_style.word_break.value_or(resolved.word_break);
@@ -541,6 +544,9 @@ void LayoutTreeBuilder::BuildChildren(LayoutBox& layout_box) {
   if (box->algorithm == LayoutBox::Algorithm::BlockFlow) {
     std::vector<std::shared_ptr<LayoutBox>> refined_children;
     std::shared_ptr<LayoutBox> anonymous_box = nullptr;
+    // text-indent shifts the first line of the block, which is the first line
+    // of its first run of inline content only when nothing comes before it.
+    bool first_in_flow = true;
     for (const auto& child_box : raw_children) {
       // Out-of-flow elements (fixed/absolute) must remain direct children
       // of their containing block so LayoutOutOfFlowChildren can find them.
@@ -562,6 +568,8 @@ void LayoutTreeBuilder::BuildChildren(LayoutBox& layout_box) {
           anonymous_box->text.line_height = resolved.line_height;
           anonymous_box->text.overflow_wrap = resolved.overflow_wrap;
           anonymous_box->text.word_break = resolved.word_break;
+          anonymous_box->text.text_indent =
+              first_in_flow ? resolved.text_indent : 0;
           // Taken from the block rather than from `resolved`: text-overflow is
           // not inherited, it belongs to the block container, and this box is
           // that container's inline formatting context. Without it the
@@ -571,6 +579,8 @@ void LayoutTreeBuilder::BuildChildren(LayoutBox& layout_box) {
           // being inline-block.
           anonymous_box->mutable_style().text_overflow =
               box->style().text_overflow;
+          // So is line-clamp.
+          anonymous_box->mutable_style().line_clamp = box->style().line_clamp;
           refined_children.push_back(anonymous_box);
         }
         anonymous_box->children.push_back(child_box);
@@ -579,6 +589,7 @@ void LayoutTreeBuilder::BuildChildren(LayoutBox& layout_box) {
         anonymous_box = nullptr;
         refined_children.push_back(child_box);
       }
+      first_in_flow = false;
     }
     box->children = std::move(refined_children);
   } else {

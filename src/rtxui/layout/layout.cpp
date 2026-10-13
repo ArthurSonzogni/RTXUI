@@ -1163,7 +1163,8 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     container_frag->border_width = box->style().border;
   }
 
-  int cursor_x = 0;
+  // text-indent shifts the first line only.
+  int cursor_x = box->text.text_indent;
   int cursor_y = box->style().padding.top + box->style().border.top;
   // CSS line-height acts as a minimum: tall inline children still grow the
   // line beyond it.
@@ -1186,6 +1187,9 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     // True when the line was ended by an explicit newline in the text.
     // text-align: justify never stretches such lines (nor the last line).
     bool hard_break = false;
+    // Where the line starts, and how tall it is.
+    int y = 0;
+    int height = 0;
   };
   std::vector<LineInfo> lines;
   size_t line_start_index = 0;
@@ -1193,7 +1197,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   auto commit_line = [&](bool hard_break = false) {
     max_line_width = std::max(max_line_width, cursor_x);
     lines.push_back({line_start_index, container_frag->children.size(),
-                     cursor_x, hard_break});
+                     cursor_x, hard_break, cursor_y, line_height});
     cursor_x = 0;
     cursor_y += line_height;
     line_height = min_line_height;
@@ -1581,6 +1585,102 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   }
 
   commit_line();
+  // line-clamp: the lines past the last one shown go, and that one ends in
+  // the ellipsis text-overflow draws.
+  const int clamp = box->style().line_clamp;
+  if (clamp > 0 && static_cast<int>(lines.size()) > clamp &&
+      std::any_of(lines.begin() + clamp, lines.end(), [](const LineInfo& l) {
+        return l.end_index > l.start_index;
+      })) {
+    auto& children = container_frag->children;
+    lines.resize(clamp);
+    LineInfo& last = lines.back();
+    children.erase(
+        children.begin() + static_cast<std::ptrdiff_t>(last.end_index),
+        children.end());
+    cursor_y = last.y + last.height;
+
+    const int x0 = box->style().padding.left + box->style().border.left;
+    constexpr std::string_view kEllipsis = "...";
+    const int ellipsis_width = static_cast<int>(kEllipsis.size());
+    // Make room for it: drop what is past the room left, and cut the text
+    // fragment it falls in.
+    int end_x = last.occupied_width;
+    while (end_x + ellipsis_width > content_width_limit &&
+           last.end_index > last.start_index) {
+      const auto& link = children[last.end_index - 1];
+      PhysicalFragment* fragment = link.fragment;
+      const int excess = end_x + ellipsis_width - content_width_limit;
+      if (!fragment->is_text || fragment->width <= excess) {
+        end_x = link.x - x0;
+        children.erase(children.begin() +
+                       static_cast<std::ptrdiff_t>(last.end_index - 1));
+        --last.end_index;
+        continue;
+      }
+      const int keep = fragment->width - excess;
+      int kept = 0;
+      size_t bytes = 0;
+      for (const Grapheme& g : Graphemes(fragment->text_content)) {
+        if (kept + g.width > keep) {
+          break;
+        }
+        kept += g.width;
+        bytes = static_cast<size_t>(g.text.data() + g.text.size() -
+                                    fragment->text_content.data());
+      }
+      fragment->text_content = fragment->text_content.substr(0, bytes);
+      fragment->width = kept;
+      end_x = link.x - x0 + kept;
+      break;
+    }
+
+    // It follows the last character, not the spaces after it.
+    while (last.end_index > last.start_index) {
+      const auto& link = children[last.end_index - 1];
+      PhysicalFragment* fragment = link.fragment;
+      if (!fragment->is_text) {
+        break;
+      }
+      const size_t kept = fragment->text_content.find_last_not_of(' ');
+      const size_t spaces = kept == std::string_view::npos
+                                ? fragment->text_content.size()
+                                : fragment->text_content.size() - kept - 1;
+      fragment->text_content.remove_suffix(spaces);
+      fragment->width -= static_cast<int>(spaces);
+      end_x = link.x - x0 + fragment->width;
+      if (!fragment->text_content.empty()) {
+        break;
+      }
+      children.erase(children.begin() +
+                     static_cast<std::ptrdiff_t>(last.end_index - 1));
+      --last.end_index;
+    }
+    // Styled as the text it follows.
+    const PhysicalFragment* source = nullptr;
+    for (size_t i = last.end_index; i-- > last.start_index;) {
+      if (children[i].fragment->is_text) {
+        source = children[i].fragment;
+        break;
+      }
+    }
+    auto* ellipsis = MakeArenaFragment(ellipsis_width, 1);
+    if (source) {
+      *ellipsis = *source;
+      ellipsis->width = ellipsis_width;
+    } else {
+      ellipsis->is_text = true;
+      ellipsis->dom_node = box->dom_node;
+      ellipsis->paint_fields = kPaintBackground | kPaintForeground;
+      ellipsis->foreground_color = box->text.fg;
+    }
+    ellipsis->text_content = kEllipsis;
+    children.insert(
+        children.begin() + static_cast<std::ptrdiff_t>(last.end_index),
+        {ellipsis, x0 + end_x, last.y});
+    ++last.end_index;
+    last.occupied_width = end_x + ellipsis_width;
+  }
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
   } else {

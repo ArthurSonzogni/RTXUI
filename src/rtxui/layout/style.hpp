@@ -495,6 +495,12 @@ struct ComputedStyleCore {
   std::optional<int> tab_size;
   // Minimum rows each line box occupies; inherited. 1 means normal.
   std::optional<int> line_height;
+  // Cells the first line of a block is shifted by; inherited. Negative
+  // hangs it out to the left.
+  std::optional<int> text_indent;
+  // line-clamp: the lines a block shows at most, its last one ending in an
+  // ellipsis when there were more. 0 for none.
+  int line_clamp = 0;
   std::optional<OverflowWrap> overflow_wrap;
   std::optional<WordBreak> word_break;
   // Width / height ratio in cells; 0 means auto (no preferred ratio).

@@ -3268,6 +3268,25 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "text-indent") {
+    if (const auto cells = ParseWholeInt(v)) {
+      style.text_indent = *cells;
+      return;
+    }
+  }
+
+  // line-clamp, and the -webkit- spelling every browser still needs.
+  if (p == "line-clamp" || p == "-webkit-line-clamp") {
+    if (TrimWhitespace(v) == "none") {
+      style.line_clamp = 0;
+      return;
+    }
+    if (const auto lines = ParseWholeInt(v); lines && *lines > 0) {
+      style.line_clamp = *lines;
+      return;
+    }
+  }
+
   if (p == "tab-size") {
     // Zero is legal and means a tab advances nothing; negative is not, and
     // clamps. `tab-size` in CSS also accepts a length, which here would be the

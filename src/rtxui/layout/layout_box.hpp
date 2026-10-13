@@ -34,6 +34,7 @@ struct InheritedTextStyle {
   // 8 is the tab stop every terminal and CSS itself default to.
   int tab_size = 8;
   int line_height = 1;
+  int text_indent = 0;
   OverflowWrap overflow_wrap = OverflowWrap::Anywhere;
   WordBreak word_break = WordBreak::Normal;
 

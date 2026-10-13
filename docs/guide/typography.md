@@ -169,6 +169,26 @@ glyph is dropped whole rather than halved:
 }
 ```
 
+To show a few lines of wrapped text rather than one, `line-clamp` keeps the
+first N lines of a block and ends the last with the same `...` when it cut
+anything:
+
+```css
+.summary {
+  line-clamp: 2;
+}
+```
+
+`text-indent` shifts the first line of a block. A negative indent with as
+much padding hangs it, which suits a list marker written in the text:
+
+```css
+.note {
+  padding-left: 2;
+  text-indent: -2;
+}
+```
+
 Words longer than the line break at the container edge by default
 (`overflow-wrap: anywhere` — note this differs from CSS, whose default lets
 long words overflow). Set `overflow-wrap: normal` to keep such words intact

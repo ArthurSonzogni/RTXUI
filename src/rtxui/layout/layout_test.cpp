@@ -4636,4 +4636,64 @@ TEST_CASE("Layout: CSS-wide keywords reset a property",
   }
 }
 
+TEST_CASE("Layout: text-indent shifts the first line of a block",
+          "[layout][text-indent]") {
+  SECTION("the first line only") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>p{margin:0;width:8;text-indent:2;}</style><p>aaaa bbbb cc</p>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 3)) ==
+          CheckGrid({"  aaaa  ", "bbbb cc ", "        "}));
+  }
+
+  SECTION("inherited, and only before anything else in the block") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{width:6;text-indent:1;}</style><div class="b">aa<div>bb</div>cc</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 3)) ==
+          CheckGrid({" aa   ", " bb   ", "cc    "}));
+  }
+
+  SECTION("negative hangs the first line") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{width:6;padding-left:2;text-indent:-2;}</style><div class="b">- aaa bb</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 2)) ==
+          CheckGrid({"- aaa ", "  bb  "}));
+  }
+}
+
+TEST_CASE("Layout: line-clamp shows the first lines and an ellipsis",
+          "[layout][line-clamp]") {
+  SECTION("the last line shown ends in an ellipsis") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{width:8;line-clamp:2;}</style><div class="b">aaa bb cccc dd ee</div><div>next</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 3)) ==
+          CheckGrid({"aaa bb  ", "cccc... ", "next    "}));
+  }
+
+  SECTION("a full line is cut to make room") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{width:6;-webkit-line-clamp:1;}</style><div class="b">abcdef ghi</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 2)) ==
+          CheckGrid({"abc...", "      "}));
+  }
+
+  SECTION("no ellipsis when everything fits") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.b{width:8;line-clamp:2;}</style><div class="b">aaa bb</div><div>next</div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 2)) ==
+          CheckGrid({"aaa bb  ", "next    "}));
+  }
+}
+
 }  // namespace rtxui
