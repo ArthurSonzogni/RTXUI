@@ -3298,6 +3298,307 @@ void ComponentBase::Render(const xml::Node& node,
   slot->TruncateChildren(child_idx);
 }
 
+// Out of RenderReconcile(), and never inlined into it, so that its locals
+// stay off the stack frame every level of a deeply nested template pays for.
+[[gnu::noinline]] void ComponentBase::RenderLoop(const xml::Node& child_node,
+                                                 Element* slot,
+                                                 ComponentBase* import_source,
+                                                 const LocalScope* scope,
+                                                 size_t& child_idx,
+                                                 bool preserve_newlines,
+                                                 const SlotFilter* filter) {
+  // What it renders depends on the collection, which no interpolation
+  // reads.
+  ItemNotCacheable();
+  // Same for a <for> with nothing to iterate: render no items rather
+  // than throwing out of Render().
+  if (!child_node.attributes.contains("each")) {
+    return;
+  }
+  const auto& each_attr = child_node.attributes.at("each");
+  // Strip {} if present
+  std::string_view range_name = each_attr;
+  if (range_name.starts_with("{") && range_name.ends_with("}")) {
+    range_name = range_name.substr(1, range_name.size() - 2);
+  }
+
+  std::string_view as_attr = "item";
+  if (child_node.attributes.contains("as")) {
+    as_attr = child_node.attributes.at("as");
+  }
+
+  // `key` makes an iteration's elements identifiable across frames, so
+  // a reordered collection moves its elements rather than rewriting
+  // them in place. Without it the loop stays position-matched, which
+  // leaves focus, scroll and running transitions on whatever item
+  // lands at that index.
+  std::string_view key_attr;
+  if (child_node.attributes.contains("key")) {
+    key_attr = child_node.attributes.at("key");
+  }
+
+  std::shared_ptr<TypeErasedRange> range;
+  for (const auto& entry : import_source->data_->range_entries_) {
+    if (entry.name == range_name) {
+      range = entry.range;
+      break;
+    }
+  }
+
+  // `virtual`: in a scroll container, render only the items around
+  // what it shows, and stand in for the rest with two spacers of
+  // their height, so that a long list costs what a screenful does.
+  // Every item is assumed `item-height` rows tall (1 by default).
+  const bool is_virtual = child_node.attributes.contains("virtual");
+  size_t first = 0;
+  size_t last = range ? range->Size() : 0;
+  int item_height = 1;
+  if (range && is_virtual) {
+    if (const auto it = child_node.attributes.find("item-height");
+        it != child_node.attributes.end()) {
+      int parsed = 0;
+      const std::string_view text = it->second;
+      const auto [ptr, ec] =
+          std::from_chars(text.data(), text.data() + text.size(), parsed);
+      if (ec != std::errc() || ptr != text.data() + text.size() || parsed < 1) {
+        ReportDiagnostic("<for item-height=\"" + std::string(text) +
+                         "\">: expected a whole number of rows, 1 "
+                         "or more");
+      } else {
+        item_height = std::min(parsed, 1000);
+      }
+    }
+    std::optional<VirtualListViewport> view = MeasureViewport(slot);
+    if (!view) {
+      const auto cached =
+          import_source->data_->virtual_viewports_.find(&child_node);
+      if (cached != import_source->data_->virtual_viewports_.end()) {
+        view = cached->second;
+      } else {
+        view = VirtualListViewport{0, css::g_terminal_height};
+      }
+    }
+    std::tie(first, last) = VirtualRange(range->Size(), item_height, *view);
+    import_source->data_->virtual_windows_.push_back(
+        {&child_node, Ref<Element>(slot), first, last, range->Size(),
+         item_height});
+  }
+
+  // A block as tall as `rows`, standing in for items not rendered.
+  // Reused in place, like any other element of the loop's output.
+  auto place_spacer = [&](size_t rows) {
+    if (!is_virtual) {
+      return;
+    }
+    Ref<Element> spacer;
+    if (child_idx < slot->ChildCount() &&
+        !slot->ChildAt(child_idx)->component() &&
+        slot->ChildAt(child_idx)->tag() == "virtual-spacer") {
+      spacer = slot->children()[child_idx];
+    } else {
+      spacer = Ref<Element>::New();
+      spacer->SetTag("virtual-spacer");
+      spacer->set_owner_component(import_source);
+      if (child_idx < slot->ChildCount()) {
+        slot->ReplaceChild(child_idx, spacer);
+      } else {
+        slot->AddChild(spacer);
+      }
+    }
+    const std::string style =
+        "display: block; flex-shrink: 0; height: " + std::to_string(rows) + ";";
+    const std::string* current = spacer->GetAttribute("style");
+    if (!current || *current != style) {
+      spacer->SetAttribute("style", style);
+    }
+    child_idx++;
+  };
+
+  // An item whose reconcile would read the same as last time, and
+  // whose elements are still where it left them, would leave them as
+  // they are: it is skipped. A virtual loop's items move, a filtered
+  // pass renders only part of each, and a fallback's nodes are a
+  // copy, so those reconcile every item.
+  Data::ForMemos* memos = nullptr;
+  if (range && !is_virtual && !filter && g_fallback_depth == 0) {
+    memos = &import_source->data_->for_memos_[{&child_node, slot}];
+    memos->visited = true;
+    if (memos->preserve_newlines != preserve_newlines ||
+        memos->terminal_width != css::g_terminal_width ||
+        memos->terminal_height != css::g_terminal_height) {
+      memos->items.clear();
+      memos->preserve_newlines = preserve_newlines;
+      memos->terminal_width = css::g_terminal_width;
+      memos->terminal_height = css::g_terminal_height;
+    }
+  }
+  // The components a skipped item uses, found in old_children_.
+  std::unordered_map<const ComponentBase*, size_t> old_index;
+  bool old_index_built = false;
+  auto skip_item = [&](const Data::ForItemMemo& memo,
+                       const LocalScope* item_scope) -> bool {
+    const std::vector<Ref<Element>>& elements = memo.elements;
+    if (elements.empty() || child_idx + elements.size() > slot->ChildCount()) {
+      return false;
+    }
+    for (size_t j = 0; j < elements.size(); ++j) {
+      if (slot->ChildAt(child_idx + j) != elements[j].get()) {
+        return false;
+      }
+    }
+    // In order, so that the first that differs stops it before any
+    // other is evaluated in a branch the item no longer takes.
+    for (const auto& [text, value] : memo.reads) {
+      if (InterpolateUntraced(text, import_source, item_scope) != value) {
+        return false;
+      }
+    }
+    if (!old_index_built) {
+      old_index_built = true;
+      for (size_t k = data_->old_children_taken_;
+           k < data_->old_children_.size(); ++k) {
+        if (data_->old_children_[k]) {
+          old_index.emplace(data_->old_children_[k].get(), k);
+        }
+      }
+    }
+    // Reconciling would have taken these out of old_children_, and
+    // digested them. Each owns what is projected into it, so the
+    // search stops at them.
+    std::vector<size_t> used;
+    bool owned = true;
+    auto collect = [&](auto& self, Element* el) -> void {
+      if (const ComponentBase* component = el->component()) {
+        const auto it = old_index.find(component);
+        if (it == old_index.end() ||
+            data_->old_children_[it->second].get() != component) {
+          owned = false;
+        } else {
+          used.push_back(it->second);
+        }
+        return;
+      }
+      for (size_t k = 0; k < el->ChildCount(); ++k) {
+        self(self, el->ChildAt(k));
+      }
+    };
+    for (const Ref<Element>& element : elements) {
+      collect(collect, element.get());
+    }
+    if (!owned) {
+      return false;
+    }
+    for (const size_t k : used) {
+      data_->old_children_[k]->Digest();
+    }
+    // One that rendered again and made a slot afresh needs its
+    // content projected again.
+    for (const size_t k : used) {
+      if (data_->old_children_[k]->data_->slots_recreated_) {
+        return false;
+      }
+    }
+    for (const size_t k : used) {
+      data_->children_.push_back(std::move(data_->old_children_[k]));
+    }
+    child_idx += elements.size();
+    ++g_for_item_skip_count;
+    return true;
+  };
+
+  if (range) {
+    place_spacer(first * static_cast<size_t>(item_height));
+    for (size_t i = first; i < last; ++i) {
+      LocalScope index_scope;
+      index_scope.parent = scope;
+      index_scope.name = "$index";
+      index_scope.value = std::string_view(GetIndexString(i));
+
+      LocalScope item_scope;
+      item_scope.parent = &index_scope;
+      item_scope.name = as_attr;
+
+      auto visitor = range->GetItemVisitor(i);
+      std::string fallback_storage;
+      if (visitor) {
+        item_scope.value = visitor;
+      } else {
+        item_scope.value = range->GetItemStringView(i, fallback_storage);
+      }
+
+      // Bring this item's existing elements to the current
+      // position before reconciling, so the reconcile below reuses
+      // them instead of rewriting whatever sits here.
+      std::string item_key;
+      if (!key_attr.empty() || is_virtual) {
+        // A virtual loop's window moves, so a position means a
+        // different item from one render to the next: without a key
+        // of its own, each item is keyed by its index, which keeps
+        // focus and other element state on the item rather than on
+        // the row it happened to be rendered in.
+        item_key = key_attr.empty() ? "#" + std::to_string(i)
+                                    : rtxui::Interpolate(
+                                          key_attr, import_source, &item_scope);
+        for (size_t p = child_idx; p < slot->ChildCount(); ++p) {
+          Element* candidate = slot->ChildAt(p);
+          if (!candidate || candidate->for_key != item_key) {
+            continue;
+          }
+          const size_t run = candidate->for_run ? candidate->for_run : 1;
+          for (size_t j = 0; j < run && p + j < slot->ChildCount(); ++j) {
+            slot->MoveChild(p + j, child_idx + j);
+          }
+          break;
+        }
+      }
+
+      if (memos && i < memos->items.size()) {
+        const ItemTraceSuspension not_reconciling;
+        if (skip_item(memos->items[i], &item_scope)) {
+          continue;
+        }
+      }
+
+      const size_t run_start = child_idx;
+      ItemTrace trace;
+      trace.source = import_source;
+      ItemTrace* const outer_trace =
+          std::exchange(g_item_trace, memos ? &trace : nullptr);
+      RenderReconcile(child_node, slot, import_source, &item_scope, child_idx,
+                      preserve_newlines, filter,
+                      item_key.empty() ? nullptr : &item_key);
+      g_item_trace = outer_trace;
+      if (memos) {
+        if (memos->items.size() <= i) {
+          memos->items.resize(i + 1);
+        }
+        Data::ForItemMemo& memo = memos->items[i];
+        memo.elements.clear();
+        memo.reads.clear();
+        if (trace.cacheable) {
+          memo.reads = std::move(trace.reads);
+          for (size_t j = run_start; j < child_idx; ++j) {
+            memo.elements.push_back(slot->children()[j]);
+          }
+        }
+      }
+
+      // Stamp the identity on what this iteration produced, so the
+      // next frame can find it again.
+      if (!item_key.empty() && child_idx > run_start) {
+        if (Element* produced = slot->ChildAt(run_start)) {
+          produced->for_key = item_key;
+          produced->for_run = static_cast<uint16_t>(child_idx - run_start);
+        }
+      }
+    }
+    place_spacer((range->Size() - last) * static_cast<size_t>(item_height));
+    if (memos && memos->items.size() > last) {
+      memos->items.resize(last);
+    }
+  }
+}
+
 void ComponentBase::RenderReconcile(const xml::Node& node,
                                     Element* slot,
                                     ComponentBase* import_source,
@@ -3546,307 +3847,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         if (child_node.tag == "for") {
-          // What it renders depends on the collection, which no interpolation
-          // reads.
-          ItemNotCacheable();
-          // Same for a <for> with nothing to iterate: render no items rather
-          // than throwing out of Render().
-          if (!child_node.attributes.contains("each")) {
-            break;
-          }
-          const auto& each_attr = child_node.attributes.at("each");
-          // Strip {} if present
-          std::string_view range_name = each_attr;
-          if (range_name.starts_with("{") && range_name.ends_with("}")) {
-            range_name = range_name.substr(1, range_name.size() - 2);
-          }
-
-          std::string_view as_attr = "item";
-          if (child_node.attributes.contains("as")) {
-            as_attr = child_node.attributes.at("as");
-          }
-
-          // `key` makes an iteration's elements identifiable across frames, so
-          // a reordered collection moves its elements rather than rewriting
-          // them in place. Without it the loop stays position-matched, which
-          // leaves focus, scroll and running transitions on whatever item
-          // lands at that index.
-          std::string_view key_attr;
-          if (child_node.attributes.contains("key")) {
-            key_attr = child_node.attributes.at("key");
-          }
-
-          std::shared_ptr<TypeErasedRange> range;
-          for (const auto& entry : import_source->data_->range_entries_) {
-            if (entry.name == range_name) {
-              range = entry.range;
-              break;
-            }
-          }
-
-          // `virtual`: in a scroll container, render only the items around
-          // what it shows, and stand in for the rest with two spacers of
-          // their height, so that a long list costs what a screenful does.
-          // Every item is assumed `item-height` rows tall (1 by default).
-          const bool is_virtual = child_node.attributes.contains("virtual");
-          size_t first = 0;
-          size_t last = range ? range->Size() : 0;
-          int item_height = 1;
-          if (range && is_virtual) {
-            if (const auto it = child_node.attributes.find("item-height");
-                it != child_node.attributes.end()) {
-              int parsed = 0;
-              const std::string_view text = it->second;
-              const auto [ptr, ec] = std::from_chars(
-                  text.data(), text.data() + text.size(), parsed);
-              if (ec != std::errc() || ptr != text.data() + text.size() ||
-                  parsed < 1) {
-                ReportDiagnostic("<for item-height=\"" + std::string(text) +
-                                 "\">: expected a whole number of rows, 1 "
-                                 "or more");
-              } else {
-                item_height = std::min(parsed, 1000);
-              }
-            }
-            std::optional<VirtualListViewport> view = MeasureViewport(slot);
-            if (!view) {
-              const auto cached =
-                  import_source->data_->virtual_viewports_.find(&child_node);
-              if (cached != import_source->data_->virtual_viewports_.end()) {
-                view = cached->second;
-              } else {
-                view = VirtualListViewport{0, css::g_terminal_height};
-              }
-            }
-            std::tie(first, last) =
-                VirtualRange(range->Size(), item_height, *view);
-            import_source->data_->virtual_windows_.push_back(
-                {&child_node, Ref<Element>(slot), first, last, range->Size(),
-                 item_height});
-          }
-
-          // A block as tall as `rows`, standing in for items not rendered.
-          // Reused in place, like any other element of the loop's output.
-          auto place_spacer = [&](size_t rows) {
-            if (!is_virtual) {
-              return;
-            }
-            Ref<Element> spacer;
-            if (child_idx < slot->ChildCount() &&
-                !slot->ChildAt(child_idx)->component() &&
-                slot->ChildAt(child_idx)->tag() == "virtual-spacer") {
-              spacer = slot->children()[child_idx];
-            } else {
-              spacer = Ref<Element>::New();
-              spacer->SetTag("virtual-spacer");
-              spacer->set_owner_component(import_source);
-              if (child_idx < slot->ChildCount()) {
-                slot->ReplaceChild(child_idx, spacer);
-              } else {
-                slot->AddChild(spacer);
-              }
-            }
-            const std::string style =
-                "display: block; flex-shrink: 0; height: " +
-                std::to_string(rows) + ";";
-            const std::string* current = spacer->GetAttribute("style");
-            if (!current || *current != style) {
-              spacer->SetAttribute("style", style);
-            }
-            child_idx++;
-          };
-
-          // An item whose reconcile would read the same as last time, and
-          // whose elements are still where it left them, would leave them as
-          // they are: it is skipped. A virtual loop's items move, a filtered
-          // pass renders only part of each, and a fallback's nodes are a
-          // copy, so those reconcile every item.
-          Data::ForMemos* memos = nullptr;
-          if (range && !is_virtual && !filter && g_fallback_depth == 0) {
-            memos = &import_source->data_->for_memos_[{&child_node, slot}];
-            memos->visited = true;
-            if (memos->preserve_newlines != preserve_newlines ||
-                memos->terminal_width != css::g_terminal_width ||
-                memos->terminal_height != css::g_terminal_height) {
-              memos->items.clear();
-              memos->preserve_newlines = preserve_newlines;
-              memos->terminal_width = css::g_terminal_width;
-              memos->terminal_height = css::g_terminal_height;
-            }
-          }
-          // The components a skipped item uses, found in old_children_.
-          std::unordered_map<const ComponentBase*, size_t> old_index;
-          bool old_index_built = false;
-          auto skip_item = [&](const Data::ForItemMemo& memo,
-                               const LocalScope* item_scope) -> bool {
-            const std::vector<Ref<Element>>& elements = memo.elements;
-            if (elements.empty() ||
-                child_idx + elements.size() > slot->ChildCount()) {
-              return false;
-            }
-            for (size_t j = 0; j < elements.size(); ++j) {
-              if (slot->ChildAt(child_idx + j) != elements[j].get()) {
-                return false;
-              }
-            }
-            // In order, so that the first that differs stops it before any
-            // other is evaluated in a branch the item no longer takes.
-            for (const auto& [text, value] : memo.reads) {
-              if (InterpolateUntraced(text, import_source, item_scope) !=
-                  value) {
-                return false;
-              }
-            }
-            if (!old_index_built) {
-              old_index_built = true;
-              for (size_t k = data_->old_children_taken_;
-                   k < data_->old_children_.size(); ++k) {
-                if (data_->old_children_[k]) {
-                  old_index.emplace(data_->old_children_[k].get(), k);
-                }
-              }
-            }
-            // Reconciling would have taken these out of old_children_, and
-            // digested them. Each owns what is projected into it, so the
-            // search stops at them.
-            std::vector<size_t> used;
-            bool owned = true;
-            auto collect = [&](auto& self, Element* el) -> void {
-              if (const ComponentBase* component = el->component()) {
-                const auto it = old_index.find(component);
-                if (it == old_index.end() ||
-                    data_->old_children_[it->second].get() != component) {
-                  owned = false;
-                } else {
-                  used.push_back(it->second);
-                }
-                return;
-              }
-              for (size_t k = 0; k < el->ChildCount(); ++k) {
-                self(self, el->ChildAt(k));
-              }
-            };
-            for (const Ref<Element>& element : elements) {
-              collect(collect, element.get());
-            }
-            if (!owned) {
-              return false;
-            }
-            for (const size_t k : used) {
-              data_->old_children_[k]->Digest();
-            }
-            // One that rendered again and made a slot afresh needs its
-            // content projected again.
-            for (const size_t k : used) {
-              if (data_->old_children_[k]->data_->slots_recreated_) {
-                return false;
-              }
-            }
-            for (const size_t k : used) {
-              data_->children_.push_back(std::move(data_->old_children_[k]));
-            }
-            child_idx += elements.size();
-            ++g_for_item_skip_count;
-            return true;
-          };
-
-          if (range) {
-            place_spacer(first * static_cast<size_t>(item_height));
-            for (size_t i = first; i < last; ++i) {
-              LocalScope index_scope;
-              index_scope.parent = scope;
-              index_scope.name = "$index";
-              index_scope.value = std::string_view(GetIndexString(i));
-
-              LocalScope item_scope;
-              item_scope.parent = &index_scope;
-              item_scope.name = as_attr;
-
-              auto visitor = range->GetItemVisitor(i);
-              std::string fallback_storage;
-              if (visitor) {
-                item_scope.value = visitor;
-              } else {
-                item_scope.value =
-                    range->GetItemStringView(i, fallback_storage);
-              }
-
-              // Bring this item's existing elements to the current
-              // position before reconciling, so the reconcile below reuses
-              // them instead of rewriting whatever sits here.
-              std::string item_key;
-              if (!key_attr.empty() || is_virtual) {
-                // A virtual loop's window moves, so a position means a
-                // different item from one render to the next: without a key
-                // of its own, each item is keyed by its index, which keeps
-                // focus and other element state on the item rather than on
-                // the row it happened to be rendered in.
-                item_key = key_attr.empty()
-                               ? "#" + std::to_string(i)
-                               : rtxui::Interpolate(key_attr, import_source,
-                                                    &item_scope);
-                for (size_t p = child_idx; p < slot->ChildCount(); ++p) {
-                  Element* candidate = slot->ChildAt(p);
-                  if (!candidate || candidate->for_key != item_key) {
-                    continue;
-                  }
-                  const size_t run =
-                      candidate->for_run ? candidate->for_run : 1;
-                  for (size_t j = 0; j < run && p + j < slot->ChildCount();
-                       ++j) {
-                    slot->MoveChild(p + j, child_idx + j);
-                  }
-                  break;
-                }
-              }
-
-              if (memos && i < memos->items.size()) {
-                const ItemTraceSuspension not_reconciling;
-                if (skip_item(memos->items[i], &item_scope)) {
-                  continue;
-                }
-              }
-
-              const size_t run_start = child_idx;
-              ItemTrace trace;
-              trace.source = import_source;
-              ItemTrace* const outer_trace =
-                  std::exchange(g_item_trace, memos ? &trace : nullptr);
-              RenderReconcile(child_node, slot, import_source, &item_scope,
-                              child_idx, preserve_newlines, filter,
-                              item_key.empty() ? nullptr : &item_key);
-              g_item_trace = outer_trace;
-              if (memos) {
-                if (memos->items.size() <= i) {
-                  memos->items.resize(i + 1);
-                }
-                Data::ForItemMemo& memo = memos->items[i];
-                memo.elements.clear();
-                memo.reads.clear();
-                if (trace.cacheable) {
-                  memo.reads = std::move(trace.reads);
-                  for (size_t j = run_start; j < child_idx; ++j) {
-                    memo.elements.push_back(slot->children()[j]);
-                  }
-                }
-              }
-
-              // Stamp the identity on what this iteration produced, so the
-              // next frame can find it again.
-              if (!item_key.empty() && child_idx > run_start) {
-                if (Element* produced = slot->ChildAt(run_start)) {
-                  produced->for_key = item_key;
-                  produced->for_run =
-                      static_cast<uint16_t>(child_idx - run_start);
-                }
-              }
-            }
-            place_spacer((range->Size() - last) *
-                         static_cast<size_t>(item_height));
-            if (memos && memos->items.size() > last) {
-              memos->items.resize(last);
-            }
-          }
+          RenderLoop(child_node, slot, import_source, scope, child_idx,
+                     preserve_newlines, filter);
           break;
         }
 

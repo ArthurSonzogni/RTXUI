@@ -232,6 +232,14 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
                        bool preserve_newlines = false,
                        const SlotFilter* filter = nullptr,
                        const std::string* item_key = nullptr);
+  /// The part of RenderReconcile() that renders a `<for>`.
+  void RenderLoop(const xml::Node& node,
+                  Element* element,
+                  ComponentBase* source,
+                  const LocalScope* scope,
+                  size_t& child_idx,
+                  bool preserve_newlines,
+                  const SlotFilter* filter);
   /// Whether a virtual loop's scroll container now shows items outside what
   /// the loop rendered, so that it has to render again.
   bool VirtualWindowsStale();
