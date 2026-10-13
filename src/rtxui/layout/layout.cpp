@@ -277,6 +277,126 @@ int AlignLine(std::span<PhysicalFragment::ChildLink> children,
   return height;
 }
 
+// One line of an inline formatting context: its fragments, among the
+// container's children, and its extent.
+struct LineInfo {
+  size_t start_index;
+  size_t end_index;
+  int occupied_width;
+  // True when the line was ended by an explicit newline in the text.
+  // text-align: justify never stretches such lines (nor the last line).
+  bool hard_break = false;
+  // Where the line starts, and how tall it is.
+  int y = 0;
+  int height = 0;
+};
+
+// line-clamp: the lines past the first `clamp` go, and the last one shown ends
+// in the ellipsis text-overflow draws. Moves `cursor_y` up to the end of the
+// lines kept. Out of LayoutInlineFlow, whose stack frame every nested inline
+// box pays for.
+[[gnu::noinline]] void ClampLines(std::vector<LineInfo>& lines,
+                                  int clamp,
+                                  int content_width_limit,
+                                  int x0,
+                                  Element* dom_node,
+                                  std::optional<Color> foreground,
+                                  PhysicalFragment& container,
+                                  int& cursor_y) {
+  if (static_cast<int>(lines.size()) <= clamp ||
+      std::none_of(lines.begin() + clamp, lines.end(), [](const LineInfo& l) {
+        return l.end_index > l.start_index;
+      })) {
+    return;
+  }
+  auto& children = container.children;
+  lines.resize(clamp);
+  LineInfo& last = lines.back();
+  children.erase(children.begin() + static_cast<std::ptrdiff_t>(last.end_index),
+                 children.end());
+  cursor_y = last.y + last.height;
+
+  constexpr std::string_view kEllipsis = "...";
+  const int ellipsis_width = static_cast<int>(kEllipsis.size());
+  // Make room for it: drop what is past the room left, and cut the text
+  // fragment it falls in.
+  int end_x = last.occupied_width;
+  while (end_x + ellipsis_width > content_width_limit &&
+         last.end_index > last.start_index) {
+    const auto& link = children[last.end_index - 1];
+    PhysicalFragment* fragment = link.fragment;
+    const int excess = end_x + ellipsis_width - content_width_limit;
+    if (!fragment->is_text || fragment->width <= excess) {
+      end_x = link.x - x0;
+      children.erase(children.begin() +
+                     static_cast<std::ptrdiff_t>(last.end_index - 1));
+      --last.end_index;
+      continue;
+    }
+    const int keep = fragment->width - excess;
+    int kept = 0;
+    size_t bytes = 0;
+    for (const Grapheme& g : Graphemes(fragment->text_content)) {
+      if (kept + g.width > keep) {
+        break;
+      }
+      kept += g.width;
+      bytes = static_cast<size_t>(g.text.data() + g.text.size() -
+                                  fragment->text_content.data());
+    }
+    fragment->text_content = fragment->text_content.substr(0, bytes);
+    fragment->width = kept;
+    end_x = link.x - x0 + kept;
+    break;
+  }
+
+  // It follows the last character, not the spaces after it.
+  while (last.end_index > last.start_index) {
+    const auto& link = children[last.end_index - 1];
+    PhysicalFragment* fragment = link.fragment;
+    if (!fragment->is_text) {
+      break;
+    }
+    const size_t kept = fragment->text_content.find_last_not_of(' ');
+    const size_t spaces = kept == std::string_view::npos
+                              ? fragment->text_content.size()
+                              : fragment->text_content.size() - kept - 1;
+    fragment->text_content.remove_suffix(spaces);
+    fragment->width -= static_cast<int>(spaces);
+    end_x = link.x - x0 + fragment->width;
+    if (!fragment->text_content.empty()) {
+      break;
+    }
+    children.erase(children.begin() +
+                   static_cast<std::ptrdiff_t>(last.end_index - 1));
+    --last.end_index;
+  }
+  // Styled as the text it follows.
+  const PhysicalFragment* source = nullptr;
+  for (size_t i = last.end_index; i-- > last.start_index;) {
+    if (children[i].fragment->is_text) {
+      source = children[i].fragment;
+      break;
+    }
+  }
+  auto* ellipsis = MakeArenaFragment(ellipsis_width, 1);
+  if (source) {
+    *ellipsis = *source;
+    ellipsis->width = ellipsis_width;
+  } else {
+    ellipsis->is_text = true;
+    ellipsis->dom_node = dom_node;
+    ellipsis->paint_fields = kPaintBackground | kPaintForeground;
+    ellipsis->foreground_color = foreground;
+  }
+  ellipsis->text_content = kEllipsis;
+  children.insert(
+      children.begin() + static_cast<std::ptrdiff_t>(last.end_index),
+      {ellipsis, x0 + end_x, last.y});
+  ++last.end_index;
+  last.occupied_width = end_x + ellipsis_width;
+}
+
 // --- Forward Declarations ---
 PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
                                   LayoutConstraints constraints,
@@ -1284,17 +1404,6 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   int line_height = min_line_height;
   int max_line_width = 0;
 
-  struct LineInfo {
-    size_t start_index;
-    size_t end_index;
-    int occupied_width;
-    // True when the line was ended by an explicit newline in the text.
-    // text-align: justify never stretches such lines (nor the last line).
-    bool hard_break = false;
-    // Where the line starts, and how tall it is.
-    int y = 0;
-    int height = 0;
-  };
   std::vector<LineInfo> lines;
   size_t line_start_index = 0;
   // The inline-level boxes on the current line.
@@ -1701,101 +1810,10 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   }
 
   commit_line();
-  // line-clamp: the lines past the last one shown go, and that one ends in
-  // the ellipsis text-overflow draws.
-  const int clamp = box->style().line_clamp;
-  if (clamp > 0 && static_cast<int>(lines.size()) > clamp &&
-      std::any_of(lines.begin() + clamp, lines.end(), [](const LineInfo& l) {
-        return l.end_index > l.start_index;
-      })) {
-    auto& children = container_frag->children;
-    lines.resize(clamp);
-    LineInfo& last = lines.back();
-    children.erase(
-        children.begin() + static_cast<std::ptrdiff_t>(last.end_index),
-        children.end());
-    cursor_y = last.y + last.height;
-
-    const int x0 = box->style().padding.left + box->style().border.left;
-    constexpr std::string_view kEllipsis = "...";
-    const int ellipsis_width = static_cast<int>(kEllipsis.size());
-    // Make room for it: drop what is past the room left, and cut the text
-    // fragment it falls in.
-    int end_x = last.occupied_width;
-    while (end_x + ellipsis_width > content_width_limit &&
-           last.end_index > last.start_index) {
-      const auto& link = children[last.end_index - 1];
-      PhysicalFragment* fragment = link.fragment;
-      const int excess = end_x + ellipsis_width - content_width_limit;
-      if (!fragment->is_text || fragment->width <= excess) {
-        end_x = link.x - x0;
-        children.erase(children.begin() +
-                       static_cast<std::ptrdiff_t>(last.end_index - 1));
-        --last.end_index;
-        continue;
-      }
-      const int keep = fragment->width - excess;
-      int kept = 0;
-      size_t bytes = 0;
-      for (const Grapheme& g : Graphemes(fragment->text_content)) {
-        if (kept + g.width > keep) {
-          break;
-        }
-        kept += g.width;
-        bytes = static_cast<size_t>(g.text.data() + g.text.size() -
-                                    fragment->text_content.data());
-      }
-      fragment->text_content = fragment->text_content.substr(0, bytes);
-      fragment->width = kept;
-      end_x = link.x - x0 + kept;
-      break;
-    }
-
-    // It follows the last character, not the spaces after it.
-    while (last.end_index > last.start_index) {
-      const auto& link = children[last.end_index - 1];
-      PhysicalFragment* fragment = link.fragment;
-      if (!fragment->is_text) {
-        break;
-      }
-      const size_t kept = fragment->text_content.find_last_not_of(' ');
-      const size_t spaces = kept == std::string_view::npos
-                                ? fragment->text_content.size()
-                                : fragment->text_content.size() - kept - 1;
-      fragment->text_content.remove_suffix(spaces);
-      fragment->width -= static_cast<int>(spaces);
-      end_x = link.x - x0 + fragment->width;
-      if (!fragment->text_content.empty()) {
-        break;
-      }
-      children.erase(children.begin() +
-                     static_cast<std::ptrdiff_t>(last.end_index - 1));
-      --last.end_index;
-    }
-    // Styled as the text it follows.
-    const PhysicalFragment* source = nullptr;
-    for (size_t i = last.end_index; i-- > last.start_index;) {
-      if (children[i].fragment->is_text) {
-        source = children[i].fragment;
-        break;
-      }
-    }
-    auto* ellipsis = MakeArenaFragment(ellipsis_width, 1);
-    if (source) {
-      *ellipsis = *source;
-      ellipsis->width = ellipsis_width;
-    } else {
-      ellipsis->is_text = true;
-      ellipsis->dom_node = box->dom_node;
-      ellipsis->paint_fields = kPaintBackground | kPaintForeground;
-      ellipsis->foreground_color = box->text.fg;
-    }
-    ellipsis->text_content = kEllipsis;
-    children.insert(
-        children.begin() + static_cast<std::ptrdiff_t>(last.end_index),
-        {ellipsis, x0 + end_x, last.y});
-    ++last.end_index;
-    last.occupied_width = end_x + ellipsis_width;
+  if (box->style().line_clamp > 0) {
+    ClampLines(lines, box->style().line_clamp, content_width_limit,
+               box->style().padding.left + box->style().border.left,
+               box->dom_node, box->text.fg, *container_frag, cursor_y);
   }
   if (constraints.height.mode == MeasureMode::Exactly) {
     container_frag->height = constraints.height.value;
@@ -2800,6 +2818,28 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
   return fragment;
 }
 
+// How far vertical-align moves the content of a table cell down: by what the
+// row has to spare, all or half of it. Out of LayoutTable, whose stack frame
+// every nested table pays for.
+[[gnu::noinline]] int CellAlignShift(LayoutBox* cell,
+                                     int cell_width,
+                                     int cell_height,
+                                     const LayoutContext& context) {
+  const VerticalAlign align = cell->style().vertical_align;
+  if (align != VerticalAlign::Middle && align != VerticalAlign::Bottom) {
+    return 0;
+  }
+  LayoutContext measure_context = context;
+  measure_context.is_measurement = true;
+  const int natural_height = RunLayout({cell},
+                                       {{cell_width, MeasureMode::Exactly},
+                                        {0, MeasureMode::Undefined}},
+                                       measure_context)
+                                 ->height;
+  const int spare = std::max(0, cell_height - natural_height);
+  return align == VerticalAlign::Middle ? spare / 2 : spare;
+}
+
 PhysicalFragment* LayoutTable(LayoutInputNode node,
                               LayoutConstraints constraints,
                               LayoutContext context) {
@@ -3331,20 +3371,8 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
             row_box, content_width_limit, row_height, col_x[col], 0, context);
         // vertical-align: middle or bottom moves the cell's content down by
         // what the row has to spare.
-        const VerticalAlign align = cell->style().vertical_align;
-        int shift = 0;
-        if (align == VerticalAlign::Middle || align == VerticalAlign::Bottom) {
-          LayoutContext measure_context = child_context;
-          measure_context.is_measurement = true;
-          const int natural_height =
-              RunLayout({cell},
-                        {{cell_width, MeasureMode::Exactly},
-                         {0, MeasureMode::Undefined}},
-                        measure_context)
-                  ->height;
-          const int spare = std::max(0, cell_height - natural_height);
-          shift = align == VerticalAlign::Middle ? spare / 2 : spare;
-        }
+        const int shift =
+            CellAlignShift(cell, cell_width, cell_height, child_context);
         auto final_cell_frag = RunLayout({cell}, final_c, child_context);
         if (shift > 0) {
           // A copy is moved: the layout cache may hand the cell's own
