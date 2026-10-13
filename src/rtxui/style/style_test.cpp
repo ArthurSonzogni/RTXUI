@@ -1663,6 +1663,75 @@ TEST_CASE("place-content sets both content-distribution axes",
   }
 }
 
+TEST_CASE("The background shorthand sets the background color",
+          "[style][color]") {
+  // `background` was unknown: the shorthand most stylesheets write did
+  // nothing, and was reported as unsupported.
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler(
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+  rtxui::ComputedStyle style;
+
+  SECTION("A color") {
+    rtxui::ApplyStyle(style, {"background", "#ff0000"});
+    CHECK(style.background_color == rtxui::Color::RGB(255, 0, 0));
+    CHECK(messages.empty());
+  }
+
+  SECTION("none clears it") {
+    rtxui::ApplyStyle(style, {"background", "red"});
+    rtxui::ApplyStyle(style, {"background", "none"});
+    rtxui::ComputedStyle transparent;
+    rtxui::ApplyStyle(transparent, {"background-color", "transparent"});
+    CHECK(style.background_color == transparent.background_color);
+    CHECK(messages.empty());
+  }
+
+  SECTION("An image cannot be drawn, and is reported") {
+    rtxui::ApplyStyle(style, {"background", "url(sky.png) red"});
+    CHECK(messages.size() == 1);
+  }
+  rtxui::SetDiagnosticHandler(nullptr);
+}
+
+TEST_CASE("flex-flow sets the direction and the wrapping", "[style][flex]") {
+  // flex-flow was unknown, so `flex-flow: column wrap` did nothing.
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler(
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+  rtxui::ComputedStyle style;
+
+  SECTION("Both, in either order") {
+    rtxui::ApplyStyle(style, {"flex-flow", "column wrap"});
+    CHECK(style.flex_direction == rtxui::Direction::Column);
+    CHECK(style.flex_wrap == rtxui::FlexWrap::Wrap);
+    rtxui::ApplyStyle(style, {"flex-flow", "wrap-reverse row-reverse"});
+    CHECK(style.flex_direction == rtxui::Direction::RowReverse);
+    CHECK(style.flex_wrap == rtxui::FlexWrap::WrapReverse);
+  }
+
+  SECTION("One value resets the other longhand") {
+    rtxui::ApplyStyle(style, {"flex-flow", "column wrap"});
+    rtxui::ApplyStyle(style, {"flex-flow", "row-reverse"});
+    CHECK(style.flex_direction == rtxui::Direction::RowReverse);
+    CHECK(style.flex_wrap == rtxui::FlexWrap::NoWrap);
+    rtxui::ApplyStyle(style, {"flex-flow", "wrap"});
+    CHECK(style.flex_direction == rtxui::Direction::Row);
+    CHECK(style.flex_wrap == rtxui::FlexWrap::Wrap);
+  }
+  CHECK(messages.empty());
+
+  SECTION("An unknown or repeated keyword changes nothing, and is reported") {
+    rtxui::ApplyStyle(style, {"flex-flow", "column"});
+    rtxui::ApplyStyle(style, {"flex-flow", "diagonal wrap"});
+    rtxui::ApplyStyle(style, {"flex-flow", "row column"});
+    CHECK(style.flex_direction == rtxui::Direction::Column);
+    CHECK(style.flex_wrap == rtxui::FlexWrap::NoWrap);
+    CHECK(messages.size() == 2);
+  }
+  rtxui::SetDiagnosticHandler(nullptr);
+}
+
 TEST_CASE("justify-content and align-content accept start/end",
           "[style][flex]") {
   // align-items/align-self took the CSS box-alignment spellings `start`/`end`

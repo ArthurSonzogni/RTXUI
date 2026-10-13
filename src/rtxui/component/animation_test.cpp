@@ -516,6 +516,36 @@ TEST_CASE("A transition moves an element by its offsets", "[animation]") {
   CHECK(box->style.left == Length::Cells(10));
 }
 
+class Tint : public Component<Tint> {
+ public:
+  std::string box_class;
+  Tint() { Bind(box_class); }
+  std::string_view view = R"html(
+    <div id="box" class="{box_class}">Hi</div>
+    <style>
+      #box { background: rgb(0, 0, 0); transition: background 1s linear; }
+      #box.lit { background: rgb(200, 0, 0); }
+    </style>
+  )html";
+};
+
+TEST_CASE("A transition on background fades the background color",
+          "[animation]") {
+  FakeClock clock;
+  auto app = Ref<Tint>::New();
+  app->Mount();
+  Element* box = app->Root()->QuerySelector("#box");
+  REQUIRE(box != nullptr);
+
+  app->box_class = "lit";
+  app->Digest();
+  CHECK(Red(box->style.background_color) == 0);
+  clock.Advance(box, 500);
+  CHECK(Red(box->style.background_color) == 100);
+  clock.Advance(box, 600);
+  CHECK(Red(box->style.background_color) == 200);
+}
+
 class Ending : public Component<Ending> {
  public:
   int ended = 0;

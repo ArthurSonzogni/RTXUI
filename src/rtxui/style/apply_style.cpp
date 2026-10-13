@@ -1722,6 +1722,15 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  // The background shorthand, of which a terminal can only draw the color.
+  if (p == "background") {
+    if (auto color = TransformColor(style.background_color,
+                                    v == "none" ? "transparent" : v)) {
+      style.background_color = color;
+      return;
+    }
+  }
+
   if (p == "color" || p == "foreground-color") {
     // As in CSS, the text color's own `currentColor` is the parent's.
     if (IsCurrentColor(v)) {
@@ -2227,6 +2236,45 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
     if (v == "wrap-reverse") {
       style.flex_wrap = FlexWrap::WrapReverse;
+      return;
+    }
+  }
+
+  // flex-flow: <flex-direction> || <flex-wrap>. Whichever is left out goes
+  // back to its initial value.
+  if (p == "flex-flow") {
+    std::optional<Direction> direction;
+    std::optional<FlexWrap> wrap;
+    bool valid = true;
+    for (std::string_view word : SplitWords(v)) {
+      std::optional<Direction> as_direction;
+      std::optional<FlexWrap> as_wrap;
+      if (word == "row") {
+        as_direction = Direction::Row;
+      } else if (word == "row-reverse") {
+        as_direction = Direction::RowReverse;
+      } else if (word == "column") {
+        as_direction = Direction::Column;
+      } else if (word == "column-reverse") {
+        as_direction = Direction::ColumnReverse;
+      } else if (word == "nowrap") {
+        as_wrap = FlexWrap::NoWrap;
+      } else if (word == "wrap") {
+        as_wrap = FlexWrap::Wrap;
+      } else if (word == "wrap-reverse") {
+        as_wrap = FlexWrap::WrapReverse;
+      }
+      if (as_direction && !direction) {
+        direction = as_direction;
+      } else if (as_wrap && !wrap) {
+        wrap = as_wrap;
+      } else {
+        valid = false;
+      }
+    }
+    if (valid && (direction || wrap)) {
+      style.flex_direction = direction.value_or(Direction::Row);
+      style.flex_wrap = wrap.value_or(FlexWrap::NoWrap);
       return;
     }
   }

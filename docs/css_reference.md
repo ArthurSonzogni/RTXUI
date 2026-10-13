@@ -163,6 +163,7 @@ RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing 
 <CssProperty name="color" values="<color>" animatable inherited description="Initial: `white`. Foreground text character color." />
 <CssProperty name="foreground-color" values="<color>" animatable inherited description="Initial: `white`. Alias for color." />
 <CssProperty name="background-color" values="<color>" animatable description="Initial: `transparent`. Background block container cell color." />
+<CssProperty name="background" values="<color> | none" shorthand animatable description="Initial: `transparent`. Shorthand for background-color, the only part a terminal can draw: a value with an image, position or size in it is reported as unsupported. `none` is `transparent`." />
 <CssProperty name="opacity" values="<number>" animatable description="Initial: `1.0`. Transparency value (0.0 for transparent to 1.0 for opaque)." />
 <CssProperty name="text-align" values="left | right | center | justify" inherited description="Initial: `left`. Horizontal alignment of inline text flows. justify widens space runs on soft-wrapped lines (never the last line or lines ended by an explicit newline)." />
 <CssProperty name="white-space" values="normal | nowrap | pre | pre-wrap | pre-line | break-spaces" inherited description="Initial: `normal`. nowrap/pre disable wrapping; pre-line collapses space runs while honoring newlines. Note: this engine preserves interior whitespace and newlines in all modes, so normal, pre-wrap, and break-spaces behave alike." />
@@ -225,6 +226,7 @@ self {
 <CssProperty name="display" values="none | block | inline | flex | grid | inline-block | inline-flex | inline-grid | flow-root" description="Initial: `inline`. Enables the flex/grid layout engine or hides elements." />
 <CssProperty name="flex-direction" values="row | column | row-reverse | column-reverse" description="Initial: `row`. Main formatting axis direction." />
 <CssProperty name="flex-wrap" values="nowrap | wrap | wrap-reverse" description="Initial: `nowrap`. Controls wrapping behavior of flex items." />
+<CssProperty name="flex-flow" values="<flex-direction> || <flex-wrap>" shorthand description="Initial: `row nowrap`. Shorthand for flex-direction + flex-wrap, in either order. The one left out goes back to its initial value." />
 <CssProperty name="flex-grow" values="<number>" animatable description="Initial: `0`. Portion of free space item claims along main axis." />
 <CssProperty name="flex-shrink" values="<number>" animatable description="Initial: `1`. Factor determining how much item shrinks." />
 <CssProperty name="flex-basis" values="<length>" description="Initial: `auto`. Initial size of flex item before free space is distributed." />

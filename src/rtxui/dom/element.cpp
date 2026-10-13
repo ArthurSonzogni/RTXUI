@@ -362,6 +362,9 @@ const TransitionConfig* FindTransitionConfig(const Element* element,
         (property == "border-left-color" || property == "border-color-left")) {
       return &config;
     }
+    if (config.property == "background" && property == "background-color") {
+      return &config;
+    }
     if (config.property == "translate" &&
         (property == "translate-x" || property == "translate-y")) {
       return &config;
