@@ -1,13 +1,16 @@
 #include "rtxui/style/apply_style.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <charconv>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <limits>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -919,6 +922,135 @@ Length ParseLength(std::string_view value) {
     return Length::Fr(StoF(value));
   }
   return Length::Cells(StoF(value));
+}
+
+// Grid lines and spans past this are taken as this: every track up to an
+// item's lines is laid out, so an unbounded one would be laid out forever.
+constexpr int kMaxGridLine = 1000;
+
+// One grid-*-start/-end value: `auto`, a line number other than 0, or
+// `span N`.
+std::optional<GridLine> ParseGridLine(std::string_view value) {
+  const auto words = SplitWords(value);
+  if (words.size() == 1 && words[0] == "auto") {
+    return GridLine();
+  }
+  if (words.size() == 1) {
+    const auto line = ParseWholeInt(words[0]);
+    if (!line || *line == 0) {
+      return std::nullopt;
+    }
+    return GridLine{.line = std::clamp(*line, -kMaxGridLine, kMaxGridLine)};
+  }
+  if (words.size() == 2 && words[0] == "span") {
+    const auto span = ParseWholeInt(words[1]);
+    if (!span || *span < 1) {
+      return std::nullopt;
+    }
+    return GridLine{.span = std::min(*span, kMaxGridLine)};
+  }
+  return std::nullopt;
+}
+
+// Up to `count` grid lines separated by '/', those left out auto.
+std::optional<std::vector<GridLine>> ParseGridLines(std::string_view value,
+                                                    size_t count) {
+  std::vector<GridLine> lines;
+  while (true) {
+    const size_t slash = value.find('/');
+    auto line = ParseGridLine(value.substr(0, slash));
+    if (!line || lines.size() == count) {
+      return std::nullopt;
+    }
+    lines.push_back(*line);
+    if (slash == std::string_view::npos) {
+      break;
+    }
+    value.remove_prefix(slash + 1);
+  }
+  lines.resize(count);
+  return lines;
+}
+
+// Whether `name` can name a grid area: an identifier, other than the keywords
+// a grid line takes.
+bool IsGridAreaName(std::string_view name) {
+  if (name.empty() || name == "auto" || name == "span" ||
+      std::isdigit(static_cast<unsigned char>(name.front()))) {
+    return false;
+  }
+  return std::ranges::all_of(name, [](char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '-' ||
+           c == '_' || static_cast<unsigned char>(c) >= 0x80;
+  });
+}
+
+// grid-template-areas: `none`, or one quoted string per row, each naming the
+// area of every cell, `.` for none. Rows must have the same number of cells,
+// and the cells of each name must make a rectangle.
+std::optional<std::vector<std::vector<std::string>>> ParseGridTemplateAreas(
+    std::string_view value) {
+  value = TrimWhitespace(value);
+  std::vector<std::vector<std::string>> rows;
+  if (value == "none") {
+    return rows;
+  }
+  while (!value.empty()) {
+    const char quote = value.front();
+    if (quote != '"' && quote != '\'') {
+      return std::nullopt;
+    }
+    const size_t close = value.find(quote, 1);
+    if (close == std::string_view::npos) {
+      return std::nullopt;
+    }
+    std::vector<std::string> row;
+    for (std::string_view word : SplitWords(value.substr(1, close - 1))) {
+      if (std::ranges::all_of(word, [](char c) { return c == '.'; })) {
+        row.emplace_back();
+      } else if (IsGridAreaName(word)) {
+        row.emplace_back(word);
+      } else {
+        return std::nullopt;
+      }
+    }
+    if (row.empty() || (!rows.empty() && row.size() != rows[0].size()) ||
+        rows.size() == kMaxGridLine || row.size() > kMaxGridLine) {
+      return std::nullopt;
+    }
+    rows.push_back(std::move(row));
+    value = TrimWhitespace(value.substr(close + 1));
+  }
+  if (rows.empty()) {
+    return std::nullopt;
+  }
+  // Each name must fill the rectangle from its first cell to its last.
+  std::map<std::string_view, std::array<size_t, 4>> bounds;
+  for (size_t r = 0; r < rows.size(); ++r) {
+    for (size_t c = 0; c < rows[r].size(); ++c) {
+      const std::string& name = rows[r][c];
+      if (name.empty()) {
+        continue;
+      }
+      auto [it, inserted] = bounds.try_emplace(name, std::array{r, c, r, c});
+      auto& [r0, c0, r1, c1] = it->second;
+      r0 = std::min(r0, r);
+      c0 = std::min(c0, c);
+      r1 = std::max(r1, r);
+      c1 = std::max(c1, c);
+    }
+  }
+  for (const auto& [name, box] : bounds) {
+    const auto& [r0, c0, r1, c1] = box;
+    for (size_t r = r0; r <= r1; ++r) {
+      for (size_t c = c0; c <= c1; ++c) {
+        if (rows[r][c] != name) {
+          return std::nullopt;
+        }
+      }
+    }
+  }
+  return rows;
 }
 
 std::vector<Length> ParseGridTemplate(std::string_view v) {
@@ -2512,69 +2644,58 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
-  if (p == "grid-column" || p == "grid-column-end") {
-    int span = 1;
-    if (v.find("span") != std::string_view::npos) {
-      auto parts = SplitWords(v);
-      for (size_t i = 0; i < parts.size(); ++i) {
-        if (parts[i] == "span" && i + 1 < parts.size()) {
-          if (const auto val = ParseWholeInt(parts[i + 1])) {
-            span = *val;
-          }
-          break;
-        }
-      }
-    } else {
-      std::string_view s = v;
-      while (!s.empty() &&
-             std::isspace(static_cast<unsigned char>(s.front()))) {
-        s.remove_prefix(1);
-      }
-      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
-        s.remove_suffix(1);
-      }
-      if (!s.empty()) {
-        int val = 1;
-        auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
-        if (ec == std::errc() && ptr == s.data() + s.size()) {
-          span = val;
-        }
-      }
+  if (p == "grid-column-start" || p == "grid-column-end" ||
+      p == "grid-row-start" || p == "grid-row-end") {
+    if (auto line = ParseGridLine(v)) {
+      GridLine& edge = p == "grid-column-start" ? style.grid_column_start
+                       : p == "grid-column-end" ? style.grid_column_end
+                       : p == "grid-row-start"  ? style.grid_row_start
+                                                : style.grid_row_end;
+      edge = *line;
+      return;
     }
-    style.grid_column_span = std::max(1, span);
-    return;
   }
 
-  if (p == "grid-row" || p == "grid-row-end") {
-    int span = 1;
-    if (v.find("span") != std::string_view::npos) {
-      auto parts = SplitWords(v);
-      for (size_t i = 0; i < parts.size(); ++i) {
-        if (parts[i] == "span" && i + 1 < parts.size()) {
-          if (const auto val = ParseWholeInt(parts[i + 1])) {
-            span = *val;
-          }
-          break;
-        }
-      }
-    } else {
-      std::string_view s = v;
-      while (!s.empty() &&
-             std::isspace(static_cast<unsigned char>(s.front()))) {
-        s.remove_prefix(1);
-      }
-      while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
-        s.remove_suffix(1);
-      }
-      if (!s.empty()) {
-        int val = 1;
-        auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), val);
-        if (ec == std::errc() && ptr == s.data() + s.size()) {
-          span = val;
-        }
-      }
+  // grid-column / grid-row: <start> [ / <end> ]?, the end auto when left out.
+  if (p == "grid-column" || p == "grid-row") {
+    if (auto edges = ParseGridLines(v, 2)) {
+      (p == "grid-column" ? style.grid_column_start : style.grid_row_start) =
+          (*edges)[0];
+      (p == "grid-column" ? style.grid_column_end : style.grid_row_end) =
+          (*edges)[1];
+      return;
     }
-    style.grid_row_span = std::max(1, span);
+  }
+
+  // grid-area: an area of the container's grid-template-areas, or
+  // <row-start> / <column-start> / <row-end> / <column-end>, those left out
+  // auto.
+  if (p == "grid-area") {
+    const std::string_view name = TrimWhitespace(v);
+    if (IsGridAreaName(name)) {
+      style.grid_area = std::string(name);
+      style.grid_row_start = style.grid_column_start = style.grid_row_end =
+          style.grid_column_end = GridLine();
+      return;
+    }
+    if (auto edges = ParseGridLines(v, 4)) {
+      style.grid_area.clear();
+      style.grid_row_start = (*edges)[0];
+      style.grid_column_start = (*edges)[1];
+      style.grid_row_end = (*edges)[2];
+      style.grid_column_end = (*edges)[3];
+      return;
+    }
+  }
+
+  if (p == "grid-template-areas") {
+    if (auto areas = ParseGridTemplateAreas(v)) {
+      style.grid_template_areas = std::move(*areas);
+      return;
+    }
+    ReportDiagnostic("invalid 'grid-template-areas: " + std::string(v) +
+                     "': expected quoted rows of the same length, each name "
+                     "making a rectangle, or none");
     return;
   }
 

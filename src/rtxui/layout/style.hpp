@@ -377,6 +377,14 @@ struct AnimationConfig {
   bool operator==(const AnimationConfig&) const = default;
 };
 
+// One edge of a grid item's placement: `auto`, a line number counted from 1
+// (negative counts back from the end of the explicit grid), or `span N`.
+struct GridLine {
+  int line = 0;  // 0 when not a line.
+  int span = 0;  // 0 when not a span.
+  bool operator==(const GridLine&) const = default;
+};
+
 // The trivially-copyable part of ComputedStyle, kept in its own base so that
 // copying it compiles down to a single memcpy instead of ~100 individual field
 // assignments. Style copies are one of the hottest operations in a frame: every
@@ -495,8 +503,12 @@ struct ComputedStyleCore {
   int scroll_speed_y = 1;
   ScrollBehavior scroll_behavior = ScrollBehavior::Auto;
 
-  int grid_column_span = 1;
-  int grid_row_span = 1;
+  // Where a grid item goes, edge by edge: grid-column-start/-end and
+  // grid-row-start/-end.
+  GridLine grid_column_start;
+  GridLine grid_column_end;
+  GridLine grid_row_start;
+  GridLine grid_row_end;
 
   Cursor cursor = Cursor::Auto;
   Visibility visibility = Visibility::Visible;
@@ -533,13 +545,21 @@ struct ComputedStyle : ComputedStyleCore {
   // by field copy their presence in the core would force on every element.
   std::vector<Length> grid_template_columns;
   std::vector<Length> grid_template_rows;
+  // grid-template-areas: the area name of each cell, row by row. Empty for a
+  // cell in no area (`.`).
+  std::vector<std::vector<std::string>> grid_template_areas;
+  // `grid-area: <name>`: the area of the container's grid-template-areas the
+  // item goes in, on each axis whose edges are both auto.
+  std::string grid_area;
 
   ComputedStyle() = default;
 
   ComputedStyle(const ComputedStyle& other)
       : ComputedStyleCore(other),
         grid_template_columns(other.grid_template_columns),
-        grid_template_rows(other.grid_template_rows) {
+        grid_template_rows(other.grid_template_rows),
+        grid_template_areas(other.grid_template_areas),
+        grid_area(other.grid_area) {
     if (other.transitions) {
       transitions =
           std::make_unique<std::vector<TransitionConfig>>(*other.transitions);
@@ -576,6 +596,8 @@ struct ComputedStyle : ComputedStyleCore {
     }
     grid_template_columns = other.grid_template_columns;
     grid_template_rows = other.grid_template_rows;
+    grid_template_areas = other.grid_template_areas;
+    grid_area = other.grid_area;
     ComputedStyleCore::operator=(other);
     return *this;
   }

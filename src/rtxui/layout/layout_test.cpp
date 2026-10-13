@@ -512,6 +512,125 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
     CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
           CheckGrid({"AABB", "CCDD"}));
   }
+
+  SECTION("grid-column places an item from a line") {
+    // A number is a line, as in CSS: `grid-column: 2` used to mean span 2.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2 2;width:6;}.s{grid-column:2;}</style><div class="g"><div class="s">AA</div><div>BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"  AABB"}));
+  }
+
+  SECTION("a line pair, counted from the end") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2 2;width:6;}.s{grid-column:1 / -1;}</style><div class="g"><div>AA</div><div class="s">BBBBBB</div><div>CC</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 3)) ==
+          CheckGrid({"AA    ", "BBBBBB", "CC    "}));
+  }
+
+  SECTION("an item placed on both axes goes first") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}.s{grid-area:1 / 2;}</style><div class="g"><div>AA</div><div>BB</div><div class="s">CC</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"AACC", "BB  "}));
+  }
+
+  SECTION("an item placed on its row only") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}.s{grid-row:2;}</style><div class="g"><div class="s">AA</div><div>BB</div><div>CC</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"BBCC", "AA  "}));
+  }
+
+  SECTION("an item placed on its column only") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;width:4;}.s{grid-column:1;}</style><div class="g"><div>AA</div><div>BB</div><div class="s">CC</div><div>DD</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 2)) ==
+          CheckGrid({"AABB", "CCDD"}));
+  }
+
+  SECTION("an end line with a span") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2 2;width:6;}.s{grid-column:span 2 / 4;}</style><div class="g"><div class="s">AAAA</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"  AAAA"}));
+  }
+
+  SECTION("grid-template-areas and grid-area") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .g {
+            display: grid;
+            grid-template-columns: 2 4;
+            grid-template-areas: "head head" "side main" "side foot";
+            width: 6;
+          }
+          .h { grid-area: head; }
+          .s { grid-area: side; }
+          .m { grid-area: main; }
+          .f { grid-area: foot; }
+        </style>
+        <div class="g">
+          <div class="f">FF</div>
+          <div class="m">MM</div>
+          <div class="s">S</div>
+          <div class="h">HHHHHH</div>
+        </div>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 3)) ==
+          CheckGrid({"HHHHHH", "S MM  ", "  FF  "}));
+  }
+
+  SECTION("areas without a column template share the width") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-areas:"a b";width:4;}.a{grid-area:a;}.b{grid-area:b;}</style><div class="g"><div class="b">BB</div><div class="a">AA</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1)) ==
+          CheckGrid({"AABB"}));
+  }
+
+  SECTION("an auto track beside fr tracks fits its content") {
+    // It used to get no width at all, and its content vanished.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:auto 1fr;width:6;}</style><div class="g"><div>AA</div><div>BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"AABB  "}));
+  }
+
+  SECTION("an item past the last column adds an auto column") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:1fr 1fr;width:6;}.s{grid-column:3;}</style><div class="g"><div>AA</div><div class="s">BB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 1)) ==
+          CheckGrid({"AA  BB"}));
+  }
+
+  SECTION("an unknown area name is auto-placed") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:2 2;grid-template-areas:"a b";width:4;}.x{grid-area:nowhere;}</style><div class="g"><div class="x">XX</div><div>YY</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1)) ==
+          CheckGrid({"XXYY"}));
+  }
 }
 
 // position: sticky had no unit test, and its offset maths lives in one shared

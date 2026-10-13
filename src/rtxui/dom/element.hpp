@@ -242,11 +242,19 @@ class RTXUI_EXPORT Element : public RefCounted {
     StyleChangeScope(const StyleChangeScope&) = delete;
     StyleChangeScope& operator=(const StyleChangeScope&) = delete;
 
+    // The fields of the style outside ComputedStyleCore that layout reads.
+    struct Grid {
+      explicit Grid(const ComputedStyle& style);
+      std::vector<Length> template_columns;
+      std::vector<Length> template_rows;
+      std::vector<std::vector<std::string>> template_areas;
+      std::string area;
+    };
+
    private:
     Element& element_;
     ComputedStyleCore core_;
-    std::vector<Length> grid_template_columns_;
-    std::vector<Length> grid_template_rows_;
+    Grid grid_;
   };
 
   /// Same as StyleChangeScope, for `generated`.

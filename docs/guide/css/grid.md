@@ -46,6 +46,42 @@ item can cover several tracks:
 .sidebar { grid-row: span 3; }
 ```
 
+Or name the lines it goes between. Lines are numbered from 1, and from -1
+back from the end:
+
+```css
+.title  { grid-column: 1 / -1; }        /* every column */
+.aside  { grid-column: 3; grid-row: 2 / span 2; }
+.corner { grid-area: 1 / 1 / 3 / 3; }   /* row-start / col-start / row-end / col-end */
+```
+
+Items placed on both axes are placed first, then those placed on their row
+only, then the others fill the gaps in order, as in CSS. Placing an item past
+the last column adds columns, sized as `auto`.
+
+## Named areas
+
+`grid-template-areas` draws the layout, one quoted string per row, and
+`grid-area` puts an item in a named area:
+
+```css
+.app {
+  display: grid;
+  grid-template-columns: 20 1fr;
+  grid-template-areas:
+    "head head"
+    "nav  main"
+    "nav  foot";
+}
+.header  { grid-area: head; }
+.nav     { grid-area: nav; }
+.content { grid-area: main; }
+.footer  { grid-area: foot; }
+```
+
+`.` leaves a cell empty. Each name must cover a rectangle, and every row must
+have as many cells; a template breaking either rule is reported and ignored.
+
 ## Aligning items in their cells
 
 By default items stretch to fill their cell. `justify-items` (inline axis)

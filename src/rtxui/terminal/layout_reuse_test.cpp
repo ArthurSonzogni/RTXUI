@@ -313,6 +313,44 @@ TEST_CASE("A reused layout follows an added and a removed child",
   CheckChange([](Page& page) { page.items.erase(page.items.begin()); });
 }
 
+// The grid fields of a style live outside the part compared byte for byte.
+// The area changes through a class above the grid, so that nothing else about
+// the grid or the item does.
+class Areas : public Component<Areas> {
+ public:
+  bool swapped = false;
+  std::string side() const { return swapped ? "swapped" : ""; }
+  std::string_view view = R"html(
+    <div class="{side}">
+      <div class="grid"><div class="item">item</div></div>
+      <div><div>unchanged</div></div>
+    </div>
+    <style>
+      .grid { display: grid; grid-template-areas: "a b"; width: 20; }
+      .item { grid-area: a; }
+      .swapped .item { grid-area: b; }
+    </style>
+  )html";
+  Areas() {
+    Bind(swapped);
+    Bind(side);
+  }
+};
+
+TEST_CASE("A reused layout follows a change of grid area",
+          "[screen][layout-reuse]") {
+  unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
+  auto app = Ref<Areas>::New();
+  TimelineScreen screen(app, kWidth, kHeight);
+  screen.Advance(0);
+  REQUIRE(screen.Text().starts_with("item"));
+  PostTask([&] { app->swapped = true; });
+  ResetLayoutRunCount();
+  screen.Advance(0);
+  CHECK(LayoutReuseCount() > 0);
+  CHECK(screen.Text().starts_with("          item"));
+}
+
 TEST_CASE("A reused layout follows a scroll", "[screen][layout-reuse]") {
   unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
   auto app = Ref<Page>::New();

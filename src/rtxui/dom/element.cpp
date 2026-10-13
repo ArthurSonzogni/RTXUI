@@ -621,25 +621,25 @@ void Element::SetClasses(std::vector<std::string> classes) {
 
 namespace {
 
-// Whether `style` still is the style `core` and the grid templates were taken
-// from. Byte equality of the core is enough to say so: equal bytes are equal
-// values. Padding or a disengaged optional's payload can differ between equal
-// styles, which only costs a layout, never a stale one.
+// Whether `style` still is the style `core` and `grid` were taken from. Byte
+// equality of the core is enough to say so: equal bytes are equal values.
+// Padding or a disengaged optional's payload can differ between equal styles,
+// which only costs a layout, never a stale one.
 bool SameStyle(const ComputedStyleCore& core,
-               const std::vector<Length>& grid_template_columns,
-               const std::vector<Length>& grid_template_rows,
+               const Element::StyleChangeScope::Grid& grid,
                const ComputedStyle& style) {
   // NOLINTNEXTLINE(bugprone-suspicious-memory-comparison): see above.
   return std::memcmp(&core, static_cast<const ComputedStyleCore*>(&style),
                      sizeof(ComputedStyleCore)) == 0 &&
-         grid_template_columns == style.grid_template_columns &&
-         grid_template_rows == style.grid_template_rows;
+         grid.template_columns == style.grid_template_columns &&
+         grid.template_rows == style.grid_template_rows &&
+         grid.template_areas == style.grid_template_areas &&
+         grid.area == style.grid_area;
 }
 
 bool SameGenerated(const GeneratedContent& a, const GeneratedContent& b) {
   return a.content == b.content &&
-         SameStyle(a.style, a.style.grid_template_columns,
-                   a.style.grid_template_rows, b.style);
+         SameStyle(a.style, Element::StyleChangeScope::Grid(a.style), b.style);
 }
 
 }  // namespace
@@ -662,14 +662,16 @@ Element::GeneratedChangeScope::~GeneratedChangeScope() {
 }
 
 Element::StyleChangeScope::StyleChangeScope(Element& element)
-    : element_(element),
-      core_(element.style),
-      grid_template_columns_(element.style.grid_template_columns),
-      grid_template_rows_(element.style.grid_template_rows) {}
+    : element_(element), core_(element.style), grid_(element.style) {}
+
+Element::StyleChangeScope::Grid::Grid(const ComputedStyle& style)
+    : template_columns(style.grid_template_columns),
+      template_rows(style.grid_template_rows),
+      template_areas(style.grid_template_areas),
+      area(style.grid_area) {}
 
 Element::StyleChangeScope::~StyleChangeScope() {
-  if (!SameStyle(core_, grid_template_columns_, grid_template_rows_,
-                 element_.style)) {
+  if (!SameStyle(core_, grid_, element_.style)) {
     element_.InvalidateLayout();
   }
   // What changes the style is also what starts transitions and animations.

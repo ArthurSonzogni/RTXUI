@@ -815,7 +815,7 @@ TEST_CASE("Extreme CSS numbers are bounded", "[style][limits]") {
 
     rtxui::ComputedStyle span;
     rtxui::ApplyStyle(span, {"grid-column", "span 2000000000"});
-    CHECK(span.grid_column_span < 2000000000);
+    CHECK(span.grid_column_start.span < 2000000000);
   }
 
   SECTION("the border shorthand still tells a keyword from a number") {
@@ -1422,20 +1422,66 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle",
     CHECK(style.grid_template_columns.empty());
   }
 
-  SECTION("grid-column and grid-column-end") {
+  SECTION("grid-column and its longhands") {
     rtxui::ApplyStyle(style, {"grid-column", "span 3"});
-    CHECK(style.grid_column_span == 3);
+    CHECK(style.grid_column_start == rtxui::GridLine{.span = 3});
+    CHECK(style.grid_column_end == rtxui::GridLine());
 
-    rtxui::ApplyStyle(style, {"grid-column-end", "5"});
-    CHECK(style.grid_column_span == 5);
+    // A number is a line, as in CSS, not a span.
+    rtxui::ApplyStyle(style, {"grid-column", "2"});
+    CHECK(style.grid_column_start == rtxui::GridLine{.line = 2});
+    CHECK(style.grid_column_end == rtxui::GridLine());
+
+    rtxui::ApplyStyle(style, {"grid-column", "1 / -1"});
+    CHECK(style.grid_column_start == rtxui::GridLine{.line = 1});
+    CHECK(style.grid_column_end == rtxui::GridLine{.line = -1});
+
+    rtxui::ApplyStyle(style, {"grid-column-end", "span 2"});
+    CHECK(style.grid_column_end == rtxui::GridLine{.span = 2});
+    rtxui::ApplyStyle(style, {"grid-column-start", "auto"});
+    CHECK(style.grid_column_start == rtxui::GridLine());
   }
 
-  SECTION("grid-row and grid-row-end") {
-    rtxui::ApplyStyle(style, {"grid-row", "span 2"});
-    CHECK(style.grid_row_span == 2);
+  SECTION("grid-row and its longhands") {
+    rtxui::ApplyStyle(style, {"grid-row", "2 / span 3"});
+    CHECK(style.grid_row_start == rtxui::GridLine{.line = 2});
+    CHECK(style.grid_row_end == rtxui::GridLine{.span = 3});
 
     rtxui::ApplyStyle(style, {"grid-row-end", "4"});
-    CHECK(style.grid_row_span == 4);
+    CHECK(style.grid_row_end == rtxui::GridLine{.line = 4});
+  }
+
+  SECTION("grid-area") {
+    rtxui::ApplyStyle(style, {"grid-area", "1 / 2 / 3 / 4"});
+    CHECK(style.grid_row_start == rtxui::GridLine{.line = 1});
+    CHECK(style.grid_column_start == rtxui::GridLine{.line = 2});
+    CHECK(style.grid_row_end == rtxui::GridLine{.line = 3});
+    CHECK(style.grid_column_end == rtxui::GridLine{.line = 4});
+
+    rtxui::ApplyStyle(style, {"grid-area", "2 / span 2"});
+    CHECK(style.grid_row_start == rtxui::GridLine{.line = 2});
+    CHECK(style.grid_column_start == rtxui::GridLine{.span = 2});
+    CHECK(style.grid_row_end == rtxui::GridLine());
+    CHECK(style.grid_column_end == rtxui::GridLine());
+
+    rtxui::ApplyStyle(style, {"grid-area", "sidebar"});
+    CHECK(style.grid_area == "sidebar");
+    CHECK(style.grid_row_start == rtxui::GridLine());
+    CHECK(style.grid_column_start == rtxui::GridLine());
+  }
+
+  SECTION("grid-template-areas") {
+    rtxui::ApplyStyle(style, {"grid-template-areas",
+                              "\"head head\"\n  \"side .\" 'side main'"});
+    REQUIRE(style.grid_template_areas.size() == 3);
+    CHECK(style.grid_template_areas[0] ==
+          std::vector<std::string>{"head", "head"});
+    CHECK(style.grid_template_areas[1] == std::vector<std::string>{"side", ""});
+    CHECK(style.grid_template_areas[2] ==
+          std::vector<std::string>{"side", "main"});
+
+    rtxui::ApplyStyle(style, {"grid-template-areas", "none"});
+    CHECK(style.grid_template_areas.empty());
   }
 
   SECTION("grid-template with repeat()") {
@@ -1528,16 +1574,24 @@ TEST_CASE("CSS style parsing handles invalid values robustly",
   }
 
   SECTION("Invalid grid properties") {
-    style.grid_column_span = 1;
     rtxui::ApplyStyle(style, {"grid-column", "span abc"});
-    CHECK(style.grid_column_span == 1);
-
     rtxui::ApplyStyle(style, {"grid-column", "xyz"});
-    CHECK(style.grid_column_span == 1);
+    rtxui::ApplyStyle(style, {"grid-column", "0"});
+    rtxui::ApplyStyle(style, {"grid-column", "span 0"});
+    rtxui::ApplyStyle(style, {"grid-column", "1 / 2 / 3"});
+    CHECK(style.grid_column_start == rtxui::GridLine());
+    CHECK(style.grid_column_end == rtxui::GridLine());
 
-    style.grid_row_span = 1;
     rtxui::ApplyStyle(style, {"grid-row", "span "});
-    CHECK(style.grid_row_span == 1);
+    CHECK(style.grid_row_start == rtxui::GridLine());
+
+    // Rows of different lengths, and a name that is not a rectangle.
+    rtxui::ApplyStyle(style, {"grid-template-areas", "\"a b\" \"a\""});
+    rtxui::ApplyStyle(style, {"grid-template-areas", "\"a b a\""});
+    rtxui::ApplyStyle(style, {"grid-template-areas", "\"a b\" \"b b\""});
+    rtxui::ApplyStyle(style, {"grid-template-areas", "a b"});
+    rtxui::ApplyStyle(style, {"grid-template-areas", "\"a b"});
+    CHECK(style.grid_template_areas.empty());
 
     style.grid_template_columns.clear();
     rtxui::ApplyStyle(style, {"grid-template-columns", "repeat(abc, 10px)"});

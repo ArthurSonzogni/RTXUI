@@ -252,10 +252,14 @@ self {
 <CssProperty name="grid-template-columns" values="list of <length>" description="Initial: `none`. Defines the column tracks of the grid. Supports repeat(count, track_size)." />
 <CssProperty name="grid-template-rows" values="list of <length>" description="Initial: `none`. Defines the row tracks of the grid. Supports repeat(count, track_size)." />
 <CssProperty name="grid-template" values="shorthand" shorthand description="Initial: `none`. Shorthand for grid-template-rows and grid-template-columns (separated by /)." />
-<CssProperty name="grid-column" values="span <integer> | <integer>" description="Initial: `auto`. Sets the column span of the grid item." />
-<CssProperty name="grid-column-end" values="span <integer> | <integer>" description="Initial: `auto`. Alias for grid-column." />
-<CssProperty name="grid-row" values="span <integer> | <integer>" description="Initial: `auto`. Sets the row span of the grid item." />
-<CssProperty name="grid-row-end" values="span <integer> | <integer>" description="Initial: `auto`. Alias for grid-row." />
+<CssProperty name="grid-template-areas" values="<string>+ | none" description="Initial: `none`. Names the grid's cells, one quoted string per row: `&quot;head head&quot; &quot;side main&quot;`. `.` leaves a cell unnamed. Rows must have as many cells, and each name must cover a rectangle; otherwise the declaration is reported and ignored. The areas also add explicit tracks: without grid-template-columns, their columns share the width." />
+<CssProperty name="grid-area" values="<name> | <line> [ / <line> ]{0,3}" shorthand description="Initial: `auto`. An area of the container's grid-template-areas, or row-start / column-start / row-end / column-end, those left out auto. A name places the item on each axis whose own lines are both auto; a name the container does not define leaves the item auto-placed." />
+<CssProperty name="grid-column" values="<line> [ / <line> ]?" shorthand description="Initial: `auto`. Shorthand for grid-column-start and grid-column-end, the end auto when left out. A &lt;line&gt; is `auto`, a line number (from 1; negative counts back from the end of the explicit grid) or `span <integer>`: `grid-column: 1 / -1` spans every column, `grid-column: span 2` two columns wherever the item lands." />
+<CssProperty name="grid-column-start" values="<line>" description="Initial: `auto`. The line the item starts at, or `span <integer>`." />
+<CssProperty name="grid-column-end" values="<line>" description="Initial: `auto`. The line the item ends at, or `span <integer>`." />
+<CssProperty name="grid-row" values="<line> [ / <line> ]?" shorthand description="Initial: `auto`. Shorthand for grid-row-start and grid-row-end, as grid-column." />
+<CssProperty name="grid-row-start" values="<line>" description="Initial: `auto`. The row line the item starts at, or `span <integer>`." />
+<CssProperty name="grid-row-end" values="<line>" description="Initial: `auto`. The row line the item ends at, or `span <integer>`." />
 <CssProperty name="grid-gap" values="<length>" shorthand description="Initial: `0`. Alias for gap." />
 <CssProperty name="grid-row-gap" values="<length>" description="Initial: `0`. Alias for row-gap." />
 <CssProperty name="grid-column-gap" values="<length>" description="Initial: `0`. Alias for column-gap." />
