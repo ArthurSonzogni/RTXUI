@@ -13,6 +13,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <system_error>
@@ -182,8 +183,18 @@ int FragmentBaseline(const PhysicalFragment* fragment) {
     return bottom;
   }
   int last = -1;
-  auto find = [&last](auto& self, const PhysicalFragment* at, int y) -> void {
-    for (const auto& child : at->children) {
+  // Children come last to first, which in flow is bottom to top: those ending
+  // above the lowest text found so far are skipped, and the search ends once
+  // that text is on the bottom row.
+  auto find = [&last, bottom](auto& self, const PhysicalFragment* at,
+                              int y) -> void {
+    for (const auto& child : std::views::reverse(at->children)) {
+      if (last == bottom) {
+        return;
+      }
+      if (y + child.y + child.fragment->height - 1 <= last) {
+        continue;
+      }
       if (child.fragment->is_text) {
         last = std::max(last, y + child.y);
         continue;
