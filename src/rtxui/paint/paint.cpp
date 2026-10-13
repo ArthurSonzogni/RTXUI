@@ -1,6 +1,7 @@
 #include "rtxui/paint/paint.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cctype>
 #include <cmath>
@@ -8,6 +9,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "rtxui/base/string.hpp"
@@ -21,6 +23,62 @@
 namespace rtxui {
 
 namespace {
+
+// The line glyphs of a box drawing family, by the arms they draw: bit 1 up,
+// 2 right, 4 down, 8 left. Null where no glyph has those arms.
+using BoxGlyphs = std::array<const char*, 16>;
+constexpr BoxGlyphs kLightGlyphs = {
+    nullptr, nullptr, nullptr, "└", nullptr, "│", "┌", "├",
+    nullptr, "┘",     "─",     "┴", "┐",     "┤", "┬", "┼"};
+constexpr BoxGlyphs kHeavyGlyphs = {
+    nullptr, nullptr, nullptr, "┗", nullptr, "┃", "┏", "┣",
+    nullptr, "┛",     "━",     "┻", "┓",     "┫", "┳", "╋"};
+constexpr BoxGlyphs kDoubleGlyphs = {
+    nullptr, nullptr, nullptr, "╚", nullptr, "║", "╔", "╠",
+    nullptr, "╝",     "═",     "╩", "╗",     "╣", "╦", "╬"};
+
+// The family and arms of a line glyph, or no family. Rounded corners draw the
+// arms of light ones.
+std::pair<const BoxGlyphs*, int> BoxArms(std::string_view glyph) {
+  for (const BoxGlyphs* family :
+       {&kLightGlyphs, &kHeavyGlyphs, &kDoubleGlyphs}) {
+    for (int arms = 0; arms < 16; ++arms) {
+      if ((*family)[arms] && glyph == (*family)[arms]) {
+        return {family, arms};
+      }
+    }
+  }
+  if (glyph == "╭") {
+    return {&kLightGlyphs, 2 | 4};
+  }
+  if (glyph == "╮") {
+    return {&kLightGlyphs, 4 | 8};
+  }
+  if (glyph == "╰") {
+    return {&kLightGlyphs, 1 | 2};
+  }
+  if (glyph == "╯") {
+    return {&kLightGlyphs, 1 | 8};
+  }
+  return {nullptr, 0};
+}
+
+// The glyph drawing `incoming` over `existing` where two collapsed borders
+// meet: the lines of both, joined, when they are of one family. `┐` drawn
+// over `┌` is `┬`. Otherwise `incoming`, which covers what was there.
+const char* MergeBorderGlyph(std::string_view existing, const char* incoming) {
+  const auto [family, arms] = BoxArms(incoming);
+  const auto [existing_family, existing_arms] = BoxArms(existing);
+  if (!family || family != existing_family) {
+    return incoming;
+  }
+  const int merged = arms | existing_arms;
+  // Unchanged arms keep their own glyph: a rounded corner stays rounded.
+  if (merged == arms || !(*family)[merged]) {
+    return incoming;
+  }
+  return (*family)[merged];
+}
 
 const Color kDefaultScrollbarThumbColor = Color::RGBA(200, 200, 200, 200);
 const Color kDefaultScrollbarTrackColor = Color::RGBA(80, 80, 80, 120);
@@ -485,9 +543,23 @@ void PaintImpl(const PhysicalFragment* frag,
               // glyphs included: a dialog box must not show the text it
               // covers through its blank cells.
               const bool was_continuation = cell.is_continuation;
+              // Except, for a cell of a table with collapsed borders, the
+              // border lines under its own: they are shared, and its border
+              // joins them.
+              const bool shared_border =
+                  frag->merge_borders &&
+                  (x == 0 || y == 0 || x == w - 1 || y == h - 1) &&
+                  BoxArms(cell.character).first;
+              std::string kept;
+              if (shared_border) {
+                kept = std::move(cell.character);
+              }
               cell = Cell();
               cell.background_color = new_bg;
               cell.foreground_color = new_bg;
+              if (shared_border) {
+                cell.character = std::move(kept);
+              }
               // A wide glyph cut in half by the box's edge would still be
               // drawn two cells wide, over the box or past it: blank the
               // half left outside.
@@ -551,6 +623,9 @@ void PaintImpl(const PhysicalFragment* frag,
           clip.Contains(x, y)) {
         auto& cell = texture[x, y];
         resolve_cell(cell);
+        if (frag->merge_borders) {
+          c = MergeBorderGlyph(cell.character, c);
+        }
         cell.character = c;
         cell.link = 0;
 

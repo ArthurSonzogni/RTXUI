@@ -73,7 +73,21 @@ The following attributes apply to all elements and components:
 
 #### Table Sizing Algorithm:
 - **Columns**: Evaluates the maximum preferred cell width across each column. Extra horizontal space from fixed container `width` or `min-width` is distributed proportionally.
-- **Rows**: Row height conforms to the tallest cell in the row. Shorter cells stretch vertically to maintain unbroken borders and backgrounds.
+- **Rows**: Row height conforms to the tallest cell in the row. Shorter cells stretch vertically to maintain unbroken borders and backgrounds; `vertical-align: middle | bottom` on a cell moves its content down within it.
+- **Cell borders**: by default each cell draws its whole border, next to its neighbours'. `border-spacing` puts space between them. `border-collapse: collapse` on the table draws each line once and joins them at the crossings:
+
+  ```css
+  table { border: solid; border-collapse: collapse; }
+  td, th { border: solid; padding: 0 1; }
+  ```
+
+  ```
+  ┌──────────┬────────┐
+  │ Service  │ Status │
+  ├──────────┼────────┤
+  │ Database │ Active │
+  └──────────┴────────┘
+  ```
 
 ```xml
 <table>

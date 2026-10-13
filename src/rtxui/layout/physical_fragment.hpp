@@ -44,6 +44,9 @@ struct PhysicalFragment {
   // whenever `has_border` is set.
   Spacing border_width;
   BorderStyle border_style = BorderStyle::None;
+  // Set on the cells of a table with collapsed borders: where its border
+  // lines cross lines already drawn, they join into one glyph.
+  bool merge_borders = false;
   std::optional<Color> border_color_top;
   std::optional<Color> border_color_right;
   std::optional<Color> border_color_bottom;

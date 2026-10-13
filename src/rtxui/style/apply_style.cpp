@@ -3180,6 +3180,27 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "border-collapse") {
+    if (v == "collapse" || v == "separate") {
+      style.border_collapse = v == "collapse";
+      return;
+    }
+  }
+
+  // border-spacing: <horizontal> <vertical>?, in cells.
+  if (p == "border-spacing") {
+    const auto words = SplitWords(v);
+    if (!words.empty() && words.size() <= 2) {
+      const auto x = ParseWholeInt(words[0]);
+      const auto y = ParseWholeInt(words.back());
+      if (x && y && *x >= 0 && *y >= 0) {
+        style.border_spacing_x = *x;
+        style.border_spacing_y = *y;
+        return;
+      }
+    }
+  }
+
   if (p == "vertical-align") {
     if (v == "baseline") {
       style.vertical_align = VerticalAlign::Baseline;

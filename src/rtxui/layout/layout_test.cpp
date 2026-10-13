@@ -2088,10 +2088,11 @@ TEST_CASE("Layout: a table wider than its box reports its true scroll_width",
   REQUIRE(wrap != nullptr);
 
   // 10 columns can't all fit in a width-5 box even at their 1-cell floor.
-  CHECK(table->scroll_width() > table->layout_width());
-  // The wrapping scrollable container must see the same true extent, not
-  // just the table's own (smaller) reported width.
+  CHECK(table->layout_width() > wrap->layout_width());
+  // The wrapping scrollable container must see the table's true extent.
   CHECK(wrap->scroll_width() == table->scroll_width());
+  // Which counts each column once: it used to count the last one twice.
+  CHECK(table->scroll_width() == table->layout_width());
 }
 
 // Regression test: LayoutTable ignored `height`/min-height/max-height
@@ -4757,6 +4758,105 @@ TEST_CASE("Layout: vertical-align places inline boxes in their line",
     };
     CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 3)) ==
           CheckGrid({"axb   ", "      ", " popup"}));
+  }
+}
+
+TEST_CASE("Layout: border-collapse and border-spacing",
+          "[layout][table][border-collapse]") {
+  SECTION("separate borders, the default") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>td { border: solid; }</style>
+        <table><tr><td>a</td><td>bb</td></tr></table>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 7, 3)) ==
+          CheckGrid({"┌─┐┌──┐", "│a││bb│", "└─┘└──┘"}));
+  }
+
+  SECTION("border-spacing between and around cells") {
+    // Horizontally only: the second value is the vertical spacing.
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          table { border: solid; border-spacing: 1 0; }
+          td { border: solid; }
+        </style>
+        <table><tr><td>a</td><td>bb</td></tr></table>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 12, 5)) ==
+          CheckGrid({"┌──────────┐", "│ ┌─┐ ┌──┐ │", "│ │a│ │bb│ │",
+                     "│ └─┘ └──┘ │", "└──────────┘"}));
+  }
+
+  SECTION("collapsed borders are drawn once, joined") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          table { border: solid; border-collapse: collapse; }
+          td { border: solid; }
+        </style>
+        <table>
+          <tr><td>a</td><td>bb</td></tr>
+          <tr><td>ccc</td><td>d</td></tr>
+        </table>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 9, 5)) ==
+          CheckGrid({"┌───┬──┐ ", "│a  │bb│ ", "├───┼──┤ ", "│ccc│d │ ",
+                     "└───┴──┘ "}));
+  }
+
+  SECTION("the example of the HTML reference") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          table { border: solid; border-collapse: collapse; }
+          td, th { border: solid; padding: 0 1; }
+        </style>
+        <table>
+          <thead><tr><th>Service</th><th>Status</th></tr></thead>
+          <tbody><tr><td>Database</td><td>Active</td></tr></tbody>
+        </table>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 22, 5)) ==
+          CheckGrid({"┌──────────┬────────┐ ", "│ Service  │ Status │ ",
+                     "├──────────┼────────┤ ", "│ Database │ Active │ ",
+                     "└──────────┴────────┘ "}));
+  }
+
+  SECTION("cells with a background still join") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          table { border: solid; border-collapse: collapse; }
+          td { border: solid; background-color: blue; }
+        </style>
+        <table><tr><td>a</td><td>b</td></tr></table>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 3)) ==
+          CheckGrid({"┌─┬─┐ ", "│a│b│ ", "└─┴─┘ "}));
+  }
+
+  SECTION("rounded and double borders join in their own family") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <style>
+          .r { border: rounded; border-collapse: collapse; }
+          .r td { border: rounded; }
+          .d { border-collapse: collapse; }
+          .d td { border: double; }
+        </style>
+        <table class="r"><tr><td>a</td><td>b</td></tr></table>
+        <table class="d"><tr><td>a</td><td>b</td></tr></table>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 6)) ==
+          CheckGrid(
+              {"╭─┬─╮ ", "│a│b│ ", "╰─┴─╯ ", "╔═╦═╗ ", "║a║b║ ", "╚═╩═╝ "}));
   }
 }
 

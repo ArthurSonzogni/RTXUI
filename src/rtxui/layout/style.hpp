@@ -533,6 +533,13 @@ struct ComputedStyleCore {
   Cursor cursor = Cursor::Auto;
   Visibility visibility = Visibility::Visible;
   VerticalAlign vertical_align = VerticalAlign::Baseline;
+  // border-collapse: collapse; the cells' borders are then drawn once where
+  // they meet.
+  bool border_collapse = false;
+  // border-spacing: cells between the cells of a table, and around them, in
+  // the separate borders model.
+  int border_spacing_x = 0;
+  int border_spacing_y = 0;
   // pointer-events: whether the mouse passes through the element (true, for
   // `none`) or targets it (false, for `auto`); inherited when unset.
   std::optional<bool> pointer_events_none;

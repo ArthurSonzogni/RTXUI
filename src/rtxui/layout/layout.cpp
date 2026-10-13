@@ -2980,6 +2980,48 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
     return fragment;
   }
 
+  // The space between cells, and between them and the table's border:
+  // border-spacing in the separate borders model. In the collapsed one, -1
+  // where borders meet, so that the cells' borders lie over each other and
+  // over the table's, and are drawn once.
+  const bool collapse = box->style().border_collapse;
+  bool cells_bordered_x = false;
+  bool cells_bordered_y = false;
+  if (collapse) {
+    for (const auto& row : grid) {
+      for (const auto& cell : row) {
+        if (cell.box && cell.box->style().border_style != BorderStyle::None) {
+          const Spacing& border = cell.box->style().border;
+          cells_bordered_x |= border.left > 0 || border.right > 0;
+          cells_bordered_y |= border.top > 0 || border.bottom > 0;
+        }
+      }
+    }
+  }
+  const bool table_bordered = box->style().border_style != BorderStyle::None;
+  auto edge = [&](bool cells_bordered, int table_border, int spacing) {
+    if (!collapse) {
+      return spacing;
+    }
+    return cells_bordered && table_bordered && table_border > 0 ? -1 : 0;
+  };
+  const int gap_x =
+      collapse ? (cells_bordered_x ? -1 : 0) : box->style().border_spacing_x;
+  const int gap_y =
+      collapse ? (cells_bordered_y ? -1 : 0) : box->style().border_spacing_y;
+  const int edge_left = edge(cells_bordered_x, box->style().border.left, gap_x);
+  const int edge_right =
+      edge(cells_bordered_x, box->style().border.right, gap_x);
+  const int edge_top = edge(cells_bordered_y, box->style().border.top, gap_y);
+  const int edge_bottom =
+      edge(cells_bordered_y, box->style().border.bottom, gap_y);
+  // What the gaps add to the columns' widths, and to the rows' heights.
+  const int extra_x =
+      static_cast<int>(num_cols - 1) * gap_x + edge_left + edge_right;
+  const int extra_y =
+      static_cast<int>(grid.size() - 1) * gap_y + edge_top + edge_bottom;
+  content_width_limit = std::max(0, content_width_limit - extra_x);
+
   std::vector<int> col_preferred_width(num_cols, 1);
 
   // Pass 1: Measure cell preferred widths
@@ -3023,7 +3065,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
   if (is_auto_width && constraints.width.mode == MeasureMode::Undefined) {
     content_width_limit = total_preferred_width;
     width = content_width_limit + box->style().padding.Horiz() +
-            box->style().border.Horiz();
+            box->style().border.Horiz() + extra_x;
   } else {
     if (total_preferred_width <= content_width_limit) {
       // If table is fixed-width or exactly constrained, stretch columns
@@ -3047,7 +3089,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
         // Auto-width fits preferred width
         content_width_limit = total_preferred_width;
         width = content_width_limit + box->style().padding.Horiz() +
-                box->style().border.Horiz();
+                box->style().border.Horiz() + extra_x;
       }
     } else {
       // Shrink columns to fit content_width_limit
@@ -3079,7 +3121,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
   if (min_width_resolved != -1 && width < min_width_resolved) {
     int new_content_width_limit = min_width_resolved -
                                   box->style().padding.Horiz() -
-                                  box->style().border.Horiz();
+                                  box->style().border.Horiz() - extra_x;
     int extra = std::max(0, new_content_width_limit - content_width_limit);
     if (extra > 0 && total_preferred_width > 0) {
       for (size_t col = 0; col < num_cols; ++col) {
@@ -3118,13 +3160,25 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
     fragment->border_width = box->style().border;
   }
 
-  int cur_y = box->style().border.top + box->style().padding.top;
-  int start_x = box->style().border.left + box->style().padding.left;
+  int cur_y = box->style().border.top + box->style().padding.top + edge_top;
+  int start_x =
+      box->style().border.left + box->style().padding.left + edge_left;
 
+  // Each column's start, the gap after it included.
   std::vector<int> col_x(num_cols + 1, 0);
   for (size_t col = 0; col < num_cols; ++col) {
-    col_x[col + 1] = col_x[col] + col_widths[col];
+    col_x[col + 1] = col_x[col] + col_widths[col] + gap_x;
   }
+  // The width of the cells of a span of columns, or rows, with the gaps
+  // between them.
+  auto span_width = [&](size_t col, int colspan) {
+    int span = 0;
+    for (int c = 0; c < colspan && col + c < num_cols; ++c) {
+      span += col_widths[col + c];
+    }
+    return span + (colspan - 1) * gap_x;
+  };
+  const int rows_width = col_x[num_cols] - gap_x;
 
   std::vector<int> row_heights(grid.size(), 1);
   for (size_t row = 0; row < grid.size(); ++row) {
@@ -3134,10 +3188,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
         int colspan = grid[row][col].colspan;
         int rowspan = grid[row][col].rowspan;
 
-        int cell_avail_width = 0;
-        for (int c = 0; c < colspan; ++c) {
-          cell_avail_width += col_widths[col + c];
-        }
+        int cell_avail_width = span_width(col, colspan);
 
         LayoutConstraints cell_c;
         cell_c.width = {cell_avail_width, MeasureMode::Exactly};
@@ -3178,7 +3229,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
                                      ? resolved_height
                                      : row_content_total +
                                            box->style().padding.Vert() +
-                                           box->style().border.Vert();
+                                           box->style().border.Vert() + extra_y;
 
     int max_height_resolved = ResolveBoxHeight(
         box->style(), box->style().max_height, constraints.height.value);
@@ -3195,7 +3246,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
 
     int target_row_content_total = target_fragment_height -
                                    box->style().padding.Vert() -
-                                   box->style().border.Vert();
+                                   box->style().border.Vert() - extra_y;
     if (target_row_content_total > row_content_total && row_content_total > 0 &&
         !row_heights.empty()) {
       int extra = target_row_content_total - row_content_total;
@@ -3218,8 +3269,8 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
     int row_height = row_heights[row];
     LayoutBox* row_box = (row < rows.size()) ? rows[row] : nullptr;
 
-    auto row_bg_frag = MakeArenaFragment(content_width_limit, row_height);
-    auto row_cells_frag = MakeArenaFragment(content_width_limit, row_height);
+    auto row_bg_frag = MakeArenaFragment(rows_width, row_height);
+    auto row_cells_frag = MakeArenaFragment(rows_width, row_height);
 
     if (row_box) {
       row_bg_frag->dom_node = row_box->dom_node;
@@ -3252,15 +3303,12 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
       auto& gcell = grid[row][col];
       if (gcell.is_top_left && gcell.box) {
         auto* cell = gcell.box;
-        int cell_width = 0;
-        for (int c = 0; c < gcell.colspan; ++c) {
-          cell_width += col_widths[col + c];
-        }
+        int cell_width = span_width(col, gcell.colspan);
 
         int cell_height = 0;
         for (int r = 0; r < gcell.rowspan; ++r) {
           if (row + r < row_heights.size()) {
-            cell_height += row_heights[row + r];
+            cell_height += row_heights[row + r] + (r > 0 ? gap_y : 0);
           }
         }
 
@@ -3298,14 +3346,16 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
           final_cell_frag = aligned;
         }
 
+        final_cell_frag->merge_borders = collapse;
         row_cells_frag->children.push_back({final_cell_frag, col_x[col], 0});
       }
     }
 
     row_bg_links.push_back({row_bg_frag, start_x, cur_y});
     row_cells_links.push_back({row_cells_frag, start_x, cur_y});
-    cur_y += row_height;
+    cur_y += row_height + gap_y;
   }
+  cur_y += edge_bottom - gap_y;
 
   for (auto& link : row_bg_links) {
     fragment->children.push_back(link);
@@ -3332,7 +3382,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
     // ancestor's scroll_width computation silently underestimated the
     // table's real content size and the overflow was unreachable, not just
     // visually spilling.
-    int total_col_extent = num_cols > 0 ? col_x.back() + col_widths.back() : 0;
+    int total_col_extent = rows_width + edge_left + edge_right;
     box->dom_node->set_scroll_width(std::max(
         fragment->width, total_col_extent + box->style().padding.Horiz() +
                              box->style().border.Horiz()));
