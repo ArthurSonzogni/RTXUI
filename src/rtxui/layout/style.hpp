@@ -523,6 +523,9 @@ struct ComputedStyleCore {
 
   Cursor cursor = Cursor::Auto;
   Visibility visibility = Visibility::Visible;
+  // pointer-events: whether the mouse passes through the element (true, for
+  // `none`) or targets it (false, for `auto`); inherited when unset.
+  std::optional<bool> pointer_events_none;
   TextOverflow text_overflow = TextOverflow::Clip;
 
   bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }

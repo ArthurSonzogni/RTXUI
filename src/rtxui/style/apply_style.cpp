@@ -3180,6 +3180,13 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  if (p == "pointer-events") {
+    if (v == "none" || v == "auto") {
+      style.pointer_events_none = v == "none";
+      return;
+    }
+  }
+
   if (p == "cursor") {
     if (v == "pointer") {
       style.cursor = Cursor::Pointer;

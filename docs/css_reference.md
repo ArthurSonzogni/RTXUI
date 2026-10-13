@@ -204,6 +204,7 @@ RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing 
 <CssProperty name="text-overflow" values="clip | ellipsis" description="Initial: `clip`. Behavior when text overflows its block container." />
 <CssProperty name="visibility" values="visible | hidden" description="Initial: `visible`. Controls element visibility. Hidden elements keep their layout size." />
 <CssProperty name="cursor" values="default | pointer" description="Initial: `default`. Mouse pointer styling when hovering the element." />
+<CssProperty name="pointer-events" values="auto | none" inherited description="Initial: `auto`. `none` lets the mouse through the element: clicks, hover and drags go to what is under it, as for a decoration drawn over the interface. Inherited, so a child setting `auto` takes the mouse again." />
 
 ### Color Transforms
 - `lighten(amount)`: Interpolates toward `#ffffff` in sRGB space.

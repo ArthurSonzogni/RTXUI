@@ -269,6 +269,17 @@ void CollectFocusableFragments(
   }
 }
 
+// Whether the mouse passes through `element`: pointer-events is inherited,
+// so the nearest element that sets it decides.
+bool IgnoresPointer(const Element* element) {
+  for (; element; element = element->Parent()) {
+    if (element->style.pointer_events_none) {
+      return *element->style.pointer_events_none;
+    }
+  }
+  return false;
+}
+
 Element* FindElementAtImpl(PhysicalFragment* fragment,
                            int target_x,
                            int target_y,
@@ -418,7 +429,9 @@ Element* FindElementAtImpl(PhysicalFragment* fragment,
     }
   }
 
-  if (fragment->dom_node) {
+  // An element the mouse passes through is no target, but its children may
+  // be: what is under it is searched next.
+  if (fragment->dom_node && !IgnoresPointer(fragment->dom_node)) {
     return fragment->dom_node;
   }
   return nullptr;

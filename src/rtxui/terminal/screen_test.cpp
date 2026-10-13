@@ -20,6 +20,7 @@
 #include "rtxui/component/default/tooltip/tooltip.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
@@ -5511,6 +5512,44 @@ TEST_CASE("A new screen background repaints a frame that changed nothing else",
   screen.SetBackgroundColor(Color::RGB(10, 20, 30));
   screen.Draw();
   CHECK(device->GetOutput().find("48;2;10;20;30m") != std::string::npos);
+}
+
+// An overlay drawn over a button, which lets clicks through to it; and a
+// button inside the overlay, which takes them back.
+class PassThrough : public Component<PassThrough> {
+ public:
+  int under = 0;
+  int inside = 0;
+  void Under() { ++under; }
+  void Inside() { ++inside; }
+  PassThrough() {
+    Bind(Under);
+    Bind(Inside);
+  }
+  std::string_view view = R"html(
+    <div class="under" onclick="Under">under</div>
+    <div class="overlay">
+      <span>over </span><span class="inside" onclick="Inside">in</span>
+    </div>
+    <style>
+      .under { width: 10; }
+      .overlay { position: absolute; top: 0; left: 0; width: 10;
+                 pointer-events: none; }
+      .inside { pointer-events: auto; }
+    </style>
+  )html";
+};
+
+TEST_CASE("pointer-events: none lets the mouse through", "[screen][pointer]") {
+  auto app = Ref<PassThrough>::New();
+  HeadlessScreen screen(app, 10, 2);
+  REQUIRE(screen.Text().starts_with("over in"));
+  screen.Click(1, 0);  // On the overlay's own text.
+  CHECK(app->under == 1);
+  CHECK(app->inside == 0);
+  screen.Click(5, 0);  // On the child setting it back to auto.
+  CHECK(app->under == 1);
+  CHECK(app->inside == 1);
 }
 
 }  // namespace rtxui
