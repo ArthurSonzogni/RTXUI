@@ -41,7 +41,7 @@ class Log : public Component<Log> {
 int CountRows(Element* root) {
   int rows = 0;
   root->Visit([&](Element& element) {
-    for (const auto& name : element.classes) {
+    for (const auto& name : element.classes()) {
       rows += name == "row";
     }
   });

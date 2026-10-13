@@ -4666,7 +4666,7 @@ TEST_CASE("Switching tab shows only the selected pane", "[tabs][mouse][css]") {
 
   std::vector<Element*> headers;
   app->Root()->Visit([&](Element& el) {
-    for (const auto& c : el.classes) {
+    for (const auto& c : el.classes()) {
       if (c == "tab-header-btn") {
         headers.push_back(&el);
       }
@@ -4711,7 +4711,7 @@ TEST_CASE("Selecting a tab by keyboard keeps focus on the headers",
   auto headers = [&] {
     std::vector<Element*> found;
     app->Root()->Visit([&](Element& el) {
-      for (const auto& c : el.classes) {
+      for (const auto& c : el.classes()) {
         if (c == "tab-header-btn") {
           found.push_back(&el);
         }
@@ -4755,7 +4755,7 @@ TEST_CASE("Switching tab keeps the header buttons styled",
   auto headers = [&] {
     std::vector<Element*> found;
     app->Root()->Visit([&](Element& el) {
-      for (const auto& c : el.classes) {
+      for (const auto& c : el.classes()) {
         if (c == "tab-header-btn") {
           found.push_back(&el);
         }
@@ -4765,8 +4765,8 @@ TEST_CASE("Switching tab keeps the header buttons styled",
   };
 
   auto has_class = [](Element* el, std::string_view name) {
-    return std::find(el->classes.begin(), el->classes.end(), name) !=
-           el->classes.end();
+    return std::find(el->classes().begin(), el->classes().end(), name) !=
+           el->classes().end();
   };
 
   REQUIRE(headers().size() == 2);
@@ -5143,7 +5143,7 @@ int CountMatching(Element* root, const char* cls, const char* tag) {
       }
       return;
     }
-    for (const auto& c : e.classes) {
+    for (const auto& c : e.classes()) {
       if (c == cls) {
         ++n;
         return;

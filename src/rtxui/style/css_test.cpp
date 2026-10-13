@@ -795,13 +795,13 @@ class ClassMutationApp : public rtxui::Component<ClassMutationApp> {
 
 }  // namespace
 
-TEST_CASE("Mutating classes in place restyles without an explicit invalidation",
+TEST_CASE("Setting classes restyles without an explicit invalidation",
           "[component][style]") {
   // Regression: an element remembers which components have resolved it, and
-  // resolution skips it while that memo stands. SetAttribute() drops the memo,
-  // but `classes` is a plain public vector, so assigning to it left the memo
-  // in place and the new classes silently never applied. Callers were expected
-  // to call ClearResolvedStyles() themselves; <tabs> did not, twice.
+  // resolution skips it while that memo stands. `classes` used to be a plain
+  // public vector, so assigning to it left the memo in place and the new
+  // classes silently never applied; <tabs> did that, twice. SetClasses()
+  // drops the memo, and marks the ancestors so the pass reaches the element.
   auto app = rtxui::Ref<ClassMutationApp>::New();
   app->Mount();
 
@@ -809,14 +809,15 @@ TEST_CASE("Mutating classes in place restyles without an explicit invalidation",
   REQUIRE(box != nullptr);
   CHECK(box->style.foreground_color == Color::RGB(1, 1, 1));
 
-  // Deliberately mutate the vector directly, with no invalidation call.
-  box->classes.push_back("lit");
+  box->SetClasses({"lit"});
+  CHECK(app->Root()->subtree_needs_style_resolve);
   rtxui::ComponentInternals::ResolveStyles(*app);
   CHECK(box->style.foreground_color == Color::RGB(2, 2, 2));
+  CHECK_FALSE(app->Root()->subtree_needs_style_resolve);
 
   // Removing it again must take the style away, not just add on top: the
   // element has to be resolved from scratch, not incrementally.
-  box->classes.clear();
+  box->SetClasses({});
   rtxui::ComponentInternals::ResolveStyles(*app);
   CHECK(box->style.foreground_color == Color::RGB(1, 1, 1));
 }
@@ -842,7 +843,7 @@ class LateElementApp : public rtxui::Component<LateElementApp> {
       auto* host = Root()->QuerySelector("#host");
       REQUIRE(host != nullptr);
       auto element = rtxui::Ref<rtxui::Element>::New(this);
-      element->classes.push_back("late");
+      element->SetClasses({"late"});
       host->AddChild(element);
       added_ = true;
     }
@@ -1116,7 +1117,7 @@ TEST_CASE("A ::part() rule survives the inner component re-rendering itself",
       "after";
   bool changed = app->Digest();
   CHECK(changed);
-  CHECK(label()->classes == std::vector<std::string>{"after"});
+  CHECK(label()->classes() == std::vector<std::string>{"after"});
   rtxui::ComponentInternals::ResolveStyles(*app);
   CHECK(label()->style.padding.left == 3);
 }

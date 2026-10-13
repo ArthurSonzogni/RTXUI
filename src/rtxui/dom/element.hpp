@@ -314,7 +314,7 @@ class RTXUI_EXPORT Element : public RefCounted {
   void RemoveAttribute(const std::string& name);
   void ClearAttributes() {
     id.clear();
-    classes.clear();
+    SetClasses({});
     attributes_.reset();
   }
   const std::map<std::string, std::string>& Attributes() const {
@@ -337,7 +337,9 @@ class RTXUI_EXPORT Element : public RefCounted {
 
   // Common properties.
   std::string id;
-  std::vector<std::string> classes;
+  const std::vector<std::string>& classes() const { return classes_; }
+  /// Restyles the element when `classes` differs from the current ones.
+  void SetClasses(std::vector<std::string> classes);
   ComputedStyle style;
   ComputedStyle base_style;
   ComputedStyle target_style;
@@ -402,8 +404,11 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// of paying for a full resolution pass to discover there was nothing to do.
   bool needs_style_resolve = true;
 
-  /// Whether a base style pass has work to do here or anywhere below, as of
-  /// the last staleness walk. Lets the pass skip whole clean subtrees.
+  /// Whether a base style pass has work to do here or anywhere below. Set
+  /// on the element and its ancestors by ClearResolvedStyles(), and when an
+  /// element so marked is attached; cleared by the pass. Lets the pass skip
+  /// whole clean subtrees, and a frame tell whether there is any work without
+  /// walking the tree.
   bool subtree_needs_style_resolve = true;
 
   /// Set when something a selector can test on this element -- its id, its
@@ -414,26 +419,6 @@ class RTXUI_EXPORT Element : public RefCounted {
 
   bool IsStyleResolvedFor(const ComponentBase* comp) const {
     return styled_by_1 == comp || styled_by_2 == comp;
-  }
-
-  /// Drops the resolved-style memo if `classes` no longer matches the list it
-  /// was built from, and reports whether it did.
-  ///
-  /// `classes` is a plain public vector, so assigning or push_back-ing to it
-  /// cannot invalidate anything by itself the way SetAttribute() does. Every
-  /// caller was expected to follow a mutation with ClearResolvedStyles(), and
-  /// a caller that forgot got styles that silently never applied -- the bug
-  /// behind both tabs regressions. Checking the content instead of trusting
-  /// the callers makes that impossible to get wrong.
-  bool RevalidateStyleMemo() {
-    const uint64_t hash = ClassesHash();
-    if (hash == resolved_classes_hash_) {
-      return false;
-    }
-    resolved_classes_hash_ = hash;
-    ClearResolvedStyles();
-    selector_inputs_changed = true;
-    return true;
   }
 
   /// Records that `comp` has resolved this element, so the next pass can skip
@@ -457,7 +442,6 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// and none in the layout benchmark's 4009 elements, so two slots stay
   /// cheaper than anything that would hold more.
   void MarkStyleResolvedFor(const ComponentBase* comp) {
-    resolved_classes_hash_ = ClassesHash();
     if (styled_by_1 == comp || styled_by_2 == comp) {
       return;
     }
@@ -471,6 +455,7 @@ class RTXUI_EXPORT Element : public RefCounted {
     styled_by_1 = nullptr;
     styled_by_2 = nullptr;
     needs_style_resolve = true;
+    MarkStyleSubtreeStale();
   }
 
  private:
@@ -479,21 +464,11 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// it, differently.
   void PrecedingSiblingsChanged(size_t index);
 
-  /// FNV-1a over the class list. Only ever compared against itself, so the
-  /// choice of hash matters only for collisions, and a collision costs a
-  /// skipped restyle rather than anything unsafe.
-  uint64_t ClassesHash() const {
-    uint64_t hash = 1469598103934665603ull;
-    for (const std::string& name : classes) {
-      for (unsigned char c : name) {
-        hash = (hash ^ c) * 1099511628211ull;
-      }
-      hash = (hash ^ 0xff) * 1099511628211ull;  // separator
-    }
-    return hash;
-  }
+  /// Sets subtree_needs_style_resolve here and on the ancestors, up to the
+  /// first one that already has it: that one's ancestors have it too.
+  void MarkStyleSubtreeStale();
 
-  uint64_t resolved_classes_hash_ = ClassesHash();
+  std::vector<std::string> classes_;
 
  public:
   // Rendering.

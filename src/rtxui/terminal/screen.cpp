@@ -2622,8 +2622,8 @@ void ScreenImpl::Draw(bool reuse_layout) {
       if (!el) {
         return;
       }
-      if (std::find(el->classes.begin(), el->classes.end(), "cursor-focused") !=
-          el->classes.end()) {
+      if (std::find(el->classes().begin(), el->classes().end(),
+                    "cursor-focused") != el->classes().end()) {
         cursor_element = el;
         return;
       }

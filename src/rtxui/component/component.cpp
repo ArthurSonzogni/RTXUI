@@ -915,7 +915,7 @@ bool MatchPartSelector(const Element* element,
   }
   for (const auto& required_class : selector.classes) {
     bool found = false;
-    for (const auto& host_class : host->classes) {
+    for (const auto& host_class : host->classes()) {
       if (host_class == required_class) {
         found = true;
         break;
@@ -1413,7 +1413,7 @@ bool MatchSelectorPart(const Element* element,
   }
   for (const auto& cls : part.classes) {
     bool found = false;
-    for (const auto& el_cls : element->classes) {
+    for (const auto& el_cls : element->classes()) {
       if (el_cls == cls) {
         found = true;
         break;
@@ -1954,7 +1954,7 @@ void ResolveElementStyle(Element* element,
                   bool classes_match = true;
                   for (const auto& required_class : parsed.classes) {
                     bool found = false;
-                    for (const auto& el_class : element->classes) {
+                    for (const auto& el_class : element->classes()) {
                       if (el_class == required_class) {
                         found = true;
                         break;
@@ -2017,7 +2017,7 @@ void ResolveElementStyle(Element* element,
           // Class used to be visited last, which let `.c` override `#t`
           // whichever order the two rules were written in -- the opposite of
           // the CSS cascade.
-          for (const auto& cls : element->classes) {
+          for (const auto& cls : element->classes()) {
             auto it_class = buckets->by_class.find(cls);
             if (it_class != buckets->by_class.end()) {
               match_and_apply(it_class->second, false);
@@ -2312,11 +2312,12 @@ bool HasPartRules(const ComponentBase* component, StylePass pass) {
 // `<button class="x">` takes the button's own `self` rules, then the
 // stylesheet that wrote the `.x`.
 //
-// The base pass skips the subtrees the last staleness walk (AnyStyleStale)
-// found clean, unless `restyle` says the whole subtree must be resolved again:
-// selectors test ancestors, and custom properties inherit from them. It
-// returns whether something a selector tests on `element` itself changed,
-// which can change what matches its later siblings too.
+// The base pass skips the subtrees marked clean
+// (Element::subtree_needs_style_resolve), unless `restyle` says the whole
+// subtree must be resolved again: selectors test ancestors, and custom
+// properties inherit from them. It returns whether something a selector tests
+// on `element` itself changed, which can change what matches its later siblings
+// too.
 //
 // The pseudo-class pass (`check_pseudos`) sets each element's `target_style`:
 // its base style, or, when a pseudo-class rule matches, every matching rule
@@ -2334,7 +2335,10 @@ bool ResolveStylesInTree(Element* element,
       return false;
     }
     if (restyle) {
-      element->ClearResolvedStyles();
+      // Not ClearResolvedStyles(): that would mark the ancestors this pass
+      // has already cleaned.
+      element->styled_by_1 = nullptr;
+      element->styled_by_2 = nullptr;
     }
     restyle = restyle || selector_inputs_changed;
     element->selector_inputs_changed = false;
@@ -2860,36 +2864,12 @@ void ComponentBase::Mount() {
   Render();
 }
 
-namespace {
-
-// Every element is visited, never short-circuited: the revalidation below is
-// also what refreshes each element's recorded class hash, so skipping the rest
-// of the tree once an answer is known would leave stale hashes behind. Written
-// as a plain recursion rather than Element::Visit to keep a std::function call
-// out of a per-frame walk.
-bool AnyStyleStale(Element* element) {
-  if (!element) {
-    return false;
-  }
-  // Mutating `classes` cannot invalidate anything by itself, so the memo is
-  // checked against the list it was built from rather than trusted.
-  element->RevalidateStyleMemo();
-  bool stale = element->needs_style_resolve;
-  for (size_t i = 0; i < element->ChildCount(); ++i) {
-    stale = AnyStyleStale(element->ChildAt(i)) || stale;
-  }
-  element->subtree_needs_style_resolve = stale;
-  return stale;
-}
-
-}  // namespace
-
 bool ComponentBase::StylesNeedResolve() {
-  return AnyStyleStale(data_->root_.get());
+  return data_->root_ && data_->root_->subtree_needs_style_resolve;
 }
 
 void ComponentBase::ResolveStyles() {
-  // Nothing stale means nothing to do, and saying so costs a walk rather than
+  // Nothing stale means nothing to do, and saying so costs a flag rather than
   // a full pass. This is the common case on a frame that only re-animates.
   if (!StylesNeedResolve()) {
     return;
@@ -3033,7 +3013,7 @@ void ComponentBase::Render() {
   data_->root_->target_style = ComputedStyle();
   data_->root_->ClearResolvedStyles();
   data_->root_->id = data_->id_;
-  data_->root_->classes = data_->classes_;
+  data_->root_->SetClasses(data_->classes_);
 
   xml::Node template_node;
   template_node.type = xml::Node::Type::kElement;

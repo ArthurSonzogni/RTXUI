@@ -895,7 +895,7 @@ TEST_CASE("A :has() rule follows its elements projected into a component",
   auto invalid_count = [&] {
     int count = 0;
     app->Root()->Visit([&](rtxui::Element& e) {
-      count += std::ranges::count(e.classes, std::string("invalid"));
+      count += std::ranges::count(e.classes(), std::string("invalid"));
     });
     return count;
   };

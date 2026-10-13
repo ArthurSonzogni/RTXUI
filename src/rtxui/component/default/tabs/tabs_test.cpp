@@ -45,7 +45,7 @@ std::vector<rtxui::Element*> TabHeaderButtons(rtxui::Element* root) {
   std::vector<rtxui::Element*> buttons;
   if (root) {
     root->Visit([&](rtxui::Element& element) {
-      for (const std::string& name : element.classes) {
+      for (const std::string& name : element.classes()) {
         if (name == "tab-header-btn") {
           buttons.push_back(&element);
         }
@@ -76,7 +76,7 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
 
   auto* tab1_header = headers[0];
   auto* tab2_header = headers[1];
-  CHECK(tab1_header->classes[1] == "active-tab");
+  CHECK(tab1_header->classes()[1] == "active-tab");
 
   // Find pane elements initially
   Element* pane1_el = nullptr;
@@ -103,9 +103,9 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   REQUIRE(pane2_el != nullptr);
 
   // Verify initial classes and display styles (tab1 active, tab2 inactive)
-  CHECK(pane1_el->classes[0] == "active");
+  CHECK(pane1_el->classes()[0] == "active");
   CHECK(pane1_el->style.display_none == false);
-  CHECK(pane2_el->classes[0] == "inactive");
+  CHECK(pane2_el->classes()[0] == "inactive");
   CHECK(pane2_el->style.display_none == true);
 
   // Select tab2 via index
@@ -122,9 +122,9 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   REQUIRE(pane2_el != nullptr);
 
   // Verify switched classes and display styles (tab1 inactive, tab2 active)
-  CHECK(pane1_el->classes[0] == "inactive");
+  CHECK(pane1_el->classes()[0] == "inactive");
   CHECK(pane1_el->style.display_none == true);
-  CHECK(pane2_el->classes[0] == "active");
+  CHECK(pane2_el->classes()[0] == "active");
   CHECK(pane2_el->style.display_none == false);
 }
 

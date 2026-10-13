@@ -294,7 +294,7 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
   std::cout << "TEST INFO: select_el pointer=" << select_el
             << " select_ptr->Root()=" << select_ptr->Root()
             << " select_el->classes=";
-  for (const auto& c : select_el->classes) {
+  for (const auto& c : select_el->classes()) {
     std::cout << c << " ";
   }
   std::cout << "\nTEST INFO: z_index value="
@@ -431,15 +431,16 @@ TEST_CASE("Select Option Class Preservation", "[component][select][bug]") {
   auto* opt_el = container->Root()->QuerySelector("option");
   REQUIRE(opt_el != nullptr);
 
-  bool has_custom = std::find(opt_el->classes.begin(), opt_el->classes.end(),
-                              "custom-class") != opt_el->classes.end();
+  bool has_custom =
+      std::find(opt_el->classes().begin(), opt_el->classes().end(),
+                "custom-class") != opt_el->classes().end();
   CHECK(has_custom == true);
 
   container->theme = "dark";
   container->Digest();
   screen.Draw();
 
-  has_custom = std::find(opt_el->classes.begin(), opt_el->classes.end(),
-                         "custom-class") != opt_el->classes.end();
+  has_custom = std::find(opt_el->classes().begin(), opt_el->classes().end(),
+                         "custom-class") != opt_el->classes().end();
   CHECK(has_custom == true);
 }

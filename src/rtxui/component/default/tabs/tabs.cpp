@@ -160,7 +160,7 @@ std::vector<Element*> tabs::HeaderButtons() {
   std::vector<Element*> buttons;
   if (Element* root = Root()) {
     root->Visit([&](Element& element) {
-      for (const std::string& name : element.classes) {
+      for (const std::string& name : element.classes()) {
         if (name == "tab-header-btn") {
           buttons.push_back(&element);
         }
@@ -215,9 +215,7 @@ bool tabs::Digest() {
     const std::string want_style =
         active ? "display: block;" : "display: none;";
 
-    if (pane_el->classes != want_classes) {
-      pane_el->classes = want_classes;
-    }
+    pane_el->SetClasses(want_classes);
     const std::string* style_attr = pane_el->GetAttribute("style");
     if (!style_attr || *style_attr != want_style) {
       pane_el->SetAttribute("style", want_style);

@@ -213,7 +213,7 @@ TEST_CASE("A bound struct collection tracks its contents",
   auto classes = [&]() {
     std::string out;
     component->Root()->Visit([&out](rtxui::Element& element) {
-      for (const auto& name : element.classes) {
+      for (const auto& name : element.classes()) {
         out += name;
         out += ",";
       }

@@ -158,7 +158,7 @@ TEST_CASE("Element::QuerySelector resolves by id, class and tag",
   auto root = MakeElement("root");
   auto child = MakeElement("span");
   child->id = "target";
-  child->classes = {"alpha", "beta"};
+  child->SetClasses({"alpha", "beta"});
   auto grandchild = MakeElement("em");
   child->AddChild(grandchild);
   root->AddChild(child);

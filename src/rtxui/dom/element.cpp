@@ -544,7 +544,27 @@ void Element::set_parent(Element* parent) {
   parent_ = parent;
   if (parent_) {
     parent_->InvalidateLayout();
+    if (subtree_needs_style_resolve) {
+      parent_->MarkStyleSubtreeStale();
+    }
   }
+}
+
+void Element::MarkStyleSubtreeStale() {
+  for (Element* element = this;
+       element && !element->subtree_needs_style_resolve;
+       element = element->parent_) {
+    element->subtree_needs_style_resolve = true;
+  }
+}
+
+void Element::SetClasses(std::vector<std::string> classes) {
+  if (classes == classes_) {
+    return;
+  }
+  classes_ = std::move(classes);
+  ClearResolvedStyles();
+  selector_inputs_changed = true;
 }
 
 namespace {
@@ -665,6 +685,9 @@ void Element::AddChild(Ref<Element> child) {
   // reference cannot destroy it here.
   child->DetachFromParent();
   child->parent_ = this;
+  if (child->subtree_needs_style_resolve) {
+    MarkStyleSubtreeStale();
+  }
   children_.push_back(std::move(child));
   InvalidateLayout();
 }
@@ -698,6 +721,9 @@ void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
   assert(index < children_.size());
   children_[index]->parent_ = nullptr;
   new_child->parent_ = this;
+  if (new_child->subtree_needs_style_resolve) {
+    MarkStyleSubtreeStale();
+  }
   children_[index] = std::move(new_child);
   PrecedingSiblingsChanged(index + 1);
   InvalidateLayout();
@@ -750,20 +776,20 @@ void Element::SetAttribute(std::string name, std::string value) {
   if (name == "id") {
     id = value;
   } else if (name == "class") {
-    classes.clear();
+    classes_.clear();
     size_t start = 0;
     while (true) {
       size_t pos = value.find(' ', start);
       if (pos == std::string::npos) {
         auto sub = value.substr(start);
         if (!sub.empty()) {
-          classes.emplace_back(sub);
+          classes_.emplace_back(sub);
         }
         break;
       }
       auto sub = value.substr(start, pos - start);
       if (!sub.empty()) {
-        classes.emplace_back(sub);
+        classes_.emplace_back(sub);
       }
       start = pos + 1;
     }
@@ -783,7 +809,7 @@ void Element::RemoveAttribute(const std::string& name) {
   if (name == "id") {
     id.clear();
   } else if (name == "class") {
-    classes.clear();
+    classes_.clear();
   }
   if (attributes_) {
     attributes_->erase(name);
@@ -803,13 +829,13 @@ std::string Element::Print(int depth) const {
   if (!id.empty()) {
     out += " id=\"" + id + "\"";
   }
-  if (!classes.empty()) {
+  if (!classes_.empty()) {
     out += " class=\"";
-    for (size_t i = 0; i < classes.size(); ++i) {
+    for (size_t i = 0; i < classes_.size(); ++i) {
       if (i > 0) {
         out += " ";
       }
-      out += classes[i];
+      out += classes_[i];
     }
     out += "\"";
   }
@@ -848,8 +874,8 @@ Element* Element::QuerySelector(std::string_view selector) {
     }
   } else if (selector[0] == '.') {
     std::string_view target_class = selector.substr(1);
-    if (std::find(classes.begin(), classes.end(), target_class) !=
-        classes.end()) {
+    if (std::find(classes_.begin(), classes_.end(), target_class) !=
+        classes_.end()) {
       return this;
     }
   } else {

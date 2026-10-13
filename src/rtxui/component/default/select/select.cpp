@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "rtxui/bind.hpp"
@@ -363,7 +364,7 @@ bool select::Digest() {
       }
     }
 
-    auto& root_cls = root->classes;
+    std::vector<std::string> root_cls = root->classes();
     auto it_root = std::find(root_cls.begin(), root_cls.end(), "open");
     if (is_open) {
       if (it_root == root_cls.end()) {
@@ -374,11 +375,12 @@ bool select::Digest() {
         root_cls.erase(it_root);
       }
     }
+    root->SetClasses(std::move(root_cls));
     auto options = GetOptions();
     selected_label = "Select...";
     for (size_t i = 0; i < options.size(); ++i) {
       auto& opt = options[i];
-      auto& cls = opt.element->classes;
+      std::vector<std::string> cls = opt.element->classes();
       auto it_sel = std::find(cls.begin(), cls.end(), "selected");
       if (it_sel != cls.end()) {
         cls.erase(it_sel);
@@ -398,10 +400,10 @@ bool select::Digest() {
           cls.push_back("hovered");
         }
       }
+      opt.element->SetClasses(std::move(cls));
     }
-    // No explicit invalidation and no re-render: mutating `classes` above
-    // drops each element's resolved-style memo by itself, and the caller
-    // re-resolves once Digest() returns.
+    // No re-render: SetClasses() restyles what changed, once Digest()
+    // returns.
   }
 
   bool parent_digest = Component<select>::Digest();
