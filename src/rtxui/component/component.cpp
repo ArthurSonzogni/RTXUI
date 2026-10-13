@@ -119,9 +119,14 @@ ComponentBase* GetParentComponent(ComponentBase* comp) {
 
 namespace {
 thread_local bool g_pointer_interaction = false;
+// Advances when what :focus-visible depends on changes for every element.
+thread_local uint64_t g_pointer_interaction_epoch = 0;
 }  // namespace
 
 void SetPointerInteraction(bool pointer) {
+  if (pointer != g_pointer_interaction) {
+    ++g_pointer_interaction_epoch;
+  }
   g_pointer_interaction = pointer;
 }
 
@@ -619,6 +624,7 @@ void RestoreElementStates(
         el->style = pair.second.style;
       }
       el->target_stale = true;
+      el->MarkPseudoSubtreeStale();
       el->active_transitions = pair.second.active_transitions;
       // A re-render builds new elements: carry on the animations of the old
       // ones rather than starting them over.
@@ -2384,6 +2390,22 @@ bool ResolveStylesInTree(Element* element,
                          bool restyle = false) {
   css::CustomProperties previous_custom_properties;
   const bool selector_inputs_changed = element->selector_inputs_changed;
+  // The pseudo-class pass reaches only where something it tests changed, the
+  // way the base pass does: `restyle` is everything below a change.
+  const bool pseudo_inputs_changed = element->pseudo_inputs_changed;
+  if (check_pseudos) {
+    if (!restyle && !element->subtree_needs_pseudo) {
+      return false;
+    }
+    element->pseudo_inputs_changed = false;
+    element->subtree_needs_pseudo = false;
+  }
+  // Whether this element's own match may differ from last pass.
+  const bool evaluate = !check_pseudos || restyle || pseudo_inputs_changed ||
+                        element->target_stale;
+  if (check_pseudos) {
+    restyle = restyle || pseudo_inputs_changed;
+  }
   if (!check_pseudos) {
     if (!restyle && !element->subtree_needs_style_resolve) {
       return false;
@@ -2398,7 +2420,9 @@ bool ResolveStylesInTree(Element* element,
     element->selector_inputs_changed = false;
     element->subtree_needs_style_resolve = false;
   }
-  ++g_style_visit_count;
+  if (evaluate) {
+    ++g_style_visit_count;
+  }
   if (!check_pseudos) {
     g_base_styles_resolved = true;
     element->needs_style_resolve = false;
@@ -2422,7 +2446,7 @@ bool ResolveStylesInTree(Element* element,
   // Layout reads `generated`, which the pseudo-class pass resets to the base
   // contents and builds again: compared once it is done.
   std::optional<Element::GeneratedChangeScope> generated_change;
-  if (check_pseudos) {
+  if (check_pseudos && evaluate) {
     generated_change.emplace(*element);
   }
 
@@ -2431,7 +2455,7 @@ bool ResolveStylesInTree(Element* element,
   // still their base style and their style has settled, so there is nothing
   // to reset and no transition to start.
   bool must_update_target = false;
-  if (check_pseudos) {
+  if (check_pseudos && evaluate) {
     must_update_target = element->target_stale ||
                          element->matched_pseudo_rule ||
                          !element->active_transitions.empty();
@@ -2465,7 +2489,7 @@ bool ResolveStylesInTree(Element* element,
   };
   if (!check_pseudos) {
     resolve(StylePass::kBase);
-  } else {
+  } else if (evaluate) {
     resolve(StylePass::kPseudo);
     // A pseudo-class rule ranks among the others by specificity and source
     // order: `#id` beats `.a:hover`, and so does an !important declaration.
@@ -2477,7 +2501,7 @@ bool ResolveStylesInTree(Element* element,
       resolve(StylePass::kAll);
     }
   }
-  if (must_update_target || element->matched_pseudo_rule) {
+  if (evaluate && (must_update_target || element->matched_pseudo_rule)) {
     element->TriggerTransitions(current_time_ms);
     element->target_stale = false;
   }
@@ -2502,13 +2526,13 @@ bool ResolveStylesInTree(Element* element,
       element->style_seeded = true;
       element->needs_style_seed = false;
       element->target_stale = true;
+      element->MarkPseudoSubtreeStale();
     }
     restyle =
         restyle || element->custom_properties != previous_custom_properties;
   }
 
   const bool siblings_matter =
-      !check_pseudos &&
       std::ranges::any_of(enclosing, [](const ComponentBase* component) {
         const auto* rules = ComponentInternals::categorized_rules(*component);
         return rules && rules->has_sibling_combinators;
@@ -2524,14 +2548,17 @@ bool ResolveStylesInTree(Element* element,
   if (own) {
     enclosing.pop_back();
   }
-  return !check_pseudos && selector_inputs_changed;
+  return check_pseudos ? pseudo_inputs_changed : selector_inputs_changed;
 }
 
 // Resolves the styles of `root` and its subtree, with the components enclosing
 // `root` taking part as they would in a resolution of the whole document.
+// `everything` resolves every element of the subtree, not only those
+// something they test changed for.
 void ResolveStylesFrom(Element* root,
                        bool check_pseudos,
-                       double current_time_ms = 0) {
+                       double current_time_ms = 0,
+                       bool everything = false) {
   if (!root) {
     return;
   }
@@ -2542,7 +2569,8 @@ void ResolveStylesFrom(Element* root,
     }
   }
   std::reverse(enclosing.begin(), enclosing.end());
-  ResolveStylesInTree(root, enclosing, check_pseudos, current_time_ms);
+  ResolveStylesInTree(root, enclosing, check_pseudos, current_time_ms,
+                      everything);
 }
 
 }  // namespace
@@ -3262,7 +3290,13 @@ void ComponentBase::ResolveTargetStyles(double current_time_ms) {
     }
   }
 
-  ResolveStylesFrom(data_->root_.get(), true, current_time_ms);
+  // Dirty flags cannot follow a change of input modality, which every
+  // :focus-visible depends on, nor what a :has() rule tests below its target.
+  const bool everything =
+      data_->pointer_interaction_epoch_ != g_pointer_interaction_epoch ||
+      ComponentInternals::UsesRelationalSelectors(*this);
+  data_->pointer_interaction_epoch_ = g_pointer_interaction_epoch;
+  ResolveStylesFrom(data_->root_.get(), true, current_time_ms, everything);
 }
 
 namespace {

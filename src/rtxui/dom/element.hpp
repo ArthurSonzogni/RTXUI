@@ -306,6 +306,7 @@ class RTXUI_EXPORT Element : public RefCounted {
     if (tag != tag_) {
       tag_ = std::move(tag);
       InvalidateLayout();
+      MarkPseudoInputsChanged();
     }
   }
 
@@ -411,6 +412,20 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// walking the tree.
   bool subtree_needs_style_resolve = true;
 
+  /// Set when something a pseudo-class can test on this element changed: its
+  /// interaction state, its attributes or classes, its children. The next
+  /// pseudo-class pass evaluates it and its subtree again (and its following
+  /// siblings, for sibling combinators), as the base pass does for
+  /// selector_inputs_changed. Elements are created with it.
+  bool pseudo_inputs_changed = true;
+  /// Whether the pseudo-class pass has work here or anywhere below.
+  bool subtree_needs_pseudo = true;
+  /// Sets pseudo_inputs_changed, and subtree_needs_pseudo up the ancestors.
+  void MarkPseudoInputsChanged();
+  /// Sets subtree_needs_pseudo here and up the ancestors, as
+  /// MarkStyleSubtreeStale() does for styles: the pass reaches the element.
+  void MarkPseudoSubtreeStale();
+
   /// Set when something a selector can test on this element -- its id, its
   /// classes, any attribute -- actually changed. Selectors also test
   /// ancestors (`.on span`), so the next base style pass re-resolves the
@@ -467,6 +482,12 @@ class RTXUI_EXPORT Element : public RefCounted {
   /// Sets subtree_needs_style_resolve here and on the ancestors, up to the
   /// first one that already has it: that one's ancestors have it too.
   void MarkStyleSubtreeStale();
+  void SetPseudoInput(bool& field, bool value) {
+    if (field != value) {
+      field = value;
+      MarkPseudoInputsChanged();
+    }
+  }
 
   std::vector<std::string> classes_;
 
@@ -523,10 +544,10 @@ class RTXUI_EXPORT Element : public RefCounted {
   static int FocusedCount();
 
   bool hovered() const { return hovered_; }
-  void set_hovered(bool h) { hovered_ = h; }
+  void set_hovered(bool h) { SetPseudoInput(hovered_, h); }
 
   bool active() const { return active_; }
-  void set_active(bool a) { active_ = a; }
+  void set_active(bool a) { SetPseudoInput(active_, a); }
 
   // Mirrors TextInputBase::disabled/readonly (or any future component with
   // the same notion) each digest, the same way focused_/hovered_ mirror
@@ -534,7 +555,7 @@ class RTXUI_EXPORT Element : public RefCounted {
   // click/tab-order handling don't need to reach into a specific
   // component's own members.
   bool disabled() const { return disabled_; }
-  void set_disabled(bool d) { disabled_ = d; }
+  void set_disabled(bool d) { SetPseudoInput(disabled_, d); }
 
   bool checked() const {
     if (checked_) {
@@ -546,22 +567,26 @@ class RTXUI_EXPORT Element : public RefCounted {
     }
     return false;
   }
-  void set_checked(bool c) { checked_ = c; }
+  void set_checked(bool c) { SetPseudoInput(checked_, c); }
 
   bool read_only() const { return read_only_; }
-  void set_read_only(bool r) { read_only_ = r; }
+  void set_read_only(bool r) { SetPseudoInput(read_only_, r); }
 
   bool scrollbar_hovered() const { return scrollbar_hovered_; }
-  void set_scrollbar_hovered(bool h) { scrollbar_hovered_ = h; }
+  void set_scrollbar_hovered(bool h) { SetPseudoInput(scrollbar_hovered_, h); }
 
   bool scrollbar_active() const { return scrollbar_active_; }
-  void set_scrollbar_active(bool a) { scrollbar_active_ = a; }
+  void set_scrollbar_active(bool a) { SetPseudoInput(scrollbar_active_, a); }
 
   bool scrollbar_thumb_hovered() const { return scrollbar_thumb_hovered_; }
-  void set_scrollbar_thumb_hovered(bool h) { scrollbar_thumb_hovered_ = h; }
+  void set_scrollbar_thumb_hovered(bool h) {
+    SetPseudoInput(scrollbar_thumb_hovered_, h);
+  }
 
   bool scrollbar_thumb_active() const { return scrollbar_thumb_active_; }
-  void set_scrollbar_thumb_active(bool a) { scrollbar_thumb_active_ = a; }
+  void set_scrollbar_thumb_active(bool a) {
+    SetPseudoInput(scrollbar_thumb_active_, a);
+  }
 
   void TriggerTransitions(double current_time_ms);
   bool TickTransitions(double current_time_ms);

@@ -1149,6 +1149,98 @@ class FocusVisibleApp : public rtxui::Component<FocusVisibleApp> {
 
 }  // namespace
 
+namespace {
+
+// What a pseudo-class tests, changed after the first render: the pass that
+// follows evaluates only what changed, and has to reach each of these.
+class PseudoUpdatesApp : public rtxui::Component<PseudoUpdatesApp> {
+ public:
+  std::vector<std::string> items{"a", "b"};
+  bool on = false;
+  bool checked = false;
+  std::string label = "x";
+  std::string on_class() const { return on ? "on" : ""; }
+  std::string checked_attr() const { return checked ? "true" : "false"; }
+  PseudoUpdatesApp() {
+    Bind(items);
+    Bind(on);
+    Bind(checked);
+    Bind(label);
+    Bind(on_class);
+    Bind(checked_attr);
+  }
+  std::string_view view = R"(
+    <div id="list"><for each="{items}" as="item"><span>{item}</span></for></div>
+    <span id="first" class="{on_class}">{label}</span><span id="second">y</span>
+    <span id="box" checked="{checked_attr}">z</span>
+    <div id="wrap"><button>press</button></div>
+    <div class="{on_class}"><span id="deep">d</span></div>
+    <style>
+      .on span:first-child { margin-left: 6; }
+      #list span:last-child { margin-left: 1; }
+      .on + #second { margin-left: 3; }
+      #box:checked { margin-left: 4; }
+      #wrap:focus-within { margin-left: 5; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Pseudo-classes follow what they test after the first render",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<PseudoUpdatesApp>::New();
+  rtxui::HeadlessScreen screen(app, 40, 10);
+  auto margin = [&](const char* sel) {
+    auto* e = app->Root()->QuerySelector(sel);
+    REQUIRE(e != nullptr);
+    return e->style.margin.left;
+  };
+  auto list_margins = [&] {
+    std::vector<int> margins;
+    app->Root()->QuerySelector("#list")->Visit([&](rtxui::Element& e) {
+      if (!e.is_text() && e.tag() == "span") {
+        margins.push_back(e.style.margin.left);
+      }
+    });
+    return margins;
+  };
+
+  SECTION("a child added moves :last-child") {
+    CHECK(list_margins() == std::vector<int>{0, 1});
+    app->items.push_back("c");
+    app->Digest();
+    CHECK(list_margins() == std::vector<int>{0, 0, 1});
+  }
+
+  SECTION("a class on the preceding sibling") {
+    CHECK(margin("#second") == 0);
+    app->on = true;
+    app->Digest();
+    CHECK(margin("#second") == 3);
+  }
+
+  SECTION("a class on an ancestor, for a descendant's pseudo-class") {
+    CHECK(margin("#deep") == 0);
+    app->on = true;
+    app->Digest();
+    CHECK(margin("#deep") == 6);
+  }
+
+  SECTION("an attribute") {
+    CHECK(margin("#box") == 0);
+    app->checked = true;
+    app->Digest();
+    CHECK(margin("#box") == 4);
+  }
+
+  SECTION("focus inside an ancestor") {
+    CHECK(margin("#wrap") == 0);
+    screen.Input("\t");
+    CHECK(margin("#wrap") == 5);
+  }
+}
+
 TEST_CASE("The :focus-visible selector", "[component][css][selector]") {
   auto app = rtxui::Ref<FocusVisibleApp>::New();
   rtxui::HeadlessScreen screen(app, 40, 10);

@@ -16,6 +16,10 @@ class TextElement : public Element {
     if (text != text_) {
       text_ = std::move(text);
       InvalidateLayout();
+      // Whether the parent is :empty.
+      if (Parent()) {
+        Parent()->MarkPseudoInputsChanged();
+      }
     }
   }
 

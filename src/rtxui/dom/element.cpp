@@ -520,6 +520,10 @@ void Element::set_focused(bool f) {
   if (f != focused_) {
     g_focused_count.fetch_add(f ? 1 : -1, std::memory_order_relaxed);
     focused_ = f;
+    // :focus-within, on every ancestor.
+    for (Element* element = this; element; element = element->parent_) {
+      element->MarkPseudoInputsChanged();
+    }
   }
 }
 
@@ -559,6 +563,9 @@ void Element::set_parent(Element* parent) {
     if (subtree_needs_style_resolve) {
       parent_->MarkStyleSubtreeStale();
     }
+    if (subtree_needs_pseudo) {
+      parent_->MarkPseudoSubtreeStale();
+    }
   }
 }
 
@@ -570,6 +577,18 @@ void Element::MarkStyleSubtreeStale() {
   }
 }
 
+void Element::MarkPseudoSubtreeStale() {
+  for (Element* element = this; element && !element->subtree_needs_pseudo;
+       element = element->parent_) {
+    element->subtree_needs_pseudo = true;
+  }
+}
+
+void Element::MarkPseudoInputsChanged() {
+  pseudo_inputs_changed = true;
+  MarkPseudoSubtreeStale();
+}
+
 void Element::SetClasses(std::vector<std::string> classes) {
   if (classes == classes_) {
     return;
@@ -577,6 +596,7 @@ void Element::SetClasses(std::vector<std::string> classes) {
   classes_ = std::move(classes);
   ClearResolvedStyles();
   selector_inputs_changed = true;
+  MarkPseudoInputsChanged();
 }
 
 namespace {
@@ -703,6 +723,8 @@ void Element::AddChild(Ref<Element> child) {
   }
   children_.push_back(std::move(child));
   InvalidateLayout();
+  // :empty, :last-child and the like: the whole list is evaluated again.
+  MarkPseudoInputsChanged();
 }
 
 void Element::DetachFromParent() {
@@ -716,6 +738,7 @@ void Element::DetachFromParent() {
       siblings.erase(it);
       parent_->PrecedingSiblingsChanged(index);
       parent_->InvalidateLayout();
+      parent_->MarkPseudoInputsChanged();
       break;
     }
   }
@@ -728,6 +751,7 @@ void Element::RemoveChildren() {
   }
   children_.clear();
   InvalidateLayout();
+  MarkPseudoInputsChanged();
 }
 
 void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
@@ -740,6 +764,7 @@ void Element::ReplaceChild(size_t index, Ref<Element> new_child) {
   children_[index] = std::move(new_child);
   PrecedingSiblingsChanged(index + 1);
   InvalidateLayout();
+  MarkPseudoInputsChanged();
 }
 
 void Element::MoveChild(size_t from, size_t to) {
@@ -753,6 +778,7 @@ void Element::MoveChild(size_t from, size_t to) {
   children_.insert(children_.begin() + to, std::move(child));
   PrecedingSiblingsChanged(std::min(from, to));
   InvalidateLayout();
+  MarkPseudoInputsChanged();
 }
 
 void Element::PrecedingSiblingsChanged(size_t index) {
@@ -769,6 +795,7 @@ void Element::TruncateChildren(size_t count) {
     }
     children_.resize(count);
     InvalidateLayout();
+    MarkPseudoInputsChanged();
   }
 }
 
@@ -785,6 +812,7 @@ void Element::SetAttribute(std::string name, std::string value) {
       !previous || *previous != value) {
     selector_inputs_changed = true;
     InvalidateLayout();
+    MarkPseudoInputsChanged();
   }
   if (name == "id") {
     id = value;
@@ -818,6 +846,7 @@ void Element::RemoveAttribute(const std::string& name) {
   if (GetAttribute(name)) {
     selector_inputs_changed = true;
     InvalidateLayout();
+    MarkPseudoInputsChanged();
   }
   if (name == "id") {
     id.clear();

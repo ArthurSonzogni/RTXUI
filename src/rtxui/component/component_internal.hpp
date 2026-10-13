@@ -4,6 +4,7 @@
 #ifndef RTXUI_COMPONENT_INTERNAL_HPP_
 #define RTXUI_COMPONENT_INTERNAL_HPP_
 
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <map>
@@ -85,6 +86,9 @@ struct ComponentBase::Data {
   // <slot> turned true, say -- and left a slot that only the consumer can
   // fill, so the consumer has to render again.
   bool slots_recreated_ = false;
+  // The input modality the last pseudo-class pass saw: see
+  // ResolveTargetStyles().
+  uint64_t pointer_interaction_epoch_ = 0;
 
   // What each `<for virtual="">` rendered last, to tell when scrolling has
   // moved past it. Keyed by the loop's node in the template.
