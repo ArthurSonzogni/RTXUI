@@ -1065,16 +1065,15 @@ void PaintImpl(const PhysicalFragment* frag,
       }
     }
 
-    PaintImpl(child.fragment.get(), texture, child_off_x, child_off_y,
-              child_accum_scroll_x, child_accum_scroll_y,
-              is_fixed ? viewport_x : next_viewport_x,
-              is_fixed ? viewport_y : next_viewport_y,
-              is_fixed ? viewport_w : next_viewport_w,
-              is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
-              current_background_color, current_bold, current_dim,
-              current_italic, current_underlined, current_underlined_double,
-              current_strikethrough, current_overlined, current_blink,
-              child_clip_to_pass, current_opacity);
+    PaintImpl(
+        child.fragment, texture, child_off_x, child_off_y, child_accum_scroll_x,
+        child_accum_scroll_y, is_fixed ? viewport_x : next_viewport_x,
+        is_fixed ? viewport_y : next_viewport_y,
+        is_fixed ? viewport_w : next_viewport_w,
+        is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
+        current_background_color, current_bold, current_dim, current_italic,
+        current_underlined, current_underlined_double, current_strikethrough,
+        current_overlined, current_blink, child_clip_to_pass, current_opacity);
   }
 
   // 5. Outline, drawn once the whole tree is painted.

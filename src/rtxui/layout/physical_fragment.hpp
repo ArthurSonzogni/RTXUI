@@ -68,7 +68,7 @@ struct PhysicalFragment {
   int translated_x = 0, translated_y = 0;
 
   struct ChildLink {
-    std::shared_ptr<PhysicalFragment> fragment;
+    PhysicalFragment* fragment;
     int x, y;
   };
   // Optimization: Use thread-local LayoutArenaAllocator to prevent heap churn.

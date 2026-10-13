@@ -57,7 +57,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
     constraints.width = {width, MeasureMode::Exactly};
     constraints.height = {height, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   return texture;
 }
@@ -486,7 +486,7 @@ TEST_CASE("Paint: Anchor scrollbar thumb reaches bottom", "[paint][scroll]") {
   fragment = RunLayout({layout_box.get()}, constraints);
 
   Texture texture(20, 10);
-  Paint(fragment.get(), texture);
+  Paint(fragment, texture);
 
   // Print text layer for diagnostics
   std::cout << "Reaches bottom test:\n" << GetTextLayer(texture) << std::endl;

@@ -67,7 +67,7 @@ struct LayoutCache {
     LayoutConstraints constraints;
     bool is_measurement = false;
     InheritedTextStyle text;
-    std::shared_ptr<PhysicalFragment> fragment;
+    PhysicalFragment* fragment;
     // The element's next entry, or -1.
     int32_t next = -1;
   };
@@ -128,10 +128,12 @@ ScopedLayoutArenas::~ScopedLayoutArenas() {
 // Helper: allocate a PhysicalFragment in the arena using std::allocate_shared
 // so that both the control block and the object reside in the arena.
 template <typename... Args>
-std::shared_ptr<PhysicalFragment> MakeArenaFragment(Args&&... args) {
-  return std::allocate_shared<PhysicalFragment,
-                              LayoutArenaAllocator<PhysicalFragment>>(
-      LayoutArenaAllocator<PhysicalFragment>(), std::forward<Args>(args)...);
+PhysicalFragment* MakeArenaFragment(Args&&... args) {
+  // Never destroyed: the arena's reset frees it, and nothing in it needs a
+  // destructor (its children are arena memory too).
+  void* memory = ActiveLayoutArena().Allocate(sizeof(PhysicalFragment),
+                                              alignof(PhysicalFragment));
+  return new (memory) PhysicalFragment(std::forward<Args>(args)...);
 }
 
 std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
@@ -170,22 +172,21 @@ std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
 }
 
 // --- Forward Declarations ---
-std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
-                                                  LayoutConstraints constraints,
-                                                  LayoutContext context);
-std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
-    LayoutInputNode node,
-    LayoutConstraints constraints,
-    LayoutContext context);
-std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
-                                             LayoutConstraints constraints,
-                                             LayoutContext context);
-std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
-                                              LayoutConstraints constraints,
-                                              LayoutContext context);
-std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
-                                             LayoutConstraints constraints,
-                                             LayoutContext context);
+PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
+                                  LayoutConstraints constraints,
+                                  LayoutContext context);
+PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
+                                   LayoutConstraints constraints,
+                                   LayoutContext context);
+PhysicalFragment* LayoutFlex(LayoutInputNode node,
+                             LayoutConstraints constraints,
+                             LayoutContext context);
+PhysicalFragment* LayoutTable(LayoutInputNode node,
+                              LayoutConstraints constraints,
+                              LayoutContext context);
+PhysicalFragment* LayoutGrid(LayoutInputNode node,
+                             LayoutConstraints constraints,
+                             LayoutContext context);
 
 /**
  * Resolves a StyleLength against a parent dimension.
@@ -290,7 +291,7 @@ void AdjustOutOfFlowCoordinates(PhysicalFragment* frag,
           child.y -= shift_y;
         }
       } else {
-        AdjustOutOfFlowCoordinates(child.fragment.get(), shift_x, shift_y,
+        AdjustOutOfFlowCoordinates(child.fragment, shift_x, shift_y,
                                    shifted_root);
       }
     }
@@ -338,7 +339,7 @@ void AccumulateScrollExtent(const PhysicalFragment* frag,
     return;
   }
   for (const auto& child_link : frag->children) {
-    AccumulateScrollExtent(child_link.fragment.get(), offset_x + child_link.x,
+    AccumulateScrollExtent(child_link.fragment, offset_x + child_link.x,
                            offset_y + child_link.y, out_right, out_bottom);
   }
 }
@@ -383,8 +384,7 @@ void ApplyScrollExtent(LayoutBox* box,
 // Copies the tree under `fragment` into the active arena, text included: a
 // fragment reused from the last layout lives in the other arena, which the
 // next layout resets.
-std::shared_ptr<PhysicalFragment> CopyFragmentTree(
-    const PhysicalFragment& fragment) {
+PhysicalFragment* CopyFragmentTree(const PhysicalFragment& fragment) {
   auto copy = MakeArenaFragment(fragment);
   if (!copy->text_content.empty()) {
     auto* text = static_cast<char*>(
@@ -401,10 +401,9 @@ std::shared_ptr<PhysicalFragment> CopyFragmentTree(
 }
 
 // --- Dispatcher ---
-std::shared_ptr<PhysicalFragment> RunLayoutUncached(
-    LayoutInputNode node,
-    LayoutConstraints constraints,
-    LayoutContext context) {
+PhysicalFragment* RunLayoutUncached(LayoutInputNode node,
+                                    LayoutConstraints constraints,
+                                    LayoutContext context) {
   auto* box = node.box;
   g_layout_run_count++;
 
@@ -513,9 +512,9 @@ void RefreshPaint(PhysicalFragment& root) {
   }
 }
 
-std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
-                                            LayoutConstraints constraints,
-                                            LayoutContext context) {
+PhysicalFragment* RunLayout(LayoutInputNode node,
+                            LayoutConstraints constraints,
+                            LayoutContext context) {
   auto* box = node.box;
   if (!box) {
     std::cerr << "LayoutInputNode has null LayoutBox.\n";
@@ -613,7 +612,7 @@ LayoutContext CreateChildContext(LayoutBox* parent,
 }
 
 void LayoutOutOfFlowChildren(LayoutBox* parent,
-                             std::shared_ptr<PhysicalFragment>& fragment,
+                             PhysicalFragment*& fragment,
                              const LayoutContext& parent_context) {
   for (auto& child_box : parent->children) {
     if (child_box->style().position == PositionType::Absolute ||
@@ -787,9 +786,9 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
 }
 
 // --- Block Layout ---
-std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
-                                                  LayoutConstraints constraints,
-                                                  LayoutContext context) {
+PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
+                                  LayoutConstraints constraints,
+                                  LayoutContext context) {
   auto* box = node.box;
   int avail_width = constraints.width.value;
 
@@ -963,7 +962,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     int ry = cy;
 
     if (shift != child_box->style().margin.left) {
-      AdjustOutOfFlowCoordinates(child_frag.get(),
+      AdjustOutOfFlowCoordinates(child_frag,
                                  shift - child_box->style().margin.left, 0,
                                  child_box->dom_node);
     }
@@ -1071,8 +1070,8 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
     int max_child_right = 0;
     int max_child_bottom = 0;
     for (const auto& child_link : fragment->children) {
-      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
-                             child_link.y, &max_child_right, &max_child_bottom);
+      AccumulateScrollExtent(child_link.fragment, child_link.x, child_link.y,
+                             &max_child_right, &max_child_bottom);
     }
     total_scroll_width = std::max(total_scroll_width,
                                   max_child_right + box->style().padding.right +
@@ -1081,7 +1080,7 @@ std::shared_ptr<PhysicalFragment> LayoutBlockFlow(LayoutInputNode node,
         total_scroll_height, max_child_bottom + box->style().padding.bottom +
                                  box->style().border.bottom);
 
-    ApplyScrollExtent(box, fragment.get(), context, total_scroll_width,
+    ApplyScrollExtent(box, fragment, context, total_scroll_width,
                       total_scroll_height);
   }
 
@@ -1102,10 +1101,9 @@ struct TextStyle {
   std::optional<bool> blink;
 };
 
-std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
-    LayoutInputNode node,
-    LayoutConstraints constraints,
-    LayoutContext context) {
+PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
+                                   LayoutConstraints constraints,
+                                   LayoutContext context) {
   auto* box = node.box;
 
   int avail_width = (constraints.width.mode == MeasureMode::Undefined)
@@ -1653,8 +1651,8 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
     int max_child_right = 0;
     int max_child_bottom = 0;
     for (const auto& child_link : container_frag->children) {
-      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
-                             child_link.y, &max_child_right, &max_child_bottom);
+      AccumulateScrollExtent(child_link.fragment, child_link.x, child_link.y,
+                             &max_child_right, &max_child_bottom);
     }
     total_scroll_width = std::max(total_scroll_width,
                                   max_child_right + box->style().padding.right +
@@ -1663,7 +1661,7 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
         total_scroll_height, max_child_bottom + box->style().padding.bottom +
                                  box->style().border.bottom);
 
-    ApplyScrollExtent(box, container_frag.get(), context, total_scroll_width,
+    ApplyScrollExtent(box, container_frag, context, total_scroll_width,
                       total_scroll_height);
   }
 
@@ -1776,9 +1774,9 @@ std::shared_ptr<PhysicalFragment> LayoutInlineFlow(
  * LayoutFlex: A W3C-aligned Flexbox implementation for TUI.
  * Handles flex-direction, weighted flex-shrink, flex-grow, and basis.
  */
-std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
-                                             LayoutConstraints constraints,
-                                             LayoutContext context) {
+PhysicalFragment* LayoutFlex(LayoutInputNode node,
+                             LayoutConstraints constraints,
+                             LayoutContext context) {
   auto* box = node.box;
   bool is_row = box->style().flex_direction == Direction::Row ||
                 box->style().flex_direction == Direction::RowReverse;
@@ -1862,7 +1860,7 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
 
   struct FlexItem {
     std::shared_ptr<LayoutBox> child_ptr;
-    std::shared_ptr<PhysicalFragment> fragment;
+    PhysicalFragment* fragment;
     int main_base_size;
     int main_resolved_size;
     float grow;
@@ -2567,8 +2565,8 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
     int max_child_right = 0;
     int max_child_bottom = 0;
     for (const auto& child_link : fragment->children) {
-      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
-                             child_link.y, &max_child_right, &max_child_bottom);
+      AccumulateScrollExtent(child_link.fragment, child_link.x, child_link.y,
+                             &max_child_right, &max_child_bottom);
     }
     total_content_width = std::max(
         total_content_width, max_child_right + box->style().padding.right +
@@ -2577,16 +2575,16 @@ std::shared_ptr<PhysicalFragment> LayoutFlex(LayoutInputNode node,
         total_content_height, max_child_bottom + box->style().padding.bottom +
                                   box->style().border.bottom);
 
-    ApplyScrollExtent(box, fragment.get(), context, total_content_width,
+    ApplyScrollExtent(box, fragment, context, total_content_width,
                       total_content_height);
   }
 
   return fragment;
 }
 
-std::shared_ptr<PhysicalFragment> LayoutTable(LayoutInputNode node,
-                                              LayoutConstraints constraints,
-                                              LayoutContext context) {
+PhysicalFragment* LayoutTable(LayoutInputNode node,
+                              LayoutConstraints constraints,
+                              LayoutContext context) {
   auto* box = node.box;
   int avail_width = constraints.width.value;
 
@@ -3131,9 +3129,9 @@ static AlignItems EffectiveAlign(AlignSelf self, AlignItems items) {
   return items;
 }
 
-std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
-                                             LayoutConstraints constraints,
-                                             LayoutContext context) {
+PhysicalFragment* LayoutGrid(LayoutInputNode node,
+                             LayoutConstraints constraints,
+                             LayoutContext context) {
   auto* box = node.box;
 
   int border_h = box->style().border.Horiz();
@@ -3280,7 +3278,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
 
   struct PlacedChild {
     LayoutBox* box;
-    std::shared_ptr<PhysicalFragment> fragment;
+    PhysicalFragment* fragment;
     int row = 0;
     int col = 0;
     int r_span = 1;
@@ -3677,8 +3675,8 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
     int max_child_right = 0;
     int max_child_bottom = 0;
     for (const auto& child_link : container_frag->children) {
-      AccumulateScrollExtent(child_link.fragment.get(), child_link.x,
-                             child_link.y, &max_child_right, &max_child_bottom);
+      AccumulateScrollExtent(child_link.fragment, child_link.x, child_link.y,
+                             &max_child_right, &max_child_bottom);
     }
     total_scroll_width = std::max(total_scroll_width,
                                   max_child_right + box->style().padding.right +
@@ -3687,7 +3685,7 @@ std::shared_ptr<PhysicalFragment> LayoutGrid(LayoutInputNode node,
         total_scroll_height, max_child_bottom + box->style().padding.bottom +
                                  box->style().border.bottom);
 
-    ApplyScrollExtent(box, container_frag.get(), context, total_scroll_width,
+    ApplyScrollExtent(box, container_frag, context, total_scroll_width,
                       total_scroll_height);
   }
 

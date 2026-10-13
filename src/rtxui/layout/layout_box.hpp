@@ -104,7 +104,7 @@ class LayoutBox {
   // actually happen.
   struct MeasureCacheEntry {
     LayoutConstraints constraints;
-    std::shared_ptr<PhysicalFragment> fragment;
+    PhysicalFragment* fragment;
   };
   std::vector<MeasureCacheEntry, LayoutArenaAllocator<MeasureCacheEntry>>
       measure_cache;

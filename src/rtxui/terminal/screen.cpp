@@ -157,7 +157,7 @@ struct FocusableFragment {
 };
 
 void CollectFocusableFragments(
-    const std::shared_ptr<PhysicalFragment>& fragment,
+    PhysicalFragment* fragment,
     int abs_x,
     int abs_y,
     int viewport_x,
@@ -269,7 +269,7 @@ void CollectFocusableFragments(
   }
 }
 
-Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
+Element* FindElementAtImpl(PhysicalFragment* fragment,
                            int target_x,
                            int target_y,
                            int abs_x = 0,
@@ -432,7 +432,7 @@ Element* FindElementAtImpl(const std::shared_ptr<PhysicalFragment>& fragment,
 // exactly the shape of the built-in <dialog>. Collect them up front so they
 // can be tested against the viewport directly.
 struct FixedFragment {
-  std::shared_ptr<PhysicalFragment> fragment;
+  PhysicalFragment* fragment;
   // Viewport coordinates. A fragment does not know its own position -- that
   // lives in the parent's ChildLink -- and PhysicalFragment::x/y are never
   // assigned by layout, so they must not be read here.
@@ -448,7 +448,7 @@ struct FixedFragment {
 // the fixed element's parent was not itself at the viewport origin -- e.g.
 // the built-in <dialog> inside a padded wrapper, whose contents then hit-test
 // several cells away from where they are drawn.
-void CollectFixedFragments(const std::shared_ptr<PhysicalFragment>& fragment,
+void CollectFixedFragments(PhysicalFragment* fragment,
                            std::vector<FixedFragment>& out,
                            int abs_x = 0,
                            int abs_y = 0,
@@ -485,9 +485,7 @@ void CollectFixedFragments(const std::shared_ptr<PhysicalFragment>& fragment,
   }
 }
 
-Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
-                       int target_x,
-                       int target_y) {
+Element* FindElementAt(PhysicalFragment* fragment, int target_x, int target_y) {
   std::vector<FixedFragment> fixed;
   CollectFixedFragments(fragment, fixed);
 
@@ -514,16 +512,15 @@ Element* FindElementAt(const std::shared_ptr<PhysicalFragment>& fragment,
                            fragment ? fragment->height : 0);
 }
 
-std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
-    const std::shared_ptr<PhysicalFragment>& fragment,
-    int target_x,
-    int target_y,
-    int abs_x = 0,
-    int abs_y = 0,
-    int viewport_x = 0,
-    int viewport_y = 0,
-    int viewport_w = 0,
-    int viewport_h = 0) {
+PhysicalFragment* FindScrollableFragmentAtImpl(PhysicalFragment* fragment,
+                                               int target_x,
+                                               int target_y,
+                                               int abs_x = 0,
+                                               int abs_y = 0,
+                                               int viewport_x = 0,
+                                               int viewport_y = 0,
+                                               int viewport_w = 0,
+                                               int viewport_h = 0) {
   if (!fragment) {
     return nullptr;
   }
@@ -659,18 +656,16 @@ std::shared_ptr<PhysicalFragment> FindScrollableFragmentAtImpl(
   return nullptr;
 }
 
-std::shared_ptr<PhysicalFragment> FindScrollableFragmentAt(
-    const std::shared_ptr<PhysicalFragment>& fragment,
-    int target_x,
-    int target_y) {
+PhysicalFragment* FindScrollableFragmentAt(PhysicalFragment* fragment,
+                                           int target_x,
+                                           int target_y) {
   return FindScrollableFragmentAtImpl(fragment, target_x, target_y, 0, 0, 0, 0,
                                       fragment ? fragment->width : 0,
                                       fragment ? fragment->height : 0);
 }
 
-std::shared_ptr<PhysicalFragment> FindFragmentForElement(
-    const std::shared_ptr<PhysicalFragment>& fragment,
-    Element* element) {
+PhysicalFragment* FindFragmentForElement(PhysicalFragment* fragment,
+                                         Element* element) {
   if (!fragment) {
     return nullptr;
   }
@@ -685,8 +680,7 @@ std::shared_ptr<PhysicalFragment> FindFragmentForElement(
   return nullptr;
 }
 
-std::shared_ptr<PhysicalFragment> FindFirstScrollableFragment(
-    const std::shared_ptr<PhysicalFragment>& fragment) {
+PhysicalFragment* FindFirstScrollableFragment(PhysicalFragment* fragment) {
   if (!fragment) {
     return nullptr;
   }
@@ -704,13 +698,13 @@ std::shared_ptr<PhysicalFragment> FindFirstScrollableFragment(
 }
 
 struct FragmentWithPos {
-  std::shared_ptr<PhysicalFragment> fragment;
+  PhysicalFragment* fragment;
   int abs_x = 0;
   int abs_y = 0;
 };
 
 std::optional<FragmentWithPos> FindFragmentForElementWithPos(
-    const std::shared_ptr<PhysicalFragment>& fragment,
+    PhysicalFragment* fragment,
     Element* element,
     int abs_x = 0,
     int abs_y = 0,
@@ -1123,7 +1117,7 @@ class ScreenImpl {
   // Where this screen's layout lives. Declared before the trees allocated in
   // it, so they are destroyed while it still exists.
   LayoutArenas layout_arenas_;
-  std::shared_ptr<PhysicalFragment> root_fragment_;
+  PhysicalFragment* root_fragment_;
   std::shared_ptr<LayoutBox> root_box_;
   // Whether root_fragment_ still fits the application, but for the colors,
   // opacities and translations animations changed since: set by each layout,
@@ -1716,11 +1710,11 @@ void ScreenImpl::HandleEvent(Event event) {
               bool on_v_thumb = false;
               bool on_h_thumb = false;
               bool on_v_scrollbar = IsCellOnVerticalScrollbar(
-                  frag_opt->fragment.get(), frag_opt->abs_x, frag_opt->abs_y,
-                  tx, ty, &on_v_thumb);
+                  frag_opt->fragment, frag_opt->abs_x, frag_opt->abs_y, tx, ty,
+                  &on_v_thumb);
               bool on_h_scrollbar = IsCellOnHorizontalScrollbar(
-                  frag_opt->fragment.get(), frag_opt->abs_x, frag_opt->abs_y,
-                  tx, ty, &on_h_thumb);
+                  frag_opt->fragment, frag_opt->abs_x, frag_opt->abs_y, tx, ty,
+                  &on_h_thumb);
 
               if (on_v_scrollbar || on_h_scrollbar) {
                 scrollbar_hovered = true;
@@ -1800,15 +1794,15 @@ void ScreenImpl::HandleEvent(Event event) {
             auto frag_opt = FindFragmentForElementWithPos(root_fragment_, curr);
             if (frag_opt) {
               bool on_thumb = false;
-              if (IsCellOnVerticalScrollbar(frag_opt->fragment.get(),
-                                            frag_opt->abs_x, frag_opt->abs_y,
-                                            tx, ty, &on_thumb)) {
+              if (IsCellOnVerticalScrollbar(frag_opt->fragment, frag_opt->abs_x,
+                                            frag_opt->abs_y, tx, ty,
+                                            &on_thumb)) {
                 scrollbar_element = curr;
                 is_vertical = true;
                 is_on_thumb = on_thumb;
                 break;
               }
-              if (IsCellOnHorizontalScrollbar(frag_opt->fragment.get(),
+              if (IsCellOnHorizontalScrollbar(frag_opt->fragment,
                                               frag_opt->abs_x, frag_opt->abs_y,
                                               tx, ty, &on_thumb)) {
                 scrollbar_element = curr;
@@ -2023,7 +2017,7 @@ void ScreenImpl::HandleEvent(Event event) {
                         std::min(max_scroll, current_scroll + speed), false);
                   }
                 }
-                frag.reset();      // Release before Draw().
+                frag = nullptr;    // Release before Draw().
                 frag_opt.reset();  // Release before Draw().
                 RequestDraw();
               }
@@ -2151,7 +2145,7 @@ void ScreenImpl::HandleEvent(Event event) {
                 FindScrollableFragmentAt(root_fragment_, tx, ty)) {
           Element* curr = scroll_frag->dom_node;
           // Release scroll_frag immediately — we only needed dom_node.
-          scroll_frag.reset();
+          scroll_frag = nullptr;
           while (curr) {
             bool is_horizontal_wheel =
                 (mouse.button == Event::Mouse::Button::WheelLeft ||
@@ -2164,7 +2158,7 @@ void ScreenImpl::HandleEvent(Event event) {
                 int max_scroll = std::max(0, scroll_height - frag->height);
                 int curr_y = curr->target_scroll_y();
                 int speed = curr->style.scroll_speed_y;
-                frag.reset();  // Release before Draw().
+                frag = nullptr;  // Release before Draw().
 
                 int new_y = curr_y;
                 if (mouse.button == Event::Mouse::Button::WheelUp) {
@@ -2185,7 +2179,7 @@ void ScreenImpl::HandleEvent(Event event) {
                 int max_scroll = std::max(0, scroll_width - frag->width);
                 int curr_x = curr->target_scroll_x();
                 int speed = curr->style.scroll_speed_x;
-                frag.reset();  // Release before Draw().
+                frag = nullptr;  // Release before Draw().
 
                 int new_x = curr_x;
                 if (mouse.button == Event::Mouse::Button::WheelLeft ||
@@ -2342,7 +2336,7 @@ void ScreenImpl::HandleEvent(Event event) {
               int max_scroll = std::max(0, scroll_width - scroll_frag->width);
               int curr_x = curr->target_scroll_x();
               int speed = curr->style.scroll_speed_x;
-              scroll_frag.reset();  // Release before Draw().
+              scroll_frag = nullptr;  // Release before Draw().
 
               int delta = (event == Event::ArrowLeft()) ? -speed : speed;
               int new_x = std::clamp(curr_x + delta, 0, max_scroll);
@@ -2372,7 +2366,7 @@ void ScreenImpl::HandleEvent(Event event) {
               } else if (event == Event::PageDown()) {
                 delta = scroll_frag->height;
               }
-              scroll_frag.reset();  // Release before Draw().
+              scroll_frag = nullptr;  // Release before Draw().
 
               int new_y;
               if (event == Event::Home()) {
@@ -2402,7 +2396,7 @@ void ScreenImpl::HandleEvent(Event event) {
           int curr_x = scroll_frag->dom_node->target_scroll_x();
           int speed = scroll_frag->dom_node->style.scroll_speed_x;
           Element* el = scroll_frag->dom_node;
-          scroll_frag.reset();  // Release before Draw().
+          scroll_frag = nullptr;  // Release before Draw().
 
           int delta = (event == Event::ArrowLeft()) ? -speed : speed;
           int new_x = std::clamp(curr_x + delta, 0, max_scroll);
@@ -2430,7 +2424,7 @@ void ScreenImpl::HandleEvent(Event event) {
             delta = scroll_frag->height;
           }
           Element* el = scroll_frag->dom_node;
-          scroll_frag.reset();  // Release before Draw().
+          scroll_frag = nullptr;  // Release before Draw().
 
           int new_y;
           if (event == Event::Home()) {
@@ -2539,7 +2533,7 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
       {height_, MeasureMode::Exactly},
   };
 
-  std::shared_ptr<PhysicalFragment> root_fragment = nullptr;
+  PhysicalFragment* root_fragment = nullptr;
   if (root_box) {
     root_fragment = RunLayout({root_box.get()}, viewport);
     ApplyTranslate(*root_fragment);
@@ -2744,15 +2738,15 @@ void ScreenImpl::ScrollIntoView(Element* element) {
   }
 
   struct FragmentNode {
-    std::shared_ptr<PhysicalFragment> fragment;
+    PhysicalFragment* fragment;
     int x_rel_parent = 0;
     int y_rel_parent = 0;
   };
 
   std::vector<FragmentNode> path;
 
-  std::function<bool(const std::shared_ptr<PhysicalFragment>&)> find_path =
-      [&](const std::shared_ptr<PhysicalFragment>& frag) -> bool {
+  std::function<bool(PhysicalFragment*)> find_path =
+      [&](PhysicalFragment* frag) -> bool {
     if (!frag) {
       return false;
     }

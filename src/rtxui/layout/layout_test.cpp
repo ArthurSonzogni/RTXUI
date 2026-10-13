@@ -548,7 +548,7 @@ TEST_CASE("Layout: position sticky pins to the top edge", "[layout][sticky]") {
       LayoutConstraints constraints;
       constraints.width = {6, MeasureMode::Exactly};
       constraints.height = {4, MeasureMode::Exactly};
-      Paint(RunLayout({layout_box.get()}, constraints).get(), texture);
+      Paint(RunLayout({layout_box.get()}, constraints), texture);
     }
     return GetTextLayer(texture);
   };
@@ -594,7 +594,7 @@ TEST_CASE("Layout: position sticky pins to the bottom edge",
       LayoutConstraints constraints;
       constraints.width = {6, MeasureMode::Exactly};
       constraints.height = {4, MeasureMode::Exactly};
-      Paint(RunLayout({layout_box.get()}, constraints).get(), texture);
+      Paint(RunLayout({layout_box.get()}, constraints), texture);
     }
     return GetTextLayer(texture);
   };
@@ -636,7 +636,7 @@ TEST_CASE("Layout: position sticky pins to the right edge",
     LayoutConstraints constraints;
     constraints.width = {6, MeasureMode::Exactly};
     constraints.height = {1, MeasureMode::Exactly};
-    Paint(RunLayout({layout_box.get()}, constraints).get(), texture);
+    Paint(RunLayout({layout_box.get()}, constraints), texture);
   }
   // ZZ sits past the right edge in flow; sticky pulls it to the last column.
   CHECK(GetTextLayer(texture) == CheckGrid({"abcdZZ"}));
@@ -1202,7 +1202,7 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
     constraints.width = {9, MeasureMode::Exactly};
     constraints.height = {3, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   std::string layer = GetTextLayer(texture);
   INFO("Actual render: [" << layer << "]");
@@ -1241,7 +1241,7 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
     constraints.width = {7, MeasureMode::Exactly};
     constraints.height = {4, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   std::string layer = GetTextLayer(texture);
   INFO("Actual multiline render: [" << layer << "]");
@@ -1302,7 +1302,7 @@ TEST_CASE("Layout: position absolute and relative", "[layout][position]") {
     constraints.width = {5, MeasureMode::Exactly};
     constraints.height = {3, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   std::string layer = GetTextLayer(texture);
   INFO("Position render:\n" << layer);
@@ -1358,7 +1358,7 @@ TEST_CASE("Layout: z-index stacking", "[layout][z-index]") {
     constraints.width = {1, MeasureMode::Exactly};
     constraints.height = {1, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   std::string layer = GetTextLayer(texture);
   INFO("Z-index render:\n" << layer);
@@ -1416,7 +1416,7 @@ TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
     constraints.width = {5, MeasureMode::Exactly};
     constraints.height = {3, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
 
   std::string layer = GetTextLayer(texture);
@@ -1496,7 +1496,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
       constraints.width = {5, MeasureMode::Exactly};
       constraints.height = {5, MeasureMode::Exactly};
       auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
+      Paint(fragment, texture);
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 0 render:\n" << layer);
@@ -1526,7 +1526,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
       constraints.width = {5, MeasureMode::Exactly};
       constraints.height = {5, MeasureMode::Exactly};
       auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
+      Paint(fragment, texture);
     }
     CHECK(texture[0, 1].character == "S");
   }
@@ -1556,7 +1556,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
       constraints.width = {5, MeasureMode::Exactly};
       constraints.height = {5, MeasureMode::Exactly};
       auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
+      Paint(fragment, texture);
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 9 render:\n" << layer);
@@ -1616,7 +1616,7 @@ TEST_CASE("Layout: position sticky direct child of scroll container",
     constraints.width = {5, MeasureMode::Exactly};
     constraints.height = {5, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   std::string layer = GetTextLayer(texture);
   INFO("Scroll 10 direct render:\n" << layer);
@@ -2161,9 +2161,9 @@ TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
   // The fixed item should be a direct child of the container fragment,
   // not nested inside an anonymous inline wrapper.
   // Find the container fragment (it has clips_descendants due to overflow).
-  std::shared_ptr<PhysicalFragment> container_frag;
-  std::function<void(const std::shared_ptr<PhysicalFragment>&)> find_container;
-  find_container = [&](const std::shared_ptr<PhysicalFragment>& frag) {
+  PhysicalFragment* container_frag;
+  std::function<void(PhysicalFragment*)> find_container;
+  find_container = [&](PhysicalFragment* frag) {
     if (frag->dom_node && frag->dom_node->id == "container") {
       container_frag = frag;
       return;
@@ -2200,9 +2200,9 @@ TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
   auto fragment2 = RunLayout({layout_box2.get()}, constraints);
   REQUIRE(fragment2 != nullptr);
 
-  std::shared_ptr<PhysicalFragment> container_frag2;
-  std::function<void(const std::shared_ptr<PhysicalFragment>&)> find_container2;
-  find_container2 = [&](const std::shared_ptr<PhysicalFragment>& frag) {
+  PhysicalFragment* container_frag2;
+  std::function<void(PhysicalFragment*)> find_container2;
+  find_container2 = [&](PhysicalFragment* frag) {
     if (frag->dom_node && frag->dom_node->id == "container") {
       container_frag2 = frag;
       return;
@@ -3110,7 +3110,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
       constraints.width = {5, MeasureMode::Exactly};
       constraints.height = {4, MeasureMode::Exactly};
       auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
+      Paint(fragment, texture);
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 0 render:\n" << layer);
@@ -3135,7 +3135,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
       constraints.width = {5, MeasureMode::Exactly};
       constraints.height = {4, MeasureMode::Exactly};
       auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
+      Paint(fragment, texture);
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 1 render:\n" << layer);
@@ -3160,7 +3160,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
       constraints.width = {5, MeasureMode::Exactly};
       constraints.height = {4, MeasureMode::Exactly};
       auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
+      Paint(fragment, texture);
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 2 render:\n" << layer);
@@ -3185,7 +3185,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
       constraints.width = {5, MeasureMode::Exactly};
       constraints.height = {4, MeasureMode::Exactly};
       auto fragment = RunLayout({layout_box.get()}, constraints);
-      Paint(fragment.get(), texture);
+      Paint(fragment, texture);
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 3 render:\n" << layer);
@@ -3276,7 +3276,7 @@ TEST_CASE("Layout: Absolute position centering via margin auto",
   REQUIRE(fragment != nullptr);
 
   Texture texture(40, 20);
-  Paint(fragment.get(), texture);
+  Paint(fragment, texture);
 
   auto* child_el = c->Root()->QuerySelector(".child");
   REQUIRE(child_el != nullptr);
@@ -4136,6 +4136,14 @@ TEST_CASE("The layout arena is double buffered", "[layout][arena]") {
   bool previous_intact = std::all_of(first, first + 256,
                                      [](unsigned char b) { return b == 0xAB; });
   CHECK(previous_intact);
+
+#ifdef RTXUI_LAYOUT_ARENA_POISON
+  // Two frames later the first block is free again. Fragments are plain
+  // pointers into the arena, so under ASAN reading one kept that long must be
+  // reported rather than read whatever the arena holds next.
+  ResetLayoutArena();
+  CHECK(__asan_address_is_poisoned(first));
+#endif
 }
 
 // Builds `depth` nested flex containers around a fixed leaf and reports how

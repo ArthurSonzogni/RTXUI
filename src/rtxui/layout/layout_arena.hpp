@@ -7,6 +7,25 @@
 #include <memory>
 #include <vector>
 
+// Under AddressSanitizer, what Reset() frees is poisoned until allocated
+// again, so that a pointer kept into a previous layout is reported where it is
+// read rather than reading whatever the next layout put there.
+#if defined(__SANITIZE_ADDRESS__)
+#define RTXUI_LAYOUT_ARENA_POISON 1
+#elif defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define RTXUI_LAYOUT_ARENA_POISON 1
+#endif
+#endif
+#ifdef RTXUI_LAYOUT_ARENA_POISON
+#include <sanitizer/asan_interface.h>
+#define RTXUI_ARENA_POISON(ptr, size) ASAN_POISON_MEMORY_REGION(ptr, size)
+#define RTXUI_ARENA_UNPOISON(ptr, size) ASAN_UNPOISON_MEMORY_REGION(ptr, size)
+#else
+#define RTXUI_ARENA_POISON(ptr, size) ((void)(ptr), (void)(size))
+#define RTXUI_ARENA_UNPOISON(ptr, size) ((void)(ptr), (void)(size))
+#endif
+
 namespace rtxui {
 
 class LayoutArena {
@@ -19,6 +38,7 @@ class LayoutArena {
   LayoutArena() = default;
   ~LayoutArena() {
     for (const auto& chunk : allocated_chunks_) {
+      RTXUI_ARENA_UNPOISON(chunk.ptr, chunk.capacity);
       delete[] chunk.ptr;
     }
   }
@@ -32,6 +52,7 @@ class LayoutArena {
       size_t space = capacity_ - used_;
       if (std::align(alignment, size, ptr, space)) {
         used_ = capacity_ - space + size;
+        RTXUI_ARENA_UNPOISON(ptr, size);
         return ptr;
       }
       current_chunk_idx_++;
@@ -43,6 +64,7 @@ class LayoutArena {
         space = capacity_ - used_;
         if (std::align(alignment, size, ptr, space)) {
           used_ = capacity_ - space + size;
+          RTXUI_ARENA_UNPOISON(ptr, size);
           return ptr;
         }
       }
@@ -50,6 +72,7 @@ class LayoutArena {
 
     size_t new_cap = std::max(capacity_ * 2, size + alignment + 65536);
     char* new_buf = new char[new_cap];
+    RTXUI_ARENA_POISON(new_buf, new_cap);
     allocated_chunks_.push_back({new_buf, new_cap});
     current_chunk_idx_ = allocated_chunks_.size() - 1;
     buffer_ = new_buf;
@@ -60,12 +83,16 @@ class LayoutArena {
     size_t space = capacity_ - used_;
     if (std::align(alignment, size, ptr, space)) {
       used_ = capacity_ - space + size;
+      RTXUI_ARENA_UNPOISON(ptr, size);
       return ptr;
     }
     return nullptr;
   }
 
   void Reset() {
+    for (const auto& chunk : allocated_chunks_) {
+      RTXUI_ARENA_POISON(chunk.ptr, chunk.capacity);
+    }
     current_chunk_idx_ = 0;
     used_ = 0;
     if (!allocated_chunks_.empty()) {
@@ -88,10 +115,9 @@ class LayoutArena {
 // Layout arenas are double-buffered: ResetLayoutArena() flips to the other
 // arena and resets it before the new layout tree is built. Memory backing the
 // previous frame's tree is therefore never reused during the current frame,
-// so shared_ptr copies of fragments/boxes that accidentally survive one
-// Draw() (e.g. locals held across Draw() in event handlers) release into
-// intact memory instead of corrupting the new tree's control blocks. Such
-// copies must still not outlive two frames.
+// so a box shared_ptr or a fragment pointer that accidentally survives one
+// Draw() (e.g. a local held across Draw() in an event handler) still points
+// at intact memory. Neither may outlive two frames.
 // The fragments one layout produced, for the next one to reuse. Defined in
 // layout.cpp.
 struct LayoutCache;

@@ -35,7 +35,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
     constraints.width = {width, MeasureMode::Exactly};
     constraints.height = {height, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   return texture;
 }
@@ -187,7 +187,7 @@ Texture RenderTextarea(Ref<TextareaScrollbarApp> app, int width, int height) {
     constraints.width = {width, MeasureMode::Exactly};
     constraints.height = {height, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   return texture;
 }
@@ -268,7 +268,7 @@ TEST_CASE("Textarea scrollbar thumb position tracks the scroll offset",
     constraints.width = {40, MeasureMode::Exactly};
     constraints.height = {5, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
     return ScrollbarColumn(texture, 39, 5);
   };
 

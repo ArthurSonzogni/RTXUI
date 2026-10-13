@@ -5393,7 +5393,7 @@ TEST_CASE("Declaring a screen background makes reversal exact",
         {box.get()}, {{6, MeasureMode::Exactly}, {3, MeasureMode::Exactly}});
     REQUIRE(fragment != nullptr);
     Texture texture(6, 3);
-    Paint(fragment.get(), texture, 0, 0, screen_background);
+    Paint(fragment, texture, 0, 0, screen_background);
     return texture[0, 1];
   };
 

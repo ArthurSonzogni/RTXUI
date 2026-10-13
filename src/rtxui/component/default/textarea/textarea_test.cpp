@@ -1150,7 +1150,7 @@ TEST_CASE(
     };
     auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
     Texture texture(40, 10);
-    rtxui::Paint(root_fragment.get(), texture);
+    rtxui::Paint(root_fragment, texture);
     auto* selection_el = container->Root()->QuerySelector(".selection");
     if (!selection_el) {
       return false;

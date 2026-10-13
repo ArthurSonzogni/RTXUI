@@ -91,7 +91,7 @@ TEST_CASE("Layout: Rowspan painting order regression test", "[layout][table]") {
   auto fragment = RunLayout({layout_box.get()}, constraints);
 
   Texture texture(10, 2);
-  Paint(fragment.get(), texture);
+  Paint(fragment, texture);
 
   std::map<Color, char> colors = {
       {Color::RGB(0, 255, 0), 'G'},

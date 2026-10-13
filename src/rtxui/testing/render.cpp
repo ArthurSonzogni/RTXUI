@@ -29,7 +29,7 @@ Texture PaintComponent(const ComponentBase& component, int width, int height) {
     constraints.width = {width, MeasureMode::Exactly};
     constraints.height = {height, MeasureMode::Exactly};
     auto fragment = RunLayout({layout_box.get()}, constraints);
-    Paint(fragment.get(), texture);
+    Paint(fragment, texture);
   }
   return texture;
 }

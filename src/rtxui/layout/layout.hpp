@@ -30,9 +30,9 @@ struct LayoutContext {
   bool is_measurement = false;
 };
 
-std::shared_ptr<PhysicalFragment> RunLayout(LayoutInputNode node,
-                                            LayoutConstraints constraints,
-                                            LayoutContext context = {});
+PhysicalFragment* RunLayout(LayoutInputNode node,
+                            LayoutConstraints constraints,
+                            LayoutContext context = {});
 
 // Moves every box by its `translate`, once the tree under `root` is laid out:
 // each box's link in its parent, so painting and hit-testing both follow and
