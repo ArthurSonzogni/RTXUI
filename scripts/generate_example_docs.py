@@ -38,6 +38,7 @@ EXAMPLES_META = {
     "app_filebrowser.cpp": {"category": "Applications", "guide": "/guide/scrolling", "cols": 100, "rows": 28},
     "demo.cpp": {"category": "Applications", "guide": "/reactivity", "cols": 110, "rows": 30},
     "playground.cpp": {"category": "Applications", "guide": "/guide/playground", "cols": 120, "rows": 32},
+    "inline_install.cpp": {"category": "Applications", "guide": "/guide/inline", "cols": 100, "rows": 24},
 
     # Core Concepts
     "helloworld.cpp": {"category": "Core Concepts", "guide": "/guide/hello-world"},

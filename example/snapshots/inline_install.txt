@@ -1,0 +1,7 @@
+ ⠋ Downloading libc6            ━━━━━━━━━━━━━━━━━━━━━━━━   0% 0 kB / 3.2 MB
+ ⠋ Downloading zlib1g           ━━━━━━━━━━━━━━━━━━━━━━━━   0% 0 kB / 90 kB
+ ⠋ Downloading libssl3t64       ━━━━━━━━━━━━━━━━━━━━━━━━   0% 0 kB / 1.9 MB
+
+  Total       0 / 12           ━━━━━━━━━━━━━━━━━━━━━━━━   0% starting
+
+ p pause   q cancel

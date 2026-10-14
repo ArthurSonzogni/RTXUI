@@ -863,7 +863,8 @@ class HeadlessTerminalDevice : public TerminalDevice {
     height = height_;
     return true;
   }
-  void EnterRawMode(void (* /*sigwinch_handler*/)(int)) override {}
+  void EnterRawMode(void (* /*sigwinch_handler*/)(int),
+                    bool /*alternate_screen*/) override {}
   void ExitRawMode() override {}
 
   void PushInput(std::string_view data) { input_ += data; }
@@ -1071,7 +1072,41 @@ class ScreenImpl {
   Ref<ComponentBase> component_;
   int width_ = 80;
   int height_ = 24;
+  // How many rows the frame takes: the terminal's height, or, inline, the
+  // application's, up to it.
+  int frame_height_ = 24;
   int last_height_ = 0;
+
+  // Inline (Screen::SetInline): the frame is drawn where the cursor is, on
+  // the terminal's main screen, its rows below the shell's.
+  bool inline_ = false;
+  // Writes the frame from the top-left of the last one, after what Print()
+  // queued. Leaves the cursor at the frame's top-left.
+  void WriteInlineFrame(const Texture& texture, bool repaint);
+  // How many rows above the cursor the frame's top row is, after the terminal
+  // got `width` wide.
+  int InlineRowsAboveCursor(int width) const;
+  // Moves the cursor below the frame, for the shell to go on from there.
+  void LeaveInline();
+  // The terminal row the frame's top row is on, 0-based, as the terminal last
+  // reported it. -1 while unknown: the mouse is ignored until then.
+  int inline_top_ = -1;
+  // Cursor position queries not answered yet. Only the last answer is used:
+  // the frame may have moved since the earlier ones.
+  int position_queries_ = 0;
+  // Where the cursor was left after the frame, from its top-left: an input's
+  // caret, or the top-left itself.
+  int rest_x_ = 0;
+  int rest_y_ = 0;
+  // Whether a button went down inside the frame and is not released yet.
+  bool inline_pressed_ = false;
+  // Whether Loop() is running, in raw mode.
+  bool looping_ = false;
+  // What Print() queued: written above the frame at the next inline frame,
+  // or else once Loop() returns.
+  std::string printed_;
+  void Print(std::string text);
+  void Print(Ref<ComponentBase> component);
   bool has_drawn_ = false;
   bool running_ = true;
   // Set while draining a burst of already-queued events (e.g. a paste,
@@ -1232,12 +1267,31 @@ void ScreenImpl::Loop() {
     RunHeadless();
     return;
   }
-  RawTerminal raw_terminal(this);
-  Draw();
+  {
+    RawTerminal raw_terminal(this);
+    looping_ = true;
+    if (inline_) {
+      // Starts on a line of its own. Printing as many spaces as the terminal
+      // is wide leaves the cursor at the end of the line it starts at, or on
+      // the next one if that was not empty: the carriage return then goes to
+      // the start of the first empty line, without one to spare.
+      device_->Write("\x1b[?7h" + std::string(width_, ' ') +
+                     "\r\x1b[K\x1b[?7l");
+    }
+    Draw();
 
-  running_ = true;
-  while (running_) {
-    Step();
+    running_ = true;
+    while (running_) {
+      Step();
+    }
+    if (inline_) {
+      LeaveInline();
+    }
+    looping_ = false;
+  }
+  // What Print() wrote while the alternate screen hid the shell.
+  if (!printed_.empty()) {
+    device_->Write(std::exchange(printed_, ""));
   }
 }
 
@@ -1325,6 +1379,11 @@ void ScreenImpl::Step() {
       suppress_draw_ = true;
       while (auto event = parser_->GetEvent()) {
         HandleEvent(*event);
+      }
+      for (auto [x, y] : parser_->TakeCursorPositions()) {
+        if (position_queries_ > 0 && --position_queries_ == 0) {
+          inline_top_ = y;
+        }
       }
       if (auto background = parser_->TakeBackgroundColor()) {
         terminal_background_ = *background;
@@ -1493,6 +1552,30 @@ void ScreenImpl::HandleEvent(Event event) {
 
       mouse_ptr->sub_cell_x = static_cast<float>((raw_x - 1) % cell_w) / cell_w;
       mouse_ptr->sub_cell_y = static_cast<float>((raw_y - 1) % cell_h) / cell_h;
+    }
+    // Inline, the terminal reports the mouse on its whole screen: from the
+    // frame's top row instead. A press or a wheel turn outside the frame is
+    // on the shell's lines, not the application's, and so is its release; a
+    // drag started inside may go on outside.
+    if (inline_) {
+      if (inline_top_ < 0) {
+        return;
+      }
+      mouse_ptr->y -= inline_top_;
+      mouse_ptr->pixel_y -= inline_top_ * cell_h;
+      const bool outside = mouse_ptr->y < 1 || mouse_ptr->y > frame_height_;
+      const bool wheel = mouse_ptr->button >= Event::Mouse::WheelUp;
+      if (mouse_ptr->motion == Event::Mouse::Motion::Pressed) {
+        if (outside) {
+          return;
+        }
+        inline_pressed_ = inline_pressed_ || !wheel;
+      } else if (mouse_ptr->motion == Event::Mouse::Motion::Released) {
+        if (!inline_pressed_) {
+          return;
+        }
+        inline_pressed_ = false;
+      }
     }
   }
 
@@ -2429,6 +2512,23 @@ void ScreenImpl::HandleEvent(Event event) {
 // so letting it go stale across a reconciliation is a use-after-free rather
 // than merely a wrong answer -- reconciliation destroys the elements it
 // replaces, and the fragments still point at them.
+namespace {
+
+// How far down `fragment`, at row `y`, draws: its own rows, and those of
+// what overflows it, like a popup below its last row.
+int InkBottom(const PhysicalFragment& fragment, int y) {
+  int bottom = y + fragment.height;
+  if (fragment.clips_descendants) {
+    return bottom;
+  }
+  for (const auto& child : fragment.children) {
+    bottom = std::max(bottom, InkBottom(*child.fragment, y + child.y));
+  }
+  return bottom;
+}
+
+}  // namespace
+
 void ScreenImpl::UpdateLayout(bool reuse_fragments) {
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
@@ -2503,9 +2603,11 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
 
   auto root_box = LayoutTreeBuilder::Build(root, {}, /*may_defer=*/true);
 
+  // Inline, the application is as tall as its content, as a web page is;
+  // the terminal's height is only the most it is shown at.
   LayoutConstraints viewport = {
       {width_, MeasureMode::Exactly},
-      {height_, MeasureMode::Exactly},
+      {height_, inline_ ? MeasureMode::AtMost : MeasureMode::Exactly},
   };
 
   PhysicalFragment* root_fragment = nullptr;
@@ -2515,6 +2617,10 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
   }
   root_fragment_ = root_fragment;
   root_box_ = root_box;
+  frame_height_ = !inline_ ? height_
+                  : root_fragment_
+                      ? std::clamp(InkBottom(*root_fragment_, 0), 0, height_)
+                      : 0;
   reused_fragments_ = LayoutReuseCount() != reuse_count;
   if (!root_fragment_ || !reused_fragments_ || LayoutRunCount() != run_count) {
     laid_out_since_paint_ = true;
@@ -2556,7 +2662,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
   // A layout reused whole paints what the last frame painted.
   const bool repaint = reuse_layout || laid_out_since_paint_ ||
                        !last_texture_ || last_texture_->width() != width_ ||
-                       last_texture_->height() != height_ ||
+                       last_texture_->height() != frame_height_ ||
                        painted_background_set_ != background_color_set_ ||
                        painted_background_ != background_color_ ||
                        painted_terminal_background_ != terminal_background_ ||
@@ -2571,7 +2677,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
   }
   const PaintSelection* shown_selection =
       SelectionShown() ? &selection : nullptr;
-  Texture texture = repaint ? Texture(width_, height_) : *last_texture_;
+  Texture texture = repaint ? Texture(width_, frame_height_) : *last_texture_;
   if (repaint && root_fragment) {
     PaintScreen(*root_fragment, texture, shown_selection);
   }
@@ -2585,7 +2691,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
   if ((reuse_layout || reused_fragments_) &&
       std::getenv("RTXUI_VERIFY_LAYOUT_REUSE")) {
     UpdateLayout(/*reuse_fragments=*/false);
-    Texture fresh(width_, height_);
+    Texture fresh(width_, frame_height_);
     if (root_fragment_) {
       PaintScreen(*root_fragment_, fresh, shown_selection);
     }
@@ -2603,24 +2709,29 @@ void ScreenImpl::Draw(bool reuse_layout) {
   bool use_diff = has_drawn_ && last_texture_ &&
                   last_texture_->width() == width_ &&
                   last_texture_->height() == height_;
-  if (use_diff) {
-    new_output = repaint ? texture.RenderDiff(*last_texture_)
-                         : texture.RenderUnchanged();
+  if (inline_) {
+    device_->Write("\x1b[?2026h");
+    WriteInlineFrame(texture, repaint);
   } else {
-    new_output = texture.Render();
-  }
-
-  device_->Write("\x1b[?2026h");
-
-  if (has_drawn_) {
-    if (last_height_ > 0) {
-      device_->Write("\r\x1b[" + std::to_string(last_height_) + "A");
+    if (use_diff) {
+      new_output = repaint ? texture.RenderDiff(*last_texture_)
+                           : texture.RenderUnchanged();
+    } else {
+      new_output = texture.Render();
     }
-  } else {
-    device_->Write("\x1b[2J\x1b[H");
-  }
 
-  device_->Write(new_output);
+    device_->Write("\x1b[?2026h");
+
+    if (has_drawn_) {
+      if (last_height_ > 0) {
+        device_->Write("\r\x1b[" + std::to_string(last_height_) + "A");
+      }
+    } else {
+      device_->Write("\x1b[2J\x1b[H");
+    }
+
+    device_->Write(new_output);
+  }
 
   Element* cursor_element = nullptr;
   if (root) {
@@ -2645,7 +2756,28 @@ void ScreenImpl::Draw(bool reuse_layout) {
     FindCursor(focused_element_);
   }
 
-  if (cursor_element && IsWithinScrollClip(cursor_element)) {
+  if (inline_) {
+    // From the frame's top-left, where WriteInlineFrame() left the cursor.
+    const int cx = cursor_element ? cursor_element->absolute_x() : -1;
+    const int cy = cursor_element ? cursor_element->absolute_y() : -1;
+    if (cursor_element && IsWithinScrollClip(cursor_element) && cx >= 0 &&
+        cx < width_ && cy >= 0 && cy < frame_height_) {
+      std::string move = "\x1b[?25h\x1b[5 q";
+      if (cy > 0) {
+        move += "\x1b[" + std::to_string(cy) + "B";
+      }
+      if (cx > 0) {
+        move += "\x1b[" + std::to_string(cx) + "C";
+      }
+      device_->Write(move);
+      rest_x_ = cx;
+      rest_y_ = cy;
+    } else {
+      device_->Write("\x1b[?25l");
+      rest_x_ = 0;
+      rest_y_ = 0;
+    }
+  } else if (cursor_element && IsWithinScrollClip(cursor_element)) {
     int cx = cursor_element->absolute_x() + 1;
     int cy = cursor_element->absolute_y() + 1;
     device_->Write("\x1b[?25h\x1b[5 q\x1b[" + std::to_string(cy) + ";" +
@@ -2691,7 +2823,20 @@ void ScreenImpl::UpdateSize() {
       selection_ = {};
       css::g_terminal_width = width_;
       css::g_terminal_height = height_;
-      if (has_drawn_) {
+      if (has_drawn_ && inline_) {
+        // The terminal may have rewrapped the frame's rows, and moved the
+        // cursor with them. From its top-left again, the frame is drawn
+        // whole, over what is left of the last one.
+        const int above = InlineRowsAboveCursor(new_width);
+        device_->Write(above > 0 ? "\r\x1b[" + std::to_string(above) + "A"
+                                 : "\r");
+        rest_x_ = 0;
+        rest_y_ = 0;
+        last_texture_.reset();
+        inline_top_ = -1;
+        component_->Render();
+        Draw();
+      } else if (has_drawn_) {
         device_->Write("\x1b[2J\x1b[H");
         last_height_ = 0;
         component_->Render();
@@ -2699,6 +2844,145 @@ void ScreenImpl::UpdateSize() {
       }
     }
   }
+}
+
+namespace {
+
+// Whether the terminal rewraps its lines when it gets narrower, keeping the
+// cursor on the glyph it was on, as most terminals do. xterm, st and the
+// Linux console cut them instead.
+bool TerminalRewrapsLines() {
+  if (std::getenv("TMUX")) {
+    return true;
+  }
+  if (std::getenv("XTERM_VERSION")) {
+    return false;
+  }
+  const std::string_view term = std::getenv("TERM") ? std::getenv("TERM") : "";
+  return term != "linux" && term != "st" && !term.starts_with("st-");
+}
+
+// `text` with every line break a carriage return and a line feed, ending
+// with one: the terminal is in raw mode.
+std::string AsLines(std::string_view text) {
+  std::string lines;
+  for (char c : text) {
+    if (c == '\n') {
+      lines += '\r';
+    }
+    lines += c;
+  }
+  if (lines.empty() || lines.back() != '\n') {
+    lines += "\r\n";
+  }
+  return lines;
+}
+
+}  // namespace
+
+void ScreenImpl::WriteInlineFrame(const Texture& texture, bool repaint) {
+  // To the top-left of the last frame.
+  std::string out = "\r";
+  if (rest_y_ > 0) {
+    out += "\x1b[" + std::to_string(rest_y_) + "A";
+  }
+  const int height = texture.height();
+  const bool grew = !last_texture_ || height > last_texture_->height();
+  if (has_drawn_ && last_texture_ && printed_.empty() &&
+      last_texture_->width() == texture.width() &&
+      last_texture_->height() == height) {
+    if (height > 0) {
+      out += repaint ? texture.RenderDiff(*last_texture_)
+                     : texture.RenderUnchanged();
+    }
+  } else {
+    // Erases the last frame, and anything the terminal left below it.
+    out += "\x1b[J";
+    if (!printed_.empty()) {
+      // Wrapped by the terminal, as any other output, to stay readable
+      // whatever its width becomes.
+      out += "\x1b[?7h" + AsLines(printed_) + "\x1b[?7l";
+      printed_.clear();
+    }
+    out += texture.Render();
+  }
+  // Back to the top-left: the frame's rows all start on the line they are
+  // drawn on, so the terminal keeps the cursor there whatever it rewraps.
+  if (height > 1) {
+    out += "\x1b[" + std::to_string(height - 1) + "A";
+  }
+  out += "\r";
+  // The frame scrolled the terminal if it went past its bottom. The terminal
+  // says where it is now.
+  if (grew || inline_top_ < 0) {
+    out += "\x1b[6n";
+    ++position_queries_;
+    inline_top_ = -1;
+  }
+  device_->Write(out);
+}
+
+int ScreenImpl::InlineRowsAboveCursor(int width) const {
+  if (!last_texture_ || width >= last_texture_->width() ||
+      !TerminalRewrapsLines()) {
+    return rest_y_;
+  }
+  // Each row above, and the cursor's own up to it, now takes as many rows
+  // as it has glyphs for.
+  int rows = 0;
+  for (int y = 0; y < rest_y_; ++y) {
+    rows += std::max(1, (last_texture_->RowEnd(y) + width - 1) / width);
+  }
+  return rows + rest_x_ / width;
+}
+
+void ScreenImpl::LeaveInline() {
+  std::string out = "\r";
+  if (rest_y_ > 0) {
+    out += "\x1b[" + std::to_string(rest_y_) + "A";
+  }
+  // Each line feed scrolls the terminal if it is at its bottom.
+  out += std::string(last_texture_ ? last_texture_->height() : 0, '\n');
+  device_->Write(out);
+}
+
+void ScreenImpl::Print(std::string text) {
+  printed_ += text;
+  if (printed_.empty() || printed_.back() != '\n') {
+    printed_ += '\n';
+  }
+  if (inline_ && looping_) {
+    RequestDraw();
+  }
+}
+
+void ScreenImpl::Print(Ref<ComponentBase> component) {
+  // Laid out alone, as tall as it is, as an inline frame.
+  constexpr int kMaxRows = 1000;
+  const int terminal_width = css::g_terminal_width;
+  const int terminal_height = css::g_terminal_height;
+  std::string text;
+  {
+    ScreenImpl alone(
+        std::move(component),
+        std::make_shared<HeadlessTerminalDevice>(width_, kMaxRows));
+    ScopedLayoutArenas arenas(alone.layout_arenas_);
+    alone.inline_ = true;
+    alone.UpdateLayout(/*reuse_fragments=*/false);
+    Texture texture(width_, alone.frame_height_);
+    if (alone.root_fragment_) {
+      alone.PaintScreen(*alone.root_fragment_, texture);
+    }
+    if (headless_) {
+      alone.last_texture_ = std::make_unique<Texture>(std::move(texture));
+      text = alone.Text();
+    } else {
+      text = texture.Render();
+    }
+  }
+  css::g_terminal_width = terminal_width;
+  css::g_terminal_height = terminal_height;
+  Print(std::move(text));
 }
 
 void ScreenImpl::DigestAndDraw() {
@@ -2909,7 +3193,7 @@ bool ScreenImpl::SpatialNavigate(Event event) {
 
   std::vector<FocusableFragment> focusable_fragments;
   // The root viewport is the screen itself.
-  CollectFocusableFragments(root_fragment_, 0, 0, 0, 0, width_, height_,
+  CollectFocusableFragments(root_fragment_, 0, 0, 0, 0, width_, frame_height_,
                             focusable_fragments);
 
   if (focusable_fragments.empty()) {
@@ -2943,7 +3227,7 @@ bool ScreenImpl::SpatialNavigate(Event event) {
         break;
       case Direction::Up:
         cur_x = 0;
-        cur_y = height_;
+        cur_y = frame_height_;
         cur_w = width_;
         cur_h = 0;
         break;
@@ -2951,13 +3235,13 @@ bool ScreenImpl::SpatialNavigate(Event event) {
         cur_x = -1;
         cur_y = 0;
         cur_w = 0;
-        cur_h = height_;
+        cur_h = frame_height_;
         break;
       case Direction::Left:
         cur_x = width_;
         cur_y = 0;
         cur_w = 0;
-        cur_h = height_;
+        cur_h = frame_height_;
         break;
     }
   }
@@ -3132,13 +3416,13 @@ bool IsInside(const Element* element, const Element* ancestor) {
 }  // namespace
 
 Texture ScreenImpl::PaintGlyphs(std::vector<TextPosition>& glyphs) const {
-  Texture texture(width_, height_);
+  Texture texture(width_, frame_height_);
   PaintSelection selection;
   selection.glyphs = &glyphs;
   if (root_fragment_) {
     PaintScreen(*root_fragment_, texture, &selection);
   } else {
-    glyphs.assign(static_cast<size_t>(width_) * height_, {});
+    glyphs.assign(static_cast<size_t>(width_) * frame_height_, {});
   }
   return texture;
 }
@@ -3146,8 +3430,11 @@ Texture ScreenImpl::PaintGlyphs(std::vector<TextPosition>& glyphs) const {
 TextPosition ScreenImpl::GlyphNear(const std::vector<TextPosition>& glyphs,
                                    int x,
                                    int y) const {
+  if (frame_height_ <= 0 || width_ <= 0) {
+    return {};
+  }
   x = std::clamp(x, 0, width_ - 1);
-  y = std::clamp(y, 0, height_ - 1);
+  y = std::clamp(y, 0, frame_height_ - 1);
   auto at = [&](int cx, int cy) -> const TextPosition& {
     return glyphs[cx + (cy * width_)];
   };
@@ -3162,7 +3449,7 @@ TextPosition ScreenImpl::GlyphNear(const std::vector<TextPosition>& glyphs,
   auto cells_in = [&](const Element* scope) {
     std::unordered_map<const Element*, bool> inside;
     std::vector<Cell> cells;
-    for (int cy = 0; cy < height_; ++cy) {
+    for (int cy = 0; cy < frame_height_; ++cy) {
       for (int cx = 0; cx < width_; ++cx) {
         const Element* node = at(cx, cy).node;
         if (!node) {
@@ -3299,7 +3586,7 @@ std::pair<TextPosition, TextPosition> ScreenImpl::UnitAround(
   };
   int x = -1;
   int y = -1;
-  for (int cy = 0; cy < height_ && x < 0; ++cy) {
+  for (int cy = 0; cy < frame_height_ && x < 0; ++cy) {
     for (int cx = 0; cx < width_; ++cx) {
       if (at(cx, cy).node == glyph.node && at(cx, cy).offset == glyph.offset) {
         x = cx;
@@ -3595,7 +3882,7 @@ std::pair<int, int> ScreenImpl::SelectionScrollSpeed(
     return 0;
   };
   return {past(selection_.mouse_x, left, right, width_ - 1),
-          past(selection_.mouse_y, top, bottom, height_ - 1)};
+          past(selection_.mouse_y, top, bottom, frame_height_ - 1)};
 }
 
 ScreenImpl::AutoScrollPlan ScreenImpl::PlanAutoScroll() const {
@@ -3822,7 +4109,8 @@ void ScreenImpl::SimulateClick(Element* element) {
 ScreenImpl::RawTerminal::RawTerminal(ScreenImpl* screen) : screen_(screen) {
   if (screen_ && screen_->device_) {
     if (screen_->device_->IsAtty()) {
-      screen_->device_->EnterRawMode(handle_sigwinch);
+      screen_->device_->EnterRawMode(handle_sigwinch,
+                                     /*alternate_screen=*/!screen_->inline_);
       // Ask for the terminal's background color (OSC 11). The reply comes
       // back as input, whenever the terminal sends it, and one that does not
       // answer ignores the question.
@@ -3832,6 +4120,10 @@ ScreenImpl::RawTerminal::RawTerminal(ScreenImpl* screen) : screen_(screen) {
     }
     screen_->has_drawn_ = false;
     screen_->last_texture_.reset();
+    screen_->inline_top_ = -1;
+    screen_->position_queries_ = 0;
+    screen_->rest_x_ = 0;
+    screen_->rest_y_ = 0;
   }
 }
 
@@ -3854,6 +4146,33 @@ void Screen::Loop() {
 
 void Screen::Step() {
   impl_->Step();
+}
+
+void Screen::SetInline(bool enabled) {
+  ScopedLayoutArenas arenas(impl_->layout_arenas_);
+  // On a device that is no terminal, the screen drew from its constructor:
+  // it draws again, at its new height.
+  const bool drawn = impl_->has_drawn_;
+  impl_->inline_ = enabled;
+  impl_->has_drawn_ = false;
+  impl_->last_texture_.reset();
+  if (drawn) {
+    impl_->Draw();
+  } else {
+    impl_->UpdateLayout(/*reuse_fragments=*/false);
+  }
+}
+
+bool Screen::is_inline() const {
+  return impl_->inline_;
+}
+
+void Screen::Print(std::string_view text) {
+  impl_->Print(std::string(text));
+}
+
+void Screen::Print(Ref<ComponentBase> component) {
+  impl_->Print(std::move(component));
 }
 
 void Screen::Exit() {
@@ -3955,7 +4274,8 @@ void ScreenImpl::RunHeadless() {
     device.PushInput(input);
   }
   Settle(device);
-  std::cout << Text() << std::flush;
+  // What a terminal would show: the lines printed, then the last frame.
+  std::cout << std::exchange(printed_, "") << Text() << std::flush;
 }
 
 HeadlessScreen::HeadlessScreen(Ref<ComponentBase> app, int width, int height)

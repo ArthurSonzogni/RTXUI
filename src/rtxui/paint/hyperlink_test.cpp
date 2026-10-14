@@ -45,9 +45,9 @@ TEST_CASE("A texture writes its links as OSC 8 hyperlinks", "[paint][link]") {
     texture[x, 0].link = link;
   }
   // Opened before the first linked cell, closed after the last, and never
-  // left open across a line break.
+  // left open across a line break. Blank row ends are erased.
   CHECK(texture.Render() == " " + Open("https://example.com") + "aa" +
-                                std::string(kClose) + " \n    ");
+                                std::string(kClose) + "\x1B[K\n\x1B[K");
 
   SECTION("redrawn when only the URL changed") {
     Texture next(4, 2);

@@ -7,6 +7,7 @@
 #include <memory>
 #include <rtxui/rtxui_export.hpp>
 #include <string>
+#include <string_view>
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
@@ -31,6 +32,29 @@ class RTXUI_EXPORT Screen {
   /// the UI thread, typically from a callback; from another thread, post it
   /// with PostTask().
   void Exit();
+
+  /// Draws the application where the cursor is, on the terminal's main
+  /// screen, rather than on the alternate screen over the whole terminal.
+  ///
+  /// The application is then as tall as its content, as a web page is, up to
+  /// the terminal's height: `height: 100%` still makes it fill the terminal.
+  /// The shell's lines stay above it. When Loop() returns, the last frame
+  /// drawn stays there too, with the shell going on below it: an application
+  /// that wants to leave nothing behind draws nothing before it exits.
+  ///
+  /// Call it before Loop().
+  void SetInline(bool enabled);
+  bool is_inline() const;
+
+  /// Writes `text` above the application, where it stays: inline, as the
+  /// lines the shell scrolls away; on the alternate screen, once Loop()
+  /// returns. A line break ends it unless it already ends with one.
+  ///
+  /// Call it from the UI thread; from another one, post it with PostTask().
+  void Print(std::string_view text);
+  /// Writes what `component` draws, as wide as the terminal and as tall as
+  /// it is, as Print(text) writes text.
+  void Print(Ref<ComponentBase> component);
 
   // Run one step of the event loop
   void Step();

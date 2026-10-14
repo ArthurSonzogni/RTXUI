@@ -302,6 +302,7 @@ if(RTXUI_BUILD_TESTS)
   add_executable(rtxui_test
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
     "src/rtxui/terminal/headless_test.cpp"
+    "src/rtxui/terminal/inline_test.cpp"
     "src/rtxui/terminal/layout_reuse_test.cpp"
     "src/rtxui/terminal/screen_test.cpp"
     "src/rtxui/component/animation_test.cpp"

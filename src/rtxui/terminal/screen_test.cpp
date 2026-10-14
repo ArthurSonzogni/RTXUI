@@ -2573,6 +2573,11 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
               } else if (cmd == 'H') {
                 cx = 0;
                 cy = 0;
+              } else if (cmd == 'K') {
+                for (int x = cx; x < width; ++x) {
+                  cells[cy * width + x].character = " ";
+                  cells[cy * width + x].is_continuation = false;
+                }
               }
               i = end + 1;
             } else {
@@ -2803,6 +2808,11 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
               } else if (cmd == 'H') {
                 cx = 0;
                 cy = 0;
+              } else if (cmd == 'K') {
+                for (int x = cx; x < width; ++x) {
+                  cells[cy * width + x].character = " ";
+                  cells[cy * width + x].is_continuation = false;
+                }
               } else if (cmd == 'J') {
                 if (params == "2") {
                   for (auto& cell : cells) {

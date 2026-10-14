@@ -7,7 +7,7 @@
 #include <functional>
 #include <optional>  // for std::optional
 #include <string>    // for string
-#include <utility>   // for exchange
+#include <utility>   // for exchange, pair
 #include <vector>    // for vector
 
 #include "rtxui/color.hpp"  // for Color
@@ -28,6 +28,11 @@ class TerminalInputParser {
   // the application.
   std::optional<Color> TakeBackgroundColor() {
     return std::exchange(background_color_, std::nullopt);
+  }
+  // The positions the terminal reported, in reply to cursor position queries
+  // (`ESC[6n`), since the last call, oldest first: 0-based column and row.
+  std::vector<std::pair<int, int>> TakeCursorPositions() {
+    return std::exchange(cursor_positions_, {});
   }
 
  private:
@@ -69,6 +74,7 @@ class TerminalInputParser {
   std::string paste_buffer_;
 
   std::optional<Color> background_color_;
+  std::vector<std::pair<int, int>> cursor_positions_;
 };
 
 }  // namespace rtxui

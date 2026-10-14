@@ -1752,6 +1752,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
 
   // Whether the last box in flow was a block, which left an empty line open.
   bool ends_with_block = false;
+  bool any_in_flow = false;
   for (auto& child : box->children) {
     if (child->style().position == PositionType::Absolute ||
         child->style().position == PositionType::Fixed) {
@@ -1766,6 +1767,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
       continue;
     }
     ends_with_block = false;
+    any_in_flow = true;
     if (child->is_text) {
       process_text_in_flow(
           child->text_data, child->dom_node, child->dom_node,
@@ -1832,10 +1834,12 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   }
 
   // After a block, the line left open holds nothing unless something came
-  // after it: as in CSS, an empty line takes no room.
+  // after it: as in CSS, an empty line takes no room. Nor does an empty root,
+  // which an inline screen draws as tall as it is.
   const bool open_line_empty =
       cursor_x == 0 && line_start_index == container_frag->children.size();
-  if (!(ends_with_block && open_line_empty)) {
+  if (!(ends_with_block && open_line_empty) &&
+      (any_in_flow || box->dom_node->Parent())) {
     commit_line();
   }
   if (box->style().line_clamp > 0) {

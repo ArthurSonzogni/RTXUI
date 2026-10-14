@@ -16,6 +16,9 @@
 namespace rtxui {
 
 namespace {
+// Clears from the cursor to the end of the line, in the default colors.
+constexpr std::string_view kEraseLine = "\x1B[K";
+
 // Opens the hyperlink `url`, or closes the open one when it is empty.
 void LinkTransition(std::stringstream& ss, std::string_view url) {
   ss << "\x1B]8;;" << url << "\x1B\\";
@@ -95,6 +98,21 @@ void Transition(std::stringstream& ss, const Cell* prev, const Cell* next) {
 }
 }  // namespace
 
+bool Texture::IsBlank(const Cell& cell) {
+  return (cell.character.empty() || cell.character == " ") &&
+         cell.background_color.a == 0 && !cell.inverted && !cell.underlined &&
+         !cell.underlined_double && !cell.strikethrough && !cell.overlined &&
+         !cell.is_continuation && cell.link == 0;
+}
+
+int Texture::RowEnd(int y) const {
+  int end = width_;
+  while (end > 0 && IsBlank(cells_[y * width_ + end - 1])) {
+    --end;
+  }
+  return end;
+}
+
 Texture::Texture(int width, int height)
     : width_(width),
       height_(height),
@@ -135,10 +153,11 @@ std::string Texture::Render() const {
       ss << "\n";
     }
 
-    for (int x = 0; x < width_; ++x) {
+    const int end = RowEnd(y);
+    for (int x = 0; x < end; ++x) {
       const Cell& cell = cells_[y * width_ + x];
       // Continuation cells are the second half of a double-width grapheme.
-      // The terminal cursor already advanced past this column when the wide
+      // The terminal cursor already advanced past this cell when the wide
       // character was printed, so we must emit nothing here.
       if (cell.is_continuation) {
         continue;
@@ -150,6 +169,11 @@ std::string Texture::Render() const {
       } else {
         ss << cell.character;
       }
+    }
+    if (end < width_) {
+      transition(&default_cell);
+      prev = &default_cell;
+      ss << kEraseLine;
     }
   }
 
@@ -201,6 +225,7 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
   };
 
   for (int y = 0; y < height_; ++y) {
+    const int end = RowEnd(y);
     for (int x = 0; x < width_; ++x) {
       const Cell& cell = cells_[y * width_ + x];
       const Cell& old_cell = old_texture.cells_[y * width_ + x];
@@ -217,6 +242,13 @@ std::string Texture::RenderDiff(const Texture& old_texture) const {
       }
 
       MoveCursor(x, y);
+
+      if (x >= end) {
+        transition(&default_cell);
+        prev = &default_cell;
+        ss << kEraseLine;
+        break;
+      }
 
       transition(&cell);
       prev = &cell;

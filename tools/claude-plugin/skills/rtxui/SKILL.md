@@ -113,6 +113,11 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
   percentages are of the box's own size: `translate: calc(100% + 2)` puts it
   just out of sight. There is no `transform`. `onanimationend="Method"` runs
   once an animation finishes, for instance to remove an item that slid out.
+- To draw below the shell's lines rather than over the whole terminal, as
+  `apt install` does, call `screen.SetInline(true);` before `screen.Loop()`:
+  the app is then as tall as its content. `screen.Print("text")` or
+  `screen.Print(rtxui::Ref<Line>::New(...))` writes lines above it that stay
+  in the terminal's history; the last frame drawn stays once `Loop()` returns.
 - Only the UI thread may change component state. From a worker thread, hand
   the result back with `rtxui::PostTask([...] { ... });`, which is safe to
   call from any thread.

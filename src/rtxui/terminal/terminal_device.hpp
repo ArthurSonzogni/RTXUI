@@ -124,13 +124,16 @@ namespace rtxui {
 namespace internal {
 
 inline constexpr char kExitRawModeSequence[] =
-    "\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h\x1b[?1049l";
+    "\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h";
+// Written after it when the alternate screen was entered.
+inline constexpr char kLeaveAlternateScreen[] = "\x1b[?1049l";
 
 inline DWORD g_saved_in_mode = 0;
 inline DWORD g_saved_out_mode = 0;
 inline UINT g_saved_in_cp = 0;
 inline UINT g_saved_out_cp = 0;
 inline volatile long g_raw_mode_active = 0;
+inline volatile long g_alternate_screen_active = 0;
 
 inline BOOL WINAPI ConsoleCtrlHandler(DWORD ctrl_type) {
   (void)ctrl_type;
@@ -142,6 +145,11 @@ inline BOOL WINAPI ConsoleCtrlHandler(DWORD ctrl_type) {
     WriteFile(out_handle, kExitRawModeSequence,
               static_cast<DWORD>(sizeof(kExitRawModeSequence) - 1), &written,
               nullptr);
+    if (g_alternate_screen_active) {
+      WriteFile(out_handle, kLeaveAlternateScreen,
+                static_cast<DWORD>(sizeof(kLeaveAlternateScreen) - 1), &written,
+                nullptr);
+    }
     SetConsoleMode(in_handle, g_saved_in_mode);
     SetConsoleMode(out_handle, g_saved_out_mode);
     SetConsoleCP(g_saved_in_cp);
@@ -157,7 +165,9 @@ namespace internal {
 // Undoes everything EnterRawMode() turns on. Kept as a literal so the signal
 // handler can write() it without allocating.
 inline constexpr char kExitRawModeSequence[] =
-    "\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h\x1b[?1049l";
+    "\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h";
+// Written after it when the alternate screen was entered.
+inline constexpr char kLeaveAlternateScreen[] = "\x1b[?1049l";
 
 // Signals that would otherwise kill the process while the terminal is in raw
 // mode, leaving the user's shell with no echo, no line editing and mouse
@@ -173,6 +183,7 @@ inline constexpr int kFatalSignalCount =
 inline termios g_saved_termios;
 inline struct sigaction g_saved_signal_handlers[kFatalSignalCount];
 inline volatile sig_atomic_t g_raw_mode_active = 0;
+inline volatile sig_atomic_t g_alternate_screen_active = 0;
 
 // write()/tcsetattr() are both async-signal-safe, so this is legal from a
 // handler as well as from the normal teardown path.
@@ -183,6 +194,10 @@ inline void RestoreTerminalFromSignal() {
   g_raw_mode_active = 0;
   ssize_t ignored = write(STDOUT_FILENO, kExitRawModeSequence,
                           sizeof(kExitRawModeSequence) - 1);
+  if (g_alternate_screen_active) {
+    ignored = write(STDOUT_FILENO, kLeaveAlternateScreen,
+                    sizeof(kLeaveAlternateScreen) - 1);
+  }
   (void)ignored;
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_saved_termios);
 }
@@ -228,7 +243,10 @@ class TerminalDevice {
     return false;
   }
 
-  virtual void EnterRawMode(void (*sigwinch_handler)(int)) = 0;
+  // `alternate_screen`: draw on the terminal's alternate screen, which hides
+  // the shell until ExitRawMode(), rather than where the cursor is.
+  virtual void EnterRawMode(void (*sigwinch_handler)(int),
+                            bool alternate_screen) = 0;
   virtual void ExitRawMode() = 0;
 };
 
@@ -349,7 +367,9 @@ class SystemTerminalDevice : public TerminalDevice {
 #endif
   }
 
-  void EnterRawMode(void (*sigwinch_handler)(int)) override {
+  void EnterRawMode(void (*sigwinch_handler)(int),
+                    bool alternate_screen) override {
+    alternate_screen_ = alternate_screen;
 #if defined(_WIN32)
     (void)sigwinch_handler;
     HANDLE in_handle = GetStdHandle(STD_INPUT_HANDLE);
@@ -365,6 +385,7 @@ class SystemTerminalDevice : public TerminalDevice {
     internal::g_saved_in_cp = previous_in_cp_;
     internal::g_saved_out_cp = previous_out_cp_;
     internal::g_raw_mode_active = 1;
+    internal::g_alternate_screen_active = alternate_screen;
 
     SetConsoleCtrlHandler(internal::ConsoleCtrlHandler, TRUE);
 
@@ -384,13 +405,16 @@ class SystemTerminalDevice : public TerminalDevice {
 
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
-      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+      Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
     } else {
-      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+      Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
     }
 #elif defined(__EMSCRIPTEN__)
     (void)sigwinch_handler;
-    Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+    Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
+          "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
 #else
     tcgetattr(STDIN_FILENO, &previous_termios_);
     termios terminal = previous_termios_;
@@ -419,6 +443,7 @@ class SystemTerminalDevice : public TerminalDevice {
     // mouse reporting on, so arm the restore path before writing the modes.
     internal::g_saved_termios = previous_termios_;
     internal::g_raw_mode_active = 1;
+    internal::g_alternate_screen_active = alternate_screen;
     internal::InstallFatalSignalHandlers();
 
     struct sigaction sa;
@@ -429,16 +454,19 @@ class SystemTerminalDevice : public TerminalDevice {
 
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
-      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+      Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
     } else {
-      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+      Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
     }
 #endif
   }
 
   void ExitRawMode() override {
 #if defined(_WIN32)
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h" +
+          std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
     internal::g_raw_mode_active = 0;
     SetConsoleCtrlHandler(internal::ConsoleCtrlHandler, FALSE);
 
@@ -449,9 +477,11 @@ class SystemTerminalDevice : public TerminalDevice {
     SetConsoleCP(previous_in_cp_);
     SetConsoleOutputCP(previous_out_cp_);
 #elif defined(__EMSCRIPTEN__)
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h" +
+          std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
 #else
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h" +
+          std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
     internal::g_raw_mode_active = 0;
     internal::RemoveFatalSignalHandlers();
     sigaction(SIGWINCH, &previous_sigaction_, nullptr);
@@ -460,6 +490,7 @@ class SystemTerminalDevice : public TerminalDevice {
   }
 
  private:
+  bool alternate_screen_ = true;
 #if defined(_WIN32)
   DWORD previous_in_mode_ = 0;
   DWORD previous_out_mode_ = 0;
@@ -509,20 +540,25 @@ class MockTerminalDevice : public TerminalDevice {
     mock_cell_height_ = height;
   }
 
-  void EnterRawMode(void (*sigwinch_handler)(int)) override {
+  void EnterRawMode(void (*sigwinch_handler)(int),
+                    bool alternate_screen) override {
+    alternate_screen_ = alternate_screen;
     is_raw_ = true;
     sigwinch_handler_ = sigwinch_handler;
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
-      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+      Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
     } else {
-      Write("\x1b[?1049h\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+      Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
     }
   }
 
   void ExitRawMode() override {
     is_raw_ = false;
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h\x1b[?1049l");
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h" +
+          std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
   }
 
   void PushInput(std::string_view data) { input_buffer_ += data; }
@@ -551,6 +587,7 @@ class MockTerminalDevice : public TerminalDevice {
   int mock_cell_width_ = 0;
   int mock_cell_height_ = 0;
   bool is_raw_ = false;
+  bool alternate_screen_ = true;
   void (*sigwinch_handler_)(int) = nullptr;
 };
 

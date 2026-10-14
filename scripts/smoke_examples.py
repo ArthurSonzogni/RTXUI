@@ -55,6 +55,7 @@ MIN_FRAME_BYTES = 20
 # each frame it draws.
 ALTERNATE_SCREEN = b"\x1b[?1049h"
 FRAME_START = b"\x1b[?2026h"
+CLEAR_SCREEN = b"\x1b[2J"
 # After the input burst, keep reading until the example has been silent this
 # long. Waiting for quiet rather than for a fixed duration is what makes this
 # work under the sanitizer build: the heaviest examples take over ten seconds
@@ -313,6 +314,14 @@ def run_one(program, error_path):
     # switch to the alternate screen is drawn on the normal screen, and stays
     # in the scrollback once the example quits.
     alternate = first_frame.find(ALTERNATE_SCREEN)
+    if os.path.basename(program).startswith("rtxui_example_inline"):
+        # Drawn below the shell's lines, on the main screen, which it must
+        # leave as it found it.
+        if alternate != -1:
+            return "inline, but switched to the alternate screen"
+        if CLEAR_SCREEN in output:
+            return "inline, but cleared the screen"
+        return None
     if alternate == -1:
         return "never switched to the alternate screen"
     if FRAME_START in first_frame[:alternate]:

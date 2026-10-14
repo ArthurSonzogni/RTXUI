@@ -579,15 +579,19 @@ TerminalInputParser::Output TerminalInputParser::ParseMouse(
   mouse.y = arguments[2];
   return mouse;
 }
-// `ESC[row;colR` is a terminal's reply to a cursor position query. RTXUI
-// never asks, so one can only be stray.
+// `ESC[row;colR` is a terminal's reply to a cursor position query, which an
+// inline screen makes to find where it is drawn. Not an Event: it answers the
+// library, not the application.
 TerminalInputParser::Output TerminalInputParser::ParseCursorPosition(
     std::vector<int> arguments) {
   if (arguments.size() != 2) {
     if (auto event = ToEvent(pending_)) {
       return *event;
     }
+    return DROP;
   }
+  cursor_positions_.emplace_back(std::max(arguments[1], 1) - 1,
+                                 std::max(arguments[0], 1) - 1);
   return DROP;
 }
 void TerminalInputParser::AddEvent(Event event) {

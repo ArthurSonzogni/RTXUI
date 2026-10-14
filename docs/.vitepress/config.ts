@@ -93,7 +93,8 @@ export default defineConfig({
           { text: 'Slots & Composition', link: '/guide/cpp/slots' },
           { text: 'State Bindings & Reflection', link: '/guide/cpp/bindings' },
           { text: 'Navigating the DOM', link: '/guide/cpp/dom' },
-          { text: 'Screen & Lifecycle', link: '/guide/cpp/lifecycle' }
+          { text: 'Screen & Lifecycle', link: '/guide/cpp/lifecycle' },
+          { text: 'Inline Mode', link: '/guide/inline' }
         ]
       },
       {
