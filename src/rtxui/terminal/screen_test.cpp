@@ -5552,4 +5552,158 @@ TEST_CASE("pointer-events: none lets the mouse through", "[screen][pointer]") {
   CHECK(app->inside == 1);
 }
 
+namespace {
+// SGR left-button events at a 0-based cell: a press, a move with the button
+// held, a release.
+std::string LeftAt(char kind, int x, int y) {
+  const std::string button = kind == 'D' ? "32" : "0";
+  return "\x1b[<" + button + ";" + std::to_string(x + 1) + ";" +
+         std::to_string(y + 1) + (kind == 'U' ? "m" : "M");
+}
+
+std::string DragFromTo(int x0, int y0, int x1, int y1) {
+  return LeftAt('P', x0, y0) + LeftAt('D', x1, y1) + LeftAt('U', x1, y1);
+}
+
+// What the drag copied, or nothing.
+std::string CopiedBy(std::string_view view, const std::string& input) {
+  class App : public Component<App> {
+   public:
+    std::string markup;
+    std::string_view Setup() { return markup; }
+  };
+  auto app = Ref<App>::New();
+  app->markup = std::string(view);
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(30, 6);
+  Screen screen(app, device);
+  screen.Draw();
+  device->ClearOutput();
+  device->PushInput(input);
+  screen.Step();
+  const std::string output = device->GetOutput();
+  const size_t start = output.find("\x1b]52;c;");
+  if (start == std::string::npos) {
+    return "";
+  }
+  const size_t end = output.find('\x07', start);
+  return output.substr(start + 7, end - start - 7);
+}
+}  // namespace
+
+TEST_CASE("Screen.DragSelectsAndCopiesText", "[terminal][selection]") {
+  class App : public Component<App> {
+   public:
+    std::string_view view = R"(
+      <div>hello world</div>
+      <div>second line</div>
+    )";
+  };
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(30, 4);
+  Screen screen(Ref<App>::New(), device);
+  screen.Draw();
+  device->ClearOutput();
+
+  device->PushInput(LeftAt('P', 0, 0) + LeftAt('D', 5, 1));
+  screen.Step();
+  // Shown in reverse video, the text itself unchanged.
+  CHECK(device->GetOutput().find("\x1b[7m") != std::string::npos);
+  CHECK(screen.Text().starts_with("hello world"));
+
+  device->ClearOutput();
+  device->PushInput(LeftAt('U', 5, 1));
+  screen.Step();
+  // From the first cell to the last, row by row.
+  CHECK(device->GetOutput().find("\x1b]52;c;" +
+                                 Base64Encode("hello world\nsecond")) !=
+        std::string::npos);
+
+  // The next press clears it.
+  device->ClearOutput();
+  device->PushInput(LeftAt('P', 20, 3));
+  screen.Step();
+  // The text is drawn again, in normal video.
+  CHECK(device->GetOutput().find("hello world") != std::string::npos);
+  CHECK(device->GetOutput().find("\x1b[7m") == std::string::npos);
+}
+
+TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
+  SECTION("a click selects nothing") {
+    CHECK(CopiedBy("<div>hello</div>", LeftAt('P', 1, 0) + LeftAt('U', 1, 0))
+              .empty());
+  }
+  SECTION("dragging backwards") {
+    CHECK(CopiedBy("<div>hello world</div>", DragFromTo(10, 0, 6, 0)) ==
+          Base64Encode("world"));
+  }
+  SECTION("borders are no text: a space keeps the columns") {
+    CHECK(CopiedBy(R"(
+            <style> span { border: solid; } </style>
+            <div style="display: flex"><span>Name</span><span>Value</span></div>
+          )",
+                   DragFromTo(0, 1, 29, 1)) == Base64Encode("Name  Value"));
+  }
+  SECTION("rows with no text are blank lines") {
+    CHECK(CopiedBy("<div>one</div><div> </div><div>three</div>",
+                   DragFromTo(0, 0, 9, 2)) == Base64Encode("one\n\nthree"));
+  }
+  SECTION("user-select: none is left out") {
+    CHECK(CopiedBy(R"(
+            <style> .skip { user-select: none; } </style>
+            <div>keep <span class="skip">skip</span> this</div>
+          )",
+                   DragFromTo(0, 0, 20, 0)) == Base64Encode("keep      this"));
+  }
+  SECTION("user-select is inherited, and text takes it back") {
+    CHECK(CopiedBy(R"(
+            <style>
+              .skip { user-select: none; }
+              .take { user-select: text; }
+            </style>
+            <div>keep <span class="skip">skip <b class="take">this</b></span></div>
+          )",
+                   DragFromTo(0, 0, 20, 0)) == Base64Encode("keep      this"));
+  }
+  SECTION("a drag from user-select: none selects nothing") {
+    CHECK(CopiedBy(R"(
+            <style> .skip { user-select: none; } </style>
+            <div><span class="skip">skip</span> this</div>
+          )",
+                   DragFromTo(1, 0, 9, 0))
+              .empty());
+  }
+  SECTION("a drag from what handles clicks selects nothing") {
+    class App : public Component<App> {
+     public:
+      int clicks = 0;
+      void Click() { ++clicks; }
+      App() { Bind(Click); }
+      std::string_view view = R"(<div onclick="Click">press me</div>)";
+    };
+    auto app = Ref<App>::New();
+    auto device = std::make_shared<MockTerminalDevice>();
+    device->TriggerResize(30, 3);
+    Screen screen(app, device);
+    screen.Draw();
+    device->ClearOutput();
+    device->PushInput(DragFromTo(0, 0, 7, 0));
+    screen.Step();
+    CHECK(app->clicks == 1);
+    CHECK(device->GetOutput().find("\x1b]52;c;") == std::string::npos);
+  }
+  SECTION("a drag in an input selects in the input") {
+    CHECK(CopiedBy(R"(<input value="hello world" />)", DragFromTo(1, 1, 6, 1))
+              .empty());
+  }
+  SECTION("user-select: all selects the element whole on a click") {
+    CHECK(CopiedBy(R"(
+            <style> code { user-select: all; } </style>
+            <div>Run <code>npm install rtxui</code> first</div>
+          )",
+                   LeftAt('P', 8, 0) + LeftAt('U', 8, 0)) ==
+          Base64Encode("npm install rtxui"));
+  }
+}
+
 }  // namespace rtxui

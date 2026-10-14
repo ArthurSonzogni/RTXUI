@@ -420,6 +420,7 @@ void PaintOutline(const PendingOutline& outline, Texture& texture) {
     }
     cell.character = c;
     cell.link = 0;
+    cell.selectable = false;
     cell.foreground_color = Blend(color, cell.background_color);
   };
   set_char(left, top, 0, 0);
@@ -485,6 +486,7 @@ void PaintImpl(const PhysicalFragment* frag,
                bool inherited_strikethrough,
                bool inherited_overlined,
                bool inherited_blink,
+               bool inherited_selectable,
                ClipRect clip,
                float inherited_opacity) {
   if (frag->visibility == Visibility::Hidden) {
@@ -524,6 +526,10 @@ void PaintImpl(const PhysicalFragment* frag,
       frag->strikethrough.value_or(inherited_strikethrough);
   bool current_overlined = frag->overlined.value_or(inherited_overlined);
   bool current_blink = frag->blink.value_or(inherited_blink);
+  const bool current_selectable =
+      frag->dom_node && frag->dom_node->style.user_select
+          ? *frag->dom_node->style.user_select != UserSelect::None
+          : inherited_selectable;
 
   // 0. Draw Background
   if (frag->background_color) {
@@ -628,6 +634,7 @@ void PaintImpl(const PhysicalFragment* frag,
         }
         cell.character = c;
         cell.link = 0;
+        cell.selectable = false;
 
         // The glyph is always drawn in the border color. What varies is which
         // background fills the rest of the cell -- the element's own, or its
@@ -757,6 +764,7 @@ void PaintImpl(const PhysicalFragment* frag,
         resolve_cell(cell);
         cell.character = std::string(g.text);
         cell.link = link;
+        cell.selectable = current_selectable;
         Color fg = current_foreground_color;
         fg.a = static_cast<uint8_t>(fg.a * current_opacity);
         Color bg = cell.background_color;
@@ -859,6 +867,7 @@ void PaintImpl(const PhysicalFragment* frag,
           auto& cell = texture[scrollbar_x, y];
           resolve_cell(cell);
           cell.link = 0;
+          cell.selectable = false;
 
           int cell_start = i * 8;
           int cell_end = (i + 1) * 8;
@@ -962,6 +971,7 @@ void PaintImpl(const PhysicalFragment* frag,
           auto& cell = texture[x, scrollbar_y];
           resolve_cell(cell);
           cell.link = 0;
+          cell.selectable = false;
 
           int cell_start = i * 8;
           int cell_end = (i + 1) * 8;
@@ -1140,15 +1150,16 @@ void PaintImpl(const PhysicalFragment* frag,
       }
     }
 
-    PaintImpl(
-        child.fragment, texture, child_off_x, child_off_y, child_accum_scroll_x,
-        child_accum_scroll_y, is_fixed ? viewport_x : next_viewport_x,
-        is_fixed ? viewport_y : next_viewport_y,
-        is_fixed ? viewport_w : next_viewport_w,
-        is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
-        current_background_color, current_bold, current_dim, current_italic,
-        current_underlined, current_underlined_double, current_strikethrough,
-        current_overlined, current_blink, child_clip_to_pass, current_opacity);
+    PaintImpl(child.fragment, texture, child_off_x, child_off_y,
+              child_accum_scroll_x, child_accum_scroll_y,
+              is_fixed ? viewport_x : next_viewport_x,
+              is_fixed ? viewport_y : next_viewport_y,
+              is_fixed ? viewport_w : next_viewport_w,
+              is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
+              current_background_color, current_bold, current_dim,
+              current_italic, current_underlined, current_underlined_double,
+              current_strikethrough, current_overlined, current_blink,
+              current_selectable, child_clip_to_pass, current_opacity);
   }
 
   // 5. Outline, drawn once the whole tree is painted.
@@ -1177,7 +1188,7 @@ void Paint(const PhysicalFragment* frag,
   }
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y, texture.width(),
             texture.height(), Color::RGB(255, 255, 255), screen_background,
-            false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false, true,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
   // Outlines go over everything, in the order their elements were painted.
   for (const PendingOutline& outline : g_pending_outlines) {

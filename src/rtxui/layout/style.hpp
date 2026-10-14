@@ -380,6 +380,14 @@ struct AnimationConfig {
 
 // vertical-align: where an inline-level box sits in its line, or a table cell's
 // content in its cell.
+// user-select: what a drag over the screen selects of the element's text.
+enum class UserSelect : uint8_t {
+  Text,
+  None,
+  // The whole element, as soon as the selection reaches into it.
+  All,
+};
+
 enum class VerticalAlign : uint8_t {
   Baseline,
   Top,
@@ -543,6 +551,8 @@ struct ComputedStyleCore {
   // pointer-events: whether the mouse passes through the element (true, for
   // `none`) or targets it (false, for `auto`); inherited when unset.
   std::optional<bool> pointer_events_none;
+  // user-select; inherited when unset (`auto`).
+  std::optional<UserSelect> user_select;
   TextOverflow text_overflow = TextOverflow::Clip;
 
   bool IsBlockLevel() const { return display_outside == DisplayOutside::Block; }

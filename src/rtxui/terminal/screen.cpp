@@ -48,6 +48,7 @@
 #include <iterator>
 #include <optional>
 #include <thread>
+#include <tuple>
 #include <utility>
 
 #include "rtxui/base/string.hpp"
@@ -1099,6 +1100,37 @@ class ScreenImpl {
   bool FollowLink(Element* link);
   void PaintScreen(const PhysicalFragment& root, Texture& texture) const;
 
+  // Text selection: a left drag selects the text it goes over, row by row as
+  // in a terminal, from the cell it started on to the one it is on. It is
+  // copied on release, and shown until the next press.
+  struct Selection {
+    struct Box {
+      int x = 0, y = 0, width = 0, height = 0;
+    };
+    // The left button went down where a selection can start.
+    bool armed = false;
+    // The mouse has left the cell it went down on since.
+    bool dragged = false;
+    int anchor_x = 0, anchor_y = 0;
+    int focus_x = 0, focus_y = 0;
+    // The `user-select: all` elements at either end, selected whole.
+    std::optional<Box> anchor_box;
+    std::optional<Box> focus_box;
+
+    bool Shown() const { return dragged || anchor_box || focus_box; }
+    bool Contains(int x, int y) const;
+  };
+  // Updates the selection for a mouse event. Returns whether that consumed
+  // the event.
+  bool HandleSelection(const Event::Mouse& mouse);
+  // The box of the `user-select: all` element `element` is in, if any.
+  std::optional<Selection::Box> UserSelectAllBox(const Element* element);
+  // The selected text of `texture`, its rows on lines of their own.
+  std::string SelectedText(const Texture& texture) const;
+  Selection selection_;
+  // Whether the last frame drawn shows a selection.
+  bool selection_painted_ = false;
+
   void SetBackgroundColor(Color color) {
     background_color_ = color;
     background_color_set_ = true;
@@ -1538,6 +1570,11 @@ void ScreenImpl::HandleEvent(Event event) {
       mouse_ptr->sub_cell_x = static_cast<float>((raw_x - 1) % cell_w) / cell_w;
       mouse_ptr->sub_cell_y = static_cast<float>((raw_y - 1) % cell_h) / cell_h;
     }
+  }
+
+  if (auto* mouse = event.get_if<Event::Mouse>();
+      mouse && HandleSelection(*mouse)) {
+    return;
   }
 
   // `:focus-visible` follows the last kind of input. Typing after a click
@@ -2598,7 +2635,8 @@ void ScreenImpl::Draw(bool reuse_layout) {
                        last_texture_->height() != height_ ||
                        painted_background_set_ != background_color_set_ ||
                        painted_background_ != background_color_ ||
-                       painted_terminal_background_ != terminal_background_;
+                       painted_terminal_background_ != terminal_background_ ||
+                       selection_painted_ || selection_.Shown();
   Texture texture = repaint ? Texture(width_, height_) : *last_texture_;
   if (repaint && root_fragment) {
     PaintScreen(*root_fragment, texture);
@@ -2624,6 +2662,19 @@ void ScreenImpl::Draw(bool reuse_layout) {
       std::abort();
     }
   }
+
+  // The selection, in reverse video, over the text it takes.
+  if (selection_.Shown()) {
+    for (int y = 0; y < texture.height(); ++y) {
+      for (int x = 0; x < texture.width(); ++x) {
+        Cell& cell = texture[x, y];
+        if (cell.selectable && selection_.Contains(x, y)) {
+          cell.inverted = !cell.inverted;
+        }
+      }
+    }
+  }
+  selection_painted_ = selection_.Shown();
 
   std::string new_output;
   bool use_diff = has_drawn_ && last_texture_ &&
@@ -2714,6 +2765,7 @@ void ScreenImpl::UpdateSize() {
       layout_reusable_ = false;
       width_ = new_width;
       height_ = new_height;
+      selection_ = {};
       css::g_terminal_width = width_;
       css::g_terminal_height = height_;
       if (has_drawn_) {
@@ -3071,6 +3123,164 @@ void ScreenImpl::PaintScreen(const PhysicalFragment& root,
       }
     }
   }
+}
+
+bool ScreenImpl::Selection::Contains(int x, int y) const {
+  auto in = [&](const std::optional<Box>& box) {
+    return box && x >= box->x && x < box->x + box->width && y >= box->y &&
+           y < box->y + box->height;
+  };
+  if (in(anchor_box) || in(focus_box)) {
+    return true;
+  }
+  if (!dragged) {
+    return false;
+  }
+  // From the first end to the last, in reading order.
+  auto [start_x, start_y, end_x, end_y] =
+      std::tie(anchor_y, anchor_x) <= std::tie(focus_y, focus_x)
+          ? std::tuple(anchor_x, anchor_y, focus_x, focus_y)
+          : std::tuple(focus_x, focus_y, anchor_x, anchor_y);
+  return std::tie(start_y, start_x) <= std::tie(y, x) &&
+         std::tie(y, x) <= std::tie(end_y, end_x);
+}
+
+std::optional<ScreenImpl::Selection::Box> ScreenImpl::UserSelectAllBox(
+    const Element* element) {
+  for (; element; element = element->Parent()) {
+    if (!element->style.user_select) {
+      continue;
+    }
+    if (*element->style.user_select != UserSelect::All) {
+      return std::nullopt;
+    }
+    auto found = FindFragmentForElementWithPos(root_fragment_,
+                                               const_cast<Element*>(element));
+    if (!found) {
+      return std::nullopt;
+    }
+    return Selection::Box{found->abs_x, found->abs_y, found->fragment->width,
+                          found->fragment->height};
+  }
+  return std::nullopt;
+}
+
+bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
+  if (mouse.button != Event::Mouse::Button::Left || !root_fragment_) {
+    return false;
+  }
+  const int x = mouse.x - 1;
+  const int y = mouse.y - 1;
+  switch (mouse.motion) {
+    case Event::Mouse::Motion::Pressed: {
+      if (selection_.Shown()) {
+        RequestDraw();
+      }
+      selection_ = {};
+      // A press on what handles clicks, a link or a `user-select: none`
+      // element selects nothing: dragging from a button is no selection.
+      Element* target = FindElementAt(root_fragment_, x, y);
+      for (const Element* el = target; el; el = el->Parent()) {
+        if (el->GetAttribute("onclick") || el->GetAttribute("@click") ||
+            el->GetAttribute("@click.left") ||
+            (el->tag() == "a" && el->GetAttribute("href"))) {
+          return false;
+        }
+      }
+      for (const Element* el = target; el; el = el->Parent()) {
+        if (el->style.user_select) {
+          if (*el->style.user_select == UserSelect::None) {
+            return false;
+          }
+          break;
+        }
+      }
+      if (!target) {
+        return false;
+      }
+      selection_.armed = true;
+      selection_.anchor_x = selection_.focus_x = x;
+      selection_.anchor_y = selection_.focus_y = y;
+      selection_.anchor_box = UserSelectAllBox(target);
+      if (selection_.anchor_box) {
+        RequestDraw();
+      }
+      return false;
+    }
+    case Event::Mouse::Motion::Moved: {
+      // A press an input or a scrollbar took drags them instead.
+      if (!selection_.armed || drag_active_ ||
+          ComponentBase::GetMouseCapturer()) {
+        return false;
+      }
+      const bool moved =
+          selection_.dragged
+              ? x != selection_.focus_x || y != selection_.focus_y
+              : x != selection_.anchor_x || y != selection_.anchor_y;
+      if (moved) {
+        selection_.dragged = true;
+        selection_.focus_x = x;
+        selection_.focus_y = y;
+        selection_.focus_box =
+            UserSelectAllBox(FindElementAt(root_fragment_, x, y));
+        RequestDraw();
+      }
+      return true;
+    }
+    case Event::Mouse::Motion::Released: {
+      if (!selection_.armed) {
+        return false;
+      }
+      selection_.armed = false;
+      if (selection_.Shown() && last_texture_) {
+        if (std::string text = SelectedText(*last_texture_); !text.empty()) {
+          component_->SetClipboard(text);
+          RequestDraw();
+        }
+      }
+      return false;
+    }
+  }
+  return false;
+}
+
+std::string ScreenImpl::SelectedText(const Texture& texture) const {
+  auto selected = [&](int x, int y) {
+    return texture[x, y].selectable && selection_.Contains(x, y);
+  };
+  std::string text;
+  // Rows with nothing selected, held until a row with something follows.
+  int blank_rows = 0;
+  for (int y = 0; y < texture.height(); ++y) {
+    int first = texture.width();
+    int last = -1;
+    for (int x = 0; x < texture.width(); ++x) {
+      if (selected(x, y)) {
+        first = std::min(first, x);
+        last = x;
+      }
+    }
+    if (last < 0) {
+      blank_rows += text.empty() ? 0 : 1;
+      continue;
+    }
+    // What lies between selected text, a border between two table cells
+    // say, is a space: the columns stay aligned.
+    std::string line;
+    for (int x = first; x <= last; ++x) {
+      const Cell& cell = texture[x, y];
+      if (cell.is_continuation) {
+        continue;
+      }
+      line += selected(x, y) && !cell.character.empty() ? cell.character : " ";
+    }
+    if (!text.empty()) {
+      text.append(static_cast<size_t>(blank_rows) + 1, '\n');
+    }
+    blank_rows = 0;
+    text += line.substr(0, line.find_last_not_of(' ') + 1);
+  }
+  return text;
 }
 
 bool ScreenImpl::FollowLink(Element* link) {

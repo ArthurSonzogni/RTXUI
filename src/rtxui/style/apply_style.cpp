@@ -3227,6 +3227,20 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     }
   }
 
+  // user-select, and the -webkit- spelling Safari still needs.
+  if (p == "user-select" || p == "-webkit-user-select") {
+    if (v == "auto") {
+      style.user_select.reset();
+      return;
+    }
+    if (v == "text" || v == "none" || v == "all") {
+      style.user_select = v == "text"   ? UserSelect::Text
+                          : v == "none" ? UserSelect::None
+                                        : UserSelect::All;
+      return;
+    }
+  }
+
   if (p == "cursor") {
     if (v == "pointer") {
       style.cursor = Cursor::Pointer;

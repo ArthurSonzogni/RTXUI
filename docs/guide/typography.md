@@ -222,3 +222,25 @@ CSS transitions.
 
 </template>
 </ExampleTabs>
+
+---
+
+## Selecting and Copying Text
+
+Dragging the mouse over text selects it, as in a terminal: the rows from where
+the drag started to where it is, shown in reverse video. Releasing the button
+copies the selection to the system clipboard (OSC 52, so it works over SSH).
+The next click clears it.
+
+Only text is taken: borders, scrollbars and empty space are left out, and a gap
+between two selected texts, a border between table cells say, is copied as
+spaces so the columns stay aligned. A drag that starts on an element with a
+click handler, on a link, in an input or on a scrollbar does what it does there
+instead.
+
+`user-select` chooses what can be selected. It is inherited:
+
+```css
+.toolbar { user-select: none; } /* never selected; a drag from it selects nothing */
+code     { user-select: all; }  /* a click selects and copies it whole */
+```
