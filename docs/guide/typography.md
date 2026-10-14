@@ -235,7 +235,10 @@ in reverse video. Releasing the button copies it to the system clipboard (OSC
 The selection is of the document, not of the screen. Dragging from one column
 of a layout to the one beside it takes the end of the first and the start of
 the second, not the rows of both. Scrolling moves the selection with its text,
-and what is scrolled out of view is copied too. A paragraph's wrapped lines are
+and what is scrolled out of view is copied too. Dragging past the edge of the
+scroll container the selection started in scrolls it, faster the further the
+mouse is, and the selection follows; for a container that reaches the edge of
+the screen, the screen's edge row or column does it. A paragraph's wrapped lines are
 copied as one line; separate blocks, on lines of their own.
 
 Only text is taken: borders, scrollbars and empty space are left out, and a gap

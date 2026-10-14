@@ -5712,6 +5712,89 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
   }
 }
 
+TEST_CASE("Screen.SelectionScrollsItsContainer", "[terminal][selection]") {
+  struct ClockRestorer {
+    ~ClockRestorer() { time::SetCustomClock(nullptr); }
+  } restorer;
+  static double now_ms = 1000.0;
+  now_ms = 1000.0;
+  time::SetCustomClock([]() -> double { return now_ms; });
+
+  class List : public Component<List> {
+   public:
+    std::string_view view = R"(
+      <div style="overflow-y: scroll; height: 3; scroll-speed: 5">
+        <div>line 0</div><div>line 1</div><div>line 2</div>
+        <div>line 3</div><div>line 4</div><div>line 5</div>
+        <div>line 6</div><div>line 7</div>
+      </div>
+      <div>after</div>
+    )";
+  };
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(30, 6);
+  Screen screen(Ref<List>::New(), device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+  // The line the container shows on top, as the test advances its timer.
+  auto top_after = [&](double ms) {
+    now_ms += ms;
+    screen.Step();
+    return screen.Text().substr(0, 6);
+  };
+  auto copied = [&] {
+    const std::string output = device->GetOutput();
+    const size_t start = output.find("\x1b]52;c;");
+    return start == std::string::npos
+               ? std::string()
+               : output.substr(start + 7,
+                               output.find('\x07', start) - start - 7);
+  };
+
+  SECTION("down, as fast as the mouse is far below it") {
+    device->PushInput(LeftAt('P', 0, 0) + LeftAt('D', 10, 4));
+    screen.Step();
+    CHECK(screen.Text().starts_with("line 0"));
+    // Two rows below: two lines each time, with no more mouse events.
+    CHECK(top_after(50) == "line 2");
+    CHECK(top_after(50) == "line 4");
+    CHECK(top_after(50) == "line 5");  // The end.
+    device->ClearOutput();
+    device->PushInput(LeftAt('U', 10, 4));
+    screen.Step();
+    // Down to the last line it showed, nothing past the container.
+    CHECK(copied() ==
+          Base64Encode("line 0\nline 1\nline 2\nline 3\nline 4\nline 5\n"
+                       "line 6\nline 7"));
+  }
+  SECTION("until the mouse comes back") {
+    device->PushInput(LeftAt('P', 0, 0) + LeftAt('D', 10, 3));
+    screen.Step();
+    CHECK(top_after(50) == "line 1");
+    device->PushInput(LeftAt('D', 2, 1));
+    screen.Step();
+    CHECK(top_after(50) == "line 1");
+    device->ClearOutput();
+    device->PushInput(LeftAt('U', 2, 1));
+    screen.Step();
+    CHECK(copied() == Base64Encode("line 0\nline 1\nlin"));
+  }
+  SECTION("up, from the top row of the screen") {
+    device->PushInput("\x1b[<65;2;2M");  // The wheel, down to the end.
+    screen.Step();
+    REQUIRE(screen.Text().starts_with("line 5"));
+    device->PushInput(LeftAt('P', 10, 2) + LeftAt('D', 0, 0));
+    screen.Step();
+    CHECK(top_after(50) == "line 4");
+    device->ClearOutput();
+    device->PushInput(LeftAt('U', 0, 0));
+    screen.Step();
+    CHECK(copied() == Base64Encode("line 4\nline 5\nline 6\nline 7"));
+    // Released: it scrolls no more.
+    CHECK(top_after(50) == "line 4");
+  }
+}
+
 TEST_CASE("Screen.DragSelectsAndCopiesText", "[terminal][selection]") {
   class App : public Component<App> {
    public:

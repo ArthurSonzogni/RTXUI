@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/screen.hpp"
 
+#include <array>
 #include <cctype>
 #include <charconv>
 #include <cmath>
@@ -1121,6 +1122,9 @@ class ScreenImpl {
     // The `user-select: all` elements at either end, selected whole.
     const Element* anchor_all = nullptr;
     const Element* focus_all = nullptr;
+    // The scroll container the drag started in. It scrolls while the mouse
+    // is past its edges, and the selection follows.
+    Ref<ElementHandleTarget> scroller;
 
     bool Shown() const { return dragged || anchor_all || focus_all; }
   };
@@ -1139,6 +1143,21 @@ class ScreenImpl {
   // selection whose ends are gone from the document.
   void UpdateSelectionOrder();
   bool Selected(const TextPosition& glyph) const;
+  // The cells of the selection's scroll container that show its content:
+  // left, top, right, bottom, inclusive.
+  std::optional<std::array<int, 4>> ScrollerViewport() const;
+  // Moves the selection's end to the glyph at the mouse, or at the nearest
+  // cell of its scroll container's content when the mouse is past it.
+  void UpdateSelectionFocus();
+  // How many cells, and which way, the mouse is past the edges of the
+  // selection's scroll container: the speed it scrolls at. The edge rows
+  // and columns of the screen count as past a container reaching them.
+  std::pair<int, int> SelectionScrollSpeed() const;
+  // Scrolls the selection's scroll container toward the mouse, then again
+  // every kAutoScrollDelay while the drag goes on.
+  void ScheduleAutoScroll();
+  void AutoScroll();
+  bool autoscroll_pending_ = false;
   // The selected text that is drawn, in document order.
   std::string SelectedText() const;
   Selection selection_;
@@ -1340,7 +1359,7 @@ void ScreenImpl::Step() {
 
 #if defined(_WIN32)
   if (dynamic_cast<SystemTerminalDevice*>(device_.get())) {
-    DWORD timeout_ms = HasActiveTransitions() ? 16 : 100;
+    DWORD timeout_ms = HasActiveTransitions() || autoscroll_pending_ ? 16 : 100;
     HANDLE in_handle = GetStdHandle(STD_INPUT_HANDLE);
     HANDLE handles[2] = {in_handle, wakeup_event_};
     DWORD count = (wakeup_event_ != NULL) ? 2 : 1;
@@ -1366,7 +1385,7 @@ void ScreenImpl::Step() {
 
     struct timeval tv;
     struct timeval* timeout = nullptr;
-    if (HasActiveTransitions()) {
+    if (HasActiveTransitions() || autoscroll_pending_) {
       tv.tv_sec = 0;
       tv.tv_usec = 16667;  // ~60 FPS
       timeout = &tv;
@@ -3141,6 +3160,9 @@ void ScreenImpl::PaintScreen(const PhysicalFragment& root,
 }
 
 namespace {
+// How often a selection drag past the edge of its scroll container scrolls it.
+constexpr std::chrono::milliseconds kAutoScrollDelay{50};
+
 // The `user-select: all` element `element` is in, if any.
 const Element* UserSelectAll(const Element* element) {
   for (; element; element = element->Parent()) {
@@ -3291,6 +3313,13 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
       selection_.press_y = selection_.mouse_y = y;
       selection_.anchor = selection_.focus = GlyphNear(glyphs, x, y);
       selection_.anchor_all = UserSelectAll(target);
+      for (Element* el = target; el; el = el->Parent()) {
+        if (el->style.overflow_y == Overflow::Scroll ||
+            el->style.overflow_x == Overflow::Scroll) {
+          selection_.scroller = el->HandleTarget();
+          break;
+        }
+      }
       if (selection_.anchor_all) {
         RequestDraw();
       }
@@ -3307,14 +3336,11 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
               ? x != selection_.mouse_x || y != selection_.mouse_y
               : x != selection_.press_x || y != selection_.press_y;
       if (moved) {
-        std::vector<TextPosition> glyphs;
-        PaintGlyphs(glyphs);
         selection_.dragged = true;
         selection_.mouse_x = x;
         selection_.mouse_y = y;
-        selection_.focus = GlyphNear(glyphs, x, y);
-        selection_.focus_all =
-            UserSelectAll(FindElementAt(root_fragment_, x, y));
+        UpdateSelectionFocus();
+        ScheduleAutoScroll();
         RequestDraw();
       }
       return true;
@@ -3335,6 +3361,114 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
     }
   }
   return false;
+}
+
+std::optional<std::array<int, 4>> ScreenImpl::ScrollerViewport() const {
+  Element* scroller =
+      selection_.scroller ? selection_.scroller->element : nullptr;
+  if (!scroller || !root_fragment_) {
+    return std::nullopt;
+  }
+  auto found = FindFragmentForElementWithPos(root_fragment_, scroller);
+  if (!found) {
+    return std::nullopt;
+  }
+  const PhysicalFragment& fragment = *found->fragment;
+  const int border =
+      fragment.has_border && fragment.border_style != BorderStyle::None ? 1 : 0;
+  const Spacing& padding = scroller->style.padding;
+  return std::array<int, 4>{
+      found->abs_x + border + padding.left, found->abs_y + border + padding.top,
+      found->abs_x + fragment.width - border - padding.right - 1,
+      found->abs_y + fragment.height - border - padding.bottom - 1};
+}
+
+void ScreenImpl::UpdateSelectionFocus() {
+  int x = selection_.mouse_x;
+  int y = selection_.mouse_y;
+  if (auto viewport = ScrollerViewport()) {
+    const auto [left, top, right, bottom] = *viewport;
+    x = std::clamp(x, left, std::max(left, right));
+    y = std::clamp(y, top, std::max(top, bottom));
+  }
+  std::vector<TextPosition> glyphs;
+  PaintGlyphs(glyphs);
+  selection_.focus = GlyphNear(glyphs, x, y);
+  selection_.focus_all = UserSelectAll(FindElementAt(root_fragment_, x, y));
+}
+
+std::pair<int, int> ScreenImpl::SelectionScrollSpeed() const {
+  auto viewport = ScrollerViewport();
+  if (!viewport) {
+    return {0, 0};
+  }
+  const auto [left, top, right, bottom] = *viewport;
+  auto past = [](int mouse, int first, int last, int screen_last) {
+    if (mouse < first) {
+      return mouse - first;
+    }
+    if (mouse > last) {
+      return mouse - last;
+    }
+    if (mouse <= 0 && first <= 0) {
+      return -1;
+    }
+    if (mouse >= screen_last && last >= screen_last) {
+      return 1;
+    }
+    return 0;
+  };
+  return {past(selection_.mouse_x, left, right, width_ - 1),
+          past(selection_.mouse_y, top, bottom, height_ - 1)};
+}
+
+void ScreenImpl::ScheduleAutoScroll() {
+  if (autoscroll_pending_ || SelectionScrollSpeed() == std::pair(0, 0)) {
+    return;
+  }
+  autoscroll_pending_ = true;
+  // The same TaskRunner runs it, so it never outlives the screen.
+  task_runner_.PostDelayedTask([this] { AutoScroll(); }, kAutoScrollDelay);
+}
+
+void ScreenImpl::AutoScroll() {
+  autoscroll_pending_ = false;
+  if (!selection_.armed || !selection_.dragged) {
+    return;
+  }
+  Element* scroller =
+      selection_.scroller ? selection_.scroller->element : nullptr;
+  auto found = scroller
+                   ? FindFragmentForElementWithPos(root_fragment_, scroller)
+                   : std::nullopt;
+  if (!found) {
+    return;
+  }
+  const int max_x =
+      std::max(0, scroller->scroll_width() - found->fragment->width);
+  const int max_y =
+      std::max(0, scroller->scroll_height() - found->fragment->height);
+  found.reset();  // Release before laying out again.
+  const auto [speed_x, speed_y] = SelectionScrollSpeed();
+  bool scrolled = false;
+  if (speed_y != 0 && scroller->style.overflow_y == Overflow::Scroll) {
+    const int y = std::clamp(scroller->target_scroll_y() + speed_y, 0, max_y);
+    scrolled |= y != scroller->target_scroll_y();
+    scroller->set_scroll_y(y, false);
+  }
+  if (speed_x != 0 && scroller->style.overflow_x == Overflow::Scroll) {
+    const int x = std::clamp(scroller->target_scroll_x() + speed_x, 0, max_x);
+    scrolled |= x != scroller->target_scroll_x();
+    scroller->set_scroll_x(x, false);
+  }
+  if (!scrolled) {
+    return;
+  }
+  // The text now under the mouse is what the selection extends to.
+  UpdateLayout();
+  UpdateSelectionFocus();
+  RequestDraw();
+  ScheduleAutoScroll();
 }
 
 std::string ScreenImpl::SelectedText() const {
