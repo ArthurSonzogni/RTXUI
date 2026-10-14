@@ -3173,6 +3173,39 @@ const Element* UserSelectAll(const Element* element) {
   return nullptr;
 }
 
+// The box `element` is laid out in: its parent, a <slot> being no box.
+const Element* LayoutParent(const Element* element) {
+  const Element* parent = element->Parent();
+  while (parent && parent->is_slot()) {
+    parent = parent->Parent();
+  }
+  return parent;
+}
+
+// Whether `element` lays out as a block of its own: no inline box, or a
+// flex or grid item, whatever its `display`.
+bool IsBlockBox(const Element* element) {
+  const Element* parent = LayoutParent(element);
+  const bool inline_box =
+      element->style.display_outside == DisplayOutside::Inline &&
+      element->style.display_inside == DisplayInside::Flow;
+  const bool item =
+      parent && (parent->style.display_inside == DisplayInside::Flex ||
+                 parent->style.display_inside == DisplayInside::Grid);
+  return !inline_box || item;
+}
+
+// Whether `element` holds lines of text, rather than blocks: it is text, or
+// none of the boxes in it is a block.
+bool IsLineBox(const Element* element) {
+  if (element->is_text()) {
+    return true;
+  }
+  return std::ranges::none_of(element->children(), [](const auto& child) {
+    return child->is_slot() ? !IsLineBox(child.get()) : IsBlockBox(child.get());
+  });
+}
+
 bool IsInside(const Element* element, const Element* ancestor) {
   for (; element; element = element->Parent()) {
     if (element == ancestor) {
@@ -3200,34 +3233,124 @@ TextPosition ScreenImpl::GlyphNear(const std::vector<TextPosition>& glyphs,
                                    int y) const {
   x = std::clamp(x, 0, width_ - 1);
   y = std::clamp(y, 0, height_ - 1);
-  auto at = [&](int cx, int cy) { return glyphs[cx + (cy * width_)]; };
-  // On the row: the glyph there, else the nearest before it, else after it.
-  for (int cx = x; cx >= 0; --cx) {
-    if (at(cx, y).node) {
-      return at(cx, y);
-    }
+  auto at = [&](int cx, int cy) -> const TextPosition& {
+    return glyphs[cx + (cy * width_)];
+  };
+  if (at(x, y).node) {
+    return at(x, y);
   }
-  for (int cx = x + 1; cx < width_; ++cx) {
-    if (at(cx, y).node) {
-      return at(cx, y);
-    }
-  }
-  // Else the last glyph of the rows above, else the first of those below.
-  for (int cy = y - 1; cy >= 0; --cy) {
-    for (int cx = width_ - 1; cx >= 0; --cx) {
-      if (at(cx, cy).node) {
-        return at(cx, cy);
+  struct Cell {
+    int x = 0, y = 0;
+  };
+  // The cells showing text inside `scope`, all of them for none. A screen
+  // shows the text of few elements, so each is placed once.
+  auto cells_in = [&](const Element* scope) {
+    std::unordered_map<const Element*, bool> inside;
+    std::vector<Cell> cells;
+    for (int cy = 0; cy < height_; ++cy) {
+      for (int cx = 0; cx < width_; ++cx) {
+        const Element* node = at(cx, cy).node;
+        if (!node) {
+          continue;
+        }
+        auto [it, added] = inside.try_emplace(node, false);
+        if (added) {
+          it->second = !scope || IsInside(node, scope);
+        }
+        if (it->second) {
+          cells.push_back({cx, cy});
+        }
       }
     }
+    return cells;
+  };
+
+  // The text of the element under the mouse, as a browser takes it: a point
+  // beside a column's text is in that column, not in the one next to it. An
+  // element showing none defers to its parent.
+  const Element* scope = FindElementAt(root_fragment_, x, y);
+  while (scope && scope->is_slot()) {
+    scope = scope->Parent();
   }
-  for (int cy = y + 1; cy < height_; ++cy) {
-    for (int cx = 0; cx < width_; ++cx) {
-      if (at(cx, cy).node) {
-        return at(cx, cy);
+  std::vector<Cell> cells = cells_in(scope);
+  while (cells.empty() && scope) {
+    scope = LayoutParent(scope);
+    cells = cells_in(scope);
+  }
+  if (cells.empty()) {
+    return {};
+  }
+  // Then, down to a box of lines of text, the child of the box the point is
+  // nearest: in the direction the box lays its children out, as they are
+  // read, then across it.
+  while (scope && !IsLineBox(scope)) {
+    struct Child {
+      const Element* element = nullptr;
+      int left = 0, top = 0, right = 0, bottom = 0;
+    };
+    std::vector<Child> children;
+    for (const Cell& cell : cells) {
+      const Element* child = at(cell.x, cell.y).node;
+      while (child && LayoutParent(child) != scope) {
+        child = child->Parent();
       }
+      // Not laid out in `scope` after all: its lines are all there is.
+      if (!child) {
+        children.clear();
+        break;
+      }
+      auto it = std::ranges::find(children, child, &Child::element);
+      if (it == children.end()) {
+        children.push_back({child, cell.x, cell.y, cell.x, cell.y});
+        continue;
+      }
+      it->left = std::min(it->left, cell.x);
+      it->right = std::max(it->right, cell.x);
+      it->bottom = std::max(it->bottom, cell.y);
+    }
+    const bool row = scope->style.display_inside == DisplayInside::Flex &&
+                     (scope->style.flex_direction == Direction::Row ||
+                      scope->style.flex_direction == Direction::RowReverse);
+    const bool grid = scope->style.display_inside == DisplayInside::Grid;
+    auto distance = [&](const Child& child) {
+      const int dx = std::max({child.left - x, x - child.right, 0});
+      const int dy = std::max({child.top - y, y - child.bottom, 0});
+      return grid  ? std::pair(dx + dy, 0)
+             : row ? std::pair(dx, dy)
+                   : std::pair(dy, dx);
+    };
+    if (children.empty()) {
+      break;
+    }
+    const Child& nearest = *std::ranges::min_element(children, {}, distance);
+    scope = nearest.element;
+    std::erase_if(cells, [&](const Cell& cell) {
+      return !IsInside(at(cell.x, cell.y).node, scope);
+    });
+  }
+  // In it, the end past its last line, the start before its first, else the
+  // line the mouse is on, or the end of the one above it.
+  const int first_row = cells.front().y;
+  const int last_row = cells.back().y;
+  if (y < first_row) {
+    return at(cells.front().x, cells.front().y);
+  }
+  if (y > last_row) {
+    return at(cells.back().x, cells.back().y);
+  }
+  std::optional<Cell> before;
+  std::optional<Cell> after;
+  for (const Cell& cell : cells) {
+    if (cell.y < y || (cell.y == y && cell.x <= x)) {
+      before = cell;
+    } else if (!after) {
+      after = cell;
     }
   }
-  return {};
+  // On the mouse's row, the glyph before it, else the one after it.
+  const Cell& glyph =
+      before && (before->y == y || !after || after->y != y) ? *before : *after;
+  return at(glyph.x, glyph.y);
 }
 
 void ScreenImpl::UpdateSelectionOrder() {

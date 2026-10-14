@@ -5646,6 +5646,58 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
     // From a2 back up to b1: a2 then b1, nothing of the rows between.
     CHECK(CopiedBy(kColumns, DragFromTo(0, 1, 7, 0)) == Base64Encode("a2\nb1"));
   }
+  SECTION("beside a column's text, in that column") {
+    // B stretches as tall as C: under its text is still B, whose end it is.
+    constexpr std::string_view kColumns = R"(
+      <div style="display: flex; gap: 3">
+        <div><div>b one</div><div>b two</div></div>
+        <div><div>c one</div><div>c two</div><div>c three</div></div>
+      </div>
+    )";
+    CHECK(CopiedBy(kColumns, DragFromTo(2, 1, 1, 2)) == Base64Encode("two"));
+    // Under C, through C.
+    CHECK(CopiedBy(kColumns, DragFromTo(2, 1, 9, 4)) ==
+          Base64Encode("two\nc one\nc two\nc three"));
+    // In the gap, the nearer column.
+    CHECK(CopiedBy(kColumns, DragFromTo(2, 1, 5, 1)) == Base64Encode("two"));
+    CHECK(CopiedBy(kColumns, DragFromTo(2, 1, 7, 1)) ==
+          Base64Encode("two\nc one\nc"));
+  }
+  SECTION("between two blocks, the nearer, not text elsewhere on the row") {
+    constexpr std::string_view kStacked = R"(
+      <div style="display: flex">
+        <div style="width: 10">
+          <div>b one</div>
+          <div style="margin-top: 2">c one</div>
+        </div>
+        <div>side one</div>
+      </div>
+    )";
+    CHECK(CopiedBy(kStacked, DragFromTo(2, 0, 3, 1)) == Base64Encode("one"));
+    CHECK(CopiedBy(kStacked, DragFromTo(2, 0, 3, 2)) ==
+          Base64Encode("one\n\nc"));
+  }
+  SECTION("below paragraphs, the end of the last") {
+    CHECK(CopiedBy(R"(
+            <div style="width: 26">
+              <p>B is a paragraph whose text wraps.</p>
+              <p>C ends.</p>
+            </div>
+          )",
+                   DragFromTo(0, 0, 25, 5)) ==
+          Base64Encode("B is a paragraph whose text wraps.\n\nC ends."));
+  }
+  SECTION("from an empty box, whose parent is a slot") {
+    // The empty div is projected into the outer one: going up from it meets
+    // the <slot> layout looks through.
+    CHECK(CopiedBy(R"(
+            <div>
+              <div style="height: 2"></div>
+              <div>text</div>
+            </div>
+          )",
+                   DragFromTo(5, 0, 1, 2)) == Base64Encode("te"));
+  }
   SECTION("a soft wrap is a space") {
     CHECK(CopiedBy(R"(<div style="width: 10">hello world again</div>)",
                    DragFromTo(0, 0, 9, 2)) ==
