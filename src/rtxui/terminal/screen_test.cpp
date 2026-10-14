@@ -5877,6 +5877,78 @@ TEST_CASE("Screen.SelectionScrollsItsContainer", "[terminal][selection]") {
     screen.Step();
     CHECK(copied() == Base64Encode("line 0\nline 1\nlin"));
   }
+  SECTION("nested: the inner one, then the outer one") {
+    class Nested : public Component<Nested> {
+     public:
+      std::string_view view = R"(
+        <div style="overflow-y: scroll; height: 4">
+          <div style="overflow-y: scroll; height: 2">
+            <div>i0</div><div>i1</div><div>i2</div><div>i3</div><div>i4</div>
+          </div>
+          <div>o1</div><div>o2</div><div>o3</div><div>o4</div>
+        </div>
+      )";
+    };
+    auto nested_device = std::make_shared<MockTerminalDevice>();
+    nested_device->TriggerResize(30, 6);
+    Screen nested(Ref<Nested>::New(), nested_device);
+    nested.SetSmoothScrollEnabled(false);
+    nested.Draw();
+    auto top = [&](double ms) {
+      now_ms += ms;
+      nested.Step();
+      return nested.Text().substr(0, 2);
+    };
+    // Two rows below both.
+    nested_device->PushInput(LeftAt('P', 0, 0) + LeftAt('D', 10, 5));
+    nested.Step();
+    CHECK(top(50) == "i3");  // The inner one, to its end.
+    CHECK(top(50) == "o1");  // Then the outer one.
+    CHECK(top(50) == "o1");  // Both at their ends.
+    nested_device->ClearOutput();
+    nested_device->PushInput(LeftAt('U', 10, 5));
+    nested.Step();
+    const std::string output = nested_device->GetOutput();
+    CHECK(output.find("\x1b]52;c;" +
+                      Base64Encode("i0\ni1\ni2\ni3\ni4\no1\no2\no3\no4")) !=
+          std::string::npos);
+  }
+  SECTION("nested: the inner one, then the outer one") {
+    class Nested : public Component<Nested> {
+     public:
+      std::string_view view = R"(
+        <div style="overflow-y: scroll; height: 4">
+          <div style="overflow-y: scroll; height: 2">
+            <div>i0</div><div>i1</div><div>i2</div><div>i3</div><div>i4</div>
+          </div>
+          <div>o1</div><div>o2</div><div>o3</div><div>o4</div>
+        </div>
+      )";
+    };
+    auto nested_device = std::make_shared<MockTerminalDevice>();
+    nested_device->TriggerResize(30, 6);
+    Screen nested(Ref<Nested>::New(), nested_device);
+    nested.SetSmoothScrollEnabled(false);
+    nested.Draw();
+    auto top = [&](double ms) {
+      now_ms += ms;
+      nested.Step();
+      return nested.Text().substr(0, 2);
+    };
+    // Two rows below both.
+    nested_device->PushInput(LeftAt('P', 0, 0) + LeftAt('D', 10, 5));
+    nested.Step();
+    CHECK(top(50) == "i3");  // The inner one, to its end.
+    CHECK(top(50) == "o1");  // Then the outer one.
+    CHECK(top(50) == "o1");  // Both at their ends.
+    nested_device->ClearOutput();
+    nested_device->PushInput(LeftAt('U', 10, 5));
+    nested.Step();
+    const std::string output = nested_device->GetOutput();
+    CHECK(output.find("\x1b]52;c;" +
+                      Base64Encode("i0\ni1\ni2\ni3\ni4\no1\no2\no3\no4")) !=
+          std::string::npos);
+  }
   SECTION("up, from the top row of the screen") {
     device->PushInput("\x1b[<65;2;2M");  // The wheel, down to the end.
     screen.Step();

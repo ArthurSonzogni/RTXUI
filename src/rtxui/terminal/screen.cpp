@@ -971,9 +971,9 @@ class ScreenImpl {
     // The `user-select: all` elements at either end, selected whole.
     const Element* anchor_all = nullptr;
     const Element* focus_all = nullptr;
-    // The scroll container the drag started in. It scrolls while the mouse
-    // is past its edges, and the selection follows.
-    Ref<ElementHandleTarget> scroller;
+    // The scroll containers the drag started in, innermost first. While the
+    // mouse is past the edge of one, it scrolls, and the selection follows.
+    std::vector<Ref<ElementHandleTarget>> scrollers;
 
     bool Shown() const { return dragged || anchor_all || focus_all; }
   };
@@ -992,17 +992,29 @@ class ScreenImpl {
   // selection whose ends are gone from the document.
   void UpdateSelectionOrder();
   bool Selected(const TextPosition& glyph) const;
-  // The cells of the selection's scroll container that show its content:
-  // left, top, right, bottom, inclusive.
-  std::optional<std::array<int, 4>> ScrollerViewport() const;
-  // Moves the selection's end to the glyph at the mouse, or at the nearest
-  // cell of its scroll container's content when the mouse is past it.
+  // The cells of `scroller` that show its content: left, top, right,
+  // bottom, inclusive.
+  std::optional<std::array<int, 4>> ScrollerViewport(
+      const Element* scroller) const;
+  // Moves the selection's end to the glyph at the mouse, or, when the mouse
+  // is past the scroll container scrolling toward it, at the nearest cell
+  // of that container's content.
   void UpdateSelectionFocus();
-  // How many cells, and which way, the mouse is past the edges of the
-  // selection's scroll container: the speed it scrolls at. The edge rows
-  // and columns of the screen count as past a container reaching them.
-  std::pair<int, int> SelectionScrollSpeed() const;
-  // Scrolls the selection's scroll container toward the mouse, then again
+  // How many cells, and which way, the mouse is past the edges of
+  // `scroller`: the speed it scrolls at. The edge rows and columns of the
+  // screen count as past a container reaching them.
+  std::pair<int, int> SelectionScrollSpeed(const Element* scroller) const;
+  // What the next autoscroll scrolls, on each axis: the innermost of the
+  // selection's scroll containers the mouse is past that can still scroll
+  // toward it, and by how much. The next one out takes over at its end.
+  struct AutoScrollPlan {
+    Element* x_scroller = nullptr;
+    Element* y_scroller = nullptr;
+    int dx = 0;
+    int dy = 0;
+  };
+  AutoScrollPlan PlanAutoScroll() const;
+  // Scrolls the selection's scroll containers toward the mouse, then again
   // every kAutoScrollDelay while the drag goes on.
   void ScheduleAutoScroll();
   void AutoScroll();
@@ -3309,8 +3321,7 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
       for (Element* el = target; el; el = el->Parent()) {
         if (el->style.overflow_y == Overflow::Scroll ||
             el->style.overflow_x == Overflow::Scroll) {
-          selection_.scroller = el->HandleTarget();
-          break;
+          selection_.scrollers.push_back(el->HandleTarget());
         }
       }
       if (selection_.anchor_all) {
@@ -3356,13 +3367,13 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
   return false;
 }
 
-std::optional<std::array<int, 4>> ScreenImpl::ScrollerViewport() const {
-  Element* scroller =
-      selection_.scroller ? selection_.scroller->element : nullptr;
+std::optional<std::array<int, 4>> ScreenImpl::ScrollerViewport(
+    const Element* scroller) const {
   if (!scroller || !root_fragment_) {
     return std::nullopt;
   }
-  auto found = FindFragmentForElementWithPos(root_fragment_, scroller);
+  auto found = FindFragmentForElementWithPos(root_fragment_,
+                                             const_cast<Element*>(scroller));
   if (!found) {
     return std::nullopt;
   }
@@ -3379,10 +3390,33 @@ std::optional<std::array<int, 4>> ScreenImpl::ScrollerViewport() const {
 void ScreenImpl::UpdateSelectionFocus() {
   int x = selection_.mouse_x;
   int y = selection_.mouse_y;
-  if (auto viewport = ScrollerViewport()) {
-    const auto [left, top, right, bottom] = *viewport;
+  auto clamp_into = [&](const std::array<int, 4>& viewport) {
+    const auto [left, top, right, bottom] = viewport;
     x = std::clamp(x, left, std::max(left, right));
     y = std::clamp(y, top, std::max(top, bottom));
+  };
+  const AutoScrollPlan plan = PlanAutoScroll();
+  if (Element* scrolling =
+          plan.y_scroller ? plan.y_scroller : plan.x_scroller) {
+    // The edge of what scrolls into view.
+    if (auto viewport = ScrollerViewport(scrolling)) {
+      clamp_into(*viewport);
+    }
+  } else {
+    // None can scroll further: past all of them, the nearest cell of the
+    // outermost; in one, wherever the mouse is.
+    std::optional<std::array<int, 4>> outermost;
+    bool inside = false;
+    for (const auto& handle : selection_.scrollers) {
+      if (auto viewport = ScrollerViewport(handle->element)) {
+        const auto [left, top, right, bottom] = *viewport;
+        inside |= x >= left && x <= right && y >= top && y <= bottom;
+        outermost = viewport;
+      }
+    }
+    if (outermost && !inside) {
+      clamp_into(*outermost);
+    }
   }
   std::vector<TextPosition> glyphs;
   PaintGlyphs(glyphs);
@@ -3390,8 +3424,9 @@ void ScreenImpl::UpdateSelectionFocus() {
   selection_.focus_all = UserSelectAll(FindElementAt(root_fragment_, x, y));
 }
 
-std::pair<int, int> ScreenImpl::SelectionScrollSpeed() const {
-  auto viewport = ScrollerViewport();
+std::pair<int, int> ScreenImpl::SelectionScrollSpeed(
+    const Element* scroller) const {
+  auto viewport = ScrollerViewport(scroller);
   if (!viewport) {
     return {0, 0};
   }
@@ -3415,8 +3450,47 @@ std::pair<int, int> ScreenImpl::SelectionScrollSpeed() const {
           past(selection_.mouse_y, top, bottom, height_ - 1)};
 }
 
+ScreenImpl::AutoScrollPlan ScreenImpl::PlanAutoScroll() const {
+  AutoScrollPlan plan;
+  for (const auto& handle : selection_.scrollers) {
+    Element* scroller = handle->element;
+    auto found = scroller
+                     ? FindFragmentForElementWithPos(root_fragment_, scroller)
+                     : std::nullopt;
+    if (!found) {
+      continue;
+    }
+    const auto [speed_x, speed_y] = SelectionScrollSpeed(scroller);
+    // Whether `scroll` can still move by `speed` within [0, max].
+    auto can = [](int speed, int scroll, int max) {
+      return (speed < 0 && scroll > 0) || (speed > 0 && scroll < max);
+    };
+    const int max_y =
+        std::max(0, scroller->scroll_height() - found->fragment->height);
+    if (!plan.y_scroller && scroller->style.overflow_y == Overflow::Scroll &&
+        can(speed_y, scroller->target_scroll_y(), max_y)) {
+      plan.y_scroller = scroller;
+      plan.dy = std::clamp(scroller->target_scroll_y() + speed_y, 0, max_y) -
+                scroller->target_scroll_y();
+    }
+    const int max_x =
+        std::max(0, scroller->scroll_width() - found->fragment->width);
+    if (!plan.x_scroller && scroller->style.overflow_x == Overflow::Scroll &&
+        can(speed_x, scroller->target_scroll_x(), max_x)) {
+      plan.x_scroller = scroller;
+      plan.dx = std::clamp(scroller->target_scroll_x() + speed_x, 0, max_x) -
+                scroller->target_scroll_x();
+    }
+  }
+  return plan;
+}
+
 void ScreenImpl::ScheduleAutoScroll() {
-  if (autoscroll_pending_ || SelectionScrollSpeed() == std::pair(0, 0)) {
+  if (autoscroll_pending_) {
+    return;
+  }
+  const AutoScrollPlan plan = PlanAutoScroll();
+  if (!plan.x_scroller && !plan.y_scroller) {
     return;
   }
   autoscroll_pending_ = true;
@@ -3429,33 +3503,17 @@ void ScreenImpl::AutoScroll() {
   if (!selection_.armed || !selection_.dragged) {
     return;
   }
-  Element* scroller =
-      selection_.scroller ? selection_.scroller->element : nullptr;
-  auto found = scroller
-                   ? FindFragmentForElementWithPos(root_fragment_, scroller)
-                   : std::nullopt;
-  if (!found) {
+  const AutoScrollPlan plan = PlanAutoScroll();
+  if (!plan.x_scroller && !plan.y_scroller) {
     return;
   }
-  const int max_x =
-      std::max(0, scroller->scroll_width() - found->fragment->width);
-  const int max_y =
-      std::max(0, scroller->scroll_height() - found->fragment->height);
-  found.reset();  // Release before laying out again.
-  const auto [speed_x, speed_y] = SelectionScrollSpeed();
-  bool scrolled = false;
-  if (speed_y != 0 && scroller->style.overflow_y == Overflow::Scroll) {
-    const int y = std::clamp(scroller->target_scroll_y() + speed_y, 0, max_y);
-    scrolled |= y != scroller->target_scroll_y();
-    scroller->set_scroll_y(y, false);
+  if (plan.y_scroller) {
+    plan.y_scroller->set_scroll_y(plan.y_scroller->target_scroll_y() + plan.dy,
+                                  false);
   }
-  if (speed_x != 0 && scroller->style.overflow_x == Overflow::Scroll) {
-    const int x = std::clamp(scroller->target_scroll_x() + speed_x, 0, max_x);
-    scrolled |= x != scroller->target_scroll_x();
-    scroller->set_scroll_x(x, false);
-  }
-  if (!scrolled) {
-    return;
+  if (plan.x_scroller) {
+    plan.x_scroller->set_scroll_x(plan.x_scroller->target_scroll_x() + plan.dx,
+                                  false);
   }
   // The text now under the mouse is what the selection extends to.
   UpdateLayout();

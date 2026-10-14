@@ -237,7 +237,8 @@ of a layout to the one beside it takes the end of the first and the start of
 the second, not the rows of both. Scrolling moves the selection with its text,
 and what is scrolled out of view is copied too. Dragging past the edge of the
 scroll container the selection started in scrolls it, faster the further the
-mouse is, and the selection follows; for a container that reaches the edge of
+mouse is, and the selection follows; at its end, the scroll container around
+it takes over, once the mouse is past that one's edge too; for a container that reaches the edge of
 the screen, the screen's edge row or column does it. A paragraph's wrapped lines are
 copied as one line; separate blocks, and lines a `<br>` or a newline in
 `<pre>` ends, on lines of their own. Text is copied as written, before
