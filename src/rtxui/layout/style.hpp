@@ -43,7 +43,8 @@ enum class BoxSizing {
 
 enum class MeasureMode { Exactly, AtMost, Undefined };
 enum class Direction { Row, RowReverse, Column, ColumnReverse };
-enum class Unit { Auto, Cells, Percent, Fr, Calc, MinMax };
+// Track is a grid track's minmax(<min>, <max>), interned: see GridTrack.
+enum class Unit { Auto, Cells, Percent, Fr, Calc, MinMax, Track };
 
 /// Narrows a resolved length, in cells, to int.
 ///
@@ -138,6 +139,9 @@ struct Length {
   static Length MakeMinMax(int id) {
     return {static_cast<float>(id), Unit::MinMax};
   }
+  static Length MakeTrack(int id) {
+    return {static_cast<float>(id), Unit::Track};
+  }
 
   /// Narrows a resolved length to int. See ClampToCells.
   static int ToCells(float resolved) { return ClampToCells(resolved); }
@@ -159,6 +163,20 @@ struct Length {
     return 0;  // Auto resolves to 0 or handled by logic
   }
 };
+
+// A grid track sized minmax(min, max): at least `min`, at most `max`, which
+// may be fr. Interned like MinMaxExpr, so that a Length can name one.
+struct GridTrack {
+  Length min;
+  Length max;
+  bool operator==(const GridTrack&) const = default;
+};
+/// Interns the track and returns its id, for Length::MakeTrack().
+int RegisterGridTrack(const GridTrack& track);
+/// The track of an id RegisterGridTrack() returned.
+GridTrack GetGridTrack(int id);
+/// The minmax() of `track`, or `track` as both ends when it is no minmax().
+GridTrack AsGridTrack(Length track);
 
 struct Spacing {
   int top = 0, right = 0, bottom = 0, left = 0;
@@ -584,6 +602,22 @@ struct GridDetails {
   // The line names an item's edges give in place of a number, in grid-area
   // order: row start, column start, row end, column end. Empty when unnamed.
   std::array<std::string, 4> line_names;
+  // repeat(auto-fill | auto-fit, <tracks>) in a template: as many
+  // repetitions of `tracks` as fit, which layout works out, before the
+  // template's track `index`.
+  struct AutoRepeat {
+    size_t index = 0;
+    std::vector<Length> tracks;
+    // The names of the lines of `tracks`, as for the templates, and those
+    // written right after the repeat(), of the line after its last track.
+    std::vector<std::vector<std::string>> names;
+    std::vector<std::string> names_after;
+    // auto-fit: the repeated tracks no item is in go.
+    bool fit = false;
+    bool operator==(const AutoRepeat&) const = default;
+  };
+  std::optional<AutoRepeat> auto_repeat_columns;
+  std::optional<AutoRepeat> auto_repeat_rows;
 
   bool operator==(const GridDetails&) const = default;
 };

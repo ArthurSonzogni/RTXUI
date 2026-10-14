@@ -25,9 +25,27 @@ Track sizes accept:
 - **Fractions** — `1fr`, `2fr`: after fixed tracks are placed, remaining
   space is divided proportionally.
 - **`repeat(count, size)`** — shorthand for repeated tracks.
+- **`minmax(min, max)`** — at least `min`, at most `max`: `minmax(20, 1fr)`
+  takes its share of the space but never less than 20; `minmax(5, 10)`
+  grows from 5 toward 10 when there is room. `min` can be `auto` (the
+  content), not `fr`.
+- **`repeat(auto-fill, size)`** — as many tracks as fit in the width (or a
+  known height). `repeat(auto-fit, size)` is the same, except that the
+  repeated tracks no item is in are dropped, so the items share the room.
 - **`calc()` expressions** — e.g. `calc(50% - 5)`.
 - **`auto`** — as wide as the widest item in the track. Auto tracks share
   the space left over when no `fr` track takes it.
+
+A card grid that adapts to the terminal's width, as many columns of at least
+24 cells as fit, sharing the rest:
+
+```css
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(24, 1fr));
+  gap: 1;
+}
+```
 
 `grid-template` combines both axes as `rows / columns`:
 

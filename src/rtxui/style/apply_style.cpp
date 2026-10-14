@@ -1099,16 +1099,47 @@ using GridLineNames = std::vector<std::vector<std::string>>;
 // A track list: sizes, `repeat(count, ...)`, and line names in brackets,
 // `[full-start main-start] 1fr [main-end]`. The names of each line go to
 // `names`, when given: one list per line, left empty when none is named.
-std::vector<Length> ParseGridTemplate(std::string_view v,
-                                      GridLineNames* names = nullptr) {
+// A grid track: a length, an fr, auto, or minmax(<min>, <max>), whose min
+// cannot be fr. Nothing when it is none of them.
+std::optional<Length> ParseGridTrack(std::string_view token) {
+  if (!token.starts_with("minmax(") || token.back() != ')') {
+    return ParseLength(token);
+  }
+  const std::string_view inner = token.substr(7, token.size() - 8);
+  const size_t comma = inner.find(',');
+  if (comma == std::string_view::npos) {
+    return std::nullopt;
+  }
+  const Length min = ParseLength(TrimWhitespace(inner.substr(0, comma)));
+  const Length max = ParseLength(TrimWhitespace(inner.substr(comma + 1)));
+  if (min.unit == Unit::Fr) {
+    return std::nullopt;
+  }
+  return Length::MakeTrack(RegisterGridTrack({min, max}));
+}
+
+std::vector<Length> ParseGridTemplate(
+    std::string_view v,
+    GridLineNames* names = nullptr,
+    std::optional<GridDetails::AutoRepeat>* auto_repeat = nullptr) {
   std::vector<Length> tracks;
   GridLineNames line_names;
+  // Past a repeat(auto-fill | auto-fit, ...), until the next track: the
+  // names written there are of the line after its repetitions.
+  bool after_auto_repeat = false;
   auto names_at = [&](size_t line) -> std::vector<std::string>& {
+    if (after_auto_repeat && auto_repeat && *auto_repeat &&
+        line == (*auto_repeat)->index) {
+      return (*auto_repeat)->names_after;
+    }
     if (line_names.size() <= line) {
       line_names.resize(line + 1);
     }
     return line_names[line];
   };
+  if (auto_repeat) {
+    auto_repeat->reset();
+  }
   // Tokens split on whitespace outside parentheses and brackets.
   std::vector<std::string_view> tokens;
   size_t start = 0;
@@ -1159,6 +1190,20 @@ std::vector<Length> ParseGridTemplate(std::string_view v,
         std::string_view count_str = TrimWhitespace(inner.substr(0, comma));
         std::string_view pattern_str = TrimWhitespace(inner.substr(comma + 1));
 
+        // As many as fit, worked out by layout. One per template.
+        if ((count_str == "auto-fill" || count_str == "auto-fit") &&
+            auto_repeat && !*auto_repeat) {
+          GridDetails::AutoRepeat repeat;
+          repeat.index = tracks.size();
+          repeat.tracks = ParseGridTemplate(pattern_str, &repeat.names);
+          repeat.fit = count_str == "auto-fit";
+          if (!repeat.tracks.empty()) {
+            *auto_repeat = std::move(repeat);
+            after_auto_repeat = true;
+          }
+          continue;
+        }
+
         int count = 0;
         auto [ptr, ec] = std::from_chars(
             count_str.data(), count_str.data() + count_str.size(), count);
@@ -1178,8 +1223,9 @@ std::vector<Length> ParseGridTemplate(std::string_view v,
           tracks.insert(tracks.end(), sub_tracks.begin(), sub_tracks.end());
         }
       }
-    } else {
-      tracks.push_back(ParseLength(token));
+    } else if (auto track = ParseGridTrack(token)) {
+      tracks.push_back(*track);
+      after_auto_repeat = false;
     }
   }
   if (names) {
@@ -1192,8 +1238,10 @@ std::vector<Length> ParseGridTemplate(std::string_view v,
 struct GridTemplateShorthand {
   std::vector<Length> rows;
   GridLineNames row_names;
+  std::optional<GridDetails::AutoRepeat> row_repeat;
   std::vector<Length> columns;
   GridLineNames column_names;
+  std::optional<GridDetails::AutoRepeat> column_repeat;
   std::vector<std::vector<std::string>> areas;
 };
 
@@ -1224,14 +1272,15 @@ std::optional<GridTemplateShorthand> ParseGridTemplateShorthand(
   GridTemplateShorthand result;
   const std::string_view rows = value.substr(0, slash);
   if (slash != std::string_view::npos) {
-    result.columns =
-        ParseGridTemplate(value.substr(slash + 1), &result.column_names);
+    result.columns = ParseGridTemplate(
+        value.substr(slash + 1), &result.column_names, &result.column_repeat);
   }
   if (rows.find_first_of("\"'") == std::string_view::npos) {
     if (slash == std::string_view::npos) {
       return std::nullopt;
     }
-    result.rows = ParseGridTemplate(rows, &result.row_names);
+    result.rows =
+        ParseGridTemplate(rows, &result.row_names, &result.row_repeat);
     return result;
   }
 
@@ -2879,14 +2928,16 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   }
 
   if (p == "grid-template-columns") {
-    style.grid_template_columns =
-        ParseGridTemplate(v, &style.mutable_grid().template_column_names);
+    GridDetails& grid = style.mutable_grid();
+    style.grid_template_columns = ParseGridTemplate(
+        v, &grid.template_column_names, &grid.auto_repeat_columns);
     return;
   }
 
   if (p == "grid-template-rows") {
+    GridDetails& grid = style.mutable_grid();
     style.grid_template_rows =
-        ParseGridTemplate(v, &style.mutable_grid().template_row_names);
+        ParseGridTemplate(v, &grid.template_row_names, &grid.auto_repeat_rows);
     return;
   }
 
@@ -2901,6 +2952,8 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
         style.grid_details->template_row_names.clear();
         style.grid_details->template_column_names.clear();
         style.grid_details->template_areas.clear();
+        style.grid_details->auto_repeat_rows.reset();
+        style.grid_details->auto_repeat_columns.reset();
       }
       return;
     }
@@ -2911,6 +2964,9 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.mutable_grid().template_column_names =
           std::move(parsed->column_names);
       style.mutable_grid().template_areas = std::move(parsed->areas);
+      style.mutable_grid().auto_repeat_rows = std::move(parsed->row_repeat);
+      style.mutable_grid().auto_repeat_columns =
+          std::move(parsed->column_repeat);
       return;
     }
   }

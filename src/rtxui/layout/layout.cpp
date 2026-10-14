@@ -3461,6 +3461,100 @@ static AlignItems EffectiveAlign(AlignSelf self, AlignItems items) {
   return items;
 }
 
+// The most tracks a repeat(auto-fill | auto-fit, ...) writes out.
+constexpr int kMaxGridRepeat = 1000;
+
+// A grid template with its repeat(auto-fill | auto-fit, ...) written out.
+struct ExpandedTemplate {
+  std::vector<Length> tracks;
+  std::vector<std::vector<std::string>> names;
+  // The tracks the repetitions took, for auto-fit.
+  int repeat_begin = 0;
+  int repeat_end = 0;
+  bool fit = false;
+};
+
+// Writes out `repeat`: as many repetitions as fit in `space` cells with the
+// rest of the template, counting each track at its maximum when that is a
+// length, else its minimum; at least one, and one when `space` is unknown.
+ExpandedTemplate ExpandAutoRepeat(
+    const std::vector<Length>& tracks,
+    const std::vector<std::vector<std::string>>& names,
+    const std::optional<GridDetails::AutoRepeat>& repeat,
+    std::optional<int> space,
+    int gap) {
+  ExpandedTemplate out;
+  if (!repeat) {
+    out.tracks = tracks;
+    out.names = names;
+    return out;
+  }
+  auto definite = [&](Length length) -> std::optional<int> {
+    if (length.unit == Unit::Auto || length.unit == Unit::Fr ||
+        length.unit == Unit::Track) {
+      return std::nullopt;
+    }
+    return length.Resolve(space.value_or(0));
+  };
+  auto size = [&](Length length) {
+    const GridTrack track = AsGridTrack(length);
+    if (auto max = definite(track.max)) {
+      return *max;
+    }
+    return definite(track.min).value_or(0);
+  };
+  const int length = static_cast<int>(repeat->tracks.size());
+  int count = 1;
+  if (space) {
+    int repeated = 0;
+    for (const Length& track : repeat->tracks) {
+      repeated += size(track);
+    }
+    int others = 0;
+    for (const Length& track : tracks) {
+      others += size(track);
+    }
+    // n repetitions and the rest, with the gaps between all of them.
+    const int per = repeated + (length * gap);
+    if (per > 0) {
+      count =
+          (*space + gap - others - (static_cast<int>(tracks.size()) * gap)) /
+          per;
+    }
+    count = std::clamp(count, 1, std::max(1, kMaxGridRepeat / length));
+  }
+  const size_t at = std::min(repeat->index, tracks.size());
+  out.tracks.assign(tracks.begin(),
+                    tracks.begin() + static_cast<std::ptrdiff_t>(at));
+  for (int r = 0; r < count; ++r) {
+    out.tracks.insert(out.tracks.end(), repeat->tracks.begin(),
+                      repeat->tracks.end());
+  }
+  out.tracks.insert(out.tracks.end(),
+                    tracks.begin() + static_cast<std::ptrdiff_t>(at),
+                    tracks.end());
+  out.names.resize(out.tracks.size() + 1);
+  auto add = [&](size_t line, const std::vector<std::string>& more) {
+    if (line < out.names.size()) {
+      out.names[line].insert(out.names[line].end(), more.begin(), more.end());
+    }
+  };
+  const size_t shift = static_cast<size_t>(count) * length;
+  for (size_t line = 0; line < names.size(); ++line) {
+    add(line <= at ? line : line + shift, names[line]);
+  }
+  for (int r = 0; r < count; ++r) {
+    for (size_t line = 0; line < repeat->names.size(); ++line) {
+      add(at + (static_cast<size_t>(r) * length) + line, repeat->names[line]);
+    }
+  }
+  add(at + shift, repeat->names_after);
+  out.repeat_begin = static_cast<int>(at);
+  out.repeat_end = static_cast<int>(at + shift);
+  out.fit = repeat->fit;
+  return out;
+}
+
 PhysicalFragment* LayoutGrid(LayoutInputNode node,
                              LayoutConstraints constraints,
                              LayoutContext context) {
@@ -3510,12 +3604,26 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   const ComputedStyle& grid_style = box->style();
   const GridDetails& grid_details = grid_style.grid();
   const auto& areas = grid_details.template_areas;
-  const int explicit_columns =
-      std::max(static_cast<int>(grid_style.grid_template_columns.size()),
+  const int col_gap_val = grid_style.column_gap.Resolve(avail_width);
+  const int row_gap_val = grid_style.row_gap.Resolve(avail_height);
+  // A repeat(auto-fill | auto-fit, ...) repeats as many times as fit in the
+  // width, and the height when that is known.
+  const bool height_known = constraints.height.mode == MeasureMode::Exactly ||
+                            ResolveBoxHeight(grid_style, grid_style.height,
+                                             constraints.height.value) != -1;
+  ExpandedTemplate template_columns = ExpandAutoRepeat(
+      grid_style.grid_template_columns, grid_details.template_column_names,
+      grid_details.auto_repeat_columns, avail_width, col_gap_val);
+  ExpandedTemplate template_rows = ExpandAutoRepeat(
+      grid_style.grid_template_rows, grid_details.template_row_names,
+      grid_details.auto_repeat_rows,
+      height_known ? std::optional<int>(avail_height) : std::nullopt,
+      row_gap_val);
+  int explicit_columns =
+      std::max(static_cast<int>(template_columns.tracks.size()),
                areas.empty() ? 0 : static_cast<int>(areas[0].size()));
-  const int explicit_rows =
-      std::max(static_cast<int>(grid_style.grid_template_rows.size()),
-               static_cast<int>(areas.size()));
+  int explicit_rows = std::max(static_cast<int>(template_rows.tracks.size()),
+                               static_cast<int>(areas.size()));
 
   // The named lines of each axis, by name: those of the templates, and the
   // `<area>-start` / `<area>-end` lines every area implies. A name naming
@@ -3527,17 +3635,15 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     auto [it, inserted] = lines.try_emplace(std::move(name), line);
     it->second = std::min(it->second, line);
   };
-  for (int line = 0;
-       line < static_cast<int>(grid_details.template_row_names.size());
+  for (int line = 0; line < static_cast<int>(template_rows.names.size());
        ++line) {
-    for (const auto& name : grid_details.template_row_names[line]) {
+    for (const auto& name : template_rows.names[line]) {
       name_line(row_lines, name, line);
     }
   }
-  for (int line = 0;
-       line < static_cast<int>(grid_details.template_column_names.size());
+  for (int line = 0; line < static_cast<int>(template_columns.names.size());
        ++line) {
-    for (const auto& name : grid_details.template_column_names[line]) {
+    for (const auto& name : template_columns.names[line]) {
       name_line(column_lines, name, line);
     }
   }
@@ -3792,6 +3898,43 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     swap_axes();
   }
 
+  // auto-fit: the repeated tracks no item is in go, with their gaps.
+  auto collapse = [&](ExpandedTemplate& templ, bool columns, int& count) {
+    if (!templ.fit) {
+      return;
+    }
+    const int begin = templ.repeat_begin;
+    std::vector<bool> used(templ.repeat_end - begin, false);
+    for (const auto& pc : placed_children) {
+      const int start = columns ? pc.col : pc.row;
+      const int span = columns ? pc.c_span : pc.r_span;
+      for (int t = std::max(start, begin);
+           t < std::min(start + span, templ.repeat_end); ++t) {
+        used[t - begin] = true;
+      }
+    }
+    // How many go before each track.
+    std::vector<int> gone_before(templ.tracks.size() + 1, 0);
+    for (size_t t = 0; t < templ.tracks.size(); ++t) {
+      const bool gone = static_cast<int>(t) >= begin &&
+                        static_cast<int>(t) < templ.repeat_end &&
+                        !used[t - begin];
+      gone_before[t + 1] = gone_before[t] + (gone ? 1 : 0);
+    }
+    for (auto& pc : placed_children) {
+      int& start = columns ? pc.col : pc.row;
+      start -= gone_before[std::min<size_t>(start, templ.tracks.size())];
+    }
+    for (int t = templ.repeat_end; t-- > begin;) {
+      if (!used[t - begin]) {
+        templ.tracks.erase(templ.tracks.begin() + t);
+      }
+    }
+    count -= gone_before.back();
+  };
+  collapse(template_columns, /*columns=*/true, explicit_columns);
+  collapse(template_rows, /*columns=*/false, explicit_rows);
+
   // The tracks: the template's, then those of grid-auto-columns /
   // grid-auto-rows, repeated, for the tracks past it.
   int C = std::max(1, explicit_columns);
@@ -3815,39 +3958,62 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   const std::vector<Length> cols_template =
       explicit_columns == 0 && C == 1 && grid_details.auto_columns.empty()
           ? std::vector<Length>{Length::Fr(1.0f)}
-          : tracks(grid_style.grid_template_columns, grid_details.auto_columns,
-                   C);
+          : tracks(template_columns.tracks, grid_details.auto_columns, C);
   const std::vector<Length> rows_template =
-      tracks(grid_style.grid_template_rows, grid_details.auto_rows, R);
+      tracks(template_rows.tracks, grid_details.auto_rows, R);
 
-  // 4. Resolve Column Widths
-  int col_gap_val = grid_style.column_gap.Resolve(avail_width);
+  // 4. Resolve Column Widths, as CSS sizes tracks: each starts at its base
+  // size (a length, or the content of an auto minimum), the ones with a
+  // length for maximum grow toward it, then the fr ones share what is left,
+  // never below their base; without any, the auto ones stretch.
   int total_col_gaps = std::max(0, C - 1) * col_gap_val;
   int remaining_width = std::max(0, avail_width - total_col_gaps);
 
+  struct ColumnSize {
+    GridTrack track;
+    int base = 0;
+    int limit = 0;  // For a length maximum.
+    float flex = 0.0f;
+    bool content_min = false;  // An auto minimum.
+    bool stretch = false;      // An auto maximum.
+  };
+  std::vector<ColumnSize> sizes(C);
   std::vector<int> col_widths(C, 0);
-  float total_col_fr = 0.0f;
-  int non_fr_col_width = 0;
   for (int c = 0; c < C; ++c) {
-    if (cols_template[c].unit == Unit::Fr) {
-      total_col_fr += cols_template[c].value;
+    ColumnSize& size = sizes[c];
+    size.track = AsGridTrack(cols_template[c]);
+    const Length& min = size.track.min;
+    const Length& max = size.track.max;
+    // A plain fr track has no minimum here: it takes its share only.
+    size.content_min = min.unit == Unit::Auto;
+    if (min.unit != Unit::Auto && min.unit != Unit::Fr) {
+      size.base = min.Resolve(remaining_width);
+    }
+    if (max.unit == Unit::Fr) {
+      size.flex = max.value;
+      size.content_min =
+          size.content_min && cols_template[c].unit == Unit::Track;
+    } else if (max.unit == Unit::Auto) {
+      size.stretch = true;
     } else {
-      col_widths[c] = cols_template[c].Resolve(remaining_width);
-      non_fr_col_width += col_widths[c];
+      size.limit = std::max(size.base, max.Resolve(remaining_width));
     }
   }
-  int free_col_width = std::max(0, remaining_width - non_fr_col_width);
 
-  // An auto track is as wide as the widest item in it alone, out of the space
-  // the other tracks leave.
+  // The content of the columns with an auto minimum or maximum: the widest
+  // item in it alone, out of the space the other tracks leave.
+  int fixed_width = 0;
+  for (const ColumnSize& size : sizes) {
+    if (!size.content_min && !size.stretch) {
+      fixed_width += size.base;
+    }
+  }
+  int free_col_width = std::max(0, remaining_width - fixed_width);
   std::vector<int> auto_content(C, 0);
-  int auto_count = 0;
-  int auto_total = 0;
   for (int c = 0; c < C; ++c) {
-    if (cols_template[c].unit != Unit::Auto) {
+    if (!sizes[c].content_min && !sizes[c].stretch) {
       continue;
     }
-    ++auto_count;
     for (const auto& pc : placed_children) {
       if (pc.col != c || pc.c_span != 1) {
         continue;
@@ -3862,40 +4028,128 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
           std::max(auto_content[c],
                    RunLayout({pc.box}, measure_c, measure_context)->width);
     }
-    auto_total += auto_content[c];
   }
-  if (total_col_fr > 0.0f) {
-    // The fr tracks share what the auto tracks leave.
-    for (int c = 0; c < C; ++c) {
-      if (cols_template[c].unit == Unit::Auto) {
-        col_widths[c] = std::min(auto_content[c], free_col_width);
+
+  bool any_flex = false;
+  int stretch_count = 0;
+  int stretch_content = 0;
+  for (int c = 0; c < C; ++c) {
+    any_flex |= sizes[c].flex > 0.0f;
+    if (sizes[c].stretch) {
+      ++stretch_count;
+      stretch_content += std::max(sizes[c].base, auto_content[c]);
+    }
+  }
+  // Base sizes. With fr tracks, the content of an auto one fits in what the
+  // others leave, the first ones first.
+  for (int c = 0; c < C; ++c) {
+    ColumnSize& size = sizes[c];
+    if (size.content_min || size.stretch) {
+      const int content = std::max(size.base, auto_content[c]);
+      col_widths[c] = any_flex ? std::min(content, free_col_width) : content;
+      if (any_flex) {
         free_col_width -= col_widths[c];
       }
+    } else {
+      col_widths[c] = size.base;
     }
+    if (size.limit) {
+      size.limit = std::max(size.limit, col_widths[c]);
+    }
+  }
+  auto used_width = [&] {
+    int used = 0;
     for (int c = 0; c < C; ++c) {
-      if (cols_template[c].unit == Unit::Fr) {
-        col_widths[c] = static_cast<int>(
-            free_col_width * (cols_template[c].value / total_col_fr));
+      used += col_widths[c];
+    }
+    return used;
+  };
+
+  // The tracks with a length maximum grow toward it, sharing the free space.
+  int free = remaining_width - used_width();
+  while (free > 0) {
+    std::vector<int> growing;
+    for (int c = 0; c < C; ++c) {
+      if (sizes[c].flex == 0.0f && !sizes[c].stretch &&
+          col_widths[c] < sizes[c].limit) {
+        growing.push_back(c);
       }
     }
-  } else if (auto_count > 0) {
-    // Without fr tracks, the auto tracks stretch to fill the width, sharing
-    // what their content leaves equally; or shrink in proportion to it when
-    // it does not fit.
-    const int extra = free_col_width - auto_total;
-    int nth = 0;
-    for (int c = 0; c < C; ++c) {
-      if (cols_template[c].unit != Unit::Auto) {
+    if (growing.empty()) {
+      break;
+    }
+    const int share = std::max(1, free / static_cast<int>(growing.size()));
+    for (int c : growing) {
+      const int grow = std::min({share, sizes[c].limit - col_widths[c], free});
+      col_widths[c] += grow;
+      free -= grow;
+    }
+  }
+
+  if (any_flex) {
+    // The fr tracks share what is left. One whose share would be below its
+    // base keeps its base, and the others share the rest.
+    std::vector<bool> frozen(C, false);
+    while (true) {
+      int leftover = remaining_width;
+      float total_flex = 0.0f;
+      for (int c = 0; c < C; ++c) {
+        if (sizes[c].flex > 0.0f && !frozen[c]) {
+          total_flex += sizes[c].flex;
+        } else {
+          leftover -= col_widths[c];
+        }
+      }
+      leftover = std::max(0, leftover);
+      bool froze = false;
+      for (int c = 0; c < C; ++c) {
+        if (sizes[c].flex > 0.0f && !frozen[c]) {
+          const int share =
+              static_cast<int>(leftover * (sizes[c].flex / total_flex));
+          if (share < col_widths[c]) {
+            frozen[c] = true;
+            froze = true;
+          }
+        }
+      }
+      if (froze) {
         continue;
       }
+      for (int c = 0; c < C; ++c) {
+        if (sizes[c].flex > 0.0f && !frozen[c]) {
+          col_widths[c] = std::max(
+              col_widths[c],
+              static_cast<int>(leftover * (sizes[c].flex / total_flex)));
+        }
+      }
+      break;
+    }
+  } else if (stretch_count > 0) {
+    // The auto tracks stretch to fill the width, sharing what their content
+    // leaves equally; or shrink in proportion to it when it does not fit.
+    int others = 0;
+    for (int c = 0; c < C; ++c) {
+      if (!sizes[c].stretch) {
+        others += col_widths[c];
+      }
+    }
+    const int space = std::max(0, remaining_width - others);
+    const int extra = space - stretch_content;
+    int nth = 0;
+    for (int c = 0; c < C; ++c) {
+      if (!sizes[c].stretch) {
+        continue;
+      }
+      const int content = std::max(sizes[c].base, auto_content[c]);
       if (extra >= 0) {
-        col_widths[c] = auto_content[c] + extra / auto_count +
-                        (nth < extra % auto_count ? 1 : 0);
+        col_widths[c] = content + extra / stretch_count +
+                        (nth < extra % stretch_count ? 1 : 0);
       } else {
         col_widths[c] =
-            auto_total > 0
-                ? static_cast<int>(static_cast<int64_t>(auto_content[c]) *
-                                   free_col_width / auto_total)
+            stretch_content > 0
+                ? std::max(sizes[c].base,
+                           static_cast<int>(static_cast<int64_t>(content) *
+                                            space / stretch_content))
                 : 0;
       }
       ++nth;
@@ -3903,7 +4157,6 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   }
 
   // 6. Resolve Row Heights
-  int row_gap_val = box->style().row_gap.Resolve(avail_height);
   int total_row_gaps = std::max(0, R - 1) * row_gap_val;
   int remaining_height = std::max(0, avail_height - total_row_gaps);
 
@@ -3911,9 +4164,25 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   std::vector<bool> is_row_fr(R, false);
   float total_row_fr = 0.0f;
 
+  // A minmax() row starts at its minimum, grows with its content as an auto
+  // one does, up to its maximum when that is a length, or shares the free
+  // height as an fr one does when that is fr.
+  std::vector<int> row_limits(R, -1);
   for (int r = 0; r < R; ++r) {
     if (r < static_cast<int>(rows_template.size())) {
-      if (rows_template[r].unit == Unit::Fr) {
+      const GridTrack track = AsGridTrack(rows_template[r]);
+      if (rows_template[r].unit == Unit::Track) {
+        if (track.min.unit != Unit::Auto) {
+          row_heights[r] = track.min.Resolve(remaining_height);
+        }
+        if (track.max.unit == Unit::Fr) {
+          is_row_fr[r] = true;
+          total_row_fr += track.max.value;
+        } else if (track.max.unit != Unit::Auto) {
+          row_limits[r] =
+              std::max(row_heights[r], track.max.Resolve(remaining_height));
+        }
+      } else if (rows_template[r].unit == Unit::Fr) {
         is_row_fr[r] = true;
         total_row_fr += rows_template[r].value;
       } else {
@@ -3921,6 +4190,12 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       }
     }
   }
+  // Whether a row grows with its content: auto, fr, minmax() and implicit.
+  auto row_grows = [&](int r) {
+    return r >= static_cast<int>(rows_template.size()) || is_row_fr[r] ||
+           rows_template[r].unit == Unit::Auto ||
+           rows_template[r].unit == Unit::Track;
+  };
 
   // Measure children with exact widths and calculated/undefined heights
   for (auto& pc : placed_children) {
@@ -3946,8 +4221,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     int fixed_height_sum = 0;
     for (int i = 0; i < pc.r_span; ++i) {
       int idx = pc.row + i;
-      if (idx >= static_cast<int>(rows_template.size()) || is_row_fr[idx] ||
-          rows_template[idx].unit == Unit::Auto) {
+      if (row_grows(idx)) {
         all_fixed = false;
         break;
       } else {
@@ -3989,9 +4263,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     if (extra > 0) {
       int growable_count = 0;
       for (int i = 0; i < pc.r_span; ++i) {
-        int r_idx = pc.row + i;
-        if (r_idx >= static_cast<int>(rows_template.size()) ||
-            is_row_fr[r_idx] || rows_template[r_idx].unit == Unit::Auto) {
+        if (row_grows(pc.row + i)) {
           growable_count++;
         }
       }
@@ -4001,8 +4273,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
         int remainder = extra % growable_count;
         for (int i = 0; i < pc.r_span; ++i) {
           int r_idx = pc.row + i;
-          if (r_idx >= static_cast<int>(rows_template.size()) ||
-              is_row_fr[r_idx] || rows_template[r_idx].unit == Unit::Auto) {
+          if (row_grows(r_idx)) {
             int amount = extra_per_row + (remainder > 0 ? 1 : 0);
             if (remainder > 0) {
               remainder--;
@@ -4011,6 +4282,13 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
           }
         }
       }
+    }
+  }
+
+  // A minmax() row with a length maximum grows no further.
+  for (int r = 0; r < R; ++r) {
+    if (row_limits[r] >= 0) {
+      row_heights[r] = std::min(row_heights[r], row_limits[r]);
     }
   }
 

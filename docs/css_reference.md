@@ -278,7 +278,7 @@ self {
 
 ## 8. Grid Layout
 
-<CssProperty name="grid-template-columns" values="list of <length> | [names]" description="Initial: `none`. Defines the column tracks of the grid. Supports repeat(count, tracks) and line names in brackets: `[full-start] 1fr [main-start] 3fr [main-end full-end]`. An `auto` track is as wide as its widest item; auto tracks share what is left when no `fr` track takes it." />
+<CssProperty name="grid-template-columns" values="list of <length> | [names]" description="Initial: `none`. Defines the column tracks of the grid. Supports repeat(count, tracks), `minmax(min, max)` (`min` not `fr`), `repeat(auto-fill, tracks)` (as many as fit) and `repeat(auto-fit, tracks)` (the same, without the repeated tracks no item is in), and line names in brackets: `[full-start] 1fr [main-start] 3fr [main-end full-end]`. An `auto` track is as wide as its widest item; auto tracks share what is left when no `fr` track takes it." />
 <CssProperty name="grid-template-rows" values="list of <length> | [names]" description="Initial: `none`. Defines the row tracks of the grid, as grid-template-columns." />
 <CssProperty name="grid-template" values="none | <rows> / <columns> | areas" shorthand description="Initial: `none`. Shorthand for grid-template-rows, grid-template-columns and grid-template-areas: either `rows / columns`, or the areas form, one quoted row of area names each optionally followed by its size, then optionally `/ columns`: `&quot;head head&quot; 1 &quot;nav main&quot; 1fr / 20 1fr`." />
 <CssProperty name="grid-auto-columns" values="list of <length> | auto" description="Initial: `auto`. The size of the columns past the template, created by items placed past it or by `grid-auto-flow: column`. A list repeats." />

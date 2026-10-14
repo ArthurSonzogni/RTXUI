@@ -32,6 +32,41 @@ int RegisterMinMaxExpr(const MinMaxExpr& expr) {
   return static_cast<int>(registry.size() - 1);
 }
 
+namespace {
+std::deque<GridTrack>& TrackRegistry() {
+  static auto* registry = new std::deque<GridTrack>();
+  return *registry;
+}
+}  // namespace
+
+int RegisterGridTrack(const GridTrack& track) {
+  std::lock_guard<std::mutex> lock(g_minmax_mutex);
+  auto& registry = TrackRegistry();
+  for (size_t i = 0; i < registry.size(); ++i) {
+    if (registry[i] == track) {
+      return static_cast<int>(i);
+    }
+  }
+  registry.push_back(track);
+  return static_cast<int>(registry.size() - 1);
+}
+
+GridTrack GetGridTrack(int id) {
+  std::lock_guard<std::mutex> lock(g_minmax_mutex);
+  auto& registry = TrackRegistry();
+  if (id < 0 || static_cast<size_t>(id) >= registry.size()) {
+    return GridTrack{};
+  }
+  return registry[static_cast<size_t>(id)];
+}
+
+GridTrack AsGridTrack(Length track) {
+  if (track.unit == Unit::Track) {
+    return GetGridTrack(Length::ToCells(track.value));
+  }
+  return {track, track};
+}
+
 MinMaxExpr GetMinMaxExpr(int id) {
   std::lock_guard<std::mutex> lock(g_minmax_mutex);
   auto& registry = Registry();

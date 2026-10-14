@@ -683,6 +683,74 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
           CheckGrid({"AACC  ", "WWWWWW", "aa    ", "wwwwww"}));
   }
 
+  SECTION("minmax() with an fr maximum keeps its minimum") {
+    // 1fr each would be 5: the first keeps its 6, the second takes the rest.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:minmax(6,1fr) 1fr;width:10;}</style><div class="g"><div>AAAAAA</div><div>BBBB</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 1)) ==
+          CheckGrid({"AAAAAABBBB"}));
+  }
+
+  SECTION("minmax() with a length maximum grows toward it") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:minmax(2,4) 3;width:10;}</style><div class="g"><div>A</div><div>B</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 1)) ==
+          CheckGrid({"A   B     "}));
+  }
+
+  SECTION("repeat(auto-fill) repeats as many tracks as fit") {
+    // Two 3-wide columns and their gap fit in 10; three would not.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:repeat(auto-fill,3);column-gap:1;width:10;}</style><div class="g"><div>AAA</div><div>BBB</div><div>CCC</div><div>DDD</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 2)) ==
+          CheckGrid({"AAA BBB   ", "CCC DDD   "}));
+  }
+
+  SECTION("repeat(auto-fill, minmax(n, 1fr)) shares the width") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(3,1fr));column-gap:1;width:10;}</style><div class="g"><div>AA</div><div>BB</div><div>CC</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 2)) ==
+          CheckGrid({"AA   BB   ", "CC        "}));
+  }
+
+  SECTION("repeat(auto-fit) drops the tracks no item is in") {
+    // Five 2-wide tracks fit. auto-fill keeps them; auto-fit keeps the two
+    // in use, which share the width.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.fill{display:grid;grid-template-columns:repeat(auto-fill,minmax(2,1fr));width:10;}.fit{display:grid;grid-template-columns:repeat(auto-fit,minmax(2,1fr));width:10;}</style><div class="fill"><div>AA</div><div>BB</div></div><div class="fit"><div>aa</div><div>bb</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 2)) ==
+          CheckGrid({"AABB      ", "aa   bb   "}));
+  }
+
+  SECTION("a name after repeat(auto-fill) is the line after its last track") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:repeat(auto-fill,2) [end];width:8;}.w{grid-column:2 / end;}</style><div class="g"><div>A</div><div class="w">WWWWWW</div></div>)html";
+    };
+    // Four tracks: `end` is line 5, so the item spans the last three.
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 8, 1)) ==
+          CheckGrid({"A WWWWWW"}));
+  }
+
+  SECTION("a minmax() row starts at its minimum") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-rows:minmax(2,3) 1;width:2;}</style><div class="g"><div>A</div><div>B</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3)) ==
+          CheckGrid({"A ", "  ", "B "}));
+  }
+
   SECTION("grid-auto-rows sizes the rows past the template") {
     struct T : Component<T> {
       std::string_view view =
