@@ -5731,6 +5731,19 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
           )",
                    DragFromTo(5, 0, 1, 2)) == Base64Encode("te"));
   }
+  SECTION("a line break is a line break") {
+    // <pre> has a margin: a blank line.
+    CHECK(CopiedBy("<div>one<br/>two</div><pre>three\nfour</pre>",
+                   DragFromTo(0, 0, 9, 4)) ==
+          Base64Encode("one\ntwo\n\nthree\nfour"));
+  }
+  SECTION("as written, before text-transform") {
+    CHECK(CopiedBy(R"(
+            <style> .up { text-transform: uppercase; } </style>
+            <div class="up">Hello   World</div>
+          )",
+                   DragFromTo(0, 0, 14, 0)) == Base64Encode("Hello   World"));
+  }
   SECTION("a soft wrap is a space") {
     CHECK(CopiedBy(R"(<div style="width: 10">hello world again</div>)",
                    DragFromTo(0, 0, 9, 2)) ==

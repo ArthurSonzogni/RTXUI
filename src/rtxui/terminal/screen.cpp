@@ -58,6 +58,7 @@
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/dom/text_element.hpp"
 #include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
@@ -3054,6 +3055,27 @@ bool IsLineBox(const Element* element) {
   });
 }
 
+// `glyph`, the text drawn for `position`, as its text element has it:
+// before text-transform changed its case. Where the laid-out text no longer
+// lines up with the element's, whitespace collapsed say, as drawn.
+std::string_view AsWritten(const TextPosition& position,
+                           std::string_view glyph) {
+  if (!position.node->is_text()) {
+    return glyph;
+  }
+  const std::string& text =
+      static_cast<const TextElement*>(position.node)->text();
+  if (position.offset + glyph.size() > text.size()) {
+    return glyph;
+  }
+  const std::string_view written =
+      std::string_view(text).substr(position.offset, glyph.size());
+  auto lower = [](char c) {
+    return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
+  };
+  return std::ranges::equal(written, glyph, {}, lower, lower) ? written : glyph;
+}
+
 bool IsInside(const Element* element, const Element* ancestor) {
   for (; element; element = element->Parent()) {
     if (element == ancestor) {
@@ -3508,7 +3530,7 @@ std::string ScreenImpl::SelectedText() const {
         text += glyph.y > previous->y + 1 ? "\n\n" : "\n";
       }
     }
-    text += glyph.text;
+    text += AsWritten(glyph.position, glyph.text);
     previous = &glyph;
   }
   text.erase(text.find_last_not_of(' ') + 1);

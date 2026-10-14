@@ -239,7 +239,9 @@ and what is scrolled out of view is copied too. Dragging past the edge of the
 scroll container the selection started in scrolls it, faster the further the
 mouse is, and the selection follows; for a container that reaches the edge of
 the screen, the screen's edge row or column does it. A paragraph's wrapped lines are
-copied as one line; separate blocks, on lines of their own.
+copied as one line; separate blocks, and lines a `<br>` or a newline in
+`<pre>` ends, on lines of their own. Text is copied as written, before
+`text-transform` changes its case.
 
 Only text is taken: borders, scrollbars and empty space are left out, and a gap
 in a row of selected text, a border between table cells say, is copied as a
