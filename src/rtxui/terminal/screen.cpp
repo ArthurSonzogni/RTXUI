@@ -50,6 +50,7 @@
 #include <iterator>
 #include <optional>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 
@@ -964,10 +965,17 @@ class ScreenImpl {
     bool dragged = false;
     int press_x = 0, press_y = 0;
     int mouse_x = 0, mouse_y = 0;
-    // The glyphs at either end, both selected. No node where there was no
-    // text to start or end on.
+    // What a press selects at once: a glyph, a word (a double click) or a
+    // block (a triple click). A drag then extends it by as much.
+    enum class Unit { Glyph, Word, Block };
+    Unit unit = Unit::Glyph;
+    // The first and last glyphs of the units at either end. The selection
+    // runs from the first start to the last end. No node where there was
+    // no text to start or end on.
     TextPosition anchor;
+    TextPosition anchor_end;
     TextPosition focus;
+    TextPosition focus_end;
     // The `user-select: all` elements at either end, selected whole.
     const Element* anchor_all = nullptr;
     const Element* focus_all = nullptr;
@@ -975,8 +983,16 @@ class ScreenImpl {
     // mouse is past the edge of one, it scrolls, and the selection follows.
     std::vector<Ref<ElementHandleTarget>> scrollers;
 
-    bool Shown() const { return dragged || anchor_all || focus_all; }
+    bool Shown() const {
+      return dragged || unit != Unit::Glyph || anchor_all || focus_all;
+    }
   };
+  // Whether the selection is drawn: not while a press it started on is
+  // taken by a component capturing the mouse, an input selecting its own.
+  bool SelectionShown() const {
+    return selection_.Shown() &&
+           !(selection_.armed && ComponentBase::GetMouseCapturer());
+  }
   // Updates the selection for a mouse event. Returns whether that consumed
   // the event.
   bool HandleSelection(const Event::Mouse& mouse);
@@ -988,6 +1004,18 @@ class ScreenImpl {
   TextPosition GlyphNear(const std::vector<TextPosition>& glyphs,
                          int x,
                          int y) const;
+  // The first and last glyphs of the unit around `glyph`, from what
+  // PaintGlyphs() recorded: the glyph, the word on screen, or the block.
+  std::pair<TextPosition, TextPosition> UnitAround(
+      const std::vector<TextPosition>& glyphs,
+      const Texture& texture,
+      const TextPosition& glyph,
+      Selection::Unit unit) const;
+  // Consecutive presses on a cell, for double and triple clicks.
+  int click_count_ = 0;
+  int last_click_x_ = -1;
+  int last_click_y_ = -1;
+  double last_click_ms_ = 0;
   // Numbers the elements in document order, for Selected(), and drops a
   // selection whose ends are gone from the document.
   void UpdateSelectionOrder();
@@ -2531,17 +2559,17 @@ void ScreenImpl::Draw(bool reuse_layout) {
                        painted_background_set_ != background_color_set_ ||
                        painted_background_ != background_color_ ||
                        painted_terminal_background_ != terminal_background_ ||
-                       selection_painted_ || selection_.Shown();
+                       selection_painted_ || SelectionShown();
   // The selection, in reverse video over the text it takes.
   PaintSelection selection;
-  if (selection_.Shown()) {
+  if (SelectionShown()) {
     UpdateSelectionOrder();
     selection.selected = [this](const TextPosition& glyph) {
       return Selected(glyph);
     };
   }
   const PaintSelection* shown_selection =
-      selection_.Shown() ? &selection : nullptr;
+      SelectionShown() ? &selection : nullptr;
   Texture texture = repaint ? Texture(width_, height_) : *last_texture_;
   if (repaint && root_fragment) {
     PaintScreen(*root_fragment, texture, shown_selection);
@@ -2568,7 +2596,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
     }
   }
 
-  selection_painted_ = selection_.Shown();
+  selection_painted_ = SelectionShown();
 
   std::string new_output;
   bool use_diff = has_drawn_ && last_texture_ &&
@@ -3021,6 +3049,10 @@ void ScreenImpl::PaintScreen(const PhysicalFragment& root,
 }
 
 namespace {
+// How soon a press must follow the last on its cell to make a double or
+// triple click.
+constexpr double kMultiClickDelayMs = 500;
+
 // How often a selection drag past the edge of its scroll container scrolls it.
 constexpr std::chrono::milliseconds kAutoScrollDelay{50};
 
@@ -3235,6 +3267,86 @@ TextPosition ScreenImpl::GlyphNear(const std::vector<TextPosition>& glyphs,
   return at(glyph.x, glyph.y);
 }
 
+std::pair<TextPosition, TextPosition> ScreenImpl::UnitAround(
+    const std::vector<TextPosition>& glyphs,
+    const Texture& texture,
+    const TextPosition& glyph,
+    Selection::Unit unit) const {
+  if (!glyph.node || unit == Selection::Unit::Glyph) {
+    return {glyph, glyph};
+  }
+  if (unit == Selection::Unit::Block) {
+    // From the start of the first text in the block to the end of the last.
+    const Element* block = glyph.node;
+    while (block->Parent() && !IsBlockBox(block)) {
+      block = block->Parent();
+    }
+    const Element* first = nullptr;
+    const Element* last = nullptr;
+    const_cast<Element*>(block)->Visit([&](Element& element) {
+      if (element.is_text()) {
+        first = first ? first : &element;
+        last = &element;
+      }
+    });
+    return {{first, 0}, {last, UINT32_MAX}};
+  }
+  // A word: the glyphs of its text on its row that are of its kind, letters
+  // and digits, spaces or punctuation.
+  auto at = [&](int cx, int cy) -> const TextPosition& {
+    return glyphs[cx + (cy * width_)];
+  };
+  int x = -1;
+  int y = -1;
+  for (int cy = 0; cy < height_ && x < 0; ++cy) {
+    for (int cx = 0; cx < width_; ++cx) {
+      if (at(cx, cy).node == glyph.node && at(cx, cy).offset == glyph.offset) {
+        x = cx;
+        y = cy;
+        break;
+      }
+    }
+  }
+  if (x < 0) {
+    return {glyph, glyph};
+  }
+  auto kind = [&](int cx) {
+    const std::string& c = texture[cx, y].character;
+    const unsigned char first = c.empty() ? ' ' : c[0];
+    if (first == ' ') {
+      return 0;
+    }
+    return std::isalnum(first) || first == '_' || first >= 0x80 ? 1 : 2;
+  };
+  const int word = kind(x);
+  // Whether the glyph at `cx` is of the word, the second half of a wide one
+  // aside.
+  auto of_word = [&](int cx) {
+    return at(cx, y).node == glyph.node && kind(cx) == word;
+  };
+  int left = x;
+  for (int cx = x - 1; cx >= 0; --cx) {
+    if (texture[cx, y].is_continuation) {
+      continue;
+    }
+    if (!of_word(cx)) {
+      break;
+    }
+    left = cx;
+  }
+  int right = x;
+  for (int cx = x + 1; cx < width_; ++cx) {
+    if (texture[cx, y].is_continuation) {
+      continue;
+    }
+    if (!of_word(cx)) {
+      break;
+    }
+    right = cx;
+  }
+  return {at(left, y), at(right, y)};
+}
+
 void ScreenImpl::UpdateSelectionOrder() {
   selection_order_.clear();
   if (Element* root = component_->Root()) {
@@ -3265,15 +3377,16 @@ bool ScreenImpl::Selected(const TextPosition& glyph) const {
       (selection_.focus_all && IsInside(glyph.node, selection_.focus_all))) {
     return true;
   }
-  if (!selection_.dragged || !selection_.anchor.node ||
-      !selection_.focus.node) {
+  if ((!selection_.dragged && selection_.unit == Selection::Unit::Glyph) ||
+      !selection_.anchor.node || !selection_.focus.node) {
     return false;
   }
-  const auto anchor =
-      std::pair(order(selection_.anchor.node), selection_.anchor.offset);
-  const auto focus =
-      std::pair(order(selection_.focus.node), selection_.focus.offset);
-  const auto [first, last] = std::minmax(anchor, focus);
+  auto key = [&](const TextPosition& position) {
+    return std::pair(order(position.node), position.offset);
+  };
+  const auto first = std::min(key(selection_.anchor), key(selection_.focus));
+  const auto last =
+      std::max(key(selection_.anchor_end), key(selection_.focus_end));
   const auto here = std::pair(node, glyph.offset);
   return first <= here && here <= last;
 }
@@ -3286,10 +3399,22 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
   const int y = mouse.y - 1;
   switch (mouse.motion) {
     case Event::Mouse::Motion::Pressed: {
-      if (selection_.Shown()) {
+      // Presses on one cell in quick succession: a word, then its block.
+      const double now = time::GetTimeMs();
+      click_count_ = x == last_click_x_ && y == last_click_y_ &&
+                             now - last_click_ms_ < kMultiClickDelayMs
+                         ? (click_count_ % 3) + 1
+                         : 1;
+      last_click_x_ = x;
+      last_click_y_ = y;
+      last_click_ms_ = now;
+      // Shift and a click moves the end of the selection there.
+      const bool extend =
+          mouse.modifier.shift && click_count_ == 1 && selection_.anchor.node;
+      if (selection_.Shown() && !extend) {
         RequestDraw();
       }
-      selection_ = {};
+      const Selection previous = std::exchange(selection_, {});
       // A press on what handles clicks, a link or a `user-select: none`
       // element selects nothing: dragging from a button is no selection.
       Element* target = FindElementAt(root_fragment_, x, y);
@@ -3311,12 +3436,28 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
       if (!target) {
         return false;
       }
+      if (extend) {
+        selection_ = previous;
+        selection_.armed = true;
+        selection_.dragged = true;
+        selection_.press_x = selection_.mouse_x = x;
+        selection_.press_y = selection_.mouse_y = y;
+        UpdateSelectionFocus();
+        RequestDraw();
+        return false;
+      }
       std::vector<TextPosition> glyphs;
-      PaintGlyphs(glyphs);
+      const Texture texture = PaintGlyphs(glyphs);
       selection_.armed = true;
       selection_.press_x = selection_.mouse_x = x;
       selection_.press_y = selection_.mouse_y = y;
-      selection_.anchor = selection_.focus = GlyphNear(glyphs, x, y);
+      selection_.unit = click_count_ == 3   ? Selection::Unit::Block
+                        : click_count_ == 2 ? Selection::Unit::Word
+                                            : Selection::Unit::Glyph;
+      std::tie(selection_.anchor, selection_.anchor_end) =
+          UnitAround(glyphs, texture, GlyphNear(glyphs, x, y), selection_.unit);
+      selection_.focus = selection_.anchor;
+      selection_.focus_end = selection_.anchor_end;
       selection_.anchor_all = UserSelectAll(target);
       for (Element* el = target; el; el = el->Parent()) {
         if (el->style.overflow_y == Overflow::Scroll ||
@@ -3324,7 +3465,7 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
           selection_.scrollers.push_back(el->HandleTarget());
         }
       }
-      if (selection_.anchor_all) {
+      if (selection_.Shown()) {
         RequestDraw();
       }
       return false;
@@ -3354,6 +3495,11 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
         return false;
       }
       selection_.armed = false;
+      // A press an input took was a click in it: its own selection.
+      if (ComponentBase::GetMouseCapturer()) {
+        selection_ = {};
+        return false;
+      }
       if (selection_.Shown()) {
         UpdateSelectionOrder();
         if (std::string text = SelectedText(); !text.empty()) {
@@ -3419,8 +3565,9 @@ void ScreenImpl::UpdateSelectionFocus() {
     }
   }
   std::vector<TextPosition> glyphs;
-  PaintGlyphs(glyphs);
-  selection_.focus = GlyphNear(glyphs, x, y);
+  const Texture texture = PaintGlyphs(glyphs);
+  std::tie(selection_.focus, selection_.focus_end) =
+      UnitAround(glyphs, texture, GlyphNear(glyphs, x, y), selection_.unit);
   selection_.focus_all = UserSelectAll(FindElementAt(root_fragment_, x, y));
 }
 

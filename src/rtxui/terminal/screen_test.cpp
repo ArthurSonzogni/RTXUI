@@ -5744,6 +5744,67 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
           )",
                    DragFromTo(0, 0, 14, 0)) == Base64Encode("Hello   World"));
   }
+  SECTION("a double click, a word") {
+    const std::string click = LeftAt('P', 8, 0) + LeftAt('U', 8, 0);
+    CHECK(CopiedBy("<div>hello world, again</div>", click + click) ==
+          Base64Encode("world"));
+    // Punctuation is a word of its own.
+    const std::string on_comma = LeftAt('P', 11, 0) + LeftAt('U', 11, 0);
+    CHECK(CopiedBy("<div>hello world, again</div>", on_comma + on_comma) ==
+          Base64Encode(","));
+  }
+  SECTION("a triple click, the block, wrapped lines and all") {
+    const std::string click = LeftAt('P', 1, 1) + LeftAt('U', 1, 1);
+    CHECK(CopiedBy(R"(<div style="width: 10">one two three four</div>
+                      <div>next</div>)",
+                   click + click + click) ==
+          Base64Encode("one two three four"));
+  }
+  SECTION("a drag after a double click goes by words") {
+    CHECK(CopiedBy("<div>alpha beta gamma delta</div>",
+                   LeftAt('P', 7, 0) + LeftAt('U', 7, 0) + LeftAt('P', 7, 0) +
+                       LeftAt('D', 13, 0) + LeftAt('U', 13, 0)) ==
+          Base64Encode("beta gamma"));
+  }
+  SECTION("shift and a click, from the last click to it") {
+    // SGR button 4: the left one, with shift.
+    CHECK(CopiedBy("<div>alpha beta gamma</div>",
+                   LeftAt('P', 6, 0) + LeftAt('U', 6, 0) +
+                       "\x1b[<4;14;1M\x1b[<4;14;1m") ==
+          Base64Encode("beta gam"));
+  }
+  SECTION("a double click on what takes the mouse is its own") {
+    // Captures the mouse on a press, as a slider or an input does, without
+    // changing what it shows.
+    class Grabber : public Component<Grabber> {
+     public:
+      std::string_view view = "<div>drag me</div>";
+      bool OnEvent(Event event) override {
+        if (auto* mouse = event.get_if<Event::Mouse>()) {
+          if (mouse->motion == Event::Mouse::Motion::Pressed) {
+            CaptureMouse();
+          } else if (mouse->motion == Event::Mouse::Motion::Released) {
+            ReleaseMouse();
+          }
+          return true;
+        }
+        return false;
+      }
+    };
+    auto device = std::make_shared<MockTerminalDevice>();
+    device->TriggerResize(30, 3);
+    Screen screen(Ref<Grabber>::New(), device);
+    screen.Draw();
+    device->ClearOutput();
+    const std::string click = LeftAt('P', 2, 0) + LeftAt('U', 2, 0);
+    device->PushInput(click + click);
+    screen.Step();
+    CHECK(device->GetOutput().find("\x1b]52;c;") == std::string::npos);
+  }
+  SECTION("a double click in an input is the input's") {
+    const std::string click = LeftAt('P', 3, 0) + LeftAt('U', 3, 0);
+    CHECK(CopiedBy(R"(<input value="hello world" />)", click + click).empty());
+  }
   SECTION("a soft wrap is a space") {
     CHECK(CopiedBy(R"(<div style="width: 10">hello world again</div>)",
                    DragFromTo(0, 0, 9, 2)) ==
@@ -6067,7 +6128,7 @@ TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
     CHECK(device->GetOutput().find("\x1b]52;c;") == std::string::npos);
   }
   SECTION("a drag in an input selects in the input") {
-    CHECK(CopiedBy(R"(<input value="hello world" />)", DragFromTo(1, 0, 6, 0))
+    CHECK(CopiedBy(R"(<input value="hello world" />)", DragFromTo(2, 0, 7, 0))
               .empty());
   }
   SECTION("user-select: all selects the element whole on a click") {
