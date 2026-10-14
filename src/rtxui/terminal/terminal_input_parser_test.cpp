@@ -676,6 +676,25 @@ TEST_CASE("The terminal's background color is read from its OSC 11 reply",
   CHECK_FALSE(parser.TakeBackgroundColor());
 }
 
+TEST_CASE("The terminal's text color is read from its OSC 10 reply",
+          "[terminal][parser]") {
+  auto foreground_for = [](std::string_view sequence) {
+    TerminalInputParser parser;
+    for (char c : sequence) {
+      parser.Add(c);
+    }
+    CHECK_FALSE(parser.GetEvent());
+    return parser.TakeForegroundColor();
+  };
+  CHECK(foreground_for("\x1B]10;rgb:0d0d/1111/1717\x1B\\") ==
+        Color::RGB(0x0d, 0x11, 0x17));
+  CHECK(foreground_for("\x1B]10;rgb:ff/80/00\x07") ==
+        Color::RGB(0xff, 0x80, 0x00));
+  CHECK_FALSE(foreground_for("\x1B]10;rgb:0d0d/1111\x07"));
+  CHECK_FALSE(foreground_for("\x1B]11;rgb:00/00/00\x07"));  // Background.
+  CHECK_FALSE(foreground_for("\x1B]100;rgb:00/00/00\x07"));
+}
+
 // --- Event construction ---
 
 TEST_CASE("Event's converting constructor accepts only its alternatives",

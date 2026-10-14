@@ -44,12 +44,15 @@ bool TextSelectable(const Element* element);
 /// fall back to approximations: a reversed border cell has to ask the terminal
 /// to swap its colors, and blending against it is blending against nothing.
 /// Give it a concrete color and all of that becomes exact.
+///
+/// `screen_foreground` is the color of text no element gives a color to.
 void Paint(const PhysicalFragment* frag,
            Texture& texture,
            int off_x = 0,
            int off_y = 0,
            Color screen_background = Color(),
-           const PaintSelection* selection = nullptr);
+           const PaintSelection* selection = nullptr,
+           Color screen_foreground = Color::RGB(255, 255, 255));
 
 /// Counts the `<a>` elements in existence, +1 as one is created and -1 as it
 /// goes. Painting looks for the link around each text only while there is

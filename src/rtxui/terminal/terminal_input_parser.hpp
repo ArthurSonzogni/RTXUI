@@ -32,6 +32,10 @@ class TerminalInputParser {
   std::optional<Color> TakeBackgroundColor() {
     return std::exchange(background_color_, std::nullopt);
   }
+  // The same for the text color, in reply to an OSC 10 query.
+  std::optional<Color> TakeForegroundColor() {
+    return std::exchange(foreground_color_, std::nullopt);
+  }
   // The positions the terminal reported, in reply to cursor position queries
   // (`ESC[6n`), since the last call, oldest first: 0-based column and row.
   std::vector<std::pair<int, int>> TakeCursorPositions() {
@@ -77,6 +81,7 @@ class TerminalInputParser {
   std::string paste_buffer_;
 
   std::optional<Color> background_color_;
+  std::optional<Color> foreground_color_;
   std::vector<std::pair<int, int>> cursor_positions_;
 };
 

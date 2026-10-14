@@ -201,10 +201,12 @@ class Prompt : public Component<Prompt> {
       }
       .prompt { display: flex; gap: 1; }
       .label { color: var(--accent); font-weight: bold; }
-      input { width: 30; }
+      input { width: 30; background-color: rgba(128, 128, 128, 0.2); }
       .row { display: flex; gap: 1; padding-left: 2; }
-      .row:hover { background-color: rgb(33, 38, 45); }
-      .selected { background-color: rgb(31, 58, 95); }
+      /* Translucent: they blend with the terminal's background, light or dark,
+         and its own text color reads on them. */
+      .row:hover { background-color: rgba(128, 128, 128, 0.2); }
+      .selected { background-color: rgba(88, 166, 255, 0.3); }
       .name { width: 12; font-weight: bold; }
       .version { width: 8; color: var(--muted); }
       .about { color: var(--muted); }

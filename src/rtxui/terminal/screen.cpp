@@ -1151,6 +1151,7 @@ class ScreenImpl {
   bool painted_background_set_ = false;
   Color painted_background_;
   Color painted_terminal_background_;
+  Color painted_terminal_foreground_;
   std::unique_ptr<Texture> last_texture_;
   std::shared_ptr<TerminalDevice> device_;
   std::unique_ptr<TerminalInputParser> parser_;
@@ -1166,6 +1167,9 @@ class ScreenImpl {
   // made on entering raw mode. Transparent until then, and for a terminal
   // that does not answer. Used only while the app has not named one.
   Color terminal_background_;
+  // The same for the text color, from the OSC 10 query. Text in no color of
+  // its own is drawn in it, unless the app named a background.
+  Color terminal_foreground_;
   bool drag_active_ = false;
   Element* drag_element_ = nullptr;
   bool drag_vertical_ = false;
@@ -1386,9 +1390,8 @@ void ScreenImpl::Step() {
       // synthesizing one keyboard event per pasted character): suppress
       // the per-event draws so the whole batch applies as a single redraw.
       suppress_draw_ = true;
-      while (auto event = parser_->GetEvent()) {
-        HandleEvent(*event);
-      }
+      // Replies to what the screen asked before, which the events read with
+      // them may need: where the frame is, the terminal's colors.
       for (auto [x, y] : parser_->TakeCursorPositions()) {
         if (position_queries_ > 0 && --position_queries_ == 0) {
           inline_top_ = y;
@@ -1399,6 +1402,15 @@ void ScreenImpl::Step() {
         if (!background_color_set_) {
           RequestDraw();
         }
+      }
+      if (auto foreground = parser_->TakeForegroundColor()) {
+        terminal_foreground_ = *foreground;
+        if (!background_color_set_) {
+          RequestDraw();
+        }
+      }
+      while (auto event = parser_->GetEvent()) {
+        HandleEvent(*event);
       }
       suppress_draw_ = false;
       if (draw_pending_) {
@@ -2680,6 +2692,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
                        painted_background_set_ != background_color_set_ ||
                        painted_background_ != background_color_ ||
                        painted_terminal_background_ != terminal_background_ ||
+                       painted_terminal_foreground_ != terminal_foreground_ ||
                        selection_painted_ || SelectionShown();
   // The selection, in reverse video over the text it takes.
   PaintSelection selection;
@@ -2699,6 +2712,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
   painted_background_set_ = background_color_set_;
   painted_background_ = background_color_;
   painted_terminal_background_ = terminal_background_;
+  painted_terminal_foreground_ = terminal_foreground_;
 
   // RTXUI_VERIFY_LAYOUT_REUSE (set for the tests) lays out again anyway,
   // from scratch, and stops if that draws anything else.
@@ -2985,6 +2999,11 @@ void ScreenImpl::Print(Ref<ComponentBase> component) {
         std::make_shared<HeadlessTerminalDevice>(width_, kMaxRows));
     ScopedLayoutArenas arenas(alone.layout_arenas_);
     alone.inline_ = true;
+    // Drawn in this screen's colors, the terminal's included.
+    alone.background_color_ = background_color_;
+    alone.background_color_set_ = background_color_set_;
+    alone.terminal_background_ = terminal_background_;
+    alone.terminal_foreground_ = terminal_foreground_;
     alone.UpdateLayout(/*reuse_fragments=*/false);
     Texture texture(width_, alone.frame_height_);
     if (alone.root_fragment_) {
@@ -3332,19 +3351,33 @@ bool ScreenImpl::SpatialNavigate(Event event) {
 // as over it. Wherever it would merely show, the cell is left at the
 // terminal's default background, so a translucent or themed terminal still
 // shows through, as it does when its color is unknown.
+//
+// Text in no color of its own is drawn in the terminal's text color the same
+// way: borrowed for blending, left at the terminal's default where it would
+// merely show, so that a light terminal shows dark text. White when the
+// terminal did not say, or when the app named its own background, which the
+// terminal's text color may not read on.
 void ScreenImpl::PaintScreen(const PhysicalFragment& root,
                              Texture& texture,
                              const PaintSelection* selection) const {
-  if (background_color_set_ || terminal_background_.a == 0) {
-    Paint(&root, texture, 0, 0, background_color_, selection);
+  const bool borrow_background =
+      !background_color_set_ && terminal_background_.a != 0;
+  const bool borrow_foreground =
+      !background_color_set_ && terminal_foreground_.a != 0;
+  Paint(&root, texture, 0, 0,
+        borrow_background ? terminal_background_ : background_color_, selection,
+        borrow_foreground ? terminal_foreground_ : Color::RGB(255, 255, 255));
+  if (!borrow_background && !borrow_foreground) {
     return;
   }
-  Paint(&root, texture, 0, 0, terminal_background_, selection);
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
       Cell& cell = texture[x, y];
-      if (cell.background_color == terminal_background_) {
+      if (borrow_background && cell.background_color == terminal_background_) {
         cell.background_color = Color();
+      }
+      if (borrow_foreground && cell.foreground_color == terminal_foreground_) {
+        cell.foreground_color = Color();
       }
     }
   }
@@ -4132,7 +4165,7 @@ ScreenImpl::RawTerminal::RawTerminal(ScreenImpl* screen) : screen_(screen) {
       // back as input, whenever the terminal sends it, and one that does not
       // answer ignores the question.
       if (!screen_->background_color_set_) {
-        screen_->device_->Write("\x1b]11;?\x1b\\");
+        screen_->device_->Write("\x1b]11;?\x1b\\\x1b]10;?\x1b\\");
       }
     }
     screen_->has_drawn_ = false;

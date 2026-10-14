@@ -5502,6 +5502,70 @@ TEST_CASE("Screen blends against the background the terminal reports",
   }
 }
 
+namespace {
+class DimOnQ : public Component<DimOnQ> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <div>plain</div>
+      <div class="dim">dim</div>
+      <div class="red">red</div>
+    </div>
+    <style>
+      .dim { opacity: 0.5; }
+      .red { color: rgb(255, 0, 0); }
+    </style>
+  )";
+  std::function<void()> quit;
+
+  bool OnEvent(Event event) override {
+    if (auto* key = event.get_if<Event::Keyboard>();
+        key && key->codepoint == 'q') {
+      quit();
+      return true;
+    }
+    return false;
+  }
+};
+}  // namespace
+
+TEST_CASE("Text is drawn in the text color the terminal reports",
+          "[terminal]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(10, 3);
+  auto app = Ref<DimOnQ>::New();
+  Screen screen(app, device);
+  app->quit = [&screen] { screen.Exit(); };
+
+  SECTION("asked for, and used") {
+    // A light terminal: dark text on white.
+    device->PushInput(
+        "\x1b]11;rgb:ffff/ffff/ffff\x1b\\\x1b]10;rgb:2020/2020/2020\x1b\\q");
+    screen.Loop();
+    const std::string output = device->GetOutput();
+    REQUIRE(output.find("\x1b]10;?\x1b\\") != std::string::npos);
+    // The frame drawn once the terminal answered.
+    const std::string frame = output.substr(output.rfind("\x1b[?2026h"));
+    // Plain text is left in the terminal's default color, never stamped
+    // with it, nor white.
+    CHECK(frame.find("38;2;32;32;32m") == std::string::npos);
+    CHECK(frame.find("38;2;255;255;255m") == std::string::npos);
+    // Half of #202020 over white.
+    CHECK(frame.find("38;2;143;143;143m") != std::string::npos);
+    // A color of its own stays.
+    CHECK(output.find("38;2;255;0;0m") != std::string::npos);
+  }
+
+  SECTION("white when the app names a background") {
+    screen.SetBackgroundColor(Color::RGB(0, 0, 0));
+    device->PushInput("\x1b]10;rgb:2020/2020/2020\x1b\\q");
+    screen.Loop();
+    const std::string output = device->GetOutput();
+    const std::string frame = output.substr(output.rfind("\x1b[?2026h"));
+    CHECK(frame.find("38;2;255;255;255m") != std::string::npos);
+  }
+}
+
 TEST_CASE("A translucent background blends with the screen background",
           "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();

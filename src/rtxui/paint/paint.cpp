@@ -1240,7 +1240,8 @@ void Paint(const PhysicalFragment* frag,
            int off_x,
            int off_y,
            Color screen_background,
-           const PaintSelection* selection) {
+           const PaintSelection* selection,
+           Color screen_foreground) {
   g_pending_outlines.clear();
   g_selection = selection;
   if (selection && selection->glyphs) {
@@ -1257,8 +1258,8 @@ void Paint(const PhysicalFragment* frag,
     }
   }
   PaintImpl(frag, texture, off_x, off_y, 0, 0, off_x, off_y, texture.width(),
-            texture.height(), Color::RGB(255, 255, 255), screen_background,
-            false, false, false, false, false, false, false, false,
+            texture.height(), screen_foreground, screen_background, false,
+            false, false, false, false, false, false, false,
             ClipRect{0, 0, texture.width(), texture.height()}, 1.0f);
   // Outlines go over everything, in the order their elements were painted.
   for (const PendingOutline& outline : g_pending_outlines) {

@@ -69,6 +69,18 @@ shell goes on below it. Make that frame the outcome: a summary line, a
 chosen value. An application that should leave nothing behind draws nothing
 before it exits, for instance its content inside an `<if>` turned off.
 
+## Colors
+
+An inline application sits on the terminal's own background, light or dark.
+Text no style gives a color to is drawn in the terminal's own text color, and
+what no style paints is left to the terminal's background, so plain text reads
+on either. For highlights, prefer translucent backgrounds: they blend with
+whatever the terminal's background is.
+
+```css
+.selected { background-color: rgba(88, 166, 255, 0.3); }
+```
+
 ## Mouse and cursor
 
 The mouse works as in full screen. Clicks and wheel turns on the shell's

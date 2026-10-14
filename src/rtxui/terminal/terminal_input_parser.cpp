@@ -404,13 +404,15 @@ std::optional<uint8_t> ParseColorChannel(std::string_view hex) {
   return static_cast<uint8_t>((value * 255 + max / 2) / max);
 }
 
-// The color in the body of an OSC 11 reply: `11;rgb:RRRR/GGGG/BBBB`.
-std::optional<Color> ParseBackgroundReply(std::string_view body) {
-  constexpr std::string_view kPrefix = "11;rgb:";
-  if (!body.starts_with(kPrefix)) {
+// The color in the body of an OSC 10 or OSC 11 reply, the terminal's
+// foreground or background color: `<code>;rgb:RRRR/GGGG/BBBB`.
+std::optional<Color> ParseColorReply(std::string_view body,
+                                     std::string_view code) {
+  if (!body.starts_with(code) ||
+      !body.substr(code.size()).starts_with(";rgb:")) {
     return std::nullopt;
   }
-  body.remove_prefix(kPrefix.size());
+  body.remove_prefix(code.size() + 5);
   const size_t first = body.find('/');
   const size_t second = body.find('/', first + 1);
   if (first == std::string_view::npos || second == std::string_view::npos) {
@@ -451,9 +453,13 @@ TerminalInputParser::Output TerminalInputParser::ParseOSC() {
     if (terminator != 0) {
       // `pending_` holds the whole sequence, from its "\x1B]".
       const std::string_view sequence(pending_);
-      if (auto color = ParseBackgroundReply(
-              sequence.substr(2, sequence.size() - 2 - terminator))) {
+      const std::string_view body =
+          sequence.substr(2, sequence.size() - 2 - terminator);
+      if (auto color = ParseColorReply(body, "11")) {
         background_color_ = color;
+      }
+      if (auto color = ParseColorReply(body, "10")) {
+        foreground_color_ = color;
       }
       return DROP;
     }

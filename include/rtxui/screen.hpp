@@ -80,6 +80,10 @@ class RTXUI_EXPORT Screen {
   /// (OSC 11), and approximates in a terminal that does not answer. Naming it
   /// here makes all of that exact everywhere, at the price of no longer
   /// inheriting the terminal's background.
+  ///
+  /// Text no style gives a color to is likewise drawn in the terminal's own
+  /// text color (OSC 10), which reads on its background, light or dark. Once
+  /// the app names a background, that text is white instead.
   void SetBackgroundColor(Color color);
   Color background_color() const;
 

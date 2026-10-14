@@ -1210,5 +1210,30 @@ TEST_CASE("An inline application sees no mouse button outside it", "[inline]") {
                                                  "press 1", "release 3"});
 }
 
+TEST_CASE("Print draws a component in the terminal's text color", "[inline]") {
+  class Word : public Component<Word> {
+   public:
+    std::string_view view = R"(<div>word</div>)";
+  };
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto app = Ref<Lines>::New(Numbered("frame ", 1));
+  Screen screen(app, device);
+  screen.SetInline(true);
+  app->on_key = [&](char) { screen.Print(Ref<Word>::New()); };
+  device->PushInput("\x1b]10;rgb:2020/2020/2020\x1b\\a");
+  device->ClearOutput();
+  screen.Loop();
+
+  const std::string output = device->GetOutput();
+  const size_t word = output.find("word");
+  REQUIRE(word != std::string::npos);
+  // Printed with autowrap on, in the terminal's default color, as the frame
+  // drawn since the terminal answered is.
+  const size_t printed = output.rfind("\x1b[?7h", word);
+  REQUIRE(printed != std::string::npos);
+  CHECK(output.substr(printed, word - printed).find("38;2;255;255;255m") ==
+        std::string::npos);
+}
+
 }  // namespace
 }  // namespace rtxui
