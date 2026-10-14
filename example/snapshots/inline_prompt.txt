@@ -1,0 +1,8 @@
+ Add a dependency ›   type to search
+   serde        1.0.210  Serialize and deserialize data structures
+   tokio        1.40.0   An asynchronous runtime
+   reqwest      0.12.8   An HTTP client
+   regex        1.11.0   Regular expressions
+   rand         0.8.5    Random number generators
+   clap         4.5.20   Command line argument parsing
+   enter add · ↑↓ choose · esc done

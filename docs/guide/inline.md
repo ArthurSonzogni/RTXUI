@@ -95,9 +95,12 @@ Two terminal behaviors are out of reach of any program:
   them again when it gets wider. Rows written in between can then show pieces
   of an older frame on their right.
 
-## Example
+## Examples
 
-[inline_install.cpp](/guide/examples/inline_install) is an installer in the
-style of `apt install`: a live view of the packages being downloaded and
-unpacked, a line printed above it for each one installed, and a summary left
-behind.
+- [inline_install.cpp](/guide/examples/inline_install) is an installer in the
+  style of `apt install`: a live view of the packages being downloaded and
+  unpacked, a line printed above it for each one installed, and a summary
+  left behind.
+- [inline_prompt.cpp](/guide/examples/inline_prompt) is a prompt that stays
+  until Escape: a search input with a list to pick from, each pick printed
+  above it.

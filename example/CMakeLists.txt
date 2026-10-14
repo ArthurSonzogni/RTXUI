@@ -59,6 +59,9 @@ target_link_libraries(rtxui_example_text_decoration PRIVATE rtxui)
 add_executable(rtxui_example_inline_install inline_install.cpp)
 target_link_libraries(rtxui_example_inline_install PRIVATE rtxui)
 
+add_executable(rtxui_example_inline_prompt inline_prompt.cpp)
+target_link_libraries(rtxui_example_inline_prompt PRIVATE rtxui)
+
 add_executable(rtxui_example_input input.cpp)
 target_link_libraries(rtxui_example_input PRIVATE rtxui)
 
