@@ -2902,7 +2902,10 @@ void ScreenImpl::WriteInlineFrame(const Texture& texture, bool repaint) {
   }
   const int height = texture.height();
   const bool grew = !last_texture_ || height > last_texture_->height();
-  if (has_drawn_ && last_texture_ && printed_.empty() &&
+  // Only on a terminal Loop() runs on: else, what Print() queued is for
+  // Loop() to write when it returns, or for a headless run to print.
+  const bool print = looping_ && !printed_.empty();
+  if (has_drawn_ && last_texture_ && !print &&
       last_texture_->width() == texture.width() &&
       last_texture_->height() == height) {
     if (height > 0) {
@@ -2912,7 +2915,7 @@ void ScreenImpl::WriteInlineFrame(const Texture& texture, bool repaint) {
   } else {
     // Erases the last frame, and anything the terminal left below it.
     out += "\x1b[J";
-    if (!printed_.empty()) {
+    if (print) {
       // Wrapped by the terminal, as any other output, to stay readable
       // whatever its width becomes.
       out += "\x1b[?7h" + AsLines(printed_) + "\x1b[?7l";

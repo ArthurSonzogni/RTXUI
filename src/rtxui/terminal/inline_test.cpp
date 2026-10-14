@@ -890,6 +890,23 @@ TEST_CASE("Print writes lines above an inline screen", "[inline]") {
         "line 2\n");
 }
 
+TEST_CASE("Print before Loop() writes once Loop() draws", "[inline]") {
+  Terminal terminal(20, 6);
+  terminal.Write("$ ./app\r\n");
+  auto device = std::make_shared<EmulatorDevice>(terminal);
+  // A frame drawn before Loop() draws on no terminal yet (as a headless run
+  // does): it must leave the line printed meanwhile for Loop() to write.
+  RunInline(Ref<Lines>::New(Numbered("frame ", 1)), device, [](Screen& screen) {
+    screen.Print("early");
+    screen.Draw();
+  });
+
+  CHECK(terminal.All() ==
+        "$ ./app\n"
+        "early\n"
+        "frame 0\n");
+}
+
 TEST_CASE("Print writes what a component draws", "[inline]") {
   class Done : public Component<Done> {
    public:
