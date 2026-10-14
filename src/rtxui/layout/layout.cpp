@@ -1750,11 +1750,22 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     cursor_x += child_frag->width + child_m_horiz;
   };
 
+  // Whether the last box in flow was a block, which left an empty line open.
+  bool ends_with_block = false;
   for (auto& child : box->children) {
     if (child->style().position == PositionType::Absolute ||
         child->style().position == PositionType::Fixed) {
       continue;
     }
+    // Spaces that collapse, at the start of the line a block left open, are
+    // removed (CSS): they do not open that line.
+    if (child->is_text && ends_with_block &&
+        (child->text.white_space == WhiteSpace::Normal ||
+         child->text.white_space == WhiteSpace::Nowrap) &&
+        child->text_data.find_first_not_of(' ') == std::string::npos) {
+      continue;
+    }
+    ends_with_block = false;
     if (child->is_text) {
       process_text_in_flow(
           child->text_data, child->dom_node, child->dom_node,
@@ -1814,12 +1825,19 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
       place_opaque_box(child.get());
       commit_line();
       wrapped = false;
+      ends_with_block = true;
     } else {
       place_opaque_box(child.get());
     }
   }
 
-  commit_line();
+  // After a block, the line left open holds nothing unless something came
+  // after it: as in CSS, an empty line takes no room.
+  const bool open_line_empty =
+      cursor_x == 0 && line_start_index == container_frag->children.size();
+  if (!(ends_with_block && open_line_empty)) {
+    commit_line();
+  }
   if (box->style().line_clamp > 0) {
     ClampLines(lines, box->style().line_clamp, content_width_limit,
                box->style().padding.left + box->style().border.left,

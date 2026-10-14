@@ -139,6 +139,40 @@ TEST_CASE("A block in an inline context takes its own line",
   }
 }
 
+class TrailingBlockComponent : public rtxui::Component<TrailingBlockComponent> {
+ public:
+  // The span, a flex item, lays its content out inline, and that content ends
+  // with a block. The line the block leaves open after it holds nothing, the
+  // spaces before </span> collapsing away: it used to take a row of its own,
+  // a blank one before "after". A component's element, inline by default,
+  // holding a block did the same: <slider> in a flex row.
+  std::string_view view = R"(
+    <div class="row">
+      <span><div>block</div>
+      </span>
+    </div>
+    <div>after</div>
+    <style>
+      .row { display: flex; }
+    </style>
+  )";
+};
+
+TEST_CASE("An inline box ending with a block takes no line after it",
+          "[component][layout]") {
+  auto container = rtxui::Ref<TrailingBlockComponent>::New();
+  auto texture = RenderComponent(container, 10, 4);
+  auto row = [&](int y) {
+    std::string text;
+    for (int x = 0; x < texture.width(); ++x) {
+      text += texture[x, y].character.empty() ? " " : texture[x, y].character;
+    }
+    return text.substr(0, text.find_last_not_of(' ') + 1);
+  };
+  CHECK(row(0) == "block");
+  CHECK(row(1) == "after");
+}
+
 class ExtremeSizeComponent : public rtxui::Component<ExtremeSizeComponent> {
  public:
   // calc() bounds each operand when it is parsed, but not their product, so
