@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -31,6 +32,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
+#include "rtxui/terminal/input_wait.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -6174,4 +6176,22 @@ TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
   }
 }
 
+}  // namespace rtxui
+
+namespace rtxui {
+namespace {
+
+TEST_CASE("The event loop wakes for a delayed task when it is due",
+          "[screen]") {
+  using std::chrono::microseconds;
+  using std::chrono::milliseconds;
+  CHECK(InputWait(false, {}) == milliseconds(100));
+  CHECK(InputWait(true, {}) == milliseconds(16));
+  // A 50ms timer runs every 50ms, not every 100ms.
+  CHECK(InputWait(false, milliseconds(50)) == milliseconds(50));
+  CHECK(InputWait(false, microseconds(30500)) == milliseconds(31));
+  CHECK(InputWait(true, milliseconds(50)) == milliseconds(16));
+}
+
+}  // namespace
 }  // namespace rtxui

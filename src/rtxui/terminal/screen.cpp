@@ -68,6 +68,7 @@
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/style/style.hpp"
+#include "rtxui/terminal/input_wait.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
@@ -913,6 +914,8 @@ class ScreenImpl {
 
   void Loop();
   void Step();
+  // When the next delayed task is due, from the end of the last Step().
+  std::chrono::steady_clock::duration next_task_delay_{};
   void Exit() { running_ = false; }
   void Dispatch(Event event);
   // `reuse_layout`: when nothing but paint-only animations changed since the
@@ -1248,7 +1251,10 @@ void ScreenImpl::Step() {
 
 #if defined(_WIN32)
   if (dynamic_cast<SystemTerminalDevice*>(device_.get())) {
-    DWORD timeout_ms = HasActiveTransitions() || autoscroll_pending_ ? 16 : 100;
+    DWORD timeout_ms = static_cast<DWORD>(
+        InputWait(HasActiveTransitions() || autoscroll_pending_,
+                  next_task_delay_)
+            .count());
     HANDLE in_handle = GetStdHandle(STD_INPUT_HANDLE);
     HANDLE handles[2] = {in_handle, wakeup_event_};
     DWORD count = (wakeup_event_ != NULL) ? 2 : 1;
@@ -1273,19 +1279,14 @@ void ScreenImpl::Step() {
     }
 
     struct timeval tv;
-    struct timeval* timeout = nullptr;
-    if (HasActiveTransitions() || autoscroll_pending_) {
-      tv.tv_sec = 0;
-      tv.tv_usec = 16667;  // ~60 FPS
-      timeout = &tv;
-    } else {
-      // In development/hot-reload mode, we check for file changes every 100ms
-      tv.tv_sec = 0;
-      tv.tv_usec = 100000;  // 100ms
-      timeout = &tv;
-    }
+    tv.tv_sec = 0;
+    tv.tv_usec = static_cast<suseconds_t>(
+        std::chrono::microseconds(
+            InputWait(HasActiveTransitions() || autoscroll_pending_,
+                      next_task_delay_))
+            .count());
 
-    int retval = select(max_fd + 1, &fds, nullptr, nullptr, timeout);
+    int retval = select(max_fd + 1, &fds, nullptr, nullptr, &tv);
     if (retval == 0) {
       input_available = false;
     } else if (retval < 0) {
@@ -1345,7 +1346,7 @@ void ScreenImpl::Step() {
   }
 
   bool executed_task = false;
-  task_runner_.RunUntilNextDelayedTask(&executed_task);
+  next_task_delay_ = task_runner_.RunUntilNextDelayedTask(&executed_task);
   if (executed_task) {
     layout_reusable_ = false;
     // Tasks posted from other threads (or delayed tasks) commonly mutate
