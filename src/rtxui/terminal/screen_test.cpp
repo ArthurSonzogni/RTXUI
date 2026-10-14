@@ -5553,6 +5553,39 @@ TEST_CASE("pointer-events: none lets the mouse through", "[screen][pointer]") {
   CHECK(app->inside == 1);
 }
 
+TEST_CASE("pointer-events: none lets the wheel through", "[screen][pointer]") {
+  class Lists : public Component<Lists> {
+   public:
+    std::string_view view = R"(
+      <div style="position: relative; height: 3">
+        <div style="overflow-y: scroll; height: 3; scroll-speed: 1">
+          <div>u0</div><div>u1</div><div>u2</div>
+          <div>u3</div><div>u4</div><div>u5</div>
+        </div>
+        <div style="position: absolute; top: 0; left: 6; width: 8; height: 3;
+                    overflow-y: scroll; scroll-speed: 1; pointer-events: none">
+          <div>o0</div><div>o1</div><div style="pointer-events: auto">o2</div>
+          <div>o3</div><div>o4</div><div>o5</div>
+        </div>
+      </div>
+    )";
+  };
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(20, 3);
+  Screen screen(Ref<Lists>::New(), device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+  REQUIRE(screen.Text().starts_with("u0    o0"));
+  // Over the overlay's own text: the list under it scrolls.
+  device->PushInput("\x1b[<65;8;1M");
+  screen.Step();
+  CHECK(screen.Text().starts_with("u1    o0"));
+  // Over its child taking the mouse back: the overlay, its ancestor, does.
+  device->PushInput("\x1b[<65;8;3M");
+  screen.Step();
+  CHECK(screen.Text().starts_with("u1    o1"));
+}
+
 namespace {
 // SGR left-button events at a 0-based cell: a press, a move with the button
 // held, a release.

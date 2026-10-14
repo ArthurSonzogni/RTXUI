@@ -528,158 +528,6 @@ Element* FindElementAt(PhysicalFragment* fragment, int target_x, int target_y) {
                            fragment ? fragment->height : 0);
 }
 
-PhysicalFragment* FindScrollableFragmentAtImpl(PhysicalFragment* fragment,
-                                               int target_x,
-                                               int target_y,
-                                               int abs_x = 0,
-                                               int abs_y = 0,
-                                               int viewport_x = 0,
-                                               int viewport_y = 0,
-                                               int viewport_w = 0,
-                                               int viewport_h = 0) {
-  if (!fragment) {
-    return nullptr;
-  }
-  if (target_x < abs_x || target_y < abs_y ||
-      target_x >= abs_x + fragment->width ||
-      target_y >= abs_y + fragment->height) {
-    return nullptr;
-  }
-
-  int scroll_x_offset = 0;
-  int scroll_y_offset = 0;
-  int next_viewport_x = viewport_x;
-  int next_viewport_y = viewport_y;
-  int next_viewport_w = viewport_w;
-  int next_viewport_h = viewport_h;
-  int border_l = 0, border_t = 0, border_r = 0, border_b = 0;
-  int padding_l = 0, padding_t = 0, padding_r = 0, padding_b = 0;
-  if (fragment->dom_node) {
-    padding_l = fragment->dom_node->style.padding.left;
-    padding_t = fragment->dom_node->style.padding.top;
-    padding_r = fragment->dom_node->style.padding.right;
-    padding_b = fragment->dom_node->style.padding.bottom;
-  }
-  if (fragment->has_border && fragment->border_style != BorderStyle::None) {
-    border_l = 1;
-    border_t = 1;
-    border_r = 1;
-    border_b = 1;
-  }
-
-  if (fragment->clips_descendants) {
-    scroll_x_offset = fragment->scroll_x;
-    scroll_y_offset = fragment->scroll_y;
-    next_viewport_x = abs_x + border_l + padding_l;
-    next_viewport_y = abs_y + border_t + padding_t;
-    next_viewport_w =
-        fragment->width - border_l - border_r - padding_l - padding_r;
-    next_viewport_h =
-        fragment->height - border_t - border_b - padding_t - padding_b;
-  }
-
-  auto sorted_children = fragment->children;
-  std::stable_sort(
-      sorted_children.begin(), sorted_children.end(),
-      [](const PhysicalFragment::ChildLink& a,
-         const PhysicalFragment::ChildLink& b) {
-        bool a_pos = (a.fragment && a.fragment->dom_node &&
-                      a.fragment->dom_node->style.PaintsAsPositioned());
-        bool b_pos = (b.fragment && b.fragment->dom_node &&
-                      b.fragment->dom_node->style.PaintsAsPositioned());
-        int az = (a.fragment && a.fragment->dom_node)
-                     ? a.fragment->dom_node->style.z_index.value_or(0)
-                     : 0;
-        int bz = (b.fragment && b.fragment->dom_node)
-                     ? b.fragment->dom_node->style.z_index.value_or(0)
-                     : 0;
-        if (az != bz) {
-          return az < bz;
-        }
-        if (a_pos != b_pos) {
-          return !a_pos && b_pos;
-        }
-        return false;
-      });
-
-  for (auto& child : std::views::reverse(sorted_children)) {
-    bool is_fixed =
-        (child.fragment && child.fragment->dom_node &&
-         child.fragment->dom_node->style.position == PositionType::Fixed);
-    bool is_sticky =
-        (child.fragment && child.fragment->dom_node &&
-         child.fragment->dom_node->style.position == PositionType::Sticky);
-
-    int child_abs_x = is_fixed ? child.x : abs_x + child.x - scroll_x_offset;
-    int child_abs_y = is_fixed ? child.y : abs_y + child.y - scroll_y_offset;
-
-    if (is_sticky) {
-      int c_border_l = 0, c_border_r = 0, c_border_t = 0, c_border_b = 0;
-      int c_padding_l = 0, c_padding_r = 0, c_padding_t = 0, c_padding_b = 0;
-      if (fragment->dom_node) {
-        c_padding_l = fragment->dom_node->style.padding.left;
-        c_padding_r = fragment->dom_node->style.padding.right;
-        c_padding_t = fragment->dom_node->style.padding.top;
-        c_padding_b = fragment->dom_node->style.padding.bottom;
-      }
-      if (fragment->has_border && fragment->border_style != BorderStyle::None) {
-        c_border_l = 1;
-        c_border_r = 1;
-        c_border_t = 1;
-        c_border_b = 1;
-      }
-
-      StickyContext sticky;
-      sticky.parent_clips = fragment->clips_descendants;
-      sticky.viewport_x =
-          fragment->clips_descendants ? next_viewport_x : viewport_x;
-      sticky.viewport_y =
-          fragment->clips_descendants ? next_viewport_y : viewport_y;
-      sticky.viewport_width =
-          fragment->clips_descendants ? next_viewport_w : viewport_w;
-      sticky.viewport_height =
-          fragment->clips_descendants ? next_viewport_h : viewport_h;
-      sticky.parent_x = abs_x;
-      sticky.parent_y = abs_y;
-      sticky.parent_width = fragment->width;
-      sticky.parent_height = fragment->height;
-      sticky.parent_border_left = c_border_l;
-      sticky.parent_border_top = c_border_t;
-      sticky.parent_border_right = c_border_r;
-      sticky.parent_border_bottom = c_border_b;
-      sticky.parent_padding_left = c_padding_l;
-      sticky.parent_padding_top = c_padding_t;
-      sticky.parent_padding_right = c_padding_r;
-      sticky.parent_padding_bottom = c_padding_b;
-      ApplyStickyOffset(child.fragment->dom_node->style, child.fragment->width,
-                        child.fragment->height, sticky, child_abs_x,
-                        child_abs_y);
-    }
-
-    if (auto found = FindScrollableFragmentAtImpl(
-            child.fragment, target_x, target_y, child_abs_x, child_abs_y,
-            next_viewport_x, next_viewport_y, next_viewport_w,
-            next_viewport_h)) {
-      return found;
-    }
-  }
-
-  if (fragment->dom_node &&
-      (fragment->dom_node->style.overflow_y == Overflow::Scroll ||
-       fragment->dom_node->style.overflow_x == Overflow::Scroll)) {
-    return fragment;
-  }
-  return nullptr;
-}
-
-PhysicalFragment* FindScrollableFragmentAt(PhysicalFragment* fragment,
-                                           int target_x,
-                                           int target_y) {
-  return FindScrollableFragmentAtImpl(fragment, target_x, target_y, 0, 0, 0, 0,
-                                      fragment ? fragment->width : 0,
-                                      fragment ? fragment->height : 0);
-}
-
 PhysicalFragment* FindFragmentForElement(PhysicalFragment* fragment,
                                          Element* element) {
   if (!fragment) {
@@ -2225,11 +2073,11 @@ void ScreenImpl::HandleEvent(Event event) {
         };
         ScrollAction action;
 
-        if (auto scroll_frag =
-                FindScrollableFragmentAt(root_fragment_, tx, ty)) {
-          Element* curr = scroll_frag->dom_node;
-          // Release scroll_frag immediately — we only needed dom_node.
-          scroll_frag = nullptr;
+        // What the wheel is over, the mouse passing through elements with
+        // pointer-events: none, then the first of it and its ancestors that
+        // scrolls.
+        if (Element* target = FindElementAt(root_fragment_, tx, ty)) {
+          Element* curr = target;
           while (curr) {
             bool is_horizontal_wheel =
                 (mouse.button == Event::Mouse::Button::WheelLeft ||
