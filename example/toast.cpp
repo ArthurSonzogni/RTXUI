@@ -85,29 +85,15 @@ class ToastDemo : public Component<ToastDemo> {
             translate: calc(100% + 2);
             animation-timing-function: ease-out-cubic;
           }
-          30% {
-            translate: 0;
-          }
-          42% {
-            translate: -6;
-          }
-          54% {
-            translate: 2;
-          }
-          66% {
-            translate: -4;
-          }
-          78% {
-            translate: 1;
-          }
-          90% {
-            translate: -2;
-          }
+          30% { translate: 0; }
+          42% { translate: -6; }
+          54% { translate: 2; }
+          66% { translate: -4; }
+          78% { translate: 1; }
+          90% { translate: -2; }
         }
         @keyframes fade-out {
-          to {
-            opacity: 0;
-          }
+          to { opacity: 0; }
         }
         .error::part(toast) {
           border-color: rgb(248, 81, 73);
