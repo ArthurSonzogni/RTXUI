@@ -1,6 +1,7 @@
 #ifndef RTXUI_LAYOUT_PHYSICAL_FRAGMENT_HPP
 #define RTXUI_LAYOUT_PHYSICAL_FRAGMENT_HPP
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -25,11 +26,7 @@ enum PaintField : uint8_t {
 
 struct PhysicalFragment {
   Element* dom_node = nullptr;
-  // A fragment's position lives in its parent's ChildLink, not here: layout
-  // never assigns x/y. They are zero-initialised so that reading them yields
-  // something predictable rather than indeterminate memory, but callers that
-  // need a position must take it from the ChildLink.
-  int x = 0, y = 0;
+  // A fragment's position lives in its parent's ChildLink, not here.
   int width, height;
   int scroll_x = 0;
   int scroll_y = 0;
@@ -37,7 +34,15 @@ struct PhysicalFragment {
   float visual_scroll_y = 0.0f;
   bool clips_descendants = false;
   bool is_text = false;
+  // A soft wrap ends the line before this text: it runs on from there.
+  bool after_wrap = false;
+  // The byte `text_content` starts at in `text_node`'s laid-out text. Next to
+  // the flags above, where the padding before `text_content` has room.
+  uint32_t text_offset = 0;
   std::string_view text_content;
+  // The text element `text_content` is of: where a selection finds it. Null
+  // for text no element holds, like an ellipsis.
+  const Element* text_node = nullptr;
   bool has_border = false;
   // Per-side border widths, so paint.cpp can draw only the sides/corners
   // that are actually present instead of always drawing a full box outline

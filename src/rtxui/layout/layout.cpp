@@ -390,6 +390,7 @@ struct LineInfo {
     ellipsis->foreground_color = foreground;
   }
   ellipsis->text_content = kEllipsis;
+  ellipsis->text_node = nullptr;
   children.insert(
       children.begin() + static_cast<std::ptrdiff_t>(last.end_index),
       {ellipsis, x0 + end_x, last.y});
@@ -1408,6 +1409,8 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   size_t line_start_index = 0;
   // The inline-level boxes on the current line.
   std::vector<LineBox> line_boxes;
+  // The last line ended in a soft wrap, and no text came after it yet.
+  bool wrapped = false;
 
   auto commit_line = [&](bool hard_break = false) {
     max_line_width = std::max(max_line_width, cursor_x);
@@ -1424,9 +1427,11 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     cursor_y += line_height;
     line_height = min_line_height;
     line_start_index = container_frag->children.size();
+    wrapped = !hard_break;
   };
 
   auto process_text_in_flow = [&](std::string_view text, Element* dom_node,
+                                  const Element* text_node,
                                   const TextStyle& style) {
     if (box->style().text_overflow == TextOverflow::Ellipsis &&
         (box->text.white_space == WhiteSpace::Nowrap ||
@@ -1455,6 +1460,10 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
       text_frag->paint_fields = kPaintBackground | kPaintForeground;
       text_frag->is_text = true;
       text_frag->text_content = text.substr(byte_start, byte_end - byte_start);
+      text_frag->text_node = text_node;
+      text_frag->text_offset = static_cast<uint32_t>(byte_start);
+      text_frag->after_wrap = wrapped;
+      wrapped = false;
 
       text_frag->background_color = style.background_color;
       text_frag->foreground_color = style.foreground_color;
@@ -1748,7 +1757,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     }
     if (child->is_text) {
       process_text_in_flow(
-          child->text_data, child->dom_node,
+          child->text_data, child->dom_node, child->dom_node,
           {child->style().background_color, child->text.fg, child->text.bold,
            child->text.dim, child->text.italic, child->text.underlined,
            child->text.underlined_double, child->text.strikethrough,
@@ -1775,7 +1784,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
           // properties here do inherit, so grandchild's own (already
           // correctly inherited) values are used for those.
           process_text_in_flow(
-              grandchild->text_data, child->dom_node,
+              grandchild->text_data, child->dom_node, grandchild->dom_node,
               {child->style().background_color, grandchild->text.fg,
                grandchild->text.bold, grandchild->text.dim,
                grandchild->text.italic, grandchild->text.underlined,
@@ -1804,6 +1813,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
       }
       place_opaque_box(child.get());
       commit_line();
+      wrapped = false;
     } else {
       place_opaque_box(child.get());
     }

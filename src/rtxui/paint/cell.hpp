@@ -33,9 +33,6 @@ struct Cell {
   // True for the second cell of a double-width (e.g. CJK) grapheme.
   // The terminal cursor is already past this cell; nothing should be printed.
   bool is_continuation : 1 = false;
-  // Whether the cell shows text a selection can take: see `user-select`. Not
-  // drawn, so not compared.
-  bool selectable : 1 = false;
 
   // The hyperlink the cell belongs to, as an index into its Texture's links
   // (Texture::LinkUrl). 0 for none.

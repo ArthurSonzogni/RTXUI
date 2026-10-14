@@ -43,12 +43,13 @@
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <iterator>
 #include <optional>
 #include <thread>
-#include <tuple>
+#include <unordered_map>
 #include <utility>
 
 #include "rtxui/base/string.hpp"
@@ -1098,36 +1099,50 @@ class ScreenImpl {
   // Follows `link`, an <a href="#id">: scrolls the element with that id into
   // view. Returns whether there was one.
   bool FollowLink(Element* link);
-  void PaintScreen(const PhysicalFragment& root, Texture& texture) const;
+  void PaintScreen(const PhysicalFragment& root,
+                   Texture& texture,
+                   const PaintSelection* selection = nullptr) const;
 
-  // Text selection: a left drag selects the text it goes over, row by row as
-  // in a terminal, from the cell it started on to the one it is on. It is
-  // copied on release, and shown until the next press.
+  // Text selection, kept in the document as a browser keeps it: a left drag
+  // selects the text from the glyph it started on to the one it is on, in
+  // document order, wherever that text is drawn. It is copied on release,
+  // and lasts until the next press.
   struct Selection {
-    struct Box {
-      int x = 0, y = 0, width = 0, height = 0;
-    };
     // The left button went down where a selection can start.
     bool armed = false;
     // The mouse has left the cell it went down on since.
     bool dragged = false;
-    int anchor_x = 0, anchor_y = 0;
-    int focus_x = 0, focus_y = 0;
+    int press_x = 0, press_y = 0;
+    int mouse_x = 0, mouse_y = 0;
+    // The glyphs at either end, both selected. No node where there was no
+    // text to start or end on.
+    TextPosition anchor;
+    TextPosition focus;
     // The `user-select: all` elements at either end, selected whole.
-    std::optional<Box> anchor_box;
-    std::optional<Box> focus_box;
+    const Element* anchor_all = nullptr;
+    const Element* focus_all = nullptr;
 
-    bool Shown() const { return dragged || anchor_box || focus_box; }
-    bool Contains(int x, int y) const;
+    bool Shown() const { return dragged || anchor_all || focus_all; }
   };
   // Updates the selection for a mouse event. Returns whether that consumed
   // the event.
   bool HandleSelection(const Event::Mouse& mouse);
-  // The box of the `user-select: all` element `element` is in, if any.
-  std::optional<Selection::Box> UserSelectAllBox(const Element* element);
-  // The selected text of `texture`, its rows on lines of their own.
-  std::string SelectedText(const Texture& texture) const;
+  // Paints the last layout again, into the texture returned, and records in
+  // `glyphs` the glyph of selectable text each cell shows.
+  Texture PaintGlyphs(std::vector<TextPosition>& glyphs) const;
+  // The glyph a selection ending at cell `x`, `y` ends on: the one there,
+  // else the nearest one before it.
+  TextPosition GlyphNear(const std::vector<TextPosition>& glyphs,
+                         int x,
+                         int y) const;
+  // Numbers the elements in document order, for Selected(), and drops a
+  // selection whose ends are gone from the document.
+  void UpdateSelectionOrder();
+  bool Selected(const TextPosition& glyph) const;
+  // The selected text that is drawn, in document order.
+  std::string SelectedText() const;
   Selection selection_;
+  std::unordered_map<const Element*, int> selection_order_;
   // Whether the last frame drawn shows a selection.
   bool selection_painted_ = false;
 
@@ -2637,9 +2652,19 @@ void ScreenImpl::Draw(bool reuse_layout) {
                        painted_background_ != background_color_ ||
                        painted_terminal_background_ != terminal_background_ ||
                        selection_painted_ || selection_.Shown();
+  // The selection, in reverse video over the text it takes.
+  PaintSelection selection;
+  if (selection_.Shown()) {
+    UpdateSelectionOrder();
+    selection.selected = [this](const TextPosition& glyph) {
+      return Selected(glyph);
+    };
+  }
+  const PaintSelection* shown_selection =
+      selection_.Shown() ? &selection : nullptr;
   Texture texture = repaint ? Texture(width_, height_) : *last_texture_;
   if (repaint && root_fragment) {
-    PaintScreen(*root_fragment, texture);
+    PaintScreen(*root_fragment, texture, shown_selection);
   }
   laid_out_since_paint_ = false;
   painted_background_set_ = background_color_set_;
@@ -2653,7 +2678,7 @@ void ScreenImpl::Draw(bool reuse_layout) {
     UpdateLayout(/*reuse_fragments=*/false);
     Texture fresh(width_, height_);
     if (root_fragment_) {
-      PaintScreen(*root_fragment_, fresh);
+      PaintScreen(*root_fragment_, fresh, shown_selection);
     }
     if (fresh.Render() != texture.Render()) {
       std::cerr << "rtxui: the reused layout drew\n"
@@ -2663,17 +2688,6 @@ void ScreenImpl::Draw(bool reuse_layout) {
     }
   }
 
-  // The selection, in reverse video, over the text it takes.
-  if (selection_.Shown()) {
-    for (int y = 0; y < texture.height(); ++y) {
-      for (int x = 0; x < texture.width(); ++x) {
-        Cell& cell = texture[x, y];
-        if (cell.selectable && selection_.Contains(x, y)) {
-          cell.inverted = !cell.inverted;
-        }
-      }
-    }
-  }
   selection_painted_ = selection_.Shown();
 
   std::string new_output;
@@ -3109,12 +3123,13 @@ bool ScreenImpl::SpatialNavigate(Event event) {
 // terminal's default background, so a translucent or themed terminal still
 // shows through, as it does when its color is unknown.
 void ScreenImpl::PaintScreen(const PhysicalFragment& root,
-                             Texture& texture) const {
+                             Texture& texture,
+                             const PaintSelection* selection) const {
   if (background_color_set_ || terminal_background_.a == 0) {
-    Paint(&root, texture, 0, 0, background_color_);
+    Paint(&root, texture, 0, 0, background_color_, selection);
     return;
   }
-  Paint(&root, texture, 0, 0, terminal_background_);
+  Paint(&root, texture, 0, 0, terminal_background_, selection);
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
       Cell& cell = texture[x, y];
@@ -3125,44 +3140,115 @@ void ScreenImpl::PaintScreen(const PhysicalFragment& root,
   }
 }
 
-bool ScreenImpl::Selection::Contains(int x, int y) const {
-  auto in = [&](const std::optional<Box>& box) {
-    return box && x >= box->x && x < box->x + box->width && y >= box->y &&
-           y < box->y + box->height;
-  };
-  if (in(anchor_box) || in(focus_box)) {
-    return true;
+namespace {
+// The `user-select: all` element `element` is in, if any.
+const Element* UserSelectAll(const Element* element) {
+  for (; element; element = element->Parent()) {
+    if (element->style.user_select) {
+      return *element->style.user_select == UserSelect::All ? element : nullptr;
+    }
   }
-  if (!dragged) {
-    return false;
-  }
-  // From the first end to the last, in reading order.
-  auto [start_x, start_y, end_x, end_y] =
-      std::tie(anchor_y, anchor_x) <= std::tie(focus_y, focus_x)
-          ? std::tuple(anchor_x, anchor_y, focus_x, focus_y)
-          : std::tuple(focus_x, focus_y, anchor_x, anchor_y);
-  return std::tie(start_y, start_x) <= std::tie(y, x) &&
-         std::tie(y, x) <= std::tie(end_y, end_x);
+  return nullptr;
 }
 
-std::optional<ScreenImpl::Selection::Box> ScreenImpl::UserSelectAllBox(
-    const Element* element) {
+bool IsInside(const Element* element, const Element* ancestor) {
   for (; element; element = element->Parent()) {
-    if (!element->style.user_select) {
-      continue;
+    if (element == ancestor) {
+      return true;
     }
-    if (*element->style.user_select != UserSelect::All) {
-      return std::nullopt;
-    }
-    auto found = FindFragmentForElementWithPos(root_fragment_,
-                                               const_cast<Element*>(element));
-    if (!found) {
-      return std::nullopt;
-    }
-    return Selection::Box{found->abs_x, found->abs_y, found->fragment->width,
-                          found->fragment->height};
   }
-  return std::nullopt;
+  return false;
+}
+}  // namespace
+
+Texture ScreenImpl::PaintGlyphs(std::vector<TextPosition>& glyphs) const {
+  Texture texture(width_, height_);
+  PaintSelection selection;
+  selection.glyphs = &glyphs;
+  if (root_fragment_) {
+    PaintScreen(*root_fragment_, texture, &selection);
+  } else {
+    glyphs.assign(static_cast<size_t>(width_) * height_, {});
+  }
+  return texture;
+}
+
+TextPosition ScreenImpl::GlyphNear(const std::vector<TextPosition>& glyphs,
+                                   int x,
+                                   int y) const {
+  x = std::clamp(x, 0, width_ - 1);
+  y = std::clamp(y, 0, height_ - 1);
+  auto at = [&](int cx, int cy) { return glyphs[cx + (cy * width_)]; };
+  // On the row: the glyph there, else the nearest before it, else after it.
+  for (int cx = x; cx >= 0; --cx) {
+    if (at(cx, y).node) {
+      return at(cx, y);
+    }
+  }
+  for (int cx = x + 1; cx < width_; ++cx) {
+    if (at(cx, y).node) {
+      return at(cx, y);
+    }
+  }
+  // Else the last glyph of the rows above, else the first of those below.
+  for (int cy = y - 1; cy >= 0; --cy) {
+    for (int cx = width_ - 1; cx >= 0; --cx) {
+      if (at(cx, cy).node) {
+        return at(cx, cy);
+      }
+    }
+  }
+  for (int cy = y + 1; cy < height_; ++cy) {
+    for (int cx = 0; cx < width_; ++cx) {
+      if (at(cx, cy).node) {
+        return at(cx, cy);
+      }
+    }
+  }
+  return {};
+}
+
+void ScreenImpl::UpdateSelectionOrder() {
+  selection_order_.clear();
+  if (Element* root = component_->Root()) {
+    int index = 0;
+    root->Visit(
+        [&](Element& element) { selection_order_[&element] = index++; });
+  }
+  // The pointers are only compared, never read, until found in the document.
+  auto gone = [&](const Element* element) {
+    return element && !selection_order_.contains(element);
+  };
+  if (gone(selection_.anchor.node) || gone(selection_.focus.node) ||
+      gone(selection_.anchor_all) || gone(selection_.focus_all)) {
+    selection_ = {};
+  }
+}
+
+bool ScreenImpl::Selected(const TextPosition& glyph) const {
+  auto order = [&](const Element* element) {
+    auto it = selection_order_.find(element);
+    return it == selection_order_.end() ? -1 : it->second;
+  };
+  const int node = order(glyph.node);
+  if (node < 0) {
+    return false;
+  }
+  if ((selection_.anchor_all && IsInside(glyph.node, selection_.anchor_all)) ||
+      (selection_.focus_all && IsInside(glyph.node, selection_.focus_all))) {
+    return true;
+  }
+  if (!selection_.dragged || !selection_.anchor.node ||
+      !selection_.focus.node) {
+    return false;
+  }
+  const auto anchor =
+      std::pair(order(selection_.anchor.node), selection_.anchor.offset);
+  const auto focus =
+      std::pair(order(selection_.focus.node), selection_.focus.offset);
+  const auto [first, last] = std::minmax(anchor, focus);
+  const auto here = std::pair(node, glyph.offset);
+  return first <= here && here <= last;
 }
 
 bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
@@ -3198,11 +3284,14 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
       if (!target) {
         return false;
       }
+      std::vector<TextPosition> glyphs;
+      PaintGlyphs(glyphs);
       selection_.armed = true;
-      selection_.anchor_x = selection_.focus_x = x;
-      selection_.anchor_y = selection_.focus_y = y;
-      selection_.anchor_box = UserSelectAllBox(target);
-      if (selection_.anchor_box) {
+      selection_.press_x = selection_.mouse_x = x;
+      selection_.press_y = selection_.mouse_y = y;
+      selection_.anchor = selection_.focus = GlyphNear(glyphs, x, y);
+      selection_.anchor_all = UserSelectAll(target);
+      if (selection_.anchor_all) {
         RequestDraw();
       }
       return false;
@@ -3215,14 +3304,17 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
       }
       const bool moved =
           selection_.dragged
-              ? x != selection_.focus_x || y != selection_.focus_y
-              : x != selection_.anchor_x || y != selection_.anchor_y;
+              ? x != selection_.mouse_x || y != selection_.mouse_y
+              : x != selection_.press_x || y != selection_.press_y;
       if (moved) {
+        std::vector<TextPosition> glyphs;
+        PaintGlyphs(glyphs);
         selection_.dragged = true;
-        selection_.focus_x = x;
-        selection_.focus_y = y;
-        selection_.focus_box =
-            UserSelectAllBox(FindElementAt(root_fragment_, x, y));
+        selection_.mouse_x = x;
+        selection_.mouse_y = y;
+        selection_.focus = GlyphNear(glyphs, x, y);
+        selection_.focus_all =
+            UserSelectAll(FindElementAt(root_fragment_, x, y));
         RequestDraw();
       }
       return true;
@@ -3232,8 +3324,9 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
         return false;
       }
       selection_.armed = false;
-      if (selection_.Shown() && last_texture_) {
-        if (std::string text = SelectedText(*last_texture_); !text.empty()) {
+      if (selection_.Shown()) {
+        UpdateSelectionOrder();
+        if (std::string text = SelectedText(); !text.empty()) {
           component_->SetClipboard(text);
           RequestDraw();
         }
@@ -3244,42 +3337,76 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
   return false;
 }
 
-std::string ScreenImpl::SelectedText(const Texture& texture) const {
-  auto selected = [&](int x, int y) {
-    return texture[x, y].selectable && selection_.Contains(x, y);
+std::string ScreenImpl::SelectedText() const {
+  struct Glyph {
+    int order = 0;
+    TextPosition position;
+    int x = 0, y = 0, width = 0;
+    std::string_view text;
   };
-  std::string text;
-  // Rows with nothing selected, held until a row with something follows.
-  int blank_rows = 0;
-  for (int y = 0; y < texture.height(); ++y) {
-    int first = texture.width();
-    int last = -1;
-    for (int x = 0; x < texture.width(); ++x) {
-      if (selected(x, y)) {
-        first = std::min(first, x);
-        last = x;
+  std::vector<Glyph> selected;
+  // The laid out text, not the drawn one: what is scrolled out of view is in
+  // the selection too. Positions are in the content, scrolling ignored.
+  auto visit = [&](auto& self, const PhysicalFragment* fragment, int x,
+                   int y) -> void {
+    if (fragment->visibility == Visibility::Hidden) {
+      return;
+    }
+    if (fragment->is_text && fragment->text_node &&
+        TextSelectable(fragment->text_node)) {
+      int column = 0;
+      for (const Grapheme& g : Graphemes(fragment->text_content)) {
+        if (g.width == 0) {
+          continue;
+        }
+        const TextPosition position{
+            fragment->text_node,
+            fragment->text_offset +
+                static_cast<uint32_t>(g.text.data() -
+                                      fragment->text_content.data()),
+            fragment->after_wrap && column == 0};
+        if (Selected(position)) {
+          selected.push_back({selection_order_.at(position.node), position,
+                              x + column, y, g.width, g.text});
+        }
+        column += g.width;
       }
     }
-    if (last < 0) {
-      blank_rows += text.empty() ? 0 : 1;
-      continue;
+    for (const auto& child : fragment->children) {
+      self(self, child.fragment, x + child.x, y + child.y);
     }
-    // What lies between selected text, a border between two table cells
-    // say, is a space: the columns stay aligned.
-    std::string line;
-    for (int x = first; x <= last; ++x) {
-      const Cell& cell = texture[x, y];
-      if (cell.is_continuation) {
-        continue;
-      }
-      line += selected(x, y) && !cell.character.empty() ? cell.character : " ";
-    }
-    if (!text.empty()) {
-      text.append(static_cast<size_t>(blank_rows) + 1, '\n');
-    }
-    blank_rows = 0;
-    text += line.substr(0, line.find_last_not_of(' ') + 1);
+  };
+  if (root_fragment_) {
+    visit(visit, root_fragment_, 0, 0);
   }
+  std::ranges::stable_sort(selected, {}, [](const Glyph& glyph) {
+    return std::pair(glyph.order, glyph.position.offset);
+  });
+
+  std::string text;
+  const Glyph* previous = nullptr;
+  for (const Glyph& glyph : selected) {
+    const int previous_end = previous ? previous->x + previous->width : 0;
+    if (previous && glyph.y == previous->y && glyph.x >= previous_end) {
+      // Further on the row, past a gap: a border between table cells, or
+      // text left out, say. One space stands for it, unless one is there.
+      if (glyph.x > previous_end && !text.ends_with(' ') && glyph.text != " ") {
+        text += ' ';
+      }
+    } else if (previous) {
+      // On another row. A line a soft wrap began continues the text before
+      // it; anything else starts a line of its own.
+      text.erase(text.find_last_not_of(' ') + 1);
+      if (glyph.position.after_wrap) {
+        text += ' ';
+      } else {
+        text += glyph.y > previous->y + 1 ? "\n\n" : "\n";
+      }
+    }
+    text += glyph.text;
+    previous = &glyph;
+  }
+  text.erase(text.find_last_not_of(' ') + 1);
   return text;
 }
 

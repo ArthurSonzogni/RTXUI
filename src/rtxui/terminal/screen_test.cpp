@@ -1,6 +1,7 @@
 #include "rtxui/screen.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -5589,7 +5590,127 @@ std::string CopiedBy(std::string_view view, const std::string& input) {
   const size_t end = output.find('\x07', start);
   return output.substr(start + 7, end - start - 7);
 }
+// The text `output` draws in reverse video, each run of it followed by '|'.
+std::string ReversedText(std::string_view output) {
+  std::string text;
+  bool reversed = false;
+  for (size_t i = 0; i < output.size(); ++i) {
+    if (output[i] != '\x1b') {
+      if (reversed && output[i] != '\r' && output[i] != '\n') {
+        text += output[i];
+      }
+      continue;
+    }
+    if (i + 1 >= output.size() || output[i + 1] != '[') {
+      continue;
+    }
+    size_t end = i + 2;
+    while (end < output.size() && !std::isalpha(output[end])) {
+      ++end;
+    }
+    if (end < output.size() && output[end] == 'm') {
+      std::string_view params = output.substr(i + 2, end - i - 2);
+      while (true) {
+        const size_t semicolon = params.find(';');
+        const std::string_view param = params.substr(0, semicolon);
+        if (param == "7") {
+          reversed = true;
+        } else if ((param == "27" || param == "0" || param.empty()) &&
+                   reversed) {
+          reversed = false;
+          text += '|';
+        }
+        if (semicolon == std::string_view::npos) {
+          break;
+        }
+        params.remove_prefix(semicolon + 1);
+      }
+    }
+    i = end;
+  }
+  return text;
+}
 }  // namespace
+
+TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
+  SECTION("in document order, across columns") {
+    constexpr std::string_view kColumns = R"(
+      <div style="display: flex; gap: 4">
+        <div><div>a1</div><div>a2</div></div>
+        <div><div>b1</div><div>b2</div></div>
+      </div>
+    )";
+    // From a1 to b1, beside it: all of the first column comes before.
+    CHECK(CopiedBy(kColumns, DragFromTo(0, 0, 7, 0)) ==
+          Base64Encode("a1\na2\nb1"));
+    // From a2 back up to b1: a2 then b1, nothing of the rows between.
+    CHECK(CopiedBy(kColumns, DragFromTo(0, 1, 7, 0)) == Base64Encode("a2\nb1"));
+  }
+  SECTION("a soft wrap is a space") {
+    CHECK(CopiedBy(R"(<div style="width: 10">hello world again</div>)",
+                   DragFromTo(0, 0, 9, 2)) ==
+          Base64Encode("hello world again"));
+  }
+  SECTION("past the end of the text") {
+    CHECK(CopiedBy("<div>one</div><div>two</div>", DragFromTo(1, 0, 25, 4)) ==
+          Base64Encode("ne\ntwo"));
+  }
+
+  class List : public Component<List> {
+   public:
+    bool shown = true;
+    List() { Bind(shown); }
+    std::string_view view = R"(
+      <div style="overflow-y: scroll; height: 3; scroll-speed: 2">
+        <div>line 0</div><div>line 1</div><div>line 2</div>
+        <div>line 3</div><div>line 4</div><div>line 5</div>
+        <div>line 6</div><div>line 7</div>
+      </div>
+      <if condition="{shown}"><div>gone</div></if>
+    )";
+  };
+  auto app = Ref<List>::New();
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(30, 5);
+  Screen screen(app, device);
+  screen.SetSmoothScrollEnabled(false);
+  screen.Draw();
+  const std::string wheel_down = "\x1b[<65;2;2M";
+  const std::string wheel_up = "\x1b[<64;2;2M";
+
+  SECTION("the selection moves with the text it is of") {
+    device->PushInput(DragFromTo(0, 1, 5, 1));  // line 1
+    screen.Step();
+    device->ClearOutput();
+    device->PushInput(wheel_down);  // line 2 on top.
+    screen.Step();
+    // line 1 went out of view, and line 2 in its row is not selected.
+    CHECK(ReversedText(device->GetOutput()).empty());
+    device->ClearOutput();
+    device->PushInput(wheel_up);
+    screen.Step();
+    CHECK(ReversedText(device->GetOutput()) == "line 1|");
+  }
+  SECTION("text scrolled out of view is copied") {
+    device->ClearOutput();
+    device->PushInput(LeftAt('P', 0, 0) + wheel_down + LeftAt('D', 5, 2) +
+                      LeftAt('U', 5, 2));
+    screen.Step();
+    CHECK(device->GetOutput().find(
+              "\x1b]52;c;" +
+              Base64Encode("line 0\nline 1\nline 2\nline 3\nline 4")) !=
+          std::string::npos);
+  }
+  SECTION("it goes with the element it ends in") {
+    device->PushInput(DragFromTo(0, 2, 3, 3));  // line 2 to gone.
+    screen.Step();
+    app->shown = false;
+    app->Digest();
+    device->ClearOutput();
+    screen.Draw();
+    CHECK(device->GetOutput().find("\x1b[7m") == std::string::npos);
+  }
+}
 
 TEST_CASE("Screen.DragSelectsAndCopiesText", "[terminal][selection]") {
   class App : public Component<App> {
@@ -5637,12 +5758,12 @@ TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
     CHECK(CopiedBy("<div>hello world</div>", DragFromTo(10, 0, 6, 0)) ==
           Base64Encode("world"));
   }
-  SECTION("borders are no text: a space keeps the columns") {
+  SECTION("borders are no text: a space stands for them") {
     CHECK(CopiedBy(R"(
             <style> span { border: solid; } </style>
             <div style="display: flex"><span>Name</span><span>Value</span></div>
           )",
-                   DragFromTo(0, 1, 29, 1)) == Base64Encode("Name  Value"));
+                   DragFromTo(0, 1, 29, 1)) == Base64Encode("Name Value"));
   }
   SECTION("rows with no text are blank lines") {
     CHECK(CopiedBy("<div>one</div><div> </div><div>three</div>",
@@ -5653,7 +5774,7 @@ TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
             <style> .skip { user-select: none; } </style>
             <div>keep <span class="skip">skip</span> this</div>
           )",
-                   DragFromTo(0, 0, 20, 0)) == Base64Encode("keep      this"));
+                   DragFromTo(0, 0, 20, 0)) == Base64Encode("keep  this"));
   }
   SECTION("user-select is inherited, and text takes it back") {
     CHECK(CopiedBy(R"(
@@ -5663,7 +5784,7 @@ TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
             </style>
             <div>keep <span class="skip">skip <b class="take">this</b></span></div>
           )",
-                   DragFromTo(0, 0, 20, 0)) == Base64Encode("keep      this"));
+                   DragFromTo(0, 0, 20, 0)) == Base64Encode("keep this"));
   }
   SECTION("a drag from user-select: none selects nothing") {
     CHECK(CopiedBy(R"(
@@ -5693,7 +5814,7 @@ TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
     CHECK(device->GetOutput().find("\x1b]52;c;") == std::string::npos);
   }
   SECTION("a drag in an input selects in the input") {
-    CHECK(CopiedBy(R"(<input value="hello world" />)", DragFromTo(1, 1, 6, 1))
+    CHECK(CopiedBy(R"(<input value="hello world" />)", DragFromTo(1, 0, 6, 0))
               .empty());
   }
   SECTION("user-select: all selects the element whole on a click") {

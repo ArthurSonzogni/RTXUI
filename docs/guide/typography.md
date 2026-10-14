@@ -227,16 +227,21 @@ CSS transitions.
 
 ## Selecting and Copying Text
 
-Dragging the mouse over text selects it, as in a terminal: the rows from where
-the drag started to where it is, shown in reverse video. Releasing the button
-copies the selection to the system clipboard (OSC 52, so it works over SSH).
-The next click clears it.
+Dragging the mouse over text selects it, as in a browser: the text from the
+character the drag started on to the one it is on, in document order, shown
+in reverse video. Releasing the button copies it to the system clipboard (OSC
+52, so it works over SSH). The next click clears it.
+
+The selection is of the document, not of the screen. Dragging from one column
+of a layout to the one beside it takes the end of the first and the start of
+the second, not the rows of both. Scrolling moves the selection with its text,
+and what is scrolled out of view is copied too. A paragraph's wrapped lines are
+copied as one line; separate blocks, on lines of their own.
 
 Only text is taken: borders, scrollbars and empty space are left out, and a gap
-between two selected texts, a border between table cells say, is copied as
-spaces so the columns stay aligned. A drag that starts on an element with a
-click handler, on a link, in an input or on a scrollbar does what it does there
-instead.
+in a row of selected text, a border between table cells say, is copied as a
+space. A drag that starts on an element with a click handler, on a link, in an
+input or on a scrollbar does what it does there instead.
 
 `user-select` chooses what can be selected. It is inherited:
 
