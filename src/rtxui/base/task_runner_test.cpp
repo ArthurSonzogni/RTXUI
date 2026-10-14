@@ -103,6 +103,16 @@ TEST_CASE("TaskRunner::Current is the runner that is draining",
   CHECK(seen == &runner);
 }
 
+TEST_CASE("A TaskRunner gone makes the one before it current again",
+          "[task][task_runner]") {
+  task::TaskRunner outer;
+  {
+    task::TaskRunner inner;
+    CHECK(task::TaskRunner::Current() == &inner);
+  }
+  CHECK(task::TaskRunner::Current() == &outer);
+}
+
 TEST_CASE("TaskRunner fires the wakeup callback on post",
           "[task][task_runner]") {
   task::TaskRunner runner;

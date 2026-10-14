@@ -43,6 +43,9 @@ class RTXUI_EXPORT TaskRunner {
 
  private:
   TaskRunner* previous_task_runner_ = nullptr;
+  // The runner that was current when this one was made, current again once
+  // this one is gone if it is still alive.
+  TaskRunner* outer_task_runner_ = nullptr;
   TaskQueue queue_;
   mutable std::mutex mutex_;
   WakeupCallback wakeup_callback_;

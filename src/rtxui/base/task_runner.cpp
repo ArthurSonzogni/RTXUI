@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/base/task_runner.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <functional>
@@ -41,19 +42,20 @@ auto TaskRunner::Current() -> TaskRunner* {
   return current_task_runner;
 }
 
-TaskRunner::TaskRunner() {
+TaskRunner::TaskRunner() : outer_task_runner_(current_task_runner) {
   current_task_runner = this;
   std::lock_guard<std::mutex> lock(LiveRunnersMutex());
   LiveRunners().push_back(this);
 }
 
 TaskRunner::~TaskRunner() {
-  {
-    std::lock_guard<std::mutex> lock(LiveRunnersMutex());
-    std::erase(LiveRunners(), this);
-  }
+  std::lock_guard<std::mutex> lock(LiveRunnersMutex());
+  std::erase(LiveRunners(), this);
   if (current_task_runner == this) {
-    current_task_runner = nullptr;
+    const bool outer_alive =
+        std::ranges::find(LiveRunners(), outer_task_runner_) !=
+        LiveRunners().end();
+    current_task_runner = outer_alive ? outer_task_runner_ : nullptr;
   }
 }
 
