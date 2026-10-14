@@ -72,6 +72,10 @@ struct GeneratedContent {
 struct GeneratedContents {
   GeneratedContent before;
   GeneratedContent after;
+  // From ::selection: the colors of the element's selected text, and of its
+  // descendants', which inherit them.
+  std::optional<Color> selection_foreground;
+  std::optional<Color> selection_background;
 };
 
 class ComponentBase;

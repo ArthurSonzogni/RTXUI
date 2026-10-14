@@ -652,10 +652,13 @@ Element::GeneratedChangeScope::GeneratedChangeScope(Element& element)
 
 Element::GeneratedChangeScope::~GeneratedChangeScope() {
   const GeneratedContents* now = element_.generated.get();
-  const bool same = generated_ && now
-                        ? SameGenerated(generated_->before, now->before) &&
-                              SameGenerated(generated_->after, now->after)
-                        : !generated_ && !now;
+  const bool same =
+      generated_ && now
+          ? SameGenerated(generated_->before, now->before) &&
+                SameGenerated(generated_->after, now->after) &&
+                generated_->selection_foreground == now->selection_foreground &&
+                generated_->selection_background == now->selection_background
+          : !generated_ && !now;
   if (!same) {
     element_.InvalidateLayout();
   }

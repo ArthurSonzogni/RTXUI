@@ -19,6 +19,7 @@
 #include "rtxui/component/default/input/input.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/component/default/tooltip/tooltip.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -5869,6 +5870,38 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
     screen.Draw();
     CHECK(device->GetOutput().find("\x1b[7m") == std::string::npos);
   }
+}
+
+TEST_CASE("::selection colors the selected text", "[terminal][selection]") {
+  std::vector<std::string> diagnostics;
+  SetDiagnosticHandler(
+      [&](const Diagnostic& d) { diagnostics.push_back(d.message); });
+  class App : public Component<App> {
+   public:
+    std::string_view view = R"(
+      <style>
+        .marked::selection { color: #ff0000; background-color: #0000ff; }
+        .bold::selection { font-weight: bold; }
+      </style>
+      <div class="marked">some <b>bold</b></div>
+      <div class="bold">plain</div>
+    )";
+  };
+  TimelineScreen screen(Ref<App>::New(), 20, 3);
+  screen.Input(LeftAt('P', 0, 0) + LeftAt('D', 3, 1));
+  // Its colors, on the element and on the <b> in it, which inherits them.
+  CHECK(screen.BackgroundAt(1, 0) == Color::RGB(0, 0, 255));
+  CHECK(screen.ForegroundAt(1, 0) == Color::RGB(255, 0, 0));
+  CHECK(screen.BackgroundAt(6, 0) == Color::RGB(0, 0, 255));
+  // Elsewhere, reverse video: the colors are the text's.
+  CHECK(screen.BackgroundAt(1, 1) != Color::RGB(0, 0, 255));
+  // Unselected text keeps its own.
+  CHECK(screen.BackgroundAt(4, 1) != Color::RGB(0, 0, 255));
+  CHECK(std::ranges::any_of(diagnostics, [](const std::string& message) {
+    return message.find("'font-weight' does not apply to ::selection") !=
+           std::string::npos;
+  }));
+  SetDiagnosticHandler(nullptr);
 }
 
 TEST_CASE("Screen.SelectionScrollsItsContainer", "[terminal][selection]") {

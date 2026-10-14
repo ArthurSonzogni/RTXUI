@@ -29,6 +29,20 @@ const PaintSelection* g_selection = nullptr;
 
 }  // namespace
 
+namespace {
+// The ::selection colors of `node`'s text: those of the nearest element
+// declaring some, up from it. None for reverse video.
+const GeneratedContents* SelectionColors(const Element* node) {
+  for (const Element* element = node; element; element = element->Parent()) {
+    if (element->generated && (element->generated->selection_foreground ||
+                               element->generated->selection_background)) {
+      return element->generated.get();
+    }
+  }
+  return nullptr;
+}
+}  // namespace
+
 bool TextSelectable(const Element* element) {
   for (; element; element = element->Parent()) {
     if (element->style.user_select) {
@@ -787,6 +801,7 @@ void PaintImpl(const PhysicalFragment* frag,
         resolve_cell(cell);
         cell.character = std::string(g.text);
         cell.link = link;
+        bool highlighted = false;
         if (g_selection) {
           TextPosition glyph;
           if (selection_node) {
@@ -799,13 +814,24 @@ void PaintImpl(const PhysicalFragment* frag,
           if (g_selection->glyphs) {
             (*g_selection->glyphs)[x + (y * texture.width())] = glyph;
           }
-          if (glyph.node && g_selection->selected &&
-              g_selection->selected(glyph)) {
-            cell.inverted = true;
-          }
+          highlighted = glyph.node && g_selection->selected &&
+                        g_selection->selected(glyph);
         }
         Color fg = current_foreground_color;
         fg.a = static_cast<uint8_t>(fg.a * current_opacity);
+        if (highlighted) {
+          // In the colors ::selection gives, else in reverse video.
+          const GeneratedContents* colors = SelectionColors(selection_node);
+          if (!colors) {
+            cell.inverted = true;
+          } else {
+            if (colors->selection_background) {
+              cell.background_color =
+                  Blend(*colors->selection_background, cell.background_color);
+            }
+            fg = colors->selection_foreground.value_or(fg);
+          }
+        }
         Color bg = cell.background_color;
         cell.foreground_color = Blend(fg, bg);
         cell.bold = current_bold;

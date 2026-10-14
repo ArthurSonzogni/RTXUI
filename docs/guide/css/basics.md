@@ -135,6 +135,19 @@ one-colon `:before` spelling also works. Transitions and animations do not
 apply to these boxes, and they are not part of the DOM, so other selectors
 never match them.
 
+### Selected Text: `::selection`
+
+`::selection` colors the text a mouse drag selects, which is otherwise shown
+in reverse video. It takes `color` and `background-color` (or `background`);
+anything else is reported as a diagnostic. An element's descendants inherit
+its `::selection` colors, so one rule on a container covers all its text.
+
+```css
+.log::selection { color: #ffffff; background-color: #2563eb; }
+```
+
+See [Selecting and Copying Text](/guide/typography#selecting-and-copying-text).
+
 ### Styling a Nested Component's Internals: `::part()`
 
 The opening line of this page said styles apply "only to that component's

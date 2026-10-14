@@ -252,6 +252,9 @@ in a row of selected text, a border between table cells say, is copied as a
 space. A drag that starts on an element with a click handler, on a link, in an
 input or on a scrollbar does what it does there instead.
 
+A `::selection` rule changes the highlight's colors; see
+[`::selection`](/guide/css/basics#selected-text-selection).
+
 `user-select` chooses what can be selected. It is inherited:
 
 ```css

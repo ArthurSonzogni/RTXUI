@@ -437,12 +437,14 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
         ++it;
       }
     }
-    // `::before` / `::after` must end the selector. Anywhere else it stays a
-    // pseudo-class token the matcher does not know, so the selector matches
-    // nothing rather than something the author did not write.
+    // `::before`, `::after` and `::selection` must end the selector.
+    // Anywhere else it stays a pseudo-class token the matcher does not know,
+    // so the selector matches nothing rather than something the author did
+    // not write.
     if (!parsed.pseudo_classes.empty() &&
         (parsed.pseudo_classes.back() == "before" ||
-         parsed.pseudo_classes.back() == "after")) {
+         parsed.pseudo_classes.back() == "after" ||
+         parsed.pseudo_classes.back() == "selection")) {
       parsed.pseudo_element = parsed.pseudo_classes.back();
       parsed.pseudo_classes.pop_back();
     }

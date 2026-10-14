@@ -1847,9 +1847,10 @@ std::shared_ptr<const css::KeyframesRule> FindKeyframes(
   return {rules, &it->second};
 }
 
-// Applies the ::before and ::after rules in `rules`, in cascade order, onto
-// `out`: `content` gives the text, every other declaration styles the box.
-// The element's own custom properties are in scope, as for its own rules.
+// Applies the ::before, ::after and ::selection rules in `rules`, in cascade
+// order, onto `out`: `content` gives the text, every other declaration
+// styles the box; ::selection takes colors only. The element's own custom
+// properties are in scope, as for its own rules.
 void ApplyGeneratedContent(const Element* element,
                            const std::vector<const css::Ruleset*>& rules,
                            const css::CustomProperties& vars,
@@ -1857,8 +1858,13 @@ void ApplyGeneratedContent(const Element* element,
   if (!out) {
     out = std::make_unique<GeneratedContents>();
   }
+  // What ::selection rules declare, of which the colors are kept.
+  ComputedStyle selection;
+  bool any_selection = false;
   for (const bool important : {false, true}) {
     for (const css::Ruleset* ruleset : rules) {
+      const bool is_selection =
+          ruleset->parsed_selector.pseudo_element == "selection";
       GeneratedContent& target =
           ruleset->parsed_selector.pseudo_element == "after" ? out->after
                                                              : out->before;
@@ -1877,6 +1883,19 @@ void ApplyGeneratedContent(const Element* element,
           expanded = std::move(*substituted);
           resolved.value = expanded;
         }
+        if (is_selection) {
+          if (resolved.property == "color" ||
+              resolved.property == "background-color" ||
+              resolved.property == "background") {
+            ApplyStyle(selection, resolved);
+            any_selection = true;
+          } else {
+            ReportDiagnostic("'" + std::string(resolved.property) +
+                             "' does not apply to ::selection: only color "
+                             "and background-color do");
+          }
+          continue;
+        }
         if (resolved.property != "content") {
           ApplyStyle(target.style, resolved);
           continue;
@@ -1894,6 +1913,10 @@ void ApplyGeneratedContent(const Element* element,
         target.content = std::move(content.text);
       }
     }
+  }
+  if (any_selection) {
+    out->selection_foreground = selection.foreground_color;
+    out->selection_background = selection.background_color;
   }
 }
 
