@@ -6205,3 +6205,39 @@ TEST_CASE("The event loop wakes for a delayed task when it is due",
 
 }  // namespace
 }  // namespace rtxui
+
+namespace rtxui {
+namespace {
+
+class EscapeCounter : public Component<EscapeCounter> {
+ public:
+  int escapes = 0;
+  int others = 0;
+  std::string_view view = "<div>x</div>";
+  bool OnEvent(Event event) override {
+    if (event == Event::Escape()) {
+      escapes++;
+      return true;
+    }
+    if (event.is<Event::Keyboard>()) {
+      others++;
+    }
+    return Component<EscapeCounter>::OnEvent(event);
+  }
+};
+
+TEST_CASE("A lone Escape byte is the Escape key once nothing follows it",
+          "[screen]") {
+  auto app = Ref<EscapeCounter>::New();
+  HeadlessScreen screen(app, 10, 2);
+  // It waited for the rest of a sequence, forever: Escape never arrived,
+  // and the next key came as Alt and that key.
+  screen.Input("\x1b");
+  CHECK(app->escapes == 1);
+  screen.Input("a");
+  CHECK(app->escapes == 1);
+  CHECK(app->others == 1);
+}
+
+}  // namespace
+}  // namespace rtxui

@@ -23,6 +23,9 @@ class TerminalInputParser {
   void Add(char c);
   std::optional<Event> GetEvent();
   bool HasPendingEvents() const { return !events_.empty(); }
+  // Whether bytes wait to be told apart: a lone Escape from the start of a
+  // sequence. Timeout() settles them.
+  bool HasPendingInput() const { return !pending_.empty(); }
   // The background color the terminal reported, in reply to an OSC 11
   // query, since the last call. Not an Event: it answers the library, not
   // the application.

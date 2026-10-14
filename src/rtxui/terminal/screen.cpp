@@ -917,6 +917,12 @@ class ScreenImpl {
   void Step();
   // When the next delayed task is due, from the end of the last Step().
   std::chrono::steady_clock::duration next_task_delay_{};
+  // A lone Escape is the Escape key once this long has passed without the
+  // rest of a sequence following it.
+  static constexpr double kEscapeDelayMs = 50;
+  double last_input_ms_ = 0;
+  // Handles the input the parser was waiting to tell apart, as complete.
+  void SettlePendingInput();
   void Exit() { running_ = false; }
   void Dispatch(Event event);
   // `reuse_layout`: when nothing but paint-only animations changed since the
@@ -1306,7 +1312,8 @@ void ScreenImpl::Step() {
 #if defined(_WIN32)
   if (dynamic_cast<SystemTerminalDevice*>(device_.get())) {
     DWORD timeout_ms = static_cast<DWORD>(
-        InputWait(HasActiveTransitions() || autoscroll_pending_,
+        InputWait(HasActiveTransitions() || autoscroll_pending_ ||
+                      parser_->HasPendingInput(),
                   next_task_delay_)
             .count());
     HANDLE in_handle = GetStdHandle(STD_INPUT_HANDLE);
@@ -1335,9 +1342,10 @@ void ScreenImpl::Step() {
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = static_cast<suseconds_t>(
-        std::chrono::microseconds(
-            InputWait(HasActiveTransitions() || autoscroll_pending_,
-                      next_task_delay_))
+        std::chrono::microseconds(InputWait(HasActiveTransitions() ||
+                                                autoscroll_pending_ ||
+                                                parser_->HasPendingInput(),
+                                            next_task_delay_))
             .count());
 
     int retval = select(max_fd + 1, &fds, nullptr, nullptr, &tv);
@@ -1369,6 +1377,7 @@ void ScreenImpl::Step() {
     int bytes_read = device_->Read(buffer, sizeof(buffer));
     if (bytes_read > 0) {
       UpdateSize();
+      last_input_ms_ = time::GetTimeMs();
       for (int i = 0; i < bytes_read; ++i) {
         parser_->Add(buffer[i]);
       }
@@ -1402,6 +1411,11 @@ void ScreenImpl::Step() {
         UpdateSize();
       }
     }
+  }
+
+  if (parser_->HasPendingInput() &&
+      time::GetTimeMs() - last_input_ms_ >= kEscapeDelayMs) {
+    SettlePendingInput();
   }
 
   bool executed_task = false;
@@ -4236,10 +4250,26 @@ const Cell* ScreenImpl::CellAt(int x, int y) const {
   return &(*last_texture_)[x, y];
 }
 
+void ScreenImpl::SettlePendingInput() {
+  parser_->Timeout(static_cast<int>(kEscapeDelayMs));
+  suppress_draw_ = true;
+  while (auto event = parser_->GetEvent()) {
+    HandleEvent(*event);
+  }
+  suppress_draw_ = false;
+  if (draw_pending_) {
+    Draw();
+  }
+}
+
 void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
   ScopedLayoutArenas arenas(layout_arenas_);
   while (device.HasInput()) {
     Step();
+  }
+  // Nothing more comes: a lone Escape is the key.
+  if (parser_->HasPendingInput()) {
+    SettlePendingInput();
   }
   // An animation that never ends is not waited for: the frame is as settled
   // as it gets. Bounded too, so a long one cannot hang a test.
