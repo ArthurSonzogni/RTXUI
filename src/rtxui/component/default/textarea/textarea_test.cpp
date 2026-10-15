@@ -22,6 +22,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
@@ -57,7 +58,7 @@ TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   REQUIRE(initial_height > 0);
 
   // Click at the textarea's position.
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = ta_el->absolute_x() + 1;  // 1-based
@@ -115,7 +116,7 @@ TEST_CASE("Textarea Click While Scrolled Targets The Visible Line",
   // one fragment taller than the viewport, so it always resolved to that
   // fragment's top edge and scrolled back up to it), so the click landed on
   // "L0" instead of the visually-clicked "L15".
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = ta_el->absolute_x() + 2;  // inside padding-left:1
@@ -164,7 +165,7 @@ TEST_CASE("Textarea Click Accounts For The Line-Number Gutter's Width",
 
   // Click on the second character of line 0 ('b'), which sits at column 1
   // inside the content area (i.e. just past the gutter).
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x =
@@ -240,7 +241,7 @@ TEST_CASE("Textarea Scroll And Click Account For Wrapped (Multi-Row) Lines",
   // the viewport, once scrolled down). With scroll_y == 13, that cell is
   // row 13, which is the second wrapped row of line 4 ('e' * 80): row 12
   // covers [324, 361), so row 13 starts at grapheme index 361.
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = ta_el->absolute_x() + 2;  // 1-based, inside padding-left:1
@@ -298,7 +299,7 @@ TEST_CASE("Textarea Click Maps Correctly On A Word-Wrapped Row",
   // Click at actual on-screen coordinates (relative to self, not to
   // content_el -- see the comment in the test above). Column 0 of the (now
   // topmost) row 1 is the "w" of "w12".
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = ta_el->absolute_x() + 2;  // 1-based, inside padding-left:1
@@ -346,7 +347,7 @@ TEST_CASE("Textarea Multi-Click Line and Paragraph Selection",
   REQUIRE(content_el != nullptr);
 
   SECTION("Triple Click Selects Current Line") {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.x = content_el->absolute_x() + 1 + 2;
     mouse.y = content_el->absolute_y() + 1 + 1;
@@ -370,7 +371,7 @@ TEST_CASE("Textarea Multi-Click Line and Paragraph Selection",
   }
 
   SECTION("Quadruple Click Selects Entire Paragraph") {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.x = content_el->absolute_x() + 1 + 2;
     mouse.y = content_el->absolute_y() + 1 + 1;
@@ -394,7 +395,7 @@ TEST_CASE("Textarea Multi-Click Line and Paragraph Selection",
   }
 
   SECTION("Quadruple Click on Paragraph 2") {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.x = content_el->absolute_x() + 1 + 2;
     mouse.y = content_el->absolute_y() + 1 + 3;
@@ -418,7 +419,7 @@ TEST_CASE("Textarea Multi-Click Line and Paragraph Selection",
   }
 
   SECTION("Triple Click Drag Selects By Line") {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.x = content_el->absolute_x() + 1 + 2;
     mouse.y = content_el->absolute_y() + 1 + 0;
@@ -488,7 +489,7 @@ TEST_CASE(
   REQUIRE(content_el != nullptr);
   REQUIRE(content_el->layout_width() == 37);
 
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = ta_el->absolute_x() + 2;      // 1-based, inside padding-left:1
@@ -535,7 +536,7 @@ TEST_CASE("Textarea ComputeRowStarts correctly wraps past the second line",
   // Row 1: "word03 word04 " (indices 14..27)
   // Row 2: "word05 word06 " (indices 28..41)
   // Row 3: "word07 word08"  (indices 42..55)
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = content_el->absolute_x() + 1;
@@ -568,7 +569,7 @@ TEST_CASE("Textarea Component Readonly Blocks Enter And Tab Indent",
   textarea_ptr->Digest();
   std::string original = textarea_ptr->value;
 
-  Event::Keyboard tab_kb;
+  KeyboardData tab_kb;
   tab_kb.special = Event::Keyboard::Special::Tab;
   CHECK(textarea_ptr->OnEvent(Event(tab_kb)));
   textarea_ptr->Digest();
@@ -639,7 +640,7 @@ TEST_CASE("Textarea Component Maxlength Blocks Enter And Tab Past The Limit",
   textarea_el->set_focused(true);
   textarea_ptr->Digest();
 
-  Event::Keyboard tab_kb;
+  KeyboardData tab_kb;
   tab_kb.special = Event::Keyboard::Special::Tab;
   textarea_ptr->OnEvent(Event(tab_kb));
   textarea_ptr->Digest();
@@ -931,7 +932,7 @@ TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
   textarea_ptr->Digest();
   CHECK(textarea_ptr->value == "ab\n");
 
-  Event::Keyboard tab_kb;
+  KeyboardData tab_kb;
   tab_kb.special = Event::Keyboard::Special::Tab;
   textarea_ptr->OnEvent(Event(tab_kb));
   textarea_ptr->Digest();
@@ -1231,7 +1232,7 @@ TEST_CASE("Textarea Click Layout Regression Test",
   int initial_height = ta_el->layout_height();
 
   // Click at the textarea's position
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = ta_el->absolute_x() + 1;
@@ -1363,7 +1364,7 @@ TEST_CASE("Textarea PageUp and PageDown", "[component][textarea][navigation]") {
   textarea_el->set_focused(true);
   textarea_ptr->Digest();
 
-  Event::Keyboard page_down;
+  KeyboardData page_down;
   page_down.special = Event::Keyboard::Special::PageDown;
   textarea_ptr->OnEvent(Event(page_down));
   textarea_ptr->Digest();
@@ -1372,7 +1373,7 @@ TEST_CASE("Textarea PageUp and PageDown", "[component][textarea][navigation]") {
   // chars)
   CHECK(textarea_ptr->cursor_pos == 70);
 
-  Event::Keyboard page_up;
+  KeyboardData page_up;
   page_up.special = Event::Keyboard::Special::PageUp;
   textarea_ptr->OnEvent(Event(page_up));
   textarea_ptr->Digest();
@@ -1405,7 +1406,7 @@ TEST_CASE("Textarea Block Indent and Outdent",
   textarea_ptr->cursor_pos = 10;  // into beta
   textarea_ptr->Digest();
 
-  Event::Keyboard tab_kb;
+  KeyboardData tab_kb;
   tab_kb.special = Event::Keyboard::Special::Tab;
   textarea_ptr->OnEvent(Event(tab_kb));
   textarea_ptr->Digest();
@@ -1452,7 +1453,7 @@ TEST_CASE("Textarea Move Line Up and Down",
   textarea_ptr->cursor_pos = 8;
   textarea_ptr->Digest();
 
-  Event::Keyboard alt_up;
+  KeyboardData alt_up;
   alt_up.special = Event::Keyboard::Special::ArrowUp;
   alt_up.modifier.alt = true;
 
@@ -1467,7 +1468,7 @@ TEST_CASE("Textarea Move Line Up and Down",
   CHECK(textarea_ptr->value == "line 2\nline 1\nline 3");
 
   // Move line 2 down (swaps with line 1)
-  Event::Keyboard alt_down;
+  KeyboardData alt_down;
   alt_down.special = Event::Keyboard::Special::ArrowDown;
   alt_down.modifier.alt = true;
 
@@ -1510,7 +1511,7 @@ TEST_CASE("Textarea Indentation Uses Spaces And Mouse Click Matches",
   screen.Draw();
 
   // Press Tab: should insert 2 spaces
-  Event::Keyboard tab_kb;
+  KeyboardData tab_kb;
   tab_kb.special = Event::Keyboard::Special::Tab;
   ta_ptr->OnEvent(Event(tab_kb));
   ta_ptr->Digest();
@@ -1521,7 +1522,7 @@ TEST_CASE("Textarea Indentation Uses Spaces And Mouse Click Matches",
 
   // Mouse click at column 0 (first space)
   auto click_at = [&](int col) {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.x = content_el->absolute_x() + 1 + col;
     mouse.y = content_el->absolute_y() + 1;

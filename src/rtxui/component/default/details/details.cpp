@@ -75,13 +75,13 @@ bool details::OnEvent(Event event) {
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed ||
-        kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion() == Event::Keyboard::Motion::Pressed ||
+        kb.motion() == Event::Keyboard::Motion::Repeat) {
       auto* summary_btn = root->QuerySelector(".summary-line");
       if (summary_btn && summary_btn->focused()) {
-        if (kb.special == Event::Keyboard::Special::Return ||
-            (kb.special == Event::Keyboard::Special::None &&
-             kb.codepoint == 32)) {
+        if (kb.special() == Event::Keyboard::Special::Return ||
+            (kb.special() == Event::Keyboard::Special::None &&
+             kb.codepoint() == 32)) {
           Toggle();
           return true;
         }

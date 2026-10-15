@@ -18,7 +18,8 @@
 
 #include "rtxui/base/string.hpp"  // for EatCodePoint
 #include "rtxui/color.hpp"
-#include "rtxui/event.hpp"  // for Event
+#include "rtxui/event.hpp"
+#include "rtxui/terminal/event_internal.hpp"  // for Event
 
 namespace rtxui {
 
@@ -258,7 +259,8 @@ void TerminalInputParser::EmitPastedText(std::string_view text) {
       // through the "user pressed Enter" handler, which carries over the
       // current line's indentation. Pasted text already has its own
       // indentation, so that would double it on every line.
-      auto newline_kb = Event::Keyboard::From(static_cast<uint32_t>('\n'));
+      KeyboardData newline_kb;
+      newline_kb.codepoint = '\n';
       newline_kb.from_paste = true;
       events_.emplace_back(newline_kb);
       ++i;
@@ -267,7 +269,8 @@ void TerminalInputParser::EmitPastedText(std::string_view text) {
     size_t end = i;
     uint32_t codepoint = 0;
     if (EatCodePoint(text, i, &end, &codepoint)) {
-      auto kb = Event::Keyboard::From(codepoint);
+      KeyboardData kb;
+      kb.codepoint = codepoint;
       kb.from_paste = true;
       events_.emplace_back(kb);
       i = end;
@@ -570,7 +573,7 @@ TerminalInputParser::Output TerminalInputParser::ParseMouse(
       return DROP;
     }
   }
-  Event::Mouse mouse;
+  MouseData mouse;
   const int button = arguments[0];
   mouse.motion = (button & 32) ? Event::Mouse::Moved
                                : (pressed ? Event::Mouse::Pressed
@@ -583,7 +586,7 @@ TerminalInputParser::Output TerminalInputParser::ParseMouse(
   mouse.modifier.ctrl = (button & 16) != 0;
   mouse.x = arguments[1];
   mouse.y = arguments[2];
-  return mouse;
+  return Event(mouse);
 }
 // `ESC[row;colR` is a terminal's reply to a cursor position query, which an
 // inline screen makes to find where it is drawn. Not an Event: it answers the

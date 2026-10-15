@@ -401,12 +401,12 @@ class FileBrowser : public Component<FileBrowser> {
       return Component<FileBrowser>::OnEvent(event);
     }
     auto key = event.get<Event::Keyboard>();
-    if (key.motion != Event::Keyboard::Motion::Pressed &&
-        key.motion != Event::Keyboard::Motion::Repeat) {
+    if (key.motion() != Event::Keyboard::Motion::Pressed &&
+        key.motion() != Event::Keyboard::Motion::Repeat) {
       return Component<FileBrowser>::OnEvent(event);
     }
 
-    switch (key.special) {
+    switch (key.special()) {
       case Event::Keyboard::Special::ArrowDown:
         MoveDown();
         return false;  // let focus move too, so the list scrolls to follow
@@ -422,11 +422,11 @@ class FileBrowser : public Component<FileBrowser> {
       default:
         break;
     }
-    if (key.codepoint == 'j') {
+    if (key.codepoint() == 'j') {
       MoveDown();
       return true;
     }
-    if (key.codepoint == 'k') {
+    if (key.codepoint() == 'k') {
       MoveUp();
       return true;
     }

@@ -21,6 +21,7 @@
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
@@ -77,7 +78,7 @@ TEST_CASE("Select and Option Components", "[component][select]") {
 
   // Click on the select element to open it
   select_el->set_focused(true);
-  Event::Mouse mouse_click;
+  MouseData mouse_click;
   mouse_click.button = Event::Mouse::Button::Left;
   mouse_click.motion = Event::Mouse::Motion::Pressed;
   mouse_click.x = select_el->absolute_x() + 2;
@@ -90,20 +91,15 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   CHECK(select_ptr->hovered_index == 1);  // "light" is at index 1
 
   // Use keyboard: ArrowDown to "solarized" (index 2)
-  Event down_event = Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::ArrowDown,
-  });
+  Event down_event =
+      KeyboardData{.special = Event::Keyboard::Special::ArrowDown};
   CHECK(select_ptr->OnEvent(down_event) == true);
   container->Digest();
   screen.Draw();
   CHECK(select_ptr->hovered_index == 2);
 
   // Use keyboard: Enter to select "solarized"
-  Event enter_event = Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::Return,
-  });
+  Event enter_event = KeyboardData{.special = Event::Keyboard::Special::Return};
   CHECK(select_ptr->OnEvent(enter_event) == true);
   container->Digest();
   screen.Draw();
@@ -115,7 +111,7 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   CHECK(select_ptr->selected_label == "Solarized");
 
   // Re-open the select to make the option elements visible and laid out
-  Event::Mouse reopen_click;
+  MouseData reopen_click;
   reopen_click.button = Event::Mouse::Button::Left;
   reopen_click.motion = Event::Mouse::Motion::Pressed;
   reopen_click.x = select_el->absolute_x() + 2;
@@ -135,7 +131,7 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   REQUIRE(dark_option_ptr != nullptr);
   CHECK(dark_option_ptr->value == "dark");
 
-  Event::Mouse option_mouse_click;
+  MouseData option_mouse_click;
   option_mouse_click.button = Event::Mouse::Button::Left;
   option_mouse_click.motion = Event::Mouse::Motion::Pressed;
   option_mouse_click.x = dark_option_el->absolute_x() + 1;
@@ -184,7 +180,7 @@ TEST_CASE(
   // on "a", index 0) - options are only actually laid out (and have a
   // meaningful absolute position) once the dropdown is open.
   select_el->set_focused(true);
-  Event::Mouse click_select;
+  MouseData click_select;
   click_select.button = Event::Mouse::Button::Left;
   click_select.motion = Event::Mouse::Motion::Pressed;
   click_select.x = select_el->absolute_x() + 2;
@@ -199,7 +195,7 @@ TEST_CASE(
   auto* b_option_el =
       rtxui::ComponentInternals::Root(*container)->QuerySelector("#opt-b");
   REQUIRE(b_option_el != nullptr);
-  Event::Mouse click_b;
+  MouseData click_b;
   click_b.button = Event::Mouse::Button::Left;
   click_b.motion = Event::Mouse::Motion::Pressed;
   click_b.x = b_option_el->absolute_x() + 1;
@@ -209,39 +205,29 @@ TEST_CASE(
   CHECK(select_ptr->value == "a");
 
   // ArrowDown skips disabled "b" (index 1) and lands on "c" (index 2).
-  select_ptr->OnEvent(Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::ArrowDown,
-  }));
+  select_ptr->OnEvent(
+      KeyboardData{.special = Event::Keyboard::Special::ArrowDown});
   CHECK(select_ptr->hovered_index == 2);
 
   // ArrowDown again wraps around, skipping "b" again, back to "a" (index 0).
-  select_ptr->OnEvent(Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::ArrowDown,
-  }));
+  select_ptr->OnEvent(
+      KeyboardData{.special = Event::Keyboard::Special::ArrowDown});
   CHECK(select_ptr->hovered_index == 0);
 
   // Force-hover the disabled option directly and confirm Enter doesn't
   // select it (dropdown stays open, value unchanged).
   select_ptr->hovered_index = 1;
-  select_ptr->OnEvent(Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::Return,
-  }));
+  select_ptr->OnEvent(
+      KeyboardData{.special = Event::Keyboard::Special::Return});
   CHECK(select_ptr->value == "a");
   CHECK(select_ptr->is_open);
 
   // Closed-state ArrowDown also skips the disabled option.
-  select_ptr->OnEvent(Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::Escape,
-  }));
+  select_ptr->OnEvent(
+      KeyboardData{.special = Event::Keyboard::Special::Escape});
   REQUIRE_FALSE(select_ptr->is_open);
-  select_ptr->OnEvent(Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::ArrowDown,
-  }));
+  select_ptr->OnEvent(
+      KeyboardData{.special = Event::Keyboard::Special::ArrowDown});
   CHECK(select_ptr->value == "c");
 }
 
@@ -295,7 +281,7 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
 
   // Click on the select element to open it
   select_el->set_focused(true);
-  Event::Mouse mouse_click;
+  MouseData mouse_click;
   mouse_click.button = Event::Mouse::Button::Left;
   mouse_click.motion = Event::Mouse::Motion::Pressed;
   mouse_click.x = select_el->absolute_x() + 2;
@@ -343,7 +329,7 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
   int dark_x = dark_option_el->absolute_x();
   int dark_y = dark_option_el->absolute_y();
 
-  Event::Mouse mouse_move;
+  MouseData mouse_move;
   mouse_move.button = Event::Mouse::Button::None;
   mouse_move.motion = Event::Mouse::Motion::Moved;
   mouse_move.x = dark_x + 1;  // 1-indexed for screen
@@ -403,7 +389,7 @@ TEST_CASE("Select Component Z-index sibling overlap",
 
   // Click on the select element to open it
   select_el->set_focused(true);
-  Event::Mouse mouse_click;
+  MouseData mouse_click;
   mouse_click.button = Event::Mouse::Button::Left;
   mouse_click.motion = Event::Mouse::Motion::Pressed;
   mouse_click.x = select_el->absolute_x() + 2;

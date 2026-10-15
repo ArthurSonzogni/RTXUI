@@ -102,10 +102,10 @@ bool slider::OnEvent(Event event) {
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left) {
-      if (mouse.motion == Event::Mouse::Motion::Pressed) {
-        int click_x = mouse.x - 1;
-        int click_y = mouse.y - 1;
+    if (mouse.button() == Event::Mouse::Button::Left) {
+      if (mouse.motion() == Event::Mouse::Motion::Pressed) {
+        int click_x = mouse.x() - 1;
+        int click_y = mouse.y() - 1;
         int abs_x = root->absolute_x();
         int abs_y = root->absolute_y();
 
@@ -126,11 +126,11 @@ bool slider::OnEvent(Event event) {
     }
 
     if (is_captured) {
-      if (mouse.motion == Event::Mouse::Motion::Moved ||
-          mouse.motion == Event::Mouse::Motion::Pressed ||
-          mouse.motion == Event::Mouse::Motion::Released) {
-        int click_x = mouse.x - 1;
-        int click_y = mouse.y - 1;
+      if (mouse.motion() == Event::Mouse::Motion::Moved ||
+          mouse.motion() == Event::Mouse::Motion::Pressed ||
+          mouse.motion() == Event::Mouse::Motion::Released) {
+        int click_x = mouse.x() - 1;
+        int click_y = mouse.y() - 1;
         int abs_x = root->absolute_x();
         int abs_y = root->absolute_y();
         int track_x = abs_x + 1;
@@ -164,7 +164,7 @@ bool slider::OnEvent(Event event) {
           value_changed = true;
         }
 
-        if (mouse.motion == Event::Mouse::Motion::Released) {
+        if (mouse.motion() == Event::Mouse::Motion::Released) {
           ReleaseMouse();
         }
       }
@@ -173,25 +173,25 @@ bool slider::OnEvent(Event event) {
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed ||
-        kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion() == Event::Keyboard::Motion::Pressed ||
+        kb.motion() == Event::Keyboard::Motion::Repeat) {
       if (root->focused()) {
         int delta = 0;
         bool is_primary_axis = false;
 
         if (is_vertical) {
-          if (kb.special == Event::Keyboard::Special::ArrowDown) {
+          if (kb.special() == Event::Keyboard::Special::ArrowDown) {
             delta = -safe_step;
             is_primary_axis = true;
-          } else if (kb.special == Event::Keyboard::Special::ArrowUp) {
+          } else if (kb.special() == Event::Keyboard::Special::ArrowUp) {
             delta = safe_step;
             is_primary_axis = true;
           }
         } else {
-          if (kb.special == Event::Keyboard::Special::ArrowLeft) {
+          if (kb.special() == Event::Keyboard::Special::ArrowLeft) {
             delta = -safe_step;
             is_primary_axis = true;
-          } else if (kb.special == Event::Keyboard::Special::ArrowRight) {
+          } else if (kb.special() == Event::Keyboard::Special::ArrowRight) {
             delta = safe_step;
             is_primary_axis = true;
           }

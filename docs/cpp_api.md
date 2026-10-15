@@ -188,32 +188,50 @@ class Screen {
 
 ## 6. Input Event Model: `rtxui::Event`
 
-Encapsulates terminal input events as a tagged variant.
+A key, a mouse action or a resize. Only the library and the named events
+(`Event::Return()`, `Event::CtrlP()`, `Event::a()`, ...) create one; copies
+share the same immutable data, and every field is read through a getter, so
+fields can be added without changing the class's size.
 
 ```cpp
 class Event {
  public:
-  template <typename T> bool is() const noexcept;
-  template <typename T> const T& get() const noexcept;
-  template <typename T> const T* get_if() const noexcept;
+  template <typename T> bool is() const;                 // T: Keyboard, Mouse, Resized
+  template <typename T> T get() const;                   // only when is<T>()
+  template <typename T> std::optional<T> get_if() const;
+  bool operator==(const Event&) const;                   // event == Event::Return()
 };
 ```
 
+<!-- snippet: fragment -->
+```cpp
+if (auto key = event.get_if<Event::Keyboard>()) {
+  if (key->special() == Event::Keyboard::Return) { ... }
+}
+```
+
 ### 6.1 `Event::Keyboard`
-| Member | Type | Description |
+| Getter | Type | Description |
 | :--- | :--- | :--- |
-| `codepoint` | `char32_t` | Decoded UTF-32 character value. |
-| `special` | `Key` | Enumeration for special keys: `ArrowUp`, `Return`, `Escape`, `Tab`, `F1`–`F12`, etc. |
-| `modifier` | `Modifier` | Bitmask for active modifiers: `Shift`, `Alt`, `Ctrl`, `Meta`. |
-| `motion` | `Motion` | Interaction state: `Pressed`, `Repeat`, `Released`. |
+| `codepoint()` | `std::uint32_t` | Decoded UTF-32 character, or 0 for a special key. |
+| `special()` | `Special` | Special keys: `ArrowUp`, `Return`, `Escape`, `Tab`, `F1`–`F12`, etc. |
+| `modifier()` | `Event::Modifier` | `alt()`, `ctrl()`, `meta()`, `shift()`. |
+| `motion()` | `Motion` | `Pressed`, `Repeat`, `Released`. |
+| `from_paste()` | `bool` | Whether the character comes from a paste. |
+
+`Event::Keyboard::From(c)` makes the key typing `c`.
 
 ### 6.2 `Event::Mouse`
-| Member | Type | Description |
+| Getter | Type | Description |
 | :--- | :--- | :--- |
-| `x` | `int` | 1-based column terminal coordinate. |
-| `y` | `int` | 1-based row terminal coordinate. |
-| `button` | `Button` | Mouse button: `None`, `Left`, `Middle`, `Right`, `WheelUp`, `WheelDown`. |
-| `motion` | `Motion` | Mouse motion state: `Pressed`, `Released`, `Moved`. |
+| `x()` | `int` | 1-based column. |
+| `y()` | `int` | 1-based row. |
+| `button()` | `Button` | `None`, `Left`, `Middle`, `Right`, `WheelUp`, `WheelDown`, `WheelLeft`, `WheelRight`. |
+| `motion()` | `Motion` | `Pressed`, `Released`, `Moved`. |
+| `modifier()` | `Event::Modifier` | As for a key. |
+
+### 6.3 `Event::Resized`
+`width()` and `height()`, in cells.
 
 ---
 

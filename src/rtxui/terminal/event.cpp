@@ -6,11 +6,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 
 #include "rtxui/base/string.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 
 // Disable warning for shadowing variable
 #ifdef __clang__
@@ -22,18 +25,72 @@
 namespace rtxui {
 
 // static
-Event::Keyboard Event::Keyboard::From(std::uint32_t cp) {
-  Keyboard k;
-  k.codepoint = cp;
-  return k;
+namespace {
+
+constexpr std::uint32_t kAlt = 1 << 0;
+constexpr std::uint32_t kCtrl = 1 << 1;
+constexpr std::uint32_t kMeta = 1 << 2;
+constexpr std::uint32_t kShift = 1 << 3;
+
+}  // namespace
+
+// Modifier -------------------------------------------------------------------
+
+bool Event::Modifier::alt() const {
+  return bits_ & kAlt;
+}
+bool Event::Modifier::ctrl() const {
+  return bits_ & kCtrl;
+}
+bool Event::Modifier::meta() const {
+  return bits_ & kMeta;
+}
+bool Event::Modifier::shift() const {
+  return bits_ & kShift;
 }
 
-// static
+std::string Event::Modifier::Print() const {
+  std::string out;
+  for (auto [set, name] :
+       {std::pair{alt(), "alt"}, std::pair{ctrl(), "ctrl"},
+        std::pair{meta(), "meta"}, std::pair{shift(), "shift"}}) {
+    if (!set) {
+      continue;
+    }
+    if (!out.empty()) {
+      out += "|";
+    }
+    out += name;
+  }
+  return out;
+}
+
+Event::Modifier EventInternals::Make(ModifierData data) {
+  Event::Modifier modifier;
+  modifier.bits_ = (data.alt ? kAlt : 0) | (data.ctrl ? kCtrl : 0) |
+                   (data.meta ? kMeta : 0) | (data.shift ? kShift : 0);
+  return modifier;
+}
+
+ModifierData EventInternals::Data(Event::Modifier modifier) {
+  return {modifier.alt(), modifier.ctrl(), modifier.meta(), modifier.shift()};
+}
+
+// Keyboard -------------------------------------------------------------------
+
+Event::Keyboard::Keyboard(std::shared_ptr<const KeyboardData> data)
+    : data_(std::move(data)) {}
+
+Event::Keyboard Event::Keyboard::From(std::uint32_t cp) {
+  KeyboardData data;
+  data.codepoint = cp;
+  return Keyboard(std::make_shared<const KeyboardData>(data));
+}
+
 Event::Keyboard Event::Keyboard::From(char c) {
   return From(static_cast<std::uint32_t>(c));
 }
 
-// static
 Event::Keyboard Event::Keyboard::From(std::string_view str) {
   uint32_t cp = 0;
   size_t end = 0;
@@ -41,33 +98,28 @@ Event::Keyboard Event::Keyboard::From(std::string_view str) {
   return From(cp);
 }
 
-std::string EventModifier::Print() const {
-  std::string out;
-  if (alt) {
-    out += "alt";
-  }
-  if (ctrl) {
-    if (!out.empty()) {
-      out += "|";
-    }
-    out += "ctrl";
-  }
-  if (meta) {
-    if (!out.empty()) {
-      out += "|";
-    }
-    out += "meta";
-  }
-  if (shift) {
-    if (!out.empty()) {
-      out += "|";
-    }
-    out += "shift";
-  }
-  return out;
+std::uint32_t Event::Keyboard::codepoint() const {
+  return data_->codepoint;
+}
+Event::Keyboard::Special Event::Keyboard::special() const {
+  return data_->special;
+}
+Event::Modifier Event::Keyboard::modifier() const {
+  return EventInternals::Make(data_->modifier);
+}
+Event::Keyboard::Motion Event::Keyboard::motion() const {
+  return data_->motion;
+}
+bool Event::Keyboard::from_paste() const {
+  return data_->from_paste;
+}
+bool Event::Keyboard::operator==(const Keyboard& other) const {
+  return *data_ == *other.data_;
 }
 
 std::string Event::Keyboard::Print() const {
+  const KeyboardData& d = *data_;
+  const Special special = d.special;
   if (special != Special::None) {
     static const auto& special_string = *new std::map<Special, std::string>{
         {Special::ArrowLeft, "ArrowLeft"},
@@ -101,8 +153,8 @@ std::string Event::Keyboard::Print() const {
     return "Keyboard(" +
            ((std::map<Special, std::string>&)special_string)[special] + ")";
   }
-  std::string out = "Keyboard(" + CodePointToString(codepoint);
-  std::string mod = modifier.Print();
+  std::string out = "Keyboard(" + CodePointToString(d.codepoint);
+  std::string mod = modifier().Print();
   if (!mod.empty()) {
     out += " " + mod;
   }
@@ -110,7 +162,47 @@ std::string Event::Keyboard::Print() const {
   return out;
 }
 
+// Mouse ----------------------------------------------------------------------
+
+Event::Mouse::Mouse(std::shared_ptr<const MouseData> data)
+    : data_(std::move(data)) {}
+
+Event::Mouse::Button Event::Mouse::button() const {
+  return data_->button;
+}
+Event::Mouse::Motion Event::Mouse::motion() const {
+  return data_->motion;
+}
+Event::Modifier Event::Mouse::modifier() const {
+  return EventInternals::Make(data_->modifier);
+}
+int Event::Mouse::x() const {
+  return data_->x;
+}
+int Event::Mouse::y() const {
+  return data_->y;
+}
+float Event::Mouse::sub_cell_x() const {
+  return data_->sub_cell_x;
+}
+float Event::Mouse::sub_cell_y() const {
+  return data_->sub_cell_y;
+}
+int Event::Mouse::pixel_x() const {
+  return data_->pixel_x;
+}
+int Event::Mouse::pixel_y() const {
+  return data_->pixel_y;
+}
+bool Event::Mouse::is_pixel_precise() const {
+  return data_->is_pixel_precise;
+}
+bool Event::Mouse::operator==(const Mouse& other) const {
+  return *data_ == *other.data_;
+}
+
 std::string Event::Mouse::Print() const {
+  const MouseData& d = *data_;
   static const auto& button_string = *new std::map<Mouse::Button, const char*>{
       {Mouse::Button::Left, "Left"},
       {Mouse::Button::Middle, "Middle"},
@@ -129,16 +221,16 @@ std::string Event::Mouse::Print() const {
   std::string out =
       "Mouse(" +
       std::string(
-          ((std::map<Mouse::Button, const char*>&)button_string)[button]);
+          ((std::map<Mouse::Button, const char*>&)button_string)[d.button]);
   out += ", " +
          std::string(
-             ((std::map<Mouse::Motion, const char*>&)motion_string)[motion]);
-  out += ", x=" + std::to_string(x) + ", y=" + std::to_string(y);
-  if (is_pixel_precise) {
-    out +=
-        ", px=" + std::to_string(pixel_x) + ", py=" + std::to_string(pixel_y);
+             ((std::map<Mouse::Motion, const char*>&)motion_string)[d.motion]);
+  out += ", x=" + std::to_string(d.x) + ", y=" + std::to_string(d.y);
+  if (d.is_pixel_precise) {
+    out += ", px=" + std::to_string(d.pixel_x) +
+           ", py=" + std::to_string(d.pixel_y);
   }
-  std::string mod = modifier.Print();
+  std::string mod = modifier().Print();
   if (!mod.empty()) {
     out += ", " + mod;
   }
@@ -146,21 +238,124 @@ std::string Event::Mouse::Print() const {
   return out;
 }
 
-std::string Event::Resized::Print() const {
-  return "Event::Resized(" + std::to_string(width) + ", " +
-         std::to_string(height) + ")";
+// Resized --------------------------------------------------------------------
+
+Event::Resized::Resized(std::shared_ptr<const ResizedData> data)
+    : data_(std::move(data)) {}
+
+int Event::Resized::width() const {
+  return data_->width;
+}
+int Event::Resized::height() const {
+  return data_->height;
+}
+bool Event::Resized::operator==(const Resized& other) const {
+  return *data_ == *other.data_;
 }
 
-bool Event::operator==(const Event&) const = default;
+std::string Event::Resized::Print() const {
+  return "Event::Resized(" + std::to_string(data_->width) + ", " +
+         std::to_string(data_->height) + ")";
+}
+
+// Event ----------------------------------------------------------------------
+
+Event::Event(std::shared_ptr<const internal::EventData> data)
+    : data_(std::move(data)) {}
+Event::Event(Keyboard keyboard)
+    : Event(EventInternals::Make(*keyboard.data_)) {}
+Event::Event(Mouse mouse) : Event(EventInternals::Make(*mouse.data_)) {}
+Event::Event(Resized resized) : Event(EventInternals::Make(*resized.data_)) {}
+Event::Event(const Event&) = default;
+Event::Event(Event&&) noexcept = default;
+Event& Event::operator=(const Event&) = default;
+Event& Event::operator=(Event&&) noexcept = default;
+Event::~Event() = default;
+
+bool Event::IsKeyboard() const {
+  return std::holds_alternative<KeyboardData>(data_->value);
+}
+bool Event::IsMouse() const {
+  return std::holds_alternative<MouseData>(data_->value);
+}
+bool Event::IsResized() const {
+  return std::holds_alternative<ResizedData>(data_->value);
+}
+
+// Each shares the event's data, pointing into it. Asked for the wrong kind,
+// each gives an empty one rather than reading the wrong alternative.
+Event::Keyboard Event::AsKeyboard() const {
+  if (const auto* data = std::get_if<KeyboardData>(&data_->value)) {
+    return Keyboard(std::shared_ptr<const KeyboardData>(data_, data));
+  }
+  return Keyboard(std::make_shared<const KeyboardData>());
+}
+Event::Mouse Event::AsMouse() const {
+  if (const auto* data = std::get_if<MouseData>(&data_->value)) {
+    return Mouse(std::shared_ptr<const MouseData>(data_, data));
+  }
+  return Mouse(std::make_shared<const MouseData>());
+}
+Event::Resized Event::AsResized() const {
+  if (const auto* data = std::get_if<ResizedData>(&data_->value)) {
+    return Resized(std::shared_ptr<const ResizedData>(data_, data));
+  }
+  return Resized(std::make_shared<const ResizedData>());
+}
+
+bool Event::operator==(const Event& other) const {
+  return data_->value == other.data_->value;
+}
 
 std::string Event::Print() const {
-  return std::visit([](const auto& data) { return data.Print(); }, data_);
+  if (IsKeyboard()) {
+    return AsKeyboard().Print();
+  }
+  if (IsMouse()) {
+    return AsMouse().Print();
+  }
+  return AsResized().Print();
 }
 
-#define RTXUI_IMPL_EVENT(NAME, ...)                                       \
-  const Event& Event::NAME() {                                            \
-    static const Event& event = *new Event(Event::Keyboard{__VA_ARGS__}); \
-    return event;                                                         \
+Event EventInternals::Make(KeyboardData data) {
+  return Event(std::make_shared<const internal::EventData>(
+      internal::EventData{std::move(data)}));
+}
+Event EventInternals::Make(MouseData data) {
+  return Event(std::make_shared<const internal::EventData>(
+      internal::EventData{std::move(data)}));
+}
+Event EventInternals::Make(ResizedData data) {
+  return Event(std::make_shared<const internal::EventData>(
+      internal::EventData{std::move(data)}));
+}
+
+const KeyboardData& EventInternals::Data(const Event::Keyboard& event) {
+  return *event.data_;
+}
+const MouseData& EventInternals::Data(const Event::Mouse& event) {
+  return *event.data_;
+}
+const ResizedData& EventInternals::Data(const Event::Resized& event) {
+  return *event.data_;
+}
+
+namespace internal {
+KeyboardData::operator Event() const {
+  return EventInternals::Make(*this);
+}
+MouseData::operator Event() const {
+  return EventInternals::Make(*this);
+}
+ResizedData::operator Event() const {
+  return EventInternals::Make(*this);
+}
+}  // namespace internal
+
+#define RTXUI_IMPL_EVENT(NAME, ...)                                    \
+  const Event& Event::NAME() {                                         \
+    static const Event& event = *new Event(KeyboardData{__VA_ARGS__}); \
+    return event;                                                      \
   }
 
 RTXUI_IMPL_EVENT(ArrowLeft, .special = Event::Keyboard::ArrowLeft)

@@ -68,6 +68,7 @@
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/style/style.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/input_wait.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
@@ -1564,7 +1565,10 @@ void ScreenImpl::HandleEvent(Event event) {
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
 
-  if (auto* mouse_ptr = event.get_if<Event::Mouse>()) {
+  if (auto mouse_event = event.get_if<Event::Mouse>()) {
+    // Rewritten into the screen's own coordinates: a copy, then a new event.
+    MouseData mouse_data = EventInternals::Data(*mouse_event);
+    MouseData* mouse_ptr = &mouse_data;
     int cell_w = 0, cell_h = 0;
     if (device_->GetCellPixelSize(cell_w, cell_h) && cell_w > 0 && cell_h > 0) {
       mouse_ptr->is_pixel_precise = true;
@@ -1604,9 +1608,10 @@ void ScreenImpl::HandleEvent(Event event) {
         inline_pressed_ = false;
       }
     }
+    event = mouse_data;
   }
 
-  if (auto* mouse = event.get_if<Event::Mouse>();
+  if (auto mouse = event.get_if<Event::Mouse>();
       mouse && HandleSelection(*mouse)) {
     return;
   }
@@ -1619,7 +1624,7 @@ void ScreenImpl::HandleEvent(Event event) {
       SetPointerInteraction(false);
       component_->ResolveTargetStyles();
     }
-  } else if (event.is<Event::Mouse>() && event.get<Event::Mouse>().motion ==
+  } else if (event.is<Event::Mouse>() && event.get<Event::Mouse>().motion() ==
                                              Event::Mouse::Motion::Pressed) {
     SetPointerInteraction(true);
   }
@@ -1629,8 +1634,8 @@ void ScreenImpl::HandleEvent(Event event) {
 
     bool state_changed = false;
     if (root_fragment_) {
-      int tx = mouse.x - 1;
-      int ty = mouse.y - 1;
+      int tx = mouse.x() - 1;
+      int ty = mouse.y() - 1;
       Element* target_el = nullptr;
       if (auto* capturer = ComponentBase::GetMouseCapturer()) {
         target_el = capturer->Root();
@@ -1649,23 +1654,23 @@ void ScreenImpl::HandleEvent(Event event) {
       };
 
       if (drag_active_) {
-        if (mouse.motion == Event::Mouse::Motion::Released) {
+        if (mouse.motion() == Event::Mouse::Motion::Released) {
           drag_active_ = false;
           drag_element_ = nullptr;
           state_changed = true;
-        } else if (mouse.motion == Event::Mouse::Motion::Moved ||
-                   mouse.motion == Event::Mouse::Motion::Pressed) {
-          int current_mouse = drag_vertical_ ? mouse.y : mouse.x;
+        } else if (mouse.motion() == Event::Mouse::Motion::Moved ||
+                   mouse.motion() == Event::Mouse::Motion::Pressed) {
+          int current_mouse = drag_vertical_ ? mouse.y() : mouse.x();
           int delta = current_mouse - drag_start_mouse_;
 
           int delta_eighths = 0;
           int cell_w = 0, cell_h = 0;
-          if (mouse.is_pixel_precise &&
+          if (mouse.is_pixel_precise() &&
               device_->GetCellPixelSize(cell_w, cell_h) && cell_w > 0 &&
               cell_h > 0) {
-            int delta_pixels = drag_vertical_
-                                   ? (mouse.pixel_y - drag_start_mouse_pixel_)
-                                   : (mouse.pixel_x - drag_start_mouse_pixel_);
+            int delta_pixels =
+                drag_vertical_ ? (mouse.pixel_y() - drag_start_mouse_pixel_)
+                               : (mouse.pixel_x() - drag_start_mouse_pixel_);
             delta_eighths =
                 (delta_pixels * 8) / (drag_vertical_ ? cell_h : cell_w);
           } else {
@@ -1759,13 +1764,13 @@ void ScreenImpl::HandleEvent(Event event) {
 
       if (component_->Root()) {
         component_->Root()->Visit([&](Element& el) {
-          if (mouse.motion == Event::Mouse::Motion::Pressed) {
+          if (mouse.motion() == Event::Mouse::Motion::Pressed) {
             bool should_be_active = IsAncestorOf(&el, target_el);
             if (el.active() != should_be_active) {
               el.set_active(should_be_active);
               state_changed = true;
             }
-          } else if (mouse.motion == Event::Mouse::Motion::Released) {
+          } else if (mouse.motion() == Event::Mouse::Motion::Released) {
             if (el.active()) {
               el.set_active(false);
               state_changed = true;
@@ -1854,12 +1859,12 @@ void ScreenImpl::HandleEvent(Event event) {
     }
 
     if (!ComponentBase::GetMouseCapturer() &&
-        mouse.motion == Event::Mouse::Motion::Pressed &&
-        (mouse.button == Event::Mouse::Button::Left ||
-         mouse.button == Event::Mouse::Button::Right)) {
+        mouse.motion() == Event::Mouse::Motion::Pressed &&
+        (mouse.button() == Event::Mouse::Button::Left ||
+         mouse.button() == Event::Mouse::Button::Right)) {
       if (root_fragment_) {
-        int tx = mouse.x - 1;
-        int ty = mouse.y - 1;
+        int tx = mouse.x() - 1;
+        int ty = mouse.y() - 1;
         if (auto* clicked_element = FindElementAt(root_fragment_, tx, ty)) {
           // A disabled element must not gain focus or fire click handlers
           // (matches real browsers: a click on a disabled control doesn't
@@ -1903,14 +1908,14 @@ void ScreenImpl::HandleEvent(Event event) {
           bool handled = false;
           if (scrollbar_element) {
             handled = true;
-            if (is_on_thumb && mouse.button == Event::Mouse::Button::Left) {
+            if (is_on_thumb && mouse.button() == Event::Mouse::Button::Left) {
               // Start drag!
               drag_active_ = true;
               drag_element_ = scrollbar_element;
               drag_vertical_ = is_vertical;
-              drag_start_mouse_ = is_vertical ? mouse.y : mouse.x;
+              drag_start_mouse_ = is_vertical ? mouse.y() : mouse.x();
               drag_start_mouse_pixel_ =
-                  is_vertical ? mouse.pixel_y : mouse.pixel_x;
+                  is_vertical ? mouse.pixel_y() : mouse.pixel_x();
 
               auto frag_opt = FindFragmentForElementWithPos(root_fragment_,
                                                             scrollbar_element);
@@ -1998,7 +2003,7 @@ void ScreenImpl::HandleEvent(Event event) {
               component_->ResolveTargetStyles();
               RequestDraw();
             } else if (!is_on_thumb &&
-                       mouse.button == Event::Mouse::Button::Left) {
+                       mouse.button() == Event::Mouse::Button::Left) {
               // Track click: Page Up/Down or Page Left/Right
               auto frag_opt = FindFragmentForElementWithPos(root_fragment_,
                                                             scrollbar_element);
@@ -2147,7 +2152,7 @@ void ScreenImpl::HandleEvent(Event event) {
             }
           }
           std::vector<std::string> attr_keys;
-          if (mouse.button == Event::Mouse::Button::Left) {
+          if (mouse.button() == Event::Mouse::Button::Left) {
             attr_keys = {"onclick", "@click.left", "@click"};
           } else {
             attr_keys = {"oncontextmenu", "@click.right"};
@@ -2208,13 +2213,13 @@ void ScreenImpl::HandleEvent(Event event) {
         }
       }
     } else if (!ComponentBase::GetMouseCapturer() &&
-               (mouse.button == Event::Mouse::Button::WheelUp ||
-                mouse.button == Event::Mouse::Button::WheelDown ||
-                mouse.button == Event::Mouse::Button::WheelLeft ||
-                mouse.button == Event::Mouse::Button::WheelRight)) {
+               (mouse.button() == Event::Mouse::Button::WheelUp ||
+                mouse.button() == Event::Mouse::Button::WheelDown ||
+                mouse.button() == Event::Mouse::Button::WheelLeft ||
+                mouse.button() == Event::Mouse::Button::WheelRight)) {
       if (root_fragment_) {
-        int tx = mouse.x - 1;
-        int ty = mouse.y - 1;
+        int tx = mouse.x() - 1;
+        int ty = mouse.y() - 1;
         // Collect scroll info from fragments first, then release them before
         // calling Draw() to avoid use-after-arena-reset (Draw() resets the
         // arena while fragment shared_ptrs might still be in scope).
@@ -2232,8 +2237,8 @@ void ScreenImpl::HandleEvent(Event event) {
           Element* curr = target;
           while (curr) {
             bool is_horizontal_wheel =
-                (mouse.button == Event::Mouse::Button::WheelLeft ||
-                 mouse.button == Event::Mouse::Button::WheelRight);
+                (mouse.button() == Event::Mouse::Button::WheelLeft ||
+                 mouse.button() == Event::Mouse::Button::WheelRight);
             if (curr->style.overflow_y == Overflow::Scroll &&
                 !is_horizontal_wheel) {
               auto frag = FindFragmentForElement(root_fragment_, curr);
@@ -2245,7 +2250,7 @@ void ScreenImpl::HandleEvent(Event event) {
                 frag = nullptr;  // Release before Draw().
 
                 int new_y = curr_y;
-                if (mouse.button == Event::Mouse::Button::WheelUp) {
+                if (mouse.button() == Event::Mouse::Button::WheelUp) {
                   new_y = std::max(0, curr_y - speed);
                 } else {
                   new_y = std::min(max_scroll, curr_y + speed);
@@ -2266,8 +2271,8 @@ void ScreenImpl::HandleEvent(Event event) {
                 frag = nullptr;  // Release before Draw().
 
                 int new_x = curr_x;
-                if (mouse.button == Event::Mouse::Button::WheelLeft ||
-                    mouse.button == Event::Mouse::Button::WheelUp) {
+                if (mouse.button() == Event::Mouse::Button::WheelLeft ||
+                    mouse.button() == Event::Mouse::Button::WheelUp) {
                   new_x = std::max(0, curr_x - speed);
                 } else {
                   new_x = std::min(max_scroll, curr_x + speed);
@@ -2387,7 +2392,7 @@ void ScreenImpl::HandleEvent(Event event) {
 
   if (event == Event::Return() ||
       (event.is<Event::Keyboard>() &&
-       event.get<Event::Keyboard>().codepoint == 32)) {
+       event.get<Event::Keyboard>().codepoint() == 32)) {
     if (focused_element_) {
       SimulateClick(focused_element_);
       return;
@@ -3731,12 +3736,12 @@ bool ScreenImpl::Selected(const TextPosition& glyph) const {
 }
 
 bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
-  if (mouse.button != Event::Mouse::Button::Left || !root_fragment_) {
+  if (mouse.button() != Event::Mouse::Button::Left || !root_fragment_) {
     return false;
   }
-  const int x = mouse.x - 1;
-  const int y = mouse.y - 1;
-  switch (mouse.motion) {
+  const int x = mouse.x() - 1;
+  const int y = mouse.y() - 1;
+  switch (mouse.motion()) {
     case Event::Mouse::Motion::Pressed: {
       // Presses on one cell in quick succession: a word, then its block.
       const double now = time::GetTimeMs();
@@ -3748,8 +3753,8 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
       last_click_y_ = y;
       last_click_ms_ = now;
       // Shift and a click moves the end of the selection there.
-      const bool extend =
-          mouse.modifier.shift && click_count_ == 1 && selection_.anchor.node;
+      const bool extend = mouse.modifier().shift() && click_count_ == 1 &&
+                          selection_.anchor.node;
       if (selection_.Shown() && !extend) {
         RequestDraw();
       }

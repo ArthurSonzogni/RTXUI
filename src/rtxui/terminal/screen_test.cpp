@@ -33,6 +33,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/input_wait.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
@@ -103,7 +104,7 @@ TEST_CASE("Screen.StepExecution", "[terminal]") {
         last_event =
             "key:" +
             std::string(
-                1, static_cast<char>(event.get<Event::Keyboard>().codepoint));
+                1, static_cast<char>(event.get<Event::Keyboard>().codepoint()));
         return true;
       }
       return false;
@@ -253,8 +254,8 @@ TEST_CASE("Screen.PasteAppliesAsOneRedrawNotOnePerCharacter",
     std::string typed;
     BoundTrackerComponent() { Bind(typed); }
     bool OnEvent(Event event) override {
-      if (auto* kb = event.get_if<Event::Keyboard>()) {
-        typed += static_cast<char>(kb->codepoint);
+      if (auto kb = event.get_if<Event::Keyboard>()) {
+        typed += static_cast<char>(kb->codepoint());
         return true;
       }
       return false;
@@ -637,7 +638,7 @@ TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
   REQUIRE(component->clicked_count == 0);
 
   // Construct a Left Mouse Button Pressed Event at x=1, y=1
-  Event::Mouse mouse_event;
+  MouseData mouse_event;
   mouse_event.button = Event::Mouse::Button::Left;
   mouse_event.motion = Event::Mouse::Motion::Pressed;
   mouse_event.x = 1;
@@ -701,7 +702,7 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_y() == 0);
 
   // 2. Mouse Wheel Scroll Down (Scroll by speed = 2)
-  Event::Mouse wheel_down;
+  MouseData wheel_down;
   wheel_down.button = Event::Mouse::Button::WheelDown;
   wheel_down.motion = Event::Mouse::Motion::Pressed;
   wheel_down.x = 2;
@@ -710,7 +711,7 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_y() == 2);
 
   // 3. Mouse Wheel Scroll Up (Scroll by speed = 2)
-  Event::Mouse wheel_up;
+  MouseData wheel_up;
   wheel_up.button = Event::Mouse::Button::WheelUp;
   wheel_up.motion = Event::Mouse::Motion::Pressed;
   wheel_up.x = 2;
@@ -719,7 +720,7 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_y() == 0);
 
   // 4. Click to Focus the Element
-  Event::Mouse click;
+  MouseData click;
   click.button = Event::Mouse::Button::Left;
   click.motion = Event::Mouse::Motion::Pressed;
   click.x = 2;
@@ -790,7 +791,7 @@ TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_x() == 0);
 
   // 2. Mouse Wheel Scroll Right (Scroll by speed = 3)
-  Event::Mouse wheel_right;
+  MouseData wheel_right;
   wheel_right.button = Event::Mouse::Button::WheelRight;
   wheel_right.motion = Event::Mouse::Motion::Pressed;
   wheel_right.x = 2;
@@ -799,7 +800,7 @@ TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_x() == 3);
 
   // 3. Mouse Wheel Scroll Left (Scroll by speed = 3)
-  Event::Mouse wheel_left;
+  MouseData wheel_left;
   wheel_left.button = Event::Mouse::Button::WheelLeft;
   wheel_left.motion = Event::Mouse::Motion::Pressed;
   wheel_left.x = 2;
@@ -808,7 +809,7 @@ TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
   REQUIRE(scroll_element->scroll_x() == 0);
 
   // 4. Click to Focus the Element
-  Event::Mouse click;
+  MouseData click;
   click.button = Event::Mouse::Button::Left;
   click.motion = Event::Mouse::Motion::Pressed;
   click.x = 2;
@@ -877,7 +878,7 @@ TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
   REQUIRE(inner->scroll_y() == 0);
 
   // Scroll Down 1: Inner scrolls from 0 to 1
-  Event::Mouse wheel_down;
+  MouseData wheel_down;
   wheel_down.button = Event::Mouse::Button::WheelDown;
   wheel_down.motion = Event::Mouse::Motion::Pressed;
   wheel_down.x = 2;
@@ -903,7 +904,7 @@ TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
   REQUIRE(outer->scroll_y() == 2);
 
   // Now test Scroll Up:
-  Event::Mouse wheel_up;
+  MouseData wheel_up;
   wheel_up.button = Event::Mouse::Button::WheelUp;
   wheel_up.motion = Event::Mouse::Motion::Pressed;
   wheel_up.x = 2;
@@ -1396,7 +1397,7 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
   // Send a mouse hover event inside the button bounds
   // Coordinates are 1-indexed. The button starts at (0, 0) in layout, which is
   // (1, 1) in screen coords.
-  Event::Mouse hover_in;
+  MouseData hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
   hover_in.x = 2;
@@ -1418,7 +1419,7 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
   CHECK(btn->style.background_color == Color::RGB(127, 0, 0));
 
   // Send a mouse event outside button bounds
-  Event::Mouse hover_out;
+  MouseData hover_out;
   hover_out.button = Event::Mouse::Button::None;
   hover_out.motion = Event::Mouse::Motion::Moved;
   hover_out.x = 15;
@@ -1563,7 +1564,7 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
   CHECK_FALSE(btn->active());
 
   // 1. Hover in
-  Event::Mouse hover_in;
+  MouseData hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
   hover_in.x = 2;
@@ -1580,7 +1581,7 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
   CHECK(btn->style.background_color == Color::RGB(127, 0, 0));
 
   // 2. Press mouse (enters active state)
-  Event::Mouse press;
+  MouseData press;
   press.button = Event::Mouse::Button::Left;
   press.motion = Event::Mouse::Motion::Pressed;
   press.x = 2;
@@ -1602,7 +1603,7 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
   CHECK(btn->style.background_color == Color::RGB(63, 127, 0));
 
   // 3. Release mouse (leaves active state, still hovered)
-  Event::Mouse release;
+  MouseData release;
   release.button = Event::Mouse::Button::Left;
   release.motion = Event::Mouse::Motion::Released;
   release.x = 2;
@@ -1663,7 +1664,7 @@ TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
   CHECK_FALSE(input->focused());
 
   // 1. Click to focus
-  Event::Mouse click;
+  MouseData click;
   click.button = Event::Mouse::Button::Left;
   click.motion = Event::Mouse::Motion::Pressed;
   click.x = 2;
@@ -1679,7 +1680,7 @@ TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
   CHECK(input->style.background_color == Color::RGB(0, 0, 127));
 
   // 2. Click outside (focus goes to root/nullptr or loses focus)
-  Event::Mouse click_outside;
+  MouseData click_outside;
   click_outside.button = Event::Mouse::Button::Left;
   click_outside.motion = Event::Mouse::Motion::Pressed;
   click_outside.x = 15;
@@ -1766,7 +1767,7 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
 
   // Click on the fixed element. It is at top: 2, left: 5, which means y=2
   // (1-based mouse coordinates are x=6, y=3).
-  Event::Mouse click_fixed;
+  MouseData click_fixed;
   click_fixed.button = Event::Mouse::Button::Left;
   click_fixed.motion = Event::Mouse::Motion::Pressed;
   click_fixed.x = 6;
@@ -1836,7 +1837,7 @@ TEST_CASE("Screen.AnchorLinkScrolling", "[terminal][mouse][anchor]") {
 
   // Click on the link. The link "Link to Target" is at y=0, x=0 inside the
   // scroller. 1-based mouse coordinates are x=1, y=1.
-  Event::Mouse click_link;
+  MouseData click_link;
   click_link.button = Event::Mouse::Button::Left;
   click_link.motion = Event::Mouse::Motion::Pressed;
   click_link.x = 1;
@@ -2470,7 +2471,7 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   REQUIRE(scrollable_auto->visual_scroll_y() == 0.0f);
 
   // Trigger wheel scroll down on scrollable_auto
-  Event::Mouse wheel_auto;
+  MouseData wheel_auto;
   wheel_auto.button = Event::Mouse::Button::WheelDown;
   wheel_auto.motion = Event::Mouse::Motion::Pressed;
   // Locate inside scrollable_auto
@@ -2547,12 +2548,12 @@ class QuitOnQ : public Component<QuitOnQ> {
   int keys = 0;
 
   bool OnEvent(Event event) override {
-    auto* key = event.get_if<Event::Keyboard>();
+    auto key = event.get_if<Event::Keyboard>();
     if (!key) {
       return false;
     }
     ++keys;
-    if (key->codepoint == 'q') {
+    if (key->codepoint() == 'q') {
       quit();
     }
     return true;
@@ -3053,7 +3054,7 @@ TEST_CASE("Screen.SpaceEnterActivation", "[terminal][focus][activation]") {
   screen.Draw();
 
   // Press Space
-  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  screen.Dispatch(KeyboardData{.codepoint = 32});
   CHECK(component->count == 1);
 
   // Press Return
@@ -3087,7 +3088,7 @@ TEST_CASE("Screen.ParameterizedActivationWithSpaceAndReturn",
   screen.Draw();
 
   // Press Space
-  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  screen.Dispatch(KeyboardData{.codepoint = 32});
   CHECK(component->last_arg == "my-arg");
 
   component->last_arg = "";
@@ -3122,7 +3123,7 @@ TEST_CASE("Screen.CheckboxActivationWithSpaceAndReturn", "[terminal][focus]") {
   CHECK_FALSE(component->checked);
 
   // Press Space to check
-  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  screen.Dispatch(KeyboardData{.codepoint = 32});
   CHECK(component->checked);
 
   // Press Return to uncheck
@@ -3130,7 +3131,7 @@ TEST_CASE("Screen.CheckboxActivationWithSpaceAndReturn", "[terminal][focus]") {
   CHECK_FALSE(component->checked);
 
   // Press Space to check again
-  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  screen.Dispatch(KeyboardData{.codepoint = 32});
   CHECK(component->checked);
 }
 
@@ -3561,7 +3562,7 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
   device->GetSize(width, height);
   for (int y = 1; y <= height; ++y) {
     for (int x = 1; x <= width; ++x) {
-      Event::Mouse mouse_event;
+      MouseData mouse_event;
       mouse_event.button = Event::Mouse::Button::Left;
       mouse_event.motion = Event::Mouse::Motion::Pressed;
       mouse_event.x = x;
@@ -3665,7 +3666,7 @@ TEST_CASE("Screen.ScrollbarTrackClick", "[terminal][scroll][scrollbar]") {
   // Click below the thumb on the track to page down.
   // Initially the thumb is at the top, so clicking at the bottom of the track
   // should scroll down by one viewport height (10).
-  Event::Mouse track_click;
+  MouseData track_click;
   track_click.button = Event::Mouse::Button::Left;
   track_click.motion = Event::Mouse::Motion::Pressed;
   track_click.x = 20;  // Scrollbar column (1-based)
@@ -3676,7 +3677,7 @@ TEST_CASE("Screen.ScrollbarTrackClick", "[terminal][scroll][scrollbar]") {
   CHECK(scroll_el->target_scroll_y() == 10);
 
   // Now scroll is at max. Click above the thumb (at the top) to page up.
-  Event::Mouse track_click_up;
+  MouseData track_click_up;
   track_click_up.button = Event::Mouse::Button::Left;
   track_click_up.motion = Event::Mouse::Motion::Pressed;
   track_click_up.x = 20;
@@ -3739,7 +3740,7 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
   // With 20 lines, 10 visible, the thumb covers half the track (5 cells).
   // The scrollbar is at x=19 (0-based) = x=20 (1-based).
   // Click on the thumb at y=1 (1-based, top of track where thumb starts).
-  Event::Mouse press;
+  MouseData press;
   press.button = Event::Mouse::Button::Left;
   press.motion = Event::Mouse::Motion::Pressed;
   press.x = 20;
@@ -3750,7 +3751,7 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
   CHECK(scroll_el->target_scroll_y() == 0);
 
   // Drag down by 5 cells (move thumb from top to bottom).
-  Event::Mouse move;
+  MouseData move;
   move.button = Event::Mouse::Button::Left;
   move.motion = Event::Mouse::Motion::Moved;
   move.x = 20;
@@ -3762,7 +3763,7 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
   CHECK(scroll_el->target_scroll_y() == 10);
 
   // Release the mouse.
-  Event::Mouse release;
+  MouseData release;
   release.button = Event::Mouse::Button::Left;
   release.motion = Event::Mouse::Motion::Released;
   release.x = 20;
@@ -3832,7 +3833,7 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
   // The top of the track (first cell) is at y = 0 * 20 + 1 = 1 pixel.
 
   // 1. Dispatch press at y = 1 (pixel coordinate, which falls in cell y = 1)
-  Event::Mouse press;
+  MouseData press;
   press.button = Event::Mouse::Button::Left;
   press.motion = Event::Mouse::Motion::Pressed;
   press.x = 191;  // 19 * 10 + 1
@@ -3842,7 +3843,7 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
   // 2. Drag down by 5 cells.
   // Since cell height is 20 pixels, dragging down by 5 cells means moving the
   // mouse down by 5 * 20 = 100 pixels. So target y is 1 + 100 = 101 pixels.
-  Event::Mouse move;
+  MouseData move;
   move.button = Event::Mouse::Button::Left;
   move.motion = Event::Mouse::Motion::Moved;
   move.x = 191;
@@ -3856,7 +3857,7 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
 
   // 3. Move back up by 2 cells (40 pixels).
   // Target y is 101 - 40 = 61 pixels.
-  Event::Mouse move_up;
+  MouseData move_up;
   move_up.button = Event::Mouse::Button::Left;
   move_up.motion = Event::Mouse::Motion::Moved;
   move_up.x = 191;
@@ -3913,7 +3914,7 @@ TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
 
   // Move mouse over the scrollbar column.
   // Scrollbar is at x=19 (0-based) = x=20 (1-based).
-  Event::Mouse hover;
+  MouseData hover;
   hover.button = Event::Mouse::Button::None;
   hover.motion = Event::Mouse::Motion::Moved;
   hover.x = 20;
@@ -3927,7 +3928,7 @@ TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
   CHECK_FALSE(scroll_el->scrollbar_thumb_active());
 
   // Move mouse away from scrollbar.
-  Event::Mouse move_away;
+  MouseData move_away;
   move_away.button = Event::Mouse::Button::None;
   move_away.motion = Event::Mouse::Motion::Moved;
   move_away.x = 5;
@@ -3984,7 +3985,7 @@ TEST_CASE("Screen.LayoutFlexDemoClickTest", "[terminal][flex]") {
   screen.Draw();
 
   // Press Space to click
-  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  screen.Dispatch(KeyboardData{.codepoint = 32});
   CHECK(component->direction == "row-reverse");
 
   // Re-draw so that updates are processed
@@ -4027,7 +4028,7 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   CHECK(tt_ptr->tooltip_class == "hidden");
 
   // Send mouse hover event on the trigger element (x=2, y=1)
-  Event::Mouse hover_in;
+  MouseData hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
   hover_in.x = 2;  // tx = 1, inside trigger
@@ -4038,7 +4039,7 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   CHECK(tt_ptr->tooltip_class == "visible");
 
   // Hover out
-  Event::Mouse hover_out;
+  MouseData hover_out;
   hover_out.button = Event::Mouse::Button::None;
   hover_out.motion = Event::Mouse::Motion::Moved;
   hover_out.x = 20;  // outside bounds
@@ -4075,7 +4076,7 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   REQUIRE(tt_el != nullptr);
 
   // Hover in
-  Event::Mouse hover_in;
+  MouseData hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
   hover_in.x = 2;  // inside trigger
@@ -4093,7 +4094,7 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   device->ClearOutput();
 
   // Hover out
-  Event::Mouse hover_out;
+  MouseData hover_out;
   hover_out.button = Event::Mouse::Button::None;
   hover_out.motion = Event::Mouse::Motion::Moved;
   hover_out.x = 35;  // far away
@@ -4182,7 +4183,7 @@ TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
   REQUIRE(btn_y > 0);
 
   // Hover on the button
-  Event::Mouse hover_in;
+  MouseData hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
   hover_in.x = btn_x + 1;  // 1-indexed
@@ -4231,7 +4232,7 @@ TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
   REQUIRE(trigger_x >= 10);
 
   // Hover on trigger
-  Event::Mouse hover_in;
+  MouseData hover_in;
   hover_in.button = Event::Mouse::Button::None;
   hover_in.motion = Event::Mouse::Motion::Moved;
   hover_in.x = trigger_x + 1;  // 1-indexed
@@ -4278,7 +4279,7 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
     REQUIRE(trigger != nullptr);
     int tx = trigger->absolute_x();
     int ty = trigger->absolute_y();
-    Event::Mouse m;
+    MouseData m;
     m.button = Event::Mouse::Button::None;
     m.motion = Event::Mouse::Motion::Moved;
     m.x = tx + 1;
@@ -4302,7 +4303,7 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
     REQUIRE(trigger != nullptr);
     int tx = trigger->absolute_x();
     int ty = trigger->absolute_y();
-    Event::Mouse m;
+    MouseData m;
     m.button = Event::Mouse::Button::None;
     m.motion = Event::Mouse::Motion::Moved;
     m.x = tx + 1;
@@ -4326,7 +4327,7 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
     REQUIRE(trigger != nullptr);
     int tx = trigger->absolute_x();
     int ty = trigger->absolute_y();
-    Event::Mouse m;
+    MouseData m;
     m.button = Event::Mouse::Button::None;
     m.motion = Event::Mouse::Motion::Moved;
     m.x = tx + 1;
@@ -4386,7 +4387,7 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
     component->sticky_clicks = 0;
 
     // Click at absolute (0, 0), which is 1-based mouse (1, 1)
-    Event::Mouse m;
+    MouseData m;
     m.button = Event::Mouse::Button::Left;
     m.motion = Event::Mouse::Motion::Pressed;
     m.x = 1;
@@ -4406,7 +4407,7 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
     component->sticky_clicks = 0;
 
     // Click at absolute (0, 0), which is 1-based mouse (1, 1)
-    Event::Mouse m;
+    MouseData m;
     m.button = Event::Mouse::Button::Left;
     m.motion = Event::Mouse::Motion::Pressed;
     m.x = 1;
@@ -4554,7 +4555,7 @@ TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
   CHECK(box->style.border_style == BorderStyle::Solid);
 
   // Click double button
-  Event::Mouse click;
+  MouseData click;
   click.button = Event::Mouse::Button::Left;
   click.motion = Event::Mouse::Motion::Pressed;
   click.x = 5;
@@ -4673,7 +4674,7 @@ TEST_CASE("Screen.ClickFixedPositionOverlay", "[terminal][mouse][dialog]") {
 
   // Mouse coordinates are 1-based: screen.cpp maps them with `mouse.x - 1`.
   auto click_cell = [&](int column, int row) {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Pressed;
     mouse.x = column + 1;
@@ -4795,7 +4796,7 @@ TEST_CASE("Switching tab shows only the selected pane", "[tabs][mouse][css]") {
   REQUIRE(headers.size() == 2);
 
   auto send = [&](Event::Mouse::Button b, Event::Mouse::Motion m) {
-    Event::Mouse e;
+    MouseData e;
     e.button = b;
     e.motion = m;
     e.x = headers[1]->absolute_x() + 2;
@@ -4846,7 +4847,7 @@ TEST_CASE("Selecting a tab by keyboard keeps focus on the headers",
   screen.Dispatch(Event::Tab());
   REQUIRE(headers()[1]->focused());
 
-  screen.Dispatch(Event::Keyboard{.codepoint = 32});
+  screen.Dispatch(KeyboardData{.codepoint = 32});
   app->Digest();
   rtxui::ComponentInternals::ResolveTargetStyles(*app);
 
@@ -4900,7 +4901,7 @@ TEST_CASE("Switching tab keeps the header buttons styled",
   const int click_x = settings->absolute_x() + 2;
   const int click_y = settings->absolute_y() + 1;
   auto send = [&](Event::Mouse::Button b, Event::Mouse::Motion m) {
-    Event::Mouse e;
+    MouseData e;
     e.button = b;
     e.motion = m;
     e.x = click_x;
@@ -4964,7 +4965,7 @@ TEST_CASE("Clicking a summary toggles the details content",
   auto click = [&] {
     for (auto motion :
          {Event::Mouse::Motion::Pressed, Event::Mouse::Motion::Released}) {
-      Event::Mouse e;
+      MouseData e;
       e.button = Event::Mouse::Button::Left;
       e.motion = motion;
       e.x = summary_line->absolute_x() + 2;
@@ -5040,7 +5041,7 @@ TEST_CASE("Checking a radio unchecks only its own group", "[radio][mouse]") {
   REQUIRE(r2 != nullptr);
   for (auto motion :
        {Event::Mouse::Motion::Pressed, Event::Mouse::Motion::Released}) {
-    Event::Mouse e;
+    MouseData e;
     e.button = Event::Mouse::Button::Left;
     e.motion = motion;
     e.x = r2->absolute_x() + 1;
@@ -5079,7 +5080,7 @@ TEST_CASE("Clicking a checkbox toggles its glyph", "[checkbox][mouse]") {
   auto click = [&] {
     for (auto motion :
          {Event::Mouse::Motion::Pressed, Event::Mouse::Motion::Released}) {
-      Event::Mouse e;
+      MouseData e;
       e.button = Event::Mouse::Button::Left;
       e.motion = motion;
       e.x = box->absolute_x() + 1;
@@ -5565,8 +5566,8 @@ class GlassOnQ : public Component<GlassOnQ> {
   std::function<void()> quit;
 
   bool OnEvent(Event event) override {
-    if (auto* key = event.get_if<Event::Keyboard>();
-        key && key->codepoint == 'q') {
+    if (auto key = event.get_if<Event::Keyboard>();
+        key && key->codepoint() == 'q') {
       quit();
       return true;
     }
@@ -5622,8 +5623,8 @@ class DimOnQ : public Component<DimOnQ> {
   std::function<void()> quit;
 
   bool OnEvent(Event event) override {
-    if (auto* key = event.get_if<Event::Keyboard>();
-        key && key->codepoint == 'q') {
+    if (auto key = event.get_if<Event::Keyboard>();
+        key && key->codepoint() == 'q') {
       quit();
       return true;
     }
@@ -5960,10 +5961,10 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
      public:
       std::string_view view = "<div>drag me</div>";
       bool OnEvent(Event event) override {
-        if (auto* mouse = event.get_if<Event::Mouse>()) {
-          if (mouse->motion == Event::Mouse::Motion::Pressed) {
+        if (auto mouse = event.get_if<Event::Mouse>()) {
+          if (mouse->motion() == Event::Mouse::Motion::Pressed) {
             CaptureMouse();
-          } else if (mouse->motion == Event::Mouse::Motion::Released) {
+          } else if (mouse->motion() == Event::Mouse::Motion::Released) {
             ReleaseMouse();
           }
           return true;

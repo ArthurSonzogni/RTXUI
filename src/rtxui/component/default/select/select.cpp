@@ -136,11 +136,11 @@ bool select::OnEvent(Event event) {
 
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    int click_x = mouse.x - 1;
-    int click_y = mouse.y - 1;
+    int click_x = mouse.x() - 1;
+    int click_y = mouse.y() - 1;
 
-    if (mouse.button == Event::Mouse::Button::Left &&
-        mouse.motion == Event::Mouse::Motion::Pressed) {
+    if (mouse.button() == Event::Mouse::Button::Left &&
+        mouse.motion() == Event::Mouse::Motion::Pressed) {
       int abs_x = root->absolute_x();
       int abs_y = root->absolute_y();
       int layout_w = root->layout_width();
@@ -187,7 +187,7 @@ bool select::OnEvent(Event event) {
           changed = true;
         }
       }
-    } else if (is_open && mouse.motion == Event::Mouse::Motion::Moved) {
+    } else if (is_open && mouse.motion() == Event::Mouse::Motion::Moved) {
       auto options = GetOptions();
       for (int i = 0; i < static_cast<int>(options.size()); ++i) {
         auto* opt_el = options[i].element;
@@ -209,16 +209,17 @@ bool select::OnEvent(Event event) {
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed ||
-        kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion() == Event::Keyboard::Motion::Pressed ||
+        kb.motion() == Event::Keyboard::Motion::Repeat) {
       if (root->focused()) {
         auto options = GetOptions();
         if (is_open) {
-          if (kb.special == Event::Keyboard::Special::ArrowDown ||
-              kb.special == Event::Keyboard::Special::ArrowUp) {
+          if (kb.special() == Event::Keyboard::Special::ArrowDown ||
+              kb.special() == Event::Keyboard::Special::ArrowUp) {
             if (!options.empty()) {
-              int step =
-                  (kb.special == Event::Keyboard::Special::ArrowDown) ? 1 : -1;
+              int step = (kb.special() == Event::Keyboard::Special::ArrowDown)
+                             ? 1
+                             : -1;
               int next = hovered_index;
               // Wraps around, skipping disabled options; if every option is
               // disabled this comes full circle back to hovered_index and
@@ -237,9 +238,9 @@ bool select::OnEvent(Event event) {
             }
             return true;
           }
-          if (kb.special == Event::Keyboard::Special::Return ||
-              (kb.special == Event::Keyboard::Special::None &&
-               kb.codepoint == 32)) {
+          if (kb.special() == Event::Keyboard::Special::Return ||
+              (kb.special() == Event::Keyboard::Special::None &&
+               kb.codepoint() == 32)) {
             if (hovered_index >= 0 &&
                 hovered_index < static_cast<int>(options.size())) {
               if (!options[hovered_index].disabled) {
@@ -251,14 +252,14 @@ bool select::OnEvent(Event event) {
             changed = true;
             return true;
           }
-          if (kb.special == Event::Keyboard::Special::Escape) {
+          if (kb.special() == Event::Keyboard::Special::Escape) {
             is_open = false;
             changed = true;
             return true;
           }
         } else {
-          if (kb.special == Event::Keyboard::Special::ArrowDown ||
-              kb.special == Event::Keyboard::Special::ArrowUp) {
+          if (kb.special() == Event::Keyboard::Special::ArrowDown ||
+              kb.special() == Event::Keyboard::Special::ArrowUp) {
             if (!options.empty()) {
               int curr_idx = -1;
               for (int i = 0; i < static_cast<int>(options.size()); ++i) {
@@ -281,7 +282,7 @@ bool select::OnEvent(Event event) {
               } else {
                 // Clamps at the ends rather than wrapping, skipping disabled
                 // options; stops at the first edge it can't move past.
-                int step = (kb.special == Event::Keyboard::Special::ArrowDown)
+                int step = (kb.special() == Event::Keyboard::Special::ArrowDown)
                                ? 1
                                : -1;
                 int candidate = curr_idx;
@@ -304,9 +305,9 @@ bool select::OnEvent(Event event) {
               }
             }
           }
-          if (kb.special == Event::Keyboard::Special::Return ||
-              (kb.special == Event::Keyboard::Special::None &&
-               kb.codepoint == 32)) {
+          if (kb.special() == Event::Keyboard::Special::Return ||
+              (kb.special() == Event::Keyboard::Special::None &&
+               kb.codepoint() == 32)) {
             is_open = true;
             if (!options.empty()) {
               hovered_index = 0;

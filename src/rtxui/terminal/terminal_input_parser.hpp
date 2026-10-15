@@ -8,7 +8,8 @@
 #include <optional>  // for std::optional
 #include <string>    // for string
 #include <utility>   // for exchange, pair
-#include <vector>    // for vector
+#include <variant>
+#include <vector>  // for vector
 
 #include "rtxui/color.hpp"  // for Color
 #include "rtxui/event.hpp"  // for Event

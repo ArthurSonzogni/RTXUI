@@ -570,11 +570,11 @@ class Lines : public Component<Lines> {
   }
 
   bool OnEvent(Event event) override {
-    auto* key = event.get_if<Event::Keyboard>();
-    if (!key || key->codepoint == 0) {
+    auto key = event.get_if<Event::Keyboard>();
+    if (!key || key->codepoint() == 0) {
       return Component<Lines>::OnEvent(event);
     }
-    const char c = static_cast<char>(key->codepoint);
+    const char c = static_cast<char>(key->codepoint());
     if (c == '+') {
       lines.push_back("line " + std::to_string(lines.size()));
     } else if (c == '-' && !lines.empty()) {
@@ -1188,11 +1188,11 @@ TEST_CASE("An inline application sees no mouse button outside it", "[inline]") {
     std::vector<std::string> buttons;
     std::string_view view = R"(<div>canvas</div>)";
     bool OnEvent(Event event) override {
-      if (auto* mouse = event.get_if<Event::Mouse>();
-          mouse && mouse->motion != Event::Mouse::Moved) {
+      if (auto mouse = event.get_if<Event::Mouse>();
+          mouse && mouse->motion() != Event::Mouse::Moved) {
         buttons.push_back(
-            (mouse->motion == Event::Mouse::Pressed ? "press " : "release ") +
-            std::to_string(mouse->y));
+            (mouse->motion() == Event::Mouse::Pressed ? "press " : "release ") +
+            std::to_string(mouse->y()));
       }
       return Component<Canvas>::OnEvent(event);
     }

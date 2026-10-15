@@ -11,6 +11,7 @@
 #include "catch2/catch_test_macros.hpp"  // for TEST_CASE, REQUIRE, CHECK, CHECK_FALSE
 #include "rtxui/color.hpp"
 #include "rtxui/event.hpp"  // for Event, Event::Return(), Event::ArrowDown(), Event::ArrowLeft(), Event::ArrowRight(), Event::ArrowUp(), Event::Backspace(), Event::End(), Event::Home(), Event::Delete(), Event::F1(), Event::F10(), Event::F11(), Event::F12(), Event::F2(), Event::F3(), Event::F4(), Event::F5(), Event::F6(), Event::F7(), Event::F8(), Event::F9(), Event::PageDown(), Event::PageUp(), Event::Tab(), Event::TabReverse(), Event::Escape()
+#include "rtxui/terminal/event_internal.hpp"
 
 using rtxui::Color;
 using rtxui::Event;
@@ -40,14 +41,14 @@ TEST_CASE("Event.Character", "[terminal]") {
 
   REQUIRE(received_events.size() == basic_char.size());
   for (size_t i = 0; i < basic_char.size(); ++i) {
-    auto* keyboard = received_events[i].get_if<Event::Keyboard>();
+    auto keyboard = received_events[i].get_if<Event::Keyboard>();
     CHECK(keyboard);
-    CHECK(keyboard->codepoint == basic_char[i]);
-    CHECK(keyboard->motion == Event::Keyboard::Pressed);
-    CHECK_FALSE(keyboard->modifier.alt);
-    CHECK_FALSE(keyboard->modifier.ctrl);
-    CHECK_FALSE(keyboard->modifier.meta);
-    CHECK_FALSE(keyboard->modifier.shift);
+    CHECK(keyboard->codepoint() == basic_char[i]);
+    CHECK(keyboard->motion() == Event::Keyboard::Pressed);
+    CHECK_FALSE(keyboard->modifier().alt());
+    CHECK_FALSE(keyboard->modifier().ctrl());
+    CHECK_FALSE(keyboard->modifier().meta());
+    CHECK_FALSE(keyboard->modifier().shift());
   }
 }
 
@@ -111,12 +112,12 @@ TEST_CASE("Event.MouseLeftClickPressed", "[terminal]") {
 
   auto event = parser.GetEvent();
   REQUIRE(event.has_value());
-  auto* mouse = event->get_if<Event::Mouse>();
+  auto mouse = event->get_if<Event::Mouse>();
   CHECK(mouse);
-  CHECK(mouse->button == Event::Mouse::Left);
-  CHECK(mouse->x == 12);
-  CHECK(mouse->y == 42);
-  CHECK(mouse->motion == Event::Mouse::Pressed);
+  CHECK(mouse->button() == Event::Mouse::Left);
+  CHECK(mouse->x() == 12);
+  CHECK(mouse->y() == 42);
+  CHECK(mouse->motion() == Event::Mouse::Pressed);
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -137,12 +138,12 @@ TEST_CASE("Event.CsiParameterSaturatesInsteadOfOverflowing", "[terminal]") {
     const std::string digits(40, '9');
     auto event = feed("\x1b[<0;" + digits + ";" + digits + "M");
     REQUIRE(event.has_value());
-    auto* mouse = event->get_if<Event::Mouse>();
+    auto mouse = event->get_if<Event::Mouse>();
     REQUIRE(mouse);
     // Whatever the cap is, the point is that it is a large positive number
     // rather than a wrapped or negative one.
-    CHECK(mouse->x > 0);
-    CHECK(mouse->y > 0);
+    CHECK(mouse->x() > 0);
+    CHECK(mouse->y() > 0);
   }
 
   SECTION("a long button number does not wrap either") {
@@ -151,9 +152,9 @@ TEST_CASE("Event.CsiParameterSaturatesInsteadOfOverflowing", "[terminal]") {
     // It need not be a mouse event at all -- an absurd button is free to be
     // rejected. It must simply not have overflowed getting there.
     if (event.has_value()) {
-      if (auto* mouse = event->get_if<Event::Mouse>()) {
-        CHECK(mouse->x == 10);
-        CHECK(mouse->y == 10);
+      if (auto mouse = event->get_if<Event::Mouse>()) {
+        CHECK(mouse->x() == 10);
+        CHECK(mouse->y() == 10);
       }
     }
   }
@@ -161,10 +162,10 @@ TEST_CASE("Event.CsiParameterSaturatesInsteadOfOverflowing", "[terminal]") {
   SECTION("ordinary coordinates are unaffected") {
     auto event = feed("\x1b[<0;12;42M");
     REQUIRE(event.has_value());
-    auto* mouse = event->get_if<Event::Mouse>();
+    auto mouse = event->get_if<Event::Mouse>();
     REQUIRE(mouse);
-    CHECK(mouse->x == 12);
-    CHECK(mouse->y == 42);
+    CHECK(mouse->x() == 12);
+    CHECK(mouse->y() == 42);
   }
 
   SECTION("a long run of digits in any CSI is survivable") {
@@ -191,12 +192,12 @@ TEST_CASE("Event.MouseLeftMoved", "[terminal]") {
 
   auto event = parser.GetEvent();
   REQUIRE(event.has_value());
-  auto* mouse = event->get_if<Event::Mouse>();
+  auto mouse = event->get_if<Event::Mouse>();
   CHECK(mouse);
-  CHECK(mouse->button == Event::Mouse::Left);
-  CHECK(mouse->x == 12);
-  CHECK(mouse->y == 42);
-  CHECK(mouse->motion == Event::Mouse::Moved);
+  CHECK(mouse->button() == Event::Mouse::Left);
+  CHECK(mouse->x() == 12);
+  CHECK(mouse->y() == 42);
+  CHECK(mouse->motion() == Event::Mouse::Moved);
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -215,12 +216,12 @@ TEST_CASE("Event.MouseLeftClickReleased", "[terminal]") {
 
   auto event = parser.GetEvent();
   REQUIRE(event.has_value());
-  auto* mouse = event->get_if<Event::Mouse>();
+  auto mouse = event->get_if<Event::Mouse>();
   CHECK(mouse);
-  CHECK(mouse->button == Event::Mouse::Left);
-  CHECK(mouse->x == 12);
-  CHECK(mouse->y == 42);
-  CHECK(mouse->motion == Event::Mouse::Released);
+  CHECK(mouse->button() == Event::Mouse::Left);
+  CHECK(mouse->x() == 12);
+  CHECK(mouse->y() == 42);
+  CHECK(mouse->motion() == Event::Mouse::Released);
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -255,11 +256,11 @@ TEST_CASE("Event.MouseMiddleClick", "[terminal]") {
 
   auto event = parser.GetEvent();
   REQUIRE(event.has_value());
-  auto* mouse = event->get_if<Event::Mouse>();
+  auto mouse = event->get_if<Event::Mouse>();
   CHECK(mouse);
-  CHECK(mouse->button == Event::Mouse::Middle);
-  CHECK(mouse->x == 12);
-  CHECK(mouse->y == 42);
+  CHECK(mouse->button() == Event::Mouse::Middle);
+  CHECK(mouse->x() == 12);
+  CHECK(mouse->y() == 42);
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -279,11 +280,11 @@ TEST_CASE("Event.MouseRightClick", "[terminal]") {
 
   auto event = parser.GetEvent();
   REQUIRE(event.has_value());
-  auto* mouse = event->get_if<Event::Mouse>();
+  auto mouse = event->get_if<Event::Mouse>();
   CHECK(mouse);
-  CHECK(mouse->button == Event::Mouse::Right);
-  CHECK(mouse->x == 12);
-  CHECK(mouse->y == 42);
+  CHECK(mouse->button() == Event::Mouse::Right);
+  CHECK(mouse->x() == 12);
+  CHECK(mouse->y() == 42);
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -362,7 +363,7 @@ TEST_CASE("Event.UTF8", "[terminal]") {
     auto event = parser.GetEvent();
     if (test.valid) {
       REQUIRE(event.has_value());
-      auto* keyboard = event->get_if<Event::Keyboard>();
+      auto keyboard = event->get_if<Event::Keyboard>();
       CHECK(keyboard);
       CHECK_FALSE(parser.GetEvent().has_value());
     } else {
@@ -550,19 +551,19 @@ TEST_CASE("Event.BracketedPaste", "[terminal][paste]") {
   // the current line's indentation, which pasted text must not get (it
   // already has its own).
   REQUIRE(received_events.size() == 4);
-  CHECK(received_events[0].get_if<Event::Keyboard>()->codepoint == 'h');
-  CHECK(received_events[1].get_if<Event::Keyboard>()->codepoint == 'i');
-  auto* newline_kb = received_events[2].get_if<Event::Keyboard>();
+  CHECK(received_events[0].get_if<Event::Keyboard>()->codepoint() == 'h');
+  CHECK(received_events[1].get_if<Event::Keyboard>()->codepoint() == 'i');
+  auto newline_kb = received_events[2].get_if<Event::Keyboard>();
   REQUIRE(newline_kb);
-  CHECK(newline_kb->codepoint == '\n');
-  CHECK(newline_kb->special == Event::Keyboard::Special::None);
-  CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint == 'b');
+  CHECK(newline_kb->codepoint() == '\n');
+  CHECK(newline_kb->special() == Event::Keyboard::Special::None);
+  CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint() == 'b');
 
   // Every event synthesized from pasted text (including the plain '\n')
   // is marked from_paste, so components can tell it apart from the user
   // actually typing (e.g. TextInputBase's undo grouping).
   for (const auto& event : received_events) {
-    CHECK(event.get_if<Event::Keyboard>()->from_paste);
+    CHECK(event.get_if<Event::Keyboard>()->from_paste());
   }
 }
 
@@ -583,10 +584,10 @@ TEST_CASE("Event.BracketedPasteDoesNotInterpretContentAsEscapeSequences",
   }
 
   REQUIRE(received_events.size() == 4);
-  CHECK(received_events[0].get_if<Event::Keyboard>()->codepoint == '\x1B');
-  CHECK(received_events[1].get_if<Event::Keyboard>()->codepoint == '[');
-  CHECK(received_events[2].get_if<Event::Keyboard>()->codepoint == 'A');
-  CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint == 'x');
+  CHECK(received_events[0].get_if<Event::Keyboard>()->codepoint() == '\x1B');
+  CHECK(received_events[1].get_if<Event::Keyboard>()->codepoint() == '[');
+  CHECK(received_events[2].get_if<Event::Keyboard>()->codepoint() == 'A');
+  CHECK(received_events[3].get_if<Event::Keyboard>()->codepoint() == 'x');
 }
 
 TEST_CASE("Event.BracketedPasteUtf8", "[terminal][paste]") {
@@ -598,9 +599,10 @@ TEST_CASE("Event.BracketedPasteUtf8", "[terminal][paste]") {
 
   auto event = parser.GetEvent();
   REQUIRE(event.has_value());
-  auto* keyboard = event->get_if<Event::Keyboard>();
+  auto keyboard = event->get_if<Event::Keyboard>();
   REQUIRE(keyboard);
-  CHECK(keyboard->codepoint == 0xE9);  // U+00E9 LATIN SMALL LETTER E WITH ACUTE
+  CHECK(keyboard->codepoint() ==
+        0xE9);  // U+00E9 LATIN SMALL LETTER E WITH ACUTE
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
@@ -634,7 +636,7 @@ TEST_CASE("Event.OSCRepliesAreSwallowed", "[terminal][osc]") {
   SECTION("the keypress after a reply still arrives") {
     auto events = events_for("\x1B]11;rgb:0d0d/1111/1717\x07x");
     REQUIRE(events.size() == 1);
-    CHECK(events[0].get_if<Event::Keyboard>()->codepoint == 'x');
+    CHECK(events[0].get_if<Event::Keyboard>()->codepoint() == 'x');
   }
 
   SECTION("an unterminated reply consumes the rest rather than emitting it") {
@@ -697,52 +699,28 @@ TEST_CASE("The terminal's text color is read from its OSC 10 reply",
 
 // --- Event construction ---
 
-TEST_CASE("Event's converting constructor accepts only its alternatives",
-          "[event]") {
-  // Regression (09a5eed3): the constraint lived in a default template
-  // argument, which is instantiated while Event is still incomplete -- GCC 13
-  // refuses to evaluate the nested structs' default member initialisers there
-  // and the header stopped compiling. Moving it to a requires-clause defers
-  // the check to overload resolution, once Event is complete.
-  //
-  // Widening the clause does not actually reach these assertions -- the
-  // library stops compiling first, on its own conversions -- so what is
-  // pinned here is the rest of the contract, which nothing else checks: that
-  // Event has no default constructor, that the converting constructor does
-  // not hijack copy or move, and that Modifier's bit-fields stay comparable,
-  // which is the construct GCC 13 was misdiagnosed as rejecting.
-
-  // Every alternative converts.
+TEST_CASE("Event converts only from its three kinds", "[event]") {
   static_assert(std::is_constructible_v<Event, Event::Keyboard>);
   static_assert(std::is_constructible_v<Event, Event::Mouse>);
   static_assert(std::is_constructible_v<Event, Event::Resized>);
 
-  // Things that are not an alternative do not, rather than failing somewhere
-  // deeper with a variant error.
   static_assert(!std::is_constructible_v<Event, int>);
   static_assert(!std::is_constructible_v<Event, const char*>);
   static_assert(!std::is_constructible_v<Event, std::string>);
 
-  // Event stays copyable and movable, and the constraint must not hijack
-  // those: `!is_same_v<decay_t<T>, Event>` is what keeps the converting
-  // constructor from competing with the copy constructor.
   static_assert(std::is_copy_constructible_v<Event>);
   static_assert(std::is_move_constructible_v<Event>);
   static_assert(!std::is_default_constructible_v<Event>);
 
-  // The modifier flags are bit-fields carrying default member initialisers,
-  // which is the construct GCC 13 was misdiagnosed as choking on; keep them
-  // comparable so a defaulted operator<=> is still instantiable.
-  Event::Modifier a;
-  Event::Modifier b;
-  CHECK(a == b);
-  b.ctrl = true;
-  CHECK_FALSE(a == b);
+  Event::Modifier none;
+  CHECK(none == Event::Modifier());
+  CHECK_FALSE(none ==
+              rtxui::EventInternals::Make(rtxui::ModifierData{.ctrl = true}));
 
-  Event event = Event::Keyboard{.codepoint = 'x'};
-  REQUIRE(event.get_if<Event::Keyboard>() != nullptr);
-  CHECK(event.get_if<Event::Keyboard>()->codepoint == 'x');
-  CHECK(event.get_if<Event::Mouse>() == nullptr);
+  Event event = rtxui::KeyboardData{.codepoint = 'x'};
+  REQUIRE(event.get_if<Event::Keyboard>().has_value());
+  CHECK(event.get_if<Event::Keyboard>()->codepoint() == 'x');
+  CHECK_FALSE(event.get_if<Event::Mouse>().has_value());
 }
 
 TEST_CASE("Parsed keys equal the named Event constants", "[terminal][event]") {

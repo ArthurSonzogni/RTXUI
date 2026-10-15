@@ -32,10 +32,10 @@ bool label::OnEvent(Event event) {
   // Handle click on label
   if (event.is<Event::Mouse>()) {
     auto mouse = event.get<Event::Mouse>();
-    if (mouse.button == Event::Mouse::Button::Left &&
-        mouse.motion == Event::Mouse::Motion::Pressed) {
-      int click_x = mouse.x - 1;
-      int click_y = mouse.y - 1;
+    if (mouse.button() == Event::Mouse::Button::Left &&
+        mouse.motion() == Event::Mouse::Motion::Pressed) {
+      int click_x = mouse.x() - 1;
+      int click_y = mouse.y() - 1;
       int abs_x = root->absolute_x();
       int abs_y = root->absolute_y();
       int layout_w = root->layout_width();

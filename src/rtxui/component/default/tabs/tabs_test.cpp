@@ -17,6 +17,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/testing/component_as.hpp"
 #include "rtxui/testing/render.hpp"
 
@@ -179,7 +180,7 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   REQUIRE(tab2_header != nullptr);
 
   // Click on the second tab header (tab2_header)
-  Event::Mouse mouse_click;
+  MouseData mouse_click;
   mouse_click.button = Event::Mouse::Button::Left;
   mouse_click.motion = Event::Mouse::Motion::Pressed;
   mouse_click.x = tab2_header->absolute_x() + 1;
@@ -204,10 +205,8 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   tab1_header->set_focused(true);
 
   // Press Return key
-  Event return_event = Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::Return,
-  });
+  Event return_event =
+      KeyboardData{.special = Event::Keyboard::Special::Return};
   screen.Dispatch(return_event);
   container->Digest();
   screen.Draw();
@@ -253,10 +252,8 @@ TEST_CASE("Tabs Component keyboard focus survives an intervening Digest",
   CHECK(headers[1]->focused());
   CHECK_FALSE(headers[0]->focused());
 
-  Event return_event = Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::Return,
-  });
+  Event return_event =
+      KeyboardData{.special = Event::Keyboard::Special::Return};
   screen.Dispatch(return_event);
   container->Digest();
   screen.Draw();

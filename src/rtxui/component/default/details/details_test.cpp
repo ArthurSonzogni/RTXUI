@@ -14,6 +14,7 @@
 #include "rtxui/event.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/testing/component_as.hpp"
 
 using namespace rtxui;
@@ -91,10 +92,8 @@ TEST_CASE("Details and Summary Components", "[component][details]") {
   summary_line_el->set_focused(true);
 
   // Dispatch return key event
-  Event return_event = Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::Return,
-  });
+  Event return_event =
+      KeyboardData{.special = Event::Keyboard::Special::Return};
   CHECK(details_ptr->OnEvent(return_event) == true);
   container->Digest();
   screen.Draw();
@@ -112,7 +111,7 @@ TEST_CASE("Details and Summary Components", "[component][details]") {
   CHECK(container->open == false);
 
   // 5. Toggle via Mouse Click on summary-line
-  Event::Mouse mouse_click;
+  MouseData mouse_click;
   mouse_click.button = Event::Mouse::Button::Left;
   mouse_click.motion = Event::Mouse::Motion::Pressed;
   mouse_click.x = summary_line_el->absolute_x() + 1;

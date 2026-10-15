@@ -4,6 +4,7 @@
 #include "rtxui/component/default/input/input.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -20,6 +21,7 @@
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
@@ -230,7 +232,7 @@ TEST_CASE("Input Component Advanced Selection and Editing",
     input_ptr->Digest();
 
     // Shift + ArrowRight
-    Event::Keyboard kb;
+    KeyboardData kb;
     kb.special = Event::Keyboard::Special::ArrowRight;
     kb.modifier.shift = true;
     input_ptr->OnEvent(Event(kb));
@@ -291,7 +293,7 @@ TEST_CASE("Input Component Advanced Selection and Editing",
     // Click on index 2 ('l' in "hello") twice
     int x_pos = input_el->absolute_x() + 1 + 2 +
                 1;  // 1 (border/padding) + 2 (index) + 1 (1-based)
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Pressed;
     mouse.x = x_pos;
@@ -329,7 +331,7 @@ TEST_CASE("Input Component Advanced Selection and Editing",
 
     // Double click at index 2 ('l' in "hello")
     int click_x = input_el->absolute_x() + 1 + 2 + 1;
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Pressed;
     mouse.x = click_x;
@@ -367,7 +369,7 @@ TEST_CASE("Input Component Advanced Selection and Editing",
     input_ptr->Digest();
 
     int x_pos = input_el->absolute_x() + 1 + 2 + 1;
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.x = x_pos;
     mouse.y = input_el->absolute_y() + 1;
@@ -400,7 +402,7 @@ TEST_CASE("Input Component Advanced Selection and Editing",
     input_ptr->Digest();
 
     int x_pos = input_el->absolute_x() + 1 + 2 + 1;
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.x = x_pos;
     mouse.y = input_el->absolute_y() + 1;
@@ -490,7 +492,7 @@ TEST_CASE("Input Component Disabled Ignores Mouse Click Focus",
   input_ptr->disabled = true;
   input_ptr->Digest();
 
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = input_el->absolute_x() + 1;
@@ -535,7 +537,7 @@ TEST_CASE(
   input_ptr->cursor_pos = 0;
   input_ptr->selection_start = -1;
   input_ptr->Digest();
-  Event::Keyboard kb;
+  KeyboardData kb;
   kb.special = Event::Keyboard::Special::ArrowRight;
   kb.modifier.shift = true;
   input_ptr->OnEvent(Event(kb));
@@ -846,7 +848,7 @@ TEST_CASE("Input Component Undo/Redo Via Ctrl+Shift+Z",
   input_ptr->Digest();
   CHECK(input_ptr->value == "");
 
-  Event::Keyboard redo_kb;
+  KeyboardData redo_kb;
   redo_kb.codepoint = 'z';
   redo_kb.modifier.ctrl = true;
   redo_kb.modifier.shift = true;
@@ -1014,9 +1016,10 @@ TEST_CASE(
   input_ptr->Digest();
 
   for (char c : std::string("xyz")) {
-    Event::Keyboard kb = Event::Keyboard::From(c);
+    KeyboardData kb;
+    kb.codepoint = static_cast<std::uint32_t>(c);
     kb.from_paste = true;
-    input_ptr->OnEvent(Event(kb));
+    input_ptr->OnEvent(kb);
     input_ptr->Digest();
   }
   CHECK(input_ptr->value == "axyz");
@@ -1138,7 +1141,7 @@ TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   REQUIRE(initial_height > 0);
 
   // Click at the input's position.
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = input_el->absolute_x() + 1;  // 1-based
@@ -1212,7 +1215,7 @@ TEST_CASE("Input Click Layout Regression Test",
   int initial_height = input_el->layout_height();
 
   // Click at the input's position
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = input_el->absolute_x() + 1;
@@ -1535,7 +1538,7 @@ TEST_CASE(
   input_ptr->selection_start = -1;
   input_ptr->Digest();
 
-  Event::Keyboard kb;
+  KeyboardData kb;
   kb.special = Event::Keyboard::Special::ArrowRight;
   kb.modifier.shift = true;
   input_ptr->OnEvent(Event(kb));
@@ -1566,7 +1569,7 @@ TEST_CASE("TextInputBase Ctrl+Home and Ctrl+End",
   textarea_ptr->Digest();
 
   // Ctrl+Home moves to 0
-  Event::Keyboard kb;
+  KeyboardData kb;
   kb.special = Event::Keyboard::Special::Home;
   kb.modifier.ctrl = true;
   textarea_ptr->OnEvent(Event(kb));
@@ -1615,7 +1618,7 @@ TEST_CASE("TextInputBase Smart Home", "[component][input][navigation]") {
   textarea_el->set_focused(true);
   textarea_ptr->Digest();
 
-  Event::Keyboard kb;
+  KeyboardData kb;
   kb.special = Event::Keyboard::Special::Home;
 
   // First Home jumps to first non-whitespace (index 4)
@@ -1665,7 +1668,7 @@ TEST_CASE("TextInputBase Duplicate Line and Selection",
   textarea_ptr->cursor_pos = 2;
   textarea_ptr->Digest();
 
-  Event::Keyboard ctrl_d;
+  KeyboardData ctrl_d;
   ctrl_d.codepoint = 'd';
   ctrl_d.modifier.ctrl = true;
 
@@ -1678,7 +1681,7 @@ TEST_CASE("TextInputBase Duplicate Line and Selection",
   textarea_ptr->cursor_pos = 5;  // "hello"
   textarea_ptr->Digest();
 
-  Event::Keyboard shift_alt_down;
+  KeyboardData shift_alt_down;
   shift_alt_down.special = Event::Keyboard::Special::ArrowDown;
   shift_alt_down.modifier.shift = true;
   shift_alt_down.modifier.alt = true;
@@ -1705,7 +1708,7 @@ TEST_CASE("TextInputBase Delete Entire Line",
   textarea_ptr->cursor_pos = 8;  // in line 2
   textarea_ptr->Digest();
 
-  Event::Keyboard ctrl_shift_k;
+  KeyboardData ctrl_shift_k;
   ctrl_shift_k.codepoint = 'k';
   ctrl_shift_k.modifier.ctrl = true;
   ctrl_shift_k.modifier.shift = true;
@@ -1804,7 +1807,7 @@ TEST_CASE("TextInputBase Select On Focus",
 
   // Click on already-focused input does not re-select all
   int x_pos = input_el->absolute_x() + 1 + 2 + 1;
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.x = x_pos;
   mouse.y = input_el->absolute_y() + 1;

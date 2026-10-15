@@ -37,6 +37,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
@@ -998,7 +999,7 @@ TEST_CASE("Slider click on real demo layout squash regression",
   int initial_sidebar_width = sidebar_el->layout_width();
 
   // Click/Drag the slider
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = slider_el->absolute_x() + 5;
@@ -1461,16 +1462,13 @@ TEST_CASE(
   auto* sel_ptr = ComponentAs<rtxui::select>(sel_el);
   REQUIRE(sel_ptr != nullptr);
   sel_el->set_focused(true);
-  sel_ptr->OnEvent(Event::Keyboard({
-      Event::Keyboard::Motion::Pressed,
-      Event::Keyboard::Special::Return,
-  }));
+  sel_ptr->OnEvent(KeyboardData{.special = Event::Keyboard::Special::Return});
   CHECK_FALSE(sel_ptr->is_open);
 
   auto* sl_el = root->QuerySelector("#sl");
   auto* sl_ptr = ComponentAs<rtxui::slider>(sl_el);
   REQUIRE(sl_ptr != nullptr);
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = sl_el->absolute_x() + 2;
@@ -1479,7 +1477,7 @@ TEST_CASE(
   CHECK(sl_ptr->value == 50);
 
   auto* btn_el = root->QuerySelector("#btn");
-  Event::Mouse btn_mouse;
+  MouseData btn_mouse;
   btn_mouse.button = Event::Mouse::Button::Left;
   btn_mouse.motion = Event::Mouse::Motion::Pressed;
   btn_mouse.x = btn_el->absolute_x() + 1;

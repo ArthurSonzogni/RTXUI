@@ -15,6 +15,7 @@
 #include "rtxui/event.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
@@ -125,7 +126,7 @@ TEST_CASE("Dialog: a button inside an open dialog is clickable",
   // The button must actually have been laid out somewhere on screen.
   REQUIRE(btn_el->layout_width() > 0);
 
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   // Dispatch coordinates are 1-based; aim at the middle of the button.

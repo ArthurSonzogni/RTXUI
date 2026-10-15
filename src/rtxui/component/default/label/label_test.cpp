@@ -11,6 +11,7 @@
 #include "rtxui/event.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 
 using namespace rtxui;
 
@@ -72,7 +73,7 @@ TEST_CASE("Label Component Interaction", "[component][label]") {
   CHECK(container->cb2_checked == false);
 
   // 1. Click on Explicit Label (lbl1)
-  Event::Mouse mouse1;
+  MouseData mouse1;
   mouse1.button = Event::Mouse::Button::Left;
   mouse1.motion = Event::Mouse::Motion::Pressed;
   mouse1.x = lbl1_el->absolute_x() + 1;
@@ -89,7 +90,7 @@ TEST_CASE("Label Component Interaction", "[component][label]") {
   CHECK(cb1_el->focused() == true);
 
   // 2. Click on Implicit Label (lbl2)
-  Event::Mouse mouse2;
+  MouseData mouse2;
   mouse2.button = Event::Mouse::Button::Left;
   mouse2.motion = Event::Mouse::Motion::Pressed;
   mouse2.x = lbl2_el->absolute_x() + 1;
@@ -142,7 +143,7 @@ TEST_CASE("Clicking a label doesn't check or focus its disabled target",
       rtxui::ComponentInternals::Root(*container)->QuerySelector("#cb");
   auto* lbl_comp = const_cast<rtxui::ComponentBase*>(lbl_el->component());
 
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = lbl_el->absolute_x() + 1;

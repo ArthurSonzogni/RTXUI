@@ -106,9 +106,9 @@ bool dialog::OnEvent(Event event) {
   // also keeps it from reaching the screen's Escape-to-quit fallback.
   if (open && event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if ((kb.motion == Event::Keyboard::Motion::Pressed ||
-         kb.motion == Event::Keyboard::Motion::Repeat) &&
-        kb.special == Event::Keyboard::Special::Escape) {
+    if ((kb.motion() == Event::Keyboard::Motion::Pressed ||
+         kb.motion() == Event::Keyboard::Motion::Repeat) &&
+        kb.special() == Event::Keyboard::Special::Escape) {
       open = false;
       return true;
     }

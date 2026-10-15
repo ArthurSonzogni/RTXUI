@@ -178,16 +178,16 @@ bool tabs::OnEvent(Event event) {
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed ||
-        kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion() == Event::Keyboard::Motion::Pressed ||
+        kb.motion() == Event::Keyboard::Motion::Repeat) {
       std::vector<Element*> buttons = HeaderButtons();
       {
         for (size_t i = 0; i < buttons.size(); ++i) {
           auto* btn = buttons[i];
           if (btn && btn->focused()) {
-            if (kb.special == Event::Keyboard::Special::Return ||
-                (kb.special == Event::Keyboard::Special::None &&
-                 kb.codepoint == 32)) {
+            if (kb.special() == Event::Keyboard::Special::Return ||
+                (kb.special() == Event::Keyboard::Special::None &&
+                 kb.codepoint() == 32)) {
               SelectTab(std::to_string(i));
               return true;
             }

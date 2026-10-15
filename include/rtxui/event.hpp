@@ -4,39 +4,54 @@
 #ifndef RTXUI_EVENT_HPP_
 #define RTXUI_EVENT_HPP_
 
-#include <cstdint>  // for uint32_t
+#include <cstdint>
+#include <memory>
+#include <optional>
 #include <ostream>
 #include <rtxui/rtxui_export.hpp>
-#include <string>  // for string, operator==
+#include <string>
 #include <string_view>
-#include <variant>  // for variant
-#include <vector>
+#include <type_traits>
 
 namespace rtxui {
 
-// Hoisted out of Event deliberately. GCC 13 will not evaluate a nested class's
-// default member initialisers while the enclosing class is still incomplete,
-// and Event's std::variant member forces exactly that: the variant needs its
-// alternatives complete, one alternative (Keyboard) holds a Modifier, and
-// Modifier's initialisers are then required "before the end of its enclosing
-// class". At namespace scope there is no enclosing class to be incomplete.
-// Event::Modifier remains valid through the alias below.
-struct RTXUI_EXPORT EventModifier {
-  bool alt : 1 = false;
-  bool ctrl : 1 = false;
-  bool meta : 1 = false;
-  bool shift : 1 = false;
-  std::string Print() const;
-  std::strong_ordering operator<=>(const EventModifier&) const = default;
-};
+namespace internal {
+struct EventData;
+struct KeyboardData;
+struct MouseData;
+struct ResizedData;
+}  // namespace internal
 
-struct RTXUI_EXPORT Event {
-  using Modifier = EventModifier;
-  struct Keyboard {
-    static Keyboard From(std::uint32_t cp);
-    static Keyboard From(char c);
-    static Keyboard From(std::string_view str);
-    std::uint32_t codepoint = 0;
+/// An input event: a key, a mouse action or a resize. Only the library and
+/// the named events below create one; read it with is<T>() and get<T>():
+///
+///   if (event.is<Event::Keyboard>()) {
+///     Event::Keyboard key = event.get<Event::Keyboard>();
+///     if (key.special() == Event::Keyboard::Return) { ... }
+///   }
+///   if (event == Event::CtrlP()) { ... }
+///
+/// Copies share the same immutable data.
+class RTXUI_EXPORT Event {
+ public:
+  /// The modifier keys held during an event.
+  class RTXUI_EXPORT Modifier {
+   public:
+    Modifier() = default;
+    bool alt() const;
+    bool ctrl() const;
+    bool meta() const;
+    bool shift() const;
+    std::string Print() const;
+    bool operator==(const Modifier&) const = default;
+
+   private:
+    friend struct EventInternals;
+    std::uint32_t bits_ = 0;
+  };
+
+  class RTXUI_EXPORT Keyboard {
+   public:
     enum Special {
       None = 0,
       ArrowLeft,
@@ -67,23 +82,36 @@ struct RTXUI_EXPORT Event {
       F11,
       F12,
     };
-    Special special = None;
-    Modifier modifier = {};
     enum Motion {
       Pressed,
       Repeat,
       Released,
     };
-    Motion motion = Pressed;
-    // Set only by TerminalInputParser::EmitPastedText, for components (e.g.
-    // TextInputBase's undo grouping) that need to tell a pasted character
-    // apart from one the user actually typed, even though both arrive as
-    // the same kind of single-codepoint event.
-    bool from_paste = false;
-    std::strong_ordering operator<=>(const Keyboard&) const = default;
+
+    /// The key typing `cp`, `c` or the first character of `str`.
+    static Keyboard From(std::uint32_t cp);
+    static Keyboard From(char c);
+    static Keyboard From(std::string_view str);
+
+    /// The character typed, or 0 for a special key.
+    std::uint32_t codepoint() const;
+    Special special() const;
+    Modifier modifier() const;
+    Motion motion() const;
+    /// Whether the character comes from a paste rather than from typing.
+    bool from_paste() const;
     std::string Print() const;
+    bool operator==(const Keyboard&) const;
+
+   private:
+    friend class Event;
+    friend struct EventInternals;
+    explicit Keyboard(std::shared_ptr<const internal::KeyboardData> data);
+    std::shared_ptr<const internal::KeyboardData> data_;
   };
-  struct Mouse {
+
+  class RTXUI_EXPORT Mouse {
+   public:
     enum Button {
       Left = 0,
       Middle = 1,
@@ -99,38 +127,54 @@ struct RTXUI_EXPORT Event {
       Pressed = 1,
       Moved = 2,
     };
-    Button button = Button::None;
-    Motion motion = Motion::Pressed;
-    Modifier modifier;
-    int x = 0, y = 0;
-    float sub_cell_x = 0.0f, sub_cell_y = 0.0f;
-    int pixel_x = 0, pixel_y = 0;
-    bool is_pixel_precise = false;
-    std::strong_ordering operator<=>(const Mouse&) const = default;
+
+    Button button() const;
+    Motion motion() const;
+    Modifier modifier() const;
+    /// The cell under the pointer: 1-based column and row.
+    int x() const;
+    int y() const;
+    /// Where in the cell, from 0 to 1, when the terminal reports pixels.
+    float sub_cell_x() const;
+    float sub_cell_y() const;
+    /// The pixel, when the terminal reports pixels.
+    int pixel_x() const;
+    int pixel_y() const;
+    bool is_pixel_precise() const;
     std::string Print() const;
+    bool operator==(const Mouse&) const;
+
+   private:
+    friend class Event;
+    friend struct EventInternals;
+    explicit Mouse(std::shared_ptr<const internal::MouseData> data);
+    std::shared_ptr<const internal::MouseData> data_;
   };
-  struct Resized {
-    int width = 0, height = 0;
-    std::strong_ordering operator<=>(const Resized&) const = default;
+
+  class RTXUI_EXPORT Resized {
+   public:
+    int width() const;
+    int height() const;
     std::string Print() const;
+    bool operator==(const Resized&) const;
+
+   private:
+    friend class Event;
+    friend struct EventInternals;
+    explicit Resized(std::shared_ptr<const internal::ResizedData> data);
+    std::shared_ptr<const internal::ResizedData> data_;
   };
 
   Event() = delete;
-  Event(const Event& other) = default;
-  Event(Event&& other) = default;
-  Event& operator=(const Event& other) = default;
-  Event& operator=(Event&& other) = default;
-
-  // Constrained with a requires-clause rather than a default template
-  // argument. The argument form is instantiated while Event is still an
-  // incomplete type, and GCC 13 will not evaluate the nested structs' default
-  // member initialisers in that context -- it reports them as "required before
-  // the end of its enclosing class". A requires-clause is checked during
-  // overload resolution instead, by which point Event is complete.
-  template <typename T>
-    requires(!std::is_same_v<std::decay_t<T>, Event> &&
-             std::is_constructible_v<std::variant<Keyboard, Mouse, Resized>, T>)
-  Event(T&& value) : data_(std::forward<T>(value)) {}
+  Event(Keyboard keyboard);  // NOLINT(google-explicit-constructor): an Event is
+                             // any of the three.
+  Event(Mouse mouse);        // NOLINT(google-explicit-constructor): idem.
+  Event(Resized resized);    // NOLINT(google-explicit-constructor): idem.
+  Event(const Event&);
+  Event(Event&&) noexcept;
+  Event& operator=(const Event&);
+  Event& operator=(Event&&) noexcept;
+  ~Event();
 
   // --- Singleton Events ---
   static const Event& ArrowLeft();
@@ -210,30 +254,52 @@ struct RTXUI_EXPORT Event {
 #undef RTXUI_DECLARE_LETTER
 
   std::string Print() const;
-  // Defined in event.cpp, not defaulted here: a defaulted == is generated
-  // wherever it is used, which needs std::variant's operators in scope, and
-  // code that does `import rtxui;` does not have them.
   bool operator==(const Event&) const;
-  std::strong_ordering operator<=>(const Event&) const = default;
+
+  /// Whether this is a T: Event::Keyboard, Event::Mouse or Event::Resized.
   template <typename T>
   bool is() const {
-    return std::holds_alternative<T>(data_);
+    if constexpr (std::is_same_v<T, Keyboard>) {
+      return IsKeyboard();
+    } else if constexpr (std::is_same_v<T, Mouse>) {
+      return IsMouse();
+    } else {
+      static_assert(std::is_same_v<T, Resized>);
+      return IsResized();
+    }
   }
+  /// The event as a T. Call it only when is<T>(): otherwise the T is empty.
   template <typename T>
-  const T& get() const {
-    return std::get<T>(data_);
+  T get() const {
+    if constexpr (std::is_same_v<T, Keyboard>) {
+      return AsKeyboard();
+    } else if constexpr (std::is_same_v<T, Mouse>) {
+      return AsMouse();
+    } else {
+      static_assert(std::is_same_v<T, Resized>);
+      return AsResized();
+    }
   }
+  /// The event as a T when it is one.
   template <typename T>
-  T* get_if() {
-    return std::get_if<T>(&data_);
-  }
-  template <typename T>
-  const T* get_if() const {
-    return std::get_if<T>(&data_);
+  std::optional<T> get_if() const {
+    if (!is<T>()) {
+      return std::nullopt;
+    }
+    return get<T>();
   }
 
  private:
-  std::variant<Keyboard, Mouse, Resized> data_;
+  friend struct EventInternals;
+  explicit Event(std::shared_ptr<const internal::EventData> data);
+  bool IsKeyboard() const;
+  bool IsMouse() const;
+  bool IsResized() const;
+  Keyboard AsKeyboard() const;
+  Mouse AsMouse() const;
+  Resized AsResized() const;
+
+  std::shared_ptr<const internal::EventData> data_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Event& event) {

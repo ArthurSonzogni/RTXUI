@@ -709,13 +709,13 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
     auto mouse = event.get<Event::Mouse>();
     bool is_captured = (ComponentInternals::GetMouseCapturer() == self);
 
-    if (mouse.button == Event::Mouse::Button::Left) {
-      if (mouse.motion == Event::Mouse::Motion::Pressed) {
+    if (mouse.button() == Event::Mouse::Button::Left) {
+      if (mouse.motion() == Event::Mouse::Motion::Pressed) {
         if (!root) {
           return false;
         }
-        int click_x = mouse.x - 1;
-        int click_y = mouse.y - 1;
+        int click_x = mouse.x() - 1;
+        int click_y = mouse.y() - 1;
         int abs_x = root->absolute_x();
         int abs_y = root->absolute_y();
         int layout_w = root->layout_width();
@@ -809,12 +809,12 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           KeepCursorVisible(root, is_multiline);
           return true;
         }
-      } else if (mouse.motion == Event::Mouse::Motion::Moved && is_captured) {
+      } else if (mouse.motion() == Event::Mouse::Motion::Moved && is_captured) {
         if (!root) {
           return false;
         }
-        int click_x = mouse.x - 1;
-        int click_y = mouse.y - 1;
+        int click_x = mouse.x() - 1;
+        int click_y = mouse.y() - 1;
 
         auto graphemes = GetGraphemesList(value);
         int click_pos =
@@ -856,7 +856,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
 
         KeepCursorVisible(root, is_multiline);
         return true;
-      } else if (mouse.motion == Event::Mouse::Motion::Released &&
+      } else if (mouse.motion() == Event::Mouse::Motion::Released &&
                  is_captured) {
         self->ReleaseMouse();
         if (selection_start == cursor_pos) {
@@ -870,8 +870,8 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
 
   if (event.is<Event::Keyboard>()) {
     auto kb = event.get<Event::Keyboard>();
-    if (kb.motion == Event::Keyboard::Motion::Pressed ||
-        kb.motion == Event::Keyboard::Motion::Repeat) {
+    if (kb.motion() == Event::Keyboard::Motion::Pressed ||
+        kb.motion() == Event::Keyboard::Motion::Repeat) {
       last_click_time_ = std::chrono::steady_clock::time_point::min();
       click_count_ = 0;
       if (!root || !root->focused()) {
@@ -890,9 +890,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
 
-      bool is_redo_chord = kb.codepoint == 'z' && kb.modifier.ctrl &&
-                           kb.modifier.shift && !kb.modifier.alt &&
-                           !kb.modifier.meta;
+      bool is_redo_chord = kb.codepoint() == 'z' && kb.modifier().ctrl() &&
+                           kb.modifier().shift() && !kb.modifier().alt() &&
+                           !kb.modifier().meta();
       if (event == Event::CtrlZ() || is_redo_chord || event == Event::CtrlY()) {
         if (readonly) {
           return true;
@@ -945,13 +945,13 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         return true;
       }
 
-      bool is_ctrl_d = kb.modifier.ctrl && !kb.modifier.alt &&
-                       !kb.modifier.shift && !kb.modifier.meta &&
-                       (kb.codepoint == 'd' || kb.codepoint == 'D');
+      bool is_ctrl_d = kb.modifier().ctrl() && !kb.modifier().alt() &&
+                       !kb.modifier().shift() && !kb.modifier().meta() &&
+                       (kb.codepoint() == 'd' || kb.codepoint() == 'D');
       bool is_shift_alt_down =
-          kb.modifier.shift && kb.modifier.alt && !kb.modifier.ctrl &&
-          !kb.modifier.meta &&
-          kb.special == Event::Keyboard::Special::ArrowDown;
+          kb.modifier().shift() && kb.modifier().alt() &&
+          !kb.modifier().ctrl() && !kb.modifier().meta() &&
+          kb.special() == Event::Keyboard::Special::ArrowDown;
       if (is_ctrl_d || is_shift_alt_down) {
         if (readonly) {
           return true;
@@ -1026,9 +1026,9 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         }
       }
 
-      bool is_ctrl_shift_k = kb.modifier.ctrl && kb.modifier.shift &&
-                             !kb.modifier.alt && !kb.modifier.meta &&
-                             (kb.codepoint == 'k' || kb.codepoint == 'K');
+      bool is_ctrl_shift_k = kb.modifier().ctrl() && kb.modifier().shift() &&
+                             !kb.modifier().alt() && !kb.modifier().meta() &&
+                             (kb.codepoint() == 'k' || kb.codepoint() == 'K');
       if (is_ctrl_shift_k) {
         if (readonly) {
           return true;
@@ -1075,20 +1075,20 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         }
       }
 
-      if (kb.special == Event::Keyboard::Special::ArrowLeft) {
-        if (kb.modifier.shift && selection_start == -1) {
+      if (kb.special() == Event::Keyboard::Special::ArrowLeft) {
+        if (kb.modifier().shift() && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift && selection_start != -1 &&
-            selection_start != cursor_pos && !kb.modifier.ctrl &&
-            !kb.modifier.alt) {
+        if (!kb.modifier().shift() && selection_start != -1 &&
+            selection_start != cursor_pos && !kb.modifier().ctrl() &&
+            !kb.modifier().alt()) {
           cursor_pos = std::min(selection_start, cursor_pos);
           selection_start = -1;
         } else {
-          if (!kb.modifier.shift) {
+          if (!kb.modifier().shift()) {
             selection_start = -1;
           }
-          if (kb.modifier.ctrl || kb.modifier.alt) {
+          if (kb.modifier().ctrl() || kb.modifier().alt()) {
             cursor_pos = FindWordBoundaryLeft(graphemes, cursor_pos);
           } else {
             cursor_pos = std::max(0, cursor_pos - 1);
@@ -1099,20 +1099,20 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::ArrowRight) {
-        if (kb.modifier.shift && selection_start == -1) {
+      if (kb.special() == Event::Keyboard::Special::ArrowRight) {
+        if (kb.modifier().shift() && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift && selection_start != -1 &&
-            selection_start != cursor_pos && !kb.modifier.ctrl &&
-            !kb.modifier.alt) {
+        if (!kb.modifier().shift() && selection_start != -1 &&
+            selection_start != cursor_pos && !kb.modifier().ctrl() &&
+            !kb.modifier().alt()) {
           cursor_pos = std::max(selection_start, cursor_pos);
           selection_start = -1;
         } else {
-          if (!kb.modifier.shift) {
+          if (!kb.modifier().shift()) {
             selection_start = -1;
           }
-          if (kb.modifier.ctrl || kb.modifier.alt) {
+          if (kb.modifier().ctrl() || kb.modifier().alt()) {
             cursor_pos = FindWordBoundaryRight(graphemes, cursor_pos);
           } else {
             cursor_pos = std::min(n, cursor_pos + 1);
@@ -1123,10 +1123,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (is_multiline && kb.modifier.alt && !kb.modifier.ctrl &&
-          !kb.modifier.shift && !kb.modifier.meta &&
-          (kb.special == Event::Keyboard::Special::ArrowUp ||
-           kb.special == Event::Keyboard::Special::ArrowDown)) {
+      if (is_multiline && kb.modifier().alt() && !kb.modifier().ctrl() &&
+          !kb.modifier().shift() && !kb.modifier().meta() &&
+          (kb.special() == Event::Keyboard::Special::ArrowUp ||
+           kb.special() == Event::Keyboard::Special::ArrowDown)) {
         if (readonly) {
           return true;
         }
@@ -1143,7 +1143,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         }
         int block_end = FindLineEnd(graphemes, last_pos);
 
-        if (kb.special == Event::Keyboard::Special::ArrowUp) {
+        if (kb.special() == Event::Keyboard::Special::ArrowUp) {
           if (block_start > 0) {
             int delim_pos = block_start - 1;
             int prev_line_start = FindLineStart(graphemes, delim_pos);
@@ -1212,11 +1212,11 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           return true;
         }
       }
-      if (is_multiline && kb.special == Event::Keyboard::Special::ArrowUp) {
-        if (kb.modifier.shift && selection_start == -1) {
+      if (is_multiline && kb.special() == Event::Keyboard::Special::ArrowUp) {
+        if (kb.modifier().shift() && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift) {
+        if (!kb.modifier().shift()) {
           selection_start = -1;
         }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
@@ -1225,11 +1225,11 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (is_multiline && kb.special == Event::Keyboard::Special::ArrowDown) {
-        if (kb.modifier.shift && selection_start == -1) {
+      if (is_multiline && kb.special() == Event::Keyboard::Special::ArrowDown) {
+        if (kb.modifier().shift() && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift) {
+        if (!kb.modifier().shift()) {
           selection_start = -1;
         }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
@@ -1238,12 +1238,13 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (is_multiline && (kb.special == Event::Keyboard::Special::PageUp ||
-                           kb.special == Event::Keyboard::Special::PageDown)) {
-        if (kb.modifier.shift && selection_start == -1) {
+      if (is_multiline &&
+          (kb.special() == Event::Keyboard::Special::PageUp ||
+           kb.special() == Event::Keyboard::Special::PageDown)) {
+        if (kb.modifier().shift() && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift) {
+        if (!kb.modifier().shift()) {
           selection_start = -1;
         }
         int page_size = 10;
@@ -1258,21 +1259,21 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           }
         }
         auto pos2d = GetCursor2D(graphemes, cursor_pos);
-        int target_line = (kb.special == Event::Keyboard::Special::PageUp)
+        int target_line = (kb.special() == Event::Keyboard::Special::PageUp)
                               ? std::max(0, pos2d.line - page_size)
                               : (pos2d.line + page_size);
         cursor_pos = GetCursorPosFrom2D(graphemes, target_line, ideal_column_);
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::Home) {
-        if (kb.modifier.shift && selection_start == -1) {
+      if (kb.special() == Event::Keyboard::Special::Home) {
+        if (kb.modifier().shift() && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift) {
+        if (!kb.modifier().shift()) {
           selection_start = -1;
         }
-        if (kb.modifier.ctrl) {
+        if (kb.modifier().ctrl()) {
           cursor_pos = 0;
         } else {
           int line_start =
@@ -1291,14 +1292,14 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::End) {
-        if (kb.modifier.shift && selection_start == -1) {
+      if (kb.special() == Event::Keyboard::Special::End) {
+        if (kb.modifier().shift() && selection_start == -1) {
           selection_start = cursor_pos;
         }
-        if (!kb.modifier.shift) {
+        if (!kb.modifier().shift()) {
           selection_start = -1;
         }
-        if (kb.modifier.ctrl) {
+        if (kb.modifier().ctrl()) {
           cursor_pos = n;
         } else {
           if (is_multiline) {
@@ -1312,7 +1313,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::Backspace) {
+      if (kb.special() == Event::Keyboard::Special::Backspace) {
         if (readonly) {
           return true;
         }
@@ -1321,7 +1322,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           // Selection deleted
         } else {
           HandleBackspace(graphemes, cursor_pos,
-                          kb.modifier.ctrl || kb.modifier.alt);
+                          kb.modifier().ctrl() || kb.modifier().alt());
         }
         // Cursor position must be computed from `graphemes` before `value`
         // is reassigned below: Grapheme::text is a string_view into the
@@ -1337,7 +1338,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      if (kb.special == Event::Keyboard::Special::Delete) {
+      if (kb.special() == Event::Keyboard::Special::Delete) {
         if (readonly) {
           return true;
         }
@@ -1346,7 +1347,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           // Selection deleted
         } else {
           HandleDelete(graphemes, cursor_pos,
-                       kb.modifier.ctrl || kb.modifier.alt);
+                       kb.modifier().ctrl() || kb.modifier().alt());
         }
         // See the Backspace branch above for why this must come before the
         // `value` reassignment.
@@ -1358,10 +1359,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
         KeepCursorVisible(root, is_multiline);
         return true;
       }
-      bool is_tab = (kb.special == Event::Keyboard::Special::Tab);
+      bool is_tab = (kb.special() == Event::Keyboard::Special::Tab);
       bool is_tab_reverse =
-          (kb.special == Event::Keyboard::Special::TabReverse);
-      bool is_shift_tab = is_tab_reverse || (is_tab && kb.modifier.shift);
+          (kb.special() == Event::Keyboard::Special::TabReverse);
+      bool is_shift_tab = is_tab_reverse || (is_tab && kb.modifier().shift());
       if (is_multiline && (is_tab || is_tab_reverse)) {
         if (readonly) {
           return true;
@@ -1493,7 +1494,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
           return true;
         }
       }
-      if (is_multiline && kb.special == Event::Keyboard::Special::Return) {
+      if (is_multiline && kb.special() == Event::Keyboard::Special::Return) {
         if (readonly) {
           return true;
         }
@@ -1542,19 +1543,19 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
       // line's indentation, since pasted text already has its own. For a
       // single-line field, a pasted '\n' is simply dropped, matching how a
       // real single-line input discards newlines from pasted content.
-      bool is_pasted_newline = kb.codepoint == '\n' && is_multiline;
-      if (kb.special == Event::Keyboard::Special::None &&
-          (kb.codepoint >= 32 || is_pasted_newline) && !kb.modifier.ctrl &&
-          !kb.modifier.meta) {
+      bool is_pasted_newline = kb.codepoint() == '\n' && is_multiline;
+      if (kb.special() == Event::Keyboard::Special::None &&
+          (kb.codepoint() >= 32 || is_pasted_newline) &&
+          !kb.modifier().ctrl() && !kb.modifier().meta()) {
         if (readonly) {
           return true;
         }
         bool has_selection =
             (selection_start != -1 && selection_start != cursor_pos);
-        if (has_selection && !kb.from_paste) {
+        if (has_selection && !kb.from_paste()) {
           char open_delim = 0;
           char close_delim = 0;
-          switch (kb.codepoint) {
+          switch (kb.codepoint()) {
             case '(':
             case ')':
               open_delim = '(';
@@ -1621,10 +1622,10 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
             }
           }
         }
-        BeginEdit(kb.from_paste ? EditKind::Paste : EditKind::Insert);
+        BeginEdit(kb.from_paste() ? EditKind::Paste : EditKind::Insert);
         DeleteSelection(graphemes, selection_start, cursor_pos);
         n = static_cast<int>(graphemes.size());
-        std::string character = CodePointToString(kb.codepoint);
+        std::string character = CodePointToString(kb.codepoint());
         auto new_graphemes = GetGraphemesList(character);
         CapInsertionToMaxLength(new_graphemes, n, maxlength);
         if (cursor_pos < 0) {

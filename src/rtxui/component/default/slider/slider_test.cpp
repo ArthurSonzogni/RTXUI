@@ -18,6 +18,7 @@
 #include "rtxui/event.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
@@ -140,7 +141,7 @@ TEST_CASE("Slider with step=0 doesn't crash on mouse drag",
   int abs_x = slider_el->absolute_x();
   int abs_y = slider_el->absolute_y();
 
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = abs_x + 2;
@@ -151,7 +152,7 @@ TEST_CASE("Slider with step=0 doesn't crash on mouse drag",
 
   // Keyboard arrows go through the same clamp (delta = ±step); with a
   // sane step=1 floor they should still move the value.
-  Event::Keyboard right_arrow;
+  KeyboardData right_arrow;
   right_arrow.motion = Event::Keyboard::Motion::Pressed;
   right_arrow.special = Event::Keyboard::Special::ArrowRight;
   screen.Dispatch(Event(right_arrow));
@@ -180,7 +181,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
 
   // Press at the leftmost column of the track (1-based mouse coords)
   {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Pressed;
     mouse.x = abs_x + 2;  // 1-based: column 1 in 0-indexed (start of track)
@@ -195,7 +196,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
   // Move to the centre of the track — y deliberately far off (capture ignores
   // it)
   {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Moved;
     mouse.x = abs_x + (track_w / 2) + 2;  // middle column, 1-based
@@ -209,7 +210,7 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
 
   // Release at the rightmost column
   {
-    Event::Mouse mouse;
+    MouseData mouse;
     mouse.button = Event::Mouse::Button::Left;
     mouse.motion = Event::Mouse::Motion::Released;
     mouse.x = abs_x + track_w + 1;  // last column, 1-based
@@ -386,7 +387,7 @@ TEST_CASE("Slider interaction layout squashing regression",
   int initial_scroll_width = scroll_el->layout_width();
 
   // Click/Drag the slider
-  Event::Mouse mouse;
+  MouseData mouse;
   mouse.button = Event::Mouse::Button::Left;
   mouse.motion = Event::Mouse::Motion::Pressed;
   mouse.x = slider_el->absolute_x() + 5;

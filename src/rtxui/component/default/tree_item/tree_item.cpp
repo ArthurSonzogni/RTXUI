@@ -96,8 +96,8 @@ bool tree_item::OnEvent(Event event) {
     return false;
   }
   const auto kb = event.get<Event::Keyboard>();
-  if (kb.motion != Event::Keyboard::Motion::Pressed &&
-      kb.motion != Event::Keyboard::Motion::Repeat) {
+  if (kb.motion() != Event::Keyboard::Motion::Pressed &&
+      kb.motion() != Event::Keyboard::Motion::Repeat) {
     return false;
   }
   Element* row = root->QuerySelector(".tree-row");
@@ -106,11 +106,11 @@ bool tree_item::OnEvent(Event event) {
   }
   // Right opens and Left closes a branch, as in a file explorer. Once there
   // is nothing to open or close, the keys fall through to spatial navigation.
-  if (kb.special == Event::Keyboard::Special::ArrowRight && !open) {
+  if (kb.special() == Event::Keyboard::Special::ArrowRight && !open) {
     SetOpen(true);
     return true;
   }
-  if (kb.special == Event::Keyboard::Special::ArrowLeft && open) {
+  if (kb.special() == Event::Keyboard::Special::ArrowLeft && open) {
     SetOpen(false);
     return true;
   }
