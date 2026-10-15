@@ -111,6 +111,10 @@ struct ComponentBase::Data {
   // matches on to reuse it. Not Tag(): that is the class name, which an alias
   // or a hyphenated tag (`tab-pane` is `tab_pane`) does not match.
   std::string created_tag_;
+  // The attributes the parent's template set on the root last time. An
+  // instance is reused by tag, for whichever node of that tag comes next: one
+  // that leaves an attribute out removes it.
+  std::vector<std::string> parent_attributes_;
   std::vector<Ref<ComponentBase>> children_;
   std::vector<Ref<ComponentBase>> old_children_;
   // Reuse takes old_children_ out in order, leaving nulls behind: those

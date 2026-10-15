@@ -4115,6 +4115,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
 
           bool attribute_changed = false;
           std::vector<std::string> child_custom_keys;
+          std::vector<std::string> applied_attributes;
           for (auto& [key_view, value] : child_node.attributes) {
             std::string_view key = key_view;
             bool dynamic = false;
@@ -4181,6 +4182,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               child->Root()->SetAttribute(std::string(key),
                                           std::string(interpolated_value));
             }
+            applied_attributes.emplace_back(key);
 
             if (dynamic || (value.starts_with("{") && value.ends_with("}"))) {
               std::string_view expr = value;
@@ -4191,6 +4193,17 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
                   {std::string(key), import_source, std::string(expr)});
             }
           }
+
+          if (child->Root()) {
+            for (const std::string& key : child->data_->parent_attributes_) {
+              if (std::ranges::find(applied_attributes, key) ==
+                  applied_attributes.end()) {
+                child->Root()->RemoveAttribute(key);
+                attribute_changed = true;
+              }
+            }
+          }
+          child->data_->parent_attributes_ = std::move(applied_attributes);
 
           bool terminal_size_changed =
               (child->data_->last_render_terminal_width_ !=

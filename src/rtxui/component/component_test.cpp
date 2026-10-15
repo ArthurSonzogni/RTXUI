@@ -1707,3 +1707,40 @@ TEST_CASE("Clicking a button's label focuses the button",
   CHECK(button->focused());
   CHECK(button->style.margin.left == 1);  // button:focus
 }
+
+namespace {
+class GrowingLoop : public rtxui::Component<GrowingLoop> {
+ public:
+  std::vector<std::string> rows;
+  int hits = 0;
+  void Hit() { hits++; }
+  // The loop is empty at first: its new item reuses the instance of the
+  // <div> after it, which kept its onclick.
+  std::string_view view = R"(<for each="{rows}" as="row"><div>{row}</div></for>
+      <div onclick="Hit">hits {hits}</div>)";
+  GrowingLoop() {
+    Bind(rows);
+    Bind(hits);
+    Bind(Hit);
+  }
+  bool OnEvent(rtxui::Event event) override {
+    if (event == rtxui::Event(rtxui::Event::Keyboard::From('+'))) {
+      rows.push_back("row");
+      return true;
+    }
+    return rtxui::Component<GrowingLoop>::OnEvent(event);
+  }
+};
+}  // namespace
+
+TEST_CASE("A reused component loses the attributes its new place leaves out",
+          "[component][reconciliation]") {
+  auto app = rtxui::Ref<GrowingLoop>::New();
+  rtxui::HeadlessScreen screen(app, 20, 4);
+  screen.Input("+");
+  REQUIRE(screen.Text().starts_with("row\nhits 0"));
+  screen.Click(1, 0);
+  CHECK(app->hits == 0);
+  screen.Click(1, 1);
+  CHECK(app->hits == 1);
+}
