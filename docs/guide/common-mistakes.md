@@ -70,7 +70,8 @@ imported component renders as an unstyled box.
 
 ## Styling
 
-**Lengths are terminal cells.** `width: 20` is twenty columns. Fonts do not
+**Lengths are terminal cells.** `width: 20` is twenty columns; `px`, `em`
+and `rem` do not exist (`vh` and `vw`, shares of the terminal, do). Fonts do not
 exist in a terminal, so `font-size` and `font-family` do nothing; use
 `font-weight`, `font-style`, `text-decoration` and colors for emphasis. The
 [CSS reference](/css_reference) lists every supported property.

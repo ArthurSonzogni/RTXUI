@@ -102,7 +102,8 @@ Link the CMake target `rtxui`, never `rtxui_lib`, and include only
   is no `<View>`, `<Text>` or `<Box>`. A notification is
   `<toast open="{saved}" duration="3000">Saved</toast>`: it slides in, and
   `saved` falls back to false once it closes.
-- CSS lengths are terminal cells (`width: 20`). `font-size` and `font-family`
+- CSS lengths are terminal cells (`width: 20`), `%`, or `vh`/`vw` (shares
+  of the terminal); there is no `px`, `em` or `rem`. `font-size` and `font-family`
   do not exist; use `font-weight`, `font-style`, `text-decoration`, colors and
   `border` (`solid`, `rounded`, `double`, `tall`, ...).
 - Motion: `transition: width 200ms ease-out 100ms` (property, duration, then

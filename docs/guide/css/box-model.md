@@ -56,7 +56,7 @@ the root is usually clearer than auto margins.
 
 ## Dimension Units
 
-Sizing attributes `width` and `height` accept two types of length units:
+Sizing attributes `width` and `height` accept three types of length units:
 
 1.  **Integer Cell Counts**: A raw number indicates character cell counts.
     ```css
@@ -66,6 +66,15 @@ Sizing attributes `width` and `height` accept two types of length units:
     ```css
     .half-pane { width: 50%; } /* Fills half the parent width */
     ```
+3.  **Viewport Units**: `vh` and `vw` are hundredths of the terminal's
+    height and width, whatever the parent is, and follow it when it is
+    resized.
+    ```css
+    .panel { height: 50vh; } /* Half the terminal's rows */
+    ```
+
+There are no `px`, `em` or `rem`: a terminal has only cells. A length in
+another unit is reported as a [diagnostic](/guide/diagnostics) and ignored.
 
 Both forms combine in `calc()` and are bounded by `min()`, `max()`, and
 `clamp()` — see [values in a terminal](/guide/css/basics#values-in-a-terminal).

@@ -39,6 +39,17 @@ namespace {
 // and differences of several of them far from the ends of int.
 constexpr int kMaxCssNumber = 100000;
 
+// `number` hundredths of the terminal's height (`vh`) or width (`vw`), in
+// cells: what `unit` is, else nothing.
+std::optional<float> ViewportCells(float number, std::string_view unit) {
+  if (unit != "vh" && unit != "vw") {
+    return std::nullopt;
+  }
+  const int size =
+      unit == "vh" ? css::g_terminal_height : css::g_terminal_width;
+  return std::floor(number * static_cast<float>(size) / 100.0f);
+}
+
 float StoF(std::string_view s) {
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
     s.remove_prefix(1);
@@ -775,6 +786,12 @@ class CalcParser {
       ++pos_;
       return CalcLinear{0, number};
     }
+    if (pos_ + 2 <= s_.size()) {
+      if (auto cells = ViewportCells(number, s_.substr(pos_, 2))) {
+        pos_ += 2;
+        return CalcLinear{*cells, 0};
+      }
+    }
     return CalcLinear{number, 0};
   }
 
@@ -921,7 +938,24 @@ Length ParseLength(std::string_view value) {
     value.remove_suffix(2);
     return Length::Fr(StoF(value));
   }
-  return Length::Cells(StoF(value));
+  // A number, in cells, and what follows it: a unit.
+  float number = 0;
+  const auto [end, ec] =
+      std::from_chars(value.data(), value.data() + value.size(), number);
+  const std::string_view unit(end, value.data() + value.size() - end);
+  if (ec != std::errc() || unit.empty()) {
+    return Length::Cells(StoF(value));
+  }
+  if (auto cells = ViewportCells(number, unit)) {
+    return Length::Cells(*cells);
+  }
+  // `px`, `em`, `rem`, ...: cells are the only length a terminal has. Read
+  // as cells, as they were, they made 10px ten cells wide.
+  ReportDiagnostic("unsupported unit '" + std::string(unit) + "' in '" +
+                   std::string(value) +
+                   "': lengths are in cells, %, fr, vh "
+                   "or vw");
+  return Length::Auto();
 }
 
 // Grid lines and spans past this are taken as this: every track up to an

@@ -6305,3 +6305,32 @@ TEST_CASE("A lone Escape byte is the Escape key once nothing follows it",
 
 }  // namespace
 }  // namespace rtxui
+
+namespace rtxui {
+namespace {
+
+class HalfHeight : public Component<HalfHeight> {
+ public:
+  std::string_view view = R"(
+    <div class="box">x</div>
+    <style>.box { height: 50vh; border: solid; }</style>
+  )";
+};
+
+TEST_CASE("A vh length follows the terminal's height", "[screen][style]") {
+  HeadlessScreen screen(Ref<HalfHeight>::New(), 10, 10);
+  // The box's rows, down to its bottom border.
+  auto rows = [&] {
+    const std::string text = screen.Text();
+    const size_t bottom = text.find("└");
+    return bottom == std::string::npos
+               ? -1
+               : std::count(text.begin(), text.begin() + bottom, '\n') + 1;
+  };
+  CHECK(rows() == 5);
+  screen.Resize(10, 20);
+  CHECK(rows() == 10);
+}
+
+}  // namespace
+}  // namespace rtxui

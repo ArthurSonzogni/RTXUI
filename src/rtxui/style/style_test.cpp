@@ -1390,7 +1390,7 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle",
   rtxui::ComputedStyle style;
 
   SECTION("grid-template-columns only") {
-    rtxui::ApplyStyle(style, {"grid-template-columns", "1fr 2fr 50px"});
+    rtxui::ApplyStyle(style, {"grid-template-columns", "1fr 2fr 50"});
     REQUIRE(style.grid_template_columns.size() == 3);
     CHECK(style.grid_template_columns[0] == rtxui::Length::Fr(1.0f));
     CHECK(style.grid_template_columns[1] == rtxui::Length::Fr(2.0f));
@@ -1405,7 +1405,7 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle",
   }
 
   SECTION("grid-template shorthand") {
-    rtxui::ApplyStyle(style, {"grid-template", "1fr 2fr / 100px 50px"});
+    rtxui::ApplyStyle(style, {"grid-template", "1fr 2fr / 100 50"});
     REQUIRE(style.grid_template_rows.size() == 2);
     CHECK(style.grid_template_rows[0] == rtxui::Length::Fr(1.0f));
     CHECK(style.grid_template_rows[1] == rtxui::Length::Fr(2.0f));
@@ -1560,7 +1560,7 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle",
 
   SECTION("grid-template with repeat()") {
     rtxui::ApplyStyle(style,
-                      {"grid-template-columns", "1fr repeat(3, 100px) 2fr"});
+                      {"grid-template-columns", "1fr repeat(3, 100) 2fr"});
     REQUIRE(style.grid_template_columns.size() == 5);
     CHECK(style.grid_template_columns[0] == rtxui::Length::Fr(1.0f));
     CHECK(style.grid_template_columns[1] == rtxui::Length::Cells(100.0f));
@@ -1579,7 +1579,7 @@ TEST_CASE("Grid templates and placement parsing in ApplyStyle",
   }
 
   SECTION("grid gap aliases") {
-    rtxui::ApplyStyle(style, {"grid-gap", "5px 10px"});
+    rtxui::ApplyStyle(style, {"grid-gap", "5 10"});
     CHECK(style.row_gap == rtxui::Length::Cells(5.0f));
     CHECK(style.column_gap == rtxui::Length::Cells(10.0f));
 
@@ -2274,4 +2274,37 @@ TEST_CASE("Print writes an expanded :is() rule back out once",
   REQUIRE(sheet);
   CHECK(sheet.value().size() == 2);
   CHECK(css::Print(sheet.value()) == "a:is(.b, .c) {\n  color: red;\n}\n\n");
+}
+
+TEST_CASE("vh and vw are hundredths of the terminal's height and width",
+          "[style]") {
+  const int width = css::g_terminal_width;
+  const int height = css::g_terminal_height;
+  css::g_terminal_width = 80;
+  css::g_terminal_height = 25;
+  rtxui::ComputedStyle style;
+  rtxui::ApplyStyle(style, {"height", "100vh"});
+  CHECK(style.height == rtxui::Length::Cells(25.0f));
+  rtxui::ApplyStyle(style, {"height", "50vh"});
+  CHECK(style.height == rtxui::Length::Cells(12.0f));
+  rtxui::ApplyStyle(style, {"width", "25vw"});
+  CHECK(style.width == rtxui::Length::Cells(20.0f));
+  rtxui::ApplyStyle(style, {"width", "calc(50vw - 2)"});
+  CHECK(style.width == rtxui::Length::Cells(38.0f));
+  css::g_terminal_width = width;
+  css::g_terminal_height = height;
+}
+
+TEST_CASE("A length in a unit a terminal has not is reported", "[style]") {
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& diagnostic) {
+    messages.push_back(diagnostic.message);
+  });
+  rtxui::ComputedStyle style;
+  // It used to be read as cells: 10px was ten cells.
+  rtxui::ApplyStyle(style, {"width", "10px"});
+  rtxui::SetDiagnosticHandler(nullptr);
+  CHECK(style.width.unit == rtxui::Unit::Auto);
+  REQUIRE_FALSE(messages.empty());
+  CHECK(messages[0].find("unsupported unit 'px'") != std::string::npos);
 }

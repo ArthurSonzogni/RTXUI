@@ -13,10 +13,11 @@ Declaration      ::= PropertyName ':' Value ('!important')? ';'
 PropertyName     ::= [a-z-]+ | '--' [a-z0-9-]+
 Value            ::= Token (Whitespace Token)*
 
-Length           ::= Integer | Percentage | Fractional | 'auto' | CalcExpr | MinMaxExpr
+Length           ::= Integer | Percentage | Fractional | Viewport | 'auto' | CalcExpr | MinMaxExpr
 Integer          ::= [-+]? [0-9]+
 Percentage       ::= [-+]? [0-9]+ ('.' [0-9]+)? '%'
 Fractional       ::= [0-9]+ ('.' [0-9]+)? 'fr'
+Viewport         ::= [0-9]+ ('.' [0-9]+)? ('vh' | 'vw')
 Color            ::= HexColor | RgbColor | HslColor | ColorKeyword | ColorTransform
 
 HexColor         ::= '#' ([0-9a-fA-F]{3} | [0-9a-fA-F]{4} | [0-9a-fA-F]{6} | [0-9a-fA-F]{8})
@@ -28,7 +29,7 @@ ColorKeyword     ::= 'transparent' | 'orange' | 'red' | 'white' | 'blue' | 'yell
 ```
 
 ### Coordinate & Dimensional Model
-- **Grid Unit**: 1 unit = 1 terminal character cell.
+- **Grid Unit**: 1 unit = 1 terminal character cell. `vh` and `vw` are hundredths of the terminal's height and width, rounded down to cells. Other units (`px`, `em`, `rem`, ...) are reported and ignored.
 - **Physical Cell Aspect Ratio**: Terminal cells are approximately 1:2 (width:height). An aspect ratio of `2 / 1` produces an approximately square visual block.
 - **Default Box Model**: Unlike web browsers which default to `content-box`, RTXUI defaults to `border-box` (`box-sizing: border-box`). Declared `width` and `height` define the outer dimensions including padding and borders.
 
