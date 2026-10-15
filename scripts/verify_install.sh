@@ -6,7 +6,10 @@
 #
 #   scripts/verify_install.sh [extra CMake arguments for the library]
 #   scripts/verify_install.sh -DBUILD_SHARED_LIBS=ON
+#   APP_REFLECTION_FLAG=-freflection scripts/verify_install.sh
 #
+# With APP_REFLECTION_FLAG, the apps (not the installed library) are compiled
+# as C++26 with that flag, and must read a struct's fields by reflection.
 # Uses $CXX if set. Works in a temporary directory, removed on exit.
 set -euo pipefail
 
@@ -16,6 +19,14 @@ trap 'rm -rf "$work"' EXIT
 prefix="$work/prefix"
 
 step() { echo "== $*"; }
+
+reflection=${APP_REFLECTION_FLAG:-}
+app_cmake_args=()
+app_std=-std=c++23
+if [[ -n "$reflection" ]]; then
+  app_cmake_args=(-DCMAKE_CXX_STANDARD=26 "-DCMAKE_CXX_FLAGS=$reflection")
+  app_std="-std=c++26 $reflection"
+fi
 
 step "Install RTXUI to $prefix"
 cmake -S "$root" -B "$work/lib" -G Ninja -DCMAKE_BUILD_TYPE=Release \
@@ -27,6 +38,23 @@ mkdir -p "$work/app"
 cat > "$work/app/main.cpp" <<'EOF'
 #include <iostream>
 #include <rtxui/rtxui.hpp>
+
+#if defined(RTXUI_HAS_REFLECTION)
+struct Person {
+  std::string name;
+  bool operator==(const Person&) const = default;
+};
+
+// No Fields(): {p.name} is read by reflection.
+class People : public rtxui::Component<People> {
+ public:
+  std::vector<Person> people = {{"Ada"}};
+  std::string_view view = R"html(
+    <div><for each="{people}" as="p"><span>{p.name}</span></for></div>
+  )html";
+  People() { Bind(people); }
+};
+#endif
 
 class App : public rtxui::Component<App> {
  public:
@@ -48,6 +76,10 @@ int main() {
   rtxui::HeadlessScreen screen(rtxui::Ref<App>::New(), 30, 6);
   screen.Input("\t\r");
   std::cout << screen.Text();
+#if defined(RTXUI_HAS_REFLECTION)
+  rtxui::HeadlessScreen people(rtxui::Ref<People>::New(), 30, 1);
+  std::cout << "\nreflection: " << people.Text();
+#endif
 }
 EOF
 
@@ -56,7 +88,8 @@ check() {  # <name> <binary>
   out=$(LD_LIBRARY_PATH="$prefix/lib:${LD_LIBRARY_PATH:-}" \
         DYLD_LIBRARY_PATH="$prefix/lib:${DYLD_LIBRARY_PATH:-}" \
         RTXUI_STRICT=1 "$2")
-  if [[ "$out" != *"clicked 1"* || "$out" != *"☐ check"* ]]; then
+  if [[ "$out" != *"clicked 1"* || "$out" != *"☐ check"* ]] ||
+     [[ -n "$reflection" && "$out" != *"reflection: Ada"* ]]; then
     echo "$1: unexpected output:"
     echo "$out"
     exit 1
@@ -73,18 +106,16 @@ add_executable(app main.cpp)
 target_link_libraries(app PRIVATE rtxui::rtxui)
 EOF
 cmake -S "$work/app" -B "$work/find_package" -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$prefix" > /dev/null
-cmake --build "$work/find_package" > /dev/null
+  -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$prefix" \
+  ${app_cmake_args[@]+"${app_cmake_args[@]}"} > /dev/null
+cmake --build "$work/find_package"
 check find_package "$work/find_package/app"
 
 step "pkg-config"
 pc_dir=$(dirname "$(find "$prefix" -name rtxui.pc)")
 flags=$(PKG_CONFIG_PATH="$pc_dir" pkg-config --cflags --libs rtxui)
-# Without reflection the .pc names no standard; the consumer picks C++23.
-std=-std=c++23
-[[ "$flags" == *-std=* ]] && std=
-# shellcheck disable=SC2086  # $flags is a list of flags.
-"${CXX:-c++}" $std "$work/app/main.cpp" $flags -o "$work/pkg-config-app"
+# shellcheck disable=SC2086  # $app_std and $flags are lists of flags.
+"${CXX:-c++}" $app_std "$work/app/main.cpp" $flags -o "$work/pkg-config-app"
 check pkg-config "$work/pkg-config-app"
 
 step "FetchContent"
@@ -98,6 +129,6 @@ add_executable(app main.cpp)
 target_link_libraries(app PRIVATE rtxui)
 EOF
 cmake -S "$work/app" -B "$work/fetch_content" -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release "$@" > /dev/null
-cmake --build "$work/fetch_content" > /dev/null
+  -DCMAKE_BUILD_TYPE=Release ${app_cmake_args[@]+"${app_cmake_args[@]}"} "$@" > /dev/null
+cmake --build "$work/fetch_content"
 check FetchContent "$work/fetch_content/app"

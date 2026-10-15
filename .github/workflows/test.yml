@@ -177,9 +177,10 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
-  # C++26 reflection: GCC 16 builds RTXUI with RTXUI_HAS_REFLECTION, which no
-  # other job does. Fails if CMake did not enable it: the probe once failed
-  # under every compiler, and the reflection code went unbuilt unnoticed.
+  # C++26 reflection: GCC 16 builds RTXUI's tests and examples with
+  # reflection, which no other job does. Fails if CMake did not enable it: the
+  # probe once failed under every compiler, and the reflection code went
+  # unbuilt unnoticed.
   test-reflection:
     name: GCC 16 Reflection
     runs-on: ubuntu-latest
@@ -189,7 +190,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install toolchain
-        run: apt-get update && apt-get install -y cmake ninja-build
+        run: apt-get update && apt-get install -y cmake ninja-build pkg-config
 
       - name: Configure
         run: |
@@ -206,6 +207,13 @@ jobs:
       # reflection; the other Linux jobs run it.
       - name: Test
         run: ctest --test-dir build --output-on-failure -E smoke_examples
+
+      # The installed library is C++23 and asks nothing of its users; an app
+      # compiled with reflection must still get it.
+      - name: Reflection app against the installed library
+        env:
+          APP_REFLECTION_FLAG: -freflection
+        run: scripts/verify_install.sh
 
   # The `rtxui` C++ module: every example, rewritten to `import rtxui;`, must
   # draw the same snapshot as its header-based build. See cmake/modules.cmake.

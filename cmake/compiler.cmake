@@ -28,11 +28,14 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 # C++23 is the requirement. C++26 is optional: when the compiler offers
-# reflection, RTXUI uses it to read struct fields in bound collections without
-# a manual mapper, and the targets that need it are raised to 26 by
+# reflection, RTXUI's own tests and examples are raised to 26 by
 # cmake/reflection.cmake. The interface requirement stays at 23 so consumers
-# are not dragged along.
-set(CMAKE_CXX_STANDARD 23)
+# are not dragged along. A newer standard picked by the project that embeds
+# RTXUI is kept: it may come with flags, such as -freflection, that C++23
+# rejects.
+if(NOT CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 23)
+  set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set the default build type to 'Release'

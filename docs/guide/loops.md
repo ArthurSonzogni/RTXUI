@@ -193,7 +193,8 @@ instead.
 
 ### With C++26 reflection
 
-When compiled with C++26 static reflection (`RTXUI_HAS_REFLECTION`), a struct
+When your application is compiled with C++26 static reflection (for example
+GCC 16 with `-std=c++26 -freflection`), a struct
 without `Fields()` exposes its members under their own names: `Bind(tasks)`
 alone makes `{task.name}` work. A `Fields()` function, or the binding's own
 fields, still decide when there is one: to rename, format or compute a field

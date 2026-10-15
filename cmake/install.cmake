@@ -70,16 +70,8 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rtxui
 )
 
-# pkg-config, for Meson, Makefiles and distro packaging. The reflection flags
-# are on rtxui's interface (see cmake/reflection.cmake), so they are on the
-# Cflags line too. The library name goes through file(GENERATE) to pick up the
-# Debug `d` suffix.
-set(RTXUI_PC_CFLAGS "")
-if(HAS_REFLECTION_CLANG)
-  set(RTXUI_PC_CFLAGS " -std=c++26 -freflection-latest -DRTXUI_HAS_REFLECTION")
-elseif(HAS_REFLECTION_GCC)
-  set(RTXUI_PC_CFLAGS " -std=c++26 -freflection -DRTXUI_HAS_REFLECTION")
-endif()
+# pkg-config, for Meson, Makefiles and distro packaging. The library name goes
+# through file(GENERATE) to pick up the Debug `d` suffix.
 set(RTXUI_PC_PREFIX "${CMAKE_INSTALL_PREFIX}")
 foreach(dir LIBDIR INCLUDEDIR)
   if(IS_ABSOLUTE "${CMAKE_INSTALL_${dir}}")

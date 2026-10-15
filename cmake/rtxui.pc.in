@@ -6,5 +6,5 @@ Name: rtxui
 Description: @PROJECT_DESCRIPTION@
 URL: https://github.com/ArthurSonzogni/RTXUI
 Version: @PROJECT_VERSION@
-Cflags: -I${includedir}@RTXUI_PC_CFLAGS@
+Cflags: -I${includedir}
 Libs: -L${libdir} -l$<TARGET_FILE_BASE_NAME:rtxui>

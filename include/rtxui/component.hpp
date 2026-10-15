@@ -18,7 +18,12 @@
 #include <utility>
 #include <variant>
 #include <vector>
-#if defined(RTXUI_HAS_REFLECTION)
+// C++26 static reflection, when the code including this header is compiled
+// with it (e.g. GCC 16 with -std=c++26 -freflection). Each application decides
+// for itself: the library's own code never needs it, so a library built as
+// C++23 serves applications compiled either way.
+#if defined(__cpp_impl_reflection) && __has_include(<meta>)
+#define RTXUI_HAS_REFLECTION 1
 #include <meta>
 #endif
 

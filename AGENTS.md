@@ -169,12 +169,14 @@ parser).
 - **One library** — `rtxui` (alias `rtxui::rtxui`) is the only library
   target. Built-in tags are registered explicitly in `GetGlobalRegistry()`,
   not by static initializers, so a plain static link keeps them all.
-- **C++26 reflection (optional)** — CMake probes for `<meta>` support
-  (`-freflection-latest` on Clang, `-freflection` on GCC) and defines
-  `RTXUI_HAS_REFLECTION`. It is only used to read the fields of structs in
-  bound collections that have no `Fields()` function; components still call
-  `Bind()`. Code
-  must still work without it.
+- **C++26 reflection (optional)** — `<rtxui/component.hpp>` defines
+  `RTXUI_HAS_REFLECTION` when the code including it is compiled with
+  reflection (`__cpp_impl_reflection`). It is only used to read the fields of
+  structs in bound collections that have no `Fields()` function; components
+  still call `Bind()`. The library itself never needs it, so it is built as
+  C++23 and asks no flags of applications; CMake probes for support
+  (`-freflection-latest` on Clang, `-freflection` on GCC) only to build
+  RTXUI's own tests and examples with it. Code must still work without it.
 - **Hot reload** — `EnableHotReload()` uses `std::source_location` to watch the
   component's own source file and re-parse the `view` template at runtime
   without recompiling.
