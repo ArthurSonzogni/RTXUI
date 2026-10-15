@@ -1333,7 +1333,7 @@ TEST_CASE(
   // input.
   std::vector<rtxui::Diagnostic> seen;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& e) {
-    if (e.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+    if (e.kind() == rtxui::Diagnostic::Kind::XmlSyntax) {
       seen.push_back(e);
     }
   });
@@ -1345,7 +1345,7 @@ TEST_CASE(
   rtxui::SetDiagnosticHandler(nullptr);
 
   REQUIRE(seen.size() == 1);
-  CHECK_FALSE(seen[0].message.empty());
+  CHECK_FALSE(seen[0].message().empty());
   // Mount must not go on to read the parse result it does not have; the
   // component simply renders nothing.
   CHECK(rtxui::ComponentInternals::Root(*app) != nullptr);
@@ -1597,7 +1597,7 @@ TEST_CASE("HotReload reports a parse error to the XML error handler",
 
   std::optional<rtxui::Diagnostic> reported_error;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
-    if (error.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+    if (error.kind() == rtxui::Diagnostic::Kind::XmlSyntax) {
       reported_error = error;
     }
   });
@@ -1605,7 +1605,7 @@ TEST_CASE("HotReload reports a parse error to the XML error handler",
   rtxui::SetDiagnosticHandler(nullptr);
 
   REQUIRE(reported_error.has_value());
-  CHECK_FALSE(reported_error->message.empty());
+  CHECK_FALSE(reported_error->message().empty());
 }
 
 namespace {
@@ -1791,7 +1791,7 @@ TEST_CASE("A loop over no bound collection is reported",
           "[component][diagnostic]") {
   std::vector<std::string> messages;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& diagnostic) {
-    messages.push_back(diagnostic.message);
+    messages.push_back(diagnostic.message());
   });
   auto app = rtxui::Ref<UnboundLoops>::New();
   rtxui::HeadlessScreen screen(app, 10, 3);

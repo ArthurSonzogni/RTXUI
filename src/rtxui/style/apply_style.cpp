@@ -19,8 +19,8 @@
 #include <utility>
 #include <vector>
 
+#include "rtxui/base/diagnostic_internal.hpp"
 #include "rtxui/color.hpp"
-#include "rtxui/diagnostic.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/style/style.hpp"
 

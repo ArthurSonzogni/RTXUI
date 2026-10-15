@@ -52,10 +52,10 @@ interface, since printing to stderr disturbs a running frame:
 #include <rtxui/rtxui.hpp>
 
 rtxui::SetDiagnosticHandler([](const rtxui::Diagnostic& d) {
-  if (d.kind == rtxui::Diagnostic::Kind::CssSyntax) {
-    log_file << "line " << d.line + 1 << ": ";
+  if (d.kind() == rtxui::Diagnostic::Kind::CssSyntax) {
+    log_file << "line " << d.line() + 1 << ": ";
   }
-  log_file << d.message << '\n';
+  log_file << d.message() << '\n';
 });
 ```
 

@@ -5,13 +5,16 @@
 #define RTXUI_DIAGNOSTIC_HPP_
 
 #include <functional>
+#include <memory>
 #include <rtxui/rtxui_export.hpp>
 #include <string>
 
 namespace rtxui {
 
-/// A mistake in a template or a stylesheet.
-struct Diagnostic {
+/// A mistake in a template or a stylesheet. Only the library creates one; a
+/// handler reads it (see SetDiagnosticHandler()). Copies share it.
+class RTXUI_EXPORT Diagnostic {
+ public:
   enum class Kind {
     /// A construct that parses but that RTXUI does not support, so it would
     /// otherwise be silently ignored: an unknown CSS property or value, a
@@ -26,13 +29,26 @@ struct Diagnostic {
     XmlSyntax,
   };
 
-  std::string message;
-  Kind kind = Kind::Unsupported;
+  Diagnostic(const Diagnostic&);
+  Diagnostic(Diagnostic&&) noexcept;
+  Diagnostic& operator=(const Diagnostic&);
+  Diagnostic& operator=(Diagnostic&&) noexcept;
+  ~Diagnostic();
+
+  /// What is wrong, in a sentence.
+  const std::string& message() const;
+  Kind kind() const;
   /// For a syntax error, where it is in the text that failed to parse:
   /// 0-based, and relative to that <style> block or that markup. -1 for the
   /// other kinds.
-  int line = -1;
-  int column = -1;
+  int line() const;
+  int column() const;
+
+ private:
+  friend struct DiagnosticInternals;
+  struct Data;
+  explicit Diagnostic(std::shared_ptr<const Data> data);
+  std::shared_ptr<const Data> data_;
 };
 
 /// Installs a handler invoked for each diagnostic. An unsupported construct is
@@ -46,9 +62,6 @@ struct Diagnostic {
 /// frame. Pass nullptr to restore the default.
 RTXUI_EXPORT void SetDiagnosticHandler(
     std::function<void(const Diagnostic&)> handler);
-
-/// Reports a diagnostic. Repeats of a message already reported are dropped.
-RTXUI_EXPORT void ReportDiagnostic(std::string message);
 
 }  // namespace rtxui
 

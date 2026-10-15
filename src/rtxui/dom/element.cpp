@@ -20,10 +20,10 @@
 #include <vector>
 
 #include "rtxui/base/clock.hpp"
+#include "rtxui/base/diagnostic_internal.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/component/component_internal.hpp"
-#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"

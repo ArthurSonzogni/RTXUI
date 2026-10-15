@@ -234,18 +234,19 @@ int main() {
   // parse errors from HotReload(), and constructs RTXUI does not support, get
   // the same treatment.
   SetDiagnosticHandler([app](const Diagnostic& diagnostic) {
-    switch (diagnostic.kind) {
+    switch (diagnostic.kind()) {
       case Diagnostic::Kind::CssSyntax:
-        app->status = "CSS error, line " + std::to_string(diagnostic.line + 1) +
-                      ": " + diagnostic.message;
+        app->status = "CSS error, line " +
+                      std::to_string(diagnostic.line() + 1) + ": " +
+                      diagnostic.message();
         break;
       case Diagnostic::Kind::XmlSyntax:
         app->status = "Parse error, line " +
-                      std::to_string(diagnostic.line + 1) + ": " +
-                      diagnostic.message;
+                      std::to_string(diagnostic.line() + 1) + ": " +
+                      diagnostic.message();
         break;
       case Diagnostic::Kind::Unsupported:
-        app->status = diagnostic.message;
+        app->status = diagnostic.message();
         break;
     }
   });

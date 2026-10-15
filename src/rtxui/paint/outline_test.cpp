@@ -86,7 +86,7 @@ TEST_CASE("outline shorthand and longhands parse", "[css][outline]") {
 
   std::vector<std::string> messages;
   SetDiagnosticHandler([&](const Diagnostic& diagnostic) {
-    messages.push_back(diagnostic.message);
+    messages.push_back(diagnostic.message());
   });
   ApplyStyle(style, {"outline", "solid wobbly"});
   ApplyStyle(style, {"outline-offset", "far"});

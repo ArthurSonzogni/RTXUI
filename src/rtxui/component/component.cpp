@@ -905,8 +905,8 @@ void ReportSyntaxError(const Diagnostic& diagnostic, std::string_view source) {
     return;
   }
   PrintCompilerStyleError(
-      source, diagnostic.line, diagnostic.column, diagnostic.message,
-      diagnostic.kind == Diagnostic::Kind::CssSyntax ? "CSS" : "XML");
+      source, diagnostic.line(), diagnostic.column(), diagnostic.message(),
+      diagnostic.kind() == Diagnostic::Kind::CssSyntax ? "CSS" : "XML");
   if (StrictDiagnostics()) {
     std::abort();
   }
@@ -922,8 +922,8 @@ namespace {
 // its own UI. Mount() returns without nodes in that case, so the component
 // renders empty.
 void XmlParseError(const xml::Error& error, std::string_view xml_string) {
-  const Diagnostic diagnostic{error.message, Diagnostic::Kind::XmlSyntax,
-                              error.line, error.column};
+  const Diagnostic diagnostic = DiagnosticInternals::Make(
+      error.message, Diagnostic::Kind::XmlSyntax, error.line, error.column);
   if (DeliverDiagnostic(diagnostic)) {
     return;
   }
@@ -937,7 +937,8 @@ void XmlParseError(const xml::Error& error, std::string_view xml_string) {
 // must not end the running process on a malformed value.
 void CssParseError(const css::Error& error, std::string_view css_string) {
   ReportSyntaxError(
-      {error.message, Diagnostic::Kind::CssSyntax, error.line, error.column},
+      DiagnosticInternals::Make(error.message, Diagnostic::Kind::CssSyntax,
+                                error.line, error.column),
       css_string);
 }
 
@@ -4669,8 +4670,9 @@ void ComponentBase::HotReload(std::string_view new_template) {
 
   Expected<xml::Nodes, xml::Error> nodes = xml::Parse(data_->xml_string_);
   if (!nodes) {
-    ReportSyntaxError({nodes.error().message, Diagnostic::Kind::XmlSyntax,
-                       nodes.error().line, nodes.error().column},
+    ReportSyntaxError(DiagnosticInternals::Make(
+                          nodes.error().message, Diagnostic::Kind::XmlSyntax,
+                          nodes.error().line, nodes.error().column),
                       data_->xml_string_);
     return;
   }

@@ -1797,7 +1797,7 @@ TEST_CASE("The background shorthand sets the background color",
   // nothing, and was reported as unsupported.
   std::vector<std::string> messages;
   rtxui::SetDiagnosticHandler(
-      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message()); });
   rtxui::ComputedStyle style;
 
   SECTION("A color") {
@@ -1826,7 +1826,7 @@ TEST_CASE("flex-flow sets the direction and the wrapping", "[style][flex]") {
   // flex-flow was unknown, so `flex-flow: column wrap` did nothing.
   std::vector<std::string> messages;
   rtxui::SetDiagnosticHandler(
-      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message()); });
   rtxui::ComputedStyle style;
 
   SECTION("Both, in either order") {
@@ -2130,7 +2130,7 @@ TEST_CASE("An invalid animation value is reported, not ignored",
           "[css][animation]") {
   std::vector<std::string> messages;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& diagnostic) {
-    messages.push_back(diagnostic.message);
+    messages.push_back(diagnostic.message());
   });
   rtxui::ComputedStyle style;
   rtxui::ApplyStyle(style, {"animation", "a 1s 2s 3s"});
@@ -2179,7 +2179,7 @@ TEST_CASE("transition reads a delay and any timing function",
 
   std::vector<std::string> messages;
   rtxui::SetDiagnosticHandler(
-      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message()); });
   rtxui::ApplyStyle(style, {"transition", "width 1s 2s 3s"});
   rtxui::ApplyStyle(style, {"transition", "width color 1s"});
   rtxui::SetDiagnosticHandler(nullptr);
@@ -2218,7 +2218,7 @@ TEST_CASE("An invalid or unsupported color is reported, not applied",
           "[style][color]") {
   std::vector<std::string> messages;
   rtxui::SetDiagnosticHandler(
-      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message); });
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message()); });
   rtxui::ComputedStyle style;
   rtxui::ApplyStyle(style, {"background-color", "red"});
   rtxui::ApplyStyle(style, {"color", "red"});
@@ -2298,7 +2298,7 @@ TEST_CASE("vh and vw are hundredths of the terminal's height and width",
 TEST_CASE("A length in a unit a terminal has not is reported", "[style]") {
   std::vector<std::string> messages;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& diagnostic) {
-    messages.push_back(diagnostic.message);
+    messages.push_back(diagnostic.message());
   });
   rtxui::ComputedStyle style;
   // It used to be read as cells: 10px was ten cells.

@@ -4727,7 +4727,7 @@ TEST_CASE("Layout: CSS-wide keywords reset a property",
   SECTION("a keyword is not reported as an unsupported value") {
     std::vector<std::string> reported;
     SetDiagnosticHandler(
-        [&](const Diagnostic& d) { reported.push_back(d.message); });
+        [&](const Diagnostic& d) { reported.push_back(d.message()); });
     struct T : Component<T> {
       std::string_view view = R"html(
         <style>

@@ -251,16 +251,17 @@ int main() {
   // markdown.cpp's Digest()), and a malformed stylesheet can break that parse
   // too. Same recovery.
   SetDiagnosticHandler([app](const Diagnostic& diagnostic) {
-    switch (diagnostic.kind) {
+    switch (diagnostic.kind()) {
       case Diagnostic::Kind::CssSyntax:
-        app->status = "CSS error, line " + std::to_string(diagnostic.line + 1) +
-                      ": " + diagnostic.message;
+        app->status = "CSS error, line " +
+                      std::to_string(diagnostic.line() + 1) + ": " +
+                      diagnostic.message();
         break;
       case Diagnostic::Kind::XmlSyntax:
-        app->status = "HTML error: " + diagnostic.message;
+        app->status = "HTML error: " + diagnostic.message();
         break;
       case Diagnostic::Kind::Unsupported:
-        app->status = diagnostic.message;
+        app->status = diagnostic.message();
         break;
     }
   });

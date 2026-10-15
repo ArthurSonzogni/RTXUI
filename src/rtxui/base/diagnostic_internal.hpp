@@ -4,9 +4,21 @@
 #ifndef RTXUI_BASE_DIAGNOSTIC_INTERNAL_HPP_
 #define RTXUI_BASE_DIAGNOSTIC_INTERNAL_HPP_
 
+#include <string>
+
 #include "rtxui/diagnostic.hpp"
 
 namespace rtxui {
+
+struct DiagnosticInternals {
+  static Diagnostic Make(std::string message,
+                         Diagnostic::Kind kind = Diagnostic::Kind::Unsupported,
+                         int line = -1,
+                         int column = -1);
+};
+
+/// Reports a diagnostic. Repeats of a message already reported are dropped.
+void ReportDiagnostic(std::string message);
 
 /// Hands `diagnostic` to the handler installed with SetDiagnosticHandler,
 /// every time, without the de-duplication ReportDiagnostic does. False when

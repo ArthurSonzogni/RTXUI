@@ -93,7 +93,7 @@ class Misplaced : public Component<Misplaced> {
 TEST_CASE("An unknown toast placement is reported", "[component][toast]") {
   std::vector<std::string> messages;
   SetDiagnosticHandler(
-      [&](const Diagnostic& d) { messages.push_back(d.message); });
+      [&](const Diagnostic& d) { messages.push_back(d.message()); });
   RenderToString(Ref<Misplaced>::New(), 10, 3);
   SetDiagnosticHandler(nullptr);
   REQUIRE_FALSE(messages.empty());
@@ -281,7 +281,7 @@ TEST_CASE("A toast's opening and closing animations can both be replaced",
           "[component][toast]") {
   std::vector<std::string> messages;
   SetDiagnosticHandler(
-      [&](const Diagnostic& d) { messages.push_back(d.message); });
+      [&](const Diagnostic& d) { messages.push_back(d.message()); });
   auto app = Ref<Restyled2>::New();
   TimelineScreen screen(app, 20, 4);
   screen.Advance(400);

@@ -6,6 +6,7 @@
 #include <string_view>
 #include <utility>
 
+#include "rtxui/base/diagnostic_internal.hpp"
 #include "rtxui/base/string.hpp"
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
@@ -67,9 +68,10 @@ bool markdown::Digest() {
       ComponentInternals::data(*this).SetXmlNodes(std::move(nodes.value()));
     } else {
       const xml::Error& error = nodes.error();
-      ReportSyntaxError({error.message, Diagnostic::Kind::XmlSyntax, error.line,
-                         error.column},
-                        ComponentInternals::data(*this).xml_string_);
+      ReportSyntaxError(
+          DiagnosticInternals::Make(error.message, Diagnostic::Kind::XmlSyntax,
+                                    error.line, error.column),
+          ComponentInternals::data(*this).xml_string_);
     }
     ComponentInternals::Render(*this);
   }

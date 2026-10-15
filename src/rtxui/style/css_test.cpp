@@ -771,7 +771,7 @@ TEST_CASE("A CSS syntax error reaches the diagnostic handler",
 
   std::optional<rtxui::Diagnostic> captured;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
-    if (error.kind == rtxui::Diagnostic::Kind::CssSyntax) {
+    if (error.kind() == rtxui::Diagnostic::Kind::CssSyntax) {
       captured = error;
     }
   });
@@ -784,7 +784,7 @@ TEST_CASE("A CSS syntax error reaches the diagnostic handler",
   rtxui::SetDiagnosticHandler(nullptr);  // Don't leak into other tests.
 
   REQUIRE(captured.has_value());
-  CHECK_FALSE(captured->message.empty());
+  CHECK_FALSE(captured->message().empty());
 }
 
 namespace {

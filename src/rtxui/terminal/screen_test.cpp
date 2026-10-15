@@ -6054,7 +6054,7 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
 TEST_CASE("::selection colors the selected text", "[terminal][selection]") {
   std::vector<std::string> diagnostics;
   SetDiagnosticHandler(
-      [&](const Diagnostic& d) { diagnostics.push_back(d.message); });
+      [&](const Diagnostic& d) { diagnostics.push_back(d.message()); });
   class App : public Component<App> {
    public:
     std::string_view view = R"(

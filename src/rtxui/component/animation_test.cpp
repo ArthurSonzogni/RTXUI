@@ -54,7 +54,7 @@ class DiagnosticRecorder {
  public:
   DiagnosticRecorder() {
     SetDiagnosticHandler(
-        [this](const Diagnostic& d) { messages.push_back(d.message); });
+        [this](const Diagnostic& d) { messages.push_back(d.message()); });
   }
   ~DiagnosticRecorder() { SetDiagnosticHandler(nullptr); }
   DiagnosticRecorder(const DiagnosticRecorder&) = delete;

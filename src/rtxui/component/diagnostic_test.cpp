@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "catch2/catch_test_macros.hpp"
+#include "rtxui/base/diagnostic_internal.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/refcounted.hpp"
@@ -24,7 +25,7 @@ class DiagnosticRecorder {
  public:
   DiagnosticRecorder() {
     SetDiagnosticHandler(
-        [this](const Diagnostic& d) { messages.push_back(d.message); });
+        [this](const Diagnostic& d) { messages.push_back(d.message()); });
   }
   ~DiagnosticRecorder() { SetDiagnosticHandler(nullptr); }
   DiagnosticRecorder(const DiagnosticRecorder&) = delete;
@@ -209,9 +210,9 @@ TEST_CASE("A syntax error is a diagnostic that says where it is",
   app->rule = "color: red; }}";
   app->Digest();
   REQUIRE(seen.size() == 1);
-  CHECK(seen[0].kind == Diagnostic::Kind::CssSyntax);
-  CHECK(seen[0].line >= 0);
-  CHECK(seen[0].column >= 0);
+  CHECK(seen[0].kind() == Diagnostic::Kind::CssSyntax);
+  CHECK(seen[0].line() >= 0);
+  CHECK(seen[0].column() >= 0);
 
   // Reported again each time it is made again, unlike an unsupported
   // construct: a live editor has to hear about every attempt.
@@ -223,8 +224,8 @@ TEST_CASE("A syntax error is a diagnostic that says where it is",
 
   ReportDiagnostic("something unsupported");
   REQUIRE(seen.size() == 3);
-  CHECK(seen[2].kind == Diagnostic::Kind::Unsupported);
-  CHECK(seen[2].line == -1);
+  CHECK(seen[2].kind() == Diagnostic::Kind::Unsupported);
+  CHECK(seen[2].line() == -1);
   SetDiagnosticHandler(nullptr);
 }
 

@@ -272,7 +272,7 @@ TEST_CASE(
 
   std::optional<rtxui::Diagnostic> reported_error;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
-    if (error.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+    if (error.kind() == rtxui::Diagnostic::Kind::XmlSyntax) {
       reported_error = error;
     }
   });
@@ -286,7 +286,7 @@ TEST_CASE(
   rtxui::SetDiagnosticHandler(nullptr);
 
   REQUIRE(reported_error.has_value());
-  CHECK_FALSE(reported_error->message.empty());
+  CHECK_FALSE(reported_error->message().empty());
 }
 
 TEST_CASE("Markdown Component accepts tag-like sequences in its stylesheet",
@@ -300,7 +300,7 @@ TEST_CASE("Markdown Component accepts tag-like sequences in its stylesheet",
 
   std::optional<rtxui::Diagnostic> reported_error;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
-    if (error.kind == rtxui::Diagnostic::Kind::XmlSyntax) {
+    if (error.kind() == rtxui::Diagnostic::Kind::XmlSyntax) {
       reported_error = error;
     }
   });

@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <string>
 #include <string_view>
@@ -14,6 +15,42 @@
 #include "rtxui/base/diagnostic_internal.hpp"
 
 namespace rtxui {
+
+struct Diagnostic::Data {
+  std::string message;
+  Kind kind = Kind::Unsupported;
+  int line = -1;
+  int column = -1;
+};
+
+Diagnostic::Diagnostic(std::shared_ptr<const Data> data)
+    : data_(std::move(data)) {}
+Diagnostic::Diagnostic(const Diagnostic&) = default;
+Diagnostic::Diagnostic(Diagnostic&&) noexcept = default;
+Diagnostic& Diagnostic::operator=(const Diagnostic&) = default;
+Diagnostic& Diagnostic::operator=(Diagnostic&&) noexcept = default;
+Diagnostic::~Diagnostic() = default;
+
+const std::string& Diagnostic::message() const {
+  return data_->message;
+}
+Diagnostic::Kind Diagnostic::kind() const {
+  return data_->kind;
+}
+int Diagnostic::line() const {
+  return data_->line;
+}
+int Diagnostic::column() const {
+  return data_->column;
+}
+
+Diagnostic DiagnosticInternals::Make(std::string message,
+                                     Diagnostic::Kind kind,
+                                     int line,
+                                     int column) {
+  return Diagnostic(std::make_shared<const Diagnostic::Data>(
+      Diagnostic::Data{std::move(message), kind, line, column}));
+}
 
 namespace {
 
@@ -55,7 +92,7 @@ void ReportDiagnostic(std::string message) {
   if (!Reported().insert(message).second) {
     return;
   }
-  if (DeliverDiagnostic(Diagnostic{message})) {
+  if (DeliverDiagnostic(DiagnosticInternals::Make(message))) {
     return;
   }
   std::cerr << "rtxui: " << message << '\n';

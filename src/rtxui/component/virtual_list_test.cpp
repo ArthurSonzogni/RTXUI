@@ -197,7 +197,7 @@ TEST_CASE("A virtual loop outside a scroll container is reported",
           "[component][virtual]") {
   std::vector<std::string> messages;
   SetDiagnosticHandler(
-      [&](const Diagnostic& d) { messages.push_back(d.message); });
+      [&](const Diagnostic& d) { messages.push_back(d.message()); });
   CHECK(RenderToString(Ref<Unscrolled>::New(), 10, 3) == "a\nb\n\n");
   SetDiagnosticHandler(nullptr);
   REQUIRE_FALSE(messages.empty());

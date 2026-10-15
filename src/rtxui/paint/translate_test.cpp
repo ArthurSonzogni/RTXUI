@@ -84,7 +84,7 @@ TEST_CASE("translate parses lengths, percentages and calc()",
 
   std::vector<std::string> messages;
   SetDiagnosticHandler([&](const Diagnostic& diagnostic) {
-    messages.push_back(diagnostic.message);
+    messages.push_back(diagnostic.message());
   });
   ApplyStyle(style, {"translate", "auto"});
   ApplyStyle(style, {"translate", "left 2"});
