@@ -3409,6 +3409,17 @@ void ComponentBase::Render(const xml::Node& node,
       break;
     }
   }
+  // Rendering nothing, as it does, would hide the mistake.
+  if (!range) {
+    const bool in_syntax = range_name.find(" in ") != std::string_view::npos ||
+                           range_name.find(" of ") != std::string_view::npos;
+    ReportDiagnostic(
+        "<for each=\"" + std::string(each_attr) + "\"> in <" +
+        std::string(import_source->Tag()) + ">: " +
+        (in_syntax ? std::string("write <for each=\"{list}\" as=\"item\">")
+                   : "no collection named '" + std::string(range_name) +
+                         "' is bound"));
+  }
 
   // `virtual`: in a scroll container, render only the items around
   // what it shows, and stand in for the rest with two spacers of

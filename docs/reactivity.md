@@ -107,11 +107,11 @@ When user interaction modifies the child control:
 
 ## 5. Collection Keying & DOM Reconciliation
 
-When rendering collections with `<for each="item in items">`, the reconciler maps collection items to active DOM subtrees.
+When rendering collections with `<for each="{items}" as="item">`, the reconciler maps collection items to active DOM subtrees.
 
 ### 5.1 Positional Reconciliation (Unkeyed)
 ```xml
-<for each="item in items">
+<for each="{items}" as="item">
   <div class="row">
     <input value="{item.name}" />
   </div>
@@ -123,7 +123,7 @@ Without an explicit `key`, elements are matched purely by collection index:
 
 ### 5.2 Associative Identity Reconciliation (Keyed)
 ```xml
-<for each="item in items" key="item.id">
+<for each="{items}" as="item" key="{item.id}">
   <div class="row">
     <input value="{item.name}" />
   </div>

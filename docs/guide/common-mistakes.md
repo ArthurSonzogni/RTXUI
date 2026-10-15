@@ -32,7 +32,7 @@ class Counter : public rtxui::Component<Counter> {
 | Wrong | Right |
 |---|---|
 | `v-if="shown"`, `*ngIf`, `x-if` | `if="{shown}"` on the element, or `<if condition="{shown}">` with `<elif>` / `<else>` |
-| `v-for="item in items"`, `for="item in items"` | `<for each="{items}" as="item">`, with `{$index}` for the index |
+| `v-for="item in items"`, `for="item in items"`, `<for each="item in items">` | `<for each="{items}" as="item">`, with `{$index}` for the index |
 
 A condition is true when the bound value prints as `true` or `1`.
 

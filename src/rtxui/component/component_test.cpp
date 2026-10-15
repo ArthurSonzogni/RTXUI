@@ -1744,3 +1744,33 @@ TEST_CASE("A reused component loses the attributes its new place leaves out",
   screen.Click(1, 1);
   CHECK(app->hits == 1);
 }
+
+namespace {
+class UnboundLoops : public rtxui::Component<UnboundLoops> {
+ public:
+  std::vector<std::string> items = {"a"};
+  std::string_view view = R"(
+    <for each="item in items"><div>{item}</div></for>
+    <for each="{missing}" as="m"><div>{m}</div></for>
+    <for each="{items}" as="i"><div>{i}</div></for>
+  )";
+  UnboundLoops() { Bind(items); }
+};
+}  // namespace
+
+TEST_CASE("A loop over no bound collection is reported",
+          "[component][diagnostic]") {
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& diagnostic) {
+    messages.push_back(diagnostic.message);
+  });
+  auto app = rtxui::Ref<UnboundLoops>::New();
+  rtxui::HeadlessScreen screen(app, 10, 3);
+  rtxui::SetDiagnosticHandler(nullptr);
+
+  REQUIRE(messages.size() == 2);
+  CHECK(messages[0].find("write <for each=\"{list}\" as=\"item\">") !=
+        std::string::npos);
+  CHECK(messages[1].find("no collection named 'missing'") != std::string::npos);
+  CHECK(screen.Text().starts_with("a"));
+}
