@@ -90,7 +90,7 @@ ctest --test-dir build                      # everything, incl. verify_* scripts
 
 Test sources live next to the code they test (`*_test.cpp`). New test files
 must be added to the `rtxui_test` target in `CMakeLists.txt`; new library
-sources to `rtxui_lib`.
+sources to `rtxui`.
 
 ### Seeing what an app draws
 
@@ -166,9 +166,9 @@ parser).
   selector. To add a tag: create the dir, include its header in
   `default_components_internal.hpp`, add it to `GetGlobalRegistry()` in
   `component/component.cpp`, and add the .cpp to `CMakeLists.txt`.
-- **WHOLE_ARCHIVE wrapper** — the public `rtxui` target wraps `rtxui_lib` with
-  `$<LINK_LIBRARY:WHOLE_ARCHIVE,...>` so nothing gets dropped by the linker;
-  link examples/apps against `rtxui`, tests against `rtxui_lib`.
+- **One library** — `rtxui` (alias `rtxui::rtxui`) is the only library
+  target. Built-in tags are registered explicitly in `GetGlobalRegistry()`,
+  not by static initializers, so a plain static link keeps them all.
 - **C++26 reflection (optional)** — CMake probes for `<meta>` support
   (`-freflection-latest` on Clang, `-freflection` on GCC) and defines
   `RTXUI_HAS_REFLECTION`. It is only used to read the fields of structs in

@@ -57,8 +57,7 @@ int main() {
 }
 ```
 
-Link the CMake target `rtxui`, never `rtxui_lib`, and include only
-`<rtxui/rtxui.hpp>`.
+Link the CMake target `rtxui` and include only `<rtxui/rtxui.hpp>`.
 
 ## Rules
 

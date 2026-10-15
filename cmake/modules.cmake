@@ -23,8 +23,6 @@ target_sources(rtxui_module
   PUBLIC FILE_SET CXX_MODULES FILES
   src/rtxui/rtxui.cppm
 )
-# rtxui, not rtxui_lib: the wrapper links the whole archive, so the built-in
-# components' registrations are not dropped by the linker.
 target_link_libraries(rtxui_module PUBLIC rtxui)
 target_compile_features(rtxui_module PUBLIC cxx_std_23)
 add_library(rtxui::module ALIAS rtxui_module)

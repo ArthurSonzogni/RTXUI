@@ -77,8 +77,8 @@ jobs:
 
       - name: Confirm a shared library was produced
         run: |
-          ls build/librtxui_lib.* build/librtxui.*
-          if ls build/librtxui_lib.a >/dev/null 2>&1; then
+          ls build/librtxui.*
+          if ls build/librtxui.a >/dev/null 2>&1; then
             echo "::error::BUILD_SHARED_LIBS=ON still produced a static archive"
             exit 1
           fi
@@ -174,8 +174,8 @@ jobs:
 
       - name: Confirm a shared library was produced
         run: |
-          ls build/librtxui_lib.* build/librtxui.*
-          if ls build/librtxui_lib.a >/dev/null 2>&1; then
+          ls build/librtxui.*
+          if ls build/librtxui.a >/dev/null 2>&1; then
             echo "::error::BUILD_SHARED_LIBS=ON still produced a static archive"
             exit 1
           fi

@@ -57,12 +57,6 @@ add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE rtxui)
 ```
 
-Link against the **`rtxui`** target, not `rtxui_lib`. Built-in elements
-register themselves through static initializers, and the `rtxui` target
-carries the linker flags that keep those initializers from being discarded.
-Linking `rtxui_lib` directly can produce binaries where tags like
-`<button>` silently fail to resolve.
-
 ### With an installed package
 
 If RTXUI has been installed (`cmake --install`), consume it with
@@ -71,6 +65,13 @@ If RTXUI has been installed (`cmake --install`), consume it with
 ```cmake
 find_package(rtxui REQUIRED)
 target_link_libraries(my_app PRIVATE rtxui::rtxui)
+```
+
+Outside CMake (Meson, Makefiles, ...), the install also provides `rtxui.pc`
+for pkg-config:
+
+```bash
+c++ -std=c++23 main.cpp $(pkg-config --cflags --libs rtxui) -o my_app
 ```
 
 ## First program

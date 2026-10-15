@@ -39,7 +39,7 @@ endif()
 # No explicit STATIC: the kind follows BUILD_SHARED_LIBS so a consumer or a
 # distro can ask for a shared build. See the visibility settings and the
 # generated export header below -- a shared build only exports what is marked.
-add_library(rtxui_lib
+add_library(rtxui
   "src/rtxui/terminal/terminal_input_parser.cpp"
   "src/rtxui/terminal/terminal_input_parser.hpp"
   "src/rtxui/terminal/event.cpp"
@@ -149,8 +149,8 @@ add_library(rtxui_lib
   "src/rtxui/markdown/markdown.hpp"
 )
 
-target_compile_features(rtxui_lib PUBLIC cxx_std_23)
-target_compile_options(rtxui_lib PRIVATE
+target_compile_features(rtxui PUBLIC cxx_std_23)
+target_compile_options(rtxui PRIVATE
   -Wall
   -Wextra
 )
@@ -160,25 +160,25 @@ target_compile_options(rtxui_lib PRIVATE
 # external. generate_export_header also defines RTXUI_STATIC_DEFINE for the
 # static build, where the macro expands to nothing.
 include(GenerateExportHeader)
-set_target_properties(rtxui_lib PROPERTIES
+set_target_properties(rtxui PROPERTIES
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN ON
 )
-generate_export_header(rtxui_lib
+generate_export_header(rtxui
   BASE_NAME RTXUI
   EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/generated/rtxui/rtxui_export.hpp"
 )
-target_include_directories(rtxui_lib PUBLIC
+target_include_directories(rtxui PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 # Internal headers stay private: were src/ propagated, the examples could
 # include what an installed consumer cannot, and nothing would notice.
-target_include_directories(rtxui_lib PRIVATE
+target_include_directories(rtxui PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_include_directories(rtxui_lib SYSTEM INTERFACE
+target_include_directories(rtxui SYSTEM INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
   $<INSTALL_INTERFACE:include>
@@ -186,23 +186,7 @@ target_include_directories(rtxui_lib SYSTEM INTERFACE
 
 include(cmake/reflection.cmake)
 
-# See https://stackoverflow.com/questions/53071878/using-whole-archive-linker-option-with-cmake-and-libraries-with-other-library
-add_library(rtxui "src/rtxui/dummy.cpp")
-
-# The namespaced alias matters for the installed package: install(EXPORT)
-# rewrites plain target names in INTERFACE_LINK_LIBRARIES to their namespaced
-# form, but not names sitting inside a $<LINK_LIBRARY:...> expression. Exported
-# as bare `rtxui_lib` it resolved to no target in a consumer's project, so it
-# degraded to a raw -lrtxui_lib and rtxui_lib's include directories never
-# propagated -- consumers got "rtxui/rtxui.hpp: No such file or directory".
-add_library(rtxui::rtxui_lib ALIAS rtxui_lib)
-if(BUILD_SHARED_LIBS)
-  # A shared object runs its static initialisers on load, so the built-in
-  # components register themselves without the archive trick below.
-  target_link_libraries(rtxui PUBLIC rtxui::rtxui_lib)
-else()
-  target_link_libraries(rtxui PUBLIC "$<LINK_LIBRARY:WHOLE_ARCHIVE,rtxui::rtxui_lib>")
-endif()
+add_library(rtxui::rtxui ALIAS rtxui)
 
 if(RTXUI_BUILD_EXAMPLES)
   add_subdirectory(example)
@@ -230,6 +214,11 @@ if(RTXUI_BUILD_TESTS)
     # Verify that examples, their build targets and the docs stay in sync
     add_test(NAME verify_examples
       COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_examples.py"
+    )
+
+    # Verify that the CMake, Conan and vcpkg files name the same version
+    add_test(NAME verify_version
+      COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_version.py"
     )
 
     # Start every built example and check it draws a frame. The unit tests
@@ -359,7 +348,7 @@ if(RTXUI_BUILD_TESTS)
   # binary rather than the shared object: linking both would give the process
   # two copies of the global component registry.
   if(BUILD_SHARED_LIBS)
-    target_sources(rtxui_test PRIVATE $<TARGET_OBJECTS:rtxui_lib>)
+    target_sources(rtxui_test PRIVATE $<TARGET_OBJECTS:rtxui>)
     target_include_directories(rtxui_test PRIVATE
       "${CMAKE_CURRENT_SOURCE_DIR}/include"
       "${CMAKE_CURRENT_BINARY_DIR}/generated"
@@ -375,7 +364,7 @@ if(RTXUI_BUILD_TESTS)
       target_compile_definitions(rtxui_test PRIVATE RTXUI_HAS_REFLECTION)
     endif()
   else()
-    target_link_libraries(rtxui_test PRIVATE rtxui_lib)
+    target_link_libraries(rtxui_test PRIVATE rtxui)
   endif()
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
   target_include_directories(rtxui_test PRIVATE "src")
@@ -396,7 +385,7 @@ if(RTXUI_BUILD_TESTS)
   # A development tool driving an internal class: give it the objects rather
   # than exporting TerminalInputParser and widening the library's ABI for it.
   if(BUILD_SHARED_LIBS)
-    target_sources(rtxui_terminal_input_parser PRIVATE $<TARGET_OBJECTS:rtxui_lib>)
+    target_sources(rtxui_terminal_input_parser PRIVATE $<TARGET_OBJECTS:rtxui>)
     target_include_directories(rtxui_terminal_input_parser PRIVATE
       "${CMAKE_CURRENT_SOURCE_DIR}/include"
       "${CMAKE_CURRENT_BINARY_DIR}/generated"
@@ -404,7 +393,7 @@ if(RTXUI_BUILD_TESTS)
     target_compile_features(rtxui_terminal_input_parser PRIVATE cxx_std_23)
     target_compile_definitions(rtxui_terminal_input_parser PRIVATE RTXUI_STATIC_DEFINE)
   else()
-    target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui_lib)
+    target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui)
   endif()
   target_include_directories(rtxui_terminal_input_parser PRIVATE "src")
 
@@ -433,9 +422,6 @@ if (RTXUI_BUILD_FUZZERS)
     "src/rtxui/xml/xml_fuzzer.cpp"
   )
   include(GoogleTest)
-  # rtxui, not rtxui_lib: as a plain archive, rtxui_lib would leave out
-  # every built-in component no fuzzer names, and the templates under
-  # test would render those tags as generic boxes.
   target_link_libraries(rtxui_fuzzer PRIVATE rtxui)
   target_include_directories(rtxui_fuzzer PRIVATE "src")
   link_fuzztest(rtxui_fuzzer)

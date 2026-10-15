@@ -93,9 +93,6 @@ percentages of the box's own size and `calc()`, and it animates.
 **Include only `<rtxui/rtxui.hpp>`.** Headers under `src/` are internal and
 not installed.
 
-**Link `rtxui`, not `rtxui_lib`.** `rtxui` keeps the built-in components that
-a static link would otherwise drop.
-
 **Only the UI thread touches component state.** From a worker thread, hand the
 result back with `rtxui::PostTask(...)`, which is safe to call from any thread
 (see the [cookbook](/guide/cookbook)).

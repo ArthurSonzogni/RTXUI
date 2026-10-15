@@ -101,6 +101,42 @@ jobs:
           UBSAN_OPTIONS: print_stacktrace=1
         run: ctest --test-dir build --output-on-failure
 
+  # What a user of the package does: install RTXUI, then build an app against
+  # it with find_package(), pkg-config and FetchContent.
+  install:
+    name: Install (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux static
+            os: ubuntu-latest
+            cmake_args: ""
+          - name: Linux shared
+            os: ubuntu-latest
+            cmake_args: "-DBUILD_SHARED_LIBS=ON"
+          - name: macOS static
+            os: macos-latest
+            cmake_args: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build g++-14 pkg-config
+
+      - name: Install toolchain (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja pkgconf
+
+      - name: Install and consume
+        env:
+          CC: ${{ runner.os == 'Linux' && 'gcc-14' || 'clang' }}
+          CXX: ${{ runner.os == 'Linux' && 'g++-14' || 'clang++' }}
+        run: scripts/verify_install.sh ${{ matrix.cmake_args }}
+
   # Runs on every push: macOS minutes are free for a public repository, and
   # libc++ catches missing includes libstdc++ supplies transitively.
   test-macos:

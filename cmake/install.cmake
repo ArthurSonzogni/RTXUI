@@ -11,19 +11,25 @@ include(GNUInstallDirs)
 # prefix. The alternative -- a per-config subdirectory -- keeps them apart too,
 # but puts the archives in lib/<Config>/ instead of lib/, which vcpkg, distro
 # packagers and a plain find_package() from a normal prefix do not expect.
-set_target_properties(rtxui rtxui_lib PROPERTIES DEBUG_POSTFIX d)
+set_target_properties(rtxui PROPERTIES DEBUG_POSTFIX d)
 
 # SOVERSION is what lets an ABI break be expressed at all: without it the
-# SONAME is a bare librtxui_lib.so, two incompatible builds cannot coexist,
+# SONAME is a bare librtxui.so, two incompatible builds cannot coexist,
 # and a consumer linked against the old one loads the new one silently. The
 # major version is the ABI generation, matching the inline namespace in the
-# headers.
-set_target_properties(rtxui rtxui_lib PROPERTIES
+# headers. Before 1.0, any minor release may break the ABI, so 0.x carries the
+# minor version too: librtxui.so.0.1, not librtxui.so.0.
+if(PROJECT_VERSION_MAJOR EQUAL 0)
+  set(RTXUI_SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+else()
+  set(RTXUI_SOVERSION ${PROJECT_VERSION_MAJOR})
+endif()
+set_target_properties(rtxui PROPERTIES
   VERSION ${PROJECT_VERSION}
-  SOVERSION ${PROJECT_VERSION_MAJOR}
+  SOVERSION ${RTXUI_SOVERSION}
 )
 
-install(TARGETS rtxui rtxui_lib
+install(TARGETS rtxui
   EXPORT rtxui-targets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -62,4 +68,31 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/rtxui-config.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/rtxui-config-version.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rtxui
+)
+
+# pkg-config, for Meson, Makefiles and distro packaging. The reflection flags
+# are on rtxui's interface (see cmake/reflection.cmake), so they are on the
+# Cflags line too. The library name goes through file(GENERATE) to pick up the
+# Debug `d` suffix.
+set(RTXUI_PC_CFLAGS "")
+if(HAS_REFLECTION_CLANG)
+  set(RTXUI_PC_CFLAGS " -std=c++26 -freflection-latest -DRTXUI_HAS_REFLECTION")
+elseif(HAS_REFLECTION_GCC)
+  set(RTXUI_PC_CFLAGS " -std=c++26 -freflection -DRTXUI_HAS_REFLECTION")
+endif()
+set(RTXUI_PC_PREFIX "${CMAKE_INSTALL_PREFIX}")
+foreach(dir LIBDIR INCLUDEDIR)
+  if(IS_ABSOLUTE "${CMAKE_INSTALL_${dir}}")
+    set(RTXUI_PC_${dir} "${CMAKE_INSTALL_${dir}}")
+  else()
+    set(RTXUI_PC_${dir} "\${prefix}/${CMAKE_INSTALL_${dir}}")
+  endif()
+endforeach()
+configure_file(cmake/rtxui.pc.in "${CMAKE_CURRENT_BINARY_DIR}/rtxui.pc.in" @ONLY)
+file(GENERATE
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/pkgconfig/$<CONFIG>/rtxui.pc"
+  INPUT "${CMAKE_CURRENT_BINARY_DIR}/rtxui.pc.in"
+)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/pkgconfig/$<CONFIG>/rtxui.pc"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )

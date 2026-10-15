@@ -63,3 +63,7 @@ __pycache__/
 /.claude/*
 !/.claude/settings.json
 /.cache/
+
+# Left by `conan create -tf packaging/conan/test_package`
+packaging/conan/test_package/build/
+packaging/conan/test_package/CMakeUserPresets.json

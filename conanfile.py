@@ -1,4 +1,6 @@
 from conan import ConanFile
+from conan.errors import ConanInvalidConfiguration
+from conan.tools.build import check_min_cppstd
 from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
 
 class RtxuiConan(ConanFile):
@@ -12,10 +14,16 @@ class RtxuiConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
+    exports_sources = "CMakeLists.txt", "LICENSE", "cmake/*", "include/*", "src/*"
 
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
+
+    def validate(self):
+        check_min_cppstd(self, 23)
+        if self.settings.os == "Windows":
+            raise ConanInvalidConfiguration("RTXUI does not support Windows yet")
 
     def layout(self):
         cmake_layout(self)
@@ -36,6 +44,7 @@ class RtxuiConan(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = ["rtxui", "rtxui_lib"]
+        self.cpp_info.libs = [
+            "rtxuid" if self.settings.build_type == "Debug" else "rtxui"]
         self.cpp_info.set_property("cmake_file_name", "rtxui")
         self.cpp_info.set_property("cmake_target_name", "rtxui::rtxui")

@@ -115,9 +115,34 @@ jobs:
           name: rtxui-macos-universal
           path: rtxui-macos-universal.tar.gz
 
+  # The tarball registries (vcpkg, Conan, Meson, Homebrew, ...) build from,
+  # with a checksum they can pin: GitHub's own archives are not guaranteed to
+  # stay byte-identical.
+  source:
+    name: Source tarball
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the version matches the tag
+        if: github.ref_type == 'tag'
+        run: python3 scripts/verify_version.py "${{ github.ref_name }}"
+
+      - name: Package
+        run: |
+          version=$(sed -n 's/^  VERSION \([0-9.]*\)$/\1/p' CMakeLists.txt)
+          git archive --format=tar.gz --prefix="rtxui-$version/" \
+            -o "rtxui-$version.tar.gz" HEAD
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtxui-source
+          path: rtxui-[0-9]*.tar.gz
+
   publish:
     name: Publish release
-    needs: [linux, macos]
+    needs: [source, linux, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -126,9 +151,14 @@ jobs:
         with:
           merge-multiple: true
 
+      - name: Checksums
+        run: sha256sum rtxui-*.tar.gz > SHA256SUMS
+
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
             rtxui-linux-x64.tar.gz
             rtxui-macos-universal.tar.gz
+            rtxui-[0-9]*.tar.gz
+            SHA256SUMS

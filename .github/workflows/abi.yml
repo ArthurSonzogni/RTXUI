@@ -1,8 +1,7 @@
 # Detect ABI changes with libabigail's abidiff.
 #
-# rtxui_lib is built (Debug, PIC) at a baseline commit and at HEAD, each
-# archive is linked whole-archive into a shared object, and the two are
-# compared. Reports go to the run's step summary.
+# rtxui is built as a shared library (Debug) at a baseline commit and at HEAD,
+# and the two are compared. Reports go to the run's step summary.
 #
 # - pull_request: baseline is the merge-base with the target branch; an
 #   incompatible ABI change fails the job.
@@ -83,11 +82,14 @@ jobs:
               -DRTXUI_BUILD_TESTS=OFF \
               -DRTXUI_BUILD_EXAMPLES=OFF \
               -DRTXUI_BUILD_BENCHMARKS=OFF
-            cmake --build "$2" --target rtxui_lib
-            # Prefer the versioned file the SONAME points at.
-            lib=$(ls "$2"/librtxui_lib*.so.*.*.* "$2"/librtxui_lib*.so 2>/dev/null | head -1)
+            cmake --build "$2" --target rtxui
+            # Prefer the versioned file the SONAME points at. A baseline from
+            # before the two targets were merged calls the real library
+            # rtxui_lib; its librtxui is an empty wrapper, so look there first.
+            lib=$(ls "$2"/librtxui_lib*.so.*.*.* "$2"/librtxui_lib*.so \
+                     "$2"/librtxui*.so.*.*.* "$2"/librtxui*.so 2>/dev/null | head -1)
             if [ -z "$lib" ]; then
-              echo "No shared rtxui_lib in $2 (baseline predates shared support)."
+              echo "No shared rtxui in $2 (baseline predates shared support)."
               return 1
             fi
             cp "$lib" "$3"

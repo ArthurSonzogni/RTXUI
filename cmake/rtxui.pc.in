@@ -1,0 +1,10 @@
+prefix=@RTXUI_PC_PREFIX@
+libdir=@RTXUI_PC_LIBDIR@
+includedir=@RTXUI_PC_INCLUDEDIR@
+
+Name: rtxui
+Description: @PROJECT_DESCRIPTION@
+URL: https://github.com/ArthurSonzogni/RTXUI
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir}@RTXUI_PC_CFLAGS@
+Libs: -L${libdir} -l$<TARGET_FILE_BASE_NAME:rtxui>

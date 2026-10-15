@@ -112,7 +112,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(rtxui)
 
 add_executable(my_app main.cpp)
-# Link against `rtxui` (not rtxui_lib) to preserve static element registrations
 target_link_libraries(my_app PRIVATE rtxui)
 ```
 
