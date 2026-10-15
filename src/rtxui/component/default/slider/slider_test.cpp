@@ -16,9 +16,9 @@
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -40,7 +40,7 @@ TEST_CASE("Slider squashed layout regression", "[component][slider][layout]") {
   };
 
   auto component = rtxui::Ref<SliderTest>::New();
-  rtxui::Screen screen(component, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(component, device);
   screen.Draw();
 
   std::string output = device->GetOutput();
@@ -130,7 +130,7 @@ TEST_CASE("Slider with step=0 doesn't crash on mouse drag",
   // first mouse-drag interaction.
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<SliderStepZeroTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* slider_el = container->Root()->QuerySelector("slider");
@@ -159,7 +159,7 @@ TEST_CASE("Slider with step=0 doesn't crash on mouse drag",
 TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<SliderTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* slider_el = container->Root()->QuerySelector("slider");
@@ -266,7 +266,7 @@ TEST_CASE("Vertical slider layout regression", "[component][slider][layout]") {
   };
 
   auto component = rtxui::Ref<VerticalSliderTest>::New();
-  rtxui::Screen screen(component, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(component, device);
   screen.Draw();
 
   std::string output = device->GetOutput();
@@ -363,7 +363,7 @@ TEST_CASE("Slider interaction layout squashing regression",
   device->TriggerResize(150, 20);
 
   auto container = rtxui::Ref<SliderDemoSquashTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* slider_el = container->Root()->QuerySelector("#slider");

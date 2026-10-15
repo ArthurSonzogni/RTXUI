@@ -37,6 +37,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 #include "rtxui/testing/render.hpp"
@@ -950,7 +951,7 @@ TEST_CASE("Add Todo Regression Test", "[demo]") {
   auto app = Ref<App>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(120, 40);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
 
   screen.Draw();
   REQUIRE(app->todos.size() == 2);
@@ -971,7 +972,7 @@ TEST_CASE("Slider click on real demo layout squash regression",
   device->TriggerResize(120, 40);
 
   auto app = rtxui::Ref<App>::New();
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto* slider_el = app->Root()->QuerySelector("slider");
@@ -1413,7 +1414,7 @@ TEST_CASE(
   // path already gates on Element::disabled() centrally).
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<DisabledInteractiveTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* root = container->Root();

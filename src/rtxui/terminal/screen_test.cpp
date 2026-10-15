@@ -33,6 +33,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/terminal/input_wait.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -50,7 +51,7 @@ TEST_CASE("TerminalDevice.MockIOWrites", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<DummyComponent>::New();
 
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   // Verify that drawing wrote the expected component output to the mock
   // terminal device.
@@ -63,7 +64,7 @@ TEST_CASE("Screen.SynchronizedOutputMode2026", "[terminal][sync]") {
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<DummyComponent>::New();
 
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   std::string output = device->GetOutput();
   size_t start = output.find("\x1b[?2026h");
   size_t end = output.find("\x1b[?2026l");
@@ -76,7 +77,7 @@ TEST_CASE("TerminalDevice.ResizeTrigger", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<DummyComponent>::New();
 
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   device->ClearOutput();
 
   // Set size to a new dimension and check if resizing updates width/height.
@@ -110,7 +111,7 @@ TEST_CASE("Screen.StepExecution", "[terminal]") {
   };
 
   auto component = Ref<EventTrackerComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   // Step() drains everything buffered when it runs, so a batch of queued
   // bytes is decoded and dispatched in order within a single Step -- 'a'
@@ -146,7 +147,7 @@ TEST_CASE("Screen.BracketedPasteInsertsTextIntoFocusedInput",
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto container = Ref<PasteInputComponent>::New();
-  Screen screen(container, device);
+  Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* in_el = container->Root()->QuerySelector("#in");
@@ -174,7 +175,7 @@ TEST_CASE("Screen.PasteNewlineIntoInputIsDropped", "[terminal][paste]") {
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto container = Ref<PasteInputComponent>::New();
-  Screen screen(container, device);
+  Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* in_el = container->Root()->QuerySelector("#in");
@@ -207,7 +208,7 @@ TEST_CASE("Screen.PastingIntoTextareaDoesNotDoubleIndentation",
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto container = Ref<PasteTextareaComponent>::New();
-  Screen screen(container, device);
+  Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("#ta");
@@ -259,7 +260,7 @@ TEST_CASE("Screen.PasteAppliesAsOneRedrawNotOnePerCharacter",
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<BoundTrackerComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   device->ClearOutput();
   std::string paste_content(20, 'x');
@@ -303,7 +304,7 @@ TEST_CASE("Screen.WheelBurstAppliesAsOneRedrawNotOnePerTick",
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<WheelBurstComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -377,7 +378,7 @@ std::string DrawWith(const std::string& payload) {
   app->text = payload;
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(30, 3);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
   return device->GetOutput();
 }
@@ -536,7 +537,7 @@ TEST_CASE("A click handler receives its argument", "[terminal][mouse][for]") {
   auto app = Ref<HandlerArgComponent>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(40, 12);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto click_row = [&](int row) {
@@ -588,7 +589,7 @@ TEST_CASE("Screen.ClickBurstHitTestsTheCurrentLayout", "[terminal][mouse]") {
   // silent, so the assertions here check the routing rather than the memory.
   auto device = std::make_shared<MockTerminalDevice>();
   auto app = Ref<BurstClickComponent>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   SECTION("a single click routes by row") {
@@ -625,7 +626,7 @@ TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
   };
 
   auto component = Ref<ClickableComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   // Initially clicked_count is 0
   REQUIRE(component->clicked_count == 0);
@@ -682,7 +683,7 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   };
 
   auto component = Ref<ScrollTestComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
 
   auto* scroll_element = component->Root()->QuerySelector("#scrollable");
@@ -769,7 +770,7 @@ TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
   };
 
   auto component = Ref<ScrollTestComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
 
   auto* scroll_element = component->Root()->QuerySelector("#scrollable");
@@ -853,7 +854,7 @@ TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
   };
 
   auto component = Ref<NestedScrollComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
 
   auto* outer = component->Root()->QuerySelector("#outer");
@@ -973,7 +974,7 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
   };
 
   auto component = Ref<FocusCyclingComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* input1 = component->Root()->QuerySelector("#input1");
   auto* checkbox1 = component->Root()->QuerySelector("#checkbox1");
@@ -1045,7 +1046,7 @@ TEST_CASE("Screen.DisabledInputExcludedFromTabOrder",
   };
 
   auto component = Ref<DisabledFocusCyclingComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* input1 = component->Root()->QuerySelector("#input1");
@@ -1091,7 +1092,7 @@ TEST_CASE("Screen.RadioFocusCyclingAndNavigation", "[terminal][focus][radio]") {
   };
 
   auto component = Ref<RadioFocusComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* radio1 = component->Root()->QuerySelector("#radio1");
   auto* radio2 = component->Root()->QuerySelector("#radio2");
@@ -1168,7 +1169,7 @@ TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
   };
 
   auto component = Ref<TransitionTestComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* btn = component->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
@@ -1228,7 +1229,7 @@ TEST_CASE("Transitions.EasingFunctions", "[transitions][easing]") {
   };
 
   auto component = Ref<EasingTestComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* btn = component->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
@@ -1287,7 +1288,7 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
   };
 
   auto component = Ref<InterruptionTestComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* btn = component->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
@@ -1358,7 +1359,7 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
   };
 
   auto component = Ref<MouseTransitionComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   // We need to render/draw first so that root_fragment_ layout bounds are
   // populated
@@ -1457,7 +1458,7 @@ TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
   };
 
   auto component = Ref<FlexGrowTransitionComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* item1 = component->Root()->QuerySelector("#item1");
   auto* item2 = component->Root()->QuerySelector("#item2");
@@ -1527,7 +1528,7 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
   };
 
   auto component = Ref<ActiveTransitionComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* btn = component->Root()->QuerySelector("#btn");
@@ -1627,7 +1628,7 @@ TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
   };
 
   auto component = Ref<FocusTransitionComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* input = component->Root()->QuerySelector("#input");
@@ -1722,7 +1723,7 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
   };
 
   auto component = Ref<HitTestFixedComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -1795,7 +1796,7 @@ TEST_CASE("Screen.AnchorLinkScrolling", "[terminal][mouse][anchor]") {
   };
 
   auto component = Ref<AnchorTestComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -1833,7 +1834,7 @@ TEST_CASE("Screen.KeyboardFocusTabindexNavigation", "[terminal][focus]") {
   };
 
   auto component = Ref<FocusTabindexComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* first = component->Root()->QuerySelector("#first");
@@ -1932,7 +1933,7 @@ TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
   auto component = Ref<ResponsiveComponent>::New();
   device->TriggerResize(70, 20);
 
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* target = component->Root()->QuerySelector("#target");
@@ -1992,7 +1993,7 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
   };
 
   auto component = Ref<ScrollFocusComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -2071,7 +2072,7 @@ TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto container = Ref<ScrollCursorComponent>::New();
-  Screen screen(container, device);
+  Screen screen = ScreenInternals::Make(container, device);
 
   auto* ta_el = container->Root()->QuerySelector("#ta");
   REQUIRE(ta_el != nullptr);
@@ -2109,7 +2110,7 @@ TEST_CASE("Screen.CopySelectionWritesOSC52", "[terminal][clipboard]") {
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto container = Ref<ClipboardInputComponent>::New();
-  Screen screen(container, device);
+  Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* in_el = container->Root()->QuerySelector("#in");
@@ -2142,7 +2143,7 @@ TEST_CASE("Screen.CutSelectionWritesOSC52AndDeletesSelection",
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto container = Ref<ClipboardInputComponent>::New();
-  Screen screen(container, device);
+  Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* in_el = container->Root()->QuerySelector("#in");
@@ -2180,7 +2181,7 @@ TEST_CASE("Screen.CopyWithNoSelectionLeavesEventUnhandled",
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto container = Ref<ClipboardInputComponent>::New();
-  Screen screen(container, device);
+  Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* in_el = container->Root()->QuerySelector("#in");
@@ -2234,7 +2235,7 @@ TEST_CASE("Screen.ScrollIntoViewWithBorder", "[terminal][focus][scroll]") {
   };
 
   auto component = Ref<ScrollFocusBorderComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -2304,7 +2305,7 @@ TEST_CASE("Screen.ScrollIntoViewWithMargin", "[terminal][focus][scroll]") {
   };
 
   auto component = Ref<ScrollFocusMarginComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -2401,7 +2402,7 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   };
 
   auto component = Ref<ScrollAnimComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* scrollable_auto = component->Root()->QuerySelector("#scrollable_auto");
   auto* scrollable_smooth =
@@ -2465,7 +2466,7 @@ TEST_CASE("Screen.InitialFrameInRawModeRegression", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<DummyComponent>::New();
 
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   // Clear the initial constructor draw output from the device
   device->ClearOutput();
@@ -2511,7 +2512,7 @@ class QuitOnQ : public Component<QuitOnQ> {
 TEST_CASE("Screen.ExitStopsTheLoop", "[terminal]") {
   auto device = std::make_shared<ByteAtATimeDevice>();
   auto app = Ref<QuitOnQ>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   app->quit = [&screen] { screen.Exit(); };
 
   device->PushInput("abqcd");
@@ -2748,7 +2749,7 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
   };
 
   auto component = Ref<DynamicComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   screen.Draw();
   std::string first_output = device->GetOutput();
@@ -2920,7 +2921,7 @@ TEST_CASE("Screen.SpatialNavigation", "[terminal][focus][spatial]") {
   };
 
   auto component = Ref<SpatialNavComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* item1 = component->Root()->QuerySelector("#item1");
   auto* item2 = component->Root()->QuerySelector("#item2");
@@ -2989,7 +2990,7 @@ TEST_CASE("Screen.SpaceEnterActivation", "[terminal][focus][activation]") {
   };
 
   auto component = Ref<ActivationComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   auto* btn = component->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   btn->set_focused(true);
@@ -3022,7 +3023,7 @@ TEST_CASE("Screen.ParameterizedActivationWithSpaceAndReturn",
   };
 
   auto component = Ref<ParameterizedActivationComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   auto* btn = component->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   btn->set_focused(true);
@@ -3053,7 +3054,7 @@ TEST_CASE("Screen.CheckboxActivationWithSpaceAndReturn", "[terminal][focus]") {
   };
 
   auto component = Ref<CheckboxActivationComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   auto* chk = component->Root()->QuerySelector("#chk");
   REQUIRE(chk != nullptr);
   chk->set_focused(true);
@@ -3094,7 +3095,7 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
   };
 
   auto component = Ref<InputComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* input = component->Root()->QuerySelector("#input");
   auto* other = component->Root()->QuerySelector("#other");
@@ -3170,7 +3171,7 @@ TEST_CASE("Transitions.NulloptTargetReverts",
   };
 
   auto component = Ref<TransitionTestComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* btn = component->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
@@ -3242,7 +3243,7 @@ TEST_CASE("Screen.TransitionForegroundColorAlias",
   };
 
   auto component = Ref<ForegroundColorTransitionComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* btn = component->Root()->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
@@ -3287,7 +3288,7 @@ TEST_CASE("Screen.TransitionBorderColorTopAlias",
   };
 
   auto component = Ref<BorderColorTransitionComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   auto* box = component->Root()->QuerySelector("#box");
   REQUIRE(box != nullptr);
@@ -3472,7 +3473,7 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
 
   auto component = Ref<AnchorDemoTest>::New();
   device->TriggerResize(80, 40);
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -3582,7 +3583,7 @@ TEST_CASE("Screen.ScrollbarTrackClick", "[terminal][scroll][scrollbar]") {
   };
 
   auto component = Ref<TrackClickComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -3657,7 +3658,7 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
   };
 
   auto component = Ref<ThumbDragComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -3744,7 +3745,7 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
   };
 
   auto component = Ref<ThumbDragPixelComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -3825,7 +3826,7 @@ TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
   };
 
   auto component = Ref<PseudoClassComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
@@ -3896,7 +3897,7 @@ TEST_CASE("Screen.LayoutFlexDemoClickTest", "[terminal][flex]") {
 
   auto component = Ref<LayoutFlexDemo>::New();
 
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* flex_container = component->Root()->QuerySelector("#flex-container");
@@ -3935,7 +3936,7 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   };
 
   auto component = Ref<ScreenTooltipHoverRegressionTest>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* tt_el = component->Root()->QuerySelector("#tt");
@@ -3990,7 +3991,7 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   };
 
   auto component = Ref<ScreenTooltipVisibleTest>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* tt_el = component->Root()->QuerySelector("#tt");
@@ -4086,7 +4087,7 @@ TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
   };
 
   auto component = Ref<TooltipDemoTest>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   // Find button and tooltip
@@ -4137,7 +4138,7 @@ TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
   };
 
   auto component = Ref<TooltipMarginAutoTest>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* trigger = component->Root()->QuerySelector("#trigger");
@@ -4187,7 +4188,7 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
   };
 
   auto component = Ref<TooltipPlacementsTest>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   // Test Bottom
@@ -4283,7 +4284,7 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
   };
 
   auto component = Ref<NestedStickyTest>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* scrollable = component->Root()->QuerySelector("#scrollable");
@@ -4347,7 +4348,7 @@ TEST_CASE("Screen.FocusDisplayNone", "[screen][focus][display_none]") {
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<FocusDisplayNoneTest>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* first = component->Root()->QuerySelector("#first");
@@ -4440,7 +4441,7 @@ TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
 
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<BorderUpdateComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
   auto* main = component->Root()->QuerySelector(".main-container");
@@ -4484,7 +4485,7 @@ class PostedTaskComponent : public Component<PostedTaskComponent> {
 TEST_CASE("Screen.PostedTaskTriggersDigestAndRepaint", "[terminal][task]") {
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<PostedTaskComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
   REQUIRE(device->GetOutput().find("one") != std::string::npos);
   device->ClearOutput();
@@ -4575,7 +4576,7 @@ TEST_CASE("Screen.ClickFixedPositionOverlay", "[terminal][mouse][dialog]") {
   css::g_terminal_height = 24;
 
   auto component = Ref<OverlayComponent>::New();
-  Screen screen(component, device);
+  Screen screen = ScreenInternals::Make(component, device);
 
   // Mouse coordinates are 1-based: screen.cpp maps them with `mouse.x - 1`.
   auto click_cell = [&](int column, int row) {
@@ -4624,7 +4625,8 @@ class OverlineScreenComponent : public Component<OverlineScreenComponent> {
 TEST_CASE("Overlined cells emit SGR 53 and reset it with SGR 55",
           "[terminal][decoration]") {
   auto device = std::make_shared<MockTerminalDevice>();
-  Screen screen(Ref<OverlineScreenComponent>::New(), device);
+  Screen screen =
+      ScreenInternals::Make(Ref<OverlineScreenComponent>::New(), device);
 
   // Screen's constructor mounts, digests and draws once, so this is frame one.
   std::string output = device->GetOutput();
@@ -4663,7 +4665,7 @@ TEST_CASE("Switching tab shows only the selected pane", "[tabs][mouse][css]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(90, 24);
   auto app = Ref<TabsClickApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto panes = [&] {
@@ -4730,7 +4732,7 @@ TEST_CASE("Selecting a tab by keyboard keeps focus on the headers",
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(90, 24);
   auto app = Ref<TabsClickApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto headers = [&] {
@@ -4774,7 +4776,7 @@ TEST_CASE("Switching tab keeps the header buttons styled",
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(90, 24);
   auto app = Ref<TabsClickApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto headers = [&] {
@@ -4853,7 +4855,7 @@ TEST_CASE("Clicking a summary toggles the details content",
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<DetailsApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto* content = app->Root()->QuerySelector(".details-content");
@@ -4913,7 +4915,7 @@ TEST_CASE("Checking a radio unchecks only its own group", "[radio][mouse]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<RadioGroupApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   // The marker glyph is how checked-ness actually reaches the user. Take just
@@ -4961,7 +4963,7 @@ TEST_CASE("Clicking a checkbox toggles its glyph", "[checkbox][mouse]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<CheckboxApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto* box = app->Root()->QuerySelector("#c");
@@ -5040,7 +5042,7 @@ TEST_CASE(
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<ConditionalLegendApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto count = [&](const char* tag) {
@@ -5092,7 +5094,7 @@ TEST_CASE("A details drops a summary its consumer stopped providing",
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<ConditionalSummaryApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto count = [&] {
@@ -5184,7 +5186,7 @@ TEST_CASE("Built-ins follow conditional projected children",
   auto run = [](auto app, const char* cls, const char* tag) {
     auto device = std::make_shared<MockTerminalDevice>();
     device->TriggerResize(60, 20);
-    Screen screen(app, device);
+    Screen screen = ScreenInternals::Make(app, device);
     screen.Draw();
     Element* root = app->Root();
 
@@ -5217,7 +5219,7 @@ TEST_CASE("tabs follows a collection that grows and shrinks", "[slot][tabs]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<ForTabsApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto headers = [&] {
@@ -5278,7 +5280,7 @@ TEST_CASE("A keyed <for> moves element state with the item", "[for][key]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<KeyedListApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto inputs = InputsOf(app->Root());
@@ -5313,7 +5315,7 @@ TEST_CASE("An unkeyed <for> still reconciles by position", "[for][key]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<UnkeyedListApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto inputs = InputsOf(app->Root());
@@ -5340,7 +5342,7 @@ TEST_CASE("A fieldset projects its legend and styles itself accordingly",
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(60, 20);
   auto app = Ref<FieldsetApp>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   // The legend ends up under the legend slot, not left in the body.
@@ -5477,7 +5479,7 @@ TEST_CASE("Screen blends against the background the terminal reports",
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(10, 3);
   auto app = Ref<GlassOnQ>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   app->quit = [&screen] { screen.Exit(); };
 
   SECTION("asked for, and used") {
@@ -5534,7 +5536,7 @@ TEST_CASE("Text is drawn in the text color the terminal reports",
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(10, 3);
   auto app = Ref<DimOnQ>::New();
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   app->quit = [&screen] { screen.Exit(); };
 
   SECTION("asked for, and used") {
@@ -5570,7 +5572,7 @@ TEST_CASE("A translucent background blends with the screen background",
           "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(10, 3);
-  Screen screen(Ref<GlassOnQ>::New(), device);
+  Screen screen = ScreenInternals::Make(Ref<GlassOnQ>::New(), device);
   screen.SetBackgroundColor(Color::RGB(0, 0, 0));
   device->ClearOutput();
   screen.Draw();
@@ -5582,7 +5584,7 @@ TEST_CASE("A new screen background repaints a frame that changed nothing else",
           "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(10, 3);
-  Screen screen(Ref<GlassOnQ>::New(), device);
+  Screen screen = ScreenInternals::Make(Ref<GlassOnQ>::New(), device);
   screen.SetBackgroundColor(Color::RGB(0, 0, 0));
   screen.Draw();
   device->ClearOutput();
@@ -5649,7 +5651,7 @@ TEST_CASE("pointer-events: none lets the wheel through", "[screen][pointer]") {
   };
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(20, 3);
-  Screen screen(Ref<Lists>::New(), device);
+  Screen screen = ScreenInternals::Make(Ref<Lists>::New(), device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
   REQUIRE(screen.Text().starts_with("u0    o0"));
@@ -5687,7 +5689,7 @@ std::string CopiedBy(std::string_view view, const std::string& input) {
   app->markup = std::string(view);
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(30, 6);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
   device->ClearOutput();
   device->PushInput(input);
@@ -5870,7 +5872,7 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
     };
     auto device = std::make_shared<MockTerminalDevice>();
     device->TriggerResize(30, 3);
-    Screen screen(Ref<Grabber>::New(), device);
+    Screen screen = ScreenInternals::Make(Ref<Grabber>::New(), device);
     screen.Draw();
     device->ClearOutput();
     const std::string click = LeftAt('P', 2, 0) + LeftAt('U', 2, 0);
@@ -5908,7 +5910,7 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
   auto app = Ref<List>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(30, 5);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
   const std::string wheel_down = "\x1b[<65;2;2M";
@@ -6001,7 +6003,7 @@ TEST_CASE("Screen.SelectionScrollsItsContainer", "[terminal][selection]") {
   };
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(30, 6);
-  Screen screen(Ref<List>::New(), device);
+  Screen screen = ScreenInternals::Make(Ref<List>::New(), device);
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
   // The line the container shows on top, as the test advances its timer.
@@ -6061,7 +6063,7 @@ TEST_CASE("Screen.SelectionScrollsItsContainer", "[terminal][selection]") {
     };
     auto nested_device = std::make_shared<MockTerminalDevice>();
     nested_device->TriggerResize(30, 6);
-    Screen nested(Ref<Nested>::New(), nested_device);
+    Screen nested = ScreenInternals::Make(Ref<Nested>::New(), nested_device);
     nested.SetSmoothScrollEnabled(false);
     nested.Draw();
     auto top = [&](double ms) {
@@ -6097,7 +6099,7 @@ TEST_CASE("Screen.SelectionScrollsItsContainer", "[terminal][selection]") {
     };
     auto nested_device = std::make_shared<MockTerminalDevice>();
     nested_device->TriggerResize(30, 6);
-    Screen nested(Ref<Nested>::New(), nested_device);
+    Screen nested = ScreenInternals::Make(Ref<Nested>::New(), nested_device);
     nested.SetSmoothScrollEnabled(false);
     nested.Draw();
     auto top = [&](double ms) {
@@ -6145,7 +6147,7 @@ TEST_CASE("Screen.DragSelectsAndCopiesText", "[terminal][selection]") {
   };
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(30, 4);
-  Screen screen(Ref<App>::New(), device);
+  Screen screen = ScreenInternals::Make(Ref<App>::New(), device);
   screen.Draw();
   device->ClearOutput();
 
@@ -6228,7 +6230,7 @@ TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
     auto app = Ref<App>::New();
     auto device = std::make_shared<MockTerminalDevice>();
     device->TriggerResize(30, 3);
-    Screen screen(app, device);
+    Screen screen = ScreenInternals::Make(app, device);
     screen.Draw();
     device->ClearOutput();
     device->PushInput(DragFromTo(0, 0, 7, 0));

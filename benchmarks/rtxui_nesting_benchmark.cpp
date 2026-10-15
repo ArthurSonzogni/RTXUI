@@ -18,6 +18,7 @@
 #include "benchmark_common.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 using namespace rtxui;
@@ -65,7 +66,7 @@ Sample Measure(int depth, const char* style, int leaf_items) {
   auto app = Ref<NestedComponent>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(80, 24);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   app->Digest();
 
   for (int i = 0; i < kWarmupFrames; ++i) {

@@ -69,6 +69,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/terminal/input_wait.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
 
@@ -4183,6 +4184,9 @@ ScreenImpl::RawTerminal::~RawTerminal() {
   }
 }
 
+Screen::Screen(Ref<ComponentBase> component)
+    : Screen(std::move(component), nullptr) {}
+
 Screen::Screen(Ref<ComponentBase> component,
                std::shared_ptr<TerminalDevice> device)
     : impl_(std::make_unique<ScreenImpl>(std::move(component),
@@ -4344,17 +4348,26 @@ void ScreenImpl::RunHeadless() {
   std::cout << std::exchange(printed_, "") << Text() << std::flush;
 }
 
+struct HeadlessScreen::Impl {
+  Impl(Ref<ComponentBase> app, int width, int height)
+      : device(std::make_shared<HeadlessTerminalDevice>(width, height)),
+        screen(ScreenInternals::Make(std::move(app), device)) {}
+  ScreenImpl& screen_impl() { return ScreenInternals::Impl(screen); }
+
+  std::shared_ptr<HeadlessTerminalDevice> device;
+  Screen screen;
+};
+
 HeadlessScreen::HeadlessScreen(Ref<ComponentBase> app, int width, int height)
-    : device_(std::make_shared<HeadlessTerminalDevice>(width, height)),
-      screen_(std::make_unique<Screen>(std::move(app), device_)) {
-  screen_->impl_->Settle(*device_);
+    : impl_(std::make_unique<Impl>(std::move(app), width, height)) {
+  impl_->screen_impl().Settle(*impl_->device);
 }
 
 HeadlessScreen::~HeadlessScreen() = default;
 
 void HeadlessScreen::Input(std::string_view bytes) {
-  device_->PushInput(bytes);
-  screen_->impl_->Settle(*device_);
+  impl_->device->PushInput(bytes);
+  impl_->screen_impl().Settle(*impl_->device);
 }
 
 void HeadlessScreen::Click(int x, int y) {
@@ -4365,13 +4378,13 @@ void HeadlessScreen::Click(int x, int y) {
 }
 
 void HeadlessScreen::Resize(int width, int height) {
-  device_->Resize(width, height);
-  screen_->impl_->UpdateSize();
-  screen_->impl_->Settle(*device_);
+  impl_->device->Resize(width, height);
+  impl_->screen_impl().UpdateSize();
+  impl_->screen_impl().Settle(*impl_->device);
 }
 
 std::string HeadlessScreen::Text() const {
-  return screen_->Text();
+  return impl_->screen.Text();
 }
 
 namespace {
@@ -4383,22 +4396,35 @@ double TimelineNow() {
 }
 }  // namespace
 
-TimelineScreen::TimelineScreen(Ref<ComponentBase> app, int width, int height)
-    : device_(std::make_shared<HeadlessTerminalDevice>(width, height)) {
+struct TimelineScreen::Impl {
+  Impl(Ref<ComponentBase> app, int width, int height)
+      : device(std::make_shared<HeadlessTerminalDevice>(width, height)),
+        screen(ScreenInternals::Make(std::move(app), device)) {}
+  ScreenImpl& screen_impl() { return ScreenInternals::Impl(screen); }
+  const ScreenImpl& screen_impl() const {
+    return ScreenInternals::Impl(screen);
+  }
+
+  std::shared_ptr<HeadlessTerminalDevice> device;
+  Screen screen;
+};
+
+TimelineScreen::TimelineScreen(Ref<ComponentBase> app, int width, int height) {
+  // The clock is set before the Screen exists: it reads the time as it starts.
   g_timeline_now = kTimelineStart;
   time::SetCustomClock(&TimelineNow);
-  screen_ = std::make_unique<Screen>(std::move(app), device_);
-  screen_->Draw();
+  impl_ = std::make_unique<Impl>(std::move(app), width, height);
+  impl_->screen.Draw();
 }
 
 TimelineScreen::~TimelineScreen() {
-  screen_.reset();
+  impl_.reset();
   time::SetCustomClock(nullptr);
 }
 
 std::string TimelineScreen::Advance(double milliseconds) {
   g_timeline_now += milliseconds;
-  screen_->impl_->Step();
+  impl_->screen_impl().Step();
   return Text();
 }
 
@@ -4416,7 +4442,7 @@ std::vector<std::string> TimelineScreen::Record(double milliseconds,
 }
 
 void TimelineScreen::Input(std::string_view bytes) {
-  device_->PushInput(bytes);
+  impl_->device->PushInput(bytes);
   Advance(0);
 }
 
@@ -4428,22 +4454,22 @@ void TimelineScreen::Click(int x, int y) {
 }
 
 void TimelineScreen::Resize(int width, int height) {
-  device_->Resize(width, height);
-  screen_->impl_->UpdateSize();
+  impl_->device->Resize(width, height);
+  impl_->screen_impl().UpdateSize();
   Advance(0);
 }
 
 std::string TimelineScreen::Text() const {
-  return screen_->Text();
+  return impl_->screen.Text();
 }
 
 Color TimelineScreen::BackgroundAt(int x, int y) const {
-  const Cell* cell = screen_->impl_->CellAt(x, y);
+  const Cell* cell = impl_->screen_impl().CellAt(x, y);
   return cell ? cell->background_color : Color();
 }
 
 Color TimelineScreen::ForegroundAt(int x, int y) const {
-  const Cell* cell = screen_->impl_->CellAt(x, y);
+  const Cell* cell = impl_->screen_impl().CellAt(x, y);
   return cell ? cell->foreground_color : Color();
 }
 

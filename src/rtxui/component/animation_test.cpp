@@ -19,6 +19,7 @@
 #include "rtxui/headless.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
@@ -449,7 +450,7 @@ TEST_CASE("An element sliding in from past the edge of the screen is clipped",
   auto app = Ref<Slide>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(10, 1);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
   CHECK(screen.Text() == "\n");  // `right: -10` puts it past the edge.
 
@@ -573,7 +574,7 @@ TEST_CASE("onanimationend runs once an animation finishes", "[animation]") {
   auto app = Ref<Ending>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(10, 3);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
   g_now += 50;
@@ -691,7 +692,7 @@ TEST_CASE("translate animates by the box's own size", "[animation]") {
   auto app = Ref<SlideOwnWidth>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(10, 1);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
   CHECK(screen.Text() == "      ABCD\n");  // 4 + 2 to the right.
   g_now += 500;

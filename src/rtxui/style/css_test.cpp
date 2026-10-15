@@ -17,10 +17,10 @@
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -579,7 +579,7 @@ TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)",
   auto app = Ref<ConditionalTabTestApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
 
   auto* button = app->Root()->QuerySelector("button");
   REQUIRE(button != nullptr);
@@ -860,7 +860,7 @@ TEST_CASE("An element created during Digest() still gets its base style",
           "[component][css][digest]") {
   auto app = rtxui::Ref<LateElementApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
 
   app->add_late = true;

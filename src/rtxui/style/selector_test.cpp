@@ -20,6 +20,7 @@
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/task.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -91,7 +92,7 @@ TEST_CASE("CSS Child and Descendant Combinator Matching", "[component][css]") {
   auto app = Ref<ComplexSelectorTestApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
 
   auto* root_div = app->Root();
   REQUIRE(root_div != nullptr);
@@ -152,7 +153,7 @@ TEST_CASE("CSS Sibling Combinators and Structural Pseudo-classes",
   auto app = Ref<AdvancedCSSFeaturesTestApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
 
   auto* root_div = app->Root();
   REQUIRE(root_div != nullptr);
@@ -227,7 +228,7 @@ TEST_CASE("Structural pseudo-classes: only-child, empty, nth-last-child",
   auto app = Ref<StructuralPseudoTestApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   auto* root = app->Root();
   REQUIRE(root != nullptr);
 
@@ -919,7 +920,7 @@ TEST_CASE("A :has() rule follows its elements projected into a component",
   auto app = rtxui::Ref<HasForm>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(20, 3);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto form_padding = [&] {
@@ -1013,7 +1014,7 @@ TEST_CASE("The :focus-within selector", "[component][css][selector]") {
   auto app = rtxui::Ref<FocusWithinApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(40, 10);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
 
   auto at = [&](const char* sel) {
@@ -1340,7 +1341,7 @@ TEST_CASE("Removing an element restyles the siblings after it",
   auto app = rtxui::Ref<SiblingRemovalApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(20, 3);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
   auto at = [&](const char* sel) {
     auto* e = app->Root()->QuerySelector(sel);
@@ -1386,7 +1387,7 @@ TEST_CASE("Removing a keyed list item restyles the items after it",
   auto app = rtxui::Ref<KeyedListRemovalApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(20, 3);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
   auto at = [&](const char* sel) {
     auto* e = app->Root()->QuerySelector(sel);
@@ -1429,7 +1430,7 @@ TEST_CASE("Removing a list item restyles the items after it",
   auto app = rtxui::Ref<ListRemovalApp>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(20, 3);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
   auto at = [&](const char* sel) {
     auto* e = app->Root()->QuerySelector(sel);

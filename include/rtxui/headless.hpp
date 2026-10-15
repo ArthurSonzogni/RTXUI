@@ -15,9 +15,6 @@
 
 namespace rtxui {
 
-class Screen;
-class HeadlessTerminalDevice;
-
 /// Runs an application without a terminal: at a fixed size, fed input as
 /// bytes, read back as text. For tests, and for checking an interface from a
 /// script or an agent.
@@ -51,8 +48,8 @@ class RTXUI_EXPORT HeadlessScreen {
   std::string Text() const;
 
  private:
-  std::shared_ptr<HeadlessTerminalDevice> device_;
-  std::unique_ptr<Screen> screen_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 /// Runs an application without a terminal, like HeadlessScreen, on a clock
@@ -104,8 +101,8 @@ class RTXUI_EXPORT TimelineScreen {
   double Elapsed() const;
 
  private:
-  std::shared_ptr<HeadlessTerminalDevice> device_;
-  std::unique_ptr<Screen> screen_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 /// Renders `app` once at `width` x `height` and returns the screen as text,

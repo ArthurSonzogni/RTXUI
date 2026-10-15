@@ -24,6 +24,7 @@
 #include "rtxui/dom/element.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/xml/xml.hpp"
 
@@ -139,7 +140,7 @@ void TestEvents(const std::string& input) {
   // below the viewport, where nothing lays out and no click can reach it --
   // the fuzzer then spends its budget on coordinates that hit nothing.
   device->TriggerResize(60, 44);
-  rtxui::Screen screen(app, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
 
   device->PushInput(input);

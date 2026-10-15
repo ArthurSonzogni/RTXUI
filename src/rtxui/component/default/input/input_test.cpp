@@ -16,10 +16,10 @@
 #include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -207,7 +207,7 @@ TEST_CASE("Input Component Advanced Selection and Editing",
           "[component][input]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* input_el = container->Root()->QuerySelector("input");
@@ -472,7 +472,7 @@ TEST_CASE("Input Component Disabled Ignores Mouse Click Focus",
           "[component][input][disabled]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* input_el = container->Root()->QuerySelector("input");
@@ -1095,7 +1095,7 @@ TEST_CASE("Input Component Cut Is Undoable", "[component][input][undo]") {
 TEST_CASE("Input Click Does Not Resize", "[component][input]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* input_el = container->Root()->QuerySelector("input");
@@ -1170,7 +1170,7 @@ TEST_CASE("Input Click Layout Regression Test",
           "[component][input][regression]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* input_el = container->Root()->QuerySelector("input");
@@ -1291,7 +1291,7 @@ TEST_CASE("Input Scrolling Regression Test",
           "[component][input][scroll][regression]") {
   auto container = rtxui::Ref<SmallInputTestComponent>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
 
   auto* input_el = container->Root()->QuerySelector("SmallInput");
   REQUIRE(input_el != nullptr);
@@ -1351,7 +1351,7 @@ TEST_CASE("Input component is not recreated when attributes change",
   auto container = rtxui::Ref<InputReuseTestComponent>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
 
   auto* input_element = container->Root()->QuerySelector("#test-input");
   REQUIRE(input_element != nullptr);
@@ -1732,7 +1732,7 @@ TEST_CASE("TextInputBase Select On Focus",
           "[component][input][select_on_focus]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<InputTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* input_el = container->Root()->QuerySelector("input");

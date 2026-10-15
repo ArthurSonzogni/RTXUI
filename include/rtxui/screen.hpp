@@ -20,9 +20,10 @@ class TerminalDevice;
 
 class RTXUI_EXPORT Screen {
  public:
-  explicit Screen(Ref<ComponentBase> component,
-                  std::shared_ptr<TerminalDevice> device = nullptr);
+  explicit Screen(Ref<ComponentBase> component);
   ~Screen();
+  Screen(const Screen&) = delete;
+  Screen& operator=(const Screen&) = delete;
 
   /// Runs the event loop. Returns after Exit(), or when an Escape or Ctrl+C
   /// that no component handled arrives, or when the input closes.
@@ -92,8 +93,8 @@ class RTXUI_EXPORT Screen {
   std::string Text() const;
 
  private:
-  friend class HeadlessScreen;
-  friend class TimelineScreen;
+  friend struct ScreenInternals;
+  Screen(Ref<ComponentBase> component, std::shared_ptr<TerminalDevice> device);
   std::unique_ptr<ScreenImpl> impl_;
 };
 

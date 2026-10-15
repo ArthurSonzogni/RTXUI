@@ -14,7 +14,6 @@
 #include "rtxui/component/default/input/text_input_base.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
@@ -22,6 +21,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -41,7 +41,7 @@ class TextareaTestComponent : public rtxui::Component<TextareaTestComponent> {
 TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -88,7 +88,7 @@ TEST_CASE("Textarea Click While Scrolled Targets The Visible Line",
   }
   container->my_text = content;
 
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -143,7 +143,7 @@ TEST_CASE("Textarea Click Accounts For The Line-Number Gutter's Width",
   auto container = rtxui::Ref<GutterTextareaTestComponent>::New();
   container->my_text = "abcdefgh\nijklmnop";
 
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -195,7 +195,7 @@ TEST_CASE("Textarea Scroll And Click Account For Wrapped (Multi-Row) Lines",
   }
   container->my_text = content;
 
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -270,7 +270,7 @@ TEST_CASE("Textarea Click Maps Correctly On A Word-Wrapped Row",
   }
   container->my_text = content;
 
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -327,7 +327,7 @@ TEST_CASE("Textarea Multi-Click Line and Paragraph Selection",
           "[component][textarea]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<MultiClickTextareaTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -469,7 +469,7 @@ TEST_CASE(
   content += std::string(50, 'x');
   container->my_text = content;
 
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -511,7 +511,7 @@ TEST_CASE("Textarea ComputeRowStarts correctly wraps past the second line",
 
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<NarrowTextareaComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -822,7 +822,7 @@ TEST_CASE(
   std::string text = "line 1 " + std::string(35, 'a') + "\nline 2";
   container->my_text = text;
 
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* textarea_el = container->Root()->QuerySelector("textarea");
@@ -1187,7 +1187,7 @@ TEST_CASE("Textarea Click Layout Regression Test",
           "[component][textarea][regression]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");
@@ -1274,7 +1274,7 @@ TEST_CASE("Textarea Scrolling Regression Test",
           "[component][textarea][scroll][regression]") {
   auto container = rtxui::Ref<SmallTextareaTestComponent>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
 
   auto* ta_el = container->Root()->QuerySelector("SmallTextarea");
   REQUIRE(ta_el != nullptr);
@@ -1452,7 +1452,7 @@ TEST_CASE("Textarea Indentation Uses Spaces And Mouse Click Matches",
           "[component][textarea][indent]") {
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* ta_el = container->Root()->QuerySelector("textarea");

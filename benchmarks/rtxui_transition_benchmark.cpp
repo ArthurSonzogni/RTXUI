@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "benchmark_common.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 using namespace rtxui;
@@ -91,7 +92,7 @@ int main() {
   auto app = Ref<TransitionStressComponent>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(160, 100);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
 
   const int kWarmupFrames = 10;
   const int kBenchmarkFrames = 50;

@@ -63,5 +63,5 @@ For tests and embedding, `Screen` exposes the loop's pieces:
 - `SetSmoothScrollEnabled(bool)` toggles scroll animation, useful for
   deterministic tests.
 
-A second constructor argument accepts a custom `TerminalDevice`; the test
-suite uses this with a mock device to run entire interfaces headlessly.
+To run an interface without a terminal, as tests do, use `HeadlessScreen` or
+`TimelineScreen` (see [Headless](/guide/headless)).

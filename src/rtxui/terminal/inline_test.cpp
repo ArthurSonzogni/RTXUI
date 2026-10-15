@@ -31,6 +31,7 @@
 #include "rtxui/event.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
@@ -589,7 +590,7 @@ class Lines : public Component<Lines> {
 void RunInline(Ref<ComponentBase> app,
                std::shared_ptr<EmulatorDevice> device,
                const std::function<void(Screen&)>& setup = {}) {
-  Screen screen(std::move(app), device);
+  Screen screen = ScreenInternals::Make(std::move(app), device);
   screen.SetInline(true);
   if (setup) {
     setup(screen);
@@ -940,7 +941,7 @@ TEST_CASE("Print, on the alternate screen, writes once Loop() returns",
   terminal.Write("$ ./app\r\n");
   auto device = std::make_shared<EmulatorDevice>(terminal);
   auto app = Ref<Lines>::New(Numbered("frame ", 1));
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   app->on_key = [&](char c) { screen.Print(std::string("done ") + c); };
   device->Type("a");
   screen.Loop();
@@ -1217,7 +1218,7 @@ TEST_CASE("Print draws a component in the terminal's text color", "[inline]") {
   };
   auto device = std::make_shared<MockTerminalDevice>();
   auto app = Ref<Lines>::New(Numbered("frame ", 1));
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.SetInline(true);
   app->on_key = [&](char) { screen.Print(Ref<Word>::New()); };
   device->PushInput("\x1b]10;rgb:2020/2020/2020\x1b\\a");

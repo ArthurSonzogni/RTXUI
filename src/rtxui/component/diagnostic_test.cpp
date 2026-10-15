@@ -12,6 +12,7 @@
 #include "rtxui/component.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
@@ -45,7 +46,7 @@ template <typename T>
 void Show(Ref<T> app) {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(40, 10);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 }
 
@@ -179,7 +180,7 @@ TEST_CASE("Clicking a handler that is not bound is reported", "[diagnostic]") {
   auto app = Ref<UnboundHandler>::New();
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(40, 10);
-  Screen screen(app, device);
+  Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
   device->PushInput("\x1b[<0;1;1M");  // Left press on the first cell.
   screen.Step();

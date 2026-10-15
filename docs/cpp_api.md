@@ -168,7 +168,7 @@ Coordinates terminal I/O, device capability negotiation, and the primary event l
 ```cpp
 class Screen {
  public:
-  Screen(Ref<ComponentBase> root, std::shared_ptr<TerminalDevice> device = nullptr);
+  explicit Screen(Ref<ComponentBase> root);
   ~Screen();
 
   void Loop();

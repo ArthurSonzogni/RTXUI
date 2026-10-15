@@ -12,9 +12,9 @@
 #include "rtxui/component.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -113,7 +113,7 @@ TEST_CASE("Dialog: a button inside an open dialog is clickable",
   device->TriggerResize(60, 20);
 
   auto container = rtxui::Ref<DialogClickTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   container->Digest();
   screen.Draw();
 
@@ -140,7 +140,7 @@ TEST_CASE("Dialog Component Layout Centering", "[component][dialog][layout]") {
   auto container = rtxui::Ref<DialogTestComponent>::New();
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
 
   container->dialog_open = true;
   container->Digest();

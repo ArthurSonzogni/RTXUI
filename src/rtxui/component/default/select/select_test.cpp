@@ -17,10 +17,10 @@
 #include "rtxui/component/default/option/option.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 
@@ -376,7 +376,7 @@ TEST_CASE("Select Component Z-index sibling overlap",
   device->TriggerResize(40, 10);
 
   auto container = rtxui::Ref<SelectZIndexTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   auto* select_el = container->Root()->QuerySelector("select");

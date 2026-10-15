@@ -27,11 +27,11 @@
 #include "rtxui/component/default/u/u.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/component_as.hpp"
 #include "rtxui/testing/render.hpp"
@@ -179,7 +179,7 @@ TEST_CASE("Horizontal Rule paints on the first frame", "[component][hr]") {
   device->TriggerResize(20, 3);
 
   auto container = rtxui::Ref<HrTestComponent>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
 
   // The Screen constructor mounts, digests and draws once: that is frame one.
   std::string output = device->GetOutput();

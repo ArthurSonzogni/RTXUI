@@ -14,11 +14,11 @@
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/testing/render.hpp"
 
@@ -231,7 +231,7 @@ TEST_CASE("Markdown styled code block newlines preserved",
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
   auto container = rtxui::Ref<MarkdownStyledCodeBlockTestContainer>::New();
-  rtxui::Screen screen(container, device);
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
   // Each source line of the block keeps its own row.

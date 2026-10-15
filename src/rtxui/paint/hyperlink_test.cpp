@@ -12,6 +12,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
 namespace rtxui {
@@ -87,7 +88,7 @@ class LinkApp : public Component<LinkApp> {
 TEST_CASE("An <a> with a URL is a terminal hyperlink", "[paint][link]") {
   auto device = std::make_shared<MockTerminalDevice>();
   device->TriggerResize(40, 8);
-  Screen screen(Ref<LinkApp>::New(), device);
+  Screen screen = ScreenInternals::Make(Ref<LinkApp>::New(), device);
   screen.Draw();
   const std::string output = device->GetOutput();
 
