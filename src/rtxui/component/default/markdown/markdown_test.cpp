@@ -11,6 +11,7 @@
 
 #include "catch2/catch_message.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -63,11 +64,11 @@ TEST_CASE("A component whose view changes is not served a stale template",
   // content, so the same component asks for a different template on every
   // keystroke and must get the new one back.
   auto app = rtxui::Ref<ChangingMarkdownComponent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->Digest();  // The markdown component builds its view from Digest().
 
   auto heading_text = [&]() -> std::string {
-    auto* md = app->Root()->QuerySelector("#md");
+    auto* md = rtxui::ComponentInternals::Root(*app)->QuerySelector("#md");
     REQUIRE(md != nullptr);
     std::string out;
     md->Visit([&out](rtxui::Element& element) {
@@ -95,10 +96,10 @@ TEST_CASE("A component whose view changes is not served a stale template",
 
 TEST_CASE("Markdown Component rendering", "[component][markdown]") {
   auto container = rtxui::Ref<MarkdownTestContainer>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   container->Digest();
 
-  auto* root = container->Root();
+  auto* root = rtxui::ComponentInternals::Root(*container);
   auto* md_el = root->QuerySelector("#md");
   REQUIRE(md_el != nullptr);
 
@@ -130,10 +131,11 @@ TEST_CASE(
   // is not recoverable like Digest()'s), or, when it happened to still
   // parse, injected an extra "onclick" attribute into the <a> element.
   auto container = rtxui::Ref<MarkdownLinkInjectionTestContainer>::New();
-  CHECK_NOTHROW(container->Mount());
+  CHECK_NOTHROW(rtxui::ComponentInternals::Mount(*container));
   CHECK_NOTHROW(container->Digest());
 
-  auto* link_el = container->Root()->QuerySelector("a");
+  auto* link_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("a");
   REQUIRE(link_el != nullptr);
   CHECK(link_el->GetAttribute("onclick") == nullptr);
 }
@@ -148,10 +150,10 @@ class MarkdownListTestContainer
 
 TEST_CASE("Markdown List rendering", "[component][markdown][list]") {
   auto container = rtxui::Ref<MarkdownListTestContainer>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   container->Digest();
 
-  auto* root = container->Root();
+  auto* root = rtxui::ComponentInternals::Root(*container);
   auto* md_el = root->QuerySelector("#md");
   REQUIRE(md_el != nullptr);
 
@@ -179,7 +181,7 @@ class MarkdownCodeBlockTestContainer
 TEST_CASE("Markdown code block newlines preserved",
           "[component][markdown][pre]") {
   auto container = rtxui::Ref<MarkdownCodeBlockTestContainer>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   container->Digest();
 
   auto texture = PaintComponent(*container, 80, 24);
@@ -265,7 +267,7 @@ TEST_CASE(
   // host app (e.g. the Markdown playground) to surface the error to the
   // user.
   auto container = rtxui::Ref<MarkdownStylesheetErrorTestContainer>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   container->Digest();
 
   std::optional<rtxui::Diagnostic> reported_error;
@@ -293,7 +295,7 @@ TEST_CASE("Markdown Component accepts tag-like sequences in its stylesheet",
   // CSS. This used to abort the XML parse of the generated document, which is
   // why playground.cpp once needed a workaround for it.
   auto container = rtxui::Ref<MarkdownStylesheetErrorTestContainer>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   container->Digest();
 
   std::optional<rtxui::Diagnostic> reported_error;

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "benchmark_common.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 
@@ -41,7 +42,7 @@ class TransitionStressComponent : public Component<TransitionStressComponent> {
     for (int i = 0; i < item_count; ++i) {
       items.push_back("Item " + std::to_string(i) + " with filler text");
     }
-    RegisterCollection("items", &items);
+    BindCollection("items", &items);
     Bind(lit);
     Bind(state_class);
 
@@ -107,7 +108,7 @@ int main() {
   // frames land while every card is still interpolating.
   app->lit = true;
   app->Digest();
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
 
   std::vector<double> digest_times_us;
   std::vector<double> draw_times_us;
@@ -120,7 +121,7 @@ int main() {
     // What a real frame does while animating; Screen::Step() calls this on
     // every tick, and it is the stage the early return skips when nothing is
     // in flight.
-    app->ResolveTargetStyles();
+    rtxui::ComponentInternals::ResolveTargetStyles(*app);
     auto t1 = Clock::now();
 
     screen.Draw();

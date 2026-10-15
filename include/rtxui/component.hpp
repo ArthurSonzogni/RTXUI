@@ -4,37 +4,28 @@
 #ifndef RTXUI_COMPONENT_HPP_
 #define RTXUI_COMPONENT_HPP_
 
-#include <charconv>
+#include <concepts>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <ranges>
+#include <rtxui/bind.hpp>  // IWYU pragma: export
+#include <rtxui/rtxui_export.hpp>
 #include <source_location>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
-#include <variant>
 #include <vector>
-// C++26 static reflection, when the code including this header is compiled
-// with it (e.g. GCC 16 with -std=c++26 -freflection). Each application decides
-// for itself: the library's own code never needs it, so a library built as
-// C++23 serves applications compiled either way.
-#if defined(__cpp_impl_reflection) && __has_include(<meta>)
-#define RTXUI_HAS_REFLECTION 1
-#include <meta>
-#endif
-
-#include <rtxui/bind.hpp>  // IWYU pragma: export
-#include <rtxui/diagnostic.hpp>
-#include <rtxui/rtxui_export.hpp>
 
 #include "rtxui/element.hpp"
 #include "rtxui/event.hpp"
+#include "rtxui/field_sink.hpp"  // IWYU pragma: export
+#include "rtxui/internal/binding.hpp"
 #include "rtxui/internal/class_name.hpp"
-#include "rtxui/internal/import.hpp"
 #include "rtxui/refcounted.hpp"
 
 namespace css {
@@ -42,75 +33,41 @@ struct Ruleset;
 using StyleSheet = std::vector<Ruleset>;
 }  // namespace css
 
-namespace rtxui {
-class Element;
-}  // namespace rtxui
-
 namespace xml {
 struct Node;
-using Nodes = std::vector<Node>;
 }  // namespace xml
 
 namespace rtxui {
+
+class ComponentBase;
+class Element;
 struct CategorizedRules;
+template <typename Derived>
+class Component;
 
-class RTXUI_EXPORT StructVisitor {
- public:
-  virtual ~StructVisitor() = default;
-  virtual std::string GetFieldValue(std::string_view field_name) const = 0;
-};
+namespace internal {
+struct LocalScope;
+struct SlotFilter;
+}  // namespace internal
 
-class RTXUI_EXPORT TypeErasedRange {
- public:
-  virtual ~TypeErasedRange() = default;
-  virtual size_t Size() const = 0;
-  virtual std::string GetItemString(size_t index) const = 0;
-  virtual std::string_view GetItemStringView(
-      size_t index,
-      std::string& fallback_storage) const = 0;
-  virtual std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const = 0;
-  virtual bool CheckAndUpdate() = 0;
-};
+/// Creates a component, for a tag a template writes. See Import().
+using ComponentFactory = std::function<Ref<ComponentBase>()>;
 
-struct LocalScope {
-  const LocalScope* parent = nullptr;
-  std::string_view name;
-  std::variant<std::string_view, std::shared_ptr<StructVisitor>> value;
-
-  const std::variant<std::string_view, std::shared_ptr<StructVisitor>>* Get(
-      std::string_view var_name) const {
-    if (name == var_name) {
-      return &value;
-    }
-    if (parent) {
-      return parent->Get(var_name);
-    }
-    return nullptr;
-  }
-};
-
-// The scroll offset and height of the scroll container a `<for virtual="">`
-// renders into.
-struct VirtualListViewport {
-  int scroll = 0;
-  int height = 0;
-};
-
-class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
+/// What every component is. Applications derive from Component<Derived>, which
+/// implements the part that depends on the derived type.
+class RTXUI_EXPORT ComponentBase : public RefCounted {
  public:
   ComponentBase();
-  virtual ~ComponentBase();
+  ~ComponentBase() override;
   ComponentBase(const ComponentBase&) = delete;
   ComponentBase& operator=(const ComponentBase&) = delete;
   ComponentBase(ComponentBase&&) = delete;
   ComponentBase& operator=(ComponentBase&&) = delete;
 
+  /// The template: the derived class's `view` member or Setup() method.
   virtual std::string_view GetView() const = 0;
+  /// The class name, which is the tag a template writes to create one.
   virtual std::string_view Tag() const = 0;
-  /// The tag a template wrote to create this component: what selectors and
-  /// QuerySelector() match it by. Tag() -- the class name -- for a component
-  /// no template created, such as the application's own.
-  std::string_view WrittenTag() const;
 
   // Reactivity ---------------------------------------------------------------
   /// Registers the component's bindings. Called once, before the first
@@ -120,16 +77,39 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
 
   /// Compares bound state with its last snapshot, re-renders what changed and
   /// recurses into children. Screen calls it every frame; returns whether
-  /// anything changed.
-  virtual bool Digest() = 0;
+  /// anything changed. An override doing more each frame calls this one.
+  virtual bool Digest();
 
   /// Pushes `value` to the parent state bound to this component's `child_prop`
   /// attribute, for a component exposing a two-way binding.
   void PropagateBinding(std::string_view child_prop, std::string_view value);
 
+  // Imports ------------------------------------------------------------------
+  /// Makes `callback` callable from the template as `name`: `onclick="name"`.
+  void Import(std::string_view name, std::function<void()> callback);
+  /// The same, for a callback taking the value the template passes.
+  void Import(std::string_view name, std::function<void(std::string)> callback);
+  /// Makes `<name>` in the template create a component with `factory`.
+  void Import(std::string_view name, ComponentFactory factory);
+  /// Makes `<T>` in the template, T's class name, create a T.
+  template <typename T>
+    requires std::derived_from<T, ComponentBase>
+  void Import() {
+    Import(T::StaticTag(), ComponentFactory([] { return Ref<T>::New(); }));
+  }
+  /// Makes `<alias>` in the template create a T.
+  template <typename T>
+    requires std::derived_from<T, ComponentBase>
+  void Import(std::string_view alias) {
+    ImportAlias(ClassName<T>(), alias,
+                ComponentFactory([] { return Ref<T>::New(); }));
+  }
+
   // Input --------------------------------------------------------------------
   /// Handles an event no focused element consumed. Return true to stop it.
+  /// The default offers it to the components this one's template wrote.
   virtual bool OnEvent(Event event);
+  /// Routes every mouse event to this component until ReleaseMouse().
   void CaptureMouse();
   void ReleaseMouse();
 
@@ -138,8 +118,8 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   void SetClipboard(std::string_view text);
 
   // DOM ----------------------------------------------------------------------
-  /// The root of this component's rendered DOM, or a null handle before
-  /// Mount(). See ElementHandle.
+  /// The root of this component's rendered DOM, or a null handle before the
+  /// first render. See ElementHandle.
   ElementHandle RootElement() const;
 
   /// The first element in this component's DOM matching `selector` (`#id`,
@@ -158,20 +138,33 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
                        std::string_view filepath);
   void HotReload(std::string_view new_template);
 
-  // Driving a component without a Screen, for tests --------------------------
+ private:
+  // Everything below is the library's own: it reaches it through
+  // ComponentInternals (component_internal.hpp), and Component<Derived>
+  // through the bindings it registers.
+  friend class ScreenImpl;
+  friend struct ComponentInternals;
+  template <typename Derived>
+  friend class Component;
+
+  void ImportAlias(std::string_view class_name,
+                   std::string_view alias,
+                   ComponentFactory factory);
+  bool RunCallback(std::string_view name, std::string_view arg = "");
+
+  /// The tag a template wrote to create this component: what selectors and
+  /// QuerySelector() match it by. Tag() -- the class name -- for a component
+  /// no template created, such as the application's own.
+  std::string_view WrittenTag() const;
+
   /// Parses the template and builds the DOM. Screen does this itself.
   void Mount();
   /// Rebuilds the DOM from the template and the current state.
   void Render();
-  /// The rendered root element. Element is internal to the library.
+  /// The rendered root element.
   Element* Root() const;
   void ResolveTargetStyles();
   void ResolveTargetStyles(double current_time_ms);
-
- protected:
-  // The library's own access to what follows; see component_internal.hpp.
-  friend class ScreenImpl;
-  friend struct ComponentInternals;
 
   std::string_view Template();
 
@@ -214,62 +207,43 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   const std::map<std::string, Ref<Element>, std::less<>>& slots() const;
   void SetProperty(std::string_view name, std::string_view value);
 
-  virtual std::string GetInterpolatedValue(std::string_view expression) = 0;
-
   void Render(const xml::Node& node,
               Element* element,
               ComponentBase* source,
-              const LocalScope* scope = nullptr);
-  /// Restricts which of a node's children a reconcile pass consumes, so that
-  /// content projected into a component can be split across several slots by
-  /// tag. See `<slot.name select="tag">` in RenderReconcile.
-  struct SlotFilter {
-    /// Tags claimed by a sibling select-slot; skipped by the default slot.
-    const std::vector<std::string>* claimed = nullptr;
-    /// When set, only children carrying this tag are consumed.
-    const std::string* only = nullptr;
-  };
+              const internal::LocalScope* scope = nullptr);
   void RenderReconcile(const xml::Node& node,
                        Element* element,
                        ComponentBase* source,
-                       const LocalScope* scope,
+                       const internal::LocalScope* scope,
                        size_t& child_idx,
                        bool preserve_newlines = false,
-                       const SlotFilter* filter = nullptr,
+                       const internal::SlotFilter* filter = nullptr,
                        const std::string* item_key = nullptr);
   /// The part of RenderReconcile() that renders a `<for>`.
   void RenderLoop(const xml::Node& node,
                   Element* element,
                   ComponentBase* source,
-                  const LocalScope* scope,
+                  const internal::LocalScope* scope,
                   size_t& child_idx,
                   bool preserve_newlines,
-                  const SlotFilter* filter);
-  /// Whether a virtual loop's scroll container now shows items outside what
-  /// the loop rendered, so that it has to render again.
-  bool VirtualWindowsStale();
+                  const internal::SlotFilter* filter);
+
+  /// The value of the bound name `expression`, as text; reports a diagnostic
+  /// and returns the expression itself when there is none.
+  std::string GetInterpolatedValue(std::string_view expression);
+
   void MarkSlotsRecreated(bool recreated);
   // Whether a component this one's template wrote re-rendered on its own and
   // left a slot only this one can fill.
   bool ConsumesRecreatedSlots() const;
+  /// Whether a virtual loop's scroll container now shows items outside what
+  /// the loop rendered, so that it has to render again.
+  bool VirtualWindowsStale();
 
-  /// A bound name: how to read its value and, for state, how to tell that it
-  /// changed since the last look and how to set it from a string.
-  struct Entry {
-    std::string name;
-    std::function<std::string()> get_value;
-    std::function<bool()> check_and_update;
-    std::function<void(std::string_view)> set_value;
-  };
-  /// A bound collection, for `<for>`.
-  struct RangeEntry {
-    std::string name;
-    std::shared_ptr<TypeErasedRange> range;
-  };
-  void AddEntry(Entry entry);
-  void AddRange(RangeEntry entry);
+  void AddEntry(internal::ValueBinding entry);
+  void AddRange(internal::RangeBinding entry);
   /// The bound name `name`, or nullptr.
-  const Entry* FindEntry(std::string_view name) const;
+  const internal::ValueBinding* FindEntry(std::string_view name) const;
   /// Compares every bound value with its snapshot, and takes a new one.
   /// Whether any changed.
   bool UpdateBindings();
@@ -279,307 +253,22 @@ class RTXUI_EXPORT ComponentBase : public RefCounted, public Bindings {
   /// handles it.
   bool ChildrenOnEvent(Event event);
 
-  /// Everything else a component holds, defined inside the library
+  /// Everything a component holds, defined inside the library
   /// (component_internal.hpp) so that it is neither visible to a component
   /// nor part of its layout.
   struct Data;
   std::unique_ptr<Data> data_;
 };
 
-namespace reflection {
-RTXUI_EXPORT int ParseInt(std::string_view str);
-
-template <typename T>
-std::string to_string(const T& value) {
-  if constexpr (std::is_same_v<T, bool>) {
-    return value ? "true" : "false";
-  } else if constexpr (std::is_same_v<T, char>) {
-    return std::string(1, value);
-  }
-  if constexpr (std::is_floating_point_v<T>) {
-    char buf[64];
-    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
-    if (ec == std::errc()) {
-      return std::string(buf, ptr - buf);
-    }
-  }
-  if constexpr (std::is_convertible_v<T, std::string>) {
-    return static_cast<std::string>(value);
-  } else if constexpr (requires { std::to_string(value); }) {
-    return std::to_string(value);
-  } else if constexpr (requires(std::ostream& os, const T& v) { os << v; }) {
-    std::stringstream ss;
-    ss << value;
-    return ss.str();
-  } else {
-    return "";
-  }
-}
-
-template <typename T>
-void from_string(std::string_view str, T& value) {
-  if constexpr (std::is_same_v<T, std::string>) {
-    value = std::string(str);
-  } else if constexpr (std::is_same_v<T, int>) {
-    value = ParseInt(str);
-  } else if constexpr (std::is_same_v<T, bool>) {
-    value = (str == "true" || str == "1");
-  } else if constexpr (std::is_floating_point_v<T>) {
-    std::string_view s = str;
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
-      s.remove_prefix(1);
-    }
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
-      s.remove_suffix(1);
-    }
-    if (!s.empty()) {
-      auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
-      if (ec != std::errc()) {
-        value = 0.0f;
-      }
-    } else {
-      value = 0.0f;
-    }
-  } else {
-    std::stringstream ss;
-    ss << str;
-    ss >> value;
-  }
-}
-}  // namespace reflection
-
-#if defined(RTXUI_HAS_REFLECTION)
-template <typename T>
-consteval size_t get_members_size() {
-  return std::meta::nonstatic_data_members_of(
-             ^^T, std::meta::access_context::unchecked())
-      .size();
-}
-
-template <typename T>
-consteval auto get_members() {
-  constexpr size_t N = get_members_size<T>();
-  std::array<std::meta::info, N> arr{};
-  auto vec = std::meta::nonstatic_data_members_of(
-      ^^T, std::meta::access_context::unchecked());
-  for (size_t i = 0; i < N; ++i) {
-    arr[i] = vec[i];
-  }
-  return arr;
-}
-
-template <auto Arr, typename T, size_t... Is>
-std::string get_field_value_impl(const T& obj,
-                                 std::string_view field_name,
-                                 std::index_sequence<Is...>) {
-  std::string result;
-  ((std::meta::identifier_of(Arr[Is]) == field_name
-        ? (result = reflection::to_string(obj.[:Arr[Is]:]))
-        : std::string{}),
-   ...);
-  return result;
-}
-
-template <typename T>
-class ReflectedStructVisitor : public StructVisitor {
-  const T& obj_;
-
- public:
-  ReflectedStructVisitor(const T& obj) : obj_(obj) {}
-
-  std::string GetFieldValue(std::string_view field_name) const override {
-    constexpr auto members = get_members<T>();
-    return get_field_value_impl<members>(
-        obj_, field_name, std::make_index_sequence<members.size()>{});
-  }
-};
-#endif
-
-/// The fields of one item of a bound collection, as a template reads them:
-/// `{book.title}` in `<for each="{books}" as="book">`. A type describes its
-/// fields once with a function found next to it:
+/// The base of every application component:
 ///
-///   void Fields(const Book& book, FieldSink& out) {
-///     out("title", book.title);
-///     out("length", book.pages > 300 ? "long" : "short");
-///   }
-///
-/// and `Bind(books)` alone then binds a collection of it. A binding can give
-/// its own instead, with a function or a const member function of the same
-/// shape: `Bind(books, &Library::BookFields)`.
-class FieldSink {
- public:
-  /// Adds the field `name`, converted to text as `{name}` would be.
-  template <typename T>
-  void operator()(std::string_view name, const T& value) {
-    fields_.emplace_back(std::string(name), reflection::to_string(value));
-  }
-
-  /// The value of the field `name`, or "" when there is none.
-  std::string_view Get(std::string_view name) const {
-    for (const auto& [field, value] : fields_) {
-      if (field == name) {
-        return value;
-      }
-    }
-    return {};
-  }
-
-  bool operator==(const FieldSink&) const = default;
-
- private:
-  std::vector<std::pair<std::string, std::string>> fields_;
-};
-
-class FieldSinkVisitor : public StructVisitor {
-  FieldSink fields_;
-
- public:
-  explicit FieldSinkVisitor(FieldSink fields) : fields_(std::move(fields)) {}
-
-  std::string GetFieldValue(std::string_view field_name) const override {
-    return std::string(fields_.Get(field_name));
-  }
-};
-
-// Whether `T` describes its fields with a Fields(const T&, FieldSink&)
-// function, found by argument-dependent lookup.
-template <typename T>
-concept HasFields =
-    requires(const T& item, FieldSink& out) { Fields(item, out); };
-
-template <typename Container>
-class TypeErasedRangeImpl : public TypeErasedRange {
-  using Item = std::ranges::range_value_t<Container>;
-  using FieldsMapper = std::function<void(const Item&, FieldSink&)>;
-
-  const Container* container_ptr_;
-  std::decay_t<Container> snapshot_;
-  // The binding's own fields, which take precedence over the type's.
-  FieldsMapper fields_mapper_;
-  // For items without operator==: their fields, to find what changed.
-  std::vector<FieldSink> fields_snapshot_;
-
- public:
-  TypeErasedRangeImpl(const Container* ptr)
-      : container_ptr_(ptr), snapshot_(*ptr) {
-    fields_snapshot_ = CurrentFields();
-  }
-
-  TypeErasedRangeImpl(const Container* ptr, FieldsMapper fields_mapper)
-      : container_ptr_(ptr),
-        snapshot_(*ptr),
-        fields_mapper_(std::move(fields_mapper)) {
-    fields_snapshot_ = CurrentFields();
-  }
-
-  size_t Size() const override { return std::ranges::size(*container_ptr_); }
-
-  std::string GetItemString(size_t index) const override {
-    auto it = std::ranges::begin(*container_ptr_);
-    std::advance(it, index);
-    return reflection::to_string(*it);
-  }
-
-  std::string_view GetItemStringView(
-      size_t index,
-      std::string& fallback_storage) const override {
-    auto it = std::ranges::begin(*container_ptr_);
-    std::advance(it, index);
-    using ItemType = std::ranges::range_value_t<Container>;
-    if constexpr (std::is_convertible_v<ItemType, std::string_view>) {
-      return *it;
-    } else {
-      fallback_storage = reflection::to_string(*it);
-      return fallback_storage;
-    }
-  }
-
-  std::shared_ptr<StructVisitor> GetItemVisitor(size_t index) const override {
-    auto it = std::ranges::begin(*container_ptr_);
-    std::advance(it, index);
-
-    if (HasItemFields()) {
-      FieldSink fields;
-      ItemFields(*it, fields);
-      return std::make_shared<FieldSinkVisitor>(std::move(fields));
-    }
-
-#if defined(RTXUI_HAS_REFLECTION)
-    using ItemType = std::ranges::range_value_t<Container>;
-    if constexpr (std::is_class_v<ItemType> &&
-                  !std::is_same_v<ItemType, std::string>) {
-      return std::make_shared<ReflectedStructVisitor<ItemType>>(*it);
-    }
-#endif
-    return nullptr;
-  }
-
-  bool CheckAndUpdate() override {
-    if constexpr (!std::equality_comparable<Item>) {
-      // Without operator==, compare what the template reads of each item.
-      if (HasItemFields()) {
-        std::vector<FieldSink> fields = CurrentFields();
-        if (fields != fields_snapshot_) {
-          fields_snapshot_ = std::move(fields);
-          return true;
-        }
-        return false;
-      }
-    }
-    if constexpr (std::equality_comparable<Item>) {
-      if (*container_ptr_ != snapshot_) {
-        if constexpr (requires {
-                        snapshot_.size();
-                        snapshot_[0] = (*container_ptr_)[0];
-                      }) {
-          if (snapshot_.size() != container_ptr_->size()) {
-            snapshot_ = *container_ptr_;
-          } else {
-            for (size_t i = 0; i < container_ptr_->size(); ++i) {
-              if (snapshot_[i] != (*container_ptr_)[i]) {
-                snapshot_[i] = (*container_ptr_)[i];
-              }
-            }
-          }
-        } else {
-          snapshot_ = *container_ptr_;
-        }
-        return true;
-      }
-    } else {
-      if (std::ranges::size(*container_ptr_) != std::ranges::size(snapshot_)) {
-        snapshot_ = *container_ptr_;
-        return true;
-      }
-    }
-    return false;
-  }
-
- private:
-  bool HasItemFields() const { return fields_mapper_ || HasFields<Item>; }
-
-  void ItemFields(const Item& item, FieldSink& out) const {
-    if (fields_mapper_) {
-      fields_mapper_(item, out);
-    } else if constexpr (HasFields<Item>) {
-      Fields(item, out);
-    }
-  }
-
-  std::vector<FieldSink> CurrentFields() const {
-    std::vector<FieldSink> fields;
-    if constexpr (!std::equality_comparable<Item>) {
-      if (HasItemFields()) {
-        for (const auto& item : *container_ptr_) {
-          ItemFields(item, fields.emplace_back());
-        }
-      }
-    }
-    return fields;
-  }
-};
-
+///   class Counter : public Component<Counter> {
+///    public:
+///     int count = 0;
+///     std::string_view view = R"(<button onclick="Add">{count}</button>)";
+///     void Add() { count++; }
+///     Counter() { Bind(count); Bind(Add); }
+///   };
 template <typename Derived>
 class Component : public ComponentBase {
  public:
@@ -607,45 +296,7 @@ class Component : public ComponentBase {
     }
   }
 
-  bool Digest() override {
-    StyleResolutionScope scope(this);
-    bool changed = UpdateBindings();
-    if (VirtualWindowsStale()) {
-      changed = true;
-    }
-    if (changed) {
-      this->Render();
-    }
-    if (DigestChildren()) {
-      changed = true;
-    }
-    if (ConsumesRecreatedSlots()) {
-      this->Render();
-    }
-    return changed;
-  }
-
-  std::string GetInterpolatedValue(std::string_view expression) override {
-    std::string_view target = expression;
-    if (target.starts_with("props.")) {
-      target = target.substr(6);
-    }
-    if (const Entry* entry = FindEntry(target)) {
-      return entry->get_value();
-    }
-    if (expression.find_first_of(" =!<>&|") != std::string_view::npos) {
-      ReportDiagnostic("'{" + std::string(expression) + "}' in <" +
-                       std::string(Tag()) +
-                       ">: templates do not evaluate expressions; bind a "
-                       "const method computing the value and use its name");
-    } else {
-      ReportDiagnostic("'{" + std::string(expression) + "}' in <" +
-                       std::string(Tag()) + "> is not a bound name");
-    }
-    return std::string(expression);
-  }
-
-  bool OnEvent(Event event) override { return ChildrenOnEvent(event); }
+  // What Bind() and BindCollection() call.
 
   // Member Pointer Binding (Variables or Computed Properties)
   template <typename T, typename C, typename... Args>
@@ -655,22 +306,23 @@ class Component : public ComponentBase {
         // Const member function -> Computed property
         AddEntry({name,
                   [this, member]() {
-                    return reflection::to_string(
+                    return internal::to_string(
                         (static_cast<const Derived*>(this)->*member)());
                   },
                   nullptr, nullptr});
       } else if constexpr (requires {
                              (std::declval<Derived>().*member)(std::string{});
                            }) {
-        Bindings::Import(name, std::function<void(std::string)>(
-                                   [this, member](std::string s) {
-                                     (static_cast<Derived*>(this)->*member)(s);
-                                   }));
+        ComponentBase::Import(
+            name,
+            std::function<void(std::string)>([this, member](std::string s) {
+              (static_cast<Derived*>(this)->*member)(s);
+            }));
       } else {
         // Non-const member function -> Event handler
-        Bindings::Import(name, [this, member]() {
-          (static_cast<Derived*>(this)->*member)();
-        });
+        ComponentBase::Import(name, std::function<void()>([this, member]() {
+                                (static_cast<Derived*>(this)->*member)();
+                              }));
       }
     } else {
       // Member variable pointer
@@ -699,13 +351,14 @@ class Component : public ComponentBase {
     if constexpr (std::is_invocable_v<U> ||
                   std::is_invocable_v<U, std::string>) {
       if constexpr (std::is_invocable_v<U, std::string>) {
-        Bindings::Import(
+        ComponentBase::Import(
             name, std::function<void(std::string)>(std::forward<T>(item)));
       } else if constexpr (std::is_convertible_v<U, ComponentFactory>) {
-        Bindings::Import(name,
-                         static_cast<ComponentFactory>(std::forward<T>(item)));
+        ComponentBase::Import(
+            name, static_cast<ComponentFactory>(std::forward<T>(item)));
       } else {
-        Bindings::Import(name, std::function<void()>(std::forward<T>(item)));
+        ComponentBase::Import(name,
+                              std::function<void()>(std::forward<T>(item)));
       }
     } else if constexpr (std::is_pointer_v<U>) {
       using V = std::remove_pointer_t<U>;
@@ -723,14 +376,18 @@ class Component : public ComponentBase {
     }
   }
 
+ private:
+  static std::string WithoutPropsPrefix(std::string name) {
+    if (name.starts_with("props.")) {
+      name = name.substr(6);
+    }
+    return name;
+  }
+
   template <typename Container>
   void RegisterCollection(std::string name, const Container* ptr) {
-    std::string clean_name = name;
-    if (clean_name.starts_with("props.")) {
-      clean_name = clean_name.substr(6);
-    }
-    AddRange({std::move(clean_name),
-              std::make_shared<TypeErasedRangeImpl<Container>>(ptr)});
+    AddRange({WithoutPropsPrefix(std::move(name)),
+              std::make_shared<internal::TypeErasedRangeImpl<Container>>(ptr)});
   }
 
   // The binding's own fields: Bind(books, [](const Book&, FieldSink&) {...}).
@@ -740,11 +397,9 @@ class Component : public ComponentBase {
       const Container* ptr,
       std::function<void(const std::ranges::range_value_t<Container>&,
                          FieldSink&)> fields) {
-    if (name.starts_with("props.")) {
-      name = name.substr(6);
-    }
-    AddRange({std::move(name), std::make_shared<TypeErasedRangeImpl<Container>>(
-                                   ptr, std::move(fields))});
+    AddRange({WithoutPropsPrefix(std::move(name)),
+              std::make_shared<internal::TypeErasedRangeImpl<Container>>(
+                  ptr, std::move(fields))});
   }
 
   // The same, from a const member function: Bind(books, &App::BookFields).
@@ -765,15 +420,10 @@ class Component : public ComponentBase {
             }));
   }
 
- protected:
   template <typename T>
   void RegisterState(std::string name, T* ptr) {
-    std::string clean_name = name;
-    if (clean_name.starts_with("props.")) {
-      clean_name = clean_name.substr(6);
-    }
     auto snapshot = std::make_shared<T>(*ptr);
-    auto get_value = [ptr]() { return reflection::to_string(*ptr); };
+    auto get_value = [ptr]() { return internal::to_string(*ptr); };
     auto check_and_update = [ptr, snapshot]() mutable {
       if (*ptr != *snapshot) {
         *snapshot = *ptr;
@@ -783,27 +433,13 @@ class Component : public ComponentBase {
     };
     auto set_value = [ptr](std::string_view val) {
       if constexpr (requires(std::stringstream ss) { ss >> *ptr; }) {
-        reflection::from_string(val, *ptr);
+        internal::from_string(val, *ptr);
       }
     };
-    AddEntry({std::move(clean_name), std::move(get_value),
+    AddEntry({WithoutPropsPrefix(std::move(name)), std::move(get_value),
               std::move(check_and_update), std::move(set_value)});
   }
-
-  template <typename Ret>
-  void RegisterComputed(std::string name, Ret (Derived::*method)() const) {
-    AddEntry({name,
-              [this, method]() {
-                return reflection::to_string(
-                    (static_cast<const Derived*>(this)->*method)());
-              },
-              nullptr, nullptr});
-  }
 };
-
-RTXUI_EXPORT void RegisterGlobalComponent(std::string_view name,
-                                          ComponentFactory factory);
-RTXUI_EXPORT ComponentFactory GetGlobalComponentFactory(std::string_view name);
 
 }  // namespace rtxui
 

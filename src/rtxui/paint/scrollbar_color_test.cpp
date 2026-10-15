@@ -6,6 +6,7 @@
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -20,8 +21,9 @@ namespace {
 
 // Renders a component into a texture of a fixed size.
 Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
-  component->Mount();
-  auto layout_box = LayoutTreeBuilder::Build(component->Root());
+  rtxui::ComponentInternals::Mount(*component);
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*component));
 
   Texture texture(width, height);
   for (int y = 0; y < height; ++y) {
@@ -94,9 +96,10 @@ TEST_CASE("Paint: Scrollbar partial fill color blending",
   };
 
   auto app = Ref<ScrollbarApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
-  auto* scroll_element = app->Root()->QuerySelector("#scrollable");
+  auto* scroll_element =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
 
   // Scroll partway so the thumb is in the middle, maximizing the chance
@@ -171,9 +174,10 @@ struct TextareaScrollbarApp : Component<TextareaScrollbarApp> {
 // their default-constructed empty strings, which would make the textarea
 // appear to have no content at all regardless of `text`.
 Texture RenderTextarea(Ref<TextareaScrollbarApp> app, int width, int height) {
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->Digest();
-  auto layout_box = LayoutTreeBuilder::Build(app->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*app));
 
   Texture texture(width, height);
   for (int y = 0; y < height; ++y) {
@@ -247,13 +251,15 @@ TEST_CASE("Textarea scrollbar thumb position tracks the scroll offset",
           "[paint][scrollbar][textarea]") {
   auto app = Ref<TextareaScrollbarApp>::New();
   app->text = "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\nl10\nl11\nl12";
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->Digest();
 
-  auto* ta_el = app->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
 
-  auto layout_box = LayoutTreeBuilder::Build(app->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*app));
   REQUIRE(layout_box);
 
   auto render_at_scroll = [&](int scroll_y) {

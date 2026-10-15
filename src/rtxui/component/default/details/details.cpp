@@ -5,6 +5,7 @@
 
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 
@@ -67,7 +68,7 @@ std::string_view details::Setup() {
 }
 
 bool details::OnEvent(Event event) {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root) {
     return false;
   }
@@ -97,7 +98,7 @@ bool details::Digest() {
 
   // The <summary> is routed into the summary slot by `select`; only the
   // fallback label is left to decide.
-  auto summary_slot = Slot("summary");
+  auto summary_slot = ComponentInternals::Slot(*this, "summary");
   no_summary = !summary_slot || summary_slot->ChildCount() == 0;
 
   return Component<details>::Digest();

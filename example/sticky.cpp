@@ -56,8 +56,9 @@ class MonthSection : public Component<MonthSection> {
     </style>
   )html";
 
-  void set_month_index(std::string value) {
-    int idx = std::stoi(value);
+  // The name, color and days of the month `month_index` names.
+  void ShowMonth() {
+    int idx = std::stoi(month_index);
     std::vector<std::string> months = {
         "January", "February", "March",     "April",   "May",      "June",
         "July",    "August",   "September", "October", "November", "December",
@@ -88,28 +89,27 @@ class MonthSection : public Component<MonthSection> {
     }
   }
 
-  // Registers a template variable by hand rather than through Bind(), which
-  // is what you drop to when a value needs custom read/write plumbing.
+  // The parent sets `month_index`; the rest follows from it. Digest() runs
+  // every frame before the bindings are compared, so the values derived here
+  // are drawn in the same frame.
+  bool Digest() override {
+    if (month_index != shown_month_index_) {
+      shown_month_index_ = month_index;
+      ShowMonth();
+    }
+    return Component::Digest();
+  }
+
   MonthSection() {
     EnableHotReload();
-    auto get_value = [this]() { return month_index; };
-    auto set_value = [this](std::string_view val) {
-      month_index = std::string(val);
-      set_month_index(month_index);
-    };
-    auto check_and_update = [this, last_val = std::string()]() mutable {
-      if (month_index != last_val) {
-        last_val = month_index;
-        return true;
-      }
-      return false;
-    };
-    AddEntry({"month-index", get_value, check_and_update, set_value});
-
+    Bind(month_index);
     Bind(name);
     Bind(header_bg);
     Bind(days);
   }
+
+ private:
+  std::string shown_month_index_;
 };
 
 class StickyDemo : public Component<StickyDemo> {
@@ -127,7 +127,7 @@ class StickyDemo : public Component<StickyDemo> {
 
       <div class="scroll-window">
         <for each="{month_indices}" as="idx">
-          <month-section month-index="{idx}" />
+          <month-section month_index="{idx}" />
         </for>
       </div>
     </div>

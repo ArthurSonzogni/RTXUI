@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
@@ -62,7 +62,8 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  auto* tabs_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
   auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);
@@ -71,7 +72,7 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   CHECK(tabs_ptr->value == "tab1");
 
   // Verify headers slot
-  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  auto headers = TabHeaderButtons(rtxui::ComponentInternals::Root(*tabs_ptr));
   REQUIRE(headers.size() == 2);
 
   auto* tab1_header = headers[0];
@@ -84,7 +85,7 @@ TEST_CASE("Tabs and TabPane Components", "[component][tabs]") {
   auto find_panes = [&]() {
     pane1_el = nullptr;
     pane2_el = nullptr;
-    container->Root()->Visit([&](Element& el) {
+    rtxui::ComponentInternals::Root(*container)->Visit([&](Element& el) {
       if (el.tag() == "tab-pane" || el.tag() == "tab_pane") {
         if (el.Attributes().count("name")) {
           auto name = el.Attributes().at("name");
@@ -140,7 +141,8 @@ TEST_CASE("Tabs header divider renders as a line under the headers",
 
   auto texture = PaintComponent(*container, 40, 10);
 
-  auto* headers = container->Root()->QuerySelector(".tabs-headers");
+  auto* headers = rtxui::ComponentInternals::Root(*container)
+                      ->QuerySelector(".tabs-headers");
   REQUIRE(headers != nullptr);
   // The bottom border grows the headers box by exactly 1 row: the header
   // button labels occupy row 0 (tabs is the top-level element here), so the
@@ -161,7 +163,8 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  auto* tabs_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
   auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);
@@ -169,7 +172,7 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   // Initial tab: tab1
   CHECK(tabs_ptr->value == "tab1");
 
-  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  auto headers = TabHeaderButtons(rtxui::ComponentInternals::Root(*tabs_ptr));
   REQUIRE(headers.size() == 2);
 
   auto* tab2_header = headers[1];
@@ -195,7 +198,9 @@ TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   auto* tab1_header = headers[0];
   REQUIRE(tab1_header != nullptr);
 
-  container->Root()->Visit([](Element& el) { el.set_focused(false); });
+  rtxui::ComponentInternals::Root(*container)->Visit([](Element& el) {
+    el.set_focused(false);
+  });
   tab1_header->set_focused(true);
 
   // Press Return key
@@ -223,13 +228,16 @@ TEST_CASE("Tabs Component keyboard focus survives an intervening Digest",
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  auto* tabs_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("tabs");
   auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
-  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  auto headers = TabHeaderButtons(rtxui::ComponentInternals::Root(*tabs_ptr));
   REQUIRE(headers.size() == 2);
   auto* tab2_header = headers[1];
 
-  container->Root()->Visit([](Element& el) { el.set_focused(false); });
+  rtxui::ComponentInternals::Root(*container)->Visit([](Element& el) {
+    el.set_focused(false);
+  });
   tab2_header->set_focused(true);
 
   // Something else triggers a Digest() before the keypress arrives (e.g. an
@@ -240,7 +248,7 @@ TEST_CASE("Tabs Component keyboard focus survives an intervening Digest",
   // free to hand back a different object for the same button -- so re-read it
   // rather than holding the old pointer, which is what the component used to
   // do and how it lost focus in the first place.
-  headers = TabHeaderButtons(tabs_ptr->Root());
+  headers = TabHeaderButtons(rtxui::ComponentInternals::Root(*tabs_ptr));
   REQUIRE(headers.size() == 2);
   CHECK(headers[1]->focused());
   CHECK_FALSE(headers[0]->focused());
@@ -264,7 +272,8 @@ TEST_CASE(
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  auto* tabs_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
   auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);
@@ -287,7 +296,7 @@ TEST_CASE(
   REQUIRE(content_part != nullptr);
   CHECK(*content_part == "tabs-content");
 
-  auto headers = TabHeaderButtons(tabs_ptr->Root());
+  auto headers = TabHeaderButtons(rtxui::ComponentInternals::Root(*tabs_ptr));
   REQUIRE(headers.size() == 2);
   auto* tab1_header = headers[0];
   const std::string* tab1_header_part = tab1_header->GetAttribute("part");
@@ -321,7 +330,8 @@ TEST_CASE("Tabs SelectTab Crash Prevention", "[component][tabs][bug]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* tabs_el = container->Root()->QuerySelector("tabs");
+  auto* tabs_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("tabs");
   REQUIRE(tabs_el != nullptr);
   auto* tabs_ptr = ComponentAs<rtxui::tabs>(tabs_el);
   REQUIRE(tabs_ptr != nullptr);

@@ -56,7 +56,7 @@ std::string_view radio::Setup() {
 }
 
 bool radio::OnEvent(Event event) {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root || disabled) {
     return false;
   }
@@ -133,7 +133,7 @@ bool radio::OnEvent(Event event) {
       if (root->Attributes().count("onchange")) {
         std::string onchange_cb = root->Attributes().at("onchange");
         if (auto* comp = GetAttributeOwnerComponent(root)) {
-          comp->RunCallback(onchange_cb);
+          ComponentInternals::RunCallback(*comp, onchange_cb);
         }
       }
       return true;
@@ -145,8 +145,8 @@ bool radio::OnEvent(Event event) {
 
 bool radio::Digest() {
   radio_char = checked ? "◉" : "○";
-  SyncDisabled(Root(), disabled);
-  SyncChecked(Root(), checked);
+  SyncDisabled(ComponentInternals::Root(*this), disabled);
+  SyncChecked(ComponentInternals::Root(*this), checked);
   return Component<radio>::Digest();
 }
 }  // namespace rtxui

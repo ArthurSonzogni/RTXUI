@@ -8,6 +8,7 @@
 
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 
 namespace rtxui {
@@ -170,7 +171,8 @@ std::string_view tooltip::Setup() {
 }
 
 bool tooltip::Digest() {
-  bool is_hovered = Root() && Root()->hovered();
+  bool is_hovered = ComponentInternals::Root(*this) &&
+                    ComponentInternals::Root(*this)->hovered();
   std::string expected_class = is_hovered ? "visible" : "hidden";
   if (tooltip_class != expected_class) {
     tooltip_class = expected_class;

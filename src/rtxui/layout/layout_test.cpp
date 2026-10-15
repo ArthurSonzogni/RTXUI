@@ -14,6 +14,7 @@
 #include "catch2/catch_message.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/component/default/span/span.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
@@ -804,11 +805,13 @@ TEST_CASE("Layout: position sticky pins to the top edge", "[layout][sticky]") {
 
   auto render_at = [](int scroll_y) {
     auto component = Ref<T>::New();
-    component->Mount();
-    if (auto* scroller = component->Root()->QuerySelector("#sc")) {
+    rtxui::ComponentInternals::Mount(*component);
+    if (auto* scroller =
+            rtxui::ComponentInternals::Root(*component)->QuerySelector("#sc")) {
       scroller->set_scroll_y(scroll_y);
     }
-    auto layout_box = LayoutTreeBuilder::Build(component->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*component));
     Texture texture(6, 4);
     if (layout_box) {
       LayoutConstraints constraints;
@@ -850,11 +853,13 @@ TEST_CASE("Layout: position sticky pins to the bottom edge",
 
   auto render_at = [](int scroll_y) {
     auto component = Ref<T>::New();
-    component->Mount();
-    if (auto* scroller = component->Root()->QuerySelector("#sc")) {
+    rtxui::ComponentInternals::Mount(*component);
+    if (auto* scroller =
+            rtxui::ComponentInternals::Root(*component)->QuerySelector("#sc")) {
       scroller->set_scroll_y(scroll_y);
     }
-    auto layout_box = LayoutTreeBuilder::Build(component->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*component));
     Texture texture(6, 4);
     if (layout_box) {
       LayoutConstraints constraints;
@@ -895,8 +900,9 @@ TEST_CASE("Layout: position sticky pins to the right edge",
   };
 
   auto component = Ref<T>::New();
-  component->Mount();
-  auto layout_box = LayoutTreeBuilder::Build(component->Root());
+  rtxui::ComponentInternals::Mount(*component);
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*component));
   Texture texture(6, 1);
   if (layout_box) {
     LayoutConstraints constraints;
@@ -1454,10 +1460,11 @@ TEST_CASE("Layout: textarea single line rendering", "[layout][textarea]") {
     }
   };
   auto c = Ref<TestComponent>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   // The textarea has no border (removed). Default: width=40, height=5.
   // We render into 9x3 to observe the padding+content+blank rows.
   // Width 9: padding(1) + content(7) + padding(1)
@@ -1493,10 +1500,11 @@ TEST_CASE("Layout: textarea multiline rendering", "[layout][textarea]") {
     }
   };
   auto c = Ref<TestComponent>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   // The textarea has no border (removed). Default: width=40, height=5.
   // We render into 7x4 to observe the padding+content+blank rows.
   // Width 7: padding(1) + content(5) + padding(1)
@@ -1553,10 +1561,11 @@ TEST_CASE("Layout: position absolute and relative", "[layout][position]") {
     }
   };
   auto c = Ref<TestComponent>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   Texture texture(5, 3);
   for (int y = 0; y < 3; ++y) {
     for (int x = 0; x < 5; ++x) {
@@ -1613,10 +1622,11 @@ TEST_CASE("Layout: z-index stacking", "[layout][z-index]") {
     }
   };
   auto c = Ref<TestComponent>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   Texture texture(1, 1);
   texture[0, 0].character = " ";
   if (layout_box) {
@@ -1661,16 +1671,18 @@ TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
   };
 
   auto c = Ref<TestComponent>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
   // Scroll the scrollable container down by 2 cells
-  auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+  auto* scrollable_element =
+      rtxui::ComponentInternals::Root(*c)->QuerySelector(".scrollable");
   REQUIRE(scrollable_element != nullptr);
   scrollable_element->set_scroll_y(2);
 
   // Render
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   Texture texture(5, 3);
   for (int y = 0; y < 3; ++y) {
     for (int x = 0; x < 5; ++x) {
@@ -1742,15 +1754,17 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     // 1. scroll_y = 0: normal_y is 0, but min_y is 1 (viewport_top 0 + top 1).
     // Sticky element should stick to y = 1.
     auto c = Ref<TestComponent>::New();
-    c->Mount();
+    rtxui::ComponentInternals::Mount(*c);
     c->Digest();
 
-    auto* sticky_el = c->Root()->QuerySelector(".sticky-element");
+    auto* sticky_el =
+        rtxui::ComponentInternals::Root(*c)->QuerySelector(".sticky-element");
     REQUIRE(sticky_el != nullptr);
     INFO("sticky_el position style: " << (int)sticky_el->style.position);
     CHECK(sticky_el->style.position == PositionType::Sticky);
 
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
     Texture texture(5, 5);
     for (int y = 0; y < 5; ++y) {
       for (int x = 0; x < 5; ++x) {
@@ -1773,14 +1787,16 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     // 2. scroll_y = 3: normal_y is -3, min_y is 1 (viewport_top 0 + top 1).
     // Sticky element should stick to y = 1.
     auto c = Ref<TestComponent>::New();
-    c->Mount();
+    rtxui::ComponentInternals::Mount(*c);
     c->Digest();
 
-    auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+    auto* scrollable_element =
+        rtxui::ComponentInternals::Root(*c)->QuerySelector(".scrollable");
     REQUIRE(scrollable_element != nullptr);
     scrollable_element->set_scroll_y(3);
 
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
     Texture texture(5, 5);
     for (int y = 0; y < 5; ++y) {
       for (int x = 0; x < 5; ++x) {
@@ -1803,14 +1819,16 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     // The sticky element is height 1, so max_y limit is 1 - 1 = 0.
     // So std::min(1, 0) = 0. It should be at y = 0.
     auto c = Ref<TestComponent>::New();
-    c->Mount();
+    rtxui::ComponentInternals::Mount(*c);
     c->Digest();
 
-    auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+    auto* scrollable_element =
+        rtxui::ComponentInternals::Root(*c)->QuerySelector(".scrollable");
     REQUIRE(scrollable_element != nullptr);
     scrollable_element->set_scroll_y(9);
 
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
     Texture texture(5, 5);
     for (int y = 0; y < 5; ++y) {
       for (int x = 0; x < 5; ++x) {
@@ -1863,14 +1881,16 @@ TEST_CASE("Layout: position sticky direct child of scroll container",
   };
 
   auto c = Ref<StickyDirectComponent>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto* scrollable_element = c->Root()->QuerySelector(".scrollable");
+  auto* scrollable_element =
+      rtxui::ComponentInternals::Root(*c)->QuerySelector(".scrollable");
   REQUIRE(scrollable_element != nullptr);
   scrollable_element->set_scroll_y(10);
 
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   Texture texture(5, 5);
   for (int y = 0; y < 5; ++y) {
     for (int x = 0; x < 5; ++x) {
@@ -2046,9 +2066,12 @@ TEST_CASE("Layout: Flexbox grow/shrink remainder allocated to final child",
 
     auto app = Ref<FlexRemainderGrowTest>::New();
     auto texture = RenderComponent(app, 10, 1);
-    auto* item1 = app->Root()->QuerySelector(".item1");
-    auto* item2 = app->Root()->QuerySelector(".item2");
-    auto* item3 = app->Root()->QuerySelector(".item3");
+    auto* item1 =
+        rtxui::ComponentInternals::Root(*app)->QuerySelector(".item1");
+    auto* item2 =
+        rtxui::ComponentInternals::Root(*app)->QuerySelector(".item2");
+    auto* item3 =
+        rtxui::ComponentInternals::Root(*app)->QuerySelector(".item3");
     REQUIRE(item1 != nullptr);
     REQUIRE(item2 != nullptr);
     REQUIRE(item3 != nullptr);
@@ -2083,7 +2106,7 @@ TEST_CASE("Layout: Table Grid Rendering", "[layout][table]") {
   auto app = Ref<TableTest>::New();
   auto texture = RenderComponent(app, 30, 2);
 
-  auto* table = app->Root()->QuerySelector("table");
+  auto* table = rtxui::ComponentInternals::Root(*app)->QuerySelector("table");
   REQUIRE(table != nullptr);
   CHECK(table->layout_width() > 0);
   CHECK(table->layout_height() == 2);
@@ -2111,8 +2134,8 @@ TEST_CASE("Layout: min-width is enforced on a table",
   };
   auto app = Ref<T>::New();
   RenderComponent(app, 30, 2);
-  auto* table = app->Root()->QuerySelector("table");
-  auto* cell = app->Root()->QuerySelector("td");
+  auto* table = rtxui::ComponentInternals::Root(*app)->QuerySelector("table");
+  auto* cell = rtxui::ComponentInternals::Root(*app)->QuerySelector("td");
   REQUIRE(table != nullptr);
   REQUIRE(cell != nullptr);
   CHECK(table->layout_width() == 20);
@@ -2150,8 +2173,8 @@ TEST_CASE("Layout: a table wider than its box reports its true scroll_width",
   auto app = Ref<T>::New();
   RenderComponent(app, 40, 5);
 
-  auto* table = app->Root()->QuerySelector("table");
-  auto* wrap = app->Root()->QuerySelector(".wrap");
+  auto* table = rtxui::ComponentInternals::Root(*app)->QuerySelector("table");
+  auto* wrap = rtxui::ComponentInternals::Root(*app)->QuerySelector(".wrap");
   REQUIRE(table != nullptr);
   REQUIRE(wrap != nullptr);
 
@@ -2180,8 +2203,8 @@ TEST_CASE("Layout: height/min-height/max-height are honored on a table",
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 10, 20);
-    auto* table = app->Root()->QuerySelector("table");
-    auto* cell = app->Root()->QuerySelector("td");
+    auto* table = rtxui::ComponentInternals::Root(*app)->QuerySelector("table");
+    auto* cell = rtxui::ComponentInternals::Root(*app)->QuerySelector("td");
     REQUIRE(table != nullptr);
     REQUIRE(cell != nullptr);
     CHECK(table->layout_height() == 10);
@@ -2200,7 +2223,7 @@ TEST_CASE("Layout: height/min-height/max-height are honored on a table",
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 10, 20);
-    auto* table = app->Root()->QuerySelector("table");
+    auto* table = rtxui::ComponentInternals::Root(*app)->QuerySelector("table");
     REQUIRE(table != nullptr);
     CHECK(table->layout_height() == 10);
   }
@@ -2219,7 +2242,7 @@ TEST_CASE("Layout: height/min-height/max-height are honored on a table",
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 10, 20);
-    auto* table = app->Root()->QuerySelector("table");
+    auto* table = rtxui::ComponentInternals::Root(*app)->QuerySelector("table");
     REQUIRE(table != nullptr);
     CHECK(table->layout_height() == 2);
   }
@@ -2237,7 +2260,7 @@ TEST_CASE("Layout: <br> forces a line break in inline flow", "[layout][br]") {
   auto app = Ref<BrTest>::New();
   auto texture = RenderComponent(app, 10, 3);
 
-  auto* div = app->Root()->QuerySelector("div");
+  auto* div = rtxui::ComponentInternals::Root(*app)->QuerySelector("div");
   REQUIRE(div != nullptr);
   CHECK(div->layout_height() == 3);
 
@@ -2265,7 +2288,7 @@ TEST_CASE("Layout: box-sizing", "[layout][box-sizing]") {
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 20, 5);
-    auto* box = app->Root()->QuerySelector(".box");
+    auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector(".box");
     REQUIRE(box != nullptr);
     CHECK(box->layout_width() == 10);
   }
@@ -2288,7 +2311,7 @@ TEST_CASE("Layout: box-sizing", "[layout][box-sizing]") {
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 20, 5);
-    auto* box = app->Root()->QuerySelector(".box");
+    auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector(".box");
     REQUIRE(box != nullptr);
     // 10 content + 3 padding-left + 1 border-left + 1 border-right.
     CHECK(box->layout_width() == 15);
@@ -2314,7 +2337,7 @@ TEST_CASE("Layout: box-sizing", "[layout][box-sizing]") {
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 20, 5);
-    auto* box = app->Root()->QuerySelector(".box");
+    auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector(".box");
     REQUIRE(box != nullptr);
     // 10 content (min-width floor, wider than the 3-cell parent) + 2
     // padding-left + 1 + 1 border.
@@ -2341,7 +2364,7 @@ TEST_CASE("Layout: box-sizing", "[layout][box-sizing]") {
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 20, 5);
-    auto* item = app->Root()->QuerySelector(".item");
+    auto* item = rtxui::ComponentInternals::Root(*app)->QuerySelector(".item");
     REQUIRE(item != nullptr);
     // 5 content + 2 padding-left + 1 + 1 border.
     CHECK(item->layout_width() == 9);
@@ -2366,7 +2389,7 @@ TEST_CASE("Layout: min-width is enforced on an inline-block",
   };
   auto app = Ref<T>::New();
   RenderComponent(app, 20, 5);
-  auto* box = app->Root()->QuerySelector(".box");
+  auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector(".box");
   REQUIRE(box != nullptr);
   CHECK(box->layout_width() == 10);
 }
@@ -2414,9 +2437,10 @@ TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
   };
 
   auto app = Ref<FixedNotWrappedTest>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
-  auto layout_box = LayoutTreeBuilder::Build(app->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*app));
   REQUIRE(layout_box != nullptr);
 
   LayoutConstraints constraints;
@@ -2458,12 +2482,14 @@ TEST_CASE("Layout: Fixed element not wrapped in anonymous inline box",
   CHECK(found_fixed_direct);
 
   // Verify position stays correct after scrolling and re-layout.
-  auto* container_el = app->Root()->QuerySelector("#container");
+  auto* container_el =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#container");
   REQUIRE(container_el != nullptr);
   container_el->set_scroll_y(3);
 
   // Re-build layout tree and re-run layout.
-  auto layout_box2 = LayoutTreeBuilder::Build(app->Root());
+  auto layout_box2 =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*app));
   auto fragment2 = RunLayout({layout_box2.get()}, constraints);
   REQUIRE(fragment2 != nullptr);
 
@@ -3101,14 +3127,14 @@ TEST_CASE("Layout: min-width/max-width are enforced on a grid container",
   {
     auto app = Ref<T>::New();
     RenderComponent(app, 3, 5);
-    auto* box = app->Root()->QuerySelector(".box");
+    auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector(".box");
     REQUIRE(box != nullptr);
     CHECK(box->layout_width() == 10);
   }
   {
     auto app = Ref<T>::New();
     RenderComponent(app, 20, 5);
-    auto* box = app->Root()->QuerySelector(".box");
+    auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector(".box");
     REQUIRE(box != nullptr);
     CHECK(box->layout_width() == 15);
   }
@@ -3356,16 +3382,18 @@ TEST_CASE("Layout: position sticky pushing calendar test",
   };
 
   auto c = Ref<TestStickyDemo>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto* scrollable_element = c->Root()->QuerySelector(".scroll-window");
+  auto* scrollable_element =
+      rtxui::ComponentInternals::Root(*c)->QuerySelector(".scroll-window");
   REQUIRE(scrollable_element != nullptr);
 
   // 1. scroll_y = 0
   {
     scrollable_element->set_scroll_y(0);
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
@@ -3390,7 +3418,8 @@ TEST_CASE("Layout: position sticky pushing calendar test",
   // 2. scroll_y = 1
   {
     scrollable_element->set_scroll_y(1);
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
@@ -3415,7 +3444,8 @@ TEST_CASE("Layout: position sticky pushing calendar test",
   // 3. scroll_y = 2
   {
     scrollable_element->set_scroll_y(2);
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
@@ -3440,7 +3470,8 @@ TEST_CASE("Layout: position sticky pushing calendar test",
   // 4. scroll_y = 3
   {
     scrollable_element->set_scroll_y(3);
-    auto layout_box = LayoutTreeBuilder::Build(c->Root());
+    auto layout_box =
+        LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
@@ -3483,10 +3514,11 @@ TEST_CASE("Layout: InlineFlow respects height and min-height",
   };
 
   auto c = Ref<TestInlineHeight>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   REQUIRE(layout_box != nullptr);
 
   LayoutConstraints constraints;
@@ -3495,7 +3527,8 @@ TEST_CASE("Layout: InlineFlow respects height and min-height",
   auto fragment = RunLayout({layout_box.get()}, constraints);
   REQUIRE(fragment != nullptr);
 
-  auto* inline_box_el = c->Root()->QuerySelector(".inline-box");
+  auto* inline_box_el =
+      rtxui::ComponentInternals::Root(*c)->QuerySelector(".inline-box");
   REQUIRE(inline_box_el != nullptr);
   CHECK(inline_box_el->layout_height() == 3);
   CHECK(inline_box_el->layout_width() == 10);
@@ -3530,10 +3563,11 @@ TEST_CASE("Layout: Absolute position centering via margin auto",
   };
 
   auto c = Ref<TestAbsoluteCentering>::New();
-  c->Mount();
+  rtxui::ComponentInternals::Mount(*c);
   c->Digest();
 
-  auto layout_box = LayoutTreeBuilder::Build(c->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   REQUIRE(layout_box != nullptr);
 
   LayoutConstraints constraints;
@@ -3545,7 +3579,7 @@ TEST_CASE("Layout: Absolute position centering via margin auto",
   Texture texture(40, 20);
   Paint(fragment, texture);
 
-  auto* child_el = c->Root()->QuerySelector(".child");
+  auto* child_el = rtxui::ComponentInternals::Root(*c)->QuerySelector(".child");
   REQUIRE(child_el != nullptr);
   CHECK(child_el->absolute_x() == 15);
   CHECK(child_el->absolute_y() == 8);
@@ -4125,8 +4159,10 @@ TEST_CASE("Layout: flex item with auto width shrinks to its block children",
   auto container = Ref<ShrinkToFitTest>::New();
   auto texture = RenderComponent(container, 10, 3);
 
-  auto* side_el = container->Root()->QuerySelector(".side");
-  auto* main_el = container->Root()->QuerySelector(".main");
+  auto* side_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".side");
+  auto* main_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".main");
   REQUIRE(side_el != nullptr);
   REQUIRE(main_el != nullptr);
   CHECK(side_el->layout_width() == 1);
@@ -4210,7 +4246,7 @@ TEST_CASE(
   };
   auto app = Ref<T>::New();
   RenderComponent(app, 40, 5);
-  auto* ib = app->Root()->QuerySelector(".ib");
+  auto* ib = rtxui::ComponentInternals::Root(*app)->QuerySelector(".ib");
   REQUIRE(ib != nullptr);
 
   CHECK(ib->layout_width() == 3);
@@ -4238,7 +4274,7 @@ TEST_CASE(
   };
   auto app = Ref<T>::New();
   RenderComponent(app, 40, 5);
-  auto* grid = app->Root()->QuerySelector(".grid");
+  auto* grid = rtxui::ComponentInternals::Root(*app)->QuerySelector(".grid");
   REQUIRE(grid != nullptr);
 
   // max-width clamps the box's own reported size...
@@ -4273,7 +4309,7 @@ TEST_CASE(
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 40, 5);
-    auto* grid = app->Root()->QuerySelector(".grid");
+    auto* grid = rtxui::ComponentInternals::Root(*app)->QuerySelector(".grid");
     REQUIRE(grid != nullptr);
     CHECK(grid->layout_width() == 5);
     // The overflow must still be reachable via scroll_width (session #3's
@@ -4295,7 +4331,7 @@ TEST_CASE(
     };
     auto app = Ref<T>::New();
     RenderComponent(app, 40, 5);
-    auto* grid = app->Root()->QuerySelector(".grid");
+    auto* grid = rtxui::ComponentInternals::Root(*app)->QuerySelector(".grid");
     REQUIRE(grid != nullptr);
     CHECK(grid->layout_width() == 30);
   }
@@ -4328,8 +4364,8 @@ TEST_CASE(
   };
   auto app = Ref<T>::New();
   RenderComponent(app, 40, 5);
-  auto* wrap = app->Root()->QuerySelector(".wrap");
-  auto* ib = app->Root()->QuerySelector(".ib");
+  auto* wrap = rtxui::ComponentInternals::Root(*app)->QuerySelector(".wrap");
+  auto* ib = rtxui::ComponentInternals::Root(*app)->QuerySelector(".ib");
   REQUIRE(wrap != nullptr);
   REQUIRE(ib != nullptr);
 
@@ -4358,7 +4394,7 @@ TEST_CASE(
   };
   auto app = Ref<T>::New();
   auto texture = RenderComponent(app, 20, 3);
-  auto* bq = app->Root()->QuerySelector("blockquote");
+  auto* bq = rtxui::ComponentInternals::Root(*app)->QuerySelector("blockquote");
   REQUIRE(bq != nullptr);
 
   CHECK(bq->layout_width() > 0);
@@ -4538,7 +4574,8 @@ TEST_CASE("Layout: an auto-sized absolute box shrinks to fit its content",
   auto container = Ref<ShrinkToFitAbs>::New();
   auto texture = RenderComponent(container, 10, 5);
 
-  auto* abs_el = container->Root()->QuerySelector(".abs");
+  auto* abs_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".abs");
   REQUIRE(abs_el != nullptr);
   CHECK(abs_el->layout_width() == 1);
   CHECK(abs_el->layout_height() == 1);
@@ -4587,12 +4624,14 @@ TEST_CASE("Layout: an absolute box pinned to both edges stretches between them",
   auto container = Ref<StretchAbs>::New();
   auto texture = RenderComponent(container, 10, 5);
 
-  auto* fill_el = container->Root()->QuerySelector(".fill");
+  auto* fill_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".fill");
   REQUIRE(fill_el != nullptr);
   CHECK(fill_el->layout_width() == 8);
   CHECK(fill_el->layout_height() == 4);
 
-  auto* centered_el = container->Root()->QuerySelector(".centered");
+  auto* centered_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".centered");
   REQUIRE(centered_el != nullptr);
   CHECK(centered_el->layout_width() == 2);
 

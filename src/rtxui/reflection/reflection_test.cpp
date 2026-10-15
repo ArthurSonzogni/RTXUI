@@ -3,8 +3,8 @@
 // the LICENSE file.
 #include <catch2/catch_test_macros.hpp>
 
-#include "rtxui/component.hpp"
 #include "rtxui/internal/class_name.hpp"
+#include "rtxui/internal/convert.hpp"
 
 namespace {
 class A {};
@@ -28,30 +28,30 @@ TEST_CASE("ClassName", "[reflection]") {
 TEST_CASE("Reflection Float Serialization", "[reflection]") {
   SECTION("Float to_string") {
     float f1 = 0.7f;
-    REQUIRE(rtxui::reflection::to_string(f1) == "0.7");
+    REQUIRE(rtxui::internal::to_string(f1) == "0.7");
 
     float f2 = 0.0f;
-    REQUIRE(rtxui::reflection::to_string(f2) == "0");
+    REQUIRE(rtxui::internal::to_string(f2) == "0");
 
     double d1 = 123.456;
-    REQUIRE(rtxui::reflection::to_string(d1) == "123.456");
+    REQUIRE(rtxui::internal::to_string(d1) == "123.456");
   }
 
   SECTION("Float from_string") {
     float f1 = 0.0f;
-    rtxui::reflection::from_string("0.7", f1);
+    rtxui::internal::from_string("0.7", f1);
     REQUIRE(f1 == 0.7f);
 
     float f2 = -1.0f;
-    rtxui::reflection::from_string("0", f2);
+    rtxui::internal::from_string("0", f2);
     REQUIRE(f2 == 0.0f);
 
     double d1 = 0.0;
-    rtxui::reflection::from_string("  123.456  ", d1);
+    rtxui::internal::from_string("  123.456  ", d1);
     REQUIRE(d1 == 123.456);
 
     float f3 = 5.0f;
-    rtxui::reflection::from_string("invalid", f3);
+    rtxui::internal::from_string("invalid", f3);
     REQUIRE(f3 == 0.0f);
   }
 }

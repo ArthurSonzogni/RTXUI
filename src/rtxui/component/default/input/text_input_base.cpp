@@ -701,7 +701,7 @@ int TextInputBase::ClickToCursorPos(Element* root,
 bool TextInputBase::OnEventShared(ComponentBase* self,
                                   Event event,
                                   bool is_multiline) {
-  auto* root = self->Root();
+  auto* root = ComponentInternals::Root(*self);
   if (disabled) {
     return false;
   }
@@ -1654,7 +1654,7 @@ bool TextInputBase::OnEventShared(ComponentBase* self,
 }
 
 bool TextInputBase::DigestShared(ComponentBase* self) {
-  auto* root = self->Root();
+  auto* root = ComponentInternals::Root(*self);
   if (root) {
     root->set_disabled(disabled);
     root->set_read_only(readonly);

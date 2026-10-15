@@ -13,6 +13,7 @@
 #include "rtxui/base/clock.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -48,19 +49,22 @@ class PseudoVarTestComponent : public rtxui::Component<PseudoVarTestComponent> {
 TEST_CASE("Custom properties in pseudo-class rules",
           "[component][css][var][pseudo]") {
   auto container = rtxui::Ref<PseudoVarTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* box = container->Root()->QuerySelector("#box");
+  auto* box =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   CHECK(box->base_style.background_color.value_or(Color()) ==
         Color::RGB(1, 2, 3));
 
   box->set_hovered(true);
-  container->ResolveTargetStyles(rtxui::time::GetTimeMs() + 200.0);
+  rtxui::ComponentInternals::ResolveTargetStyles(
+      *container, rtxui::time::GetTimeMs() + 200.0);
   CHECK(box->style.background_color.value_or(Color()) == Color::RGB(7, 8, 9));
 
   box->set_hovered(false);
-  container->ResolveTargetStyles(rtxui::time::GetTimeMs() + 400.0);
+  rtxui::ComponentInternals::ResolveTargetStyles(
+      *container, rtxui::time::GetTimeMs() + 400.0);
   CHECK(box->style.background_color.value_or(Color()) == Color::RGB(1, 2, 3));
 }
 
@@ -94,7 +98,7 @@ TEST_CASE("CSS Child and Descendant Combinator Matching", "[component][css]") {
   device->TriggerResize(80, 24);
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
 
-  auto* root_div = app->Root();
+  auto* root_div = rtxui::ComponentInternals::Root(*app);
   REQUIRE(root_div != nullptr);
 
   auto* direct_span = root_div->QuerySelector("#direct");
@@ -155,7 +159,7 @@ TEST_CASE("CSS Sibling Combinators and Structural Pseudo-classes",
   device->TriggerResize(80, 24);
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
 
-  auto* root_div = app->Root();
+  auto* root_div = rtxui::ComponentInternals::Root(*app);
   REQUIRE(root_div != nullptr);
 
   auto* child1 = root_div->QuerySelector("#child1");
@@ -229,7 +233,7 @@ TEST_CASE("Structural pseudo-classes: only-child, empty, nth-last-child",
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   device->TriggerResize(80, 24);
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
-  auto* root = app->Root();
+  auto* root = rtxui::ComponentInternals::Root(*app);
   REQUIRE(root != nullptr);
 
   auto at = [&](const char* sel) {
@@ -311,8 +315,8 @@ TEST_CASE("No selector matches text", "[component][css][selector]") {
   // CSS never does. A text node given position: absolute that way crashed
   // layout.
   auto app = rtxui::Ref<TextSelectorApp>::New();
-  app->Mount();
-  auto* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   CHECK(box->style.margin.left == 2);
   int texts = 0;
@@ -328,10 +332,10 @@ TEST_CASE("No selector matches text", "[component][css][selector]") {
 
 TEST_CASE("The :not() selector", "[component][css][selector]") {
   auto app = rtxui::Ref<NotSelectorApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -387,10 +391,10 @@ class NotWithPseudoApp : public rtxui::Component<NotWithPseudoApp> {
 
 TEST_CASE("A pseudo-class inside :not()", "[component][css][selector]") {
   auto app = rtxui::Ref<NotWithPseudoApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -462,10 +466,10 @@ TEST_CASE("Nested :not() is bounded", "[component][css][selector]") {
       NestedNot(500, ".x") + " { margin-top: 9; }" +    //
       "</style>";
   app->view = app->source;
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -526,10 +530,10 @@ class NotListApp : public rtxui::Component<NotListApp> {
 
 TEST_CASE("A selector list inside :not()", "[component][css][selector]") {
   auto app = rtxui::Ref<NotListApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -603,10 +607,10 @@ class AnPlusBApp : public rtxui::Component<AnPlusBApp> {
 
 TEST_CASE("An+B arguments to :nth-child()", "[component][css][selector]") {
   auto app = rtxui::Ref<AnPlusBApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -680,10 +684,10 @@ class UnknownPseudoApp : public rtxui::Component<UnknownPseudoApp> {
 TEST_CASE("An unrecognized pseudo-class matches nothing",
           "[component][css][selector]") {
   auto app = rtxui::Ref<UnknownPseudoApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -740,10 +744,10 @@ class OfTypeSelectorApp : public rtxui::Component<OfTypeSelectorApp> {
 TEST_CASE("The -of-type structural pseudo-classes",
           "[component][css][selector]") {
   auto app = rtxui::Ref<OfTypeSelectorApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -816,10 +820,10 @@ class HasSelectorApp : public rtxui::Component<HasSelectorApp> {
 
 TEST_CASE("The :has() selector", "[component][css][selector]") {
   auto app = rtxui::Ref<HasSelectorApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -908,8 +912,8 @@ class HasForm : public rtxui::Component<HasForm> {
 TEST_CASE("A :has() rule sees only its own component's elements",
           "[component][css][selector]") {
   auto app = rtxui::Ref<HasForm>::New();
-  app->Mount();
-  auto* other = app->Root()->QuerySelector(".other");
+  rtxui::ComponentInternals::Mount(*app);
+  auto* other = rtxui::ComponentInternals::Root(*app)->QuerySelector(".other");
   REQUIRE(other != nullptr);
   // The .invalid inside <HasField> is that component's own.
   CHECK(other->style.padding.left == 0);
@@ -924,20 +928,20 @@ TEST_CASE("A :has() rule follows its elements projected into a component",
   screen.Draw();
 
   auto form_padding = [&] {
-    auto* form = app->Root()->QuerySelector(".form");
+    auto* form = rtxui::ComponentInternals::Root(*app)->QuerySelector(".form");
     REQUIRE(form != nullptr);
     return form->style.padding.left;
   };
   auto invalid_count = [&] {
     int count = 0;
-    app->Root()->Visit([&](rtxui::Element& e) {
+    rtxui::ComponentInternals::Root(*app)->Visit([&](rtxui::Element& e) {
       count += std::ranges::count(e.classes(), std::string("invalid"));
     });
     return count;
   };
   CHECK(form_padding() == 4);
-  auto* reveal =
-      ComponentAs<HasReveal>(app->Root()->QuerySelector("HasReveal"));
+  auto* reveal = ComponentAs<HasReveal>(
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("HasReveal"));
   REQUIRE(reveal != nullptr);
 
   rtxui::PostTask([&] { reveal->shown = false; });
@@ -980,11 +984,12 @@ class WrittenTags : public rtxui::Component<WrittenTags> {
 TEST_CASE("A selector names a tag as the template wrote it",
           "[component][css][selector]") {
   auto app = rtxui::Ref<WrittenTags>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   // Not by class name: AliasedCounter is <my-counter> here, tab_pane is
   // <tab-pane>.
-  auto* counter = app->Root()->QuerySelector("my-counter");
-  auto* pane = app->Root()->QuerySelector("tab-pane");
+  auto* counter =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("my-counter");
+  auto* pane = rtxui::ComponentInternals::Root(*app)->QuerySelector("tab-pane");
   REQUIRE(counter != nullptr);
   REQUIRE(pane != nullptr);
   CHECK(counter->style.padding.left == 1);
@@ -1018,7 +1023,7 @@ TEST_CASE("The :focus-within selector", "[component][css][selector]") {
   screen.Draw();
 
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -1072,9 +1077,9 @@ class IsWhereApp : public rtxui::Component<IsWhereApp> {
 
 TEST_CASE("The :is() and :where() selectors", "[component][css][selector]") {
   auto app = rtxui::Ref<IsWhereApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -1124,8 +1129,8 @@ class IsTwiceApp : public rtxui::Component<IsTwiceApp> {
 TEST_CASE("An element matching two entries of one :is() takes the rule once",
           "[component][css][selector]") {
   auto app = rtxui::Ref<IsTwiceApp>::New();
-  app->Mount();
-  auto* both = app->Root()->QuerySelector("#both");
+  rtxui::ComponentInternals::Mount(*app);
+  auto* both = rtxui::ComponentInternals::Root(*app)->QuerySelector("#both");
   REQUIRE(both != nullptr);
   REQUIRE(both->style.background_color);
   CHECK(both->style.background_color->r == 127);
@@ -1193,17 +1198,18 @@ TEST_CASE("Pseudo-classes follow what they test after the first render",
   auto app = rtxui::Ref<PseudoUpdatesApp>::New();
   rtxui::HeadlessScreen screen(app, 40, 10);
   auto margin = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e->style.margin.left;
   };
   auto list_margins = [&] {
     std::vector<int> margins;
-    app->Root()->QuerySelector("#list")->Visit([&](rtxui::Element& e) {
-      if (!e.is_text() && e.tag() == "span") {
-        margins.push_back(e.style.margin.left);
-      }
-    });
+    rtxui::ComponentInternals::Root(*app)->QuerySelector("#list")->Visit(
+        [&](rtxui::Element& e) {
+          if (!e.is_text() && e.tag() == "span") {
+            margins.push_back(e.style.margin.left);
+          }
+        });
     return margins;
   };
 
@@ -1246,7 +1252,7 @@ TEST_CASE("The :focus-visible selector", "[component][css][selector]") {
   auto app = rtxui::Ref<FocusVisibleApp>::New();
   rtxui::HeadlessScreen screen(app, 40, 10);
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -1301,9 +1307,9 @@ class PseudoCascadeApp : public rtxui::Component<PseudoCascadeApp> {
 TEST_CASE("A pseudo-class rule takes its place in the cascade",
           "[component][css][selector]") {
   auto app = rtxui::Ref<PseudoCascadeApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -1344,7 +1350,7 @@ TEST_CASE("Removing an element restyles the siblings after it",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -1390,7 +1396,7 @@ TEST_CASE("Removing a keyed list item restyles the items after it",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };
@@ -1433,7 +1439,7 @@ TEST_CASE("Removing a list item restyles the items after it",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
   auto at = [&](const char* sel) {
-    auto* e = app->Root()->QuerySelector(sel);
+    auto* e = rtxui::ComponentInternals::Root(*app)->QuerySelector(sel);
     REQUIRE(e != nullptr);
     return e;
   };

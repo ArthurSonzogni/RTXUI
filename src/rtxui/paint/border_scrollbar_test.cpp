@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -41,8 +42,9 @@ std::string CheckGrid(const std::vector<std::string>& expected) {
 
 // Renders a component into a texture of a fixed size.
 Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
-  component->Mount();
-  auto layout_box = LayoutTreeBuilder::Build(component->Root());
+  rtxui::ComponentInternals::Mount(*component);
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*component));
 
   Texture texture(width, height);
   // Initialize with spaces
@@ -463,13 +465,15 @@ TEST_CASE("Paint: Anchor scrollbar thumb reaches bottom", "[paint][scroll]") {
   };
 
   auto app = Ref<ScrollableApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
-  auto* scroll_element = app->Root()->QuerySelector("#scrollable");
+  auto* scroll_element =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
 
   // Layout first to resolve scroll height
-  auto layout_box = LayoutTreeBuilder::Build(app->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*app));
   LayoutConstraints constraints;
   constraints.width = {20, MeasureMode::Exactly};
   constraints.height = {10, MeasureMode::Exactly};

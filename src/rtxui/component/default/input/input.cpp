@@ -7,6 +7,7 @@
 
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/event.hpp"
 
 namespace rtxui {
@@ -98,7 +99,7 @@ bool input::Digest() {
   DigestShared(this);
   bool changed = Component<input>::Digest();
   if (changed) {
-    KeepCursorVisible(Root(), false);
+    KeepCursorVisible(ComponentInternals::Root(*this), false);
   }
   return changed;
 }

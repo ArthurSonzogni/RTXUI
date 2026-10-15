@@ -8,6 +8,7 @@
 
 #include "catch2/catch_message.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -52,10 +53,10 @@ TEST_CASE("A virtual loop renders only the items around the view",
           "[component][virtual]") {
   auto app = Ref<Log>::New();
   HeadlessScreen screen(app, 20, 5);
-  Element* log = app->Root()->QuerySelector(".log");
+  Element* log = rtxui::ComponentInternals::Root(*app)->QuerySelector(".log");
   REQUIRE(log != nullptr);
   // Five rows show; as many again on either side are rendered, not 1000.
-  CHECK(CountRows(app->Root()) <= 12);
+  CHECK(CountRows(rtxui::ComponentInternals::Root(*app)) <= 12);
   // The spacers keep the scroll range the whole list's.
   CHECK(log->scroll_height() == 1000);
 }
@@ -67,12 +68,13 @@ TEST_CASE("Scrolling a virtual loop renders the items scrolled to",
   CHECK(screen.Text().starts_with("0: line 0\n"));
 
   // Jump far down, as a scrollbar drag would.
-  app->Root()->QuerySelector(".log")->set_scroll_y(500);
+  rtxui::ComponentInternals::Root(*app)->QuerySelector(".log")->set_scroll_y(
+      500);
   screen.Input("");
   CHECK(screen.Text() ==
         "500: line 500\n501: line 501\n502: line 502\n503: line 503\n"
         "504: line 504\n");
-  CHECK(CountRows(app->Root()) <= 16);
+  CHECK(CountRows(rtxui::ComponentInternals::Root(*app)) <= 16);
 
   // The mouse wheel, three notches down: scrolling by less than the overscan
   // shows rows already rendered.
@@ -81,7 +83,8 @@ TEST_CASE("Scrolling a virtual loop renders the items scrolled to",
   CHECK(screen.Text().starts_with("503: line 503\n"));
 
   // To the very end.
-  app->Root()->QuerySelector(".log")->set_scroll_y(995);
+  rtxui::ComponentInternals::Root(*app)->QuerySelector(".log")->set_scroll_y(
+      995);
   screen.Input("");
   CHECK(screen.Text().ends_with("999: line 999\n"));
 }
@@ -95,7 +98,8 @@ TEST_CASE("Wheeling past the rendered items renders more",
     notches += "\x1b[<65;3;3M";
   }
   screen.Input(notches);
-  const int top = app->Root()->QuerySelector(".log")->scroll_y();
+  const int top =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".log")->scroll_y();
   CHECK(top > 15);  // Past the 5 + 5 rows rendered at first.
   CHECK(screen.Text().starts_with(std::to_string(top) + ": line " +
                                   std::to_string(top) + "\n"));
@@ -141,14 +145,14 @@ TEST_CASE("Focus stays on its item when a virtual loop's window moves",
   auto app = Ref<Focusable>::New();
   HeadlessScreen screen(app, 20, 5);
   screen.Input("\t\t\t\t");  // The fourth row.
-  CHECK(FocusedText(app->Root()) == "line 3");
+  CHECK(FocusedText(rtxui::ComponentInternals::Root(*app)) == "line 3");
   // Seven notches down: the window moves, and the rows shift in the DOM.
   std::string notches;
   for (int i = 0; i < 7; ++i) {
     notches += "\x1b[<65;3;3M";
   }
   screen.Input(notches);
-  CHECK(FocusedText(app->Root()) == "line 3");
+  CHECK(FocusedText(rtxui::ComponentInternals::Root(*app)) == "line 3");
 }
 
 class Tall : public Component<Tall> {
@@ -172,7 +176,7 @@ TEST_CASE("item-height sets how tall each virtual item is",
           "[component][virtual]") {
   auto app = Ref<Tall>::New();
   HeadlessScreen screen(app, 10, 4);
-  Element* list = app->Root()->QuerySelector(".list");
+  Element* list = rtxui::ComponentInternals::Root(*app)->QuerySelector(".list");
   REQUIRE(list != nullptr);
   CHECK(list->scroll_height() == 16);
   list->set_scroll_y(12);

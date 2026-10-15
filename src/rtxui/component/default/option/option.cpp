@@ -54,7 +54,7 @@ std::string_view option::Setup() {
 }
 
 bool option::OnEvent(Event event) {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root || disabled) {
     return false;
   }
@@ -90,7 +90,7 @@ bool option::OnEvent(Event event) {
 }
 
 bool option::Digest() {
-  SyncDisabled(Root(), disabled);
+  SyncDisabled(ComponentInternals::Root(*this), disabled);
   return Component<option>::Digest();
 }
 

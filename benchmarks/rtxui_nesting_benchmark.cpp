@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "benchmark_common.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
@@ -78,7 +79,8 @@ Sample Measure(int depth, const char* style, int leaf_items) {
   std::vector<double> times_us;
   for (int i = 0; i < kFrames; ++i) {
     // What is measured is laying the tree out, not reusing the last layout.
-    app->Root()->Visit([](Element& element) { element.InvalidateLayout(); });
+    rtxui::ComponentInternals::Root(*app)->Visit(
+        [](Element& element) { element.InvalidateLayout(); });
     ResetLayoutRunCount();
     auto t0 = Clock::now();
     screen.Draw();

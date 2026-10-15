@@ -8,10 +8,10 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/testing/component_as.hpp"
@@ -50,7 +50,8 @@ TEST_CASE("Details and Summary Components", "[component][details]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* details_el = container->Root()->QuerySelector("details");
+  auto* details_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("details");
   REQUIRE(details_el != nullptr);
   auto* details_ptr = ComponentAs<rtxui::details>(details_el);
   REQUIRE(details_ptr != nullptr);
@@ -79,11 +80,14 @@ TEST_CASE("Details and Summary Components", "[component][details]") {
   CHECK(container->open == false);
 
   // 4. Toggle via Keyboard Event on focused summary-line
-  auto* summary_line_el = details_ptr->Root()->QuerySelector(".summary-line");
+  auto* summary_line_el = rtxui::ComponentInternals::Root(*details_ptr)
+                              ->QuerySelector(".summary-line");
   REQUIRE(summary_line_el != nullptr);
 
   // Reset focus
-  details_ptr->Root()->Visit([](rtxui::Element& el) { el.set_focused(false); });
+  rtxui::ComponentInternals::Root(*details_ptr)->Visit([](rtxui::Element& el) {
+    el.set_focused(false);
+  });
   summary_line_el->set_focused(true);
 
   // Dispatch return key event
@@ -128,7 +132,8 @@ TEST_CASE("Details Component Default Summary", "[component][details]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* details_el = container->Root()->QuerySelector("details");
+  auto* details_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("details");
   REQUIRE(details_el != nullptr);
   auto* details_ptr = ComponentAs<rtxui::details>(details_el);
   REQUIRE(details_ptr != nullptr);
@@ -137,7 +142,8 @@ TEST_CASE("Details Component Default Summary", "[component][details]") {
   // "Details". It used to be an imperatively-added TextElement parked inside
   // the summary slot; it is now declared in the template next to the slot, so
   // assert what the user sees rather than where the node lives.
-  auto* summary_line = container->Root()->QuerySelector(".summary-line");
+  auto* summary_line = rtxui::ComponentInternals::Root(*container)
+                           ->QuerySelector(".summary-line");
   REQUIRE(summary_line != nullptr);
   std::string label;
   summary_line->Visit([&](rtxui::Element& e) {
@@ -156,7 +162,8 @@ TEST_CASE(
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* details_el = container->Root()->QuerySelector("details");
+  auto* details_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("details");
   REQUIRE(details_el != nullptr);
 
   auto* container_el = details_el->QuerySelector(".details-container");

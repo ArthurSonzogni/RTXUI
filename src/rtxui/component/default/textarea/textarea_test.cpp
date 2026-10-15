@@ -11,6 +11,7 @@
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/input/text_input_base.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
@@ -44,7 +45,8 @@ TEST_CASE("Textarea Click Does Not Resize", "[component][textarea]") {
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
 
   int initial_width = ta_el->layout_width();
@@ -91,7 +93,8 @@ TEST_CASE("Textarea Click While Scrolled Targets The Visible Line",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -146,7 +149,8 @@ TEST_CASE("Textarea Click Accounts For The Line-Number Gutter's Width",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -198,7 +202,8 @@ TEST_CASE("Textarea Scroll And Click Account For Wrapped (Multi-Row) Lines",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -273,7 +278,8 @@ TEST_CASE("Textarea Click Maps Correctly On A Word-Wrapped Row",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -330,7 +336,8 @@ TEST_CASE("Textarea Multi-Click Line and Paragraph Selection",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -472,7 +479,8 @@ TEST_CASE(
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -514,7 +522,8 @@ TEST_CASE("Textarea ComputeRowStarts correctly wraps past the second line",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -545,9 +554,10 @@ TEST_CASE("Textarea ComputeRowStarts correctly wraps past the second line",
 TEST_CASE("Textarea Component Readonly Blocks Enter And Tab Indent",
           "[component][textarea][readonly]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -572,9 +582,10 @@ TEST_CASE("Textarea Component Readonly Blocks Enter And Tab Indent",
 TEST_CASE("Textarea Component Disabled Blocks All Interaction",
           "[component][textarea][disabled]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -593,9 +604,10 @@ TEST_CASE("Textarea Component Disabled Blocks All Interaction",
 TEST_CASE("Textarea Component Placeholder Supports Multiple Lines",
           "[component][textarea][placeholder]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -613,9 +625,10 @@ TEST_CASE("Textarea Component Placeholder Supports Multiple Lines",
 TEST_CASE("Textarea Component Maxlength Blocks Enter And Tab Past The Limit",
           "[component][textarea][maxlength]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -640,9 +653,10 @@ TEST_CASE("Textarea Component Maxlength Blocks Enter And Tab Past The Limit",
 TEST_CASE("Textarea Component Line Numbers Off By Default",
           "[component][textarea][linenumbers]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -655,9 +669,10 @@ TEST_CASE("Textarea Component Line Numbers Off By Default",
 TEST_CASE("Textarea Component Line Numbers Absolute Mode",
           "[component][textarea][linenumbers]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -682,9 +697,10 @@ TEST_CASE("Textarea Component Line Numbers Absolute Mode",
 TEST_CASE("Textarea Component Line Numbers Relative Mode",
           "[component][textarea][linenumbers]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -704,9 +720,10 @@ TEST_CASE("Textarea Component Line Numbers Relative Mode",
 TEST_CASE("Textarea Component Line Numbers Line Start Offset",
           "[component][textarea][linenumbers]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -725,9 +742,10 @@ TEST_CASE("Textarea Component Line Numbers Line Start Offset",
 TEST_CASE("Textarea Component Line Numbers Line End Blanks Beyond Range",
           "[component][textarea][linenumbers]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -747,9 +765,10 @@ TEST_CASE("Textarea Component Line Numbers Line End Blanks Beyond Range",
 TEST_CASE("Textarea Component Highlight Current Line Off By Default",
           "[component][textarea][highlight_current_line]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -761,9 +780,10 @@ TEST_CASE("Textarea Component Highlight Current Line Off By Default",
 TEST_CASE("Textarea Component Highlight Current Line Marks The Cursor's Line",
           "[component][textarea][highlight_current_line]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -791,9 +811,10 @@ TEST_CASE("Textarea Component Highlight Current Line Marks The Cursor's Line",
 TEST_CASE("Textarea Component Highlight Current Line Works With Line Numbers",
           "[component][textarea][highlight_current_line][linenumbers]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -825,7 +846,8 @@ TEST_CASE(
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -858,9 +880,10 @@ TEST_CASE(
     "Attributes For External ::part() Styling",
     "[component][textarea][part]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -891,9 +914,10 @@ TEST_CASE(
 TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
           "[component][textarea][undo]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -925,9 +949,10 @@ TEST_CASE("Textarea Component Enter And Tab Each Form Their Own Undo Step",
 
 TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -946,9 +971,10 @@ TEST_CASE("Textarea Component Basic Typing", "[component][textarea]") {
 
 TEST_CASE("Textarea Component Enter Key", "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
 
@@ -967,9 +993,10 @@ TEST_CASE("Textarea Component Enter Key", "[component][textarea]") {
 TEST_CASE("Textarea Component Enter Key Preserves Indentation",
           "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
 
@@ -1021,9 +1048,10 @@ TEST_CASE("Textarea Component Enter Key Preserves Indentation",
 TEST_CASE("Textarea Component Arrow Up/Down Navigation",
           "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
 
@@ -1060,9 +1088,10 @@ TEST_CASE("Textarea Component Arrow Up/Down Navigation",
 
 TEST_CASE("Textarea Component Home/End Keys", "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
 
@@ -1098,9 +1127,10 @@ TEST_CASE("Textarea Component Home/End Keys", "[component][textarea]") {
 
 TEST_CASE("Textarea Component Backspace/Delete", "[component][textarea]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
 
@@ -1127,9 +1157,10 @@ TEST_CASE(
   // style, for both a single-line selection and one spanning multiple
   // lines within the same <span>.
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
   ta_el->set_focused(true);
@@ -1143,7 +1174,8 @@ TEST_CASE(
   // (rather than guessing an offset from padding, which both is easy to
   // get wrong and would still read stale pre-paint coordinates).
   auto SelectionBackgroundLooksHighlighted = [&]() {
-    auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+    auto root_box = rtxui::LayoutTreeBuilder::Build(
+        rtxui::ComponentInternals::Root(*container));
     rtxui::LayoutConstraints viewport = {
         {40, rtxui::MeasureMode::Exactly},
         {10, rtxui::MeasureMode::Exactly},
@@ -1151,7 +1183,8 @@ TEST_CASE(
     auto root_fragment = rtxui::RunLayout({root_box.get()}, viewport);
     Texture texture(40, 10);
     rtxui::Paint(root_fragment, texture);
-    auto* selection_el = container->Root()->QuerySelector(".selection");
+    auto* selection_el = rtxui::ComponentInternals::Root(*container)
+                             ->QuerySelector(".selection");
     if (!selection_el) {
       return false;
     }
@@ -1190,7 +1223,8 @@ TEST_CASE("Textarea Click Layout Regression Test",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
 
   int initial_width = ta_el->layout_width();
@@ -1276,7 +1310,8 @@ TEST_CASE("Textarea Scrolling Regression Test",
   auto device = std::make_shared<rtxui::MockTerminalDevice>();
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
 
-  auto* ta_el = container->Root()->QuerySelector("SmallTextarea");
+  auto* ta_el = rtxui::ComponentInternals::Root(*container)
+                    ->QuerySelector("SmallTextarea");
   REQUIRE(ta_el != nullptr);
 
   auto* ta_ptr = ComponentAs<SmallTextarea>(ta_el);
@@ -1312,8 +1347,9 @@ TEST_CASE("Textarea Scrolling Regression Test",
 
 TEST_CASE("Textarea PageUp and PageDown", "[component][textarea][navigation]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  rtxui::ComponentInternals::Mount(*container);
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -1354,8 +1390,9 @@ TEST_CASE("Textarea PageUp and PageDown", "[component][textarea][navigation]") {
 TEST_CASE("Textarea Block Indent and Outdent",
           "[component][textarea][indent]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  rtxui::ComponentInternals::Mount(*container);
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -1401,8 +1438,9 @@ TEST_CASE("Textarea Block Indent and Outdent",
 TEST_CASE("Textarea Move Line Up and Down",
           "[component][textarea][move_line]") {
   auto container = rtxui::Ref<TextareaTestComponent>::New();
-  container->Mount();
-  auto* textarea_el = container->Root()->QuerySelector("textarea");
+  rtxui::ComponentInternals::Mount(*container);
+  auto* textarea_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(textarea_el != nullptr);
   auto* textarea_ptr = ComponentAs<rtxui::textarea>(textarea_el);
   REQUIRE(textarea_ptr != nullptr);
@@ -1455,7 +1493,8 @@ TEST_CASE("Textarea Indentation Uses Spaces And Mouse Click Matches",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("textarea");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("textarea");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<rtxui::textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);

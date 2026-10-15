@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
@@ -35,7 +36,8 @@ class Saver : public Component<Saver> {
 };
 
 bool ToastShown(Saver& app) {
-  const Element* box = app.Root()->QuerySelector(".toast");
+  const Element* box =
+      rtxui::ComponentInternals::Root(app)->QuerySelector(".toast");
   REQUIRE(box != nullptr);
   return !box->style.display_none;
 }
@@ -192,7 +194,8 @@ TEST_CASE("A closing toast slides out before it hides", "[component][toast]") {
   auto app = Ref<Placed>::New();
   TimelineScreen screen(app, 20, 4);
   screen.Advance(400);
-  const Element* box = app->Root()->QuerySelector(".toast");
+  const Element* box =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".toast");
   REQUIRE(box != nullptr);
 
   PostTask([&] { app->shown = false; });
@@ -247,7 +250,8 @@ TEST_CASE("A toast's closing animation can be replaced", "[component][toast]") {
   auto app = Ref<Faded>::New();
   TimelineScreen screen(app, 20, 4);
   const std::string open = screen.Advance(400);
-  const Element* box = app->Root()->QuerySelector(".toast");
+  const Element* box =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".toast");
   REQUIRE(box != nullptr);
 
   PostTask([&] { app->shown = false; });
@@ -286,7 +290,8 @@ TEST_CASE("A toast's opening and closing animations can both be replaced",
   screen.Advance(150);
   SetDiagnosticHandler(nullptr);
   CHECK(messages.empty());
-  const Element* box = app->Root()->QuerySelector(".toast");
+  const Element* box =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".toast");
   REQUIRE(box != nullptr);
   CHECK(box->style.opacity < 1.0f);
 }

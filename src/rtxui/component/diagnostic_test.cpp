@@ -10,6 +10,7 @@
 
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
@@ -204,7 +205,7 @@ TEST_CASE("A syntax error is a diagnostic that says where it is",
   std::vector<Diagnostic> seen;
   SetDiagnosticHandler([&](const Diagnostic& d) { seen.push_back(d); });
   auto app = Ref<BrokenStyle>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->rule = "color: red; }}";
   app->Digest();
   REQUIRE(seen.size() == 1);

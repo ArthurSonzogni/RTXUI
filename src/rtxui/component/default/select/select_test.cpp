@@ -14,6 +14,7 @@
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/option/option.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
@@ -47,22 +48,29 @@ TEST_CASE("Select and Option Components", "[component][select]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* select_el = container->Root()->QuerySelector("select");
+  auto* select_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("select");
   REQUIRE(select_el != nullptr);
   auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
 
   // Check initial state
-  std::cout << "DOM TREE:\n" << container->Root()->Print() << std::endl;
+  std::cout << "DOM TREE:\n"
+            << rtxui::ComponentInternals::Root(*container)->Print()
+            << std::endl;
   std::cout << "select_el absolute_x=" << select_el->absolute_x()
             << " absolute_y=" << select_el->absolute_y()
             << " width=" << select_el->layout_width()
             << " height=" << select_el->layout_height() << std::endl;
   std::cout << "select_ptr->Root() absolute_x="
-            << select_ptr->Root()->absolute_x()
-            << " absolute_y=" << select_ptr->Root()->absolute_y()
-            << " width=" << select_ptr->Root()->layout_width()
-            << " height=" << select_ptr->Root()->layout_height() << std::endl;
+            << rtxui::ComponentInternals::Root(*select_ptr)->absolute_x()
+            << " absolute_y="
+            << rtxui::ComponentInternals::Root(*select_ptr)->absolute_y()
+            << " width="
+            << rtxui::ComponentInternals::Root(*select_ptr)->layout_width()
+            << " height="
+            << rtxui::ComponentInternals::Root(*select_ptr)->layout_height()
+            << std::endl;
   CHECK(select_ptr->value == "light");
   CHECK(select_ptr->selected_label == "Light Theme");
   CHECK(select_ptr->is_open == false);
@@ -120,7 +128,8 @@ TEST_CASE("Select and Option Components", "[component][select]") {
 
   // Verify option click selection: click on "dark" option (index 0)
   // Let's find the "dark" option element
-  auto* dark_option_el = container->Root()->QuerySelector("option");
+  auto* dark_option_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("option");
   REQUIRE(dark_option_el != nullptr);
   auto* dark_option_ptr = ComponentAs<rtxui::option>(dark_option_el);
   REQUIRE(dark_option_ptr != nullptr);
@@ -166,7 +175,8 @@ TEST_CASE(
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* select_el = container->Root()->QuerySelector("select");
+  auto* select_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("select");
   auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
 
@@ -186,7 +196,8 @@ TEST_CASE(
   CHECK(select_ptr->hovered_index == 0);
 
   // Clicking the now-visible disabled option doesn't select it.
-  auto* b_option_el = container->Root()->QuerySelector("#opt-b");
+  auto* b_option_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#opt-b");
   REQUIRE(b_option_el != nullptr);
   Event::Mouse click_b;
   click_b.button = Event::Mouse::Button::Left;
@@ -239,9 +250,10 @@ TEST_CASE(
     "External ::part() Styling",
     "[component][select][part]") {
   auto container = rtxui::Ref<SelectTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* select_el = container->Root()->QuerySelector("select");
+  auto* select_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("select");
   REQUIRE(select_el != nullptr);
 
   auto* btn_el = select_el->QuerySelector(".select-btn");
@@ -275,7 +287,8 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* select_el = container->Root()->QuerySelector("select");
+  auto* select_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("select");
   REQUIRE(select_el != nullptr);
   auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
@@ -292,7 +305,8 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
   container->Digest();
   screen.Draw();
   std::cout << "TEST INFO: select_el pointer=" << select_el
-            << " select_ptr->Root()=" << select_ptr->Root()
+            << " rtxui::ComponentInternals::Root(*select_ptr)="
+            << rtxui::ComponentInternals::Root(*select_ptr)
             << " select_el->classes=";
   for (const auto& c : select_el->classes()) {
     std::cout << c << " ";
@@ -304,7 +318,8 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
   CHECK(select_el->base_style.z_index.value_or(0) == 1000);
 
   // Verify the absolute coordinates of the dropdown-list
-  auto* dropdown_el = container->Root()->QuerySelector(".dropdown-list");
+  auto* dropdown_el = rtxui::ComponentInternals::Root(*container)
+                          ->QuerySelector(".dropdown-list");
   REQUIRE(dropdown_el != nullptr);
   CHECK(dropdown_el->absolute_x() == select_el->absolute_x());
   CHECK(dropdown_el->absolute_y() ==
@@ -321,8 +336,9 @@ TEST_CASE("Select Component Positioning and Mouse Hover Alignment",
   CHECK(!opt0->base_style.background_color.has_value());
 
   // Verify options are hoverable by moving mouse
-  auto* dark_option_el = container->Root()->QuerySelector(
-      "option");  // first option is "dark" at index 0
+  auto* dark_option_el =
+      rtxui::ComponentInternals::Root(*container)
+          ->QuerySelector("option");  // first option is "dark" at index 0
   REQUIRE(dark_option_el != nullptr);
   int dark_x = dark_option_el->absolute_x();
   int dark_y = dark_option_el->absolute_y();
@@ -379,7 +395,8 @@ TEST_CASE("Select Component Z-index sibling overlap",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* select_el = container->Root()->QuerySelector("select");
+  auto* select_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("select");
   REQUIRE(select_el != nullptr);
   auto* select_ptr = ComponentAs<rtxui::select>(select_el);
   REQUIRE(select_ptr != nullptr);
@@ -428,7 +445,8 @@ TEST_CASE("Select Option Class Preservation", "[component][select][bug]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* opt_el = container->Root()->QuerySelector("option");
+  auto* opt_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("option");
   REQUIRE(opt_el != nullptr);
 
   bool has_custom =

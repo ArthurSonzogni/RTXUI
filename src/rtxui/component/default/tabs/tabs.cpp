@@ -42,11 +42,11 @@ void tabs::SelectTab(std::string index_str) {
     value = panes[idx].name;
     PropagateBinding("value", value);
 
-    auto* root = Root();
+    auto* root = ComponentInternals::Root(*this);
     if (root && root->Attributes().count("onchange")) {
       std::string onchange_cb = root->Attributes().at("onchange");
       if (auto* comp = GetAttributeOwnerComponent(root)) {
-        comp->RunCallback(onchange_cb);
+        ComponentInternals::RunCallback(*comp, onchange_cb);
       }
     }
   }
@@ -134,7 +134,7 @@ std::string_view tabs::Setup() {
 
 std::vector<TabPaneInfo> tabs::GetTabPanes() {
   std::vector<TabPaneInfo> panes;
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root) {
     return panes;
   }
@@ -158,7 +158,7 @@ std::vector<TabPaneInfo> tabs::GetTabPanes() {
 // The header buttons the template's <for> produced, in pane order.
 std::vector<Element*> tabs::HeaderButtons() {
   std::vector<Element*> buttons;
-  if (Element* root = Root()) {
+  if (Element* root = ComponentInternals::Root(*this)) {
     root->Visit([&](Element& element) {
       for (const std::string& name : element.classes()) {
         if (name == "tab-header-btn") {
@@ -171,7 +171,7 @@ std::vector<Element*> tabs::HeaderButtons() {
 }
 
 bool tabs::OnEvent(Event event) {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root) {
     return false;
   }

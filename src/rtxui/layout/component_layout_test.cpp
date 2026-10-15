@@ -9,6 +9,7 @@
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
@@ -43,8 +44,10 @@ TEST_CASE("A flex item that refuses to shrink is not overlapped",
   auto container = rtxui::Ref<FlexMinWidthComponent>::New();
   auto texture = RenderComponent(container, 16, 4);
 
-  auto* first = container->Root()->QuerySelector("#a");
-  auto* second = container->Root()->QuerySelector("#b");
+  auto* first =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#a");
+  auto* second =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#b");
   REQUIRE(first != nullptr);
   REQUIRE(second != nullptr);
 
@@ -202,7 +205,8 @@ TEST_CASE("Extreme sizes lay out without overflowing", "[component][limits]") {
 
   // Whatever the engine settles on, it must be a size rather than a wrapped
   // one: the failure this guards against produced INT_MIN.
-  auto* big = container->Root()->QuerySelector("#big");
+  auto* big =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#big");
   REQUIRE(big != nullptr);
   CHECK(big->layout_width() >= 0);
   CHECK(big->layout_width() <= 1000000);
@@ -254,9 +258,10 @@ class MarginAutoTestComponent
 TEST_CASE("Block layout max-width and margin auto centering",
           "[component][layout][margin][max-width]") {
   auto container = rtxui::Ref<MarginAutoTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  auto root_box = rtxui::LayoutTreeBuilder::Build(
+      rtxui::ComponentInternals::Root(*container));
   REQUIRE(root_box != nullptr);
 
   rtxui::LayoutConstraints viewport = {
@@ -303,9 +308,10 @@ class MaxHeightTestComponent : public rtxui::Component<MaxHeightTestComponent> {
 TEST_CASE("Block layout max-height constraint",
           "[component][layout][max-height]") {
   auto container = rtxui::Ref<MaxHeightTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto root_box = rtxui::LayoutTreeBuilder::Build(container->Root());
+  auto root_box = rtxui::LayoutTreeBuilder::Build(
+      rtxui::ComponentInternals::Root(*container));
   REQUIRE(root_box != nullptr);
 
   rtxui::LayoutConstraints viewport = {
@@ -354,7 +360,8 @@ TEST_CASE("Inline span background-color is applied when painted",
 
   // Find which (x, y) cell that character lands on by re-deriving it from
   // the element's own layout position, since `rendered` embeds ANSI codes.
-  auto* span = container->Root()->QuerySelector(".hl");
+  auto* span =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".hl");
   REQUIRE(span != nullptr);
   int x = span->absolute_x();
   int y = span->absolute_y();

@@ -8,6 +8,7 @@
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
@@ -78,8 +79,8 @@ TEST_CASE("::before and ::after generate content", "[component][generated]") {
 TEST_CASE("A ::before box takes its own style, and inherits the rest",
           "[component][generated]") {
   auto app = Ref<Decorated>::New();
-  app->Mount();
-  Element* done = app->Root()->QuerySelector(".done");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* done = rtxui::ComponentInternals::Root(*app)->QuerySelector(".done");
   REQUIRE(done != nullptr);
   Element* before = done->GeneratedBox(/*after=*/false);
   REQUIRE(before != nullptr);
@@ -88,7 +89,9 @@ TEST_CASE("A ::before box takes its own style, and inherits the rest",
   CHECK(before->Parent() == done);
   // It is not part of the DOM: selectors and walks never meet it.
   CHECK(done->GeneratedBox(/*after=*/true) == nullptr);
-  CHECK(app->Root()->QuerySelector(".hidden")->GeneratedBox(false) == nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*app)
+            ->QuerySelector(".hidden")
+            ->GeneratedBox(false) == nullptr);
 }
 
 class Stateful : public Component<Stateful> {

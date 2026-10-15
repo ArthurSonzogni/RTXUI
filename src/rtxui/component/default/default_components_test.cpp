@@ -71,16 +71,24 @@ class SemanticTestComponent : public rtxui::Component<SemanticTestComponent> {
 TEST_CASE("Semantic Tags and Kbd Component Rendering",
           "[component][semantic][kbd]") {
   auto container = rtxui::Ref<SemanticTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  CHECK(container->Root()->QuerySelector("header") != nullptr);
-  CHECK(container->Root()->QuerySelector("footer") != nullptr);
-  CHECK(container->Root()->QuerySelector("main") != nullptr);
-  CHECK(container->Root()->QuerySelector("nav") != nullptr);
-  CHECK(container->Root()->QuerySelector("aside") != nullptr);
-  CHECK(container->Root()->QuerySelector("section") != nullptr);
-  CHECK(container->Root()->QuerySelector("article") != nullptr);
-  auto* kbd_el = container->Root()->QuerySelector("kbd");
+  CHECK(rtxui::ComponentInternals::Root(*container)->QuerySelector("header") !=
+        nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*container)->QuerySelector("footer") !=
+        nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*container)->QuerySelector("main") !=
+        nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*container)->QuerySelector("nav") !=
+        nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*container)->QuerySelector("aside") !=
+        nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*container)->QuerySelector("section") !=
+        nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*container)->QuerySelector("article") !=
+        nullptr);
+  auto* kbd_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("kbd");
   REQUIRE(kbd_el != nullptr);
   auto* kbd_comp = dynamic_cast<const rtxui::kbd*>(kbd_el->component());
   REQUIRE(kbd_comp != nullptr);
@@ -98,10 +106,11 @@ class ProgressTestComponent : public rtxui::Component<ProgressTestComponent> {
 
 TEST_CASE("Progress Component Basic Rendering", "[component][progress]") {
   auto container = rtxui::Ref<ProgressTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   container->Digest();
 
-  auto* progress_el = container->Root()->QuerySelector("progress");
+  auto* progress_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("progress");
   REQUIRE(progress_el != nullptr);
   auto* progress_ptr = ComponentAs<rtxui::progress>(progress_el);
   REQUIRE(progress_ptr != nullptr);
@@ -127,10 +136,11 @@ TEST_CASE(
     "External ::part() Styling",
     "[component][progress][part]") {
   auto container = rtxui::Ref<ProgressTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   container->Digest();
 
-  auto* progress_el = container->Root()->QuerySelector("progress");
+  auto* progress_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("progress");
   REQUIRE(progress_el != nullptr);
 
   auto* filled_el = progress_el->QuerySelector(".filled");
@@ -158,7 +168,8 @@ TEST_CASE("Horizontal Rule Component", "[component][hr]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* hr_el = container->Root()->QuerySelector("hr");
+  auto* hr_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("hr");
   REQUIRE(hr_el != nullptr);
   auto* hr_ptr = ComponentAs<rtxui::hr>(hr_el);
   REQUIRE(hr_ptr != nullptr);
@@ -201,12 +212,13 @@ TEST_CASE("Bold and Strong Components", "[component][b][strong]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* b_el = container->Root()->QuerySelector("b");
+  auto* b_el = rtxui::ComponentInternals::Root(*container)->QuerySelector("b");
   REQUIRE(b_el != nullptr);
   auto* b_ptr = ComponentAs<rtxui::b>(b_el);
   REQUIRE(b_ptr != nullptr);
 
-  auto* strong_el = container->Root()->QuerySelector("strong");
+  auto* strong_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("strong");
   REQUIRE(strong_el != nullptr);
   auto* strong_ptr = ComponentAs<rtxui::strong>(strong_el);
   REQUIRE(strong_ptr != nullptr);
@@ -286,10 +298,10 @@ class ListTestComponent : public rtxui::Component<ListTestComponent> {
 
 TEST_CASE("List Rendering - ul, ol, li, and CSS", "[component][list]") {
   auto comp = rtxui::Ref<ListTestComponent>::New();
-  comp->Mount();
+  rtxui::ComponentInternals::Mount(*comp);
   comp->Digest();
 
-  auto* root = comp->Root();
+  auto* root = rtxui::ComponentInternals::Root(*comp);
   REQUIRE(root != nullptr);
 
   // 1. Unordered list with default bullet (disc -> "• ")
@@ -383,10 +395,10 @@ TEST_CASE("Heading Tags Rendering h1-h6", "[component]") {
   };
 
   auto app = rtxui::Ref<HeadingsTestComponent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->Digest();
 
-  auto* root = app->Root();
+  auto* root = rtxui::ComponentInternals::Root(*app);
   REQUIRE(root != nullptr);
 
   auto* h1_el = root->QuerySelector("#heading1");
@@ -433,27 +445,30 @@ TEST_CASE("Underline, Strikethrough, and Code Components",
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* u_el = container->Root()->QuerySelector("u");
+  auto* u_el = rtxui::ComponentInternals::Root(*container)->QuerySelector("u");
   REQUIRE(u_el != nullptr);
   auto* u_ptr = ComponentAs<rtxui::u>(u_el);
   REQUIRE(u_ptr != nullptr);
 
-  auto* s_el = container->Root()->QuerySelector("s");
+  auto* s_el = rtxui::ComponentInternals::Root(*container)->QuerySelector("s");
   REQUIRE(s_el != nullptr);
   auto* s_ptr = ComponentAs<rtxui::s>(s_el);
   REQUIRE(s_ptr != nullptr);
 
-  auto* strike_el = container->Root()->QuerySelector("strike");
+  auto* strike_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("strike");
   REQUIRE(strike_el != nullptr);
   auto* strike_ptr = ComponentAs<rtxui::strike>(strike_el);
   REQUIRE(strike_ptr != nullptr);
 
-  auto* del_el = container->Root()->QuerySelector("del");
+  auto* del_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("del");
   REQUIRE(del_el != nullptr);
   auto* del_ptr = ComponentAs<rtxui::del>(del_el);
   REQUIRE(del_ptr != nullptr);
 
-  auto* code_el = container->Root()->QuerySelector("code");
+  auto* code_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("code");
   REQUIRE(code_el != nullptr);
   auto* code_ptr = ComponentAs<rtxui::code>(code_el);
   REQUIRE(code_ptr != nullptr);
@@ -480,9 +495,9 @@ struct AnchorTestComponent : public rtxui::Component<AnchorTestComponent> {
 TEST_CASE("Anchor component registration and default styling",
           "[component][a]") {
   auto container = rtxui::Ref<AnchorTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* a_el = container->Root()->QuerySelector("a");
+  auto* a_el = rtxui::ComponentInternals::Root(*container)->QuerySelector("a");
   REQUIRE(a_el != nullptr);
   auto* a_ptr = ComponentAs<rtxui::a>(a_el);
   REQUIRE(a_ptr != nullptr);
@@ -529,7 +544,8 @@ TEST_CASE("Fieldset and Legend Components", "[component][fieldset]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* fieldset_el = container->Root()->QuerySelector("fieldset");
+  auto* fieldset_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("fieldset");
   REQUIRE(fieldset_el != nullptr);
   auto* fieldset_ptr = ComponentAs<rtxui::fieldset>(fieldset_el);
   REQUIRE(fieldset_ptr != nullptr);
@@ -552,7 +568,8 @@ TEST_CASE(
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* fieldset_el = container->Root()->QuerySelector("fieldset");
+  auto* fieldset_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("fieldset");
   REQUIRE(fieldset_el != nullptr);
 
   auto* wrapper_el = fieldset_el->QuerySelector(".fieldset-wrapper");
@@ -601,8 +618,10 @@ TEST_CASE("Radio Component Grouping", "[component][radio]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* radioA_el = container->Root()->QuerySelector("#radioA");
-  auto* radioB_el = container->Root()->QuerySelector("#radioB");
+  auto* radioA_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#radioA");
+  auto* radioB_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#radioB");
   REQUIRE(radioA_el != nullptr);
   REQUIRE(radioB_el != nullptr);
 
@@ -649,7 +668,8 @@ TEST_CASE(
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* radioA_el = container->Root()->QuerySelector("#radioA");
+  auto* radioA_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#radioA");
   REQUIRE(radioA_el != nullptr);
 
   auto* mark_el = radioA_el->QuerySelector(".radio-mark");

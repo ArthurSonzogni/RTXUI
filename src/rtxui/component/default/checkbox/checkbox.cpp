@@ -56,7 +56,7 @@ std::string_view checkbox::Setup() {
 }
 
 bool checkbox::OnEvent(Event event) {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root || disabled) {
     return false;
   }
@@ -103,7 +103,7 @@ bool checkbox::OnEvent(Event event) {
     if (root->Attributes().count("onchange")) {
       std::string onchange_cb = root->Attributes().at("onchange");
       if (auto* comp = GetAttributeOwnerComponent(root)) {
-        comp->RunCallback(onchange_cb);
+        ComponentInternals::RunCallback(*comp, onchange_cb);
       }
     }
     return true;
@@ -114,8 +114,8 @@ bool checkbox::OnEvent(Event event) {
 
 bool checkbox::Digest() {
   checked_char = checked ? "☑" : "☐";
-  SyncDisabled(Root(), disabled);
-  SyncChecked(Root(), checked);
+  SyncDisabled(ComponentInternals::Root(*this), disabled);
+  SyncChecked(ComponentInternals::Root(*this), checked);
   return Component<checkbox>::Digest();
 }
 

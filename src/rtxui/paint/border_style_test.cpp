@@ -8,6 +8,7 @@
 #include "catch2/catch_message.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -66,8 +67,9 @@ std::string CheckGrid(const std::vector<std::string>& expected) {
 
 // Renders a component into a texture of a fixed size.
 Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
-  component->Mount();
-  auto layout_box = LayoutTreeBuilder::Build(component->Root());
+  rtxui::ComponentInternals::Mount(*component);
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*component));
 
   Texture texture(width, height);
   // Initialize with spaces
@@ -365,9 +367,10 @@ TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
   };
 
   auto app = Ref<ScrollDemoApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
-  auto* scroll_element = app->Root()->QuerySelector("#scrollable");
+  auto* scroll_element =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
 
   // Content = 6 items + 2 padding = 8. Height = 4. Max scroll = 8 - 4 = 4.
@@ -415,9 +418,10 @@ TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
   };
 
   auto app = Ref<ScrollDemoApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
-  auto* scroll_element = app->Root()->QuerySelector("#scrollable");
+  auto* scroll_element =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
 
   // Content width is 20. Container width is 10. Max scroll = 20 - 10 = 10.

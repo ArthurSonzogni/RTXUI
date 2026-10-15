@@ -8,8 +8,8 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
@@ -45,8 +45,10 @@ TEST_CASE("Tooltip Component Interaction", "[component][tooltip]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* tt_el = container->Root()->QuerySelector("#tt");
-  auto* trigger_el = container->Root()->QuerySelector("#trigger");
+  auto* tt_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#tt");
+  auto* trigger_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#trigger");
   REQUIRE(tt_el != nullptr);
   REQUIRE(trigger_el != nullptr);
 
@@ -81,7 +83,8 @@ TEST_CASE(
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* tt_el = container->Root()->QuerySelector("#tt");
+  auto* tt_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#tt");
   REQUIRE(tt_el != nullptr);
 
   auto* container_el = tt_el->QuerySelector(".tooltip-container");
@@ -107,7 +110,8 @@ TEST_CASE("Tooltip Placement Styles", "[component][tooltip][alignment]") {
   auto container = rtxui::Ref<TooltipTestComponent>::New();
   rtxui::Screen screen(container);
 
-  auto* tt_el = container->Root()->QuerySelector("#tt");
+  auto* tt_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#tt");
   REQUIRE(tt_el != nullptr);
 
   tt_el->set_hovered(true);
@@ -117,7 +121,8 @@ TEST_CASE("Tooltip Placement Styles", "[component][tooltip][alignment]") {
     container->Digest();
     screen.Draw();
 
-    auto* popup = container->Root()->QuerySelector(".tooltip-popup");
+    auto* popup = rtxui::ComponentInternals::Root(*container)
+                      ->QuerySelector(".tooltip-popup");
     REQUIRE(popup != nullptr);
     verify_fn(popup->style);
   };

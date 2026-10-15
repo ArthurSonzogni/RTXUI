@@ -45,17 +45,17 @@ class ImportantTestComponent : public rtxui::Component<ImportantTestComponent> {
 TEST_CASE("CSS !important wins over later rules and inline styles",
           "[component][css][important]") {
   auto container = rtxui::Ref<ImportantTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
   // The #id rule is applied after the class rule, but the class rule is
   // !important and must win.
-  auto* a = container->Root()->QuerySelector("#a");
+  auto* a = rtxui::ComponentInternals::Root(*container)->QuerySelector("#a");
   REQUIRE(a != nullptr);
   CHECK(a->base_style.foreground_color.value_or(Color()) ==
         Color::RGB(1, 1, 1));
 
   // An !important rule also beats a normal inline style.
-  auto* b = container->Root()->QuerySelector("#b");
+  auto* b = rtxui::ComponentInternals::Root(*container)->QuerySelector("#b");
   REQUIRE(b != nullptr);
   CHECK(b->base_style.foreground_color.value_or(Color()) ==
         Color::RGB(1, 1, 1));
@@ -95,9 +95,9 @@ class VarTestComponent : public rtxui::Component<VarTestComponent> {
 TEST_CASE("CSS custom properties resolve through the DOM tree",
           "[component][css][var]") {
   auto container = rtxui::Ref<VarTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* root = container->Root();
+  auto* root = rtxui::ComponentInternals::Root(*container);
 
   auto* direct = root->QuerySelector("#direct");
   REQUIRE(direct != nullptr);
@@ -157,12 +157,12 @@ TEST_CASE("Components sharing a stylesheet keep their own styles",
   auto first = rtxui::Ref<SharedSheetA>::New();
   auto other = rtxui::Ref<SharedSheetB>::New();
   auto second = rtxui::Ref<SharedSheetA>::New();
-  first->Mount();
-  other->Mount();
-  second->Mount();
+  rtxui::ComponentInternals::Mount(*first);
+  rtxui::ComponentInternals::Mount(*other);
+  rtxui::ComponentInternals::Mount(*second);
 
   auto padding = [](auto& app) {
-    auto* element = app->Root()->QuerySelector("#x");
+    auto* element = rtxui::ComponentInternals::Root(*app)->QuerySelector("#x");
     REQUIRE(element != nullptr);
     return element->style.padding.left;
   };
@@ -181,11 +181,11 @@ TEST_CASE("Components sharing a stylesheet keep their own styles",
     // its last user, and the next instance builds it again from scratch.
     {
       auto only = rtxui::Ref<SharedSheetB>::New();
-      only->Mount();
+      rtxui::ComponentInternals::Mount(*only);
       CHECK(padding(only) == 9);
     }
     auto later = rtxui::Ref<SharedSheetB>::New();
-    later->Mount();
+    rtxui::ComponentInternals::Mount(*later);
     CHECK(padding(later) == 9);
   }
 }
@@ -214,10 +214,11 @@ class TwoStyleBlocksComponent
 
 TEST_CASE("Every style block in a component applies", "[component][css]") {
   auto app = rtxui::Ref<TwoStyleBlocksComponent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto at = [&](const char* selector) {
-    auto* element = app->Root()->QuerySelector(selector);
+    auto* element =
+        rtxui::ComponentInternals::Root(*app)->QuerySelector(selector);
     REQUIRE(element != nullptr);
     return element;
   };
@@ -248,8 +249,8 @@ TEST_CASE("CSS cascade orders id above class", "[component][style][cascade]") {
     };
     auto probe = rtxui::Ref<Probe>::New();
     probe->view = view_text;
-    probe->Mount();
-    auto* el = probe->Root()->QuerySelector("#t");
+    rtxui::ComponentInternals::Mount(*probe);
+    auto* el = rtxui::ComponentInternals::Root(*probe)->QuerySelector("#t");
     REQUIRE(el != nullptr);
     REQUIRE(el->style.foreground_color.has_value());
     return el->style.foreground_color.value();
@@ -327,8 +328,8 @@ TEST_CASE("CSS cascade scores compound and descendant selectors",
     };
     auto probe = rtxui::Ref<Probe>::New();
     probe->view = view_text;
-    probe->Mount();
-    auto* el = probe->Root()->QuerySelector("#t");
+    rtxui::ComponentInternals::Mount(*probe);
+    auto* el = rtxui::ComponentInternals::Root(*probe)->QuerySelector("#t");
     REQUIRE(el != nullptr);
     REQUIRE(el->style.foreground_color.has_value());
     return el->style.foreground_color.value();
@@ -407,8 +408,8 @@ TEST_CASE("CSS cascade resolves !important above specificity",
     };
     auto probe = rtxui::Ref<Probe>::New();
     probe->view = view_text;
-    probe->Mount();
-    auto* el = probe->Root()->QuerySelector("#t");
+    rtxui::ComponentInternals::Mount(*probe);
+    auto* el = rtxui::ComponentInternals::Root(*probe)->QuerySelector("#t");
     REQUIRE(el != nullptr);
     REQUIRE(el->style.foreground_color.has_value());
     return el->style.foreground_color.value();
@@ -465,8 +466,8 @@ TEST_CASE("CSS selector and specificity conformance",
     };
     auto probe = rtxui::Ref<Probe>::New();
     probe->view = view_text;
-    probe->Mount();
-    auto* el = probe->Root()->QuerySelector("#t");
+    rtxui::ComponentInternals::Mount(*probe);
+    auto* el = rtxui::ComponentInternals::Root(*probe)->QuerySelector("#t");
     REQUIRE(el != nullptr);
     return el->style.foreground_color;
   };
@@ -581,7 +582,7 @@ TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)",
   device->TriggerResize(80, 24);
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
 
-  auto* button = app->Root()->QuerySelector("button");
+  auto* button = rtxui::ComponentInternals::Root(*app)->QuerySelector("button");
   REQUIRE(button != nullptr);
 
   // Initially is_active is false, so it doesn't have the active class
@@ -590,10 +591,11 @@ TEST_CASE("CSS Tag and Class Selector Combination (e.g., button.active)",
 
   // Now activate it
   app->is_active = true;
-  app->Render();
+  rtxui::ComponentInternals::Render(*app);
 
   // Resolve styles at a later time to finish any potential transition
-  app->ResolveTargetStyles(rtxui::time::GetTimeMs() + 200.0);
+  rtxui::ComponentInternals::ResolveTargetStyles(
+      *app, rtxui::time::GetTimeMs() + 200.0);
 
   // It should now have the blue background color because of button.active
   REQUIRE(button->style.background_color.value() == Color::RGB(0, 0, 255));
@@ -622,16 +624,17 @@ TEST_CASE("Style caching regression test for multi-component resolution",
     )html";
 
     ParentComp() {
-      RegisterState("child_class", &child_class);
+      Bind(child_class);
       Import<ChildComp>("child");
       Import<rtxui::div>();
     }
   };
 
   auto parent = rtxui::Ref<ParentComp>::New();
-  parent->Mount();
+  rtxui::ComponentInternals::Mount(*parent);
 
-  auto* child_el = parent->Root()->QuerySelector("#mychild");
+  auto* child_el =
+      rtxui::ComponentInternals::Root(*parent)->QuerySelector("#mychild");
   REQUIRE(child_el != nullptr);
 
   // Both parent style (.test-child) and child style (self) should be applied.
@@ -642,7 +645,8 @@ TEST_CASE("Style caching regression test for multi-component resolution",
   parent->child_class = "";
   bool digested = parent->Digest();
 
-  child_el = parent->Root()->QuerySelector("#mychild");
+  child_el =
+      rtxui::ComponentInternals::Root(*parent)->QuerySelector("#mychild");
   REQUIRE(child_el != nullptr);
 
   // Child style (self) should still apply, but parent class style (.test-child)
@@ -675,16 +679,17 @@ class StyledParentTestComponent
 TEST_CASE("Child component style is preserved when parent stylesheet styles it",
           "[component][style][regression]") {
   auto container = rtxui::Ref<StyledParentTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* input_el = container->Root()->QuerySelector("#test-input");
+  auto* input_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#test-input");
   REQUIRE(input_el != nullptr);
 
   // Focus the input
   input_el->set_focused(true);
 
   // Initial render
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
   // Verify that the parent's base style is applied
   CHECK(input_el->base_style.background_color.value() ==
@@ -711,9 +716,10 @@ TEST_CASE("Component.InlineStyleParsingRegression", "[component][style]") {
   };
 
   auto component = rtxui::Ref<InlineStyleComp>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
-  auto* target = component->Root()->QuerySelector("#target");
+  auto* target =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#target");
   REQUIRE(target != nullptr);
   CHECK(target->style.display_inside == DisplayInside::Flex);
   CHECK(target->style.width.value == 15);
@@ -736,7 +742,7 @@ TEST_CASE("Invalid interpolated CSS does not crash the process",
   };
 
   auto component = rtxui::Ref<DynamicStyleComp>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
   // A bound value producing malformed CSS must be reported, not fatal: this
   // string is re-parsed by Render() on every Digest(), unlike the top-level
@@ -744,7 +750,8 @@ TEST_CASE("Invalid interpolated CSS does not crash the process",
   component->rule = "not valid css {{{ ]]]";
   CHECK_NOTHROW(component->Digest());
 
-  auto* target = component->Root()->QuerySelector("#target");
+  auto* target =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#target");
   REQUIRE(target != nullptr);
 }
 
@@ -770,7 +777,7 @@ TEST_CASE("A CSS syntax error reaches the diagnostic handler",
   });
 
   auto component = rtxui::Ref<DynamicStyleComp>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
   component->rule = "not valid css {{{ ]]]";
   component->Digest();
 
@@ -803,17 +810,18 @@ TEST_CASE("Setting classes restyles without an explicit invalidation",
   // classes silently never applied; <tabs> did that, twice. SetClasses()
   // drops the memo, and marks the ancestors so the pass reaches the element.
   auto app = rtxui::Ref<ClassMutationApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
-  auto* box = app->Root()->QuerySelector("#box");
+  auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   CHECK(box->style.foreground_color == Color::RGB(1, 1, 1));
 
   box->SetClasses({"lit"});
-  CHECK(app->Root()->subtree_needs_style_resolve);
+  CHECK(rtxui::ComponentInternals::Root(*app)->subtree_needs_style_resolve);
   rtxui::ComponentInternals::ResolveStyles(*app);
   CHECK(box->style.foreground_color == Color::RGB(2, 2, 2));
-  CHECK_FALSE(app->Root()->subtree_needs_style_resolve);
+  CHECK_FALSE(
+      rtxui::ComponentInternals::Root(*app)->subtree_needs_style_resolve);
 
   // Removing it again must take the style away, not just add on top: the
   // element has to be resolved from scratch, not incrementally.
@@ -840,7 +848,8 @@ class LateElementApp : public rtxui::Component<LateElementApp> {
   bool Digest() override {
     const bool changed = rtxui::Component<LateElementApp>::Digest();
     if (add_late && !added_) {
-      auto* host = Root()->QuerySelector("#host");
+      auto* host =
+          rtxui::ComponentInternals::Root(*this)->QuerySelector("#host");
       REQUIRE(host != nullptr);
       auto element = rtxui::Ref<rtxui::Element>::New(this);
       element->SetClasses({"late"});
@@ -865,7 +874,7 @@ TEST_CASE("An element created during Digest() still gets its base style",
 
   app->add_late = true;
   app->Digest();
-  auto* late = app->Root()->QuerySelector(".late");
+  auto* late = rtxui::ComponentInternals::Root(*app)->QuerySelector(".late");
   REQUIRE(late != nullptr);
 
   // Digest() alone cannot have styled it: the base pass already ran.
@@ -925,15 +934,15 @@ TEST_CASE("A nested component keeps its host's rules when it re-renders",
   // host had aimed at it: in example/conditional.cpp the tab buttons lost
   // their borders and collapsed from three rows to one on the first click.
   auto app = rtxui::Ref<HostStyledButtonsApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   auto border_of = [&](const char* id) {
-    auto* element = app->Root()->QuerySelector(id);
+    auto* element = rtxui::ComponentInternals::Root(*app)->QuerySelector(id);
     REQUIRE(element != nullptr);
     return element->style.border.left;
   };
   auto padding_of = [&](const char* id) {
-    auto* element = app->Root()->QuerySelector(id);
+    auto* element = rtxui::ComponentInternals::Root(*app)->QuerySelector(id);
     REQUIRE(element != nullptr);
     return element->style.padding.left;
   };
@@ -1010,25 +1019,26 @@ TEST_CASE("A bare `self` rule does not stop a stylesheet reaching descendants",
   // silently lose every style.
   SECTION("descendant and tag rules still apply") {
     auto app = rtxui::Ref<SelfAndDescendantRulesApp>::New();
-    app->Mount();
+    rtxui::ComponentInternals::Mount(*app);
     auto at = [&](const char* id) {
-      auto* element = app->Root()->QuerySelector(id);
+      auto* element = rtxui::ComponentInternals::Root(*app)->QuerySelector(id);
       REQUIRE(element != nullptr);
       return element;
     };
     // `self` names the component's own root, not the template's outermost tag.
-    CHECK(app->Root()->style.padding.left == 3);
+    CHECK(rtxui::ComponentInternals::Root(*app)->style.padding.left == 3);
     CHECK(at("#child")->style.margin.left == 4);
     CHECK(at("#grandchild")->style.padding.left == 5);
   }
 
   SECTION("a component that really is self-only still styles its own root") {
     auto app = rtxui::Ref<OnlySelfRulesApp>::New();
-    app->Mount();
-    CHECK(app->Root()->style.padding.left == 7);
+    rtxui::ComponentInternals::Mount(*app);
+    CHECK(rtxui::ComponentInternals::Root(*app)->style.padding.left == 7);
     // Descendants are untouched, which is the whole point: no rule can reach
     // them, which is what makes skipping the walk sound.
-    auto* child = app->Root()->QuerySelector("#child");
+    auto* child =
+        rtxui::ComponentInternals::Root(*app)->QuerySelector("#child");
     REQUIRE(child != nullptr);
     CHECK(child->style.padding.left == 0);
   }
@@ -1105,16 +1115,18 @@ TEST_CASE("A ::part() rule survives the inner component re-rendering itself",
   // still get the ::part() rule of the host two components up, not only the
   // rules of PartLabel and of the component directly using it.
   auto app = rtxui::Ref<PartLabelHost>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   auto label = [&] {
-    auto* element = app->Root()->QuerySelector("span");
+    auto* element =
+        rtxui::ComponentInternals::Root(*app)->QuerySelector("span");
     REQUIRE(element != nullptr);
     return element;
   };
   CHECK(label()->style.padding.left == 3);
 
-  ComponentAs<PartLabel>(app->Root()->QuerySelector("PartLabel"))->kind =
-      "after";
+  ComponentAs<PartLabel>(
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("PartLabel"))
+      ->kind = "after";
   bool changed = app->Digest();
   CHECK(changed);
   CHECK(label()->classes() == std::vector<std::string>{"after"});
@@ -1162,9 +1174,10 @@ TEST_CASE("One Digest() resolves the styles of the tree once",
   // the whole tree, would be work thrown away: the walk covers each element
   // once per pass, base and pseudo-class.
   auto app = rtxui::Ref<CountedParent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   int elements = 0;
-  app->Root()->Visit([&](rtxui::Element&) { ++elements; });
+  rtxui::ComponentInternals::Root(*app)->Visit(
+      [&](rtxui::Element&) { ++elements; });
 
   app->value = 1;
   rtxui::ResetStyleVisitCount();
@@ -1201,8 +1214,10 @@ TEST_CASE("A descendant rule follows a change of the ancestor it names",
   // Only the ancestor's class changes: the span itself is untouched, but
   // `.on span` now matches it.
   auto app = rtxui::Ref<DescendantRuleApp>::New();
-  app->Mount();
-  auto leaf = [&] { return app->Root()->QuerySelector("#leaf"); };
+  rtxui::ComponentInternals::Mount(*app);
+  auto leaf = [&] {
+    return rtxui::ComponentInternals::Root(*app)->QuerySelector("#leaf");
+  };
   REQUIRE(leaf() != nullptr);
   CHECK(leaf()->style.padding.left == 0);
 
@@ -1247,8 +1262,10 @@ TEST_CASE("A sibling rule follows a change of the sibling it names",
   // Only the first div's class changes: the spans after it are untouched,
   // but `.on + span` and `.on ~ span` now match them.
   auto app = rtxui::Ref<SiblingRuleApp>::New();
-  app->Mount();
-  auto at = [&](const char* id) { return app->Root()->QuerySelector(id); };
+  rtxui::ComponentInternals::Mount(*app);
+  auto at = [&](const char* id) {
+    return rtxui::ComponentInternals::Root(*app)->QuerySelector(id);
+  };
   REQUIRE(at("#next") != nullptr);
   REQUIRE(at("#later") != nullptr);
   CHECK(at("#next")->style.padding.left == 0);
@@ -1299,8 +1316,8 @@ TEST_CASE("A class change transitions from the style on screen",
   // style. Its style must not jump to the new color: the transition starts
   // from the one on screen.
   auto app = rtxui::Ref<ClassTransitionApp>::New();
-  app->Mount();
-  auto* card = app->Root()->QuerySelector("#card");
+  rtxui::ComponentInternals::Mount(*app);
+  auto* card = rtxui::ComponentInternals::Root(*app)->QuerySelector("#card");
   REQUIRE(card != nullptr);
   CHECK(card->style.background_color == Color::RGB(32, 32, 32));
 
@@ -1317,19 +1334,19 @@ TEST_CASE("A component's :hover rule outranks the one nested inside it",
   // below the root. HoverCard's `button:hover` must still win: each component's
   // pseudo-class pass runs once, children before the components that use them.
   auto app = rtxui::Ref<HoverCardHost>::New();
-  app->Mount();
-  auto* btn = app->Root()->QuerySelector("#btn");
+  rtxui::ComponentInternals::Mount(*app);
+  auto* btn = rtxui::ComponentInternals::Root(*app)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
   const auto unhovered = btn->target_style.background_color;
   btn->set_hovered(true);
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
   CHECK(btn->target_style.background_color == Color::RGB(255, 0, 0));
 
   // The pass skips elements no pseudo-class rule matches, now or last time.
   // One that stops matching is not one of them: it gets its base style back.
   btn->set_hovered(false);
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
   CHECK(btn->target_style.background_color == unhovered);
 }
 
@@ -1365,8 +1382,8 @@ TEST_CASE("Playground button hover and active styling test",
   };
 
   auto app = rtxui::Ref<TestLivePreview>::New();
-  app->Mount();
-  auto* btn = app->Root()->QuerySelector("#btn");
+  rtxui::ComponentInternals::Mount(*app);
+  auto* btn = rtxui::ComponentInternals::Root(*app)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
   // Initial style
@@ -1374,7 +1391,7 @@ TEST_CASE("Playground button hover and active styling test",
 
   // Hover
   btn->set_hovered(true);
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
 
   // Check if red
   CHECK(btn->target_style.background_color == Color::RGB(255, 0, 0));
@@ -1405,10 +1422,10 @@ TEST_CASE("Playground button hover and active styling test",
         }
       </style>
   )");
-  btn = app->Root()->QuerySelector("#btn");
+  btn = rtxui::ComponentInternals::Root(*app)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   btn->set_hovered(true);
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
   CHECK(btn->target_style.background_color == Color::RGB(255, 0, 0));
   CHECK(btn->target_style.border_color_top == Color::RGB(255, 0, 0));
 }

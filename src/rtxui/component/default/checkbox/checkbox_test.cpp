@@ -10,6 +10,7 @@
 
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/layout/style.hpp"
@@ -36,9 +37,10 @@ class CheckboxTestComponent : public rtxui::Component<CheckboxTestComponent> {
 
 TEST_CASE("Checkbox Component Basic Interactions", "[component][checkbox]") {
   auto container = rtxui::Ref<CheckboxTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* cb_el = container->Root()->QuerySelector("checkbox");
+  auto* cb_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("checkbox");
   REQUIRE(cb_el != nullptr);
   auto* cb_ptr = ComponentAs<rtxui::checkbox>(cb_el);
   REQUIRE(cb_ptr != nullptr);
@@ -89,9 +91,10 @@ class CheckboxCheckedStyleComponent
 TEST_CASE("Checkbox Component :checked CSS Pseudo-Class",
           "[component][checkbox][checked]") {
   auto container = rtxui::Ref<CheckboxCheckedStyleComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* cb_el = container->Root()->QuerySelector("checkbox");
+  auto* cb_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("checkbox");
   REQUIRE(cb_el != nullptr);
   auto* cb_ptr = ComponentAs<rtxui::checkbox>(cb_el);
   REQUIRE(cb_ptr != nullptr);
@@ -116,9 +119,10 @@ TEST_CASE(
     "::part() Styling",
     "[component][checkbox][part]") {
   auto container = rtxui::Ref<CheckboxTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* cb_el = container->Root()->QuerySelector("checkbox");
+  auto* cb_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("checkbox");
   REQUIRE(cb_el != nullptr);
 
   auto* checkmark_el = cb_el->QuerySelector(".checkmark");

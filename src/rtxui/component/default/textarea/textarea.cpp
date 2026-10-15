@@ -13,6 +13,7 @@
 #include "rtxui/base/string.hpp"
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/input/text_input_base.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
@@ -226,7 +227,7 @@ bool textarea::Digest() {
   UpdateGutter();
   bool changed = Component<textarea>::Digest();
   if (changed) {
-    KeepCursorVisible(Root(), true);
+    KeepCursorVisible(ComponentInternals::Root(*this), true);
   }
   return changed;
 }
@@ -286,7 +287,7 @@ void textarea::UpdateGutter() {
 
   // Determine content width for visual row wrapping calculation.
   int content_width = 0;
-  if (Element* root = Root()) {
+  if (Element* root = ComponentInternals::Root(*this)) {
     if (Element* content_el = root->QuerySelector(".content")) {
       content_width = content_el->layout_width();
     }

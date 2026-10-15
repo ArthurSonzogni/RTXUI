@@ -85,14 +85,14 @@ std::string_view slider::Setup() {
 }
 
 bool slider::OnEvent(Event event) {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root || disabled) {
     return false;
   }
 
   bool is_vertical = (direction == "vertical");
   bool value_changed = false;
-  bool is_captured = (GetMouseCapturer() == this);
+  bool is_captured = (ComponentInternals::GetMouseCapturer() == this);
   bool was_captured = is_captured;
   // step is bindable and freely settable via the step="" attribute with no
   // validation; a step of 0 (or negative) would divide/modulo by zero below
@@ -207,7 +207,7 @@ bool slider::OnEvent(Event event) {
             if (root->Attributes().count("onchange")) {
               std::string onchange_cb = root->Attributes().at("onchange");
               if (auto* comp = GetAttributeOwnerComponent(root)) {
-                comp->RunCallback(onchange_cb);
+                ComponentInternals::RunCallback(*comp, onchange_cb);
               }
             }
             return true;
@@ -226,7 +226,7 @@ bool slider::OnEvent(Event event) {
     if (root->Attributes().count("onchange")) {
       std::string onchange_cb = root->Attributes().at("onchange");
       if (auto* comp = GetAttributeOwnerComponent(root)) {
-        comp->RunCallback(onchange_cb);
+        ComponentInternals::RunCallback(*comp, onchange_cb);
       }
     }
     return true;
@@ -240,7 +240,7 @@ bool slider::OnEvent(Event event) {
 }
 
 bool slider::Digest() {
-  SyncDisabled(Root(), disabled);
+  SyncDisabled(ComponentInternals::Root(*this), disabled);
   int track_size = std::max(2, width);
   int range = max - min;
   int pos = 0;

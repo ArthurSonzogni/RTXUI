@@ -115,9 +115,9 @@ jobs:
           };
           int main() {
             auto app = Ref<App>::New();
-            app->Mount();
+            HeadlessScreen screen(app, 30, 4);
+            screen.Input("\t\r");
             (void)app->QueryComponent("#nothing");
-            app->Bump();
             return app->count == 1 ? 0 : 1;
           }
           EOF
@@ -212,9 +212,9 @@ jobs:
           };
           int main() {
             auto app = Ref<App>::New();
-            app->Mount();
+            HeadlessScreen screen(app, 30, 4);
+            screen.Input("\t\r");
             (void)app->QueryComponent("#nothing");
-            app->Bump();
             return app->count == 1 ? 0 : 1;
           }
           EOF

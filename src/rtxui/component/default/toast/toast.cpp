@@ -12,6 +12,7 @@
 #include "rtxui/base/clock.hpp"
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/refcounted.hpp"
@@ -45,7 +46,7 @@ void toast::FinishClosing() {
 
 std::string toast::MirrorSlide(std::string_view interrupted_prefix,
                                double next_duration_ms) const {
-  const Element* box = Root()->QuerySelector(".toast");
+  const Element* box = ComponentInternals::Root(*this)->QuerySelector(".toast");
   if (!box) {
     return "";
   }
@@ -170,7 +171,8 @@ bool toast::Digest() {
       if (!self->closing_ || self->generation_ != generation) {
         return;
       }
-      const Element* box = self->Root()->QuerySelector(".toast");
+      const Element* box =
+          ComponentInternals::Root(*self)->QuerySelector(".toast");
       if (!box || !(box->HasPlayingAnimations(/*include_infinite=*/false) ||
                     box->HasEndedAnimations())) {
         self->FinishClosing();

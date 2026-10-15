@@ -8,6 +8,7 @@
 
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/style/style.hpp"
 
@@ -34,7 +35,7 @@ std::string_view hr::Setup() {
 }
 
 bool hr::Digest() {
-  if (auto* root = Root()) {
+  if (auto* root = ComponentInternals::Root(*this)) {
     // The rule spans the element, so its length is only known once layout has
     // run. Before the first layout, fall back to the terminal width: it is an
     // upper bound for the final length, and `overflow: hidden` trims the

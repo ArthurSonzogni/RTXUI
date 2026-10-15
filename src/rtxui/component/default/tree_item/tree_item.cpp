@@ -5,6 +5,7 @@
 
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/refcounted.hpp"
@@ -73,7 +74,7 @@ std::string_view tree_item::Setup() {
 }
 
 bool tree_item::HasChildren() {
-  const Ref<Element> slot = Slot("");
+  const Ref<Element> slot = ComponentInternals::Slot(*this, "");
   if (!slot) {
     return false;
   }
@@ -90,7 +91,7 @@ bool tree_item::OnEvent(Event event) {
   if (Component<tree_item>::OnEvent(event)) {
     return true;
   }
-  Element* root = Root();
+  Element* root = ComponentInternals::Root(*this);
   if (!root || !event.is<Event::Keyboard>()) {
     return false;
   }
@@ -120,7 +121,7 @@ bool tree_item::Digest() {
   const bool branch = HasChildren();
   arrow = !branch ? " " : open ? "▾" : "▸";
   children_class = open ? "open" : "closed";
-  const Element* root = Root();
+  const Element* root = ComponentInternals::Root(*this);
   const bool has_own_onclick =
       root && (root->GetAttribute("onclick") || root->GetAttribute("@click") ||
                root->GetAttribute("@click.left"));

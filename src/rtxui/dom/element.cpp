@@ -22,6 +22,7 @@
 #include "rtxui/base/clock.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/layout/style.hpp"
@@ -934,7 +935,7 @@ std::string Element::Print(int depth) const {
 
 std::string_view Element::tag() const {
   if (component_) {
-    return component_->WrittenTag();
+    return ComponentInternals::WrittenTag(*component_);
   }
   return tag_;
 }

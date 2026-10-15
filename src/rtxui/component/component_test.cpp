@@ -92,7 +92,7 @@ TEST_CASE("Tag", "[component]") {
 
 TEST_CASE("Mount", "[component]") {
   auto component = rtxui::Ref<HelloWorld>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
   const std::string expected = R"(
     <HelloWorld>
@@ -106,7 +106,8 @@ TEST_CASE("Mount", "[component]") {
     </HelloWorld>
   )";
 
-  REQUIRE(component->Root()->Print() == StripIndent(expected));
+  REQUIRE(rtxui::ComponentInternals::Root(*component)->Print() ==
+          StripIndent(expected));
 }
 
 class LateBinding : public rtxui::Component<LateBinding> {
@@ -118,8 +119,8 @@ class LateBinding : public rtxui::Component<LateBinding> {
 
 TEST_CASE("InitReflection binds before the first render", "[component]") {
   auto component = rtxui::Ref<LateBinding>::New();
-  component->Mount();
-  CHECK(component->Root()->Print() == StripIndent(R"(
+  rtxui::ComponentInternals::Mount(*component);
+  CHECK(rtxui::ComponentInternals::Root(*component)->Print() == StripIndent(R"(
     <LateBinding>
       <span>
         3
@@ -165,7 +166,7 @@ class MyPage : public rtxui::Component<MyPage> {
 
 TEST_CASE("Component with named slots", "[component]") {
   auto mypage = rtxui::Ref<MyPage>::New();
-  mypage->Mount();
+  rtxui::ComponentInternals::Mount(*mypage);
 
   const std::string expected = R"(
     <MyPage>
@@ -186,7 +187,8 @@ TEST_CASE("Component with named slots", "[component]") {
     </MyPage>
   )";
 
-  REQUIRE(mypage->Root()->Print() == StripIndent(expected));
+  REQUIRE(rtxui::ComponentInternals::Root(*mypage)->Print() ==
+          StripIndent(expected));
 }
 
 class Inverted : public rtxui::Component<Inverted> {
@@ -240,8 +242,9 @@ TEST_CASE("Import alias", "[component]") {
   )";
 
   auto inverted = rtxui::Ref<Inverted>::New();
-  inverted->Mount();
-  REQUIRE(inverted->Root()->Print() == StripIndent(expected));
+  rtxui::ComponentInternals::Mount(*inverted);
+  REQUIRE(rtxui::ComponentInternals::Root(*inverted)->Print() ==
+          StripIndent(expected));
 }
 
 class Counter : public rtxui::Component<Counter> {
@@ -266,19 +269,23 @@ class Counter : public rtxui::Component<Counter> {
 
 TEST_CASE("Transparent Reactivity", "[component]") {
   auto counter = rtxui::Ref<Counter>::New();
-  counter->Mount();
+  rtxui::ComponentInternals::Mount(*counter);
 
   REQUIRE(counter->count == 0);
-  REQUIRE(counter->Root()->Print().find("Count: 0") != std::string::npos);
-  REQUIRE(counter->Root()->Print().find("Double: 0") != std::string::npos);
+  REQUIRE(rtxui::ComponentInternals::Root(*counter)->Print().find("Count: 0") !=
+          std::string::npos);
+  REQUIRE(rtxui::ComponentInternals::Root(*counter)->Print().find(
+              "Double: 0") != std::string::npos);
 
   // Simulate an action
   counter->increment();
   counter->Digest();
 
   REQUIRE(counter->count == 1);
-  REQUIRE(counter->Root()->Print().find("Count: 1") != std::string::npos);
-  REQUIRE(counter->Root()->Print().find("Double: 2") != std::string::npos);
+  REQUIRE(rtxui::ComponentInternals::Root(*counter)->Print().find("Count: 1") !=
+          std::string::npos);
+  REQUIRE(rtxui::ComponentInternals::Root(*counter)->Print().find(
+              "Double: 2") != std::string::npos);
 }
 
 TEST_CASE("Bindings callback execution", "[component]") {
@@ -287,11 +294,12 @@ TEST_CASE("Bindings callback execution", "[component]") {
   counter->Import("increment", [raw_counter]() { raw_counter->increment(); });
 
   REQUIRE(counter->count == 0);
-  bool ran = counter->RunCallback("increment");
+  bool ran = rtxui::ComponentInternals::RunCallback(*counter, "increment");
   REQUIRE(ran == true);
   REQUIRE(counter->count == 1);
 
-  bool ran_nonexistent = counter->RunCallback("nonexistent");
+  bool ran_nonexistent =
+      rtxui::ComponentInternals::RunCallback(*counter, "nonexistent");
   REQUIRE(ran_nonexistent == false);
 }
 
@@ -335,9 +343,9 @@ class SelectorTest : public rtxui::Component<SelectorTest> {
 
 TEST_CASE("Element.QuerySelector", "[dom]") {
   auto comp = rtxui::Ref<SelectorTest>::New();
-  comp->Mount();
+  rtxui::ComponentInternals::Mount(*comp);
 
-  auto* root = comp->Root();
+  auto* root = rtxui::ComponentInternals::Root(*comp);
   REQUIRE(root != nullptr);
 
   // 1. Tag selector
@@ -410,9 +418,9 @@ class ParentOfProps : public rtxui::Component<ParentOfProps> {
 
 TEST_CASE("ComponentPropsAndReactivity", "[component]") {
   auto parent = rtxui::Ref<ParentOfProps>::New();
-  parent->Mount();
+  rtxui::ComponentInternals::Mount(*parent);
 
-  auto* root = parent->Root();
+  auto* root = rtxui::ComponentInternals::Root(*parent);
   REQUIRE(root != nullptr);
 
   std::string output = root->Print();
@@ -422,7 +430,7 @@ TEST_CASE("ComponentPropsAndReactivity", "[component]") {
   parent->parent_val = 100;
   parent->Digest();
 
-  output = parent->Root()->Print();
+  output = rtxui::ComponentInternals::Root(*parent)->Print();
   CHECK(output.find("Message: world, Value: 100") != std::string::npos);
 }
 
@@ -442,9 +450,9 @@ class ParentOfPropsShortName : public rtxui::Component<ParentOfPropsShortName> {
 
 TEST_CASE("ComponentPropsShortNames", "[component]") {
   auto parent = rtxui::Ref<ParentOfPropsShortName>::New();
-  parent->Mount();
+  rtxui::ComponentInternals::Mount(*parent);
 
-  auto* root = parent->Root();
+  auto* root = rtxui::ComponentInternals::Root(*parent);
   REQUIRE(root != nullptr);
 
   std::string output = root->Print();
@@ -516,24 +524,25 @@ TEST_CASE("A slot shows its own content when nothing is projected",
   // Header</slot.header> and that text never appeared.
   auto text = [](auto& app) {
     std::string out;
-    app->Root()->Visit([&out](rtxui::Element& element) {
-      if (element.is_text()) {
-        out += static_cast<rtxui::TextElement&>(element).text();
-      }
-    });
+    rtxui::ComponentInternals::Root(*app)->Visit(
+        [&out](rtxui::Element& element) {
+          if (element.is_text()) {
+            out += static_cast<rtxui::TextElement&>(element).text();
+          }
+        });
     return out;
   };
 
   SECTION("a component used with no children shows every fallback") {
     auto app = rtxui::Ref<NoProjection>::New();
-    app->Mount();
+    rtxui::ComponentInternals::Mount(*app);
     app->Digest();
     CHECK(text(app) == "DEFHEAD|DEFBODY|DEFFOOT");
   }
 
   SECTION("projecting into one slot leaves the others' fallbacks alone") {
     auto app = rtxui::Ref<BodyProjection>::New();
-    app->Mount();
+    rtxui::ComponentInternals::Mount(*app);
     app->Digest();
     CHECK(text(app) == "DEFHEAD|BODY|DEFFOOT");
   }
@@ -543,7 +552,7 @@ TEST_CASE("A slot shows its own content when nothing is projected",
     // showing the fallback again means rendering it a second time rather than
     // merely leaving it in place.
     auto app = rtxui::Ref<BodyProjection>::New();
-    app->Mount();
+    rtxui::ComponentInternals::Mount(*app);
     app->Digest();
     app->show = false;
     app->Digest();
@@ -597,16 +606,17 @@ TEST_CASE("A template that stops rendering takes its slot content with it",
   // are released in the same reconcile, so what stayed behind was pointing at
   // freed memory -- a crash under a sanitizer, and silently stale otherwise.
   auto app = rtxui::Ref<ConditionalTemplateComponent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->Digest();
 
   auto text = [&]() {
     std::string out;
-    app->Root()->Visit([&out](rtxui::Element& element) {
-      if (element.is_text()) {
-        out += static_cast<rtxui::TextElement&>(element).text();
-      }
-    });
+    rtxui::ComponentInternals::Root(*app)->Visit(
+        [&out](rtxui::Element& element) {
+          if (element.is_text()) {
+            out += static_cast<rtxui::TextElement&>(element).text();
+          }
+        });
     return out;
   };
 
@@ -669,16 +679,17 @@ class NestedLoopComponent : public rtxui::Component<NestedLoopComponent> {
 TEST_CASE("Nested loops keep their own variable and index",
           "[component][for]") {
   auto app = rtxui::Ref<NestedLoopComponent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->Digest();
 
   auto text = [&]() {
     std::string out;
-    app->Root()->Visit([&out](rtxui::Element& element) {
-      if (element.is_text()) {
-        out += static_cast<rtxui::TextElement&>(element).text();
-      }
-    });
+    rtxui::ComponentInternals::Root(*app)->Visit(
+        [&out](rtxui::Element& element) {
+          if (element.is_text()) {
+            out += static_cast<rtxui::TextElement&>(element).text();
+          }
+        });
     return out;
   };
 
@@ -750,16 +761,17 @@ class SkippedItemsComponent : public rtxui::Component<SkippedItemsComponent> {
 TEST_CASE("A render skips the loop items that read nothing new",
           "[component][for]") {
   auto app = rtxui::Ref<SkippedItemsComponent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   app->Digest();
 
   auto text = [&]() {
     std::string out;
-    app->Root()->Visit([&out](rtxui::Element& element) {
-      if (element.is_text()) {
-        out += static_cast<rtxui::TextElement&>(element).text();
-      }
-    });
+    rtxui::ComponentInternals::Root(*app)->Visit(
+        [&out](rtxui::Element& element) {
+          if (element.is_text()) {
+            out += static_cast<rtxui::TextElement&>(element).text();
+          }
+        });
     return out;
   };
   REQUIRE(text() == "-a-b-c");
@@ -796,12 +808,13 @@ TEST_CASE("A render skips the loop items that read nothing new",
 
   SECTION("a component in a skipped item still takes its own changes") {
     std::vector<ItemLabel*> labels;
-    app->Root()->Visit([&labels](rtxui::Element& element) {
-      if (const auto* label =
-              dynamic_cast<const ItemLabel*>(element.component())) {
-        labels.push_back(const_cast<ItemLabel*>(label));
-      }
-    });
+    rtxui::ComponentInternals::Root(*app)->Visit(
+        [&labels](rtxui::Element& element) {
+          if (const auto* label =
+                  dynamic_cast<const ItemLabel*>(element.component())) {
+            labels.push_back(const_cast<ItemLabel*>(label));
+          }
+        });
     REQUIRE(labels.size() == 3);
     labels[0]->suffix = "?";
     app->items[2] = "C";
@@ -852,9 +865,9 @@ class SpaceTestComponent : public rtxui::Component<SpaceTestComponent> {
 TEST_CASE("Whitespace preservation around inline tags",
           "[component][xml][space]") {
   auto container = rtxui::Ref<SpaceTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* root = container->Root();
+  auto* root = rtxui::ComponentInternals::Root(*container);
   REQUIRE(root != nullptr);
   auto* div = root->QuerySelector("div");
   REQUIRE(div != nullptr);
@@ -906,10 +919,10 @@ class ParentPropsTest : public rtxui::Component<ParentPropsTest> {
 
 TEST_CASE("Component props and two-way propagation", "[component][props]") {
   auto parent = rtxui::Ref<ParentPropsTest>::New();
-  parent->Mount();
+  rtxui::ComponentInternals::Mount(*parent);
   parent->Digest();
 
-  auto* root = parent->Root();
+  auto* root = rtxui::ComponentInternals::Root(*parent);
   auto* child1_el = root->QuerySelector("#child1");
   auto* child2_el = root->QuerySelector("#child2");
   REQUIRE(child1_el != nullptr);
@@ -975,9 +988,11 @@ TEST_CASE("Slider click on real demo layout squash regression",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(app, device);
   screen.Draw();
 
-  auto* slider_el = app->Root()->QuerySelector("slider");
+  auto* slider_el =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("slider");
   REQUIRE(slider_el != nullptr);
-  auto* sidebar_el = app->Root()->QuerySelector("Sidebar");
+  auto* sidebar_el =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("Sidebar");
   REQUIRE(sidebar_el != nullptr);
 
   int initial_sidebar_width = sidebar_el->layout_width();
@@ -1022,19 +1037,21 @@ class HoverActiveTestComponent
 TEST_CASE("Hovered and Active states are preserved across Render",
           "[component]") {
   auto container = rtxui::Ref<HoverActiveTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* node = container->Root()->QuerySelector("#test-node");
+  auto* node =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#test-node");
   REQUIRE(node != nullptr);
 
   node->set_hovered(true);
   node->set_active(true);
 
   // Re-render
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
   // Query node again
-  auto* new_node = container->Root()->QuerySelector("#test-node");
+  auto* new_node =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#test-node");
   REQUIRE(new_node != nullptr);
 
   CHECK(new_node->hovered() == true);
@@ -1061,16 +1078,17 @@ class TransitionFlickerTestComponent
 TEST_CASE("Flickering transition is not triggered on re-render when focused",
           "[component][transition]") {
   auto container = rtxui::Ref<TransitionFlickerTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* node = container->Root()->QuerySelector("#test-node");
+  auto* node =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#test-node");
   REQUIRE(node != nullptr);
 
   // Focus the element
   node->set_focused(true);
 
   // Initial render (and resolve target styles to start focus transition)
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
   double now = rtxui::time::GetTimeMs();
 
@@ -1080,7 +1098,7 @@ TEST_CASE("Flickering transition is not triggered on re-render when focused",
   CHECK(node->active_transitions.empty());
 
   // Call Render again while focused
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
   // No transitions should be started because we remained focused!
   CHECK(node->active_transitions.empty());
@@ -1110,12 +1128,13 @@ TEST_CASE(
     "Component root elements are reused and reordered during reconciliation",
     "[component][reconciliation]") {
   auto container = rtxui::Ref<DynamicTagsTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
   // Initial render
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
-  auto* root_div = container->Root()->QuerySelector("#container");
+  auto* root_div =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#container");
   REQUIRE(root_div != nullptr);
   REQUIRE(root_div->ChildCount() == 1);
   auto* slot_el = root_div->ChildAt(0);
@@ -1131,7 +1150,7 @@ TEST_CASE(
 
   // Toggle order of elements (which will cause a tag mismatch at index 0)
   container->show_span_first = false;
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
   // The child elements should have been reordered (swapped) in-place without
   // creating/destroying new elements
@@ -1164,12 +1183,13 @@ class StandardTagsTestComponent
 TEST_CASE("Standard elements are reused and reordered during reconciliation",
           "[component][reconciliation]") {
   auto container = rtxui::Ref<StandardTagsTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
   // Initial render
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
-  auto* root_div = container->Root()->QuerySelector("#container");
+  auto* root_div =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#container");
   REQUIRE(root_div != nullptr);
   REQUIRE(root_div->ChildCount() == 1);
   auto* slot_el = root_div->ChildAt(0);
@@ -1185,7 +1205,7 @@ TEST_CASE("Standard elements are reused and reordered during reconciliation",
 
   // Toggle order of elements (which will cause a tag mismatch at index 0)
   container->show_section_first = false;
-  container->Render();
+  rtxui::ComponentInternals::Render(*container);
 
   // The child elements should have been reordered (swapped) in-place without
   // creating/destroying new elements
@@ -1223,7 +1243,8 @@ TEST_CASE("Component Template Hot Reloading", "[component][hotreload]") {
   screen.Draw();
 
   // Initial check
-  auto* target_el = container->Root()->QuerySelector("#target");
+  auto* target_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#target");
   REQUIRE(target_el != nullptr);
   CHECK(target_el->Print().find("Initial Content") != std::string::npos);
 
@@ -1250,7 +1271,8 @@ TEST_CASE("Component Template Hot Reloading", "[component][hotreload]") {
   // Re-draw screen to update layout and check the node contents
   screen.Draw();
 
-  auto* updated_el = container->Root()->QuerySelector("#target");
+  auto* updated_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#target");
   REQUIRE(updated_el != nullptr);
   CHECK(updated_el->Print().find("Updated Content") != std::string::npos);
 
@@ -1317,7 +1339,8 @@ TEST_CASE(
   });
 
   auto app = Ref<MalformedTemplateApp>::New();
-  app->Mount();  // Must return rather than terminate the process.
+  rtxui::ComponentInternals::Mount(
+      *app);  // Must return rather than terminate the process.
 
   rtxui::SetDiagnosticHandler(nullptr);
 
@@ -1325,7 +1348,7 @@ TEST_CASE(
   CHECK_FALSE(seen[0].message.empty());
   // Mount must not go on to read the parse result it does not have; the
   // component simply renders nothing.
-  CHECK(app->Root() != nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*app) != nullptr);
 }
 
 namespace {
@@ -1361,15 +1384,16 @@ TEST_CASE("Control-flow tags without their attribute render nothing",
   // fuzzer.
   SECTION("<if> and <for> without their attribute") {
     auto app = Ref<ControlFlowNoAttrApp>::New();
-    REQUIRE_NOTHROW(app->Mount());
+    REQUIRE_NOTHROW(rtxui::ComponentInternals::Mount(*app));
     // A condition that is not "true" renders nothing, and so does a missing
     // one; neither branch's content should appear.
-    CHECK(app->Root()->QuerySelector("div") != nullptr);
+    CHECK(rtxui::ComponentInternals::Root(*app)->QuerySelector("div") !=
+          nullptr);
   }
 
   SECTION("<elif> without a condition, reached because the <if> was false") {
     auto app = Ref<ElifNoAttrApp>::New();
-    REQUIRE_NOTHROW(app->Mount());
+    REQUIRE_NOTHROW(rtxui::ComponentInternals::Mount(*app));
   }
 }
 
@@ -1417,7 +1441,7 @@ TEST_CASE(
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* root = container->Root();
+  auto* root = rtxui::ComponentInternals::Root(*container);
 
   auto* cb_el = root->QuerySelector("#cb");
   auto* cb_ptr = ComponentAs<rtxui::checkbox>(cb_el);
@@ -1464,7 +1488,7 @@ TEST_CASE(
   CHECK_FALSE(container->button_clicked);
 
   // :disabled dims the default style for each, mirroring input's behavior.
-  container->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*container);
   CHECK(cb_el->target_style.opacity < 0.9f);
   CHECK(rd_el->target_style.opacity < 0.9f);
   CHECK(sl_el->target_style.opacity < 0.9f);
@@ -1495,14 +1519,14 @@ TEST_CASE("Importing the same component twice is not fatal",
   std::streambuf* previous = std::cerr.rdbuf(captured.rdbuf());
 
   auto app = rtxui::Ref<TwiceImportingApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   std::cerr.rdbuf(previous);
 
   // It still says something, on stderr rather than stdout.
   CHECK(captured.str().find("already imported") != std::string::npos);
   // ...and the component still works.
-  auto* el = app->Root()->QuerySelector("#a");
+  auto* el = rtxui::ComponentInternals::Root(*app)->QuerySelector("#a");
   REQUIRE(el != nullptr);
   CHECK(el->tag() == "div");
 }
@@ -1545,7 +1569,7 @@ TEST_CASE("A child given a new prop renders once per Digest()", "[component]") {
   // The parent's render passes the new value and re-renders the child. The
   // child's own Digest() then runs, and must not find that same change again.
   auto app = rtxui::Ref<RenderCountedParent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   auto* child = dynamic_cast<RenderCountedChild*>(
       app->QueryComponent("RenderCountedChild"));
   REQUIRE(child != nullptr);
@@ -1569,7 +1593,7 @@ TEST_CASE("HotReload reports a parse error to the XML error handler",
     std::string_view view = "<div>ok</div>";
   };
   auto app = rtxui::Ref<HotReloadTarget>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   std::optional<rtxui::Diagnostic> reported_error;
   rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& error) {
@@ -1609,20 +1633,23 @@ class SlotToggleUser : public rtxui::Component<SlotToggleUser> {
 TEST_CASE("A slot a component shows again gets its projected content back",
           "[component][slot]") {
   auto app = rtxui::Ref<SlotToggleUser>::New();
-  app->Mount();
-  REQUIRE(app->Root()->QuerySelector("#projected") != nullptr);
-  auto* toggle =
-      ComponentAs<SlotToggle>(app->Root()->QuerySelector("SlotToggle"));
+  rtxui::ComponentInternals::Mount(*app);
+  REQUIRE(rtxui::ComponentInternals::Root(*app)->QuerySelector("#projected") !=
+          nullptr);
+  auto* toggle = ComponentAs<SlotToggle>(
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("SlotToggle"));
   REQUIRE(toggle != nullptr);
 
   // Only <SlotToggle> changes, so only it re-renders: the content it
   // projects is its user's, which has to fill the slot again.
   toggle->open = false;
   app->Digest();
-  CHECK(app->Root()->QuerySelector("#projected") == nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*app)->QuerySelector("#projected") ==
+        nullptr);
   toggle->open = true;
   app->Digest();
-  CHECK(app->Root()->QuerySelector("#projected") != nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*app)->QuerySelector("#projected") !=
+        nullptr);
 }
 
 namespace {
@@ -1655,11 +1682,11 @@ class AliasUser : public rtxui::Component<AliasUser> {
 TEST_CASE("A component written under another tag survives its user's render",
           "[component]") {
   auto app = rtxui::Ref<AliasUser>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   // The component of type T in the tree.
   auto find = [&]<typename T>(std::type_identity<T>) -> T* {
     T* found = nullptr;
-    app->Root()->Visit([&](rtxui::Element& element) {
+    rtxui::ComponentInternals::Root(*app)->Visit([&](rtxui::Element& element) {
       if (auto* component = dynamic_cast<const T*>(element.component())) {
         found = const_cast<T*>(component);
       }
@@ -1700,11 +1727,12 @@ TEST_CASE("Clicking a button's label focuses the button",
           "[component][screen][focus]") {
   auto app = rtxui::Ref<ClickFocusApp>::New();
   rtxui::HeadlessScreen screen(app, 40, 10);
-  auto* button = app->Root()->QuerySelector("#button");
+  auto* button =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#button");
   REQUIRE(button != nullptr);
   // The middle of " press ", on the text rather than the padding.
   screen.Click(button->absolute_x() + 3, button->absolute_y());
-  button = app->Root()->QuerySelector("#button");
+  button = rtxui::ComponentInternals::Root(*app)->QuerySelector("#button");
   CHECK(button->focused());
   CHECK(button->style.margin.left == 1);  // button:focus
 }

@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 
@@ -23,7 +24,7 @@ const std::string_view label::view = R"html(
   )html";
 
 bool label::OnEvent(Event event) {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root) {
     return false;
   }

@@ -91,7 +91,7 @@ std::string_view select::Setup() {
 
 std::vector<OptionInfo> select::GetOptions() {
   std::vector<OptionInfo> opts;
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root) {
     return opts;
   }
@@ -127,7 +127,7 @@ bool select::OnEvent(Event event) {
     return true;
   }
 
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (!root) {
     return false;
   }
@@ -329,7 +329,7 @@ bool select::OnEvent(Event event) {
 }
 
 bool select::Digest() {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   SyncDisabled(root, disabled);
   if (disabled) {
     is_open = false;
@@ -352,7 +352,7 @@ bool select::Digest() {
   }
 
   if (root && state_changed) {
-    auto& comp_cls = data_->classes_;
+    auto& comp_cls = ComponentInternals::data(*this).classes_;
     auto it_comp = std::find(comp_cls.begin(), comp_cls.end(), "open");
     if (is_open) {
       if (it_comp == comp_cls.end()) {
@@ -415,11 +415,11 @@ void select::SelectOption(std::string_view opt_val) {
   PropagateBinding("value", value);
   is_open = false;
 
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (root && root->Attributes().count("onchange")) {
     std::string onchange_cb = root->Attributes().at("onchange");
     if (auto* comp = GetAttributeOwnerComponent(root)) {
-      comp->RunCallback(onchange_cb);
+      ComponentInternals::RunCallback(*comp, onchange_cb);
     }
   }
 }

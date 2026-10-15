@@ -79,9 +79,10 @@ class SliderTestComponent : public rtxui::Component<SliderTestComponent> {
 
 TEST_CASE("Slider Component Basic Interactions", "[component][slider]") {
   auto container = rtxui::Ref<SliderTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* slider_el = container->Root()->QuerySelector("slider");
+  auto* slider_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("slider");
   REQUIRE(slider_el != nullptr);
   auto* slider_ptr = ComponentAs<rtxui::slider>(slider_el);
   REQUIRE(slider_ptr != nullptr);
@@ -133,7 +134,8 @@ TEST_CASE("Slider with step=0 doesn't crash on mouse drag",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* slider_el = container->Root()->QuerySelector("slider");
+  auto* slider_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("slider");
   REQUIRE(slider_el != nullptr);
   int abs_x = slider_el->absolute_x();
   int abs_y = slider_el->absolute_y();
@@ -162,15 +164,18 @@ TEST_CASE("Slider Component Mouse Drag and Capture", "[component][slider]") {
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* slider_el = container->Root()->QuerySelector("slider");
+  auto* slider_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("slider");
   REQUIRE(slider_el != nullptr);
   auto* slider_ptr = ComponentAs<rtxui::slider>(slider_el);
   REQUIRE(slider_ptr != nullptr);
 
   // width=11, min=0, max=100, step=10. Root() is an inline <span> whose
   // layout_width_ is 0; use the width attribute directly for coordinates.
-  int abs_x = slider_ptr->Root()->absolute_x();  // 0 in mock terminal
-  int abs_y = slider_ptr->Root()->absolute_y();  // 0 in mock terminal
+  int abs_x = rtxui::ComponentInternals::Root(*slider_ptr)
+                  ->absolute_x();  // 0 in mock terminal
+  int abs_y = rtxui::ComponentInternals::Root(*slider_ptr)
+                  ->absolute_y();                // 0 in mock terminal
   int track_w = std::max(2, slider_ptr->width);  // 11
 
   // Press at the leftmost column of the track (1-based mouse coords)
@@ -222,9 +227,10 @@ TEST_CASE(
     "External ::part() Styling",
     "[component][slider][part]") {
   auto container = rtxui::Ref<SliderTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
-  auto* slider_el = container->Root()->QuerySelector("slider");
+  auto* slider_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("slider");
   REQUIRE(slider_el != nullptr);
 
   auto* container_el = slider_el->QuerySelector(".slider-container");
@@ -366,11 +372,14 @@ TEST_CASE("Slider interaction layout squashing regression",
   rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* slider_el = container->Root()->QuerySelector("#slider");
+  auto* slider_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#slider");
   REQUIRE(slider_el != nullptr);
-  auto* scroll_el = container->Root()->QuerySelector(".main-scroll");
+  auto* scroll_el = rtxui::ComponentInternals::Root(*container)
+                        ->QuerySelector(".main-scroll");
   REQUIRE(scroll_el != nullptr);
-  auto* container_el = container->Root()->QuerySelector(".container");
+  auto* container_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".container");
   REQUIRE(container_el != nullptr);
 
   int initial_container_width = container_el->layout_width();

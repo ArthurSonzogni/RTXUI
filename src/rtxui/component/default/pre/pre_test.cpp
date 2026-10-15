@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/testing/render.hpp"
@@ -85,7 +86,7 @@ struct PreCodeBindingTestComponent
 TEST_CASE("Pre code newlines preserved through interpolation",
           "[component][pre]") {
   auto container = rtxui::Ref<PreCodeBindingTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
 
   SECTION("initial value") {}
   SECTION("value updated after mount") {

@@ -40,14 +40,14 @@ std::string_view markdown::GetView() const {
 }
 
 bool markdown::Digest() {
-  StyleResolutionScope scope(this);
+  ComponentInternals::StyleResolutionScope scope(this);
   bool changed = false;
-  for (auto& entry : data_->entries_) {
+  for (auto& entry : ComponentInternals::data(*this).entries_) {
     if (entry.check_and_update && entry.check_and_update()) {
       changed = true;
     }
   }
-  for (auto& range_entry : data_->range_entries_) {
+  for (auto& range_entry : ComponentInternals::data(*this).range_entries_) {
     if (range_entry.range->CheckAndUpdate()) {
       changed = true;
     }
@@ -58,20 +58,22 @@ bool markdown::Digest() {
   // but a template still built from the old content.
   if (content != built_content_ || stylesheet != built_stylesheet_) {
     changed = true;
-    data_->template_.clear();
-    data_->template_ = Template();
-    data_->xml_string_ = StripIndent(data_->template_);
-    if (auto nodes = xml::Parse(data_->xml_string_)) {
-      data_->SetXmlNodes(std::move(nodes.value()));
+    ComponentInternals::data(*this).template_.clear();
+    ComponentInternals::data(*this).template_ =
+        ComponentInternals::Template(*this);
+    ComponentInternals::data(*this).xml_string_ =
+        StripIndent(ComponentInternals::data(*this).template_);
+    if (auto nodes = xml::Parse(ComponentInternals::data(*this).xml_string_)) {
+      ComponentInternals::data(*this).SetXmlNodes(std::move(nodes.value()));
     } else {
       const xml::Error& error = nodes.error();
       ReportSyntaxError({error.message, Diagnostic::Kind::XmlSyntax, error.line,
                          error.column},
-                        data_->xml_string_);
+                        ComponentInternals::data(*this).xml_string_);
     }
-    this->Render();
+    ComponentInternals::Render(*this);
   }
-  for (auto& child : data_->children_) {
+  for (auto& child : ComponentInternals::data(*this).children_) {
     if (child->Digest()) {
       changed = true;
     }

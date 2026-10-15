@@ -8,6 +8,7 @@
 
 #include "catch2/catch_message.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/testing/render.hpp"
@@ -545,7 +546,7 @@ class OverlineTestComponent : public rtxui::Component<OverlineTestComponent> {
 TEST_CASE("text-decoration: overline reaches the cells and inherits",
           "[component][style][paint][decoration]") {
   auto container = rtxui::Ref<OverlineTestComponent>::New();
-  container->Mount();
+  rtxui::ComponentInternals::Mount(*container);
   auto texture = PaintComponent(*container, 20, 4);
 
   int found = 0;

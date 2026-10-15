@@ -81,7 +81,7 @@
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/internal/import.hpp"
+#include "rtxui/internal/binding.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/apply_style.hpp"
@@ -111,10 +111,10 @@ ComponentBase* GetAttributeOwnerComponent(Element* element) {
 }
 
 ComponentBase* GetParentComponent(ComponentBase* comp) {
-  if (!comp || !comp->Root()) {
+  if (!comp || !ComponentInternals::Root(*comp)) {
     return nullptr;
   }
-  return GetOwningComponent(comp->Root()->Parent());
+  return GetOwningComponent(ComponentInternals::Root(*comp)->Parent());
 }
 
 namespace {
@@ -211,8 +211,46 @@ std::optional<std::string> ComponentBase::TakePendingClipboardWrite() {
   return result;
 }
 
-bool ComponentBase::OnEvent(Event /*event*/) {
-  return false;
+bool ComponentBase::OnEvent(Event event) {
+  return ChildrenOnEvent(event);
+}
+
+bool ComponentBase::Digest() {
+  StyleResolutionScope scope(this);
+  bool changed = UpdateBindings();
+  if (VirtualWindowsStale()) {
+    changed = true;
+  }
+  if (changed) {
+    Render();
+  }
+  if (DigestChildren()) {
+    changed = true;
+  }
+  if (ConsumesRecreatedSlots()) {
+    Render();
+  }
+  return changed;
+}
+
+std::string ComponentBase::GetInterpolatedValue(std::string_view expression) {
+  std::string_view target = expression;
+  if (target.starts_with("props.")) {
+    target = target.substr(6);
+  }
+  if (const internal::ValueBinding* entry = FindEntry(target)) {
+    return entry->get_value();
+  }
+  if (expression.find_first_of(" =!<>&|") != std::string_view::npos) {
+    ReportDiagnostic("'{" + std::string(expression) + "}' in <" +
+                     std::string(Tag()) +
+                     ">: templates do not evaluate expressions; bind a "
+                     "const method computing the value and use its name");
+  } else {
+    ReportDiagnostic("'{" + std::string(expression) + "}' in <" +
+                     std::string(Tag()) + "> is not a bound name");
+  }
+  return std::string(expression);
 }
 
 Element* ComponentBase::Root() const {
@@ -239,17 +277,17 @@ ComponentBase* ComponentBase::QueryComponent(std::string_view selector) {
   return const_cast<ComponentBase*>(match->component());
 }
 
-bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
+bool ComponentBase::RunCallback(std::string_view name, std::string_view arg) {
   if (arg.empty()) {
-    auto it = callbacks_.find(name);
-    if (it != callbacks_.end()) {
+    auto it = data_->callbacks_.find(name);
+    if (it != data_->callbacks_.end()) {
       it->second();
       return true;
     }
   }
 
-  auto it_param = parameterized_callbacks_.find(name);
-  if (it_param != parameterized_callbacks_.end()) {
+  auto it_param = data_->parameterized_callbacks_.find(name);
+  if (it_param != data_->parameterized_callbacks_.end()) {
     it_param->second(std::string(arg));
     return true;
   }
@@ -257,32 +295,47 @@ bool Bindings::RunCallback(std::string_view name, std::string_view arg) {
   return false;
 }
 
-void Bindings::Import(std::string_view name, std::function<void()> callback) {
-  if (callbacks_.count(name) || parameterized_callbacks_.count(name)) {
+void ComponentBase::Import(std::string_view name,
+                           std::function<void()> callback) {
+  if (data_->callbacks_.count(name) ||
+      data_->parameterized_callbacks_.count(name)) {
     std::cerr << "Error: Callback '" << name << "' is already imported.\n";
     return;
   }
 
-  callbacks_[std::string(name)] = std::move(callback);
+  data_->callbacks_[std::string(name)] = std::move(callback);
 }
 
-void Bindings::Import(std::string_view name,
-                      std::function<void(std::string)> callback) {
-  if (callbacks_.count(name) || parameterized_callbacks_.count(name)) {
+void ComponentBase::Import(std::string_view name,
+                           std::function<void(std::string)> callback) {
+  if (data_->callbacks_.count(name) ||
+      data_->parameterized_callbacks_.count(name)) {
     std::cerr << "Error: Callback '" << name << "' is already imported.\n";
     return;
   }
 
-  parameterized_callbacks_[std::string(name)] = std::move(callback);
+  data_->parameterized_callbacks_[std::string(name)] = std::move(callback);
 }
 
-void Bindings::Import(std::string_view name, ComponentFactory factory) {
-  if (imports_.count(name)) {
+void ComponentBase::Import(std::string_view name, ComponentFactory factory) {
+  if (data_->imports_.count(name)) {
     std::cerr << "Error: Component '" << name << "' is already imported.\n";
     return;
   }
 
-  imports_[std::string(name)] = std::move(factory);
+  data_->imports_[std::string(name)] = std::move(factory);
+}
+
+void ComponentBase::ImportAlias(std::string_view class_name,
+                                std::string_view alias,
+                                ComponentFactory factory) {
+  if (data_->imports_.count(alias)) {
+    std::cerr << "Error: Can't import '" << class_name << "' as '" << alias
+              << "', since it is already imported.\n";
+    return;
+  }
+
+  data_->imports_[std::string(alias)] = std::move(factory);
 }
 
 namespace {
@@ -349,20 +402,6 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
 }
 }  // namespace
 
-void ReportDuplicateImport(std::string_view name) {
-  std::cerr << "Error: Component '" << name << "' is already imported.\n";
-}
-
-void ReportDuplicateImportAlias(std::string_view class_name,
-                                std::string_view alias) {
-  std::cerr << "Error: Can't import '" << class_name << "' as '" << alias
-            << "', since it is already imported.\n";
-}
-
-void RegisterGlobalComponent(std::string_view name, ComponentFactory factory) {
-  GetGlobalRegistry()[std::string(name)] = std::move(factory);
-}
-
 ComponentFactory GetGlobalComponentFactory(std::string_view name) {
   auto& reg = GetGlobalRegistry();
   auto it = reg.find(std::string(name));
@@ -422,17 +461,17 @@ const std::map<std::string, Ref<Element>, std::less<>>& ComponentBase::slots()
   return data_->slots_;
 }
 
-void ComponentBase::AddEntry(Entry entry) {
+void ComponentBase::AddEntry(internal::ValueBinding entry) {
   data_->entries_.push_back(std::move(entry));
 }
 
-void ComponentBase::AddRange(RangeEntry entry) {
+void ComponentBase::AddRange(internal::RangeBinding entry) {
   data_->range_entries_.push_back(std::move(entry));
 }
 
-const ComponentBase::Entry* ComponentBase::FindEntry(
+const internal::ValueBinding* ComponentBase::FindEntry(
     std::string_view name) const {
-  for (const Entry& entry : data_->entries_) {
+  for (const internal::ValueBinding& entry : data_->entries_) {
     if (entry.name == name) {
       return &entry;
     }
@@ -442,12 +481,12 @@ const ComponentBase::Entry* ComponentBase::FindEntry(
 
 bool ComponentBase::UpdateBindings() {
   bool changed = false;
-  for (Entry& entry : data_->entries_) {
+  for (internal::ValueBinding& entry : data_->entries_) {
     if (entry.check_and_update && entry.check_and_update()) {
       changed = true;
     }
   }
-  for (RangeEntry& range_entry : data_->range_entries_) {
+  for (internal::RangeBinding& range_entry : data_->range_entries_) {
     if (range_entry.range->CheckAndUpdate()) {
       changed = true;
     }
@@ -1986,7 +2025,7 @@ void ResolveElementStyle(Element* element,
     // runs, so the memo and base_style bookkeeping are unchanged - only the
     // matching, sorting and applying are skipped.
     if (categorized_for_parts && categorized_for_parts->only_self_rules &&
-        element != component->Root()) {
+        element != ComponentInternals::Root(*component)) {
       return;
     }
 
@@ -2025,7 +2064,7 @@ void ResolveElementStyle(Element* element,
                   }
                   const auto& parsed = ruleset->parsed_selector;
                   if (is_universal && parsed.base == "self" &&
-                      element != component->Root()) {
+                      element != ComponentInternals::Root(*component)) {
                     continue;
                   }
 
@@ -2079,8 +2118,9 @@ void ResolveElementStyle(Element* element,
                   // Combinators and :has() see only this component's own
                   // template, as the rule's target does.
                   if (!parsed.parents.empty()) {
-                    if (!MatchSelectorParents(element, component->Root(),
-                                              parsed.parents, component)) {
+                    if (!MatchSelectorParents(
+                            element, ComponentInternals::Root(*component),
+                            parsed.parents, component)) {
                       continue;
                     }
                   }
@@ -4000,8 +4040,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         ComponentFactory factory = nullptr;
-        auto it = import_source->imports_.find(child_node.tag);
-        if (it != import_source->imports_.end()) {
+        auto it = import_source->data_->imports_.find(child_node.tag);
+        if (it != import_source->data_->imports_.end()) {
           factory = it->second;
         } else {
           factory = GetGlobalComponentFactory(child_node.tag);
@@ -4595,7 +4635,7 @@ bool ComponentBase::HasAnyPseudoClasses() const {
   return false;
 }
 
-namespace reflection {
+namespace internal {
 int ParseInt(std::string_view str) {
   while (!str.empty() &&
          std::isspace(static_cast<unsigned char>(str.front()))) {
@@ -4611,7 +4651,7 @@ int ParseInt(std::string_view str) {
   }
   return 0;
 }
-}  // namespace reflection
+}  // namespace internal
 
 void ComponentBase::EnableHotReload(std::string_view view_var_name,
                                     std::source_location location) {

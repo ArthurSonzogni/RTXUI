@@ -5,6 +5,7 @@
 #include <string_view>
 #include <utility>
 
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/rtxui.hpp"
 
 namespace {
@@ -24,7 +25,7 @@ class HandleApp : public rtxui::Component<HandleApp> {
 
 TEST_CASE("ElementHandle navigates the tree", "[dom][element_handle]") {
   auto app = rtxui::Ref<HandleApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   rtxui::ElementHandle root = app->RootElement();
   REQUIRE(root);
@@ -42,7 +43,7 @@ TEST_CASE("ElementHandle navigates the tree", "[dom][element_handle]") {
 
 TEST_CASE("A null ElementHandle is inert", "[dom][element_handle]") {
   auto app = rtxui::Ref<HandleApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   rtxui::ElementHandle none = app->QueryElement("#nothing");
   CHECK_FALSE(none);
@@ -61,7 +62,7 @@ TEST_CASE("A null ElementHandle is inert", "[dom][element_handle]") {
 
 TEST_CASE("ElementHandle reads and writes scroll", "[dom][element_handle]") {
   auto app = rtxui::Ref<HandleApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   rtxui::ElementHandle list = app->QueryElement("#list");
   REQUIRE(list);
@@ -95,7 +96,7 @@ TEST_CASE("ElementHandle becomes null once a re-render destroys its element",
   // component without owning it, so outliving the component would leave tag()
   // reading freed memory.
   auto app = rtxui::Ref<ToggleApp>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   rtxui::ElementHandle target = app->QueryElement("#target");
   REQUIRE(target);
@@ -120,7 +121,7 @@ TEST_CASE("ElementHandle becomes null once its component is destroyed",
   rtxui::ElementHandle kept;
   {
     auto app = rtxui::Ref<HandleApp>::New();
-    app->Mount();
+    rtxui::ComponentInternals::Mount(*app);
     rtxui::ElementHandle found = app->QueryElement("#list");
     rtxui::ElementHandle moved = std::move(found);
     REQUIRE(moved);

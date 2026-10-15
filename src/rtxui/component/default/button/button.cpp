@@ -17,7 +17,7 @@ void button::InitReflection() {
 }
 
 bool button::Digest() {
-  SyncDisabled(Root(), disabled);
+  SyncDisabled(ComponentInternals::Root(*this), disabled);
   return Component<button>::Digest();
 }
 

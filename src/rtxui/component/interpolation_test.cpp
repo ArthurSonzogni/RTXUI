@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/refcounted.hpp"
@@ -60,15 +61,17 @@ class ScalarComponent : public rtxui::Component<ScalarComponent> {
 
 TEST_CASE("Interpolating a bool and a char", "[component][interpolation]") {
   auto component = rtxui::Ref<ScalarComponent>::New();
-  component->Mount();
-  CHECK(component->Root()->Print().find("true false A") != std::string::npos);
+  rtxui::ComponentInternals::Mount(*component);
+  CHECK(rtxui::ComponentInternals::Root(*component)
+            ->Print()
+            .find("true false A") != std::string::npos);
 }
 
 TEST_CASE("Interpolation", "[component][interpolation]") {
   auto component = rtxui::Ref<InterpolationComponent>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
-  std::string output = component->Root()->Print();
+  std::string output = rtxui::ComponentInternals::Root(*component)->Print();
 
   // Verify text interpolation
   CHECK(output.find("Hello RTXUI") != std::string::npos);
@@ -84,7 +87,7 @@ class NestedInterpolation : public rtxui::Component<NestedInterpolation> {
  public:
   std::string color = "red";
 
-  NestedInterpolation() { RegisterState("color", &color); }
+  NestedInterpolation() { Bind(color); }
 
   std::string_view view = R"(
     <div style="background-color: {color};">
@@ -95,9 +98,9 @@ class NestedInterpolation : public rtxui::Component<NestedInterpolation> {
 
 TEST_CASE("Style Interpolation", "[component][interpolation]") {
   auto component = rtxui::Ref<NestedInterpolation>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
-  std::string output = component->Root()->Print();
+  std::string output = rtxui::ComponentInternals::Root(*component)->Print();
   CHECK(output.find("background-color: red") != std::string::npos);
 }
 
@@ -118,9 +121,9 @@ class LoopInterpolation : public rtxui::Component<LoopInterpolation> {
 
 TEST_CASE("Loop Interpolation", "[component][interpolation]") {
   auto component = rtxui::Ref<LoopInterpolation>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
-  std::string output = component->Root()->Print();
+  std::string output = rtxui::ComponentInternals::Root(*component)->Print();
   // UNCOMMENT to debug: std::cout << output << std::endl;
   CHECK(output.find("a") != std::string::npos);
   CHECK(output.find("b") != std::string::npos);
@@ -154,9 +157,9 @@ class StructLoopInterpolation
 
 TEST_CASE("Struct Loop Interpolation", "[component][interpolation]") {
   auto component = rtxui::Ref<StructLoopInterpolation>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
-  std::string output = component->Root()->Print();
+  std::string output = rtxui::ComponentInternals::Root(*component)->Print();
   CHECK(output.find("x") != std::string::npos);
   CHECK(output.find("y") != std::string::npos);
 }
@@ -198,26 +201,28 @@ TEST_CASE("A bound struct collection tracks its contents",
   // struct reaches the DOM at all, and whether adding, removing and reordering
   // items land where they should.
   auto component = rtxui::Ref<ReactiveStructCollection>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
   component->Digest();
 
   auto text = [&]() {
     std::string out;
-    component->Root()->Visit([&out](rtxui::Element& element) {
-      if (element.is_text()) {
-        out += static_cast<rtxui::TextElement&>(element).text();
-      }
-    });
+    rtxui::ComponentInternals::Root(*component)
+        ->Visit([&out](rtxui::Element& element) {
+          if (element.is_text()) {
+            out += static_cast<rtxui::TextElement&>(element).text();
+          }
+        });
     return out;
   };
   auto classes = [&]() {
     std::string out;
-    component->Root()->Visit([&out](rtxui::Element& element) {
-      for (const auto& name : element.classes()) {
-        out += name;
-        out += ",";
-      }
-    });
+    rtxui::ComponentInternals::Root(*component)
+        ->Visit([&out](rtxui::Element& element) {
+          for (const auto& name : element.classes()) {
+            out += name;
+            out += ",";
+          }
+        });
     return out;
   };
 
@@ -295,16 +300,22 @@ TEST_CASE("Automatic Reflection Loop Interpolation",
 class ConditionalApp : public rtxui::Component<ConditionalApp> {
  public:
   int value = 1;
+  bool is_one() const { return value == 1; }
+  bool is_two() const { return value == 2; }
 
-  ConditionalApp() { Bind(value); }
+  ConditionalApp() {
+    Bind(value);
+    Bind(is_one);
+    Bind(is_two);
+  }
 
   std::string_view view = R"(
     <div>
-      <if condition="{value == 1}">
+      <if condition="{is_one}">
         <span>One</span>
       </if>
       <!-- a comment -->
-      <elif condition="{value == 2}">
+      <elif condition="{is_two}">
         <span>Two</span>
       </elif>
       
@@ -312,43 +323,33 @@ class ConditionalApp : public rtxui::Component<ConditionalApp> {
         <span>Other</span>
       </else>
 
-      <span if="{value == 1}">Always One</span>
+      <span if="{is_one}">Always One</span>
     </div>
   )";
-
-  std::string GetInterpolatedValue(std::string_view expr) override {
-    if (expr == "value == 1") {
-      return value == 1 ? "true" : "false";
-    }
-    if (expr == "value == 2") {
-      return value == 2 ? "true" : "false";
-    }
-    return rtxui::Component<ConditionalApp>::GetInterpolatedValue(expr);
-  }
 };
 
 TEST_CASE("Conditional Rendering", "[component][interpolation]") {
   auto component = rtxui::Ref<ConditionalApp>::New();
 
   component->value = 1;
-  component->Mount();
-  std::string output = component->Root()->Print();
+  rtxui::ComponentInternals::Mount(*component);
+  std::string output = rtxui::ComponentInternals::Root(*component)->Print();
   CHECK(output.find("One") != std::string::npos);
   CHECK(output.find("Always One") != std::string::npos);
   CHECK(output.find("Two") == std::string::npos);
   CHECK(output.find("Other") == std::string::npos);
 
   component->value = 2;
-  component->Render();
-  output = component->Root()->Print();
+  rtxui::ComponentInternals::Render(*component);
+  output = rtxui::ComponentInternals::Root(*component)->Print();
   CHECK(output.find("One") == std::string::npos);
   CHECK(output.find("Always One") == std::string::npos);
   CHECK(output.find("Two") != std::string::npos);
   CHECK(output.find("Other") == std::string::npos);
 
   component->value = 3;
-  component->Render();
-  output = component->Root()->Print();
+  rtxui::ComponentInternals::Render(*component);
+  output = rtxui::ComponentInternals::Root(*component)->Print();
   CHECK(output.find("One") == std::string::npos);
   CHECK(output.find("Always One") == std::string::npos);
   CHECK(output.find("Two") == std::string::npos);

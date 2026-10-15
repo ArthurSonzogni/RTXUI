@@ -7,6 +7,7 @@
 
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 
 namespace rtxui {
@@ -60,7 +61,7 @@ std::string_view fieldset::Setup() {
 bool fieldset::Digest() {
   // The <legend> is routed into the legend slot by `select`, so all that is
   // left is to report whether one arrived.
-  auto legend_slot = Slot("legend");
+  auto legend_slot = ComponentInternals::Slot(*this, "legend");
   legend_class = (legend_slot && legend_slot->ChildCount() > 0) ? "has-legend"
                                                                 : "no-legend";
 

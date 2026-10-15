@@ -6,9 +6,9 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
-#include "rtxui/headless.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
 
@@ -48,10 +48,14 @@ TEST_CASE("Label Component Interaction", "[component][label]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* lbl1_el = container->Root()->QuerySelector("#lbl1");
-  auto* cb1_el = container->Root()->QuerySelector("#cb1");
-  auto* lbl2_el = container->Root()->QuerySelector("#lbl2");
-  auto* cb2_el = container->Root()->QuerySelector("#cb2");
+  auto* lbl1_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#lbl1");
+  auto* cb1_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#cb1");
+  auto* lbl2_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#lbl2");
+  auto* cb2_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#cb2");
 
   REQUIRE(lbl1_el != nullptr);
   REQUIRE(cb1_el != nullptr);
@@ -132,8 +136,10 @@ TEST_CASE("Clicking a label doesn't check or focus its disabled target",
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* lbl_el = container->Root()->QuerySelector("#lbl");
-  auto* cb_el = container->Root()->QuerySelector("#cb");
+  auto* lbl_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#lbl");
+  auto* cb_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#cb");
   auto* lbl_comp = const_cast<rtxui::ComponentBase*>(lbl_el->component());
 
   Event::Mouse mouse;

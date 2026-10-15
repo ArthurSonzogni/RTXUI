@@ -5,6 +5,7 @@
 #include "catch2/catch_message.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/color.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
@@ -81,9 +82,10 @@ TEST_CASE("Layout: Rowspan painting order regression test", "[layout][table]") {
   };
 
   auto app = Ref<RowspanPaintTest>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
-  auto layout_box = LayoutTreeBuilder::Build(app->Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*app));
 
   LayoutConstraints constraints;
   constraints.width = {10, MeasureMode::Exactly};

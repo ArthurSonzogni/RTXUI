@@ -106,7 +106,7 @@ class StressLayoutComponent : public Component<StressLayoutComponent> {
                       " with some extra ASCII text filler to stress layout!");
     }
 
-    RegisterCollection("items", &items);
+    BindCollection("items", &items);
 
     view = R"xml(
         <style>

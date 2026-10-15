@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/refcounted.hpp"
@@ -43,7 +44,8 @@ TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
   rtxui::Screen screen(container);
   screen.Draw();
 
-  auto* dialog_el = container->Root()->QuerySelector("dialog");
+  auto* dialog_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("dialog");
   REQUIRE(dialog_el != nullptr);
   auto* dialog_ptr = ComponentAs<rtxui::dialog>(dialog_el);
   REQUIRE(dialog_ptr != nullptr);
@@ -117,7 +119,8 @@ TEST_CASE("Dialog: a button inside an open dialog is clickable",
   container->Digest();
   screen.Draw();
 
-  auto* btn_el = container->Root()->QuerySelector("#ok");
+  auto* btn_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#ok");
   REQUIRE(btn_el != nullptr);
   // The button must actually have been laid out somewhere on screen.
   REQUIRE(btn_el->layout_width() > 0);
@@ -146,8 +149,10 @@ TEST_CASE("Dialog Component Layout Centering", "[component][dialog][layout]") {
   container->Digest();
   screen.Draw();
 
-  auto* overlay_el = container->Root()->QuerySelector(".dialog-overlay");
-  auto* box_el = container->Root()->QuerySelector(".dialog-box");
+  auto* overlay_el = rtxui::ComponentInternals::Root(*container)
+                         ->QuerySelector(".dialog-overlay");
+  auto* box_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector(".dialog-box");
   REQUIRE(overlay_el != nullptr);
   REQUIRE(box_el != nullptr);
 
@@ -177,7 +182,8 @@ TEST_CASE(
   container->Digest();
   screen.Draw();
 
-  auto* dialog_el = container->Root()->QuerySelector("dialog");
+  auto* dialog_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("dialog");
   REQUIRE(dialog_el != nullptr);
 
   auto* overlay_el = dialog_el->QuerySelector(".dialog-overlay");

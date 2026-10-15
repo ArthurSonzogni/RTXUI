@@ -17,6 +17,7 @@
 #include "rtxui/base/task_runner.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/input/input.hpp"
 #include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/component/default/tooltip/tooltip.hpp"
@@ -150,7 +151,8 @@ TEST_CASE("Screen.BracketedPasteInsertsTextIntoFocusedInput",
   Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* in_el = container->Root()->QuerySelector("#in");
+  auto* in_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
   in_el->set_focused(true);
 
@@ -178,7 +180,8 @@ TEST_CASE("Screen.PasteNewlineIntoInputIsDropped", "[terminal][paste]") {
   Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* in_el = container->Root()->QuerySelector("#in");
+  auto* in_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
   in_el->set_focused(true);
 
@@ -211,7 +214,8 @@ TEST_CASE("Screen.PastingIntoTextareaDoesNotDoubleIndentation",
   Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* ta_el = container->Root()->QuerySelector("#ta");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#ta");
   REQUIRE(ta_el != nullptr);
   ta_el->set_focused(true);
 
@@ -308,7 +312,8 @@ TEST_CASE("Screen.WheelBurstAppliesAsOneRedrawNotOnePerTick",
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scroll_element = component->Root()->QuerySelector("#scrollable");
+  auto* scroll_element =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
 
   device->ClearOutput();
@@ -648,7 +653,8 @@ TEST_CASE("Screen.DispatchMouseEvent", "[terminal]") {
 
   // Let's verify that the output was re-rendered using QuerySelector and
   // checking the view.
-  auto* btn_element = component->Root()->QuerySelector("#btn");
+  auto* btn_element =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn_element != nullptr);
   REQUIRE(btn_element->Print().find("Click Me (1)") != std::string::npos);
 }
@@ -686,7 +692,8 @@ TEST_CASE("Screen.ScrollEventAndClipping", "[terminal][scroll]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
 
-  auto* scroll_element = component->Root()->QuerySelector("#scrollable");
+  auto* scroll_element =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
 
   // 1. Initial State
@@ -773,7 +780,8 @@ TEST_CASE("Screen.HorizontalScrollEvent", "[terminal][scroll]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
 
-  auto* scroll_element = component->Root()->QuerySelector("#scrollable");
+  auto* scroll_element =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
   REQUIRE(scroll_element != nullptr);
 
   // 1. Initial State
@@ -857,8 +865,10 @@ TEST_CASE("Screen.NestedScrollChaining", "[terminal][scroll]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
 
-  auto* outer = component->Root()->QuerySelector("#outer");
-  auto* inner = component->Root()->QuerySelector("#inner");
+  auto* outer =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#outer");
+  auto* inner =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#inner");
   REQUIRE(outer != nullptr);
   REQUIRE(inner != nullptr);
 
@@ -976,10 +986,14 @@ TEST_CASE("Screen.TabFocusCycling", "[terminal][focus]") {
   auto component = Ref<FocusCyclingComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* input1 = component->Root()->QuerySelector("#input1");
-  auto* checkbox1 = component->Root()->QuerySelector("#checkbox1");
-  auto* non_focusable = component->Root()->QuerySelector("#non-focusable");
-  auto* input2 = component->Root()->QuerySelector("#input2");
+  auto* input1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#input1");
+  auto* checkbox1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#checkbox1");
+  auto* non_focusable = rtxui::ComponentInternals::Root(*component)
+                            ->QuerySelector("#non-focusable");
+  auto* input2 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#input2");
 
   REQUIRE(input1 != nullptr);
   REQUIRE(checkbox1 != nullptr);
@@ -1049,9 +1063,12 @@ TEST_CASE("Screen.DisabledInputExcludedFromTabOrder",
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* input1 = component->Root()->QuerySelector("#input1");
-  auto* input2 = component->Root()->QuerySelector("#input2");
-  auto* input3 = component->Root()->QuerySelector("#input3");
+  auto* input1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#input1");
+  auto* input2 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#input2");
+  auto* input3 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#input3");
   REQUIRE(input1 != nullptr);
   REQUIRE(input2 != nullptr);
   REQUIRE(input3 != nullptr);
@@ -1094,8 +1111,10 @@ TEST_CASE("Screen.RadioFocusCyclingAndNavigation", "[terminal][focus][radio]") {
   auto component = Ref<RadioFocusComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* radio1 = component->Root()->QuerySelector("#radio1");
-  auto* radio2 = component->Root()->QuerySelector("#radio2");
+  auto* radio1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#radio1");
+  auto* radio2 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#radio2");
 
   REQUIRE(radio1 != nullptr);
   REQUIRE(radio2 != nullptr);
@@ -1171,7 +1190,8 @@ TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
   auto component = Ref<TransitionTestComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
   // 1. Initial style: background-color is black (#000000)
@@ -1180,7 +1200,7 @@ TEST_CASE("Screen.TransitionsAndHover", "[terminal][transitions]") {
 
   // 2. Hover the button
   btn->set_hovered(true);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   // Active transitions should have background-color
   REQUIRE(btn->active_transitions.count("background-color") == 1);
@@ -1231,7 +1251,8 @@ TEST_CASE("Transitions.EasingFunctions", "[transitions][easing]") {
   auto component = Ref<EasingTestComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
   // Initial style
@@ -1239,7 +1260,7 @@ TEST_CASE("Transitions.EasingFunctions", "[transitions][easing]") {
 
   // Hover
   btn->set_hovered(true);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   REQUIRE(btn->active_transitions.count("flex-grow") == 1);
 
@@ -1290,7 +1311,8 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
   auto component = Ref<InterruptionTestComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
   // Initial style
@@ -1298,7 +1320,7 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
 
   // 1. Hover to start transition to Red
   btn->set_hovered(true);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   // At start (t = 1000ms), still black
   screen.Step();
@@ -1312,7 +1334,7 @@ TEST_CASE("Transitions.Interruption", "[transitions]") {
 
   // 2. Unhover to interrupt transition and go back to black
   btn->set_hovered(false);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   // At the moment of interruption (t = 1500ms), it should start from current
   // value (127, 0, 0) target is now #000000. Advance to t = 2000ms (500ms
@@ -1365,7 +1387,8 @@ TEST_CASE("Transitions.DispatchMouseEvent", "[transitions][mouse]") {
   // populated
   screen.Draw();
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   CHECK_FALSE(btn->hovered());
   CHECK(btn->style.background_color == Color::RGB(0, 0, 0));
@@ -1460,8 +1483,10 @@ TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
   auto component = Ref<FlexGrowTransitionComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* item1 = component->Root()->QuerySelector("#item1");
-  auto* item2 = component->Root()->QuerySelector("#item2");
+  auto* item1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item1");
+  auto* item2 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item2");
   REQUIRE(item1 != nullptr);
   REQUIRE(item2 != nullptr);
 
@@ -1474,7 +1499,7 @@ TEST_CASE("Transitions.FlexGrowLayout", "[transitions][layout]") {
 
   // Hover item2 to start transition
   item2->set_hovered(true);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   // Step at t = 1000ms (0%)
   screen.Step();
@@ -1531,7 +1556,8 @@ TEST_CASE("Transitions.ActiveMouseEvent", "[transitions][mouse][active]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   CHECK_FALSE(btn->hovered());
   CHECK_FALSE(btn->active());
@@ -1631,7 +1657,8 @@ TEST_CASE("Transitions.FocusEvent", "[transitions][focus]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* input = component->Root()->QuerySelector("#input");
+  auto* input =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#input");
   REQUIRE(input != nullptr);
   CHECK_FALSE(input->focused());
 
@@ -1727,8 +1754,10 @@ TEST_CASE("Screen.HitTestingFixedElementWithScroll", "[terminal][scroll]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* fixed_el = component->Root()->QuerySelector("#fixed_item");
-  auto* scroll_el = component->Root()->QuerySelector("#scroller");
+  auto* fixed_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#fixed_item");
+  auto* scroll_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scroller");
   REQUIRE(fixed_el != nullptr);
   REQUIRE(scroll_el != nullptr);
 
@@ -1800,7 +1829,8 @@ TEST_CASE("Screen.AnchorLinkScrolling", "[terminal][mouse][anchor]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scroll_el = component->Root()->QuerySelector("#scroller");
+  auto* scroll_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scroller");
   REQUIRE(scroll_el != nullptr);
   REQUIRE(scroll_el->scroll_y() == 0);
 
@@ -1837,11 +1867,16 @@ TEST_CASE("Screen.KeyboardFocusTabindexNavigation", "[terminal][focus]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* first = component->Root()->QuerySelector("#first");
-  auto* second = component->Root()->QuerySelector("#second");
-  auto* third = component->Root()->QuerySelector("#third");
-  auto* fourth = component->Root()->QuerySelector("#fourth");
-  auto* fifth = component->Root()->QuerySelector("#fifth");
+  auto* first =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#first");
+  auto* second =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#second");
+  auto* third =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#third");
+  auto* fourth =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#fourth");
+  auto* fifth =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#fifth");
 
   REQUIRE(first != nullptr);
   REQUIRE(second != nullptr);
@@ -1936,7 +1971,8 @@ TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* target = component->Root()->QuerySelector("#target");
+  auto* target =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#target");
   REQUIRE(target != nullptr);
 
   // At 70 width, only base style is active (black background: RGB(0,0,0))
@@ -1997,10 +2033,14 @@ TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scrollable = component->Root()->QuerySelector("#scrollable");
-  auto* item1 = component->Root()->QuerySelector("#item1");
-  auto* item2 = component->Root()->QuerySelector("#item2");
-  auto* item3 = component->Root()->QuerySelector("#item3");
+  auto* scrollable =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
+  auto* item1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item1");
+  auto* item2 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item2");
+  auto* item3 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item3");
 
   REQUIRE(scrollable != nullptr);
   REQUIRE(item1 != nullptr);
@@ -2074,7 +2114,8 @@ TEST_CASE("Screen.NativeCursorHiddenWhenScrolledOutOfView",
   auto container = Ref<ScrollCursorComponent>::New();
   Screen screen = ScreenInternals::Make(container, device);
 
-  auto* ta_el = container->Root()->QuerySelector("#ta");
+  auto* ta_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#ta");
   REQUIRE(ta_el != nullptr);
   auto* ta_ptr = ComponentAs<textarea>(ta_el);
   REQUIRE(ta_ptr != nullptr);
@@ -2113,7 +2154,8 @@ TEST_CASE("Screen.CopySelectionWritesOSC52", "[terminal][clipboard]") {
   Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* in_el = container->Root()->QuerySelector("#in");
+  auto* in_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
   auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
@@ -2146,7 +2188,8 @@ TEST_CASE("Screen.CutSelectionWritesOSC52AndDeletesSelection",
   Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* in_el = container->Root()->QuerySelector("#in");
+  auto* in_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
   auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
@@ -2184,7 +2227,8 @@ TEST_CASE("Screen.CopyWithNoSelectionLeavesEventUnhandled",
   Screen screen = ScreenInternals::Make(container, device);
   screen.Draw();
 
-  auto* in_el = container->Root()->QuerySelector("#in");
+  auto* in_el =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#in");
   REQUIRE(in_el != nullptr);
   auto* in_ptr = ComponentAs<input>(in_el);
   REQUIRE(in_ptr != nullptr);
@@ -2239,9 +2283,12 @@ TEST_CASE("Screen.ScrollIntoViewWithBorder", "[terminal][focus][scroll]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scrollable = component->Root()->QuerySelector("#scrollable");
-  auto* item0 = component->Root()->QuerySelector("#item0");
-  auto* item1 = component->Root()->QuerySelector("#item1");
+  auto* scrollable =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
+  auto* item0 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item0");
+  auto* item1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item1");
 
   REQUIRE(scrollable != nullptr);
   REQUIRE(item0 != nullptr);
@@ -2309,9 +2356,12 @@ TEST_CASE("Screen.ScrollIntoViewWithMargin", "[terminal][focus][scroll]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scrollable = component->Root()->QuerySelector("#scrollable");
-  auto* item0 = component->Root()->QuerySelector("#item0");
-  auto* item1 = component->Root()->QuerySelector("#item1");
+  auto* scrollable =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
+  auto* item0 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item0");
+  auto* item1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item1");
 
   REQUIRE(scrollable != nullptr);
   REQUIRE(item0 != nullptr);
@@ -2404,9 +2454,10 @@ TEST_CASE("Screen.ScrollAnimation", "[terminal][scroll][animation]") {
   auto component = Ref<ScrollAnimComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* scrollable_auto = component->Root()->QuerySelector("#scrollable_auto");
-  auto* scrollable_smooth =
-      component->Root()->QuerySelector("#scrollable_smooth");
+  auto* scrollable_auto = rtxui::ComponentInternals::Root(*component)
+                              ->QuerySelector("#scrollable_auto");
+  auto* scrollable_smooth = rtxui::ComponentInternals::Root(*component)
+                                ->QuerySelector("#scrollable_smooth");
   REQUIRE(scrollable_auto != nullptr);
   REQUIRE(scrollable_smooth != nullptr);
 
@@ -2756,13 +2807,13 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
   device->ClearOutput();
 
   component->text = "中";
-  component->Render();
+  rtxui::ComponentInternals::Render(*component);
   screen.Draw();
   std::string second_output = device->GetOutput();
   device->ClearOutput();
 
   component->text = "B";
-  component->Render();
+  rtxui::ComponentInternals::Render(*component);
   screen.Draw();
   std::string third_output = device->GetOutput();
   device->ClearOutput();
@@ -2923,10 +2974,14 @@ TEST_CASE("Screen.SpatialNavigation", "[terminal][focus][spatial]") {
   auto component = Ref<SpatialNavComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* item1 = component->Root()->QuerySelector("#item1");
-  auto* item2 = component->Root()->QuerySelector("#item2");
-  auto* item3 = component->Root()->QuerySelector("#item3");
-  auto* item4 = component->Root()->QuerySelector("#item4");
+  auto* item1 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item1");
+  auto* item2 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item2");
+  auto* item3 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item3");
+  auto* item4 =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#item4");
 
   REQUIRE(item1 != nullptr);
   REQUIRE(item2 != nullptr);
@@ -2991,7 +3046,8 @@ TEST_CASE("Screen.SpaceEnterActivation", "[terminal][focus][activation]") {
 
   auto component = Ref<ActivationComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   btn->set_focused(true);
   screen.Draw();
@@ -3024,7 +3080,8 @@ TEST_CASE("Screen.ParameterizedActivationWithSpaceAndReturn",
 
   auto component = Ref<ParameterizedActivationComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   btn->set_focused(true);
   screen.Draw();
@@ -3055,7 +3112,8 @@ TEST_CASE("Screen.CheckboxActivationWithSpaceAndReturn", "[terminal][focus]") {
 
   auto component = Ref<CheckboxActivationComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
-  auto* chk = component->Root()->QuerySelector("#chk");
+  auto* chk =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#chk");
   REQUIRE(chk != nullptr);
   chk->set_focused(true);
   screen.Draw();
@@ -3097,9 +3155,12 @@ TEST_CASE("Screen.HjklNavigationInInput", "[terminal][focus][spatial]") {
   auto component = Ref<InputComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* input = component->Root()->QuerySelector("#input");
-  auto* other = component->Root()->QuerySelector("#other");
-  auto* left_other = component->Root()->QuerySelector("#left-other");
+  auto* input =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#input");
+  auto* other =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#other");
+  auto* left_other =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#left-other");
 
   REQUIRE(input != nullptr);
   REQUIRE(other != nullptr);
@@ -3173,7 +3234,8 @@ TEST_CASE("Transitions.NulloptTargetReverts",
   auto component = Ref<TransitionTestComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
   // 1. Initial style: color is std::nullopt
@@ -3182,7 +3244,7 @@ TEST_CASE("Transitions.NulloptTargetReverts",
 
   // 2. Focus the button
   btn->set_focused(true);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   // Active transitions should have color
   REQUIRE(btn->active_transitions.count("color") == 1);
@@ -3201,7 +3263,7 @@ TEST_CASE("Transitions.NulloptTargetReverts",
 
   // 3. Unfocus the button
   btn->set_focused(false);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   // Active transitions should have color again
   REQUIRE(btn->active_transitions.count("color") == 1);
@@ -3245,11 +3307,12 @@ TEST_CASE("Screen.TransitionForegroundColorAlias",
   auto component = Ref<ForegroundColorTransitionComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
 
   btn->set_focused(true);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   REQUIRE(btn->active_transitions.count("color") == 1);
 
@@ -3290,11 +3353,12 @@ TEST_CASE("Screen.TransitionBorderColorTopAlias",
   auto component = Ref<BorderColorTransitionComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
 
-  auto* box = component->Root()->QuerySelector("#box");
+  auto* box =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   box->set_focused(true);
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 
   REQUIRE(box->active_transitions.count("border-top-color") == 1);
 
@@ -3477,9 +3541,12 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scrollable = component->Root()->QuerySelector("#scroll-window");
-  auto* link_contact = component->Root()->QuerySelector("#link-contact");
-  auto* sec_contact = component->Root()->QuerySelector("#sec-contact");
+  auto* scrollable = rtxui::ComponentInternals::Root(*component)
+                         ->QuerySelector("#scroll-window");
+  auto* link_contact = rtxui::ComponentInternals::Root(*component)
+                           ->QuerySelector("#link-contact");
+  auto* sec_contact = rtxui::ComponentInternals::Root(*component)
+                          ->QuerySelector("#sec-contact");
 
   REQUIRE(scrollable != nullptr);
   REQUIRE(link_contact != nullptr);
@@ -3504,7 +3571,7 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
       // Check if the currently focused element is link_contact or its
       // descendant
       Element* focused = nullptr;
-      component->Root()->Visit([&](Element& el) {
+      rtxui::ComponentInternals::Root(*component)->Visit([&](Element& el) {
         if (el.focused()) {
           focused = &el;
         }
@@ -3536,7 +3603,8 @@ TEST_CASE("Screen.AnchorExampleScrollIntoView", "[terminal][scroll]") {
   REQUIRE(contact_y != -1);
 
   // Confirm scrollbar is scrolled to the absolute bottom (max_scroll_y)
-  auto* scrollable_after = component->Root()->QuerySelector("#scroll-window");
+  auto* scrollable_after = rtxui::ComponentInternals::Root(*component)
+                               ->QuerySelector("#scroll-window");
 
   int max_scroll_y =
       scrollable_after->scroll_height() - scrollable_after->layout_height();
@@ -3587,7 +3655,8 @@ TEST_CASE("Screen.ScrollbarTrackClick", "[terminal][scroll][scrollbar]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  auto* scroll_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
   REQUIRE(scroll_el != nullptr);
   REQUIRE(scroll_el->scroll_y() == 0);
   // Content = 20 lines, viewport = 10, max_scroll = 10.
@@ -3662,7 +3731,8 @@ TEST_CASE("Screen.ScrollbarThumbDrag", "[terminal][scroll][scrollbar]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  auto* scroll_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
   REQUIRE(scroll_el != nullptr);
   REQUIRE(scroll_el->scroll_y() == 0);
 
@@ -3749,7 +3819,8 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  auto* scroll_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
   REQUIRE(scroll_el != nullptr);
   REQUIRE(scroll_el->scroll_y() == 0);
 
@@ -3830,7 +3901,8 @@ TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {
   screen.SetSmoothScrollEnabled(false);
   screen.Draw();
 
-  auto* scroll_el = component->Root()->QuerySelector("#scrollable");
+  auto* scroll_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
   REQUIRE(scroll_el != nullptr);
 
   // Initial state: no scrollbar hover/active.
@@ -3900,11 +3972,13 @@ TEST_CASE("Screen.LayoutFlexDemoClickTest", "[terminal][flex]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* flex_container = component->Root()->QuerySelector("#flex-container");
+  auto* flex_container = rtxui::ComponentInternals::Root(*component)
+                             ->QuerySelector("#flex-container");
   REQUIRE(flex_container != nullptr);
   CHECK(flex_container->style.flex_direction == Direction::Row);
 
-  auto* btn = component->Root()->QuerySelector("#btn");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn");
   REQUIRE(btn != nullptr);
   btn->set_focused(true);
   screen.Draw();
@@ -3939,8 +4013,10 @@ TEST_CASE("Screen.TooltipHoverDigestRegression", "[terminal][hover]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* tt_el = component->Root()->QuerySelector("#tt");
-  auto* trigger_el = component->Root()->QuerySelector("#trigger");
+  auto* tt_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#tt");
+  auto* trigger_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#trigger");
   REQUIRE(tt_el != nullptr);
   REQUIRE(trigger_el != nullptr);
 
@@ -3994,7 +4070,8 @@ TEST_CASE("Screen.TooltipVisibleRender", "[terminal][hover][render]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* tt_el = component->Root()->QuerySelector("#tt");
+  auto* tt_el =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#tt");
   REQUIRE(tt_el != nullptr);
 
   // Hover in
@@ -4091,8 +4168,10 @@ TEST_CASE("Screen.TooltipDemoRender", "[terminal][hover][demo]") {
   screen.Draw();
 
   // Find button and tooltip
-  auto* btn = component->Root()->QuerySelector("#btn_top");
-  auto* tt = component->Root()->QuerySelector("#tt_top");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn_top");
+  auto* tt =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#tt_top");
   REQUIRE(btn != nullptr);
   REQUIRE(tt != nullptr);
 
@@ -4141,8 +4220,9 @@ TEST_CASE("Screen.TooltipMarginAutoAlignment", "[terminal][hover][alignment]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* trigger = component->Root()->QuerySelector("#trigger");
-  auto* tt = component->Root()->QuerySelector("#tt");
+  auto* trigger =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#trigger");
+  auto* tt = rtxui::ComponentInternals::Root(*component)->QuerySelector("#tt");
   REQUIRE(trigger != nullptr);
   REQUIRE(tt != nullptr);
 
@@ -4193,7 +4273,8 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
 
   // Test Bottom
   {
-    auto* trigger = component->Root()->QuerySelector("#trigger_bottom");
+    auto* trigger = rtxui::ComponentInternals::Root(*component)
+                        ->QuerySelector("#trigger_bottom");
     REQUIRE(trigger != nullptr);
     int tx = trigger->absolute_x();
     int ty = trigger->absolute_y();
@@ -4216,7 +4297,8 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
 
   // Test Left
   {
-    auto* trigger = component->Root()->QuerySelector("#trigger_left");
+    auto* trigger = rtxui::ComponentInternals::Root(*component)
+                        ->QuerySelector("#trigger_left");
     REQUIRE(trigger != nullptr);
     int tx = trigger->absolute_x();
     int ty = trigger->absolute_y();
@@ -4239,7 +4321,8 @@ TEST_CASE("Screen.TooltipPlacements", "[terminal][hover][render]") {
 
   // Test Right
   {
-    auto* trigger = component->Root()->QuerySelector("#trigger_right");
+    auto* trigger = rtxui::ComponentInternals::Root(*component)
+                        ->QuerySelector("#trigger_right");
     REQUIRE(trigger != nullptr);
     int tx = trigger->absolute_x();
     int ty = trigger->absolute_y();
@@ -4287,8 +4370,10 @@ TEST_CASE("Screen.NestedStickyHitTesting", "[terminal][sticky][hittest][bug]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* scrollable = component->Root()->QuerySelector("#scrollable");
-  auto* sticky = component->Root()->QuerySelector("#sticky-header");
+  auto* scrollable =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#scrollable");
+  auto* sticky = rtxui::ComponentInternals::Root(*component)
+                     ->QuerySelector("#sticky-header");
   REQUIRE(scrollable != nullptr);
   REQUIRE(sticky != nullptr);
 
@@ -4351,9 +4436,12 @@ TEST_CASE("Screen.FocusDisplayNone", "[screen][focus][display_none]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* first = component->Root()->QuerySelector("#first");
-  auto* hidden_child = component->Root()->QuerySelector("#hidden-child");
-  auto* second = component->Root()->QuerySelector("#second");
+  auto* first =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#first");
+  auto* hidden_child = rtxui::ComponentInternals::Root(*component)
+                           ->QuerySelector("#hidden-child");
+  auto* second =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#second");
 
   REQUIRE(first != nullptr);
   REQUIRE(hidden_child != nullptr);
@@ -4444,11 +4532,16 @@ TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
   Screen screen = ScreenInternals::Make(component, device);
   screen.Draw();
 
-  auto* main = component->Root()->QuerySelector(".main-container");
-  auto* sidebar = component->Root()->QuerySelector(".sidebar");
-  auto* demo = component->Root()->QuerySelector(".demo-area");
-  auto* box = component->Root()->QuerySelector("#scrollable-content");
-  auto* btn = component->Root()->QuerySelector("#btn-double");
+  auto* main = rtxui::ComponentInternals::Root(*component)
+                   ->QuerySelector(".main-container");
+  auto* sidebar =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector(".sidebar");
+  auto* demo =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector(".demo-area");
+  auto* box = rtxui::ComponentInternals::Root(*component)
+                  ->QuerySelector("#scrollable-content");
+  auto* btn =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#btn-double");
   REQUIRE(main != nullptr);
   REQUIRE(sidebar != nullptr);
   REQUIRE(demo != nullptr);
@@ -4670,7 +4763,7 @@ TEST_CASE("Switching tab shows only the selected pane", "[tabs][mouse][css]") {
 
   auto panes = [&] {
     std::vector<Element*> found;
-    app->Root()->Visit([&](Element& el) {
+    rtxui::ComponentInternals::Root(*app)->Visit([&](Element& el) {
       if (el.tag() == "tab-pane" || el.tag() == "tab_pane") {
         found.push_back(&el);
       }
@@ -4692,7 +4785,7 @@ TEST_CASE("Switching tab shows only the selected pane", "[tabs][mouse][css]") {
   REQUIRE_FALSE(panes()[0]->style.display_none);
 
   std::vector<Element*> headers;
-  app->Root()->Visit([&](Element& el) {
+  rtxui::ComponentInternals::Root(*app)->Visit([&](Element& el) {
     for (const auto& c : el.classes()) {
       if (c == "tab-header-btn") {
         headers.push_back(&el);
@@ -4713,7 +4806,7 @@ TEST_CASE("Switching tab shows only the selected pane", "[tabs][mouse][css]") {
   send(Event::Mouse::Button::Left, Event::Mouse::Motion::Pressed);
   send(Event::Mouse::Button::Left, Event::Mouse::Motion::Released);
   app->Digest();
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
   REQUIRE(app->current_tab == "settings");
 
   // Exactly one pane is shown, and it is the one that was selected.
@@ -4737,7 +4830,7 @@ TEST_CASE("Selecting a tab by keyboard keeps focus on the headers",
 
   auto headers = [&] {
     std::vector<Element*> found;
-    app->Root()->Visit([&](Element& el) {
+    rtxui::ComponentInternals::Root(*app)->Visit([&](Element& el) {
       for (const auto& c : el.classes()) {
         if (c == "tab-header-btn") {
           found.push_back(&el);
@@ -4755,7 +4848,7 @@ TEST_CASE("Selecting a tab by keyboard keeps focus on the headers",
 
   screen.Dispatch(Event::Keyboard{.codepoint = 32});
   app->Digest();
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
 
   CHECK(app->current_tab == "settings");
   // Focus must survive the re-render, or the next keypress goes nowhere.
@@ -4781,7 +4874,7 @@ TEST_CASE("Switching tab keeps the header buttons styled",
 
   auto headers = [&] {
     std::vector<Element*> found;
-    app->Root()->Visit([&](Element& el) {
+    rtxui::ComponentInternals::Root(*app)->Visit([&](Element& el) {
       for (const auto& c : el.classes()) {
         if (c == "tab-header-btn") {
           found.push_back(&el);
@@ -4818,7 +4911,7 @@ TEST_CASE("Switching tab keeps the header buttons styled",
   send(Event::Mouse::Button::Left, Event::Mouse::Motion::Pressed);
   send(Event::Mouse::Button::Left, Event::Mouse::Motion::Released);
   app->Digest();
-  app->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*app);
 
   REQUIRE(app->current_tab == "settings");
   auto after = headers();
@@ -4858,8 +4951,10 @@ TEST_CASE("Clicking a summary toggles the details content",
   Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
-  auto* content = app->Root()->QuerySelector(".details-content");
-  auto* summary_line = app->Root()->QuerySelector(".summary-line");
+  auto* content =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".details-content");
+  auto* summary_line =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".summary-line");
   REQUIRE(content != nullptr);
   REQUIRE(summary_line != nullptr);
 
@@ -4883,12 +4978,14 @@ TEST_CASE("Clicking a summary toggles the details content",
   };
 
   click();
-  auto* opened = app->Root()->QuerySelector(".details-content");
+  auto* opened =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".details-content");
   REQUIRE(opened != nullptr);
   CHECK_FALSE(opened->style.display_none);
 
   click();
-  auto* closed = app->Root()->QuerySelector(".details-content");
+  auto* closed =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".details-content");
   REQUIRE(closed != nullptr);
   CHECK(closed->style.display_none);
 }
@@ -4921,7 +5018,7 @@ TEST_CASE("Checking a radio unchecks only its own group", "[radio][mouse]") {
   // The marker glyph is how checked-ness actually reaches the user. Take just
   // the glyph, not the label after it.
   auto marker_of = [&](const char* id) {
-    auto* el = app->Root()->QuerySelector(id);
+    auto* el = rtxui::ComponentInternals::Root(*app)->QuerySelector(id);
     REQUIRE(el != nullptr);
     std::string text;
     el->Visit([&](Element& e) {
@@ -4939,7 +5036,7 @@ TEST_CASE("Checking a radio unchecks only its own group", "[radio][mouse]") {
   const std::string unchecked = marker_of("#r2");
   REQUIRE(checked != unchecked);
 
-  auto* r2 = app->Root()->QuerySelector("#r2");
+  auto* r2 = rtxui::ComponentInternals::Root(*app)->QuerySelector("#r2");
   REQUIRE(r2 != nullptr);
   for (auto motion :
        {Event::Mouse::Motion::Pressed, Event::Mouse::Motion::Released}) {
@@ -4966,7 +5063,7 @@ TEST_CASE("Clicking a checkbox toggles its glyph", "[checkbox][mouse]") {
   Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
-  auto* box = app->Root()->QuerySelector("#c");
+  auto* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#c");
   REQUIRE(box != nullptr);
   auto glyph = [&] {
     std::string text;
@@ -5047,7 +5144,7 @@ TEST_CASE(
 
   auto count = [&](const char* tag) {
     int n = 0;
-    app->Root()->Visit([&](Element& e) {
+    rtxui::ComponentInternals::Root(*app)->Visit([&](Element& e) {
       if (e.tag() == tag) {
         ++n;
       }
@@ -5058,13 +5155,15 @@ TEST_CASE(
   REQUIRE(count("legend") == 1);
   // Routed into the legend slot even though it came out of an <if>, and the
   // has-legend styling lands on the first frame rather than a frame late.
-  REQUIRE(app->Root()->QuerySelector(".has-legend") != nullptr);
+  REQUIRE(rtxui::ComponentInternals::Root(*app)->QuerySelector(".has-legend") !=
+          nullptr);
 
   app->show = false;
   app->Digest();
   screen.Draw();
   CHECK(count("legend") == 0);
-  CHECK(app->Root()->QuerySelector(".no-legend") != nullptr);
+  CHECK(rtxui::ComponentInternals::Root(*app)->QuerySelector(".no-legend") !=
+        nullptr);
 
   app->show = true;
   app->Digest();
@@ -5099,7 +5198,7 @@ TEST_CASE("A details drops a summary its consumer stopped providing",
 
   auto count = [&] {
     int n = 0;
-    app->Root()->Visit([&](Element& e) {
+    rtxui::ComponentInternals::Root(*app)->Visit([&](Element& e) {
       if (e.tag() == "summary") {
         ++n;
       }
@@ -5157,7 +5256,7 @@ class ForTabsApp : public Component<ForTabsApp> {
     <tab-pane label="{n}" name="{n}">body</tab-pane>
   </for>
 </tabs>)html";
-  ForTabsApp() { RegisterCollection("names", &names); }
+  ForTabsApp() { BindCollection("names", &names); }
 };
 
 // Counts elements carrying `cls`, or with tag `tag` when `cls` is null.
@@ -5188,7 +5287,7 @@ TEST_CASE("Built-ins follow conditional projected children",
     device->TriggerResize(60, 20);
     Screen screen = ScreenInternals::Make(app, device);
     screen.Draw();
-    Element* root = app->Root();
+    Element* root = rtxui::ComponentInternals::Root(*app);
 
     CHECK(CountMatching(root, cls, tag) == 2);
     app->show = false;
@@ -5223,7 +5322,8 @@ TEST_CASE("tabs follows a collection that grows and shrinks", "[slot][tabs]") {
   screen.Draw();
 
   auto headers = [&] {
-    return CountMatching(app->Root(), "tab-header-btn", nullptr);
+    return CountMatching(rtxui::ComponentInternals::Root(*app),
+                         "tab-header-btn", nullptr);
   };
   CHECK(headers() == 3);
 
@@ -5247,7 +5347,7 @@ class KeyedListApp : public Component<KeyedListApp> {
     <div id="{n}">{n}</div>
   </for>
 </div>)html";
-  KeyedListApp() { RegisterCollection("names", &names); }
+  KeyedListApp() { BindCollection("names", &names); }
 };
 
 class UnkeyedListApp : public Component<UnkeyedListApp> {
@@ -5258,7 +5358,7 @@ class UnkeyedListApp : public Component<UnkeyedListApp> {
     <input id="{n}" value="{n}"/>
   </for>
 </div>)html";
-  UnkeyedListApp() { RegisterCollection("names", &names); }
+  UnkeyedListApp() { BindCollection("names", &names); }
 };
 
 std::vector<Element*> InputsOf(Element* root) {
@@ -5283,7 +5383,7 @@ TEST_CASE("A keyed <for> moves element state with the item", "[for][key]") {
   Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
-  auto inputs = InputsOf(app->Root());
+  auto inputs = InputsOf(rtxui::ComponentInternals::Root(*app));
   REQUIRE(inputs.size() == 3);
   Element* beta = inputs[1];
   REQUIRE(beta->id == "beta");
@@ -5295,7 +5395,7 @@ TEST_CASE("A keyed <for> moves element state with the item", "[for][key]") {
   app->Digest();
   screen.Draw();
 
-  auto after = InputsOf(app->Root());
+  auto after = InputsOf(rtxui::ComponentInternals::Root(*app));
   REQUIRE(after.size() == 3);
   CHECK(after[0]->id == "beta");
   CHECK(after[1]->id == "gamma");
@@ -5318,7 +5418,7 @@ TEST_CASE("An unkeyed <for> still reconciles by position", "[for][key]") {
   Screen screen = ScreenInternals::Make(app, device);
   screen.Draw();
 
-  auto inputs = InputsOf(app->Root());
+  auto inputs = InputsOf(rtxui::ComponentInternals::Root(*app));
   REQUIRE(inputs.size() == 3);
   Element* at_index_1 = inputs[1];
 
@@ -5326,7 +5426,7 @@ TEST_CASE("An unkeyed <for> still reconciles by position", "[for][key]") {
   app->Digest();
   screen.Draw();
 
-  auto after = InputsOf(app->Root());
+  auto after = InputsOf(rtxui::ComponentInternals::Root(*app));
   REQUIRE(after.size() == 3);
   CHECK(after[0]->id == "beta");
   CHECK(after[1]->id == "gamma");
@@ -5347,7 +5447,7 @@ TEST_CASE("A fieldset projects its legend and styles itself accordingly",
 
   // The legend ends up under the legend slot, not left in the body.
   Element* legend = nullptr;
-  app->Root()->Visit([&](Element& e) {
+  rtxui::ComponentInternals::Root(*app)->Visit([&](Element& e) {
     if (e.tag() == "legend") {
       legend = &e;
     }
@@ -5357,7 +5457,7 @@ TEST_CASE("A fieldset projects its legend and styles itself accordingly",
 
   // It is rendered exactly once -- the move must not leave a copy behind.
   int legend_count = 0;
-  app->Root()->Visit([&](Element& e) {
+  rtxui::ComponentInternals::Root(*app)->Visit([&](Element& e) {
     if (e.tag() == "legend") {
       ++legend_count;
     }
@@ -5366,7 +5466,8 @@ TEST_CASE("A fieldset projects its legend and styles itself accordingly",
 
   // And the container picked the has-legend styling, which only takes effect
   // if the class set during Digest() reached a computed style.
-  Element* container = app->Root()->QuerySelector(".has-legend");
+  Element* container =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector(".has-legend");
   CHECK(container != nullptr);
 
   // The legend text actually reaches the frame.
@@ -5403,8 +5504,8 @@ TEST_CASE("Declaring a screen background makes reversal exact",
   // the colors it will really be drawn in.
   auto left_cell = [](Color screen_background) {
     auto app = Ref<ScreenBackgroundApp>::New();
-    app->Mount();
-    auto box = LayoutTreeBuilder::Build(app->Root());
+    rtxui::ComponentInternals::Mount(*app);
+    auto box = LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*app));
     REQUIRE(box != nullptr);
     auto fragment = RunLayout(
         {box.get()}, {{6, MeasureMode::Exactly}, {3, MeasureMode::Exactly}});

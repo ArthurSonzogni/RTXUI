@@ -9,24 +9,81 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/xml/xml.hpp"
 
 namespace rtxui {
 
+namespace internal {
+
+// The names a template sees at one point of a render: each `<for>` around it
+// adds its item and index, chained to the scope outside.
+struct LocalScope {
+  const LocalScope* parent = nullptr;
+  std::string_view name;
+  std::variant<std::string_view, std::shared_ptr<StructVisitor>> value;
+
+  const std::variant<std::string_view, std::shared_ptr<StructVisitor>>* Get(
+      std::string_view var_name) const {
+    if (name == var_name) {
+      return &value;
+    }
+    if (parent) {
+      return parent->Get(var_name);
+    }
+    return nullptr;
+  }
+};
+
+/// Restricts which of a node's children a reconcile pass consumes, so that
+/// content projected into a component can be split across several slots by
+/// tag. See `<slot.name select="tag">` in RenderReconcile.
+struct SlotFilter {
+  /// Tags claimed by a sibling select-slot; skipped by the default slot.
+  const std::vector<std::string>* claimed = nullptr;
+  /// When set, only children carrying this tag are consumed.
+  const std::string* only = nullptr;
+};
+
+}  // namespace internal
+
+using internal::LocalScope;
+using internal::SlotFilter;
+using internal::StructVisitor;
+using internal::TypeErasedRange;
+
+// The factory of the built-in tag `name` (`button`, `input`, ...), or null.
+ComponentFactory GetGlobalComponentFactory(std::string_view name);
+
+// The scroll offset and height of the scroll container a `<for virtual="">`
+// renders into.
+struct VirtualListViewport {
+  int scroll = 0;
+  int height = 0;
+};
+
 /// What a component holds. It lives here rather than in the public header so
 /// that a component subclass cannot reach it, and so that changing it does not
 /// change the layout of every component.
 struct ComponentBase::Data {
-  std::vector<Entry> entries_;
-  std::vector<RangeEntry> range_entries_;
+  std::vector<internal::ValueBinding> entries_;
+  std::vector<internal::RangeBinding> range_entries_;
+
+  // Imported callbacks and components, by the name the template uses.
+  std::map<std::string, std::function<void()>, std::less<>> callbacks_;
+  std::map<std::string, std::function<void(std::string)>, std::less<>>
+      parameterized_callbacks_;
+  std::map<std::string, ComponentFactory, std::less<>> imports_;
 
   // Shared with every other instance declaring the same stylesheet text; see
   // GetSharedStyle. Aliasing pointers into one StyleData, so both keep it
@@ -127,6 +184,35 @@ struct ComponentBase::Data {
 // The parts of ComponentBase that the rest of the library needs but that are
 // not part of the public API.
 struct ComponentInternals {
+  using StyleResolutionScope = ComponentBase::StyleResolutionScope;
+
+  static ComponentBase::Data& data(ComponentBase& c) { return *c.data_; }
+
+  // Driving a component without a Screen, as tests do.
+  static void Mount(ComponentBase& c) { c.Mount(); }
+  static void Render(ComponentBase& c) { c.Render(); }
+  static Element* Root(const ComponentBase& c) { return c.Root(); }
+  static void ResolveTargetStyles(ComponentBase& c) { c.ResolveTargetStyles(); }
+  static void ResolveTargetStyles(ComponentBase& c, double current_time_ms) {
+    c.ResolveTargetStyles(current_time_ms);
+  }
+
+  static std::string_view WrittenTag(const ComponentBase& c) {
+    return c.WrittenTag();
+  }
+  static std::string_view Template(ComponentBase& c) { return c.Template(); }
+  static bool RunCallback(ComponentBase& c,
+                          std::string_view name,
+                          std::string_view arg = "") {
+    return c.RunCallback(name, arg);
+  }
+  static std::optional<std::string> TakePendingClipboardWrite() {
+    return ComponentBase::TakePendingClipboardWrite();
+  }
+  static bool StylesNeedResolve(ComponentBase& c) {
+    return c.StylesNeedResolve();
+  }
+
   static const CategorizedRules* categorized_rules(const ComponentBase& c) {
     return c.categorized_rules();
   }

@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
@@ -17,12 +18,13 @@
 namespace rtxui {
 
 Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
   return PaintComponent(*component, width, height);
 }
 
 Texture PaintComponent(const ComponentBase& component, int width, int height) {
-  auto layout_box = LayoutTreeBuilder::Build(component.Root());
+  auto layout_box =
+      LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(component));
   Texture texture(width, height);
   if (layout_box) {
     LayoutConstraints constraints;

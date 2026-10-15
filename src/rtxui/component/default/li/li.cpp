@@ -12,6 +12,7 @@
 
 #include "rtxui/bind.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/layout/style.hpp"
 
@@ -144,7 +145,7 @@ std::string_view li::Setup() {
 }
 
 bool li::Digest() {
-  auto* root = Root();
+  auto* root = ComponentInternals::Root(*this);
   if (root) {
     // 1. Find closest list parent and list depth
     Element* immediate_list = nullptr;

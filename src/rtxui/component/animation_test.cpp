@@ -14,6 +14,7 @@
 #include "rtxui/base/clock.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/headless.hpp"
@@ -94,8 +95,8 @@ TEST_CASE("An animation interpolates between its keyframes over time",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Fade>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   CHECK(Red(box->style.background_color) == 0);
@@ -132,8 +133,8 @@ TEST_CASE("An infinite alternating animation goes back and forth",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Pulse>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   clock.Advance(box, 25);
@@ -170,9 +171,11 @@ TEST_CASE("animation-fill-mode holds the keyframes outside the animation",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Fill>::New();
-  app->Mount();
-  Element* forwards = app->Root()->QuerySelector("#forwards");
-  Element* backwards = app->Root()->QuerySelector("#backwards");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* forwards =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#forwards");
+  Element* backwards =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#backwards");
   REQUIRE(forwards != nullptr);
   REQUIRE(backwards != nullptr);
 
@@ -211,8 +214,8 @@ TEST_CASE("A keyframe's own timing function eases the way to the next one",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Steps>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   // The first half is linear, the animation's own timing.
@@ -249,15 +252,15 @@ TEST_CASE("Re-rendering carries an animation on instead of restarting it",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Toggle>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   clock.Advance(box, 40);
   CHECK(box->style.opacity == Catch::Approx(0.4f));
 
   app->counter = 1;
   app->Digest();
-  box = app->Root()->QuerySelector("#box");
+  box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   clock.Advance(box, 20);
   CHECK(box->style.opacity == Catch::Approx(0.6f));
@@ -266,15 +269,15 @@ TEST_CASE("Re-rendering carries an animation on instead of restarting it",
 TEST_CASE("No longer declaring an animation stops it", "[animation]") {
   FakeClock clock;
   auto app = Ref<Toggle>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   clock.Advance(box, 40);
   CHECK(box->style.opacity == Catch::Approx(0.4f));
 
   app->spinning = false;
   app->Digest();
-  box = app->Root()->QuerySelector("#box");
+  box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   CHECK(box->style.opacity == Catch::Approx(1.0f));
   CHECK(box->running_animations.empty());
@@ -306,15 +309,15 @@ TEST_CASE("animation-play-state: paused freezes an animation where it is",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Pausable>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   clock.Advance(box, 300);
   CHECK(box->style.opacity == Catch::Approx(0.3f));
 
   app->paused = true;
   app->Digest();
-  box = app->Root()->QuerySelector("#box");
+  box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   clock.Advance(box, 5000);
   CHECK(box->style.opacity == Catch::Approx(0.3f));
@@ -323,7 +326,7 @@ TEST_CASE("animation-play-state: paused freezes an animation where it is",
   // Resuming picks up from there, not from where the clock has got to.
   app->paused = false;
   app->Digest();
-  box = app->Root()->QuerySelector("#box");
+  box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
   clock.Advance(box, 100);
   CHECK(box->style.opacity == Catch::Approx(0.4f));
@@ -359,16 +362,17 @@ TEST_CASE("@keyframes are scoped to the component declaring them",
   FakeClock clock;
   DiagnosticRecorder diagnostics;
   auto app = Ref<Parent>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
 
   // The parent's own rule, on the <Child> tag it wrote, finds its keyframes.
-  Element* host = app->Root()->QuerySelector("#host");
+  Element* host = rtxui::ComponentInternals::Root(*app)->QuerySelector("#host");
   REQUIRE(host != nullptr);
   clock.Advance(host, 500);
   CHECK(host->style.opacity == Catch::Approx(0.5f));
 
   // The child's rule does not see the parent's keyframes.
-  Element* inner = app->Root()->QuerySelector("#inner");
+  Element* inner =
+      rtxui::ComponentInternals::Root(*app)->QuerySelector("#inner");
   REQUIRE(inner != nullptr);
   inner->TickTransitions(g_now);
   CHECK(inner->style.opacity == Catch::Approx(1.0f));
@@ -393,7 +397,7 @@ TEST_CASE("Animations that cannot run are reported", "[animation]") {
   FakeClock clock;
   DiagnosticRecorder diagnostics;
   auto app = Ref<Missing>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   // The later rule wins, so `nowhere` is never looked up; `odd` is, and its
   // padding cannot be animated.
   CHECK_FALSE(diagnostics.Has("nowhere"));
@@ -414,7 +418,7 @@ TEST_CASE("An animation naming no @keyframes is reported", "[animation]") {
   FakeClock clock;
   DiagnosticRecorder diagnostics;
   auto app = Ref<Unknown>::New();
-  app->Mount();
+  rtxui::ComponentInternals::Mount(*app);
   CHECK(diagnostics.Has("animation 'nowhere' has no matching @keyframes"));
 }
 
@@ -432,8 +436,8 @@ class Slide : public Component<Slide> {
 TEST_CASE("An animation moves an element by its offsets", "[animation]") {
   FakeClock clock;
   auto app = Ref<Slide>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   CHECK(box->style.right == Length::Cells(-10));
@@ -477,8 +481,8 @@ class Inset : public Component<Inset> {
 TEST_CASE("inset animates the four offsets", "[animation]") {
   FakeClock clock;
   auto app = Ref<Inset>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   clock.Advance(box, 500);
@@ -504,8 +508,8 @@ class Shift : public Component<Shift> {
 TEST_CASE("A transition moves an element by its offsets", "[animation]") {
   FakeClock clock;
   auto app = Ref<Shift>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   app->box_class = "moved";
@@ -534,8 +538,8 @@ TEST_CASE("A transition on background fades the background color",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Tint>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   app->box_class = "lit";
@@ -626,8 +630,8 @@ class Hidden : public Component<Hidden> {
 TEST_CASE("An animation starts when its element is displayed", "[animation]") {
   FakeClock clock;
   auto app = Ref<Hidden>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   // Hidden for a while: nothing plays.
@@ -663,8 +667,8 @@ class MixedUnits : public Component<MixedUnits> {
 TEST_CASE("A length animates between cells and percents", "[animation]") {
   FakeClock clock;
   auto app = Ref<MixedUnits>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   CHECK(box->style.right.Resolve(20) == 10);  // 50% of 20.
@@ -719,8 +723,8 @@ class SlideOnClass : public Component<SlideOnClass> {
 TEST_CASE("A transition moves an element by its translate", "[animation]") {
   FakeClock clock;
   auto app = Ref<SlideOnClass>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   app->box_class = "away";
@@ -746,8 +750,8 @@ TEST_CASE("An animation is sampled exactly at its delay and its end",
           "[animation]") {
   FakeClock clock;
   auto app = Ref<Short>::New();
-  app->Mount();
-  Element* box = app->Root()->QuerySelector("#box");
+  rtxui::ComponentInternals::Mount(*app);
+  Element* box = rtxui::ComponentInternals::Root(*app)->QuerySelector("#box");
   REQUIRE(box != nullptr);
 
   // 0.1f and 0.2f seconds are not exact: read as they are, the animation
