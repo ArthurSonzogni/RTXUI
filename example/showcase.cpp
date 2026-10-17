@@ -491,9 +491,6 @@ class FormPage : public Component<FormPage> {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        self {
-          display: block;
-        }
         .form {
           display: flex;
           flex-direction: column;
@@ -656,9 +653,6 @@ class TasksPage : public Component<TasksPage> {
         @keyframes pulse {
           from { opacity: 1; }
           to { opacity: 0.3; }
-        }
-        self {
-          display: block;
         }
         .tasks {
           display: flex;
@@ -841,9 +835,6 @@ class DialogPage : public Component<DialogPage> {
         @keyframes drop {
           from { opacity: 0; translate: 0 -1; }
           to { opacity: 1; translate: 0 0; }
-        }
-        self {
-          display: block;
         }
         .branches {
           display: flex;
