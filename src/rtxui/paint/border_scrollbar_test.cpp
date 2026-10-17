@@ -8,6 +8,7 @@
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/component/default/div/div.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/style.hpp"
@@ -503,6 +504,27 @@ TEST_CASE("Paint: Anchor scrollbar thumb reaches bottom", "[paint][scroll]") {
   // (y=8) MUST be part of the thumb, so it must have the thumb background. The
   // top-most cell of the track (y=1) should have the track background.
   CHECK(texture[18, 8].background_color != texture[18, 1].background_color);
+}
+
+class LeftBorderScroller : public Component<LeftBorderScroller> {
+ public:
+  std::string_view view = R"(
+    <div class="pane"><div>first</div><div>2</div><div>3</div><div>last</div></div>
+    <style>
+      .pane { width: 8; height: 3; overflow-y: scroll; border-left: solid; }
+    </style>
+  )";
+};
+
+TEST_CASE("A scroller bordered on one side is clipped only on that side",
+          "[paint][scroll][regression]") {
+  // Paint treated any border as one on all four sides: it hid the first line
+  // and the last column, and drew the scrollbar where the clip cut it off.
+  // The thumb fills the first two cells of the track, which hold spaces.
+  CHECK(RenderToString(Ref<LeftBorderScroller>::New(), 8, 3) ==
+        "│first\n"
+        "│2\n"
+        "│3     ▆\n");
 }
 
 }  // namespace rtxui

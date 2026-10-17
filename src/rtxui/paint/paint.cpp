@@ -869,25 +869,21 @@ void PaintImpl(const PhysicalFragment* frag,
     draw_h_scrollbar = true;
   }
 
+  // Each side's border, which the scrollbars sit inside.
+  Spacing border;
+  if (frag->has_border && frag->border_style != BorderStyle::None) {
+    border = frag->border_width;
+  }
+
   if (draw_v_scrollbar) {
-    int border_right =
-        (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
-    int scrollbar_x = abs_x + w - border_right - 1;
-    int track_y_start = abs_y;
-    int track_h = h;
-    if (frag->has_border && frag->border_style != BorderStyle::None) {
-      track_y_start = abs_y + 1;
-      track_h = draw_h_scrollbar ? (h - 3) : (h - 2);
-    } else {
-      track_h = draw_h_scrollbar ? (h - 1) : h;
-    }
+    int scrollbar_x = abs_x + w - border.right - 1;
+    int track_y_start = abs_y + border.top;
+    int track_h = h - border.Vert() - (draw_h_scrollbar ? 1 : 0);
 
     if (track_h > 0 && scrollbar_x >= 0 && scrollbar_x < texture.width()) {
       int scroll_height = frag->dom_node->scroll_height();
       int padding_vert = frag->dom_node->style.padding.Vert();
-      int border_vert =
-          (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
-      int viewport_h = std::max(1, h - 2 * border_vert - padding_vert);
+      int viewport_h = std::max(1, h - border.Vert() - padding_vert);
 
       int thumb_h_eighths =
           (viewport_h * track_h * 8) / std::max(1, scroll_height);
@@ -974,24 +970,14 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   if (draw_h_scrollbar) {
-    int border_bottom =
-        (frag->has_border && frag->border_style != BorderStyle::None) ? 1 : 0;
-    int scrollbar_y = abs_y + h - border_bottom - 1;
-    int track_x_start = abs_x;
-    int track_w = w;
-    if (frag->has_border && frag->border_style != BorderStyle::None) {
-      track_x_start = abs_x + 1;
-      track_w = draw_v_scrollbar ? (w - 3) : (w - 2);
-    } else {
-      track_w = draw_v_scrollbar ? (w - 1) : w;
-    }
+    int scrollbar_y = abs_y + h - border.bottom - 1;
+    int track_x_start = abs_x + border.left;
+    int track_w = w - border.Horiz() - (draw_v_scrollbar ? 1 : 0);
 
     if (track_w > 0 && scrollbar_y >= 0 && scrollbar_y < texture.height()) {
       int scroll_width = frag->dom_node->scroll_width();
       int padding_horiz = frag->dom_node->style.padding.Horiz();
-      int border_horiz =
-          (frag->has_border && frag->border_style != BorderStyle::None) ? 2 : 0;
-      int viewport_w = std::max(1, w - border_horiz - padding_horiz);
+      int viewport_w = std::max(1, w - border.Horiz() - padding_horiz);
 
       int thumb_w_eighths =
           (viewport_w * track_w * 8) / std::max(1, scroll_width);
@@ -1090,10 +1076,10 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   if (frag->has_border && frag->border_style != BorderStyle::None) {
-    border_l = 1;
-    border_r = 1;
-    border_t = 1;
-    border_b = 1;
+    border_l = frag->border_width.left;
+    border_r = frag->border_width.right;
+    border_t = frag->border_width.top;
+    border_b = frag->border_width.bottom;
   }
 
   if (frag->clips_descendants) {
