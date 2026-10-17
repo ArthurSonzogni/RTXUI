@@ -1,51 +1,53 @@
-# RTXUI — Reactive Terminal User Interfaces for C++
+# RTXUI
 
 [![Test](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/test.yml)
-[![Shared library](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/shared.yml)
+[![Fuzz](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/fuzz.yml/badge.svg)](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/fuzz.yml)
 [![Docs](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/deploy-docs.yml/badge.svg)](https://arthursonzogni.github.io/RTXUI/)
-[![Live Demo](https://img.shields.io/badge/demo-interactive_wasm-brightgreen.svg)](https://arthursonzogni.github.io/RTXUI/#interactive-playground)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
 
-**RTXUI** brings the browser's declarative rendering pipeline to modern C++.
+**A browser engine for your terminal, in C++.**
 
-Structure interfaces with semantic HTML. Style them with real CSS (flexbox, grid, cascade, and transitions). Bind plain C++ state; mutate a variable and the engine diffs the DOM and repaints the terminal.
+Write the interface in HTML. Style it with real CSS: flexbox, grid, media
+queries, transitions, keyframe animations, `:hover`, `:focus`. Bind it to
+plain C++ members, change a member, and the screen follows. Save the file
+and the running app reloads its template, with no recompile.
 
-*From the creator of [FTXUI](https://github.com/ArthurSonzogni/FTXUI).*
+*From the author of [FTXUI](https://github.com/ArthurSonzogni/FTXUI).*
 
 <p align="center">
-  <img src="docs/public/img/dashboard.svg" alt="An RTXUI service-health dashboard running in a terminal" width="100%">
+  <img src="docs/public/img/dashboard.svg" alt="RTXUI's showcase example: a live dashboard on a CSS grid that reflows as the terminal is resized" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://arthursonzogni.github.io/RTXUI/#interactive-playground">
-    <img src="https://img.shields.io/badge/🎮_Interactive_Demo-Try_in_Browser-success?style=for-the-badge&logo=webassembly" alt="Try Interactive Demo in Browser" />
-  </a>
-</p>
-
-<p align="center">
-  <em>
-    <a href="example/app_dashboard.cpp">example/app_dashboard.cpp</a> —
-    flexbox, a bound collection, computed values, conditional rendering and
-    transitions, in one file.
-    Regenerate with <code>tools/ansi_to_svg.py</code>.
-  </em>
+  <a href="https://arthursonzogni.github.io/RTXUI/guide/examples/showcase"><b>▶ Run this exact app in your browser</b></a>
+  &nbsp;·&nbsp;
+  <a href="example/showcase.cpp">Read its source (one file)</a>
+  &nbsp;·&nbsp;
+  <a href="https://arthursonzogni.github.io/RTXUI/">Documentation</a>
 </p>
 
 ---
 
-## ⚡ Quickstart
+## The idea
 
-A complete, reactive counter with CSS hover styling and live hot reloading in under 30 lines:
+Terminal UI libraries make you lay out boxes by hand, or learn yet another
+layout DSL. The web solved layout long ago, and most developers already know
+the solution. RTXUI brings it to the terminal, cell for cell:
 
 ```cpp
-// main.cpp
 #include <rtxui/rtxui.hpp>
 
-class CounterApp : public rtxui::Component<CounterApp> {
+class Counter : public rtxui::Component<Counter> {
  public:
   int count = 0;
   void Increment() { count++; }
+
+  Counter() {
+    Bind(count);
+    Bind(Increment);
+    EnableHotReload();  // Edit the template below while the app runs.
+  }
 
   std::string_view view = R"html(
     <div class="card">
@@ -53,61 +55,99 @@ class CounterApp : public rtxui::Component<CounterApp> {
       <button onclick="Increment">Increment</button>
     </div>
     <style>
-      .card {
-        border: round;
-        border-color: cyan;
-        padding: 1 2;
-      }
-
-      h1 {
-        color: yellow;
-        margin-bottom: 1;
-      }
-
-      button {
-        border: solid;
-        border-color: gray;
-        padding: 0 1;
-        transition: all 0.2s ease;
-      }
-
-      button:hover,
-      button:focus {
-        border-color: green;
-        color: green;
-      }
+      .card { border: round; border-color: cyan; padding: 1 2; }
+      h1 { color: yellow; margin-bottom: 1; }
+      button { border: solid; padding: 0 1; transition: all 0.2s ease; }
+      button:hover, button:focus { border-color: green; color: green; }
     </style>
   )html";
-
-  CounterApp() {
-    Bind(count);
-    Bind(Increment);
-    EnableHotReload();
-  }
 };
 
 int main() {
-  auto app = rtxui::Ref<CounterApp>::New();
-  rtxui::Screen screen(app);
+  rtxui::Screen screen(rtxui::Ref<Counter>::New());
   screen.Loop();
-  return 0;
 }
 ```
 
-### Add to your `CMakeLists.txt`
+That is the whole program. The mouse works, Tab moves focus, the button
+fades to green on hover, and the count updates when you click.
+
+## What's in the box
+
+**Layout, the way the web does it**
+- Flexbox, with `gap`, `wrap`, `grow`/`shrink`/`basis` and alignment on both axes.
+- Grid: `repeat(auto-fill, minmax(…))`, named lines and areas, `grid-auto-flow: dense`.
+- `position: relative | absolute | fixed | sticky`, `translate`, `z-index`.
+- Scroll containers with real scrollbars, `scroll-behavior: smooth`, nested scrolling.
+- `@media (max-width: …)` to rearrange the interface as the terminal resizes.
+- `calc()`, `min()`, `max()`, `clamp()`, custom properties with `var()`.
+- Tables with `colspan`, `rowspan` and `border-collapse`.
+
+**Motion**
+- `transition` on colors, sizes, `opacity` and `translate`, with every easing curve.
+- `@keyframes` animations: delays, `steps()`, `alternate`, `infinite`, `animation-play-state`.
+- Frames that only change colors or positions reuse the last layout, so animations stay cheap.
+
+**Interaction**
+- Mouse: hover, click, drag, wheel, all hit-tested against the real layout.
+- Keyboard: Tab order, `tabindex`, arrow-key spatial navigation, `:focus-visible`.
+- Select text with the mouse, double-click for a word, triple-click for a line, then copy.
+- Clickable `<a href>` links, through the terminal's OSC 8 hyperlinks.
+
+**Batteries included**
+- `<input>`, `<textarea>`, `<select>`, `<checkbox>`, `<radio>`, `<slider>`, `<progress>`.
+- `<tabs>`, `<details>`, `<dialog>`, `<toast>`, `<tooltip>`, `<table>`, tree items.
+- `<markdown>`, rendered and styled with CSS.
+- `<for virtual="">`: lists of 100,000 rows that only lay out what is on screen.
+
+**Plain C++**
+- Bind members, methods and collections of structs. No code generator, no macros to learn.
+- `<if>`/`<elif>`/`<else>`, `<for>`, slots and props for your own components.
+- Timers and worker threads post back to the UI thread with `PostTask()`.
+- Optional C++26 reflection binds struct fields for you, on compilers that have it.
+
+**A fast development loop**
+- Hot reload: save the C++ file, and the running app picks up the new HTML and CSS.
+- Errors in templates and styles point at the line and column, like a compiler does.
+- Inline mode draws below the prompt, like `cargo` or `apt`, instead of taking the whole screen.
+- The same code builds to WebAssembly: every example in the docs runs live in the browser.
+
+**Unicode done right**
+- CJK and other wide characters, combining marks and emoji are laid out by display width.
+
+## Where it runs
+
+| Platform | Compilers tested in CI |
+| :--- | :--- |
+| Linux | GCC 14, GCC 16, Clang 20 |
+| macOS | AppleClang |
+| Windows | MSVC, clang-cl, MinGW-w64 GCC |
+| Browser | Emscripten (WebAssembly) |
+
+It needs C++23 and CMake 3.24 or newer, and depends on nothing beyond the
+standard library.
+
+## Built to be trusted
+
+- 800+ tests, also run under AddressSanitizer and UndefinedBehaviorSanitizer.
+- 8 fuzz targets: the template, CSS, selector, Markdown and terminal input
+  parsers, layout and paint, input events, and a whole app over time. The app
+  fuzzer checks every frame drawn from a cached layout against a fresh one, so
+  a stale cache fails loudly instead of drawing a plausible wrong frame.
+- A snapshot of every example's first screen, compared on every change.
+- The shared library's ABI is checked on every change, and the public API is
+  kept small: implementation details stay behind pimpl.
+
+## Get started
+
+Add it to your `CMakeLists.txt`:
 
 ```cmake
-cmake_minimum_required(VERSION 3.24)
-project(my_app LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 include(FetchContent)
 FetchContent_Declare(
   rtxui
   GIT_REPOSITORY https://github.com/ArthurSonzogni/RTXUI.git
-  GIT_TAG        main # Or pin a release tag
+  GIT_TAG        main
 )
 FetchContent_MakeAvailable(rtxui)
 
@@ -115,82 +155,40 @@ add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE rtxui)
 ```
 
-Build and run:
-```bash
-cmake -B build -G Ninja && cmake --build build
-./build/my_app
-```
+`find_package(rtxui)` and `pkg-config rtxui` work too, after
+`cmake --install`. See the
+[getting started guide](https://arthursonzogni.github.io/RTXUI/guide/getting-started).
 
----
-
-## 🌟 Key Features
-
-*   **HTML & CSS in C++:** Semantic HTML tags styled with standard CSS. Full support for flexbox, grid, cascade specificity, pseudo-classes (`:hover`, `:focus`, `:active`), and transitions.
-*   **Reactive State Binding:** Bind C++ member variables and callbacks directly to template tokens (`{count}`, `onclick="Increment"`). Mutating state triggers surgical DOM diffing and repaints.
-*   **🔥 Live Template Hot Reloading:** Call `EnableHotReload()`. Edit your HTML/CSS templates in your editor and watch the running terminal UI update **in <10ms without recompiling** or restarting.
-*   **WebAssembly Ready:** Compile the exact same codebase to WebAssembly with Emscripten to run full-speed in modern web browsers.
-*   **Spatial Navigation & Focus:** Built-in sequential Tab cycling, dynamic Arrow-key spatial navigation, and mouse event routing.
-*   **Zero External Dependencies:** Clean, self-contained modern C++23 engine with no runtime dependencies beyond the standard library.
-
----
+Then browse the [examples](https://arthursonzogni.github.io/RTXUI/guide/examples):
+66 of them, each running live in your browser next to its source.
 
 ## RTXUI or FTXUI?
 
-Both libraries are created and maintained by the same author. They explore fundamentally different architectural bets:
+Both are by the same author, and make different bets.
 
-*   **FTXUI** composes interfaces through direct C++ functional calls (`hbox(...)`, `vbox(...)`, `border(...)`). It is mature, compact, type-checked at compile time, and supports Windows.
-    *   *Choose FTXUI* when you need Windows support, a tiny binary footprint, or a minimal functional C++ API without a runtime parsing engine.
-*   **RTXUI** executes a browser-style declarative pipeline. Templates are HTML literals, styles follow the CSS cascade, and state changes flow reactively into a diffed DOM.
-    *   *Choose RTXUI* when you think in web layouts, want CSS flexbox/grid, want instant hot-reloading of layouts during development, or want identical TUIs to deploy both in terminal and via WebAssembly. Requires Linux/macOS and C++23.
+- **[FTXUI](https://github.com/ArthurSonzogni/FTXUI)** builds interfaces from
+  C++ function calls (`hbox`, `vbox`, `border`). It is mature, small, and
+  checked by the compiler. Pick it for a minimal footprint, or for C++17.
+- **RTXUI** runs a browser-style pipeline: HTML templates, the CSS cascade,
+  and reactive state diffed into a DOM. Pick it if you think in web layouts,
+  want grid, animations and hot reload, or want the same app in a terminal and
+  in a browser.
 
----
-
-## 🛠️ Building & Contributing
-
-### Compiler Prerequisites
-
-RTXUI requires a **C++23** compiler (GCC 14+ or Clang 18+) and **CMake 3.24+** with **Ninja**.
-
-*   **Debian / Ubuntu:**
-    ```bash
-    sudo apt install g++-14 ninja-build cmake
-    ```
-*   **Fedora:**
-    ```bash
-    sudo dnf install gcc-c++ ninja-build cmake
-    ```
-*   **Arch Linux:**
-    ```bash
-    sudo pacman -S gcc ninja cmake
-    ```
-*   **macOS (Homebrew):**
-    ```bash
-    brew install ninja cmake
-    # Uses Apple Clang (Xcode 16+) or GCC from Homebrew (brew install gcc)
-    ```
-
-### Build & Run Tests
+## Building from source
 
 ```bash
-# Configure and compile with Ninja
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON -DRTXUI_BUILD_TESTS=ON
+cmake -B build -G Ninja -DRTXUI_BUILD_EXAMPLES=ON -DRTXUI_BUILD_TESTS=ON
 cmake --build build
-
-# Run automated unit tests & smoke checks
 ctest --test-dir build --output-on-failure
-
-# Run any example directly:
-./build/rtxui_example_counter
-./build/rtxui_example_app_dashboard
+./build/rtxui_example_showcase
 ```
 
----
+## Contributing
 
-## 🤝 Contributing
+Contributions are welcome. The [contributing guide](CONTRIBUTING.md) covers
+the coding style (Chromium), the rules (no exceptions, a regression test with
+every fix), and formatting.
 
-Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) for coding standards (Chromium style, no `try`/`catch`, mandatory regression tests) and formatting instructions.
+## License
 
-## 📄 License
-
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
-
+MIT. See [LICENSE](LICENSE).
