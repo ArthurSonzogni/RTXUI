@@ -103,6 +103,7 @@ Built-in HTML elements, CJK text, Markdown rendering, spatial nav, and cookbook 
 | [cookbook_tabs.cpp](/guide/examples/cookbook_tabs) | Recipe: tabs built by hand. | [Guide](/guide/cookbook) |
 | [details.cpp](/guide/examples/details) | The `<details>`/`<summary>` disclosure widget. | [Reference](/html_reference) |
 | [dialog.cpp](/guide/examples/dialog) | The built-in `<dialog>` element. | [Reference](/html_reference) |
+| [events.cpp](/guide/examples/events) | Inspecting the input events: every key and mouse action the terminal sends. | [Guide](/guide/cpp/lifecycle) |
 | [hr.cpp](/guide/examples/hr) | The `<hr>` separator, and how border styles apply to it. | [Reference](/html_reference) |
 | [hyperlinks.cpp](/guide/examples/hyperlinks) | Terminal hyperlinks: an `<a href>` to a URL becomes a clickable link. | [Reference](/html_reference) |
 | [lists.cpp](/guide/examples/lists) | `<ul>`, `<ol>` and `<li>`, including nesting, `start`/`reversed`, per-item `value`, and the list-style-type property. | [Reference](/html_reference) |

@@ -86,6 +86,9 @@ target_link_libraries(rtxui_example_progress PRIVATE rtxui)
 add_executable(rtxui_example_details details.cpp)
 target_link_libraries(rtxui_example_details PRIVATE rtxui)
 
+add_executable(rtxui_example_events events.cpp)
+target_link_libraries(rtxui_example_events PRIVATE rtxui)
+
 add_executable(rtxui_example_fieldset fieldset.cpp)
 target_link_libraries(rtxui_example_fieldset PRIVATE rtxui)
 
