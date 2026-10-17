@@ -176,6 +176,38 @@ TEST_CASE("An inline box ending with a block takes no line after it",
   CHECK(row(1) == "after");
 }
 
+class BlockInInlineFlexItemComponent
+    : public rtxui::Component<BlockInInlineFlexItemComponent> {
+ public:
+  // The <span> holding a <div> is what a component's root holding its
+  // template is: an inline box around a block. As an item of the column, it
+  // made the column claim the whole row.
+  std::string_view view = R"(
+    <div class="row">
+      <div id="side">SIDE</div>
+      <div class="column"><p>main</p><span><div>inner</div></span></div>
+    </div>
+    <style>
+      .row { display: flex; }
+      #side { width: 12; }
+      .column { flex-grow: 1; display: flex; flex-direction: column; }
+    </style>
+  )";
+};
+
+TEST_CASE("A block in an inline box does not widen its flex container",
+          "[component][flex][layout]") {
+  // Any component placed in a flex column collapsed the sidebar beside it to
+  // one cell: the inline box around the component's block was measured as
+  // wide as all the space there was.
+  auto container = rtxui::Ref<BlockInInlineFlexItemComponent>::New();
+  RenderComponent(container, 40, 3);
+  auto* side =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#side");
+  REQUIRE(side != nullptr);
+  CHECK(side->layout_width() == 12);
+}
+
 class ExtremeSizeComponent : public rtxui::Component<ExtremeSizeComponent> {
  public:
   // calc() bounds each operand when it is parsed, but not their product, so

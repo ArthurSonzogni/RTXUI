@@ -1723,8 +1723,16 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
                           box->style().border.Vert());
     }
 
+    // While this box is measured for its natural width, the limit is the
+    // unbounded placeholder: a block child "filling" it would report ~10000
+    // and make the whole box as wide (LayoutBlockFlow makes the same
+    // exception for its children).
+    const MeasureMode child_width_mode =
+        (constraints.width.mode == MeasureMode::Undefined && !is_fixed_width)
+            ? MeasureMode::Undefined
+            : MeasureMode::AtMost;
     LayoutConstraints child_c = {
-        {content_width_limit - child_m_horiz, MeasureMode::AtMost},
+        {content_width_limit - child_m_horiz, child_width_mode},
         {std::max(0, child_height_limit - child_m_vert),
          MeasureMode::Undefined}};
 
