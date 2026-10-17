@@ -560,6 +560,33 @@ TEST_CASE("Paint: each border side draws in its own style", "[paint][border]") {
                                  }));
 }
 
+TEST_CASE("Paint: dotted-fine rings the box in braille dots",
+          "[paint][border]") {
+  struct DottedFineTest : Component<DottedFineTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            div {
+              display: block;
+              width: 6;
+              border: dotted-fine;
+            }
+          </style>
+          <div>dots</div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<DottedFineTest>::New(), 6, 3);
+
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "⡏⠉⠉⠉⠉⢹",
+                                     "⡇dots⢸",
+                                     "⣇⣀⣀⣀⣀⣸",
+                                 }));
+}
+
 // Regression test: `has_border` used to be the only signal paint.cpp had -
 // once true, it drew a full 4-sided box with all 4 corners regardless of
 // each side's actual width, so a single `border-bottom: 1;` (all other

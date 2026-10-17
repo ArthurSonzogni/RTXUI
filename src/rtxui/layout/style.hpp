@@ -227,6 +227,7 @@ enum class BorderStyle {
   // a raised box, or a sunken one.
   Inset,
   Outset,
+  DottedFine,
 };
 
 // The styles single sides take, as `border-top: heavy` sets them. A side

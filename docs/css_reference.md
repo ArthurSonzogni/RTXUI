@@ -145,7 +145,7 @@ Length properties accept `calc()` expressions combining discrete cells and perce
 <CssProperty name="outline-offset" values="<integer>" description="Initial: `0`. Cells between the border box and the outline; negative draws it inside the box." />
 
 ### 4.1 Border Style Glyph Matrix
-RTXUI supports 28 border style keywords mapping directly to Unicode box-drawing and block elements:
+RTXUI supports 29 border style keywords mapping directly to Unicode box-drawing and block elements:
 
 | Style Keyword | Canonical Alias | Visual Glyphs / Behavior Description |
 | :--- | :--- | :--- |
@@ -162,6 +162,7 @@ RTXUI supports 28 border style keywords mapping directly to Unicode box-drawing 
 | `dashed` | — | Light dashed stroke lines: `┌`, `╌`, `╎`. |
 | `heavy-dashed` | — | Heavy dashed stroke lines: `┏`, `╍`, `╏`. |
 | `dotted` | — | Light dotted stroke lines: `┌`, `┈`, `┊`. |
+| `dotted-fine` | — | Braille dots along the outer edge of each cell: `⡏`, `⠉`, `⢹`, `⡇`, `⣇`, `⣀`. |
 | `outset` | — | Solid lines, top and left lighter, bottom and right darker: a raised box. |
 | `inset` | — | Solid lines, top and left darker, bottom and right lighter: a sunken box. |
 | `outer` | — | Half-cell block hugging outer cell edge (`▀`, `▄`, `▌`, `▐`). |

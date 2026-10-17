@@ -425,9 +425,17 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"└", "─", "┘"},
           },
       },
+      /* DottedFine */
+      {
+          {
+              {"⡏", "⠉", "⢹"},
+              {"⡇", " ", "⢸"},
+              {"⣇", "⣀", "⣸"},
+          },
+      },
   };
   static_assert(sizeof(border_styles) / sizeof(border_styles[0]) ==
-                static_cast<size_t>(BorderStyle::Outset) + 1);
+                static_cast<size_t>(BorderStyle::DottedFine) + 1);
   return border_styles[static_cast<size_t>(style)];
 }
 

@@ -1429,6 +1429,9 @@ std::optional<BorderStyle> ParseBorderStyle(std::string_view v) {
   if (v == "dotted") {
     return BorderStyle::Dotted;
   }
+  if (v == "dotted-fine") {
+    return BorderStyle::DottedFine;
+  }
   if (v == "double-horizontal") {
     return BorderStyle::DoubleHorizontal;
   }
