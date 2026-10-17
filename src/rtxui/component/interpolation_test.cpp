@@ -287,9 +287,9 @@ TEST_CASE("Automatic Reflection Loop Interpolation",
           "[component][interpolation]") {
 #if defined(RTXUI_HAS_REFLECTION)
   auto component = rtxui::Ref<AutoLoopInterpolation>::New();
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
-  std::string output = component->Root()->Print();
+  std::string output = rtxui::ComponentInternals::Root(*component)->Print();
   CHECK(output.find("Apple") != std::string::npos);
   CHECK(output.find("Banana") != std::string::npos);
 #else
