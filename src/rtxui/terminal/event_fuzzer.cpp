@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"

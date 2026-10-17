@@ -17,6 +17,8 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
@@ -49,9 +51,10 @@ void TestLayout(const std::string& html, uint8_t width, uint8_t height) {
   auto component = rtxui::Ref<FuzzedView>::New();
   component->source = html;
   component->view = component->source;
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
-  auto box = rtxui::LayoutTreeBuilder::Build(component->Root());
+  auto box = rtxui::LayoutTreeBuilder::Build(
+      rtxui::ComponentInternals::Root(*component));
   if (!box) {
     return;
   }

@@ -19,6 +19,8 @@
 #include <vector>
 
 #include "rtxui/component.hpp"
+#include "rtxui/component/component_internal.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
 #include "rtxui/xml/xml.hpp"
@@ -68,12 +70,12 @@ void TestSelector(const std::string& selector) {
 
   // Mount() renders and resolves base styles, which is what runs the selector
   // against every element in the tree.
-  component->Mount();
+  rtxui::ComponentInternals::Mount(*component);
 
   // Pseudo-classes that depend on element state are only consulted by the
   // second pass, so ask for it explicitly rather than leaving that half of the
   // matcher unreached.
-  component->ResolveTargetStyles();
+  rtxui::ComponentInternals::ResolveTargetStyles(*component);
 }
 
 FUZZ_TEST(Selector, TestSelector)
