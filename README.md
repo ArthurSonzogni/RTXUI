@@ -16,7 +16,7 @@ and the running app reloads its template, with no recompile.
 *From the author of [FTXUI](https://github.com/ArthurSonzogni/FTXUI).*
 
 <p align="center">
-  <img src="docs/public/img/dashboard.svg" alt="RTXUI's showcase example: a live dashboard on a CSS grid that reflows as the terminal is resized" width="100%">
+  <img src="docs/public/img/showcase.svg" alt="RTXUI's showcase example: a process table with its details drawer open" width="100%">
 </p>
 
 <p align="center">
