@@ -5,121 +5,93 @@
 // The <details>/<summary> disclosure widget.
 //
 // Try it: click a summary row, or focus it and press Enter.
-#include <string>
+#include <rtxui/rtxui.hpp>
 #include <string_view>
 
-#include "rtxui/component.hpp"
-#include "rtxui/refcounted.hpp"
-#include "rtxui/screen.hpp"
+using namespace rtxui;
 
-namespace {
-
-class DetailsDemo : public rtxui::Component<DetailsDemo> {
+class DetailsDemo : public Component<DetailsDemo> {
  public:
-  bool open1 = false;
-  bool open2 = true;
-  bool checkbox_state = false;
+  bool logs_open = false;
+  bool settings_open = true;
+  bool debug = false;
 
-  std::string status_text() const {
-    return checkbox_state ? "DEBUG ENABLED" : "DEBUG DISABLED";
-  }
+  std::string_view view = R"html(
+      <div class="card">
+        <h1>Details</h1>
+        <p>Click a summary, or focus it and press Enter.</p>
 
-  DetailsDemo() {
-    Bind(open1);
-    Bind(open2);
-    Bind(checkbox_state);
-    Bind(status_text);
-  }
-
-  std::string_view Setup() {
-    return R"html(
-      <div class="app">
-        <h1>RTXUI Details &amp; Summary Demonstration</h1>
-
-        <div class="row">
-          <div class="col">
-            <details open="{open1}">
-              <summary>System Logs</summary>
-              <p>[09:41:02] Application initialized.</p>
-              <p>[09:41:05] Theme loaded: light.</p>
-              <p>[09:42:15] User input detected.</p>
-            </details>
+        <details open="{logs_open}">
+          <summary>System logs</summary>
+          <div class="body">
+            <div>09:41:02  Application initialized.</div>
+            <div>09:41:05  Theme loaded.</div>
+            <div>09:42:15  User input detected.</div>
           </div>
+        </details>
 
-          <div class="col">
-            <details open="{open2}">
-              <summary>Preferences &amp; Settings</summary>
-              <div class="settings-box">
-                <checkbox checked="{checkbox_state}">Enable debug mode</checkbox>
-                <p>Status: {status_text}</p>
-              </div>
-            </details>
+        <details open="{settings_open}">
+          <summary>Settings</summary>
+          <div class="body">
+            <checkbox checked="{debug}">Debug mode</checkbox>
           </div>
-        </div>
+        </details>
 
-        <div class="row info-row">
-          <details>
-            <p>This is a collapsible widget using the default summary header.</p>
-            <p>Since no &lt;summary&gt; tag was defined, it automatically defaulted to "Details".</p>
-          </details>
-        </div>
+        <details>
+          <div class="body">Without a &lt;summary&gt;, the header reads "Details".</div>
+        </details>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          background-color: rgb(13, 17, 23);
-          display: block;
-          padding: 1;
-        }
-        .app {
           display: flex;
-          flex-direction: column;
-          gap: 1;
-          border: solid;
-          border-color: #3b82f6;
-          padding: 1;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 56;
         }
         h1 {
-          color: #3b82f6;
-          margin-bottom: 1;
+          color: var(--accent);
         }
-        .row {
-          display: flex;
-          flex-direction: row;
-          gap: 2;
+        p {
+          color: var(--muted);
         }
-        .col {
-          flex: 1;
-          border: round;
-          border-color: #555;
-          padding: 1;
+        summary:focus {
+          color: var(--accent);
         }
-        .settings-box {
-          display: flex;
-          flex-direction: column;
-          gap: 1;
-          padding-left: 1;
+        .body {
           border-left: solid;
-          border-color: #f59e0b;
-        }
-        .info-row {
-          margin-top: 1;
-          padding: 1;
-          background-color: lighten(5%);
-          border: dashed;
-          border-color: #888;
+          border-color: var(--border);
+          padding-left: 2;
+          margin-left: 1;
+          color: var(--muted);
         }
       </style>
     )html";
+
+  DetailsDemo() {
+    Bind(logs_open);
+    Bind(settings_open);
+    Bind(debug);
   }
 };
 
-}  // namespace
-
 int main() {
-  auto component = rtxui::Ref<DetailsDemo>::New();
-  rtxui::Screen screen(component);
+  auto app = Ref<DetailsDemo>::New();
+  Screen screen(app);
   screen.Loop();
   return 0;
 }

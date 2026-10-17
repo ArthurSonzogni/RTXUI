@@ -25,51 +25,72 @@ class RadioDemo : public Component<RadioDemo> {
     if (select_c) {
       return "Redis";
     }
-    return "";
+    return "none";
   }
 
   std::string_view view = R"html(
-      <div class="content">
-        <h1>RTXUI Radio Button Group Demonstration</h1>
-        <p>Please select your favorite database technology:</p>
-        
+      <div class="card">
+        <h1>Radio</h1>
+        <p>Radios sharing a name form one group: one is checked at a time.</p>
+
         <div class="group">
-          <radio name="db" checked="{select_a}">PostgreSQL (Robust, relational)</radio>
-          <radio name="db" checked="{select_b}">MongoDB (Document-based)</radio>
-          <radio name="db" checked="{select_c}">Redis (In-memory cache)</radio>
+          <radio name="db" checked="{select_a}">PostgreSQL</radio>
+          <radio name="db" checked="{select_b}">MongoDB</radio>
+          <radio name="db" checked="{select_c}">Redis</radio>
         </div>
 
-        <p class="status">
-          Selected Tech: {selected_tech}
-        </p>
+        <div class="readout">
+          <span>selected</span>
+          <span class="value">{selected_tech}</span>
+        </div>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 50;
         }
         h1 {
-          color: rgb(88, 166, 255);
-          margin-bottom: 1;
+          color: var(--accent);
         }
         p {
-          margin-bottom: 1;
+          color: var(--muted);
         }
         .group {
           display: flex;
           flex-direction: column;
-          gap: 1;
-          margin-bottom: 1;
-          border-left: solid;
-          border-color: rgb(48, 54, 61);
-          padding-left: 2;
         }
-        .status {
+        radio:focus, radio:checked {
+          color: var(--accent);
+        }
+        .readout {
+          display: flex;
+          justify-content: space-between;
+          border-top: solid;
+          border-color: var(--border);
+          margin-top: 1;
+          padding-top: 1;
+          color: var(--muted);
+        }
+        .value {
+          color: var(--accent);
           font-weight: bold;
-          color: rgb(234, 179, 8);
         }
       </style>
     )html";
