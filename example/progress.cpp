@@ -13,31 +13,22 @@ class ProgressDemo : public Component<ProgressDemo> {
   int progress_val = 45;
 
   std::string_view view = R"html(
-      <div class="container">
-        <p class="title">Interactive Progress Bar Element</p>
-        <p class="desc">A determinate progress bar driven by bound state.</p>
-        
-        <div class="slider-wrapper">
-          <span class="label">Control:</span>
-          <slider value="{progress_val}" min="0" max="100" step="1" width="30" />
-        </div>
+      <div class="card">
+        <h1>Progress</h1>
+        <p>The bar follows the slider's bound value.</p>
 
-        <div class="progress-wrapper">
-          <span class="label">Progress:</span>
-          <progress value="{progress_val}" max="100" width="30" />
-        </div>
-        
-        <div class="output-box">
-          <span class="label">Current Completion:</span>
+        <slider value="{progress_val}" min="0" max="100" width="40" />
+        <progress value="{progress_val}" max="100" width="42" />
+
+        <div class="readout">
+          <span>completion</span>
           <span class="value">{progress_val}%</span>
         </div>
       </div>
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
           --border: rgb(48, 54, 61);
-          --text: rgb(230, 237, 243);
           --muted: rgb(139, 148, 158);
           --accent: rgb(88, 166, 255);
 
@@ -46,61 +37,42 @@ class ProgressDemo : public Component<ProgressDemo> {
           justify-content: center;
           width: 100%;
           height: 100%;
-          background-color: var(--bg);
-          color: var(--text);
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
-        .container {
-          display: block;
+        .card {
           border: tall;
           border-color: var(--border);
           background-color: rgb(22, 27, 34);
           padding: 1 3;
-          width: 62;
+          width: 50;
         }
-        .title {
+        h1 {
           color: var(--accent);
-          font-weight: bold;
         }
-        .desc {
+        p {
           color: var(--muted);
-          margin-bottom: 1;
         }
-        .output-box {
+        slider:focus {
+          color: var(--accent);
+        }
+        progress {
+          margin-top: 1;
+          color: var(--accent);
+          background-color: var(--border);
+        }
+        .readout {
           display: flex;
           justify-content: space-between;
-          width: 100%;
           border-top: solid;
           border-color: var(--border);
           margin-top: 1;
           padding-top: 1;
-        }
-        .label {
           color: var(--muted);
         }
         .value {
           color: var(--accent);
           font-weight: bold;
-        }
-        .slider-wrapper, .progress-wrapper {
-          display: flex;
-          gap: 2;
-          align-items: center;
-        }
-        .stats {
-          color: var(--muted);
-          margin-top: 1;
-        }
-        input, textarea, select, .styled-input, .editor {
-          border: tall;
-          border-color: var(--border);
-          background-color: var(--bg);
-          color: var(--text);
-          padding: 0 1;
-          width: 100%;
-        }
-        input:focus, textarea:focus, select:focus,
-        .styled-input:focus, .editor:focus {
-          border-color: var(--accent);
         }
       </style>
     )html";
