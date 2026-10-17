@@ -34,7 +34,7 @@ class BordersDemo : public Component<BordersDemo> {
           <for each="{styles}" as="s">
             <div class="tile" style="border: {s};">{s}</div>
           </for>
-        </div>
+      </div>
       </div>
 
       <style>
@@ -63,11 +63,16 @@ class BordersDemo : public Component<BordersDemo> {
         .grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 0 2;
+          gap: 2 2;
         }
         .tile {
           border-color: rgb(88, 166, 255);
           text-align: center;
+          padding: 1;
+        }
+        .tile:hover {
+          border-color: yellow;
+          background-color:black;
         }
       </style>
     )html";

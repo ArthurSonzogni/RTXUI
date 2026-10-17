@@ -30,6 +30,7 @@ class AnimationDemo : public Component<AnimationDemo> {
           --border: rgb(48, 54, 61);
           --muted: rgb(139, 148, 158);
           --accent: rgb(88, 166, 255);
+          --accent-background: rgb(44, 83, 128);
 
           display: flex;
           align-items: center;
@@ -65,12 +66,15 @@ class AnimationDemo : public Component<AnimationDemo> {
           background-color: rgb(13, 17, 23);
           padding: 1;
           text-align: center;
-          transition: flex-grow 0.2s ease-in-out, border-color 0.1s linear;
+          transition:
+            flex-grow 0.2s ease-in-out, border-color 0.1s linear,
+            background-color 0.2s linear;
         }
         .panel:hover, .panel:focus {
-          flex-grow: 4;
+          flex-grow: 10;
           border-color: var(--accent);
           color: var(--accent);
+          background-color: var(--accent-background);
         }
       </style>
     )html";
