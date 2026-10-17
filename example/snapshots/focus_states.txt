@@ -2,7 +2,7 @@
 
          ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
          ▊                                                            ▎
-         ▊   Focus States                                             ▎
+         ▊   Focus states                                             ▎
          ▊                                                            ▎
          ▊   Tab through the fields, then click a button.             ▎
          ▊                                                            ▎

@@ -2,7 +2,7 @@
 
            ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
            ▊                                                       ▎
-           ▊   Translucent Colors                                  ▎
+           ▊   Translucent colors                                  ▎
            ▊                                                       ▎
            ▊   Each tint blends with your terminal's background.   ▎
            ▊                                                       ▎

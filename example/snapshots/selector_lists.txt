@@ -3,7 +3,7 @@
 
               ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
               ▊                                                  ▎
-              ▊   Selector Lists                                 ▎
+              ▊   Selector lists                                 ▎
               ▊                                                  ▎
               ▊   One :is() rule styles all four badges.         ▎
               ▊                                                  ▎

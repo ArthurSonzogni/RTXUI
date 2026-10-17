@@ -140,6 +140,16 @@ class KeyframesDemo : public Component<KeyframesDemo> {
           color: rgb(139, 148, 158);
           animation: fade-in 1s ease-out forwards;
         }
+        button {
+          border: tall;
+          border-color: rgb(48, 54, 61);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
+        }
+        button:hover, button:focus {
+          border-color: rgb(88, 166, 255);
+          color: rgb(88, 166, 255);
+        }
         .paused .light, .paused .bar, .paused .cursor, .paused .fade {
           animation-play-state: paused;
         }

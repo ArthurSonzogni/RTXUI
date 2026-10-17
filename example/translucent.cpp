@@ -20,7 +20,7 @@ class TranslucentDemo : public Component<TranslucentDemo> {
  public:
   std::string_view view = R"html(
       <div class="card">
-        <h1>Translucent Colors</h1>
+        <h1>Translucent colors</h1>
         <p>Each tint blends with your terminal's background.</p>
 
         <div class="row">

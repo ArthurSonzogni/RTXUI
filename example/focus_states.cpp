@@ -32,7 +32,7 @@ class FocusStatesDemo : public Component<FocusStatesDemo> {
 
   std::string_view view = R"html(
       <div class="card">
-        <h1>Focus States</h1>
+        <h1>Focus states</h1>
         <p>Tab through the fields, then click a button.</p>
 
         <div class="groups">

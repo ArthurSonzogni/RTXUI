@@ -19,7 +19,7 @@ class SelectorListsDemo : public Component<SelectorListsDemo> {
  public:
   std::string_view view = R"html(
       <div class="card">
-        <h1>Selector Lists</h1>
+        <h1>Selector lists</h1>
         <p>One :is() rule styles all four badges.</p>
 
         <div class="row">

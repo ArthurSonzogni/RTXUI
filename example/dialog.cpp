@@ -33,7 +33,7 @@ class DialogDemo : public Component<DialogDemo> {
 
   std::string_view view = R"html(
       <div class="card">
-        <h1>Overlays &amp; Dialogs</h1>
+        <h1>Dialog</h1>
         <p>The dialog renders above everything else, on a dimmed backdrop.</p>
 
         <button onclick="ShowDialog">Open dialog</button>

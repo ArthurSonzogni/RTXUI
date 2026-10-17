@@ -5,7 +5,7 @@
 
           ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
           ▊                                                         ▎
-          ▊   Pseudo-Classes                                        ▎
+          ▊   Pseudo-classes                                        ▎
           ▊                                                         ▎
           ▊   Hover, Tab to focus, or hold down the mouse button.   ▎
           ▊                                                         ▎

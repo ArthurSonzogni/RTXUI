@@ -18,7 +18,7 @@ class PseudoClassesDemo : public Component<PseudoClassesDemo> {
  public:
   std::string_view view = R"html(
       <div class="card">
-        <h1>Pseudo-Classes</h1>
+        <h1>Pseudo-classes</h1>
         <p>Hover, Tab to focus, or hold down the mouse button.</p>
 
         <div class="row">

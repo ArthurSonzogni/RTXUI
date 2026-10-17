@@ -330,6 +330,10 @@ class Dashboard : public Component<Dashboard> {
         .meter {
           margin-top: 1;
         }
+        progress {
+          color: var(--accent);
+          background-color: var(--border);
+        }
         .alert {
           color: var(--down);
           margin-top: 1;
