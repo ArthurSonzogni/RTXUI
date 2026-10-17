@@ -5,254 +5,147 @@
 // Table elements: <table>, <thead>, <tr>, <th>, <td>, with colspan, rowspan and
 // a sticky header row.
 #include <rtxui/rtxui.hpp>
+#include <string>
 #include <string_view>
+#include <vector>
 
 using namespace rtxui;
 
+struct Product {
+  std::string name;
+  std::string category;
+  std::string price;
+  bool active = true;
+  bool operator==(const Product& other) const = default;
+};
+
+void Fields(const Product& product, FieldSink& out) {
+  out("name", product.name);
+  out("category", product.category);
+  out("price", product.price);
+  out("status", product.active ? "active" : "inactive");
+}
+
 class TableDemo : public Component<TableDemo> {
  public:
+  std::vector<Product> products = {
+      {"Gadget", "Appliances", "$10.00"},
+      {"Widget", "Consumer Electronics", "$15.00"},
+      {"Tool", "Hardware", "$5.99", false},
+      {"Smartwatch", "Wearables", "$199.99"},
+      {"Keyboard", "Accessories", "$45.00", false},
+      {"Monitor", "Computers", "$249.99"},
+      {"Desk lamp", "Furniture", "$35.00", false},
+      {"Headphones", "Audio", "$79.99"},
+      {"Camera", "Photography", "$450.00"},
+      {"Tripod", "Photography", "$60.00"},
+      {"Phone", "Consumer Electronics", "$699.99"},
+  };
+
   std::string_view view = R"html(
-      <div class="content">
-        <h1>RTXUI Table Layout Demo</h1>
-        <p>This demo showcases standard table elements (&lt;table&gt;, &lt;tr&gt;, &lt;th&gt;, &lt;td&gt;) with dynamic layout and styling. Scroll down to see the sticky header!</p>
+      <div class="card">
+        <h1>Tables</h1>
+        <p>Columns size to their content. Scroll the list: the header row is sticky.</p>
 
-        <table>
-          <thead>
-            <tr class="header-row">
-              <th>ID</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>#101</td>
-              <td>Gadget A</td>
-              <td>Appliances</td>
-              <td>$10.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#117</td>
-              <td>Widget Z</td>
-              <td>Consumer Electronics</td>
-              <td>$15.00</td>
-              <td class="status active">Active</td>
-            </tr>
+        <div class="scroller">
+          <table>
+            <thead>
+              <tr class="header">
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <for each="{products}" as="p">
+                <tr>
+                  <td>{p.name}</td>
+                  <td class="muted">{p.category}</td>
+                  <td>{p.price}</td>
+                  <td class="{p.status}">{p.status}</td>
+                </tr>
+              </for>
+            </tbody>
+          </table>
+        </div>
 
-            <tr>
-              <td>#102</td>
-              <td>Gadget B</td>
-              <td>Appliances</td>
-              <td>$49.50</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#103</td>
-              <td>Tool C</td>
-              <td>Hardware</td>
-              <td>$5.99</td>
-              <td class="status disabled">Inactive</td>
-            </tr>
-            <tr>
-              <td>#104</td>
-              <td>Widget D</td>
-              <td class="truncated">Consumer Electronics</td>
-              <td>$129.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#105</td>
-              <td>Smartwatch E</td>
-              <td>Wearables</td>
-              <td>$199.99</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr>
-              <td colspan="2" class="border">colspan=2</td>
-              <td>Computers</td>
-              <td>$899.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#107</td>
-              <td>Keyboard G</td>
-              <td>Accessories</td>
-              <td>$45.00</td>
-              <td class="status disabled">Inactive</td>
-            </tr>
-            <tr>
-              <td rowspan="4" class="border">rowspan=4</td>
-              <td>Mouse H</td>
-              <td>Accessories</td>
-              <td>$25.50</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>Monitor I</td>
-              <td>Computers</td>
-              <td>$249.99</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr>
-              <td>Desk Lamp J</td>
-              <td>Furniture</td>
-              <td>$35.00</td>
-              <td class="status disabled">Inactive</td>
-            </tr>
-            <tr class="alt-row">
-              <td>Chair K</td>
-              <td>Furniture</td>
-              <td>$150.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr>
-              <td>#112</td>
-              <td>Headphones L</td>
-              <td>Audio</td>
-              <td>$79.99</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#113</td>
-              <td>Speaker M</td>
-              <td>Audio</td>
-              <td>$120.00</td>
-              <td class="status disabled">Inactive</td>
-            </tr>
-            <tr>
-              <td>#114</td>
-              <td>Cable N</td>
-              <td>Accessories</td>
-              <td>$9.99</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#115</td>
-              <td>Adapter O</td>
-              <td>Accessories</td>
-              <td>$15.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr>
-              <td>#116</td>
-              <td>Camera P</td>
-              <td>Photography</td>
-              <td>$450.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#117</td>
-              <td>Lens Q</td>
-              <td>Photography</td>
-              <td>$300.00</td>
-              <td class="status disabled">Inactive</td>
-            </tr>
-            <tr>
-              <td>#118</td>
-              <td>Tripod R</td>
-              <td>Photography</td>
-              <td>$60.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr class="alt-row">
-              <td>#119</td>
-              <td>Bag S</td>
-              <td>Accessories</td>
-              <td>$40.00</td>
-              <td class="status active">Active</td>
-            </tr>
-            <tr>
-              <td>#120</td>
-              <td>Phone T</td>
-              <td class="truncated">Consumer Electronics</td>
-              <td>$699.99</td>
-              <td class="status active">Active</td>
-            </tr>
-          </tbody>
+        <p>Cells span columns with colspan and rows with rowspan.</p>
+        <table class="spans">
+          <tr>
+            <td rowspan="2" class="span">rowspan="2"</td>
+            <td>A</td>
+            <td>B</td>
+          </tr>
+          <tr>
+            <td colspan="2" class="span">colspan="2"</td>
+          </tr>
         </table>
       </div>
 
       <style>
         self {
           --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
-          background-color: rgb(13, 17, 23);
-          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           width: 100%;
           height: 100%;
-          overflow-y: scroll;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
-        .content {
-          display: block;
-          max-width: 80;
-          margin: 0 auto;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 64;
         }
         h1 {
-          font-weight: bold;
-          margin-bottom: 1;
-          color: rgb(88, 166, 255);
+          color: var(--accent);
         }
-        p {
-          margin-bottom: 2;
-          color: rgb(139, 148, 158);
+        p, .muted {
+          color: var(--muted);
         }
-        table {
-          display: block;
-          border: solid;
+        .scroller {
+          height: 9;
+          overflow-y: scroll;
+          border: round;
           border-color: var(--border);
-          width: 100%;
         }
-        tr {
-          display: block;
-          background-color: rgb(15, 23, 42); 
-        }
-        th {
-          font-weight: bold;
-          color: rgb(121, 192, 255);
-          border-bottom: solid;
-          border-color: var(--border);
-          padding: 1;
-        }
-        td {
-          padding: 1;
-        }
-        .status {
-          font-weight: bold;
-        }
-        .status.active {
-          color: rgb(74, 222, 128);
-        }
-        .status.disabled {
-          color: rgb(248, 81, 73);
-        }
-        .border {
-          border: tall;
-          border-color: rgb(74, 222, 128);
-          background-color: rgb(15, 23, 42);
-          padding: 0;
-        }
-        tr.alt-row {
-          background-color: rgb(22, 27, 34); 
-        }
-        .header-row {
+        .header {
           position: sticky;
           top: 0;
-          z-index: 10;
-          background-color: rgb(15, 23, 42);
+          background-color: rgb(22, 45, 77);
         }
-        .truncated {
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          max-width: 15;
+        th {
+          color: var(--accent);
+          text-align: left;
+        }
+        th, td {
+          padding: 0 1;
+        }
+        .active {
+          color: rgb(63, 185, 80);
+        }
+        .inactive {
+          color: rgb(248, 81, 73);
+        }
+        .spans td {
+          border: round;
+          border-color: var(--border);
+        }
+        .spans .span {
+          border-color: var(--accent);
+          color: var(--accent);
         }
       </style>
     )html";
+
+  TableDemo() { Bind(products); }
 };
 
 int main() {

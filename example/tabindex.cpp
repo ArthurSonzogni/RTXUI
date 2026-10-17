@@ -11,116 +11,61 @@ using namespace rtxui;
 class TabIndexDemo : public Component<TabIndexDemo> {
  public:
   std::string_view view = R"html(
-    <div class="container">
-      <h2>Keyboard TabIndex Navigation</h2>
-      <p class="description">
-        Use <b>Tab</b> and <b>Shift-Tab</b> to move the focus.
-        Notice that positive tabindexes are traversed first (ascending order),
-        followed by tabindex 0, and tabindex -1 is skipped from tabbing.
-      </p>
+      <div class="card">
+        <h1>tabindex</h1>
+        <p>Tab visits positive tabindex values first, in order, then 0 in document order. -1 is focusable by click only.</p>
 
-      <div class="list">
-        <div class="item positive-two" tabindex="2">
-          <span class="badge badge-pos">tabindex="2"</span>
-          <span class="label">First item in HTML, but second in Tab order</span>
-        </div>
-
-        <div class="item zero-one" tabindex="0">
-          <span class="badge badge-zero">tabindex="0"</span>
-          <span class="label">Zero tabindex (navigated third)</span>
-        </div>
-
-        <div class="item positive-one" tabindex="1">
-          <span class="badge badge-pos">tabindex="1"</span>
-          <span class="label">First element in Tab order (tabindex=1)</span>
-        </div>
-
-        <div class="item minus-one" tabindex="-1">
-          <span class="badge badge-neg">tabindex="-1"</span>
-          <span class="label">Skipped during tab navigation (click-only)</span>
-        </div>
-
-        <div class="item implicit-zero" focusable="true">
-          <span class="badge badge-implicit">focusable="true"</span>
-          <span class="label">Implicitly tabindex 0 (navigated fourth)</span>
-        </div>
+        <div class="item" tabindex="2"><span class="tag">tabindex="2"</span>second</div>
+        <div class="item" tabindex="0"><span class="tag">tabindex="0"</span>third</div>
+        <div class="item" tabindex="1"><span class="tag">tabindex="1"</span>first</div>
+        <div class="item" tabindex="-1"><span class="tag">tabindex="-1"</span>skipped by Tab</div>
+        <div class="item" focusable="true"><span class="tag">focusable="true"</span>fourth, like tabindex="0"</div>
       </div>
-    </div>
 
-    <style>
-      self {
-        --text: rgb(230, 237, 243);
-        --accent: rgb(88, 166, 255);
+      <style>
+        self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-        display: block;
-        padding: 1 2;
-        background-color: rgb(13, 17, 23); /* Deep dark slate background */
-        color: var(--text);
-      }
-      h2 {
-        color: var(--accent); /* Bright blue */
-        margin-bottom: 0;
-      }
-      .description {
-        color: rgb(139, 148, 158); /* Muted gray text */
-        margin-bottom: 1;
-      }
-      .list {
-        display: block;
-        height: 8;
-        overflow-y: scroll;
-        scroll-behavior: smooth;
-      }
-      .item {
-        display: block;
-        border: tall;
-        border-color: rgb(22, 27, 34); /* Dark slate border */
-        background-color: rgb(30, 41, 59, 0.4);
-        padding: 0 1;
-        margin-bottom: 0;
-        width: 60;
-      }
-      .item:hover {
-        background-color: rgb(30, 41, 59, 0.8);
-        border-color: rgb(48, 54, 61);
-      }
-      .item:focus {
-        border-color: var(--accent); /* Focus highlight */
-        background-color: rgb(30, 58, 138, 0.5); /* Deep slate blue on focus */
-      }
-      .badge {
-        display: inline;
-        padding: 0 1;
-        text-align: center;
-        width: 18;
-      }
-      .badge-pos {
-        background-color: rgb(63, 185, 80); /* Emerald Green */
-        color: rgb(255, 255, 255);
-      }
-      .badge-zero {
-        background-color: rgb(245, 158, 11); /* Amber Orange */
-        color: rgb(255, 255, 255);
-      }
-      .badge-neg {
-        background-color: rgb(248, 81, 73); /* Rose Red */
-        color: rgb(255, 255, 255);
-      }
-      .badge-implicit {
-        background-color: rgb(99, 102, 241); /* Indigo */
-        color: rgb(255, 255, 255);
-      }
-      .label {
-        display: inline;
-        margin-left: 2;
-        color: var(--text);
-      }
-      .item:focus .label {
-        color: rgb(255, 255, 255);
-        font-weight: bold;
-      }
-    </style>
-  )html";
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 60;
+        }
+        h1 {
+          color: var(--accent);
+        }
+        p {
+          color: var(--muted);
+        }
+        .item {
+          padding: 0 1;
+        }
+        .item:hover {
+          background-color: rgb(33, 38, 45);
+        }
+        .item:focus {
+          background-color: rgb(22, 45, 77);
+          color: var(--accent);
+        }
+        .tag {
+          display: inline-block;
+          width: 20;
+          color: var(--muted);
+        }
+      </style>
+    )html";
 };
 
 int main() {

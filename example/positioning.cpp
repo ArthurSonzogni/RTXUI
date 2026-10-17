@@ -3,6 +3,7 @@
 // the LICENSE file.
 //
 // position: relative, absolute and fixed, plus z-index stacking.
+#include <algorithm>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -11,264 +12,127 @@ using namespace rtxui;
 
 class PositioningApp : public Component<PositioningApp> {
  public:
-  // State
-  int box_x = 10;
-  int box_y = 4;
-  std::string info_text = "Use buttons to move the absolute red card.";
+  int x = 8;
+  int y = 4;
 
-  // Callback
-  void MoveLeft() {
-    if (box_x > 1) {
-      box_x -= 2;
+  void Move(std::string direction) {
+    if (direction == "left") {
+      x = std::max(0, x - 2);
+    } else if (direction == "right") {
+      x = std::min(40, x + 2);
+    } else if (direction == "up") {
+      y = std::max(0, y - 1);
+    } else if (direction == "down") {
+      y = std::min(5, y + 1);
     }
   }
 
-  void MoveRight() {
-    if (box_x < 42) {
-      box_x += 2;
-    }
-  }
-
-  void MoveUp() {
-    if (box_y > 1) {
-      box_y -= 1;
-    }
-  }
-
-  void MoveDown() {
-    if (box_y < 9) {
-      box_y += 1;
-    }
-  }
-
-  // View
   std::string_view view = R"html(
-    <div class="screen-container">
-      <div class="header">
-        <h1>RTXUI Positioning Demo</h1>
-        <p>This demo showcases <strong>absolute</strong>, <strong>fixed</strong> positioning, and <strong>z-index</strong> stacking layers.</p>
-      </div>
+      <div class="card">
+        <h1>Positioning</h1>
+        <p>The stage is position: relative; the cards in it are absolute, stacked by z-index. The status bar is fixed to the screen.</p>
 
-      <div class="row">
-        <!-- Control Panel -->
-        <div class="controls">
-          <h3>Controls</h3>
-          <div class="control-box">
-            <div class="control-row">
-              <button onclick="MoveLeft">◀ Left</button>
-              <button onclick="MoveRight">Right ▶</button>
-            </div>
-            <div class="control-row">
-              <button onclick="MoveUp">▲ Up</button>
-              <button onclick="MoveDown">▼ Down</button>
-            </div>
-          </div>
-          <div class="info-panel">
-            Position: ({box_x}, {box_y})
-          </div>
+        <div class="buttons">
+          <button onclick="Move(left)">◀</button>
+          <button onclick="Move(right)">▶</button>
+          <button onclick="Move(up)">▲</button>
+          <button onclick="Move(down)">▼</button>
         </div>
 
-        <!-- Relative Parent Container -->
-        <div class="layout-area">
-          <!-- Static / normal flow background block -->
-          <div class="background-desc">
-            This area (blue border) is a relative container. Items inside can be positioned absolutely inside it.
-          </div>
-
-          <!-- Midground block with z-index: 5 -->
-          <div class="midground-card">
-            <span class="card-label">Midground (Z-Index = 5)</span>
-          </div>
-
-          <!-- Interactive Absolute block with z-index: 10 -->
-          <div class="absolute-card">
-            <span class="card-title">Absolute (Z-Index = 10)</span>
-            <span class="card-coord">X:{box_x} Y:{box_y}</span>
-          </div>
+        <div class="stage">
+          <div class="back">z-index: 5</div>
+          <div class="front">z-index: 10</div>
         </div>
       </div>
 
-      <!-- Fixed Status Bar at the bottom of the screen with z-index: 100 -->
-      <div class="fixed-status">
-        [FIXED STATUS BAR] Current Position: ({box_x}, {box_y}) | RTXUI Layout Engine
-      </div>
+      <div class="status">position: fixed; bottom: 0   The front card is at left: {x}, top: {y}.</div>
 
-      <!-- Scrolling filler block to showcase fixed vs absolute positioning -->
-      <div class="scroll-filler">
-        <h3>Scrolling Demonstration</h3>
-        <p>Scroll down to see that the absolute layout area scrolls out of view, while the status bar at the bottom remains fixed in place.</p>
-        <p>Scroll down further...</p>
-        <p>Line A</p>
-        <p>Line B</p>
-        <p>Line C</p>
-        <p>Line D</p>
-        <p>Line E</p>
-        <p>Line F</p>
-        <p>Line G</p>
-        <p>Line H</p>
-        <p>Line I</p>
-        <p>Line J</p>
-      </div>
-    </div>
+      <style>
+        self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-    <style>
-      self {
-        --surface: rgb(22, 27, 34);
-        --border: rgb(48, 54, 61);
-        --muted: rgb(139, 148, 158);
-        --accent: rgb(88, 166, 255);
-        --accent-bright: rgb(121, 192, 255);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 66;
+        }
+        h1 {
+          color: var(--accent);
+        }
+        p {
+          color: var(--muted);
+        }
+        .buttons {
+          display: flex;
+          gap: 1;
+        }
+        button {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
+        }
+        button:hover, button:focus {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+        .stage {
+          position: relative;
+          height: 12;
+          margin-top: 1;
+          border: round;
+          border-color: var(--border);
+        }
+        .back, .front {
+          position: absolute;
+          width: 18;
+          height: 5;
+          border: tall;
+          padding: 1;
+        }
+        .back {
+          top: 2;
+          left: 24;
+          z-index: 5;
+          text-align: right;
+          border-color: rgb(188, 140, 255);
+          background-color: rgb(52, 36, 79);
+        }
+        .front {
+          top: {y};
+          left: {x};
+          z-index: 10;
+          border-color: rgb(248, 81, 73);
+          background-color: rgb(73, 32, 36);
+        }
+        .status {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          padding: 0 1;
+          background-color: rgb(22, 45, 77);
+          color: var(--accent);
+        }
+      </style>
+    )html";
 
-        display: block;
-        padding: 1 2;
-        background-color: rgb(13, 17, 23);
-        color: rgb(230, 237, 243);
-        width: 100%;
-        height: 100%;
-        overflow-y: scroll;
-      }
-      .screen-container {
-        display: block;
-        width: 100%;
-      }
-      .header {
-        display: block;
-        margin-bottom: 2;
-      }
-      h1 {
-        color: var(--accent);
-        font-weight: bold;
-      }
-      h3 {
-        color: var(--muted);
-        margin-bottom: 1;
-      }
-      p {
-        color: var(--muted);
-      }
-      .row {
-        display: flex;
-        flex-direction: row;
-        gap: 4;
-      }
-      .controls {
-        display: block;
-        border: tall;
-        border-color: var(--border);
-        padding: 1 2;
-        width: 25;
-        height: 12;
-      }
-      .control-box {
-        display: flex;
-        flex-direction: column;
-        gap: 1;
-        margin-bottom: 1;
-      }
-      .control-row {
-        display: flex;
-        flex-direction: row;
-        gap: 1;
-      }
-      button {
-        background-color: var(--surface);
-        color: white;
-        border: solid;
-        border-color: var(--border);
-        padding: 0 1;
-        text-align: center;
-      }
-      button:hover {
-        background-color: var(--accent);
-        border-color: var(--accent-bright);
-      }
-      .info-panel {
-        color: rgb(56, 189, 248);
-        font-weight: bold;
-      }
-      
-      /* Positioning Area */
-      .layout-area {
-        position: relative;
-        display: block;
-        width: 60;
-        height: 15;
-        border: solid;
-        border-color: var(--accent);
-        background-color: var(--surface);
-      }
-      .background-desc {
-        display: block;
-        color: var(--muted);
-        padding: 1;
-      }
-      .midground-card {
-        position: absolute;
-        top: 5;
-        left: 20;
-        width: 25;
-        height: 6;
-        background-color: rgb(15, 23, 42);
-        border: double;
-        border-color: var(--accent-bright);
-        z-index: 5;
-        padding: 1;
-      }
-      .card-label {
-        color: var(--accent-bright);
-      }
-      
-      /* Target of our absolute moving coordinate state variables */
-      .absolute-card {
-        position: absolute;
-        top: {box_y};
-        left: {box_x};
-        width: 15;
-        height: 4;
-        background-color: rgb(220, 38, 38);
-        border: double;
-        border-color: rgb(248, 81, 73);
-        z-index: 10;
-        padding: 0 1;
-        display: block;
-      }
-      .card-title {
-        color: white;
-        font-weight: bold;
-        display: block;
-      }
-      .card-coord {
-        color: rgb(254, 205, 211);
-        display: block;
-      }
-      
-      /* Fixed layout card */
-      .fixed-status {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: rgb(79, 70, 229);
-        color: white;
-        padding-left: 2;
-        z-index: 100;
-      }
-      .scroll-filler {
-        display: block;
-        margin-top: 5;
-        margin-bottom: 5;
-      }
-    </style>
-  )html";
-
-  // Constructor
   PositioningApp() {
-    Bind(box_x);
-    Bind(box_y);
-    Bind(MoveLeft);
-    Bind(MoveRight);
-    Bind(MoveUp);
-    Bind(MoveDown);
+    Bind(x);
+    Bind(y);
+    Bind(Move);
   }
 };
 

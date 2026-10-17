@@ -1,24 +1,24 @@
-
-
-  RTXUI Tooltip Component Demo
-
-  Hover over the buttons below using your mouse cursor to see tooltips
-  rendered in different directions and alignments.
-
-
-
-  Top Placements:
-
-   top-start                       top (center)                       top-end
-
-
-
-  Bottom Placements:
-
-   bottom-start                   bottom (center)                  bottom-end
-
-
-
-  Left Placements:
-
-   left-start                      left (center)                     left-end
+       ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+       ▊                                                                ▎
+       ▊   Tooltips                                                     ▎
+       ▊                                                                ▎
+       ▊   Hover a button to show its tooltip, on the side its          ▎
+       ▊   placement names.                                             ▎
+       ▊                                                                ▎
+       ▊      top-start              top               top-end          ▎
+       ▊                                                                ▎
+       ▊     bottom-start           bottom            bottom-end        ▎
+       ▊                                                                ▎
+       ▊      left-start             left              left-end         ▎
+       ▊                                                                ▎
+       ▊     right-start            right             right-end         ▎
+       ▊                                                                ▎
+       ▊   The content attribute can be bound, like any other:          ▎
+       ▊                                                                ▎
+       ▊   ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   ▎
+       ▊   ▊ Edit the field above to change this.                   ▎   ▎
+       ▊   ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   ▎
+       ▊                                                                ▎
+       ▊    Hover me                                                    ▎
+       ▊                                                                ▎
+       ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎

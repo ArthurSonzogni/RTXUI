@@ -1,22 +1,22 @@
 
-  Keyboard TabIndex Navigation
-
-  Use Tab and Shift-Tab to move the focus.     Notice that positive tabindexes
-  are traversed first (ascending order),     followed by tabindex 0, and
-  tabindex -1 is skipped from tabbing.
-
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊    tabindex="2"                                          ▎
-  ▊   First item in HTML, but second in Tab order            ▎
-  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎               ▆
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊    tabindex="0"     Zero tabindex (navigated third)      ▎
-  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
 
 
 
-
+          ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+          ▊                                                          ▎
+          ▊   tabindex                                               ▎
+          ▊                                                          ▎
+          ▊   Tab visits positive tabindex values first, in order,   ▎
+          ▊   then 0 in document order. -1 is focusable by click     ▎
+          ▊   only.                                                  ▎
+          ▊                                                          ▎
+          ▊    tabindex="2"        second                            ▎
+          ▊    tabindex="0"        third                             ▎
+          ▊    tabindex="1"        first                             ▎
+          ▊    tabindex="-1"       skipped by Tab                    ▎
+          ▊    focusable="true"    fourth, like tabindex="0"         ▎
+          ▊                                                          ▎
+          ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
 
 

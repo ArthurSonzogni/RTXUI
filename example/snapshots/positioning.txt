@@ -1,24 +1,24 @@
-
-  RTXUI Positioning Demo
-
-  This demo showcases absolute, fixed positioning, and z-index stacking
-  layers.
-
-
-
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎    ┌────────────────────────────────────────────────┐  ▃
-  ▊                   ▎    │                                                │
-  ▊  Controls         ▎    │ This area (blue border) is a relative          │
-  ▊                   ▎    │ container. Items inside can be positioned      │
-  ▊  ┌─────┐ ┌─────┐  ▎    │ absolute╔═════════════╗                        │
-  ▊  │  ◀  │ │ Rig │  ▎    │         ║ Absolute    ║═══════════════════╗    │
-  ▊  │ Lef │ │ ht  │  ▎    │         ║ (Z-Index =  ║                   ║    │
-  ▊  │  t  │ │  ▶  │  ▎    │         ╚═10)═════════╝ground (Z-Index =  ║    │
-  ▊  └─────┘ └─────┘  ▎    │           X:10 Y:4║ 5)                    ║    │
-  ▊                   ▎    │                   ║                       ║    │
-  ▊  ┌─────┐ ┌─────┐  ▎    │                   ╚═══════════════════════╝    │
-  ▊▁▁│▁▁▲▁▁│▁│▁▁▼▁▁│▁▁▎    │                                                │
-     │ Up  │ │ Dow │       │                                                │
-     │     │ │  n  │       │                                                │
-     └─────┘ └─────┘       └────────────────────────────────────────────────┘
-  [FIXED STATUS BAR] Current Position: (10, 4) | RTXUI Layout Engine
+       ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+       ▊                                                                ▎
+       ▊   Positioning                                                  ▎
+       ▊                                                                ▎
+       ▊   The stage is position: relative; the cards in it are         ▎
+       ▊   absolute, stacked by z-index. The status bar is fixed to     ▎
+       ▊   the screen.                                                  ▎
+       ▊                                                                ▎
+       ▊   ▊▔▔▔▎ ▊▔▔▔▎ ▊▔▔▔▎ ▊▔▔▔▎                                      ▎
+       ▊   ▊ ◀ ▎ ▊ ▶ ▎ ▊ ▲ ▎ ▊ ▼ ▎                                      ▎
+       ▊   ▊▁▁▁▎ ▊▁▁▁▎ ▊▁▁▁▎ ▊▁▁▁▎                                      ▎
+       ▊                                                                ▎
+       ▊   ╭────────────────────────────────────────────────────────╮   ▎
+       ▊   │                                                        │   ▎
+       ▊   │                       ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎               │   ▎
+       ▊   │                       ▊                ▎               │   ▎
+       ▊   │       ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎    z-index: 5 ▎               │   ▎
+       ▊   │       ▊                ▎               ▎               │   ▎
+       ▊   │       ▊ z-index: 10    ▎▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎               │   ▎
+       ▊   │       ▊                ▎                               │   ▎
+       ▊   │       ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎                               │   ▎
+       ▊   │                                                        │   ▎
+       ▊   │                                                        │   ▎
+ position: fixed; bottom: 0   The front card is at left: 8, top: 4.
