@@ -42,7 +42,7 @@ class ToastDemo : public Component<ToastDemo> {
   std::string_view view = R"html(
       <div class="card">
         <h1>Toasts</h1>
-        <p>Saved {saves} times.</p>
+        <p>A toast shows a message for a while, then closes itself. Saves so far: {saves}.</p>
         <div class="row">
           <button onclick="Save">Save</button>
           <button onclick="Fail">Fail</button>
@@ -69,15 +69,27 @@ class ToastDemo : public Component<ToastDemo> {
           border-color: rgb(48, 54, 61);
           background-color: rgb(22, 27, 34);
           padding: 1 3;
+          width: 44;
         }
         h1 {
           color: rgb(88, 166, 255);
-          font-weight: bold;
+        }
+        p {
+          color: rgb(139, 148, 158);
         }
         .row {
           display: flex;
           gap: 2;
-          margin-top: 1;
+        }
+        button {
+          border: tall;
+          border-color: rgb(48, 54, 61);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
+        }
+        button:hover, button:focus {
+          border-color: rgb(88, 166, 255);
+          color: rgb(88, 166, 255);
         }
         /* Slides in, then swings sideways a few times, less each time. */
         @keyframes shake-in {
