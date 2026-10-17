@@ -551,12 +551,12 @@ TEST_CASE("Paint: each border side draws in its own style", "[paint][border]") {
 
   auto texture = RenderComponent(Ref<MixedSidesTest>::New(), 6, 4);
 
-  // The corners follow the vertical sides.
+  // The corners join the light sides to the heavy top and double bottom.
   CHECK(GetTextLayer(texture) == CheckGrid({
-                                     "┌━━━━┐",
+                                     "┍━━━━┑",
                                      "│    │",
                                      "│    │",
-                                     "└════┘",
+                                     "╘════╛",
                                  }));
 }
 

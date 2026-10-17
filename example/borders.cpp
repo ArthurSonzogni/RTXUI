@@ -2,7 +2,8 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 //
-// Every border style: solid, double, dashed, round, tall, vkey and more.
+// Every border style: solid, double, dashed, round, tall, vkey and more,
+// then the ways to combine them: a color in the shorthand, a style per side.
 //
 // Each tile names the style it draws, so this doubles as a lookup table.
 #include <rtxui/rtxui.hpp>
@@ -25,6 +26,16 @@ class BordersDemo : public Component<BordersDemo> {
       "shadow",          "blank",        "shade-light",
       "shade-medium",    "shade-dark",   "none",
   };
+  std::vector<std::string> combinations = {
+      "border: round red",
+      "border: double green",
+      "border: solid; border-top: heavy",
+      "border: solid; border-bottom: double yellow",
+      "border-left: heavy magenta",
+      "border-top: solid; border-bottom: solid",
+      "border: dashed; border-left-style: heavy; border-right-style: heavy",
+      "border: inset cyan",
+  };
 
   std::string_view view = R"html(
       <div class="card">
@@ -35,7 +46,14 @@ class BordersDemo : public Component<BordersDemo> {
           <for each="{styles}" as="s">
             <div class="tile" style="border: {s};">{s}</div>
           </for>
-      </div>
+        </div>
+
+        <h2>Combined</h2>
+        <div class="grid combinations">
+          <for each="{combinations}" as="c">
+            <div class="tile" style="{c}">{c}</div>
+          </for>
+        </div>
       </div>
 
       <style>
@@ -57,8 +75,11 @@ class BordersDemo : public Component<BordersDemo> {
           max-height: 100%;
           overflow-y: scroll;
         }
-        h1 {
+        h1, h2 {
           color: rgb(88, 166, 255);
+        }
+        h2 {
+          margin-top: 2;
         }
         p {
           color: rgb(139, 148, 158);
@@ -67,6 +88,9 @@ class BordersDemo : public Component<BordersDemo> {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 2 2;
+        }
+        .combinations {
+          grid-template-columns: repeat(2, 1fr);
         }
         .tile {
           border-color: rgb(88, 166, 255);
@@ -80,7 +104,10 @@ class BordersDemo : public Component<BordersDemo> {
       </style>
     )html";
 
-  BordersDemo() { Bind(styles); }
+  BordersDemo() {
+    Bind(styles);
+    Bind(combinations);
+  }
 };
 
 int main() {

@@ -117,6 +117,48 @@ const char* MergeBorderGlyph(std::string_view existing, const char* incoming) {
   return (*family)[merged];
 }
 
+// How heavy a box-drawing line is: 1 light, 2 heavy, 3 double, 0 for any other
+// glyph.
+int LineWeight(std::string_view glyph) {
+  for (std::string_view light : {"─", "╌", "┈", "│", "╎", "┊"}) {
+    if (glyph == light) {
+      return 1;
+    }
+  }
+  for (std::string_view heavy : {"━", "╍", "┃", "╏"}) {
+    if (glyph == heavy) {
+      return 2;
+    }
+  }
+  if (glyph == "═" || glyph == "║") {
+    return 3;
+  }
+  return 0;
+}
+
+// The corner joining a horizontal line of weight `h` to a vertical one of
+// weight `v`, at `row` and `col` (0 or 2) of the charset. Null when the two
+// weights are equal or Unicode has no such corner: heavy against double.
+const char* MixedCorner(int h, int v, int row, int col) {
+  struct Corners {
+    int h;
+    int v;
+    const char* glyphs[4];  // Top-left, top-right, bottom-left, bottom-right.
+  };
+  static constexpr Corners kCorners[] = {
+      {1, 2, {"┎", "┒", "┖", "┚"}},
+      {2, 1, {"┍", "┑", "┕", "┙"}},
+      {1, 3, {"╓", "╖", "╙", "╜"}},
+      {3, 1, {"╒", "╕", "╘", "╛"}},
+  };
+  for (const auto& corners : kCorners) {
+    if (corners.h == h && corners.v == v) {
+      return corners.glyphs[row + col / 2];
+    }
+  }
+  return nullptr;
+}
+
 const Color kDefaultScrollbarThumbColor = Color::RGBA(200, 200, 200, 200);
 const Color kDefaultScrollbarTrackColor = Color::RGBA(80, 80, 80, 120);
 
@@ -703,7 +745,8 @@ void PaintImpl(const PhysicalFragment* frag,
 
     // One cell of the charset: the glyph and where it draws its ground. Each
     // side reads its own style's charset; a corner, like its color, follows
-    // the vertical side.
+    // the vertical side, unless its two lines differ in weight and a corner
+    // joins them.
     struct Glyph {
       const char* c;
       Location location;
@@ -714,6 +757,15 @@ void PaintImpl(const PhysicalFragment* frag,
                                      : row == 0 ? top_style
                                                 : bottom_style;
       const auto& data = GetBorderData(side_style);
+      if (row != 1 && col != 1) {
+        const auto& horizontal =
+            GetBorderData(row == 0 ? top_style : bottom_style);
+        if (const char* corner =
+                MixedCorner(LineWeight(horizontal.charset[row][1]),
+                            LineWeight(data.charset[1][col]), row, col)) {
+          return {corner, Location::Inner};
+        }
+      }
       return {data.charset[row][col],
               data.locations ? data.locations[row][col] : Location::Inner};
     };
