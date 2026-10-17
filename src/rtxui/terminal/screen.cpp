@@ -937,6 +937,9 @@ class ScreenImpl {
 
   void UpdateSize();
   void DigestAndDraw();
+  // Ends a burst of events started by setting suppress_draw_: compares the
+  // bound state once and draws once, if anything needs it.
+  void EndBurst();
   void HandleEvent(Event event);
   // Whether something is moving and needs more frames. `include_infinite`
   // false leaves out the animations that never end.
@@ -1128,6 +1131,10 @@ class ScreenImpl {
   // A RequestDraw() was deferred by suppress_draw_ and no Draw() has run
   // since.
   bool draw_pending_ = false;
+  // A DigestAndDraw() was deferred by suppress_draw_: the burst's events
+  // only change state, and EndBurst() compares it once, however many there
+  // were.
+  bool digest_pending_ = false;
   // Where this screen's layout lives. Declared before the trees allocated in
   // it, so they are destroyed while it still exists.
   LayoutArenas layout_arenas_;
@@ -1414,10 +1421,7 @@ void ScreenImpl::Step() {
       while (auto event = parser_->GetEvent()) {
         HandleEvent(*event);
       }
-      suppress_draw_ = false;
-      if (draw_pending_) {
-        Draw();
-      }
+      EndBurst();
     } else if (bytes_read == 0) {
       running_ = false;
     } else {
@@ -3030,10 +3034,27 @@ void ScreenImpl::Print(Ref<ComponentBase> component) {
 }
 
 void ScreenImpl::DigestAndDraw() {
+  if (suppress_draw_) {
+    digest_pending_ = true;
+    return;
+  }
   if (!component_->Digest()) {
     return;
   }
   RequestDraw();
+}
+
+void ScreenImpl::EndBurst() {
+  suppress_draw_ = false;
+  if (digest_pending_) {
+    digest_pending_ = false;
+    if (component_->Digest()) {
+      draw_pending_ = true;
+    }
+  }
+  if (draw_pending_) {
+    Draw();
+  }
 }
 
 void ScreenImpl::RequestDraw() {
@@ -4303,10 +4324,7 @@ void ScreenImpl::SettlePendingInput() {
   while (auto event = parser_->GetEvent()) {
     HandleEvent(*event);
   }
-  suppress_draw_ = false;
-  if (draw_pending_) {
-    Draw();
-  }
+  EndBurst();
 }
 
 void ScreenImpl::Settle(HeadlessTerminalDevice& device) {

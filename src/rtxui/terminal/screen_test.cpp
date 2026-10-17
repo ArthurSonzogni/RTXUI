@@ -6464,5 +6464,39 @@ TEST_CASE("Screen.StateChangedByAnUnhandledEventIsDrawn",
   CHECK(device->GetOutput().find("Keyboard(a)") != std::string::npos);
 }
 
+TEST_CASE("Screen.BurstOfEventsIsDigestedOnce", "[terminal][regression]") {
+  // Comparing the bound state after each event of a burst (a paste, a fast
+  // mouse motion) made large states cost once per event. The burst is
+  // compared, and drawn, once after its last event.
+  class Counter : public Component<Counter> {
+   public:
+    int events = 0;
+    int digests = 0;
+    Counter() { Bind(events); }
+    bool OnEvent(Event event) override {
+      events++;
+      return Component<Counter>::OnEvent(event);
+    }
+    bool Digest() override {
+      digests++;
+      return Component<Counter>::Digest();
+    }
+    std::string_view view = "{events}";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<Counter>::New();
+  Screen screen = ScreenInternals::Make(component, device);
+  screen.Step();
+
+  device->ClearOutput();
+  component->digests = 0;
+  device->PushInput(std::string(20, 'a'));
+  screen.Step();
+  CHECK(component->events == 20);
+  CHECK(component->digests == 1);
+  CHECK(device->GetOutput().find("20") != std::string::npos);
+}
+
 }  // namespace
 }  // namespace rtxui
