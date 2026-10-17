@@ -551,6 +551,48 @@ TEST_CASE("A transition on background fades the background color",
   CHECK(Red(box->style.background_color) == 200);
 }
 
+class Ink : public Component<Ink> {
+ public:
+  std::string text_class = "lit";
+  Ink() { Bind(text_class); }
+  std::string_view view = R"html(
+    <div id="parent"><span id="text" class="{text_class}">Hi</span></div>
+    <style>
+      #parent { color: rgb(0, 200, 0); }
+      #text { transition: color 1s linear; }
+      #text.lit { color: rgb(200, 0, 0); }
+    </style>
+  )html";
+};
+
+TEST_CASE("A transition from a color to an unset one goes to the inherited one",
+          "[animation]") {
+  // `color` is inherited: unset means the parent's. The transition went to
+  // transparent instead, and the text faded out halfway before reappearing
+  // in the parent's color at the end.
+  FakeClock clock;
+  auto app = Ref<Ink>::New();
+  rtxui::ComponentInternals::Mount(*app);
+  Element* text = rtxui::ComponentInternals::Root(*app)->QuerySelector("#text");
+  REQUIRE(text != nullptr);
+
+  app->text_class = "";
+  app->Digest();
+  clock.Advance(text, 500);
+  REQUIRE(text->style.foreground_color.has_value());
+  CHECK(text->style.foreground_color->r == 100);
+  CHECK(text->style.foreground_color->g == 100);
+  CHECK(text->style.foreground_color->a == 255);
+
+  // And back: from the inherited color to the element's own.
+  app->text_class = "lit";
+  app->Digest();
+  clock.Advance(text, 1000);
+  clock.Advance(text, 500);
+  REQUIRE(text->style.foreground_color.has_value());
+  CHECK(text->style.foreground_color->a == 255);
+}
+
 class Ending : public Component<Ending> {
  public:
   int ended = 0;

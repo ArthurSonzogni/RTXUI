@@ -3255,6 +3255,13 @@ TEST_CASE("Transitions.NulloptTargetReverts",
     std::string_view view = R"html(
       <div id="btn">Click me</div>
       <style>
+        /* What the button inherits while its own color is unset, and so
+           what the transitions run from and back to. Without any, the text
+           is in the terminal's own color, which nothing knows: the color
+           then switches at once rather than fading out of sight. */
+        self {
+          color: #808080;
+        }
         #btn {
           background-color: #000000;
           transition: color 1s linear;

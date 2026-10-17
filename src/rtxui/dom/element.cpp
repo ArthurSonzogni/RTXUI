@@ -1052,33 +1052,51 @@ void Element::TriggerTransitions(double current_time_ms) {
   auto HandleColorProperty = [&](std::string_view prop_name,
                                  std::optional<Color>& current_val,
                                  const std::optional<Color>& target_val) {
+    // `color` is inherited: unset means the parent's, and that is what a
+    // transition to or from it moves toward. Fading to transparent instead
+    // made the text vanish halfway. The other colors have no inherited
+    // value, so unset stays transparent for them.
+    std::optional<Color> inherited;
+    if (prop_name == "color") {
+      for (const Element* el = Parent(); el && !inherited; el = el->Parent()) {
+        inherited = el->style.foreground_color;
+      }
+    }
+    const std::optional<Color> from = current_val ? current_val : inherited;
+    const std::optional<Color> to = target_val ? target_val : inherited;
+
     bool has_active = active_transitions.count(std::string(prop_name)) > 0;
     bool target_changed = false;
     if (has_active) {
-      target_changed =
-          (active_transitions[std::string(prop_name)].target_color !=
-           target_val.value_or(Color::RGBA(0, 0, 0, 0)));
+      target_changed = (active_transitions[std::string(prop_name)].target_color !=
+                        to.value_or(Color::RGBA(0, 0, 0, 0)));
     } else {
-      target_changed = (current_val != target_val);
+      target_changed = (from != to);
+      // A transition to the inherited color lands on it explicitly; hand the
+      // property back to inheritance, so it follows the parent from now on.
+      current_val = target_val;
     }
 
     if (target_changed) {
       const TransitionConfig* config = FindTransitionConfig(this, prop_name);
-      if (config && config->duration_seconds > 0.0f) {
+      // Text in the terminal's own color, which nothing here knows, switches
+      // at once rather than fading out of sight.
+      const bool unknown_text_color =
+          prop_name == "color" && (!from || !to);
+      if (config && config->duration_seconds > 0.0f && !unknown_text_color) {
+        current_val = from;
         ActiveTransition trans;
         trans.start_time_ms = current_time_ms + ToMs(config->delay_seconds);
         trans.duration_ms = ToMs(config->duration_seconds);
         trans.timing_function = config->timing_function;
         trans.type = ActiveTransition::Type::Color;
-        trans.start_color = current_val.value_or(Color::RGBA(0, 0, 0, 0));
-        if (!current_val && target_val) {
-          trans.start_color =
-              Color::RGBA(target_val->r, target_val->g, target_val->b, 0);
+        trans.start_color = from.value_or(Color::RGBA(0, 0, 0, 0));
+        if (!from && to) {
+          trans.start_color = Color::RGBA(to->r, to->g, to->b, 0);
         }
-        trans.target_color = target_val.value_or(Color::RGBA(0, 0, 0, 0));
-        if (current_val && !target_val) {
-          trans.target_color =
-              Color::RGBA(current_val->r, current_val->g, current_val->b, 0);
+        trans.target_color = to.value_or(Color::RGBA(0, 0, 0, 0));
+        if (from && !to) {
+          trans.target_color = Color::RGBA(from->r, from->g, from->b, 0);
         }
         active_transitions[std::string(prop_name)] = trans;
       } else {
