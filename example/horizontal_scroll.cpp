@@ -9,155 +9,114 @@
 //
 // Try it: scroll with Shift+wheel, or drag the scrollbar.
 #include <rtxui/rtxui.hpp>
+#include <string>
 #include <string_view>
+#include <vector>
 
 using namespace rtxui;
 
 class HorizontalScrollDemo : public Component<HorizontalScrollDemo> {
  public:
+  static std::vector<std::string> Numbered(std::string prefix, int n) {
+    std::vector<std::string> out;
+    for (int i = 1; i <= n; ++i) {
+      out.push_back(prefix + " " + std::to_string(i));
+    }
+    return out;
+  }
+
+  std::vector<std::string> outer = Numbered("Item", 3);
+  std::vector<std::string> inner = Numbered("In", 8);
+  std::vector<std::string> more = {"Item 4", "Item 5", "Item 6", "Item 7"};
+
   std::string_view view = R"html(
-      <div class="header">
-        <h1>RTXUI Horizontal Scrolling Demo</h1>
-        <p class="desc">
-          This demo showcases horizontal scrollable elements. Scroll horizontally using Shift + mouse wheel,
-          WheelLeft/Right events, or ArrowLeft/ArrowRight keys when focused.
-        </p>
-      </div>
+      <div class="card">
+        <h1>Horizontal scrolling</h1>
+        <p>overflow-x: scroll on a row wider than its box. Shift+wheel, drag the bar, or focus it and use the arrows. The inner row scrolls on its own until it reaches an end.</p>
 
-      <div class="item first">[Outer Start]</div>
-      <div class="item">[Scroll right to find nested scrollboxes...]</div>
-      <div class="item">[Item A]</div>
-      <div class="item">[Item B]</div>
-
-      <div class="nested-container">
-        <div class="inner-title">Nested Box A (Light Blue Border)</div>
-        <div class="inner-scroll box-a">
-          <div class="inner-item first">[A-1]</div>
-          <div class="inner-item">[A-2]</div>
-          <div class="inner-item">[A-3]</div>
-          <div class="inner-item">[A-4]</div>
-          <div class="inner-item">[A-5]</div>
-          <div class="inner-item">[A-6]</div>
-          <div class="inner-item">[A-7]</div>
-          <div class="inner-item">[A-8]</div>
-          <div class="inner-item">[A-9]</div>
-          <div class="inner-item last">[A-End]</div>
+        <div class="outer" tabindex="0">
+          <for each="{outer}" as="item">
+            <div class="tile">{item}</div>
+          </for>
+          <div class="inner" tabindex="0">
+            <for each="{inner}" as="item">
+              <div class="tile small">{item}</div>
+            </for>
+          </div>
+          <for each="{more}" as="item">
+            <div class="tile">{item}</div>
+          </for>
         </div>
       </div>
-
-      <div class="item">[Middle Item]</div>
-
-      <div class="nested-container">
-        <div class="inner-title">Nested Box B (Steel Blue Border)</div>
-        <div class="inner-scroll box-b">
-          <div class="inner-item first">[B-1]</div>
-          <div class="inner-item">[B-2]</div>
-          <div class="inner-item">[B-3]</div>
-          <div class="inner-item">[B-4]</div>
-          <div class="inner-item">[B-5]</div>
-          <div class="inner-item">[B-6]</div>
-          <div class="inner-item">[B-7]</div>
-          <div class="inner-item">[B-8]</div>
-          <div class="inner-item">[B-9]</div>
-          <div class="inner-item last">[B-End]</div>
-        </div>
-      </div>
-
-      <div class="item last">[Outer End]</div>
 
       <style>
         self {
-          --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
-          --accent-bright: rgb(121, 192, 255);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
           display: flex;
-          flex-direction: row;
+          align-items: center;
+          justify-content: center;
           width: 100%;
           height: 100%;
-          overflow-x: scroll;
-          scroll-speed-x: 2;
           background-color: rgb(13, 17, 23);
           color: rgb(230, 237, 243);
-          padding: 1;
         }
-        .header {
-          display: block;
-          width: 35;
-          height: 8;
-          flex-shrink: 0;
-          margin-right: 2;
-          border: tall;
-          border-color: var(--surface);
-          padding: 1;
-        }
-        h1 {
-          color: var(--accent-bright);
-          font-weight: bold;
-          margin-bottom: 1;
-        }
-        .desc {
-          color: rgb(139, 148, 158);
-          margin-bottom: 1;
-        }
-        .item {
-          display: block;
-          width: 25;
-          height: 8;
-          margin-right: 2;
-          background-color: var(--surface);
-          color: rgb(219, 234, 254);
+        .card {
           border: tall;
           border-color: var(--border);
-          padding: 1;
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 64;
         }
-        .nested-container {
-          display: block;
-          width: 40;
-          height: 8;
-          margin-right: 2;
+        h1 {
+          color: var(--accent);
         }
-        .inner-title {
-          color: rgb(191, 219, 254);
-          font-weight: bold;
-          margin-bottom: 1;
+        p {
+          color: var(--muted);
         }
-        .inner-scroll {
+        .outer, .inner {
           display: flex;
-          flex-direction: row;
-          width: 38;
-          height: 5;
+          gap: 1;
           overflow-x: scroll;
-          scroll-speed-x: 1;
         }
-        .box-a {
-          border: tall;
-          border-color: var(--accent-bright);
-          background-color: var(--surface);
-        }
-        .box-b {
-          border: tall;
-          border-color: rgb(88, 166, 255);
-          background-color: var(--surface);
-        }
-        .inner-item {
-          display: block;
-          width: 10;
-          margin-right: 1;
-          background-color: rgb(15, 23, 42);
-          color: var(--accent-bright);
-          border: tall;
+        .outer {
+          border: round;
           border-color: var(--border);
           padding: 0 1;
         }
-        .first {
-          color: rgb(74, 222, 128);
+        .outer:focus, .inner:focus {
+          border-color: var(--accent);
         }
-        .last {
-          color: rgb(248, 81, 73);
+        .inner {
+          flex-shrink: 0;
+          width: 30;
+          border: tall;
+          border-color: rgb(52, 36, 79);
+          background-color: rgb(30, 24, 45);
+        }
+        .tile {
+          flex-shrink: 0;
+          width: 12;
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
+          padding: 1;
+        }
+        .small {
+          width: 8;
+          padding: 0 1;
+          border-color: rgb(188, 140, 255);
         }
       </style>
     )html";
+
+  HorizontalScrollDemo() {
+    Bind(outer);
+    Bind(inner);
+    Bind(more);
+  }
 };
 
 int main() {

@@ -12,149 +12,127 @@
 // Try it: click the jump links above each box, or Tab through the items, and
 // compare how each column travels.
 #include <rtxui/rtxui.hpp>
+#include <string>
 #include <string_view>
+#include <vector>
 
 using namespace rtxui;
 
 class ScrollBehaviorDemo : public Component<ScrollBehaviorDemo> {
  public:
+  std::vector<std::string> items = {
+      "Item 2", "Item 3", "Item 4", "Item 5",  "Item 6",
+      "Item 7", "Item 8", "Item 9", "Item 10", "Item 11",
+  };
+
   std::string_view view = R"html(
-    <div class="container">
-      <div class="header">
-        <h1>RTXUI Scroll Behavior Demo</h1>
-        <p class="desc">
-          Click a jump link, or Tab through the items: the left box jumps, the right one glides. The wheel and the keys scroll both at once.
-        </p>
-      </div>
+      <div class="card">
+        <h1>scroll-behavior</h1>
+        <p>How a box scrolls to show a link's target or a focused item: auto jumps, smooth glides. The wheel and the keys always scroll at once.</p>
 
-      <div class="row">
-        <div class="column">
-          <h2>scroll-behavior: auto</h2>
-          <p class="subtitle">Jumps straight to the target.</p>
-          <p class="jump">
-            <a href="#auto-last">↓ Last item</a>
-            <a href="#auto-first">↑ First item</a>
-          </p>
-          <div id="scroll-auto" class="scrollbox">
-            <div class="item" id="auto-first" tabindex="0">Item 1</div>
-            <div class="item" tabindex="0">Item 2</div>
-            <div class="item" tabindex="0">Item 3</div>
-            <div class="item" tabindex="0">Item 4</div>
-            <div class="item" tabindex="0">Item 5</div>
-            <div class="item" tabindex="0">Item 6</div>
-            <div class="item" tabindex="0">Item 7</div>
-            <div class="item" tabindex="0">Item 8</div>
-            <div class="item" tabindex="0">Item 9</div>
-            <div class="item" tabindex="0">Item 10</div>
-            <div class="item" tabindex="0">Item 11</div>
-            <div class="item" id="auto-last" tabindex="0">Item 12</div>
+        <div class="row">
+          <div class="column">
+            <h2>auto</h2>
+            <div class="links">
+              <a href="#auto-last">↓ Last item</a>
+              <a href="#auto-first">↑ First item</a>
+            </div>
+            <div class="box auto">
+              <div class="item" id="auto-first" tabindex="0">First item</div>
+              <for each="{items}" as="item">
+                <div class="item" tabindex="0">{item}</div>
+              </for>
+              <div class="item" id="auto-last" tabindex="0">Last item</div>
+            </div>
           </div>
-        </div>
-
-        <div class="column">
-          <h2>scroll-behavior: smooth</h2>
-          <p class="subtitle">Glides to the target.</p>
-          <p class="jump">
-            <a href="#smooth-last">↓ Last item</a>
-            <a href="#smooth-first">↑ First item</a>
-          </p>
-          <div id="scroll-smooth" class="scrollbox">
-            <div class="item" id="smooth-first" tabindex="0">Item 1</div>
-            <div class="item" tabindex="0">Item 2</div>
-            <div class="item" tabindex="0">Item 3</div>
-            <div class="item" tabindex="0">Item 4</div>
-            <div class="item" tabindex="0">Item 5</div>
-            <div class="item" tabindex="0">Item 6</div>
-            <div class="item" tabindex="0">Item 7</div>
-            <div class="item" tabindex="0">Item 8</div>
-            <div class="item" tabindex="0">Item 9</div>
-            <div class="item" tabindex="0">Item 10</div>
-            <div class="item" tabindex="0">Item 11</div>
-            <div class="item" id="smooth-last" tabindex="0">Item 12</div>
+          <div class="column">
+            <h2>smooth</h2>
+            <div class="links">
+              <a href="#smooth-last">↓ Last item</a>
+              <a href="#smooth-first">↑ First item</a>
+            </div>
+            <div class="box smooth">
+              <div class="item" id="smooth-first" tabindex="0">First item</div>
+              <for each="{items}" as="item">
+                <div class="item" tabindex="0">{item}</div>
+              </for>
+              <div class="item" id="smooth-last" tabindex="0">Last item</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <style>
-      self {
-        --border: rgb(48, 54, 61);
-        --muted: rgb(139, 148, 158);
+      <style>
+        self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-        display: block;
-        width: 80;
-        margin: 0 auto;
-        background-color: rgb(13, 17, 23);
-        color: rgb(230, 237, 243);
-      }
-      .container {
-        display: block;
-        padding: 2;
-      }
-      .header {
-        display: block;
-        margin-bottom: 2;
-      }
-      h1 {
-        color: rgb(121, 192, 255);
-        font-weight: bold;
-        margin-bottom: 1;
-      }
-      .desc {
-        color: var(--muted);
-      }
-      .row {
-        display: flex;
-        flex-direction: row;
-        width: 100%;
-      }
-      .column {
-        display: block;
-        flex-grow: 1;
-        width: 48%;
-        margin-right: 2%;
-      }
-      h2 {
-        color: rgb(224, 242, 254);
-        font-weight: bold;
-        margin-bottom: 1;
-      }
-      .subtitle {
-        color: var(--muted);
-      }
-      .jump {
-        display: flex;
-        gap: 3;
-        margin-bottom: 1;
-      }
-      .scrollbox {
-        display: block;
-        height: 10;
-        overflow-y: scroll;
-        border: tall;
-        border-color: var(--border);
-        background-color: rgb(22, 27, 34);
-        padding: 1;
-      }
-      #scroll-auto {
-        scroll-behavior: auto;
-      }
-      #scroll-smooth {
-        scroll-behavior: smooth;
-      }
-      .item {
-        display: block;
-        height: 2;
-        margin-bottom: 1;
-        background-color: var(--border);
-        color: rgb(255, 255, 255);
-        padding-left: 1;
-      }
-      .item:focus {
-        background-color: rgb(31, 111, 235);
-      }
-    </style>
-  )html";
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 64;
+        }
+        h1 {
+          color: var(--accent);
+        }
+        p {
+          color: var(--muted);
+        }
+        .row {
+          display: flex;
+          gap: 3;
+        }
+        .column {
+          flex: 1;
+        }
+        h2 {
+          margin-bottom: 0;
+        }
+        .links {
+          display: flex;
+          justify-content: space-between;
+        }
+        a {
+          color: var(--accent);
+          text-decoration: none;
+        }
+        a:hover, a:focus {
+          text-decoration: underline;
+        }
+        .box {
+          height: 10;
+          overflow-y: scroll;
+          border: round;
+          border-color: var(--border);
+        }
+        .auto {
+          scroll-behavior: auto;
+        }
+        .smooth {
+          scroll-behavior: smooth;
+        }
+        .item {
+          padding: 0 1;
+        }
+        .item:focus {
+          background-color: rgb(22, 45, 77);
+          color: var(--accent);
+        }
+      </style>
+    )html";
+
+  ScrollBehaviorDemo() { Bind(items); }
 };
 
 int main() {

@@ -1,24 +1,24 @@
 
+        ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+        ▊                                                              ▎
+        ▊   scroll-behavior                                            ▎
+        ▊                                                              ▎
+        ▊   How a box scrolls to show a link's target or a focused     ▎
+        ▊   item: auto jumps, smooth glides. The wheel and the keys    ▎
+        ▊   always scroll at once.                                     ▎
+        ▊                                                              ▎
+        ▊   auto                         smooth                        ▎
+        ▊   ↓ Last item   ↑ First item   ↓ Last item    ↑ First item   ▎
+        ▊   ╭────────────────────────╮   ╭─────────────────────────╮   ▎
+        ▊   │ First item             │   │ First item              │   ▎
+        ▊   │ Item 2                 │   │ Item 2                  │   ▎
+        ▊   │ Item 3                 │   │ Item 3                  │   ▎
+        ▊   │ Item 4                 │   │ Item 4                  │   ▎
+        ▊   │ Item 5                ▄│   │ Item 5                 ▄│   ▎
+        ▊   │ Item 6                 │   │ Item 6                  │   ▎
+        ▊   │ Item 7                 │   │ Item 7                  │   ▎
+        ▊   │ Item 8                 │   │ Item 8                  │   ▎
+        ▊   ╰────────────────────────╯   ╰─────────────────────────╯   ▎
+        ▊                                                              ▎
+        ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
-  RTXUI Scroll Behavior Demo
-
-  Click a jump link, or Tab through the items: the left box jumps, the right
-  one glides. The wheel and the keys scroll both at once.
-
-
-
-  scroll-behavior: auto                 scroll-behavior: smooth
-
-  Jumps straight to the target.         Glides to the target.
-
-  ↓ Last item   ↑ First item            ↓ Last item   ↑ First item
-
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊                                  ▎  ▊                                  ▎
-  ▊  Item 1                         ▇▎  ▊  Item 1                         ▇▎
-  ▊                                  ▎  ▊                                  ▎
-  ▊                                  ▎  ▊                                  ▎
-  ▊  Item 2                          ▎  ▊  Item 2                          ▎
-  ▊                                  ▎  ▊                                  ▎
-  ▊                                  ▎  ▊                                  ▎
-  ▊                                  ▎  ▊                                  ▎

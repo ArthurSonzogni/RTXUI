@@ -1,24 +1,24 @@
 
- ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔
- ▊                                 ▎  ▊                       ▎  ▊
- ▊ RTXUI Horizontal Scrolling Demo ▎  ▊ [Outer Start]         ▎  ▊ [Scroll righ
- ▊                                 ▎  ▊                       ▎  ▊ nested
- ▊ This demo showcases horizontal  ▎  ▊                       ▎  ▊ scrollboxes.
- ▊ scrollable elements. Scroll     ▎  ▊                       ▎  ▊
- ▊ horizontally using Shift +      ▎  ▊                       ▎  ▊
- ▊▁mouse wheel,    ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁
-   WheelLeft/Right events, or
-   ArrowLeft/ArrowRight keys when
-   focused.
+
+        ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+        ▊                                                              ▎
+        ▊   Horizontal scrolling                                       ▎
+        ▊                                                              ▎
+        ▊   overflow-x: scroll on a row wider than its box.            ▎
+        ▊   Shift+wheel, drag the bar, or focus it and use the         ▎
+        ▊   arrows. The inner row scrolls on its own until it          ▎
+        ▊   reaches an end.                                            ▎
+        ▊                                                              ▎
+        ▊   ╭──────────────────────────────────────────────────────╮   ▎
+        ▊   │ ▊▔▔▔▔▔▔▔▔▔▔▎ ▊▔▔▔▔▔▔▔▔▔▔▎ ▊▔▔▔▔▔▔▔▔▔▔▎ ▊▔▔▔▔▔▔▔▔▔▔▔▔ │   ▎
+        ▊   │ ▊          ▎ ▊          ▎ ▊          ▎ ▊▊▔▔▔▔▔▔▎ ▊▔▔ │   ▎
+        ▊   │ ▊ Item 1   ▎ ▊ Item 2   ▎ ▊ Item 3   ▎ ▊▊ In 1 ▎ ▊ I │   ▎
+        ▊   │ ▊          ▎ ▊          ▎ ▊          ▎ ▊▊▁▁▁▁▁▁▎ ▊▁▁ │   ▎
+        ▊   │ ▊          ▎ ▊          ▎ ▊          ▎ ▊          ▋  │   ▎
+        ▊   │ ▊▁▁▁▁▁▁▁▁▁▁▎ ▊▁▁▁▁▁▁▁▁▁▁▎ ▊▁▁▁▁▁▁▁▁▁▁▎ ▊▁▁▁▁▁▁▁▁▁▁▁▁ │   ▎
+        ▊   │                      ▍                               │   ▎
+        ▊   ╰──────────────────────────────────────────────────────╯   ▎
+        ▊                                                              ▎
+        ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
 
-
-
-
-
-
-
-
-
-
-                     ▉

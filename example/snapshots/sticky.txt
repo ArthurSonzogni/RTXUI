@@ -1,24 +1,24 @@
-
-  Sticky Calendar Demo
-
-  Use your mouse wheel to scroll the calendar.     Notice how month names stay
-  pinned at the top until they are pushed out of the way.
-
-
-
-
-                  January
-
-
-                   Day 1
-                   Day 2
-                   Day 3
-                   Day 4
-                   Day 5
-                   Day 6
-                   Day 7
-                   Day 8
-                   Day 9
-                   Day 10
-                   Day 11
-                   Day 12
+                    ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+                    ▊                                      ▎
+                    ▊   Sticky                             ▎
+                    ▊                                      ▎
+                    ▊   Scroll: each month's name stays    ▎
+                    ▊   at the top until the next one      ▎
+                    ▊   pushes it away.                    ▎
+                    ▊                                      ▎
+                    ▊   ╭──────────────────────────────╮   ▎
+                    ▊   │ January                      │   ▎
+                    ▊   │   1  2  3  4  5  6  7       ▃│   ▎
+                    ▊   │   8  9 10 11 12 13 14        │   ▎
+                    ▊   │  15 16 17 18 19 20 21        │   ▎
+                    ▊   │  22 23 24 25 26 27 28        │   ▎
+                    ▊   │  29 30 31                    │   ▎
+                    ▊   │                              │   ▎
+                    ▊   │ February                     │   ▎
+                    ▊   │   1  2  3  4  5  6  7        │   ▎
+                    ▊   │   8  9 10 11 12 13 14        │   ▎
+                    ▊   │  15 16 17 18 19 20 21        │   ▎
+                    ▊   │  22 23 24 25 26 27 28        │   ▎
+                    ▊   ╰──────────────────────────────╯   ▎
+                    ▊                                      ▎
+                    ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
