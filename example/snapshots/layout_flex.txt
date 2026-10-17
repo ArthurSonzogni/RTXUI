@@ -1,24 +1,24 @@
-
- RTXUI Flexbox Layout Demo
- Toggle properties and add/remove elements to test wrapping and display rules.
-
- Container Controls             │  ┌────────┐  │  Container CSS
-                                │  │        │  │
- ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ Live   │  │  ┌──────────────────────────┐
- ▊ direction: row           ▎   │  │ Previe │  │  │                          │
- ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │ w      │  │  │ display: flex;           │
-                                │  │ (Conta │  │  │                          │
- ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ iner:  │  │  │ flex-direction: row;     │
- ▊ wrap: wrap               ▎   │  │ 54 x   │  │  │                          │
- ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │ 16)    │  │  │ flex-wrap: wrap;         │
-                                │  │        │  │  │                          │
- ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ W      │  │  │ justify-content: flex-star
- ▊ justify: flex-start      ▎   │  │ i      │  │  │                          │
- ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │ d      │  │  │ align-items: stretch;    │
-                                │  │ ─────  │  │  │                          │
- ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ h      │  │  │ gap: 0;                  │
- ▊ align: stretch           ▎   │  │ :      │  │  │                          │
- ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   │  │        │  │  └──────────────────────────┘
-                                │  │        │  │
- ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   │  │ H      │  │  Children CSS
- ▊ gap: 0                   ▎   │  │ e      │  │
+▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+▊                                                                              ▎
+▊   Flexbox playground                                                         ▎
+▊                                                                              ▎
+▊   Each select sets one property: of the container, or of every box in it.    ▎
+▊                                                                              ▎
+▊   flex-direction    row          ▾    width    ───────────────────●          ▎
+▊                                       height   ─────────────●──────          ▎
+▊   flex-wrap         wrap         ▾                                           ▎
+▊                                       ╭──────────────────────────────────────╮
+▊   justify-content   flex-start   ▾    │▊▔▔▔▔▔▎▊▔▔▔▔▔▎▊▔▔▔▔▔▔▔▎▊▔▔▔▔▔▔▎       │
+▊                                       │▊ one ▎▊ two ▎▊ three ▎▊ four ▎       │
+▊   align-items       stretch      ▾    │▊     ▎▊     ▎▊       ▎▊      ▎       │
+▊                                       │▊     ▎▊     ▎▊       ▎▊      ▎       │
+▊   gap               0            ▾    │▊     ▎▊     ▎▊       ▎▊      ▎       │
+▊                                       │▊     ▎▊     ▎▊       ▎▊      ▎       │
+▊   flex-grow         0            ▾    │▊     ▎▊     ▎▊       ▎▊      ▎       │
+▊                                       │▊     ▎▊     ▎▊       ▎▊      ▎       │
+▊   flex-shrink       1            ▾    │▊     ▎▊     ▎▊       ▎▊      ▎       │
+▊                                       │▊▁▁▁▁▁▎▊▁▁▁▁▁▎▊▁▁▁▁▁▁▁▎▊▁▁▁▁▁▁▎       │
+▊   flex-basis        auto         ▾    ╰──────────────────────────────────────╯
+▊                                                                              ▎
+▊                                       ▊▔▔▔▔▔▔▔▔▔▔▔▎ ▊▔▔▔▔▔▔▔▔▔▔▔▔▎           ▎
+▊                                       ▊ Add a box ▎ ▊ Remove one ▎           ▎

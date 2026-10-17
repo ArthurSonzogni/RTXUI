@@ -14,14 +14,6 @@
 
 using namespace rtxui;
 
-struct DemoBox {
-  std::string label;
-  std::string color;
-  int width;
-  int height;
-  bool operator==(const DemoBox&) const = default;
-};
-
 class LayoutFlexDemo : public Component<LayoutFlexDemo> {
  public:
   std::string direction = "row";
@@ -29,420 +21,190 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
   std::string justify = "flex-start";
   std::string align = "stretch";
   std::string gap = "0";
+  std::string grow = "0";
+  std::string shrink = "1";
+  std::string basis = "auto";
+  int width = 40;
+  int height = 12;
+  std::vector<std::string> boxes = {"one", "two", "three", "four"};
 
-  std::string child_grow = "0";
-  std::string child_shrink = "1";
-  std::string child_basis = "auto";
-
-  int container_width = 54;
-  int container_height = 16;
-
-  int item_counter = 0;
-  std::vector<DemoBox> items;
-
-  void CycleDirection() {
-    if (direction == "row") {
-      direction = "row-reverse";
-    } else if (direction == "row-reverse") {
-      direction = "column";
-    } else if (direction == "column") {
-      direction = "column-reverse";
-    } else {
-      direction = "row";
+  void AddBox() {
+    const char* names[] = {"one", "two",   "three", "four", "five",
+                           "six", "seven", "eight", "nine", "ten"};
+    boxes.push_back(names[boxes.size() % 10]);
+  }
+  void RemoveBox() {
+    if (!boxes.empty()) {
+      boxes.pop_back();
     }
-  }
-
-  void CycleWrap() {
-    if (wrap == "nowrap") {
-      wrap = "wrap";
-    } else if (wrap == "wrap") {
-      wrap = "wrap-reverse";
-    } else {
-      wrap = "nowrap";
-    }
-  }
-
-  void CycleJustify() {
-    if (justify == "flex-start") {
-      justify = "center";
-    } else if (justify == "center") {
-      justify = "flex-end";
-    } else if (justify == "flex-end") {
-      justify = "space-between";
-    } else if (justify == "space-between") {
-      justify = "space-around";
-    } else if (justify == "space-around") {
-      justify = "space-evenly";
-    } else {
-      justify = "flex-start";
-    }
-  }
-
-  void CycleAlign() {
-    if (align == "flex-start") {
-      align = "center";
-    } else if (align == "center") {
-      align = "flex-end";
-    } else if (align == "flex-end") {
-      align = "stretch";
-    } else {
-      align = "flex-start";
-    }
-  }
-
-  void CycleChildGrow() {
-    if (child_grow == "0") {
-      child_grow = "1";
-    } else if (child_grow == "1") {
-      child_grow = "2";
-    } else {
-      child_grow = "0";
-    }
-  }
-
-  void CycleChildShrink() {
-    if (child_shrink == "1") {
-      child_shrink = "0";
-    } else if (child_shrink == "0") {
-      child_shrink = "2";
-    } else {
-      child_shrink = "1";
-    }
-  }
-
-  void CycleChildBasis() {
-    if (child_basis == "auto") {
-      child_basis = "0";
-    } else if (child_basis == "0") {
-      child_basis = "10";
-    } else {
-      child_basis = "auto";
-    }
-  }
-
-  void CycleGap() {
-    if (gap == "0") {
-      gap = "1";
-    } else if (gap == "1") {
-      gap = "2";
-    } else if (gap == "2") {
-      gap = "3";
-    } else if (gap == "3") {
-      gap = "0 2";
-    } else if (gap == "0 2") {
-      gap = "2 0";
-    } else if (gap == "2 0") {
-      gap = "1 2";
-    } else {
-      gap = "0";
-    }
-  }
-
-  void AddItem() {
-    item_counter++;
-    std::string colors[] = {
-        "var(--danger)",     "rgb(88, 166, 255)", "var(--success)",
-        "rgb(245, 158, 11)", "rgb(139, 92, 246)",
-    };
-    std::string color = colors[(item_counter - 1) % 5];
-    int width = 10 + (item_counter % 3) * 2;
-    int height = 4 + (item_counter % 2);
-    items.push_back({std::to_string(item_counter), color, width, height});
-  }
-
-  void RemoveItem() {
-    if (!items.empty()) {
-      items.pop_back();
-    }
-  }
-
-  std::string container_css() const {
-    return "display: flex;\n\n"
-           "flex-direction: " +
-           direction +
-           ";\n\n"
-           "flex-wrap: " +
-           wrap +
-           ";\n\n"
-           "justify-content: " +
-           justify +
-           ";\n\n"
-           "align-items: " +
-           align +
-           ";\n\n"
-           "gap: " +
-           gap + ";";
-  }
-
-  std::string children_css() const {
-    return "flex-grow: " + child_grow +
-           ";\n\n"
-           "flex-shrink: " +
-           child_shrink +
-           ";\n\n"
-           "flex-basis: " +
-           child_basis + ";";
   }
 
   std::string_view view = R"html(
-      <div class="app-container">
-        <div class="header">
-          <span class="title">RTXUI Flexbox Layout Demo</span>
-          <span class="desc">Toggle properties and add/remove elements to test wrapping and display rules.</span>
-        </div>
+      <div class="card">
+        <h1>Flexbox playground</h1>
+        <p>Each select sets one property: of the container, or of every box in it.</p>
 
-        <div class="content-split">
-          <!-- Controls Panel -->
-          <div class="sidebar">
-            <span class="section-title">Container Controls</span>
-            
-            <div class="control-row">
-              <button onclick="CycleDirection">direction: {direction}</button>
-            </div>
-            
-            <div class="control-row">
-              <button onclick="CycleWrap">wrap: {wrap}</button>
-            </div>
-
-            <div class="control-row">
-              <button onclick="CycleJustify">justify: {justify}</button>
-            </div>
-
-            <div class="control-row">
-              <button onclick="CycleAlign">align: {align}</button>
-            </div>
-
-            <div class="control-row">
-              <button onclick="CycleGap">gap: {gap}</button>
-            </div>
-
-            <div class="control-row divider"></div>
-
-            <span class="section-title">Children Controls</span>
-
-            <div class="control-row">
-              <button onclick="CycleChildGrow">grow: {child_grow}</button>
-            </div>
-
-            <div class="control-row">
-              <button onclick="CycleChildShrink">shrink: {child_shrink}</button>
-            </div>
-
-            <div class="control-row">
-              <button onclick="CycleChildBasis">basis: {child_basis}</button>
-            </div>
-
-            <div class="control-row divider"></div>
-
-            <div class="control-row action-row">
-              <button class="btn-add" onclick="AddItem">Add Box</button>
-              <button class="btn-remove" onclick="RemoveItem">Remove Box</button>
-            </div>
+        <div class="split">
+          <div class="fields">
+          <span>flex-direction</span>
+          <select value="{direction}">
+            <option value="row">row</option>
+            <option value="row-reverse">row-reverse</option>
+            <option value="column">column</option>
+            <option value="column-reverse">column-reverse</option>
+          </select>
+          <span>flex-wrap</span>
+          <select value="{wrap}">
+            <option value="nowrap">nowrap</option>
+            <option value="wrap">wrap</option>
+            <option value="wrap-reverse">wrap-reverse</option>
+          </select>
+          <span>justify-content</span>
+          <select value="{justify}">
+            <option value="flex-start">flex-start</option>
+            <option value="center">center</option>
+            <option value="flex-end">flex-end</option>
+            <option value="space-between">space-between</option>
+            <option value="space-around">space-around</option>
+            <option value="space-evenly">space-evenly</option>
+          </select>
+          <span>align-items</span>
+          <select value="{align}">
+            <option value="stretch">stretch</option>
+            <option value="flex-start">flex-start</option>
+            <option value="center">center</option>
+            <option value="flex-end">flex-end</option>
+          </select>
+          <span>gap</span>
+          <select value="{gap}">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="1 2">1 2</option>
+          </select>
+          <span>flex-grow</span>
+          <select value="{grow}">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+          <span>flex-shrink</span>
+          <select value="{shrink}">
+            <option value="1">1</option>
+            <option value="0">0</option>
+            <option value="2">2</option>
+          </select>
+          <span>flex-basis</span>
+          <select value="{basis}">
+            <option value="auto">auto</option>
+            <option value="0">0</option>
+            <option value="10">10</option>
+          </select>
           </div>
 
-          <!-- Preview Area (Center) -->
-          <div class="preview-area">
-            <span class="section-title">Live Preview (Container: {container_width} x {container_height})</span>
-            
-            <div class="slider-row">
-              <span class="slider-label">Width:</span>
-              <slider value="{container_width}" min="20" max="80" width="30" />
+          <div class="preview">
+            <div class="sizes">
+              <span>width</span>
+              <slider value="{width}" min="10" max="40" width="20" />
+              <span>height</span>
+              <slider value="{height}" min="3" max="16" width="20" />
             </div>
-
-            <div class="slider-row">
-              <span class="slider-label">Height:</span>
-              <slider value="{container_height}" min="5" max="30" width="30" />
-            </div>
-
-            <div class="flex-container">
-              <for each="{items}" as="b">
-                <div class="demo-box" style="
-                    background-color: {b.color};
-                    border-color: {b.color};
-                    width: {b.width};
-                    height: {b.height};
-                  ">
-                  <span>Box {b.label}</span>
-                  <span class="box-dims">{b.width}x{b.height}</span>
-                </div>
+            <div class="container">
+              <for each="{boxes}" as="box">
+                <div class="box">{box}</div>
               </for>
             </div>
-          </div>
-
-          <!-- CSS Display (Right Column) -->
-          <div class="css-panel">
-            <span class="section-title">Container CSS</span>
-            <pre class="css-display">{container_css}</pre>
-
-            <span class="section-title">Children CSS</span>
-            <pre class="css-display">{children_css}</pre>
+            <div class="buttons">
+              <button onclick="AddBox">Add a box</button>
+              <button onclick="RemoveBox">Remove one</button>
+            </div>
           </div>
         </div>
       </div>
 
       <style>
         self {
-          --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
           --muted: rgb(139, 148, 158);
-          --danger: rgb(248, 81, 73);
-          --success: rgb(63, 185, 80);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
-          background-color: rgb(13, 17, 23);
-          color: white;
-          width: 100%;
-          height: 100%;
-        }
-        .app-container {
-          display: block;
-        }
-        .header {
-          display: block;
-          margin-bottom: 1;
-        }
-        .title {
-          display: block;
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-        }
-        .desc {
-          display: block;
-          color: var(--muted);
-        }
-        .content-split {
-          display: flex;
-          flex-direction: row;
-          gap: 2;
-        }
-        .sidebar {
-          display: block;
-          width: 32;
-          flex-shrink: 0;
-          border-right: solid;
-          border-color: var(--border);
-          padding-right: 2;
-          overflow-y: auto;
-        }
-        .preview-area {
-          display: block;
-          flex-grow: 1;
-          background-color: var(--surface);
-          padding: 1;
-          border: solid;
-          border-color: var(--border);
-          overflow: hidden;
-        }
-        .css-panel {
-          display: block;
-          width: 32;
-          flex-shrink: 0;
-          border-left: solid;
-          border-color: var(--border);
-          padding-left: 2;
-          overflow-y: auto;
-        }
-        .section-title {
-          display: block;
-          font-weight: bold;
-          color: rgb(244, 63, 94);
-          margin-bottom: 1;
-        }
-        .control-row {
-          display: block;
-          margin-bottom: 1;
-        }
-        .divider {
-          border-bottom: dashed;
-          border-color: var(--border);
-          margin-top: 1;
-          margin-bottom: 1;
-        }
-        .action-row {
-          display: flex;
-          gap: 2;
-        }
-        button {
-          width: 100%;
-          border: tall;
-          border-color: var(--border);
-          color: rgb(230, 237, 243);
-          background-color: transparent;
-          padding-left: 1;
-          padding-right: 1;
-          text-align: left;
-        }
-        button:hover {
-          background-color: var(--surface);
-          border-color: rgb(121, 192, 255);
-          color: white;
-        }
-        .btn-add {
-          border-color: var(--success);
-          color: var(--success);
-        }
-        .btn-add:hover {
-          background-color: rgb(6, 95, 70);
-          color: white;
-        }
-        .btn-remove {
-          border-color: var(--danger);
-          color: var(--danger);
-        }
-        .btn-remove:hover {
-          background-color: rgb(153, 27, 27);
-          color: white;
-        }
-        .slider-row {
           display: flex;
           align-items: center;
-          margin-bottom: 1;
-          gap: 2;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
-        .slider-label {
-          display: inline;
-          width: 8;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 86;
+        }
+        h1 {
+          color: var(--accent);
+        }
+        p {
           color: var(--muted);
         }
-        .css-display {
-          display: block;
-          color: rgb(253, 224, 71);
-          background-color: rgb(15, 23, 42);
-          padding: 1;
-          border: solid;
-          border-color: var(--border);
-          margin-bottom: 1;
-        }
-        .flex-container {
+        .split {
           display: flex;
-          width: {container_width};
-          height: {container_height};
-          border: double;
-          border-color: rgb(56, 189, 248);
-          background-color: rgb(2, 6, 23);
-          gap: {gap};
+          gap: 3;
+        }
+        .fields {
+          display: grid;
+          grid-template-columns: 17 16;
+          row-gap: 1;
+          flex-shrink: 0;
+        }
+        .fields span, .sizes span {
+          color: var(--muted);
+        }
+        select:focus, slider:focus {
+          color: var(--accent);
+        }
+        .sizes {
+          display: grid;
+          grid-template-columns: 8 auto;
+        }
+        .container {
+          display: flex;
           flex-direction: {direction};
           flex-wrap: {wrap};
           justify-content: {justify};
           align-items: {align};
+          gap: {gap};
+          width: {width};
+          height: {height};
+          margin: 1 0;
           overflow: hidden;
+          border: round;
+          border-color: var(--border);
         }
-        .demo-box {
+        .box {
+          flex-grow: {grow};
+          flex-shrink: {shrink};
+          flex-basis: {basis};
+          border: tall;
+          border-color: var(--accent);
+          background-color: rgb(22, 45, 77);
+          padding: 0 1;
+        }
+        .buttons {
           display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          border: solid;
-          color: white;
-          font-weight: bold;
-          flex-grow: {child_grow};
-          flex-shrink: {child_shrink};
-          flex-basis: {child_basis};
+          gap: 1;
         }
-        .box-dims {
-          font-weight: normal;
-          color: rgba(255, 255, 255, 0.7);
+        button {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
+        }
+        button:hover, button:focus {
+          border-color: var(--accent);
+          color: var(--accent);
         }
       </style>
     )html";
@@ -453,45 +215,14 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
     Bind(justify);
     Bind(align);
     Bind(gap);
-    Bind(child_grow);
-    Bind(child_shrink);
-    Bind(child_basis);
-    Bind(container_width);
-    Bind(container_height);
-    Bind(items, &LayoutFlexDemo::DemoBoxFields);
-    Bind(CycleDirection);
-    Bind(CycleWrap);
-    Bind(CycleJustify);
-    Bind(CycleAlign);
-    Bind(CycleGap);
-    Bind(CycleChildGrow);
-    Bind(CycleChildShrink);
-    Bind(CycleChildBasis);
-    Bind(AddItem);
-    Bind(RemoveItem);
-    Bind(container_css);
-    Bind(children_css);
-
-    // Initialize with 4 boxes to immediately demonstrate layout wrapping
-    AddItem();
-    AddItem();
-    AddItem();
-    AddItem();
-  }
-
-  // What a template reads of each box. Not a Fields() function of DemoBox:
-  // the size depends on this component's alignment.
-  void DemoBoxFields(const DemoBox& b, FieldSink& out) const {
-    bool should_stretch_h =
-        (align == "stretch" &&
-         (direction == "row" || direction == "row-reverse"));
-    bool should_stretch_w =
-        (align == "stretch" &&
-         (direction == "column" || direction == "column-reverse"));
-    out("label", b.label);
-    out("color", b.color);
-    out("width", should_stretch_w ? "auto" : std::to_string(b.width));
-    out("height", should_stretch_h ? "auto" : std::to_string(b.height));
+    Bind(grow);
+    Bind(shrink);
+    Bind(basis);
+    Bind(width);
+    Bind(height);
+    Bind(boxes);
+    Bind(AddBox);
+    Bind(RemoveBox);
   }
 };
 
