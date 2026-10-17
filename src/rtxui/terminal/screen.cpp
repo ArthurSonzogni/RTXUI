@@ -2308,8 +2308,10 @@ void ScreenImpl::HandleEvent(Event event) {
     event_handled = component_->OnEvent(event);
   }
 
+  // Whether or not it handled the event, OnEvent() may have changed bound
+  // state, like a component recording the events it lets through.
+  DigestAndDraw();
   if (event_handled) {
-    DigestAndDraw();
     return;
   }
 

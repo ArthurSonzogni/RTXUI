@@ -6436,5 +6436,33 @@ TEST_CASE("A vh length follows the terminal's height", "[screen][style]") {
   CHECK(rows() == 10);
 }
 
+TEST_CASE("Screen.StateChangedByAnUnhandledEventIsDrawn",
+          "[terminal][regression]") {
+  // Regression: bound state was digested only when OnEvent() returned true,
+  // so a component recording events while letting them through (to keep
+  // Escape quitting) showed nothing until some other event redrew it.
+  class Recorder : public Component<Recorder> {
+   public:
+    std::string last = "none";
+    Recorder() { Bind(last); }
+    bool OnEvent(Event event) override {
+      last = event.Print();
+      return Component<Recorder>::OnEvent(event);
+    }
+    std::string_view view = "{last}";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<Recorder>::New();
+  Screen screen = ScreenInternals::Make(component, device);
+  screen.Step();
+
+  device->ClearOutput();
+  device->PushInput("a");
+  screen.Step();
+  CHECK(component->last == "Keyboard(a)");
+  CHECK(device->GetOutput().find("Keyboard(a)") != std::string::npos);
+}
+
 }  // namespace
 }  // namespace rtxui
