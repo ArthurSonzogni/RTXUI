@@ -65,7 +65,7 @@ class AnimationDemo : public Component<AnimationDemo> {
           background-color: rgb(13, 17, 23);
           padding: 1;
           text-align: center;
-          transition: flex-grow 0.4s ease-in-out, border-color 0.2s linear;
+          transition: flex-grow 0.2s ease-in-out, border-color 0.1s linear;
         }
         .panel:hover, .panel:focus {
           flex-grow: 4;
