@@ -2,7 +2,7 @@
 
 Foreground and background colors.
 
-Colors accept rgb(), #rrggbb and named forms, and are composed into a swatch grid by a small reusable child component.
+Colors accept named, #rgb / #rrggbb / #rrggbbaa, rgb() and rgba() forms. Each swatch is drawn by a `<for>` loop, its color set with an inline style.
 
 <ExampleTabs src="/wasm/rtxui_example_colors.js" :cols="80" :rows="24">
 <template #source>

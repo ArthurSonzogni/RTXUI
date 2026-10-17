@@ -76,7 +76,7 @@ Colors, text decorations, pseudo-classes, transitions, and keyframe animations.
 
 | Example | Demonstrates | Guide |
 | :--- | :--- | :--- |
-| [animation.cpp](/guide/examples/animation) | Keyframe animations. | [Guide](/guide/css/animations) |
+| [animation.cpp](/guide/examples/animation) | Animating layout. | [Guide](/guide/css/animations) |
 | [colors.cpp](/guide/examples/colors) | Foreground and background colors. | [Guide](/guide/typography) |
 | [focus_states.cpp](/guide/examples/focus_states) | Focus styling: :focus-within, :focus-visible and currentColor. | [Guide](/guide/css/basics) |
 | [keyframes.cpp](/guide/examples/keyframes) | CSS keyframe animations. | [Guide](/guide/css/animations) |

@@ -4,7 +4,7 @@ Looping over a collection of structs.
 
 A mapper exposes each struct's fields to the template, which reads them with dot notation on the loop variable.
 
-Try it: toggle a task to see only that row re-render.
+Try it: click a status to toggle it, then add or remove a task.
 
 <ExampleTabs src="/wasm/rtxui_example_loop_complex.js" :cols="80" :rows="24">
 <template #source>

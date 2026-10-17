@@ -1,8 +1,8 @@
-# Keyframe animations
+# Animating layout
 
-Keyframe animations.
+Animating layout.
 
-`@keyframes` plus the `animation` property drive a property through a cycle without any C++ state changing between frames.
+A transition on flex-grow resizes boxes smoothly, and their neighbors make room, with no C++ state changing between frames.
 
 <ExampleTabs src="/wasm/rtxui_example_animation.js" :cols="80" :rows="24">
 <template #source>
