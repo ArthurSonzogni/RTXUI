@@ -114,10 +114,8 @@ class Playground : public Component<Playground> {
 
     <style>
       self {
-        --surface: rgb(22, 27, 34);
         --border: rgb(48, 54, 61);
         --muted: rgb(139, 148, 158);
-        --accent: rgb(88, 166, 255);
 
         display: block;
         width: 100%;

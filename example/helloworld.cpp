@@ -6,8 +6,7 @@
 //
 // A component is a class deriving from Component<Derived> whose `view` member
 // holds an HTML template plus a <style> block. `self` selects the component's
-// own root element, and custom properties declared there (--bg, --accent, ...)
-// inherit into every descendant, so a single palette styles the whole tree.
+// own root element.
 #include <rtxui/rtxui.hpp>
 #include <string_view>
 
@@ -23,7 +22,6 @@ class HelloWorldApp : public Component<HelloWorldApp> {
 
       <style>
         self {
-
           display: flex;
           align-items: center;
           justify-content: center;

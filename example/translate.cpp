@@ -77,13 +77,13 @@ class TranslateDemo : public Component<TranslateDemo> {
 
   std::string_view view = R"html(
     <div class="page">
-      <h1>translate</h1>
+      <h1>Translate</h1>
 
       <p class="label">Cards lift when hovered or focused:</p>
       <div class="cards">
-        <div class="card" tabindex="0" onclick="Pick(Files)">Files</div>
-        <div class="card" tabindex="0" onclick="Pick(Search)">Search</div>
-        <div class="card" tabindex="0" onclick="Pick(Settings)">Settings</div>
+        <div class="tile" tabindex="0" onclick="Pick(Files)">Files</div>
+        <div class="tile" tabindex="0" onclick="Pick(Search)">Search</div>
+        <div class="tile" tabindex="0" onclick="Pick(Settings)">Settings</div>
       </div>
       <p class="label">Picked: {picked}</p>
 
@@ -103,18 +103,23 @@ class TranslateDemo : public Component<TranslateDemo> {
 
     <style>
       self {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 100%;
         height: 100%;
         background-color: rgb(13, 17, 23);
         color: rgb(230, 237, 243);
       }
       .page {
-        padding: 0 2;
+        border: tall;
+        border-color: rgb(48, 54, 61);
+        background-color: rgb(22, 27, 34);
+        padding: 1 3;
+        width: 52;
       }
       h1 {
         color: rgb(88, 166, 255);
-        font-weight: bold;
       }
       .label {
         color: rgb(139, 148, 158);
@@ -126,30 +131,30 @@ class TranslateDemo : public Component<TranslateDemo> {
         gap: 2;
         margin-top: 1;
       }
-      .card {
+      .tile {
         width: 14;
         padding: 0 1;
         border: tall;
         border-color: rgb(48, 54, 61);
-        background-color: rgb(22, 27, 34);
+        background-color: rgb(13, 17, 23);
         transition: translate 150ms ease-out, border-color 150ms;
       }
-      .card:hover, .card:focus {
+      .tile:hover, .tile:focus {
         translate: 0 -1;
         border-color: rgb(88, 166, 255);
       }
 
       /* Clipped, so a task leaving goes out of sight at the list's edge. */
       .tasks {
-        width: 40;
         overflow: hidden;
       }
       .task {
         padding: 0 1;
-        background-color: rgb(22, 27, 34);
+        background-color: rgb(13, 17, 23);
       }
       .task:focus {
-        background-color: rgb(31, 111, 235);
+        background-color: rgb(22, 45, 77);
+        color: rgb(88, 166, 255);
       }
       @keyframes leave {
         to {
