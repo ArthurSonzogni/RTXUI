@@ -4,170 +4,134 @@
 //
 // Foreground and background colors.
 //
-// Colors accept rgb(), #rrggbb and named forms, and are composed into a swatch
-// grid by a small reusable child component.
+// Colors accept named, #rgb / #rrggbb / #rrggbbaa, rgb() and rgba() forms.
+// Each swatch is drawn by a <for> loop, its color set with an inline style.
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
+#include <vector>
 
 using namespace rtxui;
 
-class ColorBox : public Component<ColorBox> {
- public:
-  struct Props {
-    std::string text;
-    std::string bg_color;
-    std::string fg_color = "black";
-  } props;
-
-  std::string_view view = R"html(
-      <div class="box-content">
-        {text}
-      </div>
-
-      <style>
-        self {
-          --bg: rgb(13, 17, 23);
-
-          background-color: var(--bg);
-          display: block;
-          /* `flex: 1` (grow 1, shrink 1, basis 0) rather than flex-grow alone:
-             with the default `flex-basis: auto` each swatch would start at its
-             label's width and only share the leftover space, so the swatches
-             came out all different sizes. */
-          flex: 1;
-        }
-        .box-content {
-          padding-left: 2;
-          padding-right: 2;
-          padding-top: 1;
-          padding-bottom: 1;
-          color: {fg_color};
-          background-color: {bg_color};
-        }
-      </style>
-    )html";
-
-  ColorBox() {
-    Bind(props.text);
-    Bind(props.bg_color);
-    Bind(props.fg_color);
-  }
+struct Swatch {
+  std::string color;
+  bool light = false;  // Whether it needs dark text.
+  bool operator==(const Swatch& other) const = default;
 };
+
+void Fields(const Swatch& swatch, FieldSink& out) {
+  out("color", swatch.color);
+  out("ink", swatch.light ? "black" : "white");
+}
 
 class ColorDemo : public Component<ColorDemo> {
  public:
+  std::vector<Swatch> named = {
+      {"black"},  {"gray"},       {"silver", true}, {"white", true},
+      {"maroon"}, {"red"},        {"purple"},       {"fuchsia"},
+      {"green"},  {"lime", true}, {"olive"},        {"yellow", true},
+      {"navy"},   {"blue"},       {"teal"},         {"aqua", true},
+  };
+  std::vector<Swatch> hex = {
+      {"#f0f"},
+      {"#0ff", true},
+      {"#ff3366"},
+      {"#33cc66", true},
+      {"#bae1ff", true},
+      {"#e8c4ff", true},
+      {"#00ffcc88", true},
+      {"#151520"},
+  };
+  std::vector<Swatch> rgb = {
+      {"rgb(255, 0, 128)"},
+      {"rgb(0, 255, 128)", true},
+      {"rgb(128, 0, 255)"},
+      {"rgb(255, 128, 0)", true},
+  };
+  std::vector<Swatch> rgba = {
+      {"rgba(255, 0, 0, 0.5)"},
+      {"rgba(0, 0, 255, 0.3)"},
+      {"rgba(0, 255, 0, 0.7)", true},
+      {"rgba(255, 255, 255, 0.2)"},
+  };
+
   std::string_view view = R"html(
-      <div class="container">
-        <h1>RTXUI Color System Demo</h1>
-        <p>Scroll to see standard keywords, hex codes, rgb(), and rgba() syntaxes.</p>
-        
-        <div class="h2">1. Standard Keywords (16-color base)</div>
-        <div class="row">
-          <ColorBox text="black" bg_color="black" fg_color="white"></ColorBox>
-          <ColorBox text="gray" bg_color="gray" fg_color="white"></ColorBox>
-          <ColorBox text="silver" bg_color="silver" fg_color="black"></ColorBox>
-          <ColorBox text="white" bg_color="white" fg_color="black"></ColorBox>
-        </div>
-        <div class="row">
-          <ColorBox text="maroon" bg_color="maroon" fg_color="white"></ColorBox>
-          <ColorBox text="red" bg_color="red" fg_color="white"></ColorBox>
-          <ColorBox text="purple" bg_color="purple" fg_color="white"></ColorBox>
-          <ColorBox text="fuchsia" bg_color="fuchsia" fg_color="white"></ColorBox>
-        </div>
-        <div class="row">
-          <ColorBox text="green" bg_color="green" fg_color="black"></ColorBox>
-          <ColorBox text="lime" bg_color="lime" fg_color="black"></ColorBox>
-          <ColorBox text="olive" bg_color="olive" fg_color="white"></ColorBox>
-          <ColorBox text="yellow" bg_color="yellow" fg_color="black"></ColorBox>
-        </div>
-        <div class="row">
-          <ColorBox text="navy" bg_color="navy" fg_color="white"></ColorBox>
-          <ColorBox text="blue" bg_color="blue" fg_color="white"></ColorBox>
-          <ColorBox text="teal" bg_color="teal" fg_color="white"></ColorBox>
-          <ColorBox text="aqua" bg_color="aqua" fg_color="black"></ColorBox>
+      <div class="card">
+        <h1>Colors</h1>
+        <p>Every CSS color form; alpha blends with what is underneath.</p>
+
+        <h2>Named</h2>
+        <div class="swatches">
+          <for each="{named}" as="s">
+            <div class="swatch" style="background-color: {s.color}; color: {s.ink};">{s.color}</div>
+          </for>
         </div>
 
-        <div class="h2">2. Hex Colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA)</div>
-        <div class="row">
-          <ColorBox text="#f0f" bg_color="#f0f" fg_color="white"></ColorBox>
-          <ColorBox text="#0ff" bg_color="#0ff" fg_color="black"></ColorBox>
-          <ColorBox text="#ff3366" bg_color="#ff3366" fg_color="white"></ColorBox>
-          <ColorBox text="#33cc66" bg_color="#33cc66" fg_color="black"></ColorBox>
-        </div>
-        <div class="row">
-          <ColorBox text="#ffb3ba" bg_color="#ffb3ba" fg_color="black"></ColorBox>
-          <ColorBox text="#ffdfba" bg_color="#ffdfba" fg_color="black"></ColorBox>
-          <ColorBox text="#ffffba" bg_color="#ffffba" fg_color="black"></ColorBox>
-          <ColorBox text="#baffc9" bg_color="#baffc9" fg_color="black"></ColorBox>
-        </div>
-        <div class="row">
-          <ColorBox text="#bae1ff" bg_color="#bae1ff" fg_color="black"></ColorBox>
-          <ColorBox text="#e8c4ff" bg_color="#e8c4ff" fg_color="black"></ColorBox>
-          <ColorBox text="#ffd3e8" bg_color="#ffd3e8" fg_color="black"></ColorBox>
-          <ColorBox text="#cbf3f0" bg_color="#cbf3f0" fg_color="black"></ColorBox>
-        </div>
-        <div class="row">
-          <ColorBox text="#ff007f" bg_color="#ff007f" fg_color="white"></ColorBox>
-          <ColorBox text="#39ff14" bg_color="#39ff14" fg_color="black"></ColorBox>
-          <ColorBox text="#00ffcc88" bg_color="#00ffcc88" fg_color="black"></ColorBox>
-          <ColorBox text="#151520" bg_color="#151520" fg_color="white"></ColorBox>
+        <h2>Hex</h2>
+        <div class="swatches">
+          <for each="{hex}" as="s">
+            <div class="swatch" style="background-color: {s.color}; color: {s.ink};">{s.color}</div>
+          </for>
         </div>
 
-        <div class="h2">3. RGB Colors</div>
-        <div class="row">
-          <ColorBox text="rgb(255,0,128)" bg_color="rgb(255,0,128)" fg_color="white"></ColorBox>
-          <ColorBox text="rgb(0,255,128)" bg_color="rgb(0,255,128)" fg_color="black"></ColorBox>
-          <ColorBox text="rgb(128,0,255)" bg_color="rgb(128,0,255)" fg_color="white"></ColorBox>
-          <ColorBox text="rgb(255,128,0)" bg_color="rgb(255,128,0)" fg_color="black"></ColorBox>
-        </div>
-
-        <div class="h2">4. RGBA Colors with Alpha Blending</div>
-        <div class="row">
-          <ColorBox text="rgba(255,0,0,0.5)" bg_color="rgba(255,0,0,0.5)" fg_color="white"></ColorBox>
-          <ColorBox text="rgba(0,0,255,0.3)" bg_color="rgba(0,0,255,0.3)" fg_color="white"></ColorBox>
-          <ColorBox text="rgba(0,255,0,0.7)" bg_color="rgba(0,255,0,0.7)" fg_color="black"></ColorBox>
-          <ColorBox text="rgba(255,255,255,0.2)" bg_color="rgba(255,255,255,0.2)" fg_color="white"></ColorBox>
+        <h2>rgb() and rgba()</h2>
+        <div class="swatches wide">
+          <for each="{rgb}" as="s">
+            <div class="swatch" style="background-color: {s.color}; color: {s.ink};">{s.color}</div>
+          </for>
+          <for each="{rgba}" as="s">
+            <div class="swatch" style="background-color: {s.color}; color: {s.ink};">{s.color}</div>
+          </for>
         </div>
       </div>
 
       <style>
         self {
-          display: block;
-          padding: 2;
-          background-color: var(--bg);
-          color: #eee;
-          height: 22;
-          overflow-y: scroll;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: rgb(48, 54, 61);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 84;
         }
         h1 {
-          color: #ffcc00;
+          color: rgb(88, 166, 255);
         }
-        .h2 {
-          display: block;
-          color: #00ccff;
-          margin-top: 2;
-          margin-bottom: 1;
-          font-weight: bold;
+        p, h2 {
+          color: rgb(139, 148, 158);
         }
-        p {
-          margin-bottom: 1;
+        h2 {
+          margin: 1 0 0 0;
+          font-weight: normal;
         }
-        .container {
-          display: block;
-          max-width: 80;
-          margin: 0 auto;
+        .swatches {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0 1;
         }
-        .row {
-          display: flex;
-          width: 100%;
-          gap: 2;
-          margin-bottom: 1;
+        .wide {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .swatch {
+          padding: 0 1;
         }
       </style>
     )html";
 
-  ColorDemo() { Import<ColorBox>(); }
+  ColorDemo() {
+    Bind(named);
+    Bind(hex);
+    Bind(rgb);
+    Bind(rgba);
+  }
 };
 
 int main() {

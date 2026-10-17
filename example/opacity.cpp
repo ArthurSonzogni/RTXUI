@@ -13,153 +13,90 @@ class OpacityDemo : public Component<OpacityDemo> {
   int opacity_percent = 70;
 
   float opacity_float() const { return opacity_percent / 100.0f; }
+  float nested_opacity() const { return opacity_float() * 0.5f; }
 
   std::string_view view = R"html(
-      <div class="container">
-        <p class="title">Opacity Property Demo</p>
-        <p class="desc">
-          rtxui supports the CSS 'opacity' property (0.0 to 1.0) for alpha-blending
-          elements and text transparently over underlying terminal content.
-        </p>
+      <div class="card">
+        <h1>Opacity</h1>
+        <p>An element and everything in it blend with what is behind. Nested opacity multiplies.</p>
 
-        <!-- Live Binding Control -->
-        <div class="control-row">
-          <span class="label">Adjust Opacity:</span>
-          <slider value="{opacity_percent}" min="0" max="100" step="10" width="30" />
-          <span class="value">{opacity_percent}%</span>
+        <div class="control">
+          <slider value="{opacity_percent}" min="0" max="100" step="10" width="40" />
+          <span class="value">{opacity_float}</span>
         </div>
 
-        <div class="demo-grid">
-          <!-- 1. Opacity Box & Inheritance -->
-          <div class="card box-card">
-            <h3>1. Alpha Blending & Inheritance</h3>
-            <div class="parent-box">
-              <span class="parent-label">Parent Container (opacity: {opacity_float})</span>
-              <div class="child-box">
-                <span class="child-label">Nested Child (inherits/accumulates opacity)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2. CSS Transitions on Opacity -->
-          <div class="card transition-card">
-            <h3>2. CSS Transition on Hover</h3>
-            <p class="sub-desc">Hover or focus the button below to trigger a smooth opacity transition:</p>
-            <div class="hover-btn" tabindex="0">Hover/Focus Me</div>
-          </div>
+        <div class="outer">
+          opacity: {opacity_float}
+          <div class="inner">opacity: 0.5 inside, so {nested_opacity} in all</div>
         </div>
+
+        <div class="fade" tabindex="0">Hover or focus me: opacity eases to 1</div>
       </div>
 
       <style>
         self {
-          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
           --muted: rgb(139, 148, 158);
           --accent: rgb(88, 166, 255);
-          --accent-bright: rgb(121, 192, 255);
 
-          display: block;
-          padding: 1;
-          background-color: rgb(13, 17, 23);
-          color: white;
-        }
-        .container {
-          display: block;
-        }
-        .title {
-          display: block;
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-          margin-bottom: 1;
-        }
-        .desc {
-          display: block;
-          color: var(--muted);
-          margin-bottom: 2;
-        }
-        .control-row {
           display: flex;
-          gap: 2;
-          margin-bottom: 2;
           align-items: center;
-        }
-        .label {
-          color: rgb(56, 189, 248);
-          width: 16;
-        }
-        .value {
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-        }
-        .demo-grid {
-          display: flex;
-          flex-direction: row;
-          gap: 2;
+          justify-content: center;
           width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
         .card {
-          flex: 1;
-          display: block;
           border: tall;
-          border-color: var(--surface);
-          padding: 1 2;
-          height: 12;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 56;
         }
-        h3 {
-          color: var(--accent-bright);
-          font-weight: bold;
-          margin-bottom: 1;
+        h1 {
+          color: var(--accent);
         }
-        .sub-desc {
+        p {
           color: var(--muted);
-          margin-bottom: 2;
         }
-
-        /* 1. Inheritance Styling */
-        .parent-box {
-          display: block;
-          border: solid;
+        .control {
+          display: flex;
+          justify-content: space-between;
+        }
+        slider:focus {
+          color: var(--accent);
+        }
+        .value {
+          color: var(--accent);
+          font-weight: bold;
+        }
+        .outer {
+          border: tall;
           border-color: var(--accent);
-          background-color: rgb(30, 58, 138);
-          padding: 1;
+          background-color: rgb(22, 45, 77);
+          padding: 0 2;
+          margin-top: 1;
           opacity: {opacity_float};
         }
-        .parent-label {
-          color: white;
-          font-weight: bold;
-        }
-        .child-box {
-          display: block;
-          margin-top: 1;
-          border: dashed;
-          border-color: var(--accent-bright);
-          background-color: var(--surface);
-          padding: 1;
-        }
-        .child-label {
-          color: var(--accent-bright);
-        }
-
-        /* 2. Interactive Button Styling */
-        .hover-btn {
-          display: block;
+        .inner {
           border: tall;
-          border-color: var(--accent);
-          background-color: rgb(30, 58, 138);
-          color: rgb(191, 219, 254);
-          padding: 1 3;
+          border-color: rgb(188, 140, 255);
+          background-color: rgb(52, 36, 79);
+          padding: 0 2;
+          opacity: 0.5;
+        }
+        .fade {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
           text-align: center;
-          width: 20;
+          margin-top: 1;
           opacity: 0.4;
-          transition: opacity 0.3s ease-in-out, background-color 0.2s linear, border-color 0.2s linear;
+          transition: opacity 0.3s ease-in-out;
         }
-        .hover-btn:hover {
-          opacity: 1.0;
-          background-color: rgb(29, 78, 216);
-          border-color: white;
-          color: white;
-        }
-        .hover-btn:focus {
-          border-color: var(--accent-bright);
+        .fade:hover, .fade:focus {
+          opacity: 1;
         }
       </style>
     )html";
@@ -167,6 +104,7 @@ class OpacityDemo : public Component<OpacityDemo> {
   OpacityDemo() {
     Bind(opacity_percent);
     Bind(opacity_float);
+    Bind(nested_opacity);
   }
 };
 

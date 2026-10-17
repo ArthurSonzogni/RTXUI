@@ -8,132 +8,71 @@
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
+#include <vector>
 
 using namespace rtxui;
 
-class BorderBox : public Component<BorderBox> {
+class BordersDemo : public Component<BordersDemo> {
  public:
-  struct Props {
-    std::string title = "Border";
-    std::string border_class = "solid";
-  } props;
+  std::vector<std::string> styles = {
+      "solid",           "round",      "double",
+      "heavy",           "dashed",     "dotted",
+      "ascii",           "squiggle",   "double-horizontal",
+      "double-vertical", "tall",       "wide",
+      "thick",           "inner",      "outer",
+      "panel",           "hkey",       "vkey",
+      "shadow",          "blank",      "shade-light",
+      "shade-medium",    "shade-dark", "none",
+  };
 
   std::string_view view = R"html(
-      <div class="box-wrapper">
-        <div class="label">{title}</div>
+      <div class="card">
+        <h1>Borders</h1>
+        <p>Every value of the border property, each drawn on itself.</p>
+
+        <div class="grid">
+          <for each="{styles}" as="s">
+            <div class="tile" style="border: {s};">{s}</div>
+          </for>
+        </div>
       </div>
 
       <style>
         self {
-          display: block;
-          flex-grow: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
-        .box-wrapper {
-          border: {border_class};
-          background-color:red;
-          border-color: rgb(100, 200, 255);
-          padding: 1;
-          margin: 1;
-          display: block;
+        .card {
+          border: tall;
+          border-color: rgb(48, 54, 61);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 92;
         }
-        .label {
-          font-weight: bold;
-          color: rgb(100, 200, 255);
+        h1 {
+          color: rgb(88, 166, 255);
+        }
+        p {
+          color: rgb(139, 148, 158);
+        }
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0 2;
+        }
+        .tile {
+          border-color: rgb(88, 166, 255);
           text-align: center;
         }
       </style>
     )html";
 
-  BorderBox() {
-    Bind(props.title);
-    Bind(props.border_class);
-  }
-};
-
-class BordersDemo : public Component<BordersDemo> {
- public:
-  std::string_view view = R"html(
-      <div class="content">
-        <h1>RTXUI Border Styles Gallery</h1>
-        <p>This demo showcases the 24 different border styles supported by RTXUI.</p>
-
-        <div class="row">
-          <BorderBox title="ascii" border_class="ascii"></BorderBox>
-          <BorderBox title="blank" border_class="blank"></BorderBox>
-          <BorderBox title="dashed" border_class="dashed"></BorderBox>
-          <BorderBox title="double" border_class="double"></BorderBox>
-        </div>
-
-        <div class="row">
-          <BorderBox title="hkey" border_class="hkey"></BorderBox>
-          <BorderBox title="heavy" border_class="heavy"></BorderBox>
-          <BorderBox title="inner" border_class="inner"></BorderBox>
-          <BorderBox title="none" border_class="none"></BorderBox>
-        </div>
-
-        <div class="row">
-          <BorderBox title="outer" border_class="outer"></BorderBox>
-          <BorderBox title="panel" border_class="panel"></BorderBox>
-          <BorderBox title="round" border_class="round"></BorderBox>
-          <BorderBox title="solid" border_class="solid"></BorderBox>
-        </div>
-
-        <div class="row">
-          <BorderBox title="tall" border_class="tall"></BorderBox>
-          <BorderBox title="thick" border_class="thick"></BorderBox>
-          <BorderBox title="vkey" border_class="vkey"></BorderBox>
-          <BorderBox title="wide" border_class="wide"></BorderBox>
-        </div>
-
-        <div class="row">
-          <BorderBox title="dotted" border_class="dotted"></BorderBox>
-          <BorderBox title="double-horiz" border_class="double-horizontal"></BorderBox>
-          <BorderBox title="double-vert" border_class="double-vertical"></BorderBox>
-          <BorderBox title="shadow (3d)" border_class="shadow"></BorderBox>
-        </div>
-
-        <div class="row">
-          <BorderBox title="shade-light" border_class="shade-light"></BorderBox>
-          <BorderBox title="shade-med" border_class="shade-medium"></BorderBox>
-          <BorderBox title="shade-dark" border_class="shade-dark"></BorderBox>
-          <BorderBox title="squiggle" border_class="squiggle"></BorderBox>
-        </div>
-      </div>
-
-      <style>
-        self {
-          display: block;
-          padding: 1;
-          background-color: var(--bg);
-          color: white;
-          width: 100%;
-          height: 100%;
-          overflow-y: scroll;
-        }
-        .content {
-          display: block;
-          max-width: 80;
-          margin: 0 auto;
-        }
-        h1 {
-          font-weight: bold;
-          margin-bottom: 1;
-          color: rgb(100, 200, 255);
-        }
-        p {
-          margin-bottom: 2;
-          color: rgb(170, 200, 255);
-        }
-        .row {
-          display: flex;
-          width: 100%;
-          gap: 2;
-          margin-bottom: 2;
-        }
-      </style>
-    )html";
-
-  BordersDemo() { Import<BorderBox>(); }
+  BordersDemo() { Bind(styles); }
 };
 
 int main() {

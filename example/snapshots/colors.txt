@@ -1,24 +1,24 @@
-
-
-  RTXUI Color System Demo
-
-  Scroll to see standard keywords, hex codes, rgb(), and rgba() syntaxes.
-
-
-  1. Standard Keywords (16-color base)                                         ▃
-
-
-    black              gray               silver             white
-
-
-
-    maroon             red                purple             fuchsia
-
-
-
-    green              lime               olive              yellow
-
-
-
-
+▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+▊                                                                              ▎
+▊   Colors                                                                     ▎
+▊                                                                              ▎
+▊   Every CSS color form; alpha blends with what is underneath.                ▎
+▊                                                                              ▎
+▊   Named                                                                      ▎
+▊    black             gray              silver            white               ▎
+▊    maroon            red               purple            fuchsia             ▎
+▊    green             lime              olive             yellow              ▎
+▊    navy              blue              teal              aqua                ▎
+▊                                                                              ▎
+▊   Hex                                                                        ▎
+▊    #f0f              #0ff              #ff3366           #33cc66             ▎
+▊    #bae1ff           #e8c4ff           #00ffcc88         #151520             ▎
+▊                                                                              ▎
+▊   rgb() and rgba()                                                           ▎
+▊    rgb(255, 0, 128)                    rgb(0, 255, 128)                      ▎
+▊    rgb(128, 0, 255)                    rgb(255, 128, 0)                      ▎
+▊    rgba(255, 0, 0, 0.5)                rgba(0, 0, 255, 0.3)                  ▎
+▊    rgba(0, 255, 0, 0.7)                rgba(255, 255, 255, 0.2)              ▎
+▊                                                                              ▎
+▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
