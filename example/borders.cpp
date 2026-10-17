@@ -54,6 +54,8 @@ class BordersDemo : public Component<BordersDemo> {
           background-color: rgb(22, 27, 34);
           padding: 1 3;
           width: 92;
+          max-height: 100%;
+          overflow-y: scroll;
         }
         h1 {
           color: rgb(88, 166, 255);
