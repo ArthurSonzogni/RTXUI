@@ -1999,6 +1999,40 @@ TEST_CASE("Screen.MediaQueryResolutionOnResize", "[terminal][css][media]") {
   CHECK(target->style.background_color == Color::RGB(0, 255, 0));
 }
 
+// A resize must not wait for input to be noticed. SIGWINCH only interrupts
+// select() when it lands while the loop waits there; one that lands while a
+// frame is drawn -- most of a window drag -- left the old size in place until
+// the next key or mouse event.
+TEST_CASE("Screen.ResizeWithoutInput", "[terminal][css][media]") {
+  class Responsive : public Component<Responsive> {
+   public:
+    std::string_view view = R"html(
+      <div id="target">Content</div>
+      <style>
+        @media (max-width: 60) {
+          #target {
+            background-color: #ff0000;
+          }
+        }
+      </style>
+    )html";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<Responsive>::New();
+  device->TriggerResize(70, 20);
+  Screen screen = ScreenInternals::Make(component, device);
+  screen.Draw();
+  auto* target =
+      rtxui::ComponentInternals::Root(*component)->QuerySelector("#target");
+  REQUIRE(target != nullptr);
+  CHECK_FALSE(target->style.background_color.has_value());
+
+  device->TriggerResize(50, 20);
+  screen.Step();
+  CHECK(target->style.background_color == Color::RGB(255, 0, 0));
+}
+
 TEST_CASE("Screen.ScrollIntoViewOnKeyboardFocus", "[terminal][focus][scroll]") {
   auto device = std::make_shared<MockTerminalDevice>();
 

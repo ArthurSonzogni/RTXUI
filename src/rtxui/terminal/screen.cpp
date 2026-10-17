@@ -44,7 +44,6 @@
 #endif
 
 #include <algorithm>
-#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -1371,12 +1370,7 @@ void ScreenImpl::Step() {
     DWORD count = (wakeup_event_ != NULL) ? 2 : 1;
     DWORD wait_result =
         WaitForMultipleObjects(count, handles, FALSE, timeout_ms);
-    if (wait_result == WAIT_OBJECT_0) {
-      input_available = true;
-    } else {
-      input_available = false;
-      UpdateSize();
-    }
+    input_available = wait_result == WAIT_OBJECT_0;
   }
 #elif !defined(__EMSCRIPTEN__)
   if (dynamic_cast<SystemTerminalDevice*>(device_.get())) {
@@ -1399,12 +1393,7 @@ void ScreenImpl::Step() {
             .count());
 
     int retval = select(max_fd + 1, &fds, nullptr, nullptr, &tv);
-    if (retval == 0) {
-      input_available = false;
-    } else if (retval < 0) {
-      if (errno == EINTR) {
-        UpdateSize();
-      }
+    if (retval <= 0) {
       input_available = false;
     } else {
       if (wakeup_pipe_[0] != -1 && FD_ISSET(wakeup_pipe_[0], &fds)) {
@@ -1417,6 +1406,12 @@ void ScreenImpl::Step() {
   }
 #endif
 
+  // Every wakeup asks for the size rather than trusting SIGWINCH to say when.
+  // The signal only interrupts select() when it lands while the loop waits
+  // there; one landing while a frame is drawn -- most of a window drag --
+  // would leave the old size until the next input.
+  UpdateSize();
+
   if (input_available) {
     // Read everything already buffered, not one byte per wakeup. With
     // any-event mouse tracking on, moving the mouse produces a dozen bytes
@@ -1426,7 +1421,6 @@ void ScreenImpl::Step() {
     char buffer[4096];
     int bytes_read = device_->Read(buffer, sizeof(buffer));
     if (bytes_read > 0) {
-      UpdateSize();
       last_input_ms_ = time::GetTimeMs();
       for (int i = 0; i < bytes_read; ++i) {
         parser_->Add(buffer[i]);
@@ -1461,10 +1455,6 @@ void ScreenImpl::Step() {
       EndBurst();
     } else if (bytes_read == 0) {
       running_ = false;
-    } else {
-      if (bytes_read == -1 && errno == EINTR) {
-        UpdateSize();
-      }
     }
   }
 
