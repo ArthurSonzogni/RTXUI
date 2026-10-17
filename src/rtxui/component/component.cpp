@@ -4255,6 +4255,14 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
             }
           }
+          // Whether this instance carried `autofocus` from its last node. An
+          // instance is reused by tag, so a node with `autofocus` appearing
+          // in front of a node without can take over its instance: the
+          // element appears all the same, and must take the focus.
+          const bool had_autofocus =
+              std::ranges::find(child->data_->parent_attributes_,
+                                "autofocus") !=
+              child->data_->parent_attributes_.end();
           child->data_->parent_attributes_ = std::move(applied_attributes);
 
           bool terminal_size_changed =
@@ -4299,7 +4307,8 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // `autofocus`, as in HTML: an element appearing with it takes the
           // focus. Applied once the frame is laid out, by which time the
           // element is in the document wherever it is going to be.
-          if (is_new && child->Root()->GetAttribute("autofocus")) {
+          if ((is_new || !had_autofocus) &&
+              child->Root()->GetAttribute("autofocus")) {
             g_pending_autofocus = Ref<Element>(child->Root());
           }
 

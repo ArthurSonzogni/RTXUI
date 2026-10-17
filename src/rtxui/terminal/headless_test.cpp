@@ -193,6 +193,43 @@ TEST_CASE("An element appearing with autofocus takes the focus",
   CHECK(app->query == "abc");
 }
 
+// The <button autofocus> appears in front of a <button> that is always
+// there. Instances are reused by tag, so it takes over that button's
+// instance rather than getting a new one -- and it must take the focus all
+// the same, as a confirmation dialog's safe default does.
+class Confirm : public Component<Confirm> {
+ public:
+  bool asking = false;
+  std::string answer;
+  void Cancel() { answer = "cancel"; }
+  void Proceed() { answer = "proceed"; }
+  Confirm() {
+    Bind(asking);
+    Bind(answer);
+    Bind(Cancel);
+    Bind(Proceed);
+  }
+  std::string_view view = R"html(
+    <div>
+      <if condition="{asking}">
+        <button onclick="Cancel" autofocus="">cancel</button>
+      </if>
+      <button onclick="Proceed">proceed</button>
+    </div>
+  )html";
+};
+
+TEST_CASE("An element appearing with autofocus takes the focus on a reused "
+          "instance",
+          "[headless][focus]") {
+  auto app = Ref<Confirm>::New();
+  HeadlessScreen screen(app, 20, 8);
+  app->asking = true;
+  screen.Input("");
+  screen.Input("\r");
+  CHECK(app->answer == "cancel");
+}
+
 class Clickable : public Component<Clickable> {
  public:
   int clicks = 0;
