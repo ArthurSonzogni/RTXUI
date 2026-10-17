@@ -19,100 +19,116 @@ using namespace rtxui;
 class SimpleLoopApp : public Component<SimpleLoopApp> {
  public:
   std::vector<std::string> items = {"Apple", "Banana", "Cherry"};
-  std::string new_fruit = "";
+  std::string new_fruit;
 
   void AddItem() {
     if (!new_fruit.empty()) {
       items.push_back(new_fruit);
-      new_fruit = "";
+      new_fruit.clear();
     }
   }
-  void RemoveItem(std::string index_str) {
-    size_t index = std::stoull(index_str);
-    if (index < items.size()) {
-      items.erase(items.begin() + index);
+  void RemoveItem(std::string index) {
+    size_t i = std::stoull(index);
+    if (i < items.size()) {
+      items.erase(items.begin() + i);
     }
   }
 
   std::string_view view = R"html(
-      <div class="container">
-        <div class="input-row">
-          <input value="{new_fruit}" placeholder="Enter fruit name..." />
-          <button onclick="AddItem">Add Fruit</button>
+      <div class="card">
+        <h1>Loops</h1>
+        <p>&lt;for each&gt; repeats its content per element, and $index gives the row's position to a handler.</p>
+
+        <div class="add">
+          <input value="{new_fruit}" placeholder="A fruit..." />
+          <button onclick="AddItem">Add</button>
         </div>
-        <ul>
+
+        <div class="list">
           <for each="{items}" as="fruit">
-            <li class="item-row">
-              <span class="fruit-name">{fruit}</span>
-              <button onclick="RemoveItem({$index})">Remove</button>
-            </li>
+            <div class="row">
+              <span class="grow">{fruit}</span>
+              <button class="remove" onclick="RemoveItem({$index})">✕</button>
+            </div>
           </for>
-        </ul>
+        </div>
       </div>
 
       <style>
         self {
-          --danger: rgb(248, 81, 73);
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: white;
+          color: rgb(230, 237, 243);
         }
-        .container {
-          padding: 1;
-          max-width: 80;
-          margin: auto;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 50;
         }
-
-        .input-row {
+        h1 {
+          color: var(--accent);
+        }
+        p {
+          color: var(--muted);
+        }
+        .add {
           display: flex;
           gap: 1;
           margin-bottom: 1;
         }
         input {
+          flex-grow: 1;
           border: tall;
-          width: 20;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
           padding: 0 1;
         }
-
-        .item-row {
-          width: 100%;
+        input:focus {
+          border-color: var(--accent);
+        }
+        button {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
+        }
+        button:hover, button:focus {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+        .list {
+          border: round;
+          border-color: var(--border);
+        }
+        .row {
           display: flex;
           gap: 2;
-          align-items: center;
-          margin-top: 1;
-          background-color: rgb(30,46,84);
-        }
-        .fruit-name {
-          flex-grow: 1;
-          padding: 1;
-        }
-        .item-row button {
-          border: tall;
-          border-color: var(--danger);
-          color: var(--danger);
-          background-color: transparent;
           padding: 0 1;
-          margin: 0;
         }
-        .item-row button:hover {
-          background-color: var(--danger);
-          color: white;
-          border-color: var(--danger);
+        .row:hover {
+          background-color: rgb(33, 38, 45);
         }
-
-        button {
-          background-color: rgb(22, 27, 34);
-          color: white;
-          transition: all 1s;
+        .grow {
+          flex-grow: 1;
         }
-
-        button:hover {
-          background-color: rgb(88, 166, 255);
-          border-color: rgb(121, 192, 255);
+        .remove {
+          border: none;
+          background-color: transparent;
+          color: rgb(248, 81, 73);
         }
-
+        .remove:hover, .remove:focus {
+          background-color: rgb(73, 32, 36);
+        }
       </style>
     )html";
 
@@ -121,7 +137,6 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
     Bind(new_fruit);
     Bind(AddItem);
     Bind(RemoveItem);
-    EnableHotReload();
   }
 };
 

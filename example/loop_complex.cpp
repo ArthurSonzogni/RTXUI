@@ -7,7 +7,7 @@
 // A mapper exposes each struct's fields to the template, which reads them with
 // dot notation on the loop variable.
 //
-// Try it: toggle a task to see only that row re-render.
+// Try it: click a status to toggle it, then add or remove a task.
 #include <cstddef>
 #include <rtxui/rtxui.hpp>
 #include <string>
@@ -25,110 +25,142 @@ struct Task {
 // What a template reads of a Task: {task.name} and {task.status}.
 void Fields(const Task& task, FieldSink& out) {
   out("name", task.name);
-  out("status", task.completed ? "✅ Done" : "⏳ Pending");
+  out("status", task.completed ? "done" : "todo");
 }
 
 class ComplexLoopApp : public Component<ComplexLoopApp> {
  public:
   std::vector<Task> tasks = {
-      Task{"Setup Project", true},
-      Task{"Implement Loops", true},
-      Task{"Write Docs", false},
+      {"Set up the project", true},
+      {"Write the loops", true},
+      {"Write the docs", false},
   };
-  std::string new_task_name = "";
+  std::string new_task_name;
 
   void AddTask() {
     if (!new_task_name.empty()) {
       tasks.push_back({new_task_name, false});
-      new_task_name = "";
+      new_task_name.clear();
     }
   }
-  void RemoveTask(std::string index_str) {
-    size_t index = std::stoull(index_str);
-    if (index < tasks.size()) {
-      tasks.erase(tasks.begin() + index);
+  void ToggleTask(std::string index) {
+    size_t i = std::stoull(index);
+    if (i < tasks.size()) {
+      tasks[i].completed = !tasks[i].completed;
+    }
+  }
+  void RemoveTask(std::string index) {
+    size_t i = std::stoull(index);
+    if (i < tasks.size()) {
+      tasks.erase(tasks.begin() + i);
     }
   }
 
   std::string_view view = R"html(
-      <div class="container">
-        <div class="input-row">
-          <input value="{new_task_name}" placeholder="New task name..." />
-          <button onclick="AddTask">Add Task</button>
+      <div class="card">
+        <h1>Looping over structs</h1>
+        <p>A Fields() function names what the template reads of each Task. Click a status to toggle it.</p>
+
+        <div class="add">
+          <input value="{new_task_name}" placeholder="A task..." />
+          <button onclick="AddTask">Add</button>
         </div>
+
         <div class="list">
-          <for each="{tasks}" as="t">
-            <div class="item">
-              <span class="status">{t.status}</span>
-              <span class="name">{t.name}</span>
-              <button class="remove-btn" onclick="RemoveTask({$index})">X</button>
+          <for each="{tasks}" as="task">
+            <div class="row">
+              <button class="status {task.status}" onclick="ToggleTask({$index})">{task.status}</button>
+              <span class="grow">{task.name}</span>
+              <button class="remove" onclick="RemoveTask({$index})">✕</button>
             </div>
           </for>
         </div>
       </div>
+
       <style>
         self {
           --border: rgb(48, 54, 61);
-          --danger: rgb(248, 81, 73);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: white;
+          color: rgb(230, 237, 243);
         }
-        .container {
-          padding: 1;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 56;
         }
-        .input-row {
+        h1 {
+          color: var(--accent);
+        }
+        p {
+          color: var(--muted);
+        }
+        .add {
           display: flex;
           gap: 1;
           margin-bottom: 1;
         }
         input {
-          width: 25;
-          padding: 0 1;
-        }
-        .list {
-          display: flex;
-          flex-direction: column;
-          gap: 0;
+          flex-grow: 1;
           border: tall;
           border-color: var(--border);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
         }
-        .item {
+        input:focus {
+          border-color: var(--accent);
+        }
+        button {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
+        }
+        button:hover, button:focus {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+        .list {
+          border: round;
+          border-color: var(--border);
+        }
+        .row {
           display: flex;
           gap: 2;
           padding: 0 1;
-          align-items: center;
+        }
+        .row:hover {
+          background-color: rgb(33, 38, 45);
+        }
+        .grow {
+          flex-grow: 1;
+        }
+        .remove {
+          border: none;
+          background-color: transparent;
+          color: rgb(248, 81, 73);
+        }
+        .remove:hover, .remove:focus {
+          background-color: rgb(73, 32, 36);
         }
         .status {
-          width: 10;
-          color: rgb(56, 189, 248);
-        }
-        .name {
-          flex-grow: 1;
-          color: white;
-        }
-        .remove-btn {
-          color: var(--danger);
           border: none;
-          padding: 0 1;
-          background-color: transparent;
+          width: 6;
         }
-        .remove-btn:hover {
-          color: white;
-          background-color: var(--danger);
+        .done {
+          color: rgb(63, 185, 80);
         }
-        button {
-          background-color: rgb(22, 27, 34);
-          color: white;
-          border: tall;
-          border-color: var(--border);
-          padding: 0 1;
-        }
-        button:hover {
-          background-color: rgb(88, 166, 255);
-          border-color: rgb(121, 192, 255);
+        .todo {
+          color: rgb(210, 153, 34);
         }
       </style>
     )html";
@@ -137,6 +169,7 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
     Bind(tasks);
     Bind(new_task_name);
     Bind(AddTask);
+    Bind(ToggleTask);
     Bind(RemoveTask);
   }
 };
