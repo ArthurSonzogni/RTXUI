@@ -6498,5 +6498,49 @@ TEST_CASE("Screen.BurstOfEventsIsDigestedOnce", "[terminal][regression]") {
   CHECK(device->GetOutput().find("20") != std::string::npos);
 }
 
+TEST_CASE("A raised box covers a later box elsewhere and takes its clicks",
+          "[screen][z-index][regression]") {
+  // z-index only ordered siblings, so a popup in one <div> was drawn under,
+  // and clicked through to, whatever a later <div> held.
+  class Raised : public Component<Raised> {
+   public:
+    int popup_clicks = 0;
+    int below_clicks = 0;
+    void ClickPopup() { popup_clicks++; }
+    void ClickBelow() { below_clicks++; }
+
+    std::string_view view = R"(
+      <div class="anchor">
+        <div class="popup" onclick="ClickPopup">popup</div>
+      </div>
+      <div onclick="ClickBelow">below</div>
+      <style>
+        .anchor { position: relative; height: 1; }
+        .popup {
+          position: absolute;
+          top: 1;
+          left: 0;
+          z-index: 1;
+          background-color: rgb(30, 41, 59);
+        }
+      </style>
+    )";
+
+    Raised() {
+      Bind(ClickPopup);
+      Bind(ClickBelow);
+    }
+  };
+
+  auto app = Ref<Raised>::New();
+  HeadlessScreen screen(app, 10, 3);
+  CHECK(screen.Text().find("popup") != std::string::npos);
+  CHECK(screen.Text().find("below") == std::string::npos);
+
+  screen.Click(1, 1);
+  CHECK(app->popup_clicks == 1);
+  CHECK(app->below_clicks == 0);
+}
+
 }  // namespace
 }  // namespace rtxui

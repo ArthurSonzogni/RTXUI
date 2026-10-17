@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -502,6 +503,23 @@ std::string_view ExternalLink(const Element* element) {
   return {};
 }
 
+// Whether `frag` is a positioned box with a positive z-index. Such a box is
+// painted above everything else in its stacking context -- the root, or the
+// nearest such box above it -- not only above its siblings: a <select>'s list
+// must cover the next field even when each sits in a <div> of its own.
+bool IsRaised(const PhysicalFragment* frag) {
+  return frag && frag->dom_node && frag->dom_node->style.PaintsAsPositioned() &&
+         frag->dom_node->style.z_index.value_or(0) > 0;
+}
+
+// The raised boxes of each stacking context being painted, innermost last:
+// each with the call that paints it, in tree order.
+struct RaisedPaint {
+  int z_index;
+  std::function<void()> paint;
+};
+std::vector<std::vector<RaisedPaint>> g_raised;
+
 void PaintImpl(const PhysicalFragment* frag,
                Texture& texture,
                int off_x,
@@ -526,6 +544,13 @@ void PaintImpl(const PhysicalFragment* frag,
                float inherited_opacity) {
   if (frag->visibility == Visibility::Hidden) {
     return;
+  }
+
+  // The root and every raised box start a stacking context: the raised boxes
+  // inside it are painted once the rest of it is, lowest z-index first.
+  const bool stacking_context = g_raised.empty() || IsRaised(frag);
+  if (stacking_context) {
+    g_raised.emplace_back();
   }
   int abs_x = off_x;
   int abs_y = off_y;
@@ -1201,15 +1226,24 @@ void PaintImpl(const PhysicalFragment* frag,
       }
     }
 
-    PaintImpl(
-        child.fragment, texture, child_off_x, child_off_y, child_accum_scroll_x,
-        child_accum_scroll_y, is_fixed ? viewport_x : next_viewport_x,
-        is_fixed ? viewport_y : next_viewport_y,
-        is_fixed ? viewport_w : next_viewport_w,
-        is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
-        current_background_color, current_bold, current_dim, current_italic,
-        current_underlined, current_underlined_double, current_strikethrough,
-        current_overlined, current_blink, child_clip_to_pass, current_opacity);
+    auto paint_child = [=, &texture, fragment = child.fragment] {
+      PaintImpl(
+          fragment, texture, child_off_x, child_off_y, child_accum_scroll_x,
+          child_accum_scroll_y, is_fixed ? viewport_x : next_viewport_x,
+          is_fixed ? viewport_y : next_viewport_y,
+          is_fixed ? viewport_w : next_viewport_w,
+          is_fixed ? viewport_h : next_viewport_h, current_foreground_color,
+          current_background_color, current_bold, current_dim, current_italic,
+          current_underlined, current_underlined_double, current_strikethrough,
+          current_overlined, current_blink, child_clip_to_pass,
+          current_opacity);
+    };
+    if (IsRaised(child.fragment)) {
+      g_raised.back().push_back(
+          {child.fragment->dom_node->style.z_index.value_or(0), paint_child});
+    } else {
+      paint_child();
+    }
   }
 
   // 5. Outline, drawn once the whole tree is painted.
@@ -1217,6 +1251,16 @@ void PaintImpl(const PhysicalFragment* frag,
       frag->dom_node->style.outline_style != BorderStyle::None) {
     QueueOutline(frag->dom_node->style, abs_x, abs_y, w, h,
                  current_foreground_color, current_opacity, clip);
+  }
+
+  // 6. The raised boxes of the stacking context this box starts.
+  if (stacking_context) {
+    std::vector<RaisedPaint> raised = std::move(g_raised.back());
+    g_raised.pop_back();
+    std::ranges::stable_sort(raised, {}, &RaisedPaint::z_index);
+    for (const RaisedPaint& box : raised) {
+      box.paint();
+    }
   }
 }
 }  // namespace

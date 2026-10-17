@@ -8,6 +8,7 @@
 #include <charconv>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <ranges>
 #include <string>
@@ -459,7 +460,25 @@ struct FixedFragment {
   // assigned by layout, so they must not be read here.
   int x = 0;
   int y = 0;
+  int accum_scroll_x = 0;
+  int accum_scroll_y = 0;
+  // What its scrolling ancestors leave visible of it, in viewport
+  // coordinates: [clip_x0, clip_x1) x [clip_y0, clip_y1).
+  int clip_x0 = 0;
+  int clip_y0 = 0;
+  int clip_x1 = 0;
+  int clip_y1 = 0;
 };
+
+// A positioned box with a positive z-index paints above the whole stacking
+// context it is in, not only above its siblings (see paint.cpp), so it is
+// tested first, like a fixed one: a <select>'s list must take the click over
+// the field drawn under it.
+bool IsRaised(const PhysicalFragment* fragment) {
+  return fragment && fragment->dom_node &&
+         fragment->dom_node->style.PaintsAsPositioned() &&
+         fragment->dom_node->style.z_index.value_or(0) > 0;
+}
 
 // Walks the fragment tree accumulating each fragment's absolute origin, so a
 // fixed fragment's parent-relative ChildLink offset can be turned into the
@@ -471,59 +490,77 @@ struct FixedFragment {
 // several cells away from where they are drawn.
 void CollectFixedFragments(PhysicalFragment* fragment,
                            std::vector<FixedFragment>& out,
-                           int abs_x = 0,
-                           int abs_y = 0,
-                           int accum_scroll_x = 0,
-                           int accum_scroll_y = 0) {
+                           FixedFragment at) {
   if (!fragment) {
     return;
   }
   int scroll_x_offset = fragment->clips_descendants ? fragment->scroll_x : 0;
   int scroll_y_offset = fragment->clips_descendants ? fragment->scroll_y : 0;
-  int next_accum_scroll_x = accum_scroll_x + scroll_x_offset;
-  int next_accum_scroll_y = accum_scroll_y + scroll_y_offset;
+  FixedFragment inside = at;
+  inside.accum_scroll_x += scroll_x_offset;
+  inside.accum_scroll_y += scroll_y_offset;
+  if (fragment->clips_descendants) {
+    inside.clip_x0 = std::max(inside.clip_x0, at.x);
+    inside.clip_y0 = std::max(inside.clip_y0, at.y);
+    inside.clip_x1 = std::min(inside.clip_x1, at.x + fragment->width);
+    inside.clip_y1 = std::min(inside.clip_y1, at.y + fragment->height);
+  }
 
   for (const auto& child : fragment->children) {
     bool is_fixed =
         child.fragment && child.fragment->dom_node &&
         child.fragment->dom_node->style.position == PositionType::Fixed;
-    int child_abs_x = abs_x + child.x;
-    int child_abs_y = abs_y + child.y;
-    int child_accum_scroll_x = next_accum_scroll_x;
-    int child_accum_scroll_y = next_accum_scroll_y;
+    FixedFragment child_at = inside;
+    child_at.fragment = child.fragment;
+    child_at.x = at.x + child.x;
+    child_at.y = at.y + child.y;
     if (is_fixed) {
-      child_abs_x += accum_scroll_x;
-      child_abs_y += accum_scroll_y;
-      child_accum_scroll_x = 0;
-      child_accum_scroll_y = 0;
-      out.push_back({child.fragment, child_abs_x, child_abs_y});
+      child_at.x += at.accum_scroll_x;
+      child_at.y += at.accum_scroll_y;
+      child_at.accum_scroll_x = 0;
+      child_at.accum_scroll_y = 0;
+      child_at.clip_x0 = 0;
+      child_at.clip_y0 = 0;
+      child_at.clip_x1 = std::numeric_limits<int>::max();
+      child_at.clip_y1 = std::numeric_limits<int>::max();
+      out.push_back(child_at);
     } else {
-      child_abs_x -= scroll_x_offset;
-      child_abs_y -= scroll_y_offset;
+      child_at.x -= scroll_x_offset;
+      child_at.y -= scroll_y_offset;
+      if (IsRaised(child.fragment)) {
+        out.push_back(child_at);
+      }
     }
-    CollectFixedFragments(child.fragment, out, child_abs_x, child_abs_y,
-                          child_accum_scroll_x, child_accum_scroll_y);
+    CollectFixedFragments(child.fragment, out, child_at);
   }
 }
 
 Element* FindElementAt(PhysicalFragment* fragment, int target_x, int target_y) {
   std::vector<FixedFragment> fixed;
-  CollectFixedFragments(fragment, fixed);
+  CollectFixedFragments(fragment, fixed,
+                        {.fragment = nullptr,
+                         .clip_x1 = std::numeric_limits<int>::max(),
+                         .clip_y1 = std::numeric_limits<int>::max()});
 
-  // Topmost first, matching paint order. `display: none` subtrees never reach
-  // layout, so a closed overlay contributes no fragment here and cannot
-  // swallow clicks meant for the interface underneath it.
-  std::stable_sort(fixed.begin(), fixed.end(),
-                   [](const FixedFragment& a, const FixedFragment& b) {
-                     return a.fragment->dom_node->style.z_index.value_or(0) >
-                            b.fragment->dom_node->style.z_index.value_or(0);
-                   });
+  // Topmost first, matching paint order: the highest z-index, and of equal
+  // ones the last painted. `display: none` subtrees never reach layout, so a
+  // closed overlay contributes no fragment here and cannot swallow clicks
+  // meant for the interface underneath it.
+  std::ranges::reverse(fixed);
+  std::ranges::stable_sort(
+      fixed, std::ranges::greater{}, [](const FixedFragment& candidate) {
+        return candidate.fragment->dom_node->style.z_index.value_or(0);
+      });
 
   for (const FixedFragment& candidate : fixed) {
-    if (auto* found = FindElementAtImpl(candidate.fragment, target_x, target_y,
-                                        candidate.x, candidate.y, 0, 0, 0, 0,
-                                        fragment ? fragment->width : 0,
-                                        fragment ? fragment->height : 0)) {
+    if (target_x < candidate.clip_x0 || target_x >= candidate.clip_x1 ||
+        target_y < candidate.clip_y0 || target_y >= candidate.clip_y1) {
+      continue;
+    }
+    if (auto* found = FindElementAtImpl(
+            candidate.fragment, target_x, target_y, candidate.x, candidate.y,
+            candidate.accum_scroll_x, candidate.accum_scroll_y, 0, 0,
+            fragment ? fragment->width : 0, fragment ? fragment->height : 0)) {
       return found;
     }
   }
