@@ -1,0 +1,411 @@
+<!doctype html>
+<!--
+  The RTXUI promo, as a page that draws any instant of it: setTime(t) poses
+  every element for t seconds, so render.js can capture it frame by frame.
+  Open it in a browser and append ?play to watch it in real time.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>RTXUI promo</title>
+<style>
+  @font-face { font-family: Inter; src: url(fonts/InterVariable.ttf); font-weight: 100 900; }
+  @font-face { font-family: Mono; src: url(fonts/JetBrainsMonoNerdFontMono-Regular.ttf); }
+  @font-face { font-family: Mono; src: url(fonts/JetBrainsMonoNerdFontMono-Bold.ttf); font-weight: bold; }
+  :root {
+    --bg: #05070b;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --blue: #58a6ff;
+    --pink: #ff7bac;
+    --violet: #bc8cff;
+  }
+  html, body { margin: 0; background: var(--bg); overflow: hidden; }
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: var(--bg); font-family: Inter; color: var(--text);
+    perspective: 1800px;
+  }
+  .abs { position: absolute; }
+  .glow {
+    position: absolute; width: 1400px; height: 1400px; border-radius: 50%;
+    filter: blur(140px); opacity: 0.35;
+  }
+  #glow1 { background: radial-gradient(circle, #1f6feb 0%, transparent 60%); }
+  #glow2 { background: radial-gradient(circle, #db61a2 0%, transparent 60%); }
+  #dots {
+    inset: 0; opacity: 0.18;
+    background-image: radial-gradient(#8b949e 1.2px, transparent 1.2px);
+    background-size: 36px 36px;
+  }
+  .word {
+    font-weight: 900; font-size: 210px; letter-spacing: -8px; line-height: 1;
+    white-space: nowrap; transform-origin: center;
+  }
+  .grad {
+    background: linear-gradient(100deg, var(--blue), var(--violet) 50%, var(--pink));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #tagline { font-family: Mono; font-size: 64px; color: var(--text); white-space: nowrap; }
+  .cursor { display: inline-block; width: 0.6em; height: 1em; background: var(--blue);
+            vertical-align: -0.12em; margin-left: 4px; }
+
+  #code {
+    width: 1180px; padding: 34px 44px; border-radius: 22px;
+    background: rgba(13, 17, 23, 0.92); border: 1px solid #30363d;
+    box-shadow: 0 60px 160px rgba(0,0,0,0.7), 0 0 0 1px rgba(88,166,255,0.08);
+    font-family: Mono; font-size: 27px; line-height: 1.5; white-space: pre;
+    transform-style: preserve-3d;
+  }
+  #code .line { position: relative; }
+  #code .hl { position: absolute; left: -44px; right: -44px; top: 0; bottom: 0;
+              background: linear-gradient(90deg, rgba(88,166,255,0.22), rgba(255,123,172,0.10));
+              border-left: 4px solid var(--blue); }
+  .k { color: #ff7b72; } .t { color: #ffa657; } .s { color: #a5d6ff; }
+  .tag { color: #7ee787; } .at { color: #79c0ff; } .in { color: #ffa657; font-weight: bold; }
+  .p { color: #79c0ff; } .v { color: #a5d6ff; } .sel { color: #d2a8ff; } .c { color: #8b949e; }
+  .n { color: var(--text); }
+  #codehead { font-size: 18px; color: var(--muted); margin-bottom: 18px; font-family: Inter; }
+
+  #win {
+    border-radius: 16px; overflow: hidden; background: #0d1117;
+    border: 1px solid #30363d;
+    box-shadow: 0 50px 140px rgba(0,0,0,0.75), 0 0 80px rgba(88,166,255,0.12);
+    transform-origin: center;
+  }
+  #winbar { height: 38px; background: #161b22; display: flex; align-items: center; gap: 9px; padding-left: 16px; }
+  #winbar i { width: 13px; height: 13px; border-radius: 50%; display: block; }
+  #termclip { overflow: hidden; height: 972px; }
+  #term { display: block; }
+
+  #cap {
+    font-weight: 850; font-size: 84px; letter-spacing: -3px; line-height: 1.02;
+    width: 520px;
+  }
+  #cap small { display: block; font-size: 30px; font-weight: 500; letter-spacing: 0;
+               color: var(--muted); margin-top: 22px; line-height: 1.3; }
+  #chip {
+    font-family: Mono; font-size: 26px; padding: 20px 26px; border-radius: 14px;
+    background: rgba(22,27,34,0.95); border: 1px solid var(--pink); white-space: pre;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  #flash { inset: 0; background: white; opacity: 0; pointer-events: none; }
+  .fact { font-weight: 900; font-size: 120px; letter-spacing: -4px; white-space: nowrap; text-align: center; width: 1920px; left: 0; }
+  .fact small { display: block; font-size: 38px; font-weight: 500; letter-spacing: 0; color: var(--muted); margin-top: 14px; }
+  #logo { font-weight: 900; font-size: 300px; letter-spacing: -14px; width: 1920px; text-align: center; left: 0; }
+  #sub { font-size: 50px; font-weight: 700; width: 1920px; text-align: center; left: 0; letter-spacing: -1px; }
+  #url { font-family: Mono; font-size: 36px; color: var(--muted); width: 1920px; text-align: center; left: 0; }
+  #bar { height: 6px; left: 0; top: 0; background: linear-gradient(90deg, var(--blue), var(--pink)); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow1" class="glow"></div>
+  <div id="glow2" class="glow"></div>
+  <div id="dots" class="abs"></div>
+
+  <div id="w1" class="abs word">HTML.</div>
+  <div id="w2" class="abs word">CSS.</div>
+  <div id="w3" class="abs word grad">C++.</div>
+  <div id="tagline" class="abs"></div>
+
+  <div id="code" class="abs"><div id="codehead">dashboard.cpp</div><div id="codebody"></div></div>
+  <div id="codecap" class="abs" style="font-weight:850;font-size:84px;letter-spacing:-3px;line-height:1.05;width:600px"></div>
+
+  <div id="win" class="abs">
+    <div id="winbar"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i></div>
+    <div id="termclip"><img id="term"></div>
+  </div>
+  <div id="cap" class="abs"></div>
+  <div id="chip" class="abs"></div>
+
+  <div id="f1" class="abs fact"></div>
+
+  <div id="logo" class="abs grad">RTXUI</div>
+  <div id="sub" class="abs"></div>
+  <div id="url" class="abs"></div>
+
+  <div id="flash" class="abs"></div>
+  <div id="bar" class="abs"></div>
+</div>
+
+<script>
+// ---------------------------------------------------------------- helpers
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, x) => a + (b - a) * x;
+// Progress of t through [a, b], clamped to 0..1.
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const outCubic = (x) => 1 - Math.pow(1 - x, 3);
+const outExpo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+const inOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const outBack = (x) => { const c = 1.70158; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+function show(el, on) { el.style.display = on ? '' : 'none'; }
+function pose(el, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s = 1, o = 1, blur = 0 } = {}) {
+  el.style.transform =
+    `translate3d(${x}px, ${y}px, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${s})`;
+  el.style.opacity = o;
+  el.style.filter = blur > 0.05 ? `blur(${blur}px)` : 'none';
+}
+// A word that slams in: big and blurred, then sharp, at time `at`.
+function slam(el, t, at, x, y) {
+  const p = seg(t, at, at + 0.28);
+  const e = outExpo(p);
+  pose(el, { x, y, s: lerp(2.4, 1, e), o: clamp(p * 3), blur: lerp(30, 0, e) });
+}
+
+// ------------------------------------------------------------------- code
+const CODE = [
+  ['<k>class</k> <t>Dashboard</t> : <k>public</k> <t>rtxui::Component</t>&lt;<t>Dashboard</t>&gt; {'],
+  [' <k>public</k>:'],
+  ['  <t>std::vector</t>&lt;<t>Metric</t>&gt; <n>metrics</n>;'],
+  ['  <t>Dashboard</t>() { <n>Bind</n>(<n>metrics</n>, &amp;<t>Dashboard</t>::<n>Fields</n>); }'],
+  [''],
+  ['  <t>std::string_view</t> <n>view</n> = <s>R"html(</s>'],
+  ['    <tag>&lt;div</tag> <at>class</at>=<s>"grid"</s><tag>&gt;</tag>'],
+  ['      <tag>&lt;for</tag> <at>each</at>=<s>"<in>{metrics}</in>"</s> <at>as</at>=<s>"m"</s><tag>&gt;</tag>', 'for'],
+  ['        <tag>&lt;div</tag> <at>class</at>=<s>"card"</s><tag>&gt;</tag><in>{m.name}</in>: <in>{m.value}</in><tag>&lt;/div&gt;</tag>', 'bind'],
+  ['      <tag>&lt;/for&gt;</tag>'],
+  ['    <tag>&lt;/div&gt;</tag>'],
+  ['    <tag>&lt;style&gt;</tag>'],
+  ['      <sel>.grid</sel> {'],
+  ['        <p>display</p>: <v>grid</v>;', 'grid'],
+  ['        <p>grid-template-columns</p>: <v>repeat(auto-fill, minmax(24, 1fr))</v>;', 'grid'],
+  ['      }'],
+  ['      <sel>.card</sel> { <p>border</p>: <v>tall</v>; <p>transition</p>: <v>translate 200ms</v>; }', 'anim'],
+  ['      <sel>.card:hover</sel> { <p>translate</p>: <v>0 -1</v>; }', 'anim'],
+  ['    <tag>&lt;/style&gt;</tag>'],
+  ['  <s>)html"</s>;'],
+  ['};'],
+];
+function buildCode() {
+  const body = $('codebody');
+  body.innerHTML = '';
+  for (const [html] of CODE) {
+    const line = document.createElement('div');
+    line.className = 'line';
+    line.innerHTML = '<div class="hl"></div><span class="txt">' +
+        (html.replace(/<(\/?)(k|t|s|tag|at|in|p|v|sel|c|n)>/g,
+                      (m, close, cls) => (close ? '</span>' : `<span class="${cls}">`)) || ' ') +
+        '</span>';
+    body.appendChild(line);
+  }
+}
+
+// ---------------------------------------------------------------- footage
+let META = null;
+const FOOTAGE_FPS = 30;
+const SEGMENTS = {};  // caption -> [first frame, last frame]
+async function loadMeta() {
+  META = await (await fetch('footage/meta.json')).json();
+  META.frames.forEach(([, , cap], i) => {
+    if (!cap) return;
+    SEGMENTS[cap] ??= [i, i];
+    SEGMENTS[cap][1] = i;
+  });
+}
+let currentFrame = -1;
+async function setFootage(index) {
+  index = clamp(Math.round(index), 0, META.frames.length - 1);
+  const [cols] = META.frames[index];
+  $('termclip').style.width = cols * META.cell[0] + 'px';
+  if (index === currentFrame) return;
+  currentFrame = index;
+  const img = $('term');
+  img.src = `footage/${String(index).padStart(5, '0')}.png`;
+  await img.decode();
+}
+
+// The footage part of the timeline: [caption, start, duration, speed,
+// big caption, small line, camera].
+const SHOTS = [
+  ['dash',    0.0, 2.2, 1.2, 'Live.<br>Reactive.', 'Bind plain C++ members. Change one, the screen follows.', { ry: -16, rx: 6 }],
+  ['resize',  2.2, 2.4, 1.2, 'CSS Grid.<br>@media.', 'The layout reflows with the terminal.', { ry: 14, rx: 4 }],
+  ['motion',  4.6, 3.2, 1.35, 'Transitions.<br>@keyframes.', 'Motion, declared in CSS.', { ry: -12, rx: -4 }],
+  ['widgets', 7.8, 3.1, 1.5, 'Mouse.<br>Keyboard.<br>Widgets.', 'Inputs, sliders, tabs, focus. Built in.', { ry: 12, rx: 5 }],
+  ['select',  10.9, 1.8, 1.3, 'Select.<br>Copy.', 'Text selection, like a browser.', { ry: -10, rx: 3 }],
+  ['reload',  12.7, 3.0, 1.0, 'Hot<br>reload.', 'Save the file. No recompile.', { ry: 0, rx: 0 }],
+];
+const FOOT_T0 = 8.0;  // When the footage starts in the promo.
+const FOOT_END = FOOT_T0 + 15.7;
+
+// ------------------------------------------------------------------ scene
+const T_FACTS = FOOT_END;
+const FACTS = [
+  ['134 CSS properties.', 'Flexbox · Grid · position · overflow · @media'],
+  ['Linux. macOS. Windows.', 'And the browser, through WebAssembly.'],
+  ['Fuzzed. Sanitized.', '800+ tests · 8 fuzzers · ABI-checked'],
+];
+const T_END = T_FACTS + FACTS.length * 0.9 + 0.1;
+const DURATION = T_END + 4.2;
+
+async function setTime(t) {
+  // Background: two glows drifting, always.
+  pose($('glow1'), { x: -300 + Math.sin(t * 0.35) * 260, y: -500 + Math.cos(t * 0.27) * 160 });
+  pose($('glow2'), { x: 900 + Math.cos(t * 0.31) * 260, y: 100 + Math.sin(t * 0.22) * 200 });
+  pose($('dots'), { y: -(t * 12) % 36 });
+  $('bar').style.width = (1920 * clamp(t / DURATION)) + 'px';
+
+  // 1. Cold open: three words slam in, then the tagline types out.
+  const open = t < 3.4;
+  for (const id of ['w1', 'w2', 'w3']) show($(id), open);
+  show($('tagline'), t >= 1.75 && t < 3.6);
+  if (open) {
+    const lift = outCubic(seg(t, 1.5, 1.85));
+    const fade = 1 - seg(t, 3.1, 3.4);
+    slam($('w1'), t, 0.15, WORD_X[0], 330 - lift * 150);
+    slam($('w2'), t, 0.55, WORD_X[1], 330 - lift * 150);
+    slam($('w3'), t, 0.95, WORD_X[2], 330 - lift * 150);
+    for (const id of ['w1', 'w2', 'w3']) $(id).style.opacity *= fade;
+  }
+  if (t >= 1.75 && t < 3.6) {
+    const text = 'In your terminal.';
+    const n = Math.floor(seg(t, 1.8, 2.6) * text.length);
+    const blink = Math.floor(t * 3) % 2 === 0 || n < text.length;
+    $('tagline').innerHTML = text.slice(0, n) + `<span class="cursor" style="opacity:${blink ? 1 : 0}"></span>`;
+    pose($('tagline'), { x: 960 - $('tagline').offsetWidth / 2 + 20, y: 600, o: 1 - seg(t, 3.2, 3.55) });
+  }
+
+  // 2. The code, in perspective, dollying past the camera.
+  const codeOn = t >= 3.3 && t < 8.4;
+  show($('code'), codeOn);
+  show($('codecap'), t >= 3.6 && t < 7.9);
+  if (codeOn) {
+    const p = seg(t, 3.3, 7.4);
+    const enter = outExpo(seg(t, 3.3, 4.0));
+    const leave = inOut(seg(t, 7.2, 7.75));
+    pose($('code'), {
+      x: lerp(1300, 560, enter) - leave * 40,
+      y: 40 - p * 20,
+      z: lerp(-900, 60, enter) + p * 140 + leave * 900,
+      ry: lerp(-30, -18, p) * (1 - leave),
+      rx: lerp(12, 6, p) * (1 - leave),
+      rz: lerp(-2.5, -1, p) * (1 - leave),
+      o: clamp(enter * 1.5) * (1 - seg(t, 7.45, 7.75)),
+      blur: leave * 18,
+    });
+    // Lines reveal top to bottom, then the key lines light up in turn.
+    const lines = $('codebody').children;
+    for (let i = 0; i < lines.length; i++) {
+      const r = seg(t, 3.5 + i * 0.07, 3.8 + i * 0.07);
+      lines[i].style.opacity = r;
+      lines[i].style.transform = `translateX(${(1 - outCubic(r)) * 60}px)`;
+      const tag = CODE[i][1];
+      const lit = tag === 'grid' ? seg(t, 5.3, 5.5) * (1 - seg(t, 6.2, 6.4))
+                : tag === 'anim' ? seg(t, 6.2, 6.4) * (1 - seg(t, 7.1, 7.3))
+                : (tag === 'for' || tag === 'bind') ? seg(t, 4.5, 4.7) * (1 - seg(t, 5.3, 5.5))
+                : 0;
+      lines[i].firstChild.style.opacity = lit;
+    }
+  }
+  if (t >= 3.6 && t < 7.9) {
+    const which = t < 5.3 ? 0 : t < 6.2 ? 1 : 2;
+    const starts = [3.6, 5.3, 6.2];
+    const texts = ['HTML<br>templates.', 'Real CSS<br><span class="grad">grid.</span>', 'Real CSS<br><span class="grad">motion.</span>'];
+    const into = outExpo(seg(t, starts[which], starts[which] + 0.35));
+    $('codecap').innerHTML = texts[which] + '<div style="font-size:30px;font-weight:500;letter-spacing:0;color:var(--muted);margin-top:20px">in a plain C++ class.</div>';
+    pose($('codecap'), { x: 90, y: 360 + (1 - into) * 40, o: into * (1 - seg(t, 7.2, 7.5)), blur: (1 - into) * 12 });
+  }
+
+  // 3. The terminal: footage cut to the beat, with a caption per shot.
+  const footOn = t >= FOOT_T0 - 0.25 && t < FOOT_END + 0.3;
+  show($('win'), footOn);
+  show($('cap'), footOn);
+  show($('chip'), false);
+  if (footOn) {
+    const local = t - FOOT_T0;
+    let shot = SHOTS[0];
+    for (const s of SHOTS) if (local >= s[1]) shot = s;
+    const [name, start, dur, speed, big, small, cam] = shot;
+    const into = local - start;
+    const [first, last] = SEGMENTS[name];
+    await setFootage(Math.min(last, first + Math.max(0, into) * FOOTAGE_FPS * speed));
+
+    // Camera: each shot eases from a tilted angle toward facing us, and
+    // pushes in a little; the first shot also flies in from the code.
+    const settle = outCubic(seg(into, 0, 0.6));
+    const drift = seg(into, 0, dur);
+    const appear = outExpo(seg(t, FOOT_T0 - 0.25, FOOT_T0 + 0.3));
+    const exit = inOut(seg(t, FOOT_END - 0.3, FOOT_END + 0.3));
+    pose($('win'), {
+      x: 531, y: 35,
+      z: lerp(-700, 0, appear) + drift * 60 - exit * 900,
+      ry: lerp(cam.ry, cam.ry * 0.35, settle) - drift * cam.ry * 0.2,
+      rx: lerp(cam.rx, cam.rx * 0.35, settle),
+      s: 0.86 * lerp(1.05, 1, settle),
+      o: appear * (1 - exit),
+    });
+    const ci = outExpo(seg(into, 0.05, 0.4));
+    $('cap').innerHTML = big + `<small>${small}</small>`;
+    pose($('cap'), { x: 70, y: 330 + (1 - ci) * 50, o: ci * (1 - exit), blur: (1 - ci) * 14 });
+
+    if (name === 'reload' && into > 0.3) {
+      const k = outBack(seg(into, 0.3, 0.6));
+      const second = into > 1.3;
+      $('chip').innerHTML = second
+        ? '<span class="c">.grid {</span>\n<span style="color:#f85149">-  minmax(24, 1fr)</span>\n<span style="color:#3fb950">+  minmax(40, 1fr)</span>'
+        : '<span class="c">self {</span>\n<span style="color:#f85149">-  --accent: rgb(88, 166, 255);</span>\n<span style="color:#3fb950">+  --accent: rgb(255, 123, 172);</span>';
+      show($('chip'), true);
+      pose($('chip'), { x: 70, y: 700, s: lerp(0.6, 1, k), o: clamp(k) * (1 - exit) });
+    }
+    // A white flash on each cut, two frames long.
+    const sinceCut = Math.min(...SHOTS.map((s) => (local >= s[1] ? local - s[1] : 99)));
+    $('flash').style.opacity = Math.abs(local + 0.2) < 0.05 ? 0.25
+        : local > 0.2 && sinceCut < 0.07 ? 0.12 : 0;
+  } else {
+    $('flash').style.opacity = 0;
+  }
+
+  // 4. Facts, slammed one per beat.
+  const factsOn = t >= T_FACTS && t < T_END;
+  show($('f1'), factsOn);
+  if (factsOn) {
+    const i = Math.min(FACTS.length - 1, Math.floor((t - T_FACTS) / 0.9));
+    const at = T_FACTS + i * 0.9;
+    $('f1').innerHTML = FACTS[i][0] + `<small>${FACTS[i][1]}</small>`;
+    const p = outExpo(seg(t, at, at + 0.25));
+    pose($('f1'), { y: 400, s: lerp(1.8, 1, p), o: clamp(p * 2) * (1 - seg(t, at + 0.78, at + 0.9)), blur: (1 - p) * 24 });
+  }
+
+  // 5. The title.
+  const endOn = t >= T_END;
+  for (const id of ['logo', 'sub', 'url']) show($(id), endOn);
+  if (endOn) {
+    const p = outExpo(seg(t, T_END, T_END + 0.5));
+    pose($('logo'), { y: 300, s: lerp(2.2, 1, p), o: clamp(p * 2), blur: (1 - p) * 30 });
+    const q = outCubic(seg(t, T_END + 0.45, T_END + 0.9));
+    $('sub').innerHTML = 'The ultimate C++ terminal UI library.<br><span style="color:var(--muted);font-weight:500">HTML. CSS. C++.</span>';
+    pose($('sub'), { y: 640 + (1 - q) * 30, o: q });
+    const r = outCubic(seg(t, T_END + 0.9, T_END + 1.3));
+    $('url').textContent = 'github.com/ArthurSonzogni/RTXUI';
+    pose($('url'), { y: 820 + (1 - r) * 20, o: r });
+  }
+}
+
+// The three opening words, side by side and centered as a line.
+const WORD_X = [];
+function layoutWords() {
+  const gap = 70;
+  const widths = ['w1', 'w2', 'w3'].map((id) => $(id).offsetWidth);
+  let x = (1920 - widths.reduce((a, b) => a + b) - 2 * gap) / 2;
+  for (const w of widths) { WORD_X.push(x); x += w + gap; }
+}
+
+window.ready = (async () => {
+  buildCode();
+  await loadMeta();
+  await document.fonts.ready;
+  layoutWords();
+  window.DURATION = DURATION;
+  window.setTime = setTime;
+  if (location.search.includes('play')) {
+    const t0 = performance.now();
+    const tick = async () => { await setTime((performance.now() - t0) / 1000 % DURATION); requestAnimationFrame(tick); };
+    tick();
+  } else {
+    await setTime(0);
+  }
+})();
+</script>
+</body>
+</html>

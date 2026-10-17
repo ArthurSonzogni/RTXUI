@@ -4,7 +4,11 @@
 # the LICENSE file.
 """Record a scripted RTXUI session to MP4.
 
-usage: record.py <scene.py> <out.mp4>
+usage: record.py <scene.py> <out.mp4> [<frames dir>]
+
+With a frames directory, every frame of the terminal alone (pointer drawn in)
+is also written there as a PNG, with meta.json listing each frame's size and
+caption, for compositing in another video.
 
 Needs ffmpeg, the JetBrains Mono Nerd Font (FONT_DIR below), Noto Sans CJK,
 and `pip install pyte pillow fonttools`.
@@ -16,6 +20,7 @@ into pyte at FPS and renders each frame with PIL, piped into ffmpeg.
 """
 import fcntl
 import importlib.util
+import json
 import math
 import os
 import pty
@@ -470,15 +475,19 @@ class Renderer:
         ty = y0 + self.bar + self.pad // 2
         canvas.paste(term_img, (tx, ty))
         if pointer and pointer[2]:
-            px = tx + pointer[0] * self.cw + self.cw / 2
-            py = ty + pointer[1] * self.ch + self.ch / 2
-            s = 1.3
-            arrow = [(0, 0), (0, 17), (4, 13), (7, 20), (10, 19), (7, 12), (12, 12)]
-            pts = [(px + ax * s, py + ay * s) for ax, ay in arrow]
-            draw.polygon(pts, fill=(255, 255, 255), outline=(0, 0, 0), width=2)
+            self.pointer(draw, tx, ty, pointer)
         if overlay:
             self.code_card(draw, overlay)
         return canvas
+
+    def pointer(self, draw, tx, ty, pointer):
+        """An arrow cursor at the pointer's cell, offset by (tx, ty)."""
+        px = tx + pointer[0] * self.cw + self.cw / 2
+        py = ty + pointer[1] * self.ch + self.ch / 2
+        s = 1.3
+        arrow = [(0, 0), (0, 17), (4, 13), (7, 20), (10, 19), (7, 12), (12, 12)]
+        pts = [(px + ax * s, py + ay * s) for ax, ay in arrow]
+        draw.polygon(pts, fill=(255, 255, 255), outline=(0, 0, 0), width=2)
 
     def code_card(self, draw, lines):
         """A small editor-like card, bottom right, over the terminal."""
@@ -499,7 +508,8 @@ class Renderer:
             draw.text((x0 + 24, y0 + 40 + i * lh), text, font=font, fill=color)
 
 
-def render(log, start, end, out, max_cols, max_rows, cols, rows):
+def render(log, start, end, out, max_cols, max_rows, cols, rows,
+           frames_dir=None):
     r = Renderer(max_cols, max_rows)
     screen = pyte.Screen(cols, rows)
     stream = pyte.ByteStream(screen)
@@ -516,6 +526,9 @@ def render(log, start, end, out, max_cols, max_rows, cols, rows):
     term_img = None
     dirty = True
     frames = int((end - start) * FPS)
+    meta = []
+    if frames_dir:
+        os.makedirs(frames_dir, exist_ok=True)
     for f in range(frames + 1):
         t = start + f / FPS
         while i < len(log) and log[i][0] <= t:
@@ -543,8 +556,17 @@ def render(log, start, end, out, max_cols, max_rows, cols, rows):
         img = r.frame(term_img, screen.columns, screen.lines, pointer, caption,
                       overlay)
         ffmpeg.stdin.write(img.tobytes())
+        if frames_dir:
+            shot = term_img.copy()
+            if pointer and pointer[2]:
+                r.pointer(ImageDraw.Draw(shot), 0, 0, pointer)
+            shot.save(os.path.join(frames_dir, f"{f:05d}.png"), compress_level=1)
+            meta.append([screen.columns, screen.lines, caption])
     ffmpeg.stdin.close()
     ffmpeg.wait()
+    if frames_dir:
+        with open(os.path.join(frames_dir, "meta.json"), "w") as f:
+            json.dump({"fps": FPS, "cell": [r.cw, r.ch], "frames": meta}, f)
 
 
 def main():
@@ -557,7 +579,7 @@ def main():
     # Everything before "start" replays instantly, so the video opens on the
     # first drawn frame.
     render(log, start, end, sys.argv[2], max_cols, max_rows, scene.COLS,
-           scene.ROWS)
+           scene.ROWS, sys.argv[3] if len(sys.argv) > 3 else None)
 
 
 if __name__ == "__main__":
