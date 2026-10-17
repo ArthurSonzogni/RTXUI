@@ -344,6 +344,24 @@ class BlockLevelFlexComponent
   )";
 };
 
+class NegativeMarginComponent
+    : public rtxui::Component<NegativeMarginComponent> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <div id="a">a</div>
+      <div id="b">b</div>
+      <div id="c">c</div>
+      <div id="d">d</div>
+    </div>
+    <style>
+      #a { margin-bottom: -1; }
+      #b { margin-bottom: 2; }
+      #c { margin-bottom: -1; }
+    </style>
+  )";
+};
+
 struct InlineSpanBackgroundTestComponent
     : public rtxui::Component<InlineSpanBackgroundTestComponent> {
   std::string_view view = R"html(
@@ -396,4 +414,18 @@ TEST_CASE("A block-level flex container fills its block parent",
   CHECK(root->QuerySelector("#row")->layout_width() == 20);
   CHECK(root->QuerySelector("#b")->absolute_x() == 19);
   CHECK(root->QuerySelector("#sized")->layout_width() == 6);
+}
+
+TEST_CASE("Negative vertical margins pull the next block up",
+          "[component][layout][regression]") {
+  // Adjacent margins collapsed to the larger of the two, so a negative one
+  // was dropped. <fieldset> relies on it to set its legend in the border.
+  auto container = rtxui::Ref<NegativeMarginComponent>::New();
+  RenderComponent(container, 10, 6);
+  auto* root = rtxui::ComponentInternals::Root(*container);
+
+  CHECK(root->QuerySelector("#a")->absolute_y() == 0);
+  CHECK(root->QuerySelector("#b")->absolute_y() == 0);  // 1 - 1.
+  CHECK(root->QuerySelector("#c")->absolute_y() == 3);  // 1 + 2.
+  CHECK(root->QuerySelector("#d")->absolute_y() == 3);  // 4 - 1.
 }

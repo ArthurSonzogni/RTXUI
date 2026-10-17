@@ -1013,6 +1013,18 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
 }
 
 // --- Block Layout ---
+// Two adjoining vertical margins collapse into one: the larger when both are
+// positive, the more negative when both are negative, their sum otherwise.
+static int CollapseMargins(int a, int b) {
+  if (a >= 0 && b >= 0) {
+    return std::max(a, b);
+  }
+  if (a <= 0 && b <= 0) {
+    return std::min(a, b);
+  }
+  return a + b;
+}
+
 PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
                                   LayoutConstraints constraints,
                                   LayoutContext context) {
@@ -1175,7 +1187,8 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
     int margin_bottom = child_box->style().margin.bottom;
 
     int collapsed_margin =
-        is_first_child ? margin_top : std::max(prev_margin_bottom, margin_top);
+        is_first_child ? margin_top
+                       : CollapseMargins(prev_margin_bottom, margin_top);
 
     int cx = cur_x;
     int cy = cur_y + collapsed_margin;
