@@ -148,7 +148,7 @@ constexpr Location RI = Location::ReverseInner;
 constexpr Location kAllOuter[3][3] = {{O, O, O}, {O, O, O}, {O, O, O}};
 // tall and panel: the left column reversed, the right on the parent.
 constexpr Location kTall[3][3] = {{RO, I, O}, {RO, I, O}, {RO, I, O}};
-// wide and tab: top and bottom on the parent, the right side reversed.
+// wide: top and bottom on the parent, the right side reversed.
 constexpr Location kWide[3][3] = {{O, O, O}, {I, O, RI}, {O, O, O}};
 // block: top and bottom on the parent, the sides on the element.
 constexpr Location kBlock[3][3] = {{O, O, O}, {I, I, I}, {O, O, O}};
@@ -181,9 +181,9 @@ const BorderData& GetBorderData(BorderStyle style) {
       /* Dashed */
       {
           {
-              {"┏", "╍", "┓"},
-              {"╏", " ", "╏"},
-              {"┗", "╍", "┛"},
+              {"┌", "╌", "┐"},
+              {"╎", " ", "╎"},
+              {"└", "╌", "┘"},
           },
       },
       /* Double */
@@ -297,9 +297,9 @@ const BorderData& GetBorderData(BorderStyle style) {
       /* Dotted */
       {
           {
-              {"·", "·", "·"},
-              {"·", " ", "·"},
-              {"·", "·", "·"},
+              {"┌", "┈", "┐"},
+              {"┊", " ", "┊"},
+              {"└", "┈", "┘"},
           },
       },
       /* DoubleHorizontal */
@@ -350,14 +350,6 @@ const BorderData& GetBorderData(BorderStyle style) {
               {"▓", "▓", "▓"},
           },
       },
-      /* Squiggle */
-      {
-          {
-              {"~", "~", "~"},
-              {"~", " ", "~"},
-              {"~", "~", "~"},
-          },
-      },
       /* Block */
       {
           {
@@ -367,16 +359,33 @@ const BorderData& GetBorderData(BorderStyle style) {
           },
           kBlock,
       },
-      /* Tab */
+      /* HeavyDashed */
       {
           {
-              {"▁", "▁", "▁"},
-              {"▎", " ", "▊"},
-              {"▔", "▔", "▔"},
+              {"┏", "╍", "┓"},
+              {"╏", " ", "╏"},
+              {"┗", "╍", "┛"},
           },
-          kWide,
+      },
+      /* Inset */
+      {
+          {
+              {"┌", "─", "┐"},
+              {"│", " ", "│"},
+              {"└", "─", "┘"},
+          },
+      },
+      /* Outset */
+      {
+          {
+              {"┌", "─", "┐"},
+              {"│", " ", "│"},
+              {"└", "─", "┘"},
+          },
       },
   };
+  static_assert(sizeof(border_styles) / sizeof(border_styles[0]) ==
+                static_cast<size_t>(BorderStyle::Outset) + 1);
   return border_styles[static_cast<size_t>(style)];
 }
 
@@ -655,6 +664,27 @@ void PaintImpl(const PhysicalFragment* frag,
         frag->border_color_bottom.value_or(current_foreground_color);
     Color left_border_color =
         frag->border_color_left.value_or(current_foreground_color);
+
+    // inset and outset light one pair of sides and shade the other, each half
+    // way from its own color to white or black. The terminal's default
+    // foreground cannot be mixed, so it stands in as a mid grey.
+    if (frag->border_style == BorderStyle::Inset ||
+        frag->border_style == BorderStyle::Outset) {
+      auto shade = [](Color c, int toward) {
+        if (c.a == 0) {
+          c = Color::RGB(170, 170, 170);
+        }
+        return Color::RGBA((c.r + toward) / 2, (c.g + toward) / 2,
+                           (c.b + toward) / 2, c.a);
+      };
+      const bool outset = frag->border_style == BorderStyle::Outset;
+      const int lit = outset ? 255 : 0;
+      const int shaded = outset ? 0 : 255;
+      top_border_color = shade(top_border_color, lit);
+      left_border_color = shade(left_border_color, lit);
+      bottom_border_color = shade(bottom_border_color, shaded);
+      right_border_color = shade(right_border_color, shaded);
+    }
 
     top_border_color.a =
         static_cast<uint8_t>(top_border_color.a * current_opacity);

@@ -221,11 +221,12 @@ enum class BorderStyle {
   ShadeLight,
   ShadeMedium,
   ShadeDark,
-  Squiggle,
-  // From Textual's table, kept at the end so the existing enumerators keep
-  // the values the charset table is indexed by.
   Block,
-  Tab,
+  HeavyDashed,
+  // Solid glyphs, the top and left sides lit and the bottom and right shaded:
+  // a raised box, or a sunken one.
+  Inset,
+  Outset,
 };
 
 enum class Overflow {

@@ -141,7 +141,7 @@ Length properties accept `calc()` expressions combining discrete cells and perce
 <CssProperty name="outline-offset" values="<integer>" description="Initial: `0`. Cells between the border box and the outline; negative draws it inside the box." />
 
 ### 4.1 Border Style Glyph Matrix
-RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing and block elements:
+RTXUI supports 28 border style keywords mapping directly to Unicode box-drawing and block elements:
 
 | Style Keyword | Canonical Alias | Visual Glyphs / Behavior Description |
 | :--- | :--- | :--- |
@@ -150,17 +150,20 @@ RTXUI supports 30 border style keywords mapping directly to Unicode box-drawing 
 | `ascii` | — | Plain ASCII fallback: `+`, `-`, `\|`. |
 | `solid` | — | Standard light box-drawing lines: `┌`, `─`, `┐`, `│`, `└`, `┘`. |
 | `round` | `rounded` | Curved corner box-drawing lines: `╭`, `─`, `╮`, `│`, `╰`, `╯`. |
-| `heavy` | `thick` | Bold / heavy stroke lines: `┏`, `━`, `┓`, `┃`, `┗`, `┛`. |
+| `heavy` | — | Bold / heavy stroke lines: `┏`, `━`, `┓`, `┃`, `┗`, `┛`. |
+| `thick` | — | Full block sides (`█`) with half-block top and bottom (`▀`, `▄`). |
 | `double` | — | Double parallel lines: `╔`, `═`, `╗`, `║`, `╚`, `╝`. |
 | `double-horizontal` | — | Double lines on horizontal axes; single line on vertical axes. |
 | `double-vertical` | — | Double lines on vertical axes; single line on horizontal axes. |
-| `dashed` | — | Heavy dashed stroke lines (`╌`, `╎`). |
-| `dotted` | — | Centered dot perimeter (`·`). |
-| `squiggle` | `wave` | Wavy perimeter line (`~`). |
+| `dashed` | — | Light dashed stroke lines: `┌`, `╌`, `╎`. |
+| `heavy-dashed` | — | Heavy dashed stroke lines: `┏`, `╍`, `╏`. |
+| `dotted` | — | Light dotted stroke lines: `┌`, `┈`, `┊`. |
+| `outset` | — | Solid lines, top and left lighter, bottom and right darker: a raised box. |
+| `inset` | — | Solid lines, top and left darker, bottom and right lighter: a sunken box. |
 | `outer` | — | Half-cell block hugging outer cell edge (`▀`, `▄`, `▌`, `▐`). |
 | `inner` | — | Half-cell block hugging inner cell edge. |
 | `tall` | — | Quarter-block vertical bars; eighth-block horizontal lines. |
-| `wide` | `tab` | Quarter-block vertical bars with inset horizontal lines. |
+| `wide` | — | Quarter-block vertical bars with inset horizontal lines. |
 | `panel` | — | Tall border structure featuring a solid top bar for title integration. |
 | `hkey` | — | Horizontal-only boundary lines on top and bottom. |
 | `vkey` | — | Vertical-only boundary lines on left and right. |

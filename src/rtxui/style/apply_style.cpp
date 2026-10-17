@@ -1447,14 +1447,17 @@ std::optional<BorderStyle> ParseBorderStyle(std::string_view v) {
   if (v == "shade-dark") {
     return BorderStyle::ShadeDark;
   }
-  if (v == "squiggle" || v == "wave") {
-    return BorderStyle::Squiggle;
-  }
   if (v == "block") {
     return BorderStyle::Block;
   }
-  if (v == "tab") {
-    return BorderStyle::Tab;
+  if (v == "heavy-dashed") {
+    return BorderStyle::HeavyDashed;
+  }
+  if (v == "inset") {
+    return BorderStyle::Inset;
+  }
+  if (v == "outset") {
+    return BorderStyle::Outset;
   }
   // Textual spells "no border" three ways; they all mean the same here.
   if (v == "hidden") {

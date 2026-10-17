@@ -147,9 +147,9 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
     std::string output = GetTextLayer(texture);
     std::vector<std::string> expected = {
         "                                        ",
-        " +-----+           ┏╍╍╍╍╍╍┓  ╔══════╗   ",
-        " |ascii|   blank   ╏dashed╏  ║double║   ",
-        " +-----+           ┗╍╍╍╍╍╍┛  ╚══════╝   ",
+        " +-----+           ┌╌╌╌╌╌╌┐  ╔══════╗   ",
+        " |ascii|   blank   ╎dashed╎  ║double║   ",
+        " +-----+           └╌╌╌╌╌╌┘  ╚══════╝   ",
         "                                        ",
         "                                        ",
         " ▔▔▔▔▔▔  ┏━━━━━┓  ▗▄▄▄▄▄▖  ▛▀▀▀▀▀▜      ",
@@ -233,7 +233,7 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
           .shade-light       { border: shade-light; }
           .shade-medium      { border: shade-medium; }
           .shade-dark        { border: shade-dark; }
-          .squiggle          { border: squiggle; }
+          .heavy-dashed      { border: heavy-dashed; }
         </style>
         <div class="cell thick">thick</div>
         <div class="cell vkey">vkey</div>
@@ -246,7 +246,7 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
         <div class="cell shade-light">light</div>
         <div class="cell shade-medium">medium</div>
         <div class="cell shade-dark">dark</div>
-        <div class="cell squiggle">squigg</div>
+        <div class="cell heavy-dashed">heavyd</div>
       )html";
 
     RemainingGridApp() { Import<div>(); }
@@ -259,9 +259,9 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
     std::string output = GetTextLayer(texture);
     std::vector<std::string> expected = {
         "                                                  ",
-        " █▀▀▀▀▀█  ▏    ▕  ▁▁▁▁▁▁        ········          ",
-        " █thick█  ▏vkey▕  ▎wide▊  none  ·dotted·          ",
-        " █▄▄▄▄▄█  ▏    ▕  ▔▔▔▔▔▔        ········          ",
+        " █▀▀▀▀▀█  ▏    ▕  ▁▁▁▁▁▁        ┌┈┈┈┈┈┈┐          ",
+        " █thick█  ▏vkey▕  ▎wide▊  none  ┊dotted┊          ",
+        " █▄▄▄▄▄█  ▏    ▕  ▔▔▔▔▔▔        └┈┈┈┈┈┈┘          ",
         "                                                  ",
         "                                                  ",
         " ╒═══════╕  ╓───────╖  ░░░░░░░▓  ░░░░░░░          ",
@@ -269,9 +269,9 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
         " ╘═══════╛  ╙───────╜  ░▓▓▓▓▓▓▓  ░░░░░░░          ",
         "                                                  ",
         "                                                  ",
-        " ▒▒▒▒▒▒▒▒  ▓▓▓▓▓▓  ~~~~~~~~                       ",
-        " ▒medium▒  ▓dark▓  ~squigg~                       ",
-        " ▒▒▒▒▒▒▒▒  ▓▓▓▓▓▓  ~~~~~~~~                       ",
+        " ▒▒▒▒▒▒▒▒  ▓▓▓▓▓▓  ┏╍╍╍╍╍╍┓                       ",
+        " ▒medium▒  ▓dark▓  ╏heavyd╏                       ",
+        " ▒▒▒▒▒▒▒▒  ▓▓▓▓▓▓  ┗╍╍╍╍╍╍┛                       ",
         "                                                  ",
         "                                                  ",
         "                                                  ",
@@ -478,6 +478,54 @@ TEST_CASE("Individual Border Colors") {
                                                                 "YRRRRB",
                                                                 "YWW..B",
                                                                 "YGGGGB",
+                                                            }));
+}
+
+TEST_CASE("Paint: outset lights the top and left, inset the bottom and right",
+          "[paint][border]") {
+  struct InsetOutsetTest : Component<InsetOutsetTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            div {
+              display: block;
+              width: 4;
+              border-color: rgb(100, 100, 100);
+            }
+            .outset { border: outset; }
+            .inset  { border: inset; }
+          </style>
+          <div class="outset"></div>
+          <div class="inset"></div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<InsetOutsetTest>::New(), 4, 6);
+
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "┌──┐",
+                                     "└──┘",
+                                     "┌──┐",
+                                     "└──┘",
+                                     "    ",
+                                     "    ",
+                                 }));
+
+  // Half way from rgb(100, 100, 100) to white (L) and to black (D). Corners
+  // take the color of the vertical border.
+  std::map<Color, char> foreground_colors = {
+      {Color::RGB(177, 177, 177), 'L'},
+      {Color::RGB(50, 50, 50), 'D'},
+  };
+  CHECK(GetColorLayer(texture, false, foreground_colors) == CheckGrid({
+                                                                "LLLD",
+                                                                "LDDD",
+                                                                "DDDL",
+                                                                "DLLL",
+                                                                "....",
+                                                                "....",
                                                             }));
 }
 

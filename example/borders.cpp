@@ -15,14 +15,15 @@ using namespace rtxui;
 class BordersDemo : public Component<BordersDemo> {
  public:
   std::vector<std::string> styles = {
-      "solid",           "round",      "double",
-      "heavy",           "dashed",     "dotted",
-      "ascii",           "squiggle",   "double-horizontal",
-      "double-vertical", "tall",       "wide",
-      "thick",           "inner",      "outer",
-      "panel",           "hkey",       "vkey",
-      "shadow",          "blank",      "shade-light",
-      "shade-medium",    "shade-dark", "none",
+      "solid",           "round",        "double",
+      "heavy",           "dashed",       "dotted",
+      "ascii",           "heavy-dashed", "double-horizontal",
+      "double-vertical", "tall",         "wide",
+      "thick",           "inner",        "outer",
+      "panel",           "hkey",         "vkey",
+      "outset",          "inset",        "block",
+      "shadow",          "blank",        "shade-light",
+      "shade-medium",    "shade-dark",   "none",
   };
 
   std::string_view view = R"html(

@@ -556,7 +556,7 @@ class SectionBorders : public Component<SectionBorders> {
       <div class="border-row">
         <div class="border-cell b-wide">Wide</div>
         <div class="border-cell b-tall">Tall</div>
-        <div class="border-cell b-squiggle">Squig</div>
+        <div class="border-cell b-outset">Outset</div>
         <div class="border-cell b-panel">Panel</div>
       </div>
       <!-- Row 4 -->
@@ -647,8 +647,8 @@ class SectionBorders : public Component<SectionBorders> {
       .b-tall {
         border: tall;
       }
-      .b-squiggle {
-        border: squiggle;
+      .b-outset {
+        border: outset;
       }
       .b-panel {
         border: panel;
