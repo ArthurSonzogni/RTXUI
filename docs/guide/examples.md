@@ -8,6 +8,7 @@ Complete applications, showing how individual features compose into full program
 
 | Example | Demonstrates | Guide |
 | :--- | :--- | :--- |
+| [showcase.cpp](/guide/examples/showcase) | A tour of RTXUI in one application. | [Guide](/guide/css/grid) |
 | [app_dashboard.cpp](/guide/examples/app_dashboard) | A complete application, rather than a demo of one property. | [Guide](/reactivity) |
 | [app_filebrowser.cpp](/guide/examples/app_filebrowser) | A complete application driven by the keyboard. | [Guide](/guide/scrolling) |
 | [inline_install.cpp](/guide/examples/inline_install) | An inline application: a package installer drawn below the command that started it, as `apt install` is, rather than over the whole terminal. | [Guide](/guide/inline) |
