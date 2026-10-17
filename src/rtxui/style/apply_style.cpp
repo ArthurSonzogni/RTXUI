@@ -2465,55 +2465,150 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
     return;
   }
 
+  // `border: [style] [color] [width]`, and each side likewise, in any order.
+  // Nullopt when a word is none of the three.
+  struct BorderShorthand {
+    std::optional<BorderStyle> style;
+    bool has_color = false;
+    std::optional<Color> color;  // Unset for currentcolor.
+    std::optional<int> width;
+  };
+  auto ParseBorderShorthand = [&v]() -> std::optional<BorderShorthand> {
+    BorderShorthand result;
+    for (std::string_view word : SplitWords(v)) {
+      if (auto parsed_style = ParseBorderStyle(word)) {
+        result.style = parsed_style;
+      } else if (auto width = ParseWholeInt(word)) {
+        result.width = width;
+      } else if (IsCurrentColor(word)) {
+        result.has_color = true;
+        result.color.reset();
+      } else if (auto color = TransformColor(std::nullopt, word)) {
+        result.has_color = true;
+        result.color = color;
+      } else {
+        return std::nullopt;
+      }
+    }
+    return result;
+  };
+
+  // A width or a color with no style draws a solid line. The width, when not
+  // given, is the one already set, or a single cell.
   if (p == "border") {
-    if (auto style_opt = ParseBorderStyle(v)) {
-      style.border_style = *style_opt;
+    if (auto border = ParseBorderShorthand()) {
+      style.border_style = border->style.value_or(BorderStyle::Solid);
+      style.border_side_styles = {};
       if (style.border_style == BorderStyle::None) {
         style.border = {0, 0, 0, 0};
+      } else if (border->width) {
+        const int w = *border->width;
+        style.border = {w, w, w, w};
       } else if (style.border.top == 0 && style.border.bottom == 0 &&
                  style.border.left == 0 && style.border.right == 0) {
         style.border = {1, 1, 1, 1};
       }
+      if (border->has_color) {
+        style.border_color_top = border->color;
+        style.border_color_right = border->color;
+        style.border_color_bottom = border->color;
+        style.border_color_left = border->color;
+      }
       return;
     }
-    // Otherwise a width, if the value is a number and nothing else.
-    if (const auto bw = ParseWholeInt(v)) {
-      style.border = {*bw, *bw, *bw, *bw};
-      style.border_style = BorderStyle::Solid;
-    }
-    return;
   }
 
-  // Like the `border` shorthand above, a single side also accepts a
-  // border-style keyword: it selects the frame's character set and gives that
-  // side a thickness of one cell. Without this, `border-bottom: solid` parsed
-  // as the integer 0 and silently drew nothing.
-  auto ApplyBorderSide = [&style, &v](int& side) {
-    if (auto style_opt = ParseBorderStyle(v)) {
-      style.border_style = *style_opt;
-      side = (*style_opt == BorderStyle::None) ? 0 : 1;
-      return;
+  // Gives one side `side_style`. The element's own style, which the sides left
+  // unset draw in, is the first one any side is given.
+  auto SetSideStyle = [&style](std::optional<BorderStyle>& side_style,
+                               BorderStyle value) {
+    side_style = value;
+    if (style.border_style == BorderStyle::None) {
+      style.border_style = value;
     }
-    side = StoI(v);
   };
 
-  if (p == "border-top") {
-    ApplyBorderSide(style.border.top);
+  // A single side: a style keyword gives it a thickness of one cell. Without
+  // this, `border-bottom: solid` parsed as the integer 0 and drew nothing.
+  auto ApplyBorderSide = [&](int& side, std::optional<BorderStyle>& side_style,
+                             std::optional<Color>& side_color) {
+    auto border = ParseBorderShorthand();
+    if (!border) {
+      return false;
+    }
+    if (border->style) {
+      SetSideStyle(side_style, *border->style);
+    }
+    if (border->style == BorderStyle::None) {
+      side = 0;
+    } else if (border->width) {
+      side = *border->width;
+    } else if (border->style) {
+      side = 1;
+    }
+    if (border->has_color) {
+      side_color = border->color;
+    }
+    return true;
+  };
+
+  if (p == "border-top" &&
+      ApplyBorderSide(style.border.top, style.border_side_styles.top,
+                      style.border_color_top)) {
     return;
   }
 
-  if (p == "border-bottom") {
-    ApplyBorderSide(style.border.bottom);
+  if (p == "border-bottom" &&
+      ApplyBorderSide(style.border.bottom, style.border_side_styles.bottom,
+                      style.border_color_bottom)) {
     return;
   }
 
-  if (p == "border-left") {
-    ApplyBorderSide(style.border.left);
+  if (p == "border-left" &&
+      ApplyBorderSide(style.border.left, style.border_side_styles.left,
+                      style.border_color_left)) {
     return;
   }
 
-  if (p == "border-right") {
-    ApplyBorderSide(style.border.right);
+  if (p == "border-right" &&
+      ApplyBorderSide(style.border.right, style.border_side_styles.right,
+                      style.border_color_right)) {
+    return;
+  }
+
+  // A side's style alone. A side with no thickness yet takes one cell, so the
+  // style shows.
+  auto ApplySideStyle = [&](int& side, std::optional<BorderStyle>& side_style) {
+    auto style_opt = ParseBorderStyle(v);
+    if (!style_opt) {
+      return false;
+    }
+    SetSideStyle(side_style, *style_opt);
+    if (*style_opt == BorderStyle::None) {
+      side = 0;
+    } else if (side == 0) {
+      side = 1;
+    }
+    return true;
+  };
+
+  if (p == "border-top-style" &&
+      ApplySideStyle(style.border.top, style.border_side_styles.top)) {
+    return;
+  }
+
+  if (p == "border-bottom-style" &&
+      ApplySideStyle(style.border.bottom, style.border_side_styles.bottom)) {
+    return;
+  }
+
+  if (p == "border-left-style" &&
+      ApplySideStyle(style.border.left, style.border_side_styles.left)) {
+    return;
+  }
+
+  if (p == "border-right-style" &&
+      ApplySideStyle(style.border.right, style.border_side_styles.right)) {
     return;
   }
 
@@ -2574,6 +2669,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   if (p == "border-style") {
     if (auto style_opt = ParseBorderStyle(v)) {
       style.border_style = *style_opt;
+      style.border_side_styles = {};
     }
     return;
   }

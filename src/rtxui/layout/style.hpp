@@ -229,6 +229,15 @@ enum class BorderStyle {
   Outset,
 };
 
+// The styles single sides take, as `border-top: heavy` sets them. A side
+// left unset draws in the element's `border_style`.
+struct BorderSideStyles {
+  std::optional<BorderStyle> top;
+  std::optional<BorderStyle> right;
+  std::optional<BorderStyle> bottom;
+  std::optional<BorderStyle> left;
+};
+
 enum class Overflow {
   Visible,
   Hidden,
@@ -490,6 +499,7 @@ struct ComputedStyleCore {
   Spacing border;
 
   BorderStyle border_style = BorderStyle::None;
+  BorderSideStyles border_side_styles;
   std::optional<Color> border_color_top;
   std::optional<Color> border_color_right;
   std::optional<Color> border_color_bottom;

@@ -1099,6 +1099,7 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
   fragment->overlined = box->text.overlined;
   fragment->blink = box->text.blink;
   fragment->border_style = box->style().border_style;
+  fragment->border_side_styles = box->style().border_side_styles;
   fragment->border_color_top = box->style().border_color_top;
   fragment->border_color_right = box->style().border_color_right;
   fragment->border_color_bottom = box->style().border_color_bottom;
@@ -1398,6 +1399,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   container_frag->overlined = box->text.overlined;
   container_frag->blink = box->text.blink;
   container_frag->border_style = box->style().border_style;
+  container_frag->border_side_styles = box->style().border_side_styles;
   container_frag->border_color_top = box->style().border_color_top;
   container_frag->border_color_right = box->style().border_color_right;
   container_frag->border_color_bottom = box->style().border_color_bottom;
@@ -2545,6 +2547,7 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
   fragment->overlined = box->text.overlined;
   fragment->blink = box->text.blink;
   fragment->border_style = box->style().border_style;
+  fragment->border_side_styles = box->style().border_side_styles;
   fragment->border_color_top = box->style().border_color_top;
   fragment->border_color_right = box->style().border_color_right;
   fragment->border_color_bottom = box->style().border_color_bottom;
@@ -3071,6 +3074,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
     fragment->background_color = box->style().background_color;
     fragment->foreground_color = box->text.fg;
     fragment->border_style = box->style().border_style;
+    fragment->border_side_styles = box->style().border_side_styles;
     if ((box->style().border.Horiz() > 0 || box->style().border.Vert() > 0) &&
         box->style().border_style != BorderStyle::None) {
       fragment->has_border = true;
@@ -3253,6 +3257,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
   fragment->foreground_color = box->text.fg;
   fragment->opacity = box->style().opacity;
   fragment->border_style = box->style().border_style;
+  fragment->border_side_styles = box->style().border_side_styles;
   fragment->border_color_top = box->style().border_color_top;
   fragment->border_color_right = box->style().border_color_right;
   fragment->border_color_bottom = box->style().border_color_bottom;
@@ -3382,6 +3387,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
       row_bg_frag->foreground_color = row_box->text.fg;
       row_bg_frag->opacity = row_box->style().opacity;
       row_bg_frag->border_style = row_box->style().border_style;
+      row_bg_frag->border_side_styles = row_box->style().border_side_styles;
       row_bg_frag->border_color_top = row_box->style().border_color_top;
       row_bg_frag->border_color_right = row_box->style().border_color_right;
       row_bg_frag->border_color_bottom = row_box->style().border_color_bottom;
@@ -4371,6 +4377,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   container_frag->overlined = box->text.overlined;
   container_frag->blink = box->text.blink;
   container_frag->border_style = box->style().border_style;
+  container_frag->border_side_styles = box->style().border_side_styles;
   container_frag->border_color_top = box->style().border_color_top;
   container_frag->border_color_right = box->style().border_color_right;
   container_frag->border_color_bottom = box->style().border_color_bottom;

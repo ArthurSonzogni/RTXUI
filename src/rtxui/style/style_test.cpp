@@ -1720,6 +1720,85 @@ TEST_CASE("border-<side> accepts a style keyword as well as a thickness",
   }
 }
 
+TEST_CASE("border and its sides take a style, a color and a width",
+          "[style][border]") {
+  rtxui::ComputedStyle style;
+  const auto red = rtxui::Color::RGB(255, 0, 0);
+  const auto blue = rtxui::Color::RGB(0, 0, 255);
+
+  SECTION("border: <style> <color>, in either order") {
+    rtxui::ApplyStyle(style, {"border", "round red"});
+    CHECK(style.border_style == rtxui::BorderStyle::Round);
+    CHECK(style.border == rtxui::Spacing{1, 1, 1, 1});
+    CHECK(style.border_color_top == red);
+    CHECK(style.border_color_left == red);
+    rtxui::ApplyStyle(style, {"border", "blue double"});
+    CHECK(style.border_style == rtxui::BorderStyle::Double);
+    CHECK(style.border_color_bottom == blue);
+  }
+
+  SECTION("A color alone draws a solid line") {
+    rtxui::ApplyStyle(style, {"border", "red"});
+    CHECK(style.border_style == rtxui::BorderStyle::Solid);
+    CHECK(style.border.top == 1);
+    CHECK(style.border_color_right == red);
+  }
+
+  SECTION("No color leaves the color set elsewhere") {
+    rtxui::ApplyStyle(style, {"border-color", "red"});
+    rtxui::ApplyStyle(style, {"border", "heavy"});
+    CHECK(style.border_color_top == red);
+  }
+
+  SECTION("A width sets every side") {
+    rtxui::ApplyStyle(style, {"border", "solid 2 red"});
+    CHECK(style.border == rtxui::Spacing{2, 2, 2, 2});
+  }
+
+  SECTION("An unknown word drops the declaration") {
+    rtxui::ApplyStyle(style, {"border", "solid nonsense"});
+    CHECK(style.border_style == rtxui::BorderStyle::None);
+    CHECK(style.border.top == 0);
+  }
+
+  SECTION("A side takes its own style and color") {
+    rtxui::ApplyStyle(style, {"border", "solid"});
+    rtxui::ApplyStyle(style, {"border-top", "heavy blue"});
+    CHECK(style.border_style == rtxui::BorderStyle::Solid);
+    CHECK(style.border_side_styles.top == rtxui::BorderStyle::Heavy);
+    CHECK_FALSE(style.border_side_styles.bottom);
+    CHECK(style.border_color_top == blue);
+    CHECK_FALSE(style.border_color_bottom);
+  }
+
+  SECTION("The first side styled is the element's style") {
+    rtxui::ApplyStyle(style, {"border-bottom", "double"});
+    rtxui::ApplyStyle(style, {"border-top", "heavy"});
+    CHECK(style.border_style == rtxui::BorderStyle::Double);
+    CHECK(style.border_side_styles.top == rtxui::BorderStyle::Heavy);
+  }
+
+  SECTION("border and border-style reset the sides") {
+    rtxui::ApplyStyle(style, {"border-top", "heavy"});
+    rtxui::ApplyStyle(style, {"border", "round"});
+    CHECK_FALSE(style.border_side_styles.top);
+    rtxui::ApplyStyle(style, {"border-left", "heavy"});
+    rtxui::ApplyStyle(style, {"border-style", "double"});
+    CHECK_FALSE(style.border_side_styles.left);
+  }
+
+  SECTION("border-<side>-style keeps a width, or gives one cell") {
+    rtxui::ApplyStyle(style, {"border-top-style", "dashed"});
+    CHECK(style.border.top == 1);
+    CHECK(style.border_side_styles.top == rtxui::BorderStyle::Dashed);
+    rtxui::ApplyStyle(style, {"border-left", "3"});
+    rtxui::ApplyStyle(style, {"border-left-style", "solid"});
+    CHECK(style.border.left == 3);
+    rtxui::ApplyStyle(style, {"border-left-style", "none"});
+    CHECK(style.border.left == 0);
+  }
+}
+
 TEST_CASE("CSS ::part() selector parsing", "[css][part]") {
   SECTION("tag base") {
     auto stylesheet = css::Parse("textarea::part(gutter) { color: red; }");

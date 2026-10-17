@@ -121,13 +121,17 @@ Length properties accept `calc()` expressions combining discrete cells and perce
 
 ## 4. Borders and Frames
 
-<CssProperty name="border" values="<border-style> | <integer>" shorthand description="Initial: `none`. Shorthand to configure borders on all sides." />
+<CssProperty name="border" values="<border-style> || <color> || <integer>" shorthand description="Initial: `none`. Shorthand to configure borders on all sides, its words in any order: `border: round red`. Without a style it draws `solid`; without a width it keeps the one set, or 1; without a color it keeps the one set. Resets each side's own style." />
 <CssProperty name="border-width" values="<integer>" description="Initial: `0`. Border frame cell thickness on all sides." />
-<CssProperty name="border-top" values="<border-style> | <integer>" description="Initial: `0`. Top border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
-<CssProperty name="border-bottom" values="<border-style> | <integer>" description="Initial: `0`. Bottom border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
-<CssProperty name="border-left" values="<border-style> | <integer>" description="Initial: `0`. Left border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
-<CssProperty name="border-right" values="<border-style> | <integer>" description="Initial: `0`. Right border frame thickness. A <border-style> keyword selects the frame character set and gives this side a thickness of 1." />
-<CssProperty name="border-style" values="<border-style>" description="Initial: `none`. Character set mapping style of the frame." />
+<CssProperty name="border-top" values="<border-style> || <color> || <integer>" description="Initial: `0`. The top border alone, its words in any order: `border-top: heavy blue`. A <border-style> keyword gives this side its own character set and a thickness of 1." />
+<CssProperty name="border-bottom" values="<border-style> || <color> || <integer>" description="Initial: `0`. The bottom border alone, its words in any order: `border-bottom: heavy blue`. A <border-style> keyword gives this side its own character set and a thickness of 1." />
+<CssProperty name="border-left" values="<border-style> || <color> || <integer>" description="Initial: `0`. The left border alone, its words in any order: `border-left: heavy blue`. A <border-style> keyword gives this side its own character set and a thickness of 1." />
+<CssProperty name="border-right" values="<border-style> || <color> || <integer>" description="Initial: `0`. The right border alone, its words in any order: `border-right: heavy blue`. A <border-style> keyword gives this side its own character set and a thickness of 1." />
+<CssProperty name="border-style" values="<border-style>" description="Initial: `none`. Character set mapping style of the frame, on every side." />
+<CssProperty name="border-top-style" values="<border-style>" description="Initial: the `border-style`. Character set of the top side alone; a side with no thickness yet gets 1. Corners follow the left and right sides." />
+<CssProperty name="border-bottom-style" values="<border-style>" description="Initial: the `border-style`. Character set of the bottom side alone; a side with no thickness yet gets 1. Corners follow the left and right sides." />
+<CssProperty name="border-left-style" values="<border-style>" description="Initial: the `border-style`. Character set of the left side alone; a side with no thickness yet gets 1. Corners follow the left and right sides." />
+<CssProperty name="border-right-style" values="<border-style>" description="Initial: the `border-style`. Character set of the right side alone; a side with no thickness yet gets 1. Corners follow the left and right sides." />
 <CssProperty name="border-color" values="<color>" animatable description="Initial: `currentcolor`. Color of all border frame lines." />
 <CssProperty name="border-color-top" values="<color>" animatable description="Initial: `currentcolor`. Color of the top border line." />
 <CssProperty name="border-color-bottom" values="<color>" animatable description="Initial: `currentcolor`. Color of the bottom border line." />

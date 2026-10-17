@@ -665,26 +665,32 @@ void PaintImpl(const PhysicalFragment* frag,
     Color left_border_color =
         frag->border_color_left.value_or(current_foreground_color);
 
+    const auto& sides = frag->border_side_styles;
+    const BorderStyle top_style = sides.top.value_or(frag->border_style);
+    const BorderStyle right_style = sides.right.value_or(frag->border_style);
+    const BorderStyle bottom_style = sides.bottom.value_or(frag->border_style);
+    const BorderStyle left_style = sides.left.value_or(frag->border_style);
+
     // inset and outset light one pair of sides and shade the other, each half
     // way from its own color to white or black. The terminal's default
     // foreground cannot be mixed, so it stands in as a mid grey.
-    if (frag->border_style == BorderStyle::Inset ||
-        frag->border_style == BorderStyle::Outset) {
-      auto shade = [](Color c, int toward) {
-        if (c.a == 0) {
-          c = Color::RGB(170, 170, 170);
-        }
-        return Color::RGBA((c.r + toward) / 2, (c.g + toward) / 2,
-                           (c.b + toward) / 2, c.a);
-      };
-      const bool outset = frag->border_style == BorderStyle::Outset;
-      const int lit = outset ? 255 : 0;
-      const int shaded = outset ? 0 : 255;
-      top_border_color = shade(top_border_color, lit);
-      left_border_color = shade(left_border_color, lit);
-      bottom_border_color = shade(bottom_border_color, shaded);
-      right_border_color = shade(right_border_color, shaded);
-    }
+    auto shade = [](Color& c, BorderStyle side_style, bool top_or_left) {
+      if (side_style != BorderStyle::Inset &&
+          side_style != BorderStyle::Outset) {
+        return;
+      }
+      if (c.a == 0) {
+        c = Color::RGB(170, 170, 170);
+      }
+      const bool lit = (side_style == BorderStyle::Outset) == top_or_left;
+      const int toward = lit ? 255 : 0;
+      c = Color::RGBA((c.r + toward) / 2, (c.g + toward) / 2,
+                      (c.b + toward) / 2, c.a);
+    };
+    shade(top_border_color, top_style, true);
+    shade(left_border_color, left_style, true);
+    shade(bottom_border_color, bottom_style, false);
+    shade(right_border_color, right_style, false);
 
     top_border_color.a =
         static_cast<uint8_t>(top_border_color.a * current_opacity);
@@ -695,14 +701,19 @@ void PaintImpl(const PhysicalFragment* frag,
     left_border_color.a =
         static_cast<uint8_t>(left_border_color.a * current_opacity);
 
-    const auto& data = GetBorderData(frag->border_style);
-
-    // One cell of the charset: the glyph and where it draws its ground.
+    // One cell of the charset: the glyph and where it draws its ground. Each
+    // side reads its own style's charset; a corner, like its color, follows
+    // the vertical side.
     struct Glyph {
       const char* c;
       Location location;
     };
-    auto glyph = [&data](int row, int col) -> Glyph {
+    auto glyph = [&](int row, int col) -> Glyph {
+      const BorderStyle side_style = col == 0   ? left_style
+                                     : col == 2 ? right_style
+                                     : row == 0 ? top_style
+                                                : bottom_style;
+      const auto& data = GetBorderData(side_style);
       return {data.charset[row][col],
               data.locations ? data.locations[row][col] : Location::Inner};
     };

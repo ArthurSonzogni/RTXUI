@@ -529,6 +529,37 @@ TEST_CASE("Paint: outset lights the top and left, inset the bottom and right",
                                                             }));
 }
 
+TEST_CASE("Paint: each border side draws in its own style", "[paint][border]") {
+  struct MixedSidesTest : Component<MixedSidesTest> {
+    std::string_view Setup() {
+      Import<div>();
+      return R"html(
+          <style>
+            div {
+              display: block;
+              width: 6;
+              height: 4;
+              border: solid;
+              border-top: heavy;
+              border-bottom: double;
+            }
+          </style>
+          <div></div>
+        )html";
+    }
+  };
+
+  auto texture = RenderComponent(Ref<MixedSidesTest>::New(), 6, 4);
+
+  // The corners follow the vertical sides.
+  CHECK(GetTextLayer(texture) == CheckGrid({
+                                     "┌━━━━┐",
+                                     "│    │",
+                                     "│    │",
+                                     "└════┘",
+                                 }));
+}
+
 // Regression test: `has_border` used to be the only signal paint.cpp had -
 // once true, it drew a full 4-sided box with all 4 corners regardless of
 // each side's actual width, so a single `border-bottom: 1;` (all other
