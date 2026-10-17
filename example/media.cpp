@@ -13,111 +13,86 @@ using namespace rtxui;
 class MediaQueriesDemo : public Component<MediaQueriesDemo> {
  public:
   std::string_view view = R"html(
-    <div class="container">
-      <h2 class="title">Responsive Media Queries</h2>
-      <p class="desc">
-        Resize your terminal to see the layout, border colors, and content adapt automatically!
-      </p>
+      <div class="card">
+        <h1>Media queries</h1>
+        <p>Resize the terminal: rules apply by its width and height.</p>
 
-      <div class="card card-large">
-        <h3>Desktop Mode</h3>
-        <p>This panel is displayed when width >= 60 columns.</p>
-        <span class="badge emerald">Wide Screen Layout</span>
+        <div class="wide">Wide: at least 60 columns.</div>
+        <div class="narrow">Narrow: under 60 columns.</div>
+        <div class="short">Short: 15 rows or fewer.</div>
       </div>
 
-      <div class="card card-small">
-        <h3>Mobile/Compact Mode</h3>
-        <p>This panel is displayed when width &lt; 60 columns.</p>
-        <span class="badge rose">Compact Layout</span>
-      </div>
+      <style>
+        self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-      <div class="compact-alert">
-        ⚠️ Vertical space is very tight! (height &lt;= 15 rows)
-      </div>
-    </div>
-
-    <style>
-      self {
-        --danger: rgb(248, 81, 73);
-        --success: rgb(63, 185, 80);
-
-        display: block;
-        padding: 1 2;
-        background-color: rgb(13, 17, 23); /* Slate 900 */
-        color: rgb(230, 237, 243);
-      }
-      .title {
-        color: rgb(88, 166, 255); /* Blue 500 */
-        margin-bottom: 0;
-      }
-      .desc {
-        color: rgb(139, 148, 158); /* Slate 400 */
-        margin-bottom: 1;
-      }
-      .badge {
-        display: inline-block;
-        padding: 0 1;
-        text-align: center;
-        width: 22;
-        color: white;
-      }
-      .emerald {
-        background-color: var(--success);
-      }
-      .rose {
-        background-color: var(--danger);
-      }
-
-      /* Desktop / Wide Screen rules */
-      @media (min-width: 60) {
-        .card-large {
-          display: block;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
           border: tall;
-          border-color: var(--success);
-          padding: 1 2;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
           width: 50;
         }
-        .card-small {
-          display: none;
+        h1 {
+          color: var(--accent);
         }
-      }
-
-      /* Mobile / Compact Width rules */
-      @media (max-width: 59) {
-        .card-large {
-          display: none;
+        p {
+          color: var(--muted);
         }
-        .card-small {
-          display: block;
+        .card {
+          max-width: 100%;
+        }
+        .wide, .narrow {
           border: tall;
-          border-color: var(--danger);
-          padding: 1 2;
-          width: 35;
-        }
-      }
-
-      /* Compact Height Rules */
-      @media (min-height: 16) {
-        .compact-alert {
-          display: none;
-        }
-      }
-      @media (max-height: 15) {
-        .compact-alert {
-          display: block;
-          margin-top: 1;
-          color: rgb(245, 158, 11);
-          font-weight: bold;
-        }
-        self {
           padding: 0 1;
         }
-        .desc {
-          display: none;
+        .wide {
+          border-color: rgb(63, 185, 80);
+          background-color: rgb(24, 57, 37);
         }
-      }
-    </style>
-  )html";
+        .narrow {
+          border-color: rgb(248, 81, 73);
+          background-color: rgb(73, 32, 36);
+        }
+        .short {
+          margin-top: 1;
+          color: rgb(210, 153, 34);
+        }
+        @media (min-width: 60) {
+          .narrow {
+            display: none;
+          }
+        }
+        @media (max-width: 59) {
+          .wide {
+            display: none;
+          }
+          .card {
+            padding: 1;
+          }
+        }
+        @media (min-height: 16) {
+          .short {
+            display: none;
+          }
+        }
+        @media (max-height: 15) {
+          p {
+            display: none;
+          }
+        }
+      </style>
+    )html";
 };
 
 int main() {

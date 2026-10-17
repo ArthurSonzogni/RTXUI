@@ -1,21 +1,21 @@
 
-  Responsive Media Queries
-
-  Resize your terminal to see the layout, border colors, and content adapt
-  automatically!
-
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊                                                ▎
-  ▊  Desktop Mode                                  ▎
-  ▊                                                ▎
-  ▊  This panel is displayed when width >= 60      ▎
-  ▊  columns.                                      ▎
-  ▊                                                ▎
-  ▊    Wide Screen Layout                          ▎
-  ▊                                                ▎
-  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
 
+
+
+
+               ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+               ▊                                                ▎
+               ▊   Media queries                                ▎
+               ▊                                                ▎
+               ▊   Resize the terminal: rules apply by its      ▎
+               ▊   width and height.                            ▎
+               ▊                                                ▎
+               ▊   ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎   ▎
+               ▊   ▊ Wide: at least 60 columns.             ▎   ▎
+               ▊   ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎   ▎
+               ▊                                                ▎
+               ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
 
 

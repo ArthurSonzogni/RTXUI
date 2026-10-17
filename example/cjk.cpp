@@ -14,91 +14,60 @@ using namespace rtxui;
 class CJKDemo : public Component<CJKDemo> {
  public:
   std::string_view view = R"html(
-      <div class="container">
-        <h1>RTXUI CJK Character Demo</h1>
-        <p>This demo showcases full-width CJK (Chinese, Japanese, Korean) characters taking exactly 2 terminal cell slots, aligning perfectly inside layout boxes.</p>
+      <div class="card">
+        <h1>Double-width text</h1>
+        <p>CJK ideographs take two cells each. Layout counts cells, so the columns stay aligned.</p>
 
-        <div class="card">
-          <div class="title">Chinese (中文)</div>
-          <div class="row">
-            <div class="label">Text:</div>
-            <div class="val">RTXUI 支持中文渲染</div>
-          </div>
-          <div class="row">
-            <div class="label">Width check:</div>
-            <div class="val">123456789012345678</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="title">Japanese (日本語)</div>
-          <div class="row">
-            <div class="label">Text:</div>
-            <div class="val">ターミナルでの日本語表示</div>
-          </div>
-          <div class="row">
-            <div class="label">Width check:</div>
-            <div class="val">123456789012345678901234</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="title">Korean (한국어)</div>
-          <div class="row">
-            <div class="label">Text:</div>
-            <div class="val">한국어 글꼴이 올바르게 렌더링됩니다.</div>
-          </div>
-          <div class="row">
-            <div class="label">Width check:</div>
-            <div class="val">123456789012345678901234567890123456</div>
-          </div>
+        <div class="table">
+          <span class="lang">English</span>
+          <span>Terminal user interface</span>
+          <span class="lang">Chinese</span>
+          <span>终端用户界面</span>
+          <span class="lang">Japanese</span>
+          <span>ターミナルの画面</span>
+          <span class="lang">Korean</span>
+          <span>터미널 사용자 인터페이스</span>
+          <span class="lang">Mixed</span>
+          <span>RTXUI 支持中文 and 日本語</span>
         </div>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: #eee;
-          overflow-y: scroll;
-        }
-        .container {
-          display: block;
-          max-width: 80;
-          margin: 0 auto;
-        }
-        h1 {
-          color: #38bdf8;
-        }
-        p {
-          margin-bottom: 1;
+          color: rgb(230, 237, 243);
         }
         .card {
-          display: block;
-          margin-top: 1;
-          padding: 1;
           border: tall;
-          border-color: #3b82f6;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 56;
         }
-        .title {
-          display: block;
-          color: #60a5fa;
-          font-weight: bold;
-          margin-bottom: 1;
+        h1 {
+          color: var(--accent);
         }
-        .row {
-          display: flex;
-          width: 100%;
+        p {
+          color: var(--muted);
         }
-        .label {
-          width: 15;
-          color: #94a3b8;
+        .table {
+          display: grid;
+          grid-template-columns: 10 auto;
+          border: round;
+          border-color: var(--border);
+          padding: 0 1;
         }
-        .val {
-          flex-grow: 1;
-          color: #e2e8f0;
+        .lang {
+          color: var(--muted);
         }
       </style>
     )html";

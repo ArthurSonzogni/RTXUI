@@ -7,7 +7,7 @@
 // <if condition="{computed}"> includes its children only when the bound value
 // is true; the `if` attribute does the same inline on any element.
 //
-// Try it: switch tabs to swap the rendered branch.
+// Try it: pick a status to swap the rendered branch.
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
@@ -16,155 +16,107 @@ using namespace rtxui;
 
 class ConditionalApp : public Component<ConditionalApp> {
  public:
-  int mode = 0;
+  std::string status = "loading";
 
-  // Computed properties
-  bool is_home() const { return mode == 0; }
-  bool is_settings() const { return mode == 1; }
-  bool is_about() const { return mode == 2; }
-  std::string home_class() const { return mode == 0 ? "active" : ""; }
-  std::string settings_class() const { return mode == 1 ? "active" : ""; }
-  std::string about_class() const { return mode == 2 ? "active" : ""; }
+  bool is_loading() const { return status == "loading"; }
+  bool is_error() const { return status == "error"; }
 
-  // Event handlers
-  void SetHome() { mode = 0; }
-  void SetSettings() { mode = 1; }
-  void SetAbout() { mode = 2; }
+  void Set(std::string value) { status = value; }
 
   std::string_view view = R"html(
-      <div class="container">
-        <div class="tabs">
-          <button onclick="SetHome" class="{home_class}">Home</button>
-          <button onclick="SetSettings" class="{settings_class}">Settings</button>
-          <button onclick="SetAbout" class="{about_class}">About</button>
+      <div class="card">
+        <h1>Conditional rendering</h1>
+        <p>An &lt;if&gt; / &lt;elif&gt; / &lt;else&gt; chain renders its first true branch.</p>
+
+        <div class="buttons">
+          <button onclick="Set(loading)">Loading</button>
+          <button onclick="Set(error)">Error</button>
+          <button onclick="Set(done)">Done</button>
         </div>
 
-        <div class="content">
-          <if condition="{is_home}">
-            <h1>Welcome to the Void</h1>
-            <p>You have reached the home screen. It's safe here. Probably.</p>
-            <div class="card">
-              <span>Daily Fortune:</span>
-              <i>"Your terminal will never betray you, unless you forget a semicolon."</i>
-            </div>
+        <div class="result">
+          <if condition="{is_loading}">
+            <span class="loading">Fetching the profile...</span>
           </if>
-
-          <if condition="{is_settings}">
-            <h1>Bureaucracy Settings</h1>
-            <p>Fine-tune your existential dread and terminal aesthetics.</p>
-            
-            <div class="card">
-              <span>Gravity Level (Local)</span>
-              <button>Normalize</button>
-            </div>
-            
-            <div class="card">
-              <span>Infinite Loop Protection</span>
-              <button>Disable (Risky!)</button>
-            </div>
-
-            <div class="card">
-              <span>Coffee Intensity</span>
-              <button>Maximum</button>
-            </div>
-          </if>
-
-          <if condition="{is_about}">
-            <h1>About RTXUI</h1>
-            <p>A reactive terminal UI library so fast it might actually finish your project for you.</p>
-            <div class="card">
-              <span>Fun Fact #42:</span>
-              <span>RTXUI was originally developed to communicate with deep-space probes that only support ASCII.</span>
-            </div>
-            <div class="card">
-              <span>Disclaimer:</span>
-              <span>Side effects may include excessive use of <span class="indigo">Indigo</span> and a sudden urge to refactor everything.</span>
-            </div>
-          </if>
-
-          <div if="{is_home}" class="footer">
-            Watching you from the bottom of the stack...
-          </div>
+          <elif condition="{is_error}">
+            <span class="error">The profile could not be fetched.</span>
+          </elif>
+          <else>
+            <span class="done">Profile loaded.</span>
+          </else>
         </div>
+
+        <div if="{is_error}" class="hint">The if attribute shows a single element, like this hint.</div>
       </div>
 
       <style>
         self {
-          --surface: rgb(22, 27, 34);
           --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: #eee;
-          overflow-y: scroll;
-
-          .container {
-            max-width: 80;
-            margin: 0 auto;
-          }
-
-          button {
-            border: vkey;
-            border-color-left: var(--border);
-            border-color-right: rgb(10, 10, 10);
-            background-color: var(--surface);
-            color: white;
-            padding: 0 1;
-            opacity: 0.6;
-            transition: all 0.2s linear;
-
-            &:hover, &:focus, &.active {
-              opacity: 1.0;
-            }
-            &.active {
-              font-weight: bold;
-            }
-          }
-
-          .content {
-            border: vkey;
-            border-color-left: var(--border);
-            border-color-right: rgb(10, 10, 10);
-            background-color: var(--surface);
-            padding: 1;
-            min-height: 15;
-
-            .card {
-              border: tall;
-              border-color: var(--border);
-              background-color: var(--surface);
-              padding: 1;
-              margin-top: 1;
-              display: flex;
-              justify-content: space-between;
-            }
-          }
-
-          .footer {
-            margin-top: 2;
-            color: rgb(139, 148, 158);
-            font-style: italic;
-          }
-
-          .indigo {
-            color: #6366f1;
-          }
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 56;
+        }
+        h1 {
+          color: var(--accent);
+        }
+        p {
+          color: var(--muted);
+        }
+        .buttons {
+          display: flex;
+          gap: 2;
+        }
+        button {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(13, 17, 23);
+          padding: 0 1;
+        }
+        button:hover, button:focus {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+        .result {
+          border: round;
+          border-color: var(--border);
+          padding: 0 1;
+          margin-top: 1;
+        }
+        .loading {
+          color: rgb(210, 153, 34);
+        }
+        .error {
+          color: rgb(248, 81, 73);
+        }
+        .done {
+          color: rgb(63, 185, 80);
+        }
+        .hint {
+          margin-top: 1;
+          color: var(--muted);
         }
       </style>
     )html";
 
   ConditionalApp() {
-    Bind(mode);
-    Bind(is_home);
-    Bind(is_settings);
-    Bind(is_about);
-    Bind(home_class);
-    Bind(settings_class);
-    Bind(about_class);
-    Bind(SetHome);
-    Bind(SetSettings);
-    Bind(SetAbout);
+    Bind(status);
+    Bind(is_loading);
+    Bind(is_error);
+    Bind(Set);
   }
 };
 

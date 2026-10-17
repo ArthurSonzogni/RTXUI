@@ -1,24 +1,24 @@
 
 
-  RTXUI CJK Character Demo
 
-  This demo showcases full-width CJK (Chinese, Japanese, Korean) characters
-  taking exactly 2 terminal cell slots, aligning perfectly inside layout
-  boxes.
 
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊                                                                         ▎
-  ▊ Chinese (中文)                                                          ▎
-  ▊                                                                         ▎
-  ▊ Text:          RTXUI 支持中文渲染                                       ▎
-  ▊ Width check:   123456789012345678                                       ▎  ▆
-  ▊                                                                         ▎
-  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+            ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+            ▊                                                      ▎
+            ▊   Double-width text                                  ▎
+            ▊                                                      ▎
+            ▊   CJK ideographs take two cells each. Layout         ▎
+            ▊   counts cells, so the columns stay aligned.         ▎
+            ▊                                                      ▎
+            ▊   ╭──────────────────────────────────────────────╮   ▎
+            ▊   │ English   Terminal user interface            │   ▎
+            ▊   │ Chinese   终端用户界面                       │   ▎
+            ▊   │ Japanese  ターミナルの画面                   │   ▎
+            ▊   │ Korean    터미널 사용자 인터페이스           │   ▎
+            ▊   │ Mixed     RTXUI 支持中文 and 日本語          │   ▎
+            ▊   ╰──────────────────────────────────────────────╯   ▎
+            ▊                                                      ▎
+            ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊                                                                         ▎
-  ▊ Japanese (日本語)                                                       ▎
-  ▊                                                                         ▎
-  ▊ Text:          ターミナルでの日本語表示                                 ▎
+
 
 
