@@ -1,23 +1,23 @@
 
-  Keyboard Focus Scroll-Into-View Demo
-
-  Press Tab or Shift-Tab to cycle focus through the items below.     The
-  scrollable container will automatically scroll to keep the focused element
-  in view.
 
 
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊┌───────────────────────────────────┐ ▎
-  ▊│ Item 1 (Start)                    │ ▎
-  ▊└───────────────────────────────────┘ ▎
-  ▊┌───────────────────────────────────┐ ▎
-  ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
-
-
-
-
-
-
+               ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+               ▊                                                ▎
+               ▊   Focus scrolls into view                      ▎
+               ▊                                                ▎
+               ▊   Press Tab or Shift+Tab: the list scrolls     ▎
+               ▊   to keep the focused item visible.            ▎
+               ▊                                                ▎
+               ▊   ╭────────────────────────────────────────╮   ▎
+               ▊   │ Inbox                                  │   ▎
+               ▊   │ Drafts                                 │   ▎
+               ▊   │ Sent                                  ▄│   ▎
+               ▊   │ Archive                                │   ▎
+               ▊   │ Spam                                   │   ▎
+               ▊   │ Trash                                  │   ▎
+               ▊   ╰────────────────────────────────────────╯   ▎
+               ▊                                                ▎
+               ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
 
 

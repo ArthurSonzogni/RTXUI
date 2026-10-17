@@ -22,10 +22,6 @@ class HrDemo : public Component<HrDemo> {
 
         <h2>Details</h2>
         <div>The second section, below it.</div>
-
-        <hr class="dashed" />
-
-        <div class="muted">A rule takes its color and style from its border.</div>
       </div>
 
       <style>
@@ -57,17 +53,6 @@ class HrDemo : public Component<HrDemo> {
         }
         h2 {
           margin-bottom: 0;
-        }
-        hr {
-          border-color: var(--border);
-          margin: 1 0;
-        }
-        hr.dashed {
-          border-top: dashed;
-          border-color: var(--accent);
-        }
-        .muted {
-          color: var(--muted);
         }
       </style>
     )html";

@@ -1,24 +1,24 @@
 
-  Anchor Navigation Demo
+     ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+     ▊                                                                    ▎
+     ▊   Anchors                                                          ▎
+     ▊                                                                    ▎
+     ▊   A link to "#id" scrolls that element into view. Click one, or    ▎
+     ▊   Tab to it and press Enter.                                       ▎
+     ▊                                                                    ▎
+     ▊   Introduction    │  Introduction                                  ▎
+     ▊   Installation    │  RTXUI builds terminal interfaces from HTML    ▎
+     ▊   Usage           │  templates and CSS, bound to C++ members.      ▎
+     ▊   Styling         │                                                ▎
+     ▊   License         │                                            ▇   ▎
+     ▊                   │                                                ▎
+     ▊                   │                                                ▎
+     ▊                   │  Installation                                  ▎
+     ▊                   │  Add it with CMake's FetchContent, then        ▎
+     ▊                   │  link your target with rtxui::rtxui.           ▎
+     ▊                   │                                                ▎
+     ▊                   │                                                ▎
+     ▊                                                                    ▎
+     ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
-  Click the links in the sidebar to scroll the corresponding section into
-  view.
 
-
-  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-  ▊                ▎  ▊                                                      ▎
-  ▊ SECTIONS       ▎  ▊                                                      ▎
-  ▊                ▎  ▊                                                      ▎
-  ▊  Introduction  ▎  ▊                                                      ▎
-  ▊                ▎  ▊    Introduction                                      ▎
-  ▊  Features      ▎  ▊                                                      ▎
-  ▊                ▎  ▊    Welcome to RTXUI. This framework lets you         ▎
-  ▊  Installation  ▎  ▊    build terminal user interfaces using              ▎
-  ▊                ▎  ▊    familiar XML templates and CSS styles.            ▎
-  ▊  Usage         ▎  ▊                                                      ▎
-  ▊                ▎  ▊    Layout features include block, inline,            ▎
-  ▊  Components    ▎  ▊    flexbox, grid, fixed, absolute, and               ▎
-  ▊                ▎  ▊    sticky positioning.                               ▎
-  ▊  Documentation ▎  ▊                                                      ▎
-  ▊                ▎  ▊                                                      ▎
-  ▊  FAQ           ▎  ▊                                                      ▎
