@@ -51,6 +51,11 @@ foreach(source ${example_sources})
   )
   add_executable(rtxui_module_example_${name} "${converted}")
   target_link_libraries(rtxui_module_example_${name} PRIVATE rtxui::module)
+  # No ccache: it hashes the source, not the module interface `import rtxui;`
+  # reads, so an unchanged example kept an object built against an older API
+  # and failed to link.
+  set_target_properties(rtxui_module_example_${name} PROPERTIES
+    CXX_COMPILER_LAUNCHER "")
   # The same file name as the header-based build, in its own directory, so
   # scripts/snapshot_examples.py compares it with the same snapshot.
   # CXX_SCAN_FOR_MODULES: the project asks for CMake 3.24, which leaves
