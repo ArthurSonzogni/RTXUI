@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -18,6 +19,7 @@
 #include "rtxui/component/default/option/option.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
@@ -447,4 +449,123 @@ TEST_CASE("Select Option Class Preservation", "[component][select][bug]") {
   has_custom = std::find(opt_el->classes().begin(), opt_el->classes().end(),
                          "custom-class") != opt_el->classes().end();
   CHECK(has_custom == true);
+}
+
+namespace {
+
+// Two selects, one row apart: the first one's list, once open, covers the
+// second.
+class TwoSelects : public rtxui::Component<TwoSelects> {
+ public:
+  std::string a = "1";
+  std::string b = "x";
+
+  TwoSelects() {
+    Bind(a);
+    Bind(b);
+  }
+  std::string_view view = R"(
+    <div><select value="{a}">
+      <option value="1">one</option>
+      <option value="2">two</option>
+      <option value="3">three</option>
+    </select></div>
+    <div>gap</div>
+    <div><select value="{b}">
+      <option value="x">ex</option>
+      <option value="y">why</option>
+    </select></div>
+    <div>end</div>
+  )";
+};
+
+// Two selects side by side: neither list covers the other select.
+class SideBySide : public rtxui::Component<SideBySide> {
+ public:
+  std::string_view view = R"(
+    <div style="display: flex; gap: 2;">
+      <select value="1"><option value="1">one</option></select>
+      <select value="x"><option value="x">ex</option></select>
+    </div>
+  )";
+};
+
+std::string Line(const std::string& text, int row) {
+  size_t start = 0;
+  for (int i = 0; i < row; ++i) {
+    start = text.find('\n', start) + 1;
+  }
+  return text.substr(start, text.find('\n', start) - start);
+}
+
+}  // namespace
+
+TEST_CASE("Clicking another select while one is open opens it",
+          "[component][select][regression]") {
+  // The open select closed on the outside click and consumed it, so the
+  // select clicked never saw it: it took a second click to open.
+  auto app = rtxui::Ref<SideBySide>::New();
+  rtxui::TimelineScreen screen(app, 40, 4);
+  screen.Click(1, 0);  // Opens the first.
+  REQUIRE(Line(screen.Text(), 0) == " one         ▴    ex          ▾");
+
+  screen.Click(18, 0);  // The second.
+  CHECK(Line(screen.Text(), 0) == " one         ▾    ex          ▴");
+}
+
+TEST_CASE("A closed select's options ignore clicks",
+          "[component][select][regression]") {
+  // Hidden options kept their last position, so a click where one had been
+  // drawn picked it, with the list closed.
+  auto app = rtxui::Ref<TwoSelects>::New();
+  rtxui::TimelineScreen screen(app, 20, 8);
+  screen.Click(1, 0);  // Opens.
+  screen.Click(1, 0);  // Closes.
+  screen.Click(1, 3);  // Where "three" was.
+  CHECK(app->a == "1");
+}
+
+TEST_CASE("An open select's list hides what it covers",
+          "[component][select][regression]") {
+  // The list was a translucent tint over the page, so the text under it --
+  // here the second select's arrow -- showed through.
+  auto app = rtxui::Ref<TwoSelects>::New();
+  rtxui::TimelineScreen screen(app, 20, 8);
+  screen.Click(1, 0);
+  CHECK(Line(screen.Text(), 2).find("▾") == std::string::npos);
+  CHECK(screen.BackgroundAt(1, 2).a == 255);
+}
+
+namespace {
+
+class LongSelect : public rtxui::Component<LongSelect> {
+ public:
+  std::string_view view = R"(
+    <select value="a">
+      <option value="a">a</option><option value="b">b</option>
+      <option value="c">c</option><option value="d">d</option>
+      <option value="e">e</option><option value="f">f</option>
+      <option value="g">g</option><option value="h">h</option>
+    </select>
+    <style>
+      select::part(dropdown-list) { max-height: 3; overflow-y: scroll; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("A select's list scrolls to the option the arrows reach",
+          "[component][select][regression]") {
+  // A list taller than its max-height scrolled with the wheel only: the
+  // highlight moved on past its bottom edge, out of sight.
+  auto app = rtxui::Ref<LongSelect>::New();
+  rtxui::TimelineScreen screen(app, 20, 6);
+  screen.Input("\t\r");  // Focus and open.
+  for (int i = 0; i < 6; ++i) {
+    screen.Input("\x1b[B");  // Down, to "g".
+  }
+  const std::string text = screen.Text();
+  CHECK(Line(text, 1).find('e') != std::string::npos);
+  CHECK(Line(text, 3).find('g') != std::string::npos);
 }

@@ -42,6 +42,9 @@ class select : public Component<select> {
 
   void SelectOption(std::string_view value);
   std::vector<OptionInfo> GetOptions();
+
+ private:
+  void ScrollHoveredIntoView(Element* root);
 };
 
 }  // namespace rtxui

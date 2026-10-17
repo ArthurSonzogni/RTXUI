@@ -75,7 +75,8 @@ std::string_view select::Setup() {
       .dropdown-list {
         display: flex;
         flex-direction: column;
-        background-color: lighten(15%);
+        background-color: rgb(30, 41, 59);
+        color: rgb(226, 232, 240);
         position: absolute;
         top: 100%;
         left: 0;
@@ -181,11 +182,11 @@ bool select::OnEvent(Event event) {
       } else if (click_inside_dropdown) {
         // Click was inside the dropdown. Do nothing here to allow event
         // propagation to the option components.
-      } else {
-        if (is_open) {
-          is_open = false;
-          changed = true;
-        }
+      } else if (is_open) {
+        // A click elsewhere closes the list, and is left for whatever it
+        // landed on: another select opens on the same click.
+        is_open = false;
+        return false;
       }
     } else if (is_open && mouse.motion() == Event::Mouse::Motion::Moved) {
       auto options = GetOptions();
@@ -407,8 +408,32 @@ bool select::Digest() {
     // returns.
   }
 
+  if (root && is_open) {
+    ScrollHoveredIntoView(root);
+  }
+
   bool parent_digest = Component<select>::Digest();
   return state_changed || parent_digest;
+}
+
+// Scrolls a list taller than its max-height so the highlighted option is in
+// view. Positions are those of the last frame: once the list has been drawn,
+// they move only as this scrolls them.
+void select::ScrollHoveredIntoView(Element* root) {
+  auto* list = root->QuerySelector(".dropdown-list");
+  auto options = GetOptions();
+  if (!list || list->layout_height() <= 0 || hovered_index < 0 ||
+      hovered_index >= static_cast<int>(options.size())) {
+    return;
+  }
+  const Element* option = options[hovered_index].element;
+  const int top = option->absolute_y() - list->absolute_y() + list->scroll_y();
+  const int bottom = top + option->layout_height();
+  if (top < list->scroll_y()) {
+    list->set_scroll_y(top);
+  } else if (bottom > list->scroll_y() + list->layout_height()) {
+    list->set_scroll_y(bottom - list->layout_height());
+  }
 }
 
 void select::SelectOption(std::string_view opt_val) {

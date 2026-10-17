@@ -78,6 +78,11 @@ bool option::OnEvent(Event event) {
             auto* select_comp =
                 const_cast<ComponentBase*>(parent_el->component());
             auto* sel = static_cast<rtxui::select*>(select_comp);
+            // A closed list's options keep their last position: ignore a
+            // click on where one was drawn.
+            if (!sel->is_open) {
+              return false;
+            }
             sel->SelectOption(value);
             return true;
           }

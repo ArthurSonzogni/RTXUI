@@ -103,6 +103,10 @@ class BorderScrollDemo : public Component<BorderScrollDemo> {
         select {
           width: 22;
         }
+        select::part(dropdown-list) {
+          max-height: 10;
+          overflow-y: scroll;
+        }
         select:focus, checkbox:focus {
           color: var(--accent);
         }
