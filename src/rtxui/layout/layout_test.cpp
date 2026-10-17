@@ -2179,11 +2179,11 @@ TEST_CASE("Layout: a table wider than its box reports its true scroll_width",
   REQUIRE(wrap != nullptr);
 
   // 10 columns can't all fit in a width-5 box even at their 1-cell floor.
-  CHECK(table->layout_width() > wrap->layout_width());
+  CHECK(table->scroll_width() > wrap->layout_width());
   // The wrapping scrollable container must see the table's true extent.
   CHECK(wrap->scroll_width() == table->scroll_width());
   // Which counts each column once: it used to count the last one twice.
-  CHECK(table->scroll_width() == table->layout_width());
+  CHECK(table->scroll_width() == 10);
 }
 
 // Regression test: LayoutTable ignored `height`/min-height/max-height
@@ -4965,6 +4965,29 @@ TEST_CASE("Layout: border-collapse and border-spacing",
           CheckGrid(
               {"╭─┬─╮ ", "│a│b│ ", "╰─┴─╯ ", "╔═╦═╗ ", "║a║b║ ", "╚═╩═╝ "}));
   }
+}
+
+TEST_CASE("Layout: a horizontal scroller is as wide to scroll as its content",
+          "[layout][scroll][regression]") {
+  // Block flow laid the children of an overflow-x scroller out 10000 cells
+  // wide, so a block child filled them all: the scroll width was 10000 and
+  // the scrollbar thumb a single cell, whatever the content.
+  struct T : Component<T> {
+    std::string_view Setup() {
+      return R"html(
+        <div class="wrap" style="width: 10; overflow-x: scroll;">
+          <div class="line" style="white-space: nowrap;">fifteen letters</div>
+          <div class="short">short</div>
+        </div>
+      )html";
+    }
+  };
+  auto app = Ref<T>::New();
+  RenderComponent(app, 40, 5);
+  auto* root = rtxui::ComponentInternals::Root(*app);
+
+  CHECK(root->QuerySelector(".wrap")->scroll_width() == 15);
+  CHECK(root->QuerySelector(".short")->layout_width() == 10);
 }
 
 }  // namespace rtxui

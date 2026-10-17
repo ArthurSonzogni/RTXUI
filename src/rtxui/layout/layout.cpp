@@ -1081,9 +1081,6 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
                             box->style().border.Horiz() - scrollbar_spacing_x);
 
   int child_width_limit = content_width_limit;
-  if (box->style().overflow_x == Overflow::Scroll) {
-    child_width_limit = 10000;
-  }
 
   auto fragment = MakeArenaFragment(width, 0);
   fragment->children.reserve(box->children.size());
