@@ -25,6 +25,13 @@ if(RTXUI_COVERAGE)
   add_link_options(-fprofile-instr-generate)
 endif()
 
+# Templates and tests are full of UTF-8 literals (box drawing, symbols, CJK);
+# MSVC reads sources in the system code page unless told otherwise, and would
+# mangle every one of them.
+if(MSVC)
+  add_compile_options(/utf-8)
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 # C++23 is the requirement. C++26 is optional: when the compiler offers

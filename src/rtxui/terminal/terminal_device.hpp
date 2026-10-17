@@ -9,6 +9,8 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+// windows.h defines RGB() as a macro, which would rewrite every Color::RGB().
+#undef RGB
 
 #include <io.h>
 #include <signal.h>
@@ -393,9 +395,10 @@ class SystemTerminalDevice : public TerminalDevice {
     SetConsoleOutputCP(CP_UTF8);
 
     DWORD in_mode = previous_in_mode_;
-    in_mode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
-    in_mode &=
-        ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+    // QuickEdit would take mouse clicks for the console's own selection.
+    in_mode |= ENABLE_VIRTUAL_TERMINAL_INPUT | ENABLE_EXTENDED_FLAGS;
+    in_mode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT |
+                 ENABLE_PROCESSED_INPUT | ENABLE_QUICK_EDIT_MODE);
     SetConsoleMode(in_handle, in_mode);
 
     DWORD out_mode = previous_out_mode_;

@@ -26,7 +26,14 @@ constexpr std::string_view ClassName() {
 
   const auto start = full.find(prefix) + prefix.size();
   const auto end = full.rfind(suffix);
-  const auto typename_full = full.substr(start, end - start);
+  auto typename_full = full.substr(start, end - start);
+
+  // MSVC spells the kind of type out: "class Foo", "struct ns::Bar".
+  for (std::string_view keyword : {"class ", "struct ", "union ", "enum "}) {
+    if (typename_full.starts_with(keyword)) {
+      typename_full.remove_prefix(keyword.size());
+    }
+  }
 
   // Strip namespaces
   const auto last_colon = typename_full.rfind("::");

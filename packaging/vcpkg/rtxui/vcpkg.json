@@ -5,7 +5,7 @@
   "description": "Reactive terminal user interfaces for C++ with HTML templates and CSS layout",
   "homepage": "https://github.com/ArthurSonzogni/RTXUI",
   "license": "MIT",
-  "supports": "!windows & !uwp & !android & !ios",
+  "supports": "!uwp & !android & !ios",
   "dependencies": [
     {
       "name": "vcpkg-cmake",

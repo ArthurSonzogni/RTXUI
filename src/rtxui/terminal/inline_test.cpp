@@ -33,6 +33,7 @@
 #include "rtxui/screen.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/environment.hpp"
 
 namespace rtxui {
 namespace {
@@ -614,17 +615,17 @@ class ScopedEnvironment {
     saved_.emplace_back(name,
                         old ? std::optional<std::string>(old) : std::nullopt);
     if (value) {
-      setenv(name, value, /*overwrite=*/1);
+      testing::SetEnv(name, value);
     } else {
-      unsetenv(name);
+      testing::UnsetEnv(name);
     }
   }
   ~ScopedEnvironment() {
     for (const auto& [name, value] : std::ranges::reverse_view(saved_)) {
       if (value) {
-        setenv(name.c_str(), value->c_str(), /*overwrite=*/1);
+        testing::SetEnv(name.c_str(), value->c_str());
       } else {
-        unsetenv(name.c_str());
+        testing::UnsetEnv(name.c_str());
       }
     }
   }

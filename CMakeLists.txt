@@ -152,10 +152,11 @@ add_library(rtxui
 )
 
 target_compile_features(rtxui PUBLIC cxx_std_23)
-target_compile_options(rtxui PRIVATE
-  -Wall
-  -Wextra
-)
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  target_compile_options(rtxui PRIVATE /W4)
+else()
+  target_compile_options(rtxui PRIVATE -Wall -Wextra)
+endif()
 
 # Everything is hidden unless marked RTXUI_EXPORT, so the shared library's ABI
 # surface is the public API rather than every symbol that happens to be
@@ -226,7 +227,8 @@ if(RTXUI_BUILD_TESTS)
     # Start every built example and check it draws a frame. The unit tests
     # never link an example nor run main(), so nothing else noticed when one
     # stopped starting.
-    if(RTXUI_BUILD_EXAMPLES)
+    # smoke_examples drives each example through a PTY, which is POSIX.
+    if(RTXUI_BUILD_EXAMPLES AND NOT WIN32)
       add_test(NAME smoke_examples
         COMMAND Python3::Interpreter
                 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/smoke_examples.py"
@@ -242,7 +244,9 @@ if(RTXUI_BUILD_TESTS)
       # layout draws anything a fresh one would not.
       set_tests_properties(smoke_examples PROPERTIES TIMEOUT 600
                            ENVIRONMENT "RTXUI_STRICT=1;RTXUI_VERIFY_LAYOUT_REUSE=1")
+    endif()
 
+    if(RTXUI_BUILD_EXAMPLES)
       # Compare what each example draws with example/snapshots/, so a
       # change that alters an interface shows up as a text diff.
       add_test(NAME snapshot_examples
@@ -252,21 +256,24 @@ if(RTXUI_BUILD_TESTS)
       )
     endif()
 
-    # Verify each public header compiles on its own. Most valuable where the
-    # standard library differs from the one used day to day.
-    add_test(NAME verify_headers
-      COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_headers.py"
-              --cxx "${CMAKE_CXX_COMPILER}"
-              --export-header-dir "${CMAKE_CURRENT_BINARY_DIR}/generated"
-    )
+    # Both checks below call the compiler with GCC-style flags.
+    if(NOT MSVC)
+      # Verify each public header compiles on its own. Most valuable where the
+      # standard library differs from the one used day to day.
+      add_test(NAME verify_headers
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_headers.py"
+                --cxx "${CMAKE_CXX_COMPILER}"
+                --export-header-dir "${CMAKE_CURRENT_BINARY_DIR}/generated"
+      )
 
-    # Compile the C++ snippets of the docs against the public headers, so
-    # the code readers copy keeps up with the API.
-    add_test(NAME verify_doc_snippets
-      COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_doc_snippets.py"
-              --cxx "${CMAKE_CXX_COMPILER}"
-              --export-header-dir "${CMAKE_CURRENT_BINARY_DIR}/generated"
-    )
+      # Compile the C++ snippets of the docs against the public headers, so
+      # the code readers copy keeps up with the API.
+      add_test(NAME verify_doc_snippets
+        COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_doc_snippets.py"
+                --cxx "${CMAKE_CXX_COMPILER}"
+                --export-header-dir "${CMAKE_CURRENT_BINARY_DIR}/generated"
+      )
+    endif()
   endif()
 
   # Catch2
@@ -374,23 +381,26 @@ if(RTXUI_BUILD_TESTS)
                ENVIRONMENT RTXUI_VERIFY_LAYOUT_REUSE=1
   )
 
-  add_executable(rtxui_terminal_input_parser
-    "src/rtxui/terminal/terminal_input_parser_main.cpp"
-  )
-  # A development tool driving an internal class: give it the objects rather
-  # than exporting TerminalInputParser and widening the library's ABI for it.
-  if(BUILD_SHARED_LIBS)
-    target_sources(rtxui_terminal_input_parser PRIVATE $<TARGET_OBJECTS:rtxui>)
-    target_include_directories(rtxui_terminal_input_parser PRIVATE
-      "${CMAKE_CURRENT_SOURCE_DIR}/include"
-      "${CMAKE_CURRENT_BINARY_DIR}/generated"
+  # Prints what the parser makes of each key: a POSIX raw-mode tool.
+  if(NOT WIN32)
+    add_executable(rtxui_terminal_input_parser
+      "src/rtxui/terminal/terminal_input_parser_main.cpp"
     )
-    target_compile_features(rtxui_terminal_input_parser PRIVATE cxx_std_23)
-    target_compile_definitions(rtxui_terminal_input_parser PRIVATE RTXUI_STATIC_DEFINE)
-  else()
-    target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui)
+    # A development tool driving an internal class: give it the objects rather
+    # than exporting TerminalInputParser and widening the library's ABI for it.
+    if(BUILD_SHARED_LIBS)
+      target_sources(rtxui_terminal_input_parser PRIVATE $<TARGET_OBJECTS:rtxui>)
+      target_include_directories(rtxui_terminal_input_parser PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_BINARY_DIR}/generated"
+      )
+      target_compile_features(rtxui_terminal_input_parser PRIVATE cxx_std_23)
+      target_compile_definitions(rtxui_terminal_input_parser PRIVATE RTXUI_STATIC_DEFINE)
+    else()
+      target_link_libraries(rtxui_terminal_input_parser PRIVATE rtxui)
+    endif()
+    target_include_directories(rtxui_terminal_input_parser PRIVATE "src")
   endif()
-  target_include_directories(rtxui_terminal_input_parser PRIVATE "src")
 
 endif()
 

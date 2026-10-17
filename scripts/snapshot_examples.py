@@ -31,10 +31,13 @@ def render(binary):
         raise RuntimeError(
             f"exited with {result.returncode}: "
             f"{result.stderr.decode('utf-8', 'replace').strip()}")
-    return result.stdout.decode("utf-8")
+    # Windows writes "\r\n" to a text-mode stdout.
+    return result.stdout.decode("utf-8").replace("\r\n", "\n")
 
 
 def main():
+    # The diffs are box drawing; a Windows console defaults to a code page.
+    sys.stdout.reconfigure(encoding="utf-8")
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     update = "--update" in sys.argv[1:]
     if len(args) != 1:
@@ -42,6 +45,8 @@ def main():
         return 2
     binaries = sorted(pathlib.Path(args[0]).glob("rtxui_example_*"))
     binaries = [b for b in binaries if b.is_file() and os.access(b, os.X_OK)]
+    if os.name == "nt":
+        binaries = [b for b in binaries if b.suffix == ".exe"]
     if not binaries:
         print(f"No rtxui_example_* binaries in {args[0]}")
         return 1
@@ -49,7 +54,8 @@ def main():
     SNAPSHOTS.mkdir(exist_ok=True)
     failures = []
     for binary in binaries:
-        name = binary.name.removeprefix("rtxui_example_")
+        name = binary.stem if binary.suffix == ".exe" else binary.name
+        name = name.removeprefix("rtxui_example_")
         snapshot = SNAPSHOTS / f"{name}.txt"
         try:
             actual = render(binary)

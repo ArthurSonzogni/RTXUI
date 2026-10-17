@@ -19,6 +19,7 @@
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/task.hpp"
+#include "rtxui/testing/environment.hpp"
 
 namespace rtxui {
 namespace {
@@ -58,9 +59,9 @@ int LayoutsWhileAnimating(const std::string& source) {
   int layouts = 0;
   for (const bool verify : {false, true}) {
     if (verify) {
-      setenv("RTXUI_VERIFY_LAYOUT_REUSE", "1", /*overwrite=*/1);
+      testing::SetEnv("RTXUI_VERIFY_LAYOUT_REUSE", "1");
     } else {
-      unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
+      testing::UnsetEnv("RTXUI_VERIFY_LAYOUT_REUSE");
     }
     auto app = Ref<Scene>::New(source);
     TimelineScreen screen(app, kWidth, kHeight);
@@ -252,7 +253,7 @@ std::pair<std::string, std::vector<Color>> Drawn(const TimelineScreen& screen) {
 // layout can offer. Checks that this draws what a page that started out
 // changed draws.
 void CheckChange(void (*change)(Page&)) {
-  unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
+  testing::UnsetEnv("RTXUI_VERIFY_LAYOUT_REUSE");
   auto expected_app = Ref<Page>::New();
   change(*expected_app);
   TimelineScreen expected_screen(expected_app, kWidth, kHeight);
@@ -272,7 +273,7 @@ void CheckChange(void (*change)(Page&)) {
 
 TEST_CASE("A layout lays out again only what changed",
           "[screen][layout-reuse]") {
-  unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
+  testing::UnsetEnv("RTXUI_VERIFY_LAYOUT_REUSE");
   auto app = Ref<Page>::New();
   TimelineScreen screen(app, kWidth, kHeight);
   screen.Advance(0);
@@ -344,7 +345,7 @@ class Areas : public Component<Areas> {
 
 TEST_CASE("A reused layout follows a change of grid area",
           "[screen][layout-reuse]") {
-  unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
+  testing::UnsetEnv("RTXUI_VERIFY_LAYOUT_REUSE");
   auto app = Ref<Areas>::New();
   TimelineScreen screen(app, kWidth, kHeight);
   screen.Advance(0);
@@ -357,7 +358,7 @@ TEST_CASE("A reused layout follows a change of grid area",
 }
 
 TEST_CASE("A reused layout follows a scroll", "[screen][layout-reuse]") {
-  unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
+  testing::UnsetEnv("RTXUI_VERIFY_LAYOUT_REUSE");
   auto app = Ref<Page>::New();
   TimelineScreen screen(app, kWidth, kHeight);
   screen.Advance(0);
@@ -370,7 +371,7 @@ TEST_CASE("A reused layout follows a scroll", "[screen][layout-reuse]") {
 }
 
 TEST_CASE("A reused layout follows a resize", "[screen][layout-reuse]") {
-  unsetenv("RTXUI_VERIFY_LAYOUT_REUSE");
+  testing::UnsetEnv("RTXUI_VERIFY_LAYOUT_REUSE");
   auto app = Ref<Page>::New();
   TimelineScreen screen(app, kWidth, kHeight);
   screen.Advance(0);

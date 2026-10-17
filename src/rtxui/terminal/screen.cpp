@@ -33,6 +33,8 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+// windows.h defines RGB() as a macro, which would rewrite every Color::RGB().
+#undef RGB
 
 #include <io.h>
 #elif defined(__EMSCRIPTEN__)
@@ -79,6 +81,24 @@ namespace rtxui {
 namespace {
 
 void handle_sigwinch(int /*sig*/) {}
+
+#if defined(_WIN32)
+// The console signals its input handle for focus, menu, mouse and resize
+// records too, but ReadFile() returns only once there is a key, and would
+// block the loop until one. Drops the records ReadFile() would skip, and says
+// whether a key is left to read.
+bool DrainToKeyRecord(HANDLE handle) {
+  INPUT_RECORD record;
+  DWORD count = 0;
+  while (PeekConsoleInputW(handle, &record, 1, &count) && count == 1) {
+    if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown) {
+      return true;
+    }
+    ReadConsoleInputW(handle, &record, 1, &count);
+  }
+  return false;
+}
+#endif
 
 // absolute_x()/absolute_y() reflect an element's scrolled screen position,
 // but not whether a scrollable ancestor currently clips it out of view
@@ -1370,7 +1390,8 @@ void ScreenImpl::Step() {
     DWORD count = (wakeup_event_ != NULL) ? 2 : 1;
     DWORD wait_result =
         WaitForMultipleObjects(count, handles, FALSE, timeout_ms);
-    input_available = wait_result == WAIT_OBJECT_0;
+    input_available =
+        wait_result == WAIT_OBJECT_0 && DrainToKeyRecord(in_handle);
   }
 #elif !defined(__EMSCRIPTEN__)
   if (dynamic_cast<SystemTerminalDevice*>(device_.get())) {
