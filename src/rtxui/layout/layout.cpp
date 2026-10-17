@@ -1152,6 +1152,16 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
         (is_auto_width && constraints.width.mode == MeasureMode::Undefined)
             ? MeasureMode::Undefined
             : MeasureMode::AtMost;
+    // A block-level box with an auto width fills the line. Blocks do that
+    // with AtMost already; a flex container reads AtMost as shrink-to-fit
+    // (what a flex or grid parent means by it), so it is told Exactly.
+    const ComputedStyle& child_style = child_box->style();
+    if (child_width_mode == MeasureMode::AtMost &&
+        child_style.display_inside == DisplayInside::Flex &&
+        child_style.IsBlockLevel() && child_style.width.unit == Unit::Auto &&
+        child_style.aspect_ratio <= 0) {
+      child_width_mode = MeasureMode::Exactly;
+    }
     child_c.width = {
         child_width_limit - child_box->style().margin.Horiz(),
         child_width_mode,

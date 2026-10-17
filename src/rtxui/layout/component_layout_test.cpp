@@ -328,6 +328,22 @@ TEST_CASE("Block layout max-height constraint",
   CHECK(child_link.fragment->height == 3);
 }
 
+class BlockLevelFlexComponent
+    : public rtxui::Component<BlockLevelFlexComponent> {
+ public:
+  std::string_view view = R"(
+    <div class="card">
+      <div id="row"><span>a</span><span id="b">b</span></div>
+      <div id="sized"><span>a</span></div>
+    </div>
+    <style>
+      .card { width: 20; }
+      #row { display: flex; justify-content: space-between; }
+      #sized { display: flex; width: 6; }
+    </style>
+  )";
+};
+
 struct InlineSpanBackgroundTestComponent
     : public rtxui::Component<InlineSpanBackgroundTestComponent> {
   std::string_view view = R"html(
@@ -366,4 +382,18 @@ TEST_CASE("Inline span background-color is applied when painted",
   int x = span->absolute_x();
   int y = span->absolute_y();
   CHECK(texture[x, y].background_color == Color::RGB(38, 79, 120));
+}
+
+TEST_CASE("A block-level flex container fills its block parent",
+          "[component][flex][layout][regression]") {
+  // Block flow offered its flex children an AtMost width, which LayoutFlex
+  // read as shrink-to-fit: the row took the width of its content, so
+  // `justify-content: space-between` had no space to distribute.
+  auto container = rtxui::Ref<BlockLevelFlexComponent>::New();
+  RenderComponent(container, 30, 4);
+  auto* root = rtxui::ComponentInternals::Root(*container);
+
+  CHECK(root->QuerySelector("#row")->layout_width() == 20);
+  CHECK(root->QuerySelector("#b")->absolute_x() == 19);
+  CHECK(root->QuerySelector("#sized")->layout_width() == 6);
 }
