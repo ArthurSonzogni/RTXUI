@@ -33,11 +33,6 @@
   }
   #glow1 { background: radial-gradient(circle, #1f6feb 0%, transparent 60%); }
   #glow2 { background: radial-gradient(circle, #db61a2 0%, transparent 60%); }
-  #dots {
-    inset: 0; opacity: 0.18;
-    background-image: radial-gradient(#8b949e 1.2px, transparent 1.2px);
-    background-size: 36px 36px;
-  }
   .word {
     font-weight: 900; font-size: 210px; letter-spacing: -8px; line-height: 1;
     white-space: nowrap; transform-origin: center;
@@ -102,7 +97,6 @@
 <div id="stage">
   <div id="glow1" class="glow"></div>
   <div id="glow2" class="glow"></div>
-  <div id="dots" class="abs"></div>
 
   <div id="w1" class="abs word">HTML.</div>
   <div id="w2" class="abs word">CSS.</div>
@@ -243,7 +237,6 @@ async function setTime(t) {
   // Background: two glows drifting, always.
   pose($('glow1'), { x: -300 + Math.sin(t * 0.35) * 260, y: -500 + Math.cos(t * 0.27) * 160 });
   pose($('glow2'), { x: 900 + Math.cos(t * 0.31) * 260, y: 100 + Math.sin(t * 0.22) * 200 });
-  pose($('dots'), { y: -(t * 12) % 36 });
   $('bar').style.width = (1920 * clamp(t / DURATION)) + 'px';
 
   // 1. Cold open: three words slam in, then the tagline types out.
