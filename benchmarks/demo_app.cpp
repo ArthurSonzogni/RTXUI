@@ -4,7 +4,9 @@
 //
 // A kitchen-sink dashboard combining most of the library in one program.
 //
-// For a smaller, more readable application see app_dashboard.cpp.
+// Not an example: rtxui_benchmark measures its frames, and component_test.cpp
+// keeps regression tests that need a layout this busy. Both include it with
+// RTXUI_BENCHMARK defined, which leaves out main().
 #include <cstddef>
 #include <functional>
 #include <rtxui/rtxui.hpp>

@@ -10,7 +10,6 @@ Complete applications, showing how individual features compose into full program
 | :--- | :--- | :--- |
 | [app_dashboard.cpp](/guide/examples/app_dashboard) | A complete application, rather than a demo of one property. | [Guide](/reactivity) |
 | [app_filebrowser.cpp](/guide/examples/app_filebrowser) | A complete application driven by the keyboard. | [Guide](/guide/scrolling) |
-| [demo.cpp](/guide/examples/demo) | A kitchen-sink dashboard combining most of the library in one program. | [Guide](/reactivity) |
 | [inline_install.cpp](/guide/examples/inline_install) | An inline application: a package installer drawn below the command that started it, as `apt install` is, rather than over the whole terminal. | [Guide](/guide/inline) |
 | [inline_prompt.cpp](/guide/examples/inline_prompt) | An inline prompt that stays: pick dependencies to add, one after the other, below the command that started it, as `cargo add` or `npm install` would. | [Guide](/guide/inline) |
 | [playground.cpp](/guide/examples/playground) | A live HTML/CSS editor and preview, side by side. | [Guide](/guide/playground) |

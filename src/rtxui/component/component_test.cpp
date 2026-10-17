@@ -959,7 +959,7 @@ TEST_CASE("Component props and two-way propagation", "[component][props]") {
 
 #define RTXUI_BENCHMARK
 
-#include "../../../example/demo.cpp"
+#include "../../../benchmarks/demo_app.cpp"
 
 TEST_CASE("Add Todo Regression Test", "[demo]") {
   auto app = Ref<App>::New();

@@ -5,9 +5,6 @@
 # docs and examples both point at build/rtxui_example_<name>.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-add_executable(rtxui_example_demo demo.cpp)
-target_link_libraries(rtxui_example_demo PRIVATE rtxui)
-
 add_executable(rtxui_example_counter counter.cpp)
 target_link_libraries(rtxui_example_counter PRIVATE rtxui)
 

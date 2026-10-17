@@ -120,7 +120,7 @@ cmake --build build
 ```
 
 - Run the test suite: `./build/rtxui_test` (or `ctest --test-dir build`)
-- Run an example: `./build/rtxui_example_demo`
+- Run an example: `./build/rtxui_example_counter`
 - Sanitizer build: add `-DRTXUI_SANITIZE=ON` for AddressSanitizer and
   UndefinedBehaviorSanitizer.
 

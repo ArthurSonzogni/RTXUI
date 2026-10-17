@@ -180,7 +180,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 
 # Run any example directly:
-./build/rtxui_example_demo
+./build/rtxui_example_counter
 ./build/rtxui_example_app_dashboard
 ```
 

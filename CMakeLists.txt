@@ -230,7 +230,7 @@ if(RTXUI_BUILD_TESTS)
       add_test(NAME smoke_examples
         COMMAND Python3::Interpreter
                 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/smoke_examples.py"
-                "$<TARGET_FILE_DIR:rtxui_example_demo>"
+                "$<TARGET_FILE_DIR:rtxui_example_counter>"
       )
       # Each example gets a PTY, a second to draw, and a burst of input to
       # survive. Release finishes in about a minute; the sanitizer build takes
@@ -248,7 +248,7 @@ if(RTXUI_BUILD_TESTS)
       add_test(NAME snapshot_examples
         COMMAND Python3::Interpreter
                 "${CMAKE_CURRENT_SOURCE_DIR}/scripts/snapshot_examples.py"
-                "$<TARGET_FILE_DIR:rtxui_example_demo>"
+                "$<TARGET_FILE_DIR:rtxui_example_counter>"
       )
     endif()
 

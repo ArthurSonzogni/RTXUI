@@ -2,8 +2,8 @@
 #include <chrono>
 #include <vector>
 
-#include "../example/demo.cpp"
 #include "benchmark_common.hpp"
+#include "demo_app.cpp"
 #include "rtxui/base/task_runner.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
