@@ -1429,3 +1429,27 @@ TEST_CASE("Playground button hover and active styling test",
   CHECK(btn->target_style.background_color == Color::RGB(255, 0, 0));
   CHECK(btn->target_style.border_color_top == Color::RGB(255, 0, 0));
 }
+
+TEST_CASE("border: none removes a border an earlier rule set",
+          "[component][style][regression]") {
+  // The shorthand reset the style but kept the width, so the box kept an
+  // invisible frame a cell thick on every side.
+  class BorderNone : public rtxui::Component<BorderNone> {
+   public:
+    std::string_view view = R"(
+      <div id="a" class="framed">a</div>
+      <style>
+        .framed { border: tall; }
+        #a { border: none; }
+      </style>
+    )";
+  };
+
+  auto app = rtxui::Ref<BorderNone>::New();
+  rtxui::ComponentInternals::Mount(*app);
+  auto* a = rtxui::ComponentInternals::Root(*app)->QuerySelector("#a");
+  REQUIRE(a != nullptr);
+  CHECK(a->style.border_style == BorderStyle::None);
+  CHECK(a->style.border.Horiz() == 0);
+  CHECK(a->style.border.Vert() == 0);
+}

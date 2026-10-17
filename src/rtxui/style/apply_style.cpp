@@ -2465,9 +2465,10 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   if (p == "border") {
     if (auto style_opt = ParseBorderStyle(v)) {
       style.border_style = *style_opt;
-      if (style.border_style != BorderStyle::None && style.border.top == 0 &&
-          style.border.bottom == 0 && style.border.left == 0 &&
-          style.border.right == 0) {
+      if (style.border_style == BorderStyle::None) {
+        style.border = {0, 0, 0, 0};
+      } else if (style.border.top == 0 && style.border.bottom == 0 &&
+                 style.border.left == 0 && style.border.right == 0) {
         style.border = {1, 1, 1, 1};
       }
       return;
