@@ -1,24 +1,24 @@
 
-         RTXUI Text Decoration Demo
 
-         Demonstrates various text-decoration styling attributes
-         supported by the layout and painting engine.
 
-         ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-         ▊                                                          ▎
-         ▊ text-decoration: underline                               ▎
-         ▊                                                          ▎
-         ▊ This text has a single underline.                        ▎
-         ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
-                                                                               ▄
-         ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-         ▊                                                          ▎
-         ▊ text-decoration: double-underline                        ▎
-         ▊                                                          ▎
-         ▊ This text has a double underline.                        ▎
-         ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
+             ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+             ▊                                                    ▎
+             ▊   Text decoration                                  ▎
+             ▊                                                    ▎
+             ▊   Terminal text attributes, set from CSS.          ▎
+             ▊                                                    ▎
+             ▊   font-weight: bold       The quick brown fox      ▎
+             ▊   font-weight: lighter    The quick brown fox      ▎
+             ▊   font-style: italic      The quick brown fox      ▎
+             ▊   underline               The quick brown fox      ▎
+             ▊   double-underline        The quick brown fox      ▎
+             ▊   overline                The quick brown fox      ▎
+             ▊   line-through            The quick brown fox      ▎
+             ▊   blink                   The quick brown fox      ▎
+             ▊   combined                The quick brown fox      ▎
+             ▊                                                    ▎
+             ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
-         ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
-         ▊                                                          ▎
-         ▊ text-decoration: line-through / strikethrough            ▎
+
+
 

@@ -16,39 +16,72 @@ class TabsDemo : public Component<TabsDemo> {
   std::string current_tab = "home";
 
   std::string_view view = R"html(
-      <div class="content">
-        <h1>RTXUI Tabbed Navigation Interface</h1>
+      <div class="card">
+        <h1>Tabs</h1>
+        <p>The value attribute names the active pane. Click a tab, or focus it and use the arrows.</p>
 
         <tabs value="{current_tab}">
           <tab-pane label="Dashboard" name="home">
-            <p class="tab-body">Welcome to your Dashboard. Active processes: 14</p>
+            <div class="pane">Active processes: 14</div>
           </tab-pane>
           <tab-pane label="Settings" name="settings">
-            <p class="tab-body">System preferences and visual theme modifications.</p>
+            <div class="pane">Preferences and theme.</div>
           </tab-pane>
           <tab-pane label="About" name="about">
-            <p class="tab-body">RTXUI Version 0.1.0 - Created by Arthur Sonzogni.</p>
+            <div class="pane">RTXUI, a terminal UI library for C++.</div>
           </tab-pane>
         </tabs>
+
+        <div class="readout">
+          <span>value</span>
+          <span class="value">{current_tab}</span>
+        </div>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 56;
         }
         h1 {
-          color: rgb(88, 166, 255);
-          margin-bottom: 2;
+          color: var(--accent);
         }
-        .tab-body {
-          border: solid;
-          border-color: rgb(48, 54, 61);
-          padding: 1;
+        p {
+          color: var(--muted);
+        }
+        .pane {
+          border: round;
+          border-color: var(--border);
+          padding: 1 2;
+        }
+        .readout {
+          display: flex;
+          justify-content: space-between;
+          border-top: solid;
+          border-color: var(--border);
           margin-top: 1;
-          color: rgb(230, 237, 243);
+          padding-top: 1;
+          color: var(--muted);
+        }
+        .value {
+          color: var(--accent);
+          font-weight: bold;
         }
       </style>
     )html";

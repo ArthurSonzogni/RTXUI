@@ -11,92 +11,95 @@ using namespace rtxui;
 class TextDecorationDemo : public Component<TextDecorationDemo> {
  public:
   std::string_view view = R"html(
-      <div class="content">
-        <h1>RTXUI Text Decoration Demo</h1>
-        <p>Demonstrates various text-decoration styling attributes supported by the layout and painting engine.</p>
-        
-        <div class="card">
-          <div class="title">text-decoration: underline</div>
-          <div class="content underline-text">This text has a single underline.</div>
-        </div>
+      <div class="card">
+        <h1>Text decoration</h1>
+        <p>Terminal text attributes, set from CSS.</p>
 
-        <div class="card">
-          <div class="title">text-decoration: double-underline</div>
-          <div class="content double-underline-text">This text has a double underline.</div>
-        </div>
-
-        <div class="card">
-          <div class="title">text-decoration: line-through / strikethrough</div>
-          <div class="content strikethrough-text">This text has a horizontal line running through it.</div>
-        </div>
-
-        <div class="card">
-          <div class="title">text-decoration: blink</div>
-          <div class="content blink-text">This text is blinking.</div>
-        </div>
-
-        <div class="card">
-          <div class="title">Combined Styles</div>
-          <div class="content combined-text">This text is bold, strikethrough, and double-underlined!</div>
+        <div class="samples">
+          <span class="name">font-weight: bold</span>
+          <span class="bold">The quick brown fox</span>
+          <span class="name">font-weight: lighter</span>
+          <span class="lighter">The quick brown fox</span>
+          <span class="name">font-style: italic</span>
+          <span class="italic">The quick brown fox</span>
+          <span class="name">underline</span>
+          <span class="underline">The quick brown fox</span>
+          <span class="name">double-underline</span>
+          <span class="double-underline">The quick brown fox</span>
+          <span class="name">overline</span>
+          <span class="overline">The quick brown fox</span>
+          <span class="name">line-through</span>
+          <span class="line-through">The quick brown fox</span>
+          <span class="name">blink</span>
+          <span class="blink">The quick brown fox</span>
+          <span class="name">combined</span>
+          <span class="combined">The quick brown fox</span>
         </div>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: white;
-          overflow-y: scroll;
-        }
-
-        .content {
-          display: block;
-          max-width: 60;
-          max-height: 100%;
-          margin: 0 auto;
-        }
-
-        h1 {
-          color: rgb(100, 180, 255);
-          font-weight: bold;
-        }
-        p {
-          margin-bottom: 1;
-          color: rgb(140, 160, 190);
+          color: rgb(230, 237, 243);
         }
         .card {
-          display: block;
-          margin-top: 1;
-          padding: 1;
           border: tall;
-          border-color: rgb(40, 60, 90);
-          background-color: rgb(20, 30, 50);
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 54;
         }
-        .title {
+        h1 {
+          color: var(--accent);
+        }
+        p {
+          color: var(--muted);
+        }
+        .samples {
+          display: grid;
+          grid-template-columns: 24 auto;
+        }
+        .name {
+          color: var(--muted);
+        }
+        .bold {
           font-weight: bold;
-          color: rgb(180, 220, 255);
-          margin-bottom: 1;
         }
-        .content {
-          color: rgb(200, 230, 255);
+        .lighter {
+          font-weight: lighter;
         }
-        .underline-text {
+        .italic {
+          font-style: italic;
+        }
+        .underline {
           text-decoration: underline;
         }
-        .double-underline-text {
+        .double-underline {
           text-decoration: double-underline;
         }
-        .strikethrough-text {
-          text-decoration: strikethrough;
+        .overline {
+          text-decoration: overline;
         }
-        .blink-text {
+        .line-through {
+          text-decoration: line-through;
+        }
+        .blink {
           text-decoration: blink;
         }
-        .combined-text {
+        .combined {
           font-weight: bold;
-          text-decoration: double-underline strikethrough;
+          font-style: italic;
+          text-decoration: underline line-through;
+          color: var(--accent);
         }
       </style>
     )html";

@@ -11,66 +11,68 @@ using namespace rtxui;
 class TextAlignDemo : public Component<TextAlignDemo> {
  public:
   std::string_view view = R"html(
-      <div>
-        <h1>RTXUI Text Alignment Demo</h1>
-        <p>Demonstrates text-align left, right, and center horizontal alignment.</p>
-        
-        <div class="card left-align">
-          <div class="title">text-align: left</div>
-          <div class="content">This text is aligned to the left of the container.</div>
-        </div>
+      <div class="card">
+        <h1>Text alignment</h1>
+        <p>text-align places each line within its box.</p>
 
-        <div class="card center-align">
-          <div class="title">text-align: center</div>
-          <div class="content">This text is aligned to the center of the container.</div>
+        <div class="box left">
+          <span class="name">left</span>
+          Lines start at the left edge, which is the default.
         </div>
-
-        <div class="card right-align">
-          <div class="title">text-align: right</div>
-          <div class="content">This text is aligned to the right of the container.</div>
+        <div class="box center">
+          <span class="name">center</span>
+          Lines are centered between both edges.
+        </div>
+        <div class="box right">
+          <span class="name">right</span>
+          Lines end at the right edge.
         </div>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: white;
-          width: 50;
-          height: 18;
-          overflow-y: scroll;
-        }
-        h1 {
-          color: rgb(56, 189, 248);
-          font-weight: bold;
-          text-align: center;
-        }
-        p {
-          margin-bottom: 1;
-          color: rgb(139, 148, 158);
-          text-align: center;
+          color: rgb(230, 237, 243);
         }
         .card {
-          display: block;
-          margin-top: 1;
-          padding: 1;
           border: tall;
-          border-color: rgb(48, 54, 61);
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 46;
         }
-        .title {
-          font-weight: bold;
-          color: rgb(121, 192, 255);
-          margin-bottom: 1;
+        h1 {
+          color: var(--accent);
         }
-        .left-align {
+        p {
+          color: var(--muted);
+        }
+        .box {
+          border: round;
+          border-color: var(--border);
+          padding: 0 1;
+          margin-top: 1;
+        }
+        .name {
+          display: block;
+          color: var(--accent);
+        }
+        .left {
           text-align: left;
         }
-        .center-align {
+        .center {
           text-align: center;
         }
-        .right-align {
+        .right {
           text-align: right;
         }
       </style>

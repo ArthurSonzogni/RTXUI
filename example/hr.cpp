@@ -11,50 +11,63 @@ using namespace rtxui;
 class HrDemo : public Component<HrDemo> {
  public:
   std::string_view view = R"html(
-      <div class="container">
-        <p class="title">Horizontal Rule Element Demo</p>
-        <p class="desc">The &lt;hr&gt; component renders a light box-drawing line horizontally, acting as a section separator.</p>
-        
-        <p class="section-title">Section 1: Introduction</p>
-        <p class="content">This is the first section of the document. Below it is a horizontal separator rule.</p>
-        
+      <div class="card">
+        <h1>Horizontal rule</h1>
+        <p>&lt;hr&gt; draws a line across its container to separate sections.</p>
+
+        <h2>Introduction</h2>
+        <div>The first section, above the rule.</div>
+
         <hr />
-        
-        <p class="section-title">Section 2: Layout & Separation</p>
-        <p class="content">This is the second section of the document, neatly separated from the introduction above.</p>
+
+        <h2>Details</h2>
+        <div>The second section, below it.</div>
+
+        <hr class="dashed" />
+
+        <div class="muted">A rule takes its color and style from its border.</div>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: white;
+          color: rgb(230, 237, 243);
         }
-        .container {
-          display: block;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 54;
         }
-        .title {
-          display: block;
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-          margin-bottom: 1;
+        h1 {
+          color: var(--accent);
         }
-        .desc {
-          display: block;
-          color: rgb(139, 148, 158);
-          margin-bottom: 2;
+        p {
+          color: var(--muted);
         }
-        .section-title {
-          display: block;
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-          margin-top: 1;
+        h2 {
+          margin-bottom: 0;
         }
-        .content {
-          display: block;
-          color: rgb(229, 231, 235);
+        hr {
+          border-color: var(--border);
+          margin: 1 0;
+        }
+        hr.dashed {
+          border-top: dashed;
+          border-color: var(--accent);
+        }
+        .muted {
+          color: var(--muted);
         }
       </style>
     )html";
