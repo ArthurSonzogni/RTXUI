@@ -14,6 +14,7 @@
 #include <fuzztest/fuzztest.h>
 #include <gtest/gtest.h>
 
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -129,8 +130,13 @@ void TestEvents(const std::string& input) {
   // reaction to a template/stylesheet error is to print and exit. Nothing here
   // fuzzes the template, but the handlers keep an unrelated diagnostic from
   // ending the run.
+  //
+  // RTXUI_VERIFY_LAYOUT_REUSE turns a stale layout cache from a plausible
+  // frame into an abort: every frame that reuses one is laid out again from
+  // scratch and must draw the same.
   static const int install_handler = [] {
     rtxui::SetDiagnosticHandler([](const rtxui::Diagnostic&) {});
+    setenv("RTXUI_VERIFY_LAYOUT_REUSE", "1", /*overwrite=*/1);
     return 0;
   }();
   (void)install_handler;

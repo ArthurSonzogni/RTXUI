@@ -72,7 +72,7 @@ jobs:
           cd build_fuzz
           for target in XML.TestXML Style.TestStyle Selector.TestSelector \
               TerminalInputParser.Fuzz Markdown.TestMarkdown Layout.TestLayout \
-              Events.TestEvents; do
+              Events.TestEvents App.TestApp; do
             echo "=== Fuzzing $target ==="
             ./rtxui_fuzzer --fuzz="$target" --fuzz_for=30s
           done
