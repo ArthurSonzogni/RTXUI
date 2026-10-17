@@ -14,14 +14,14 @@ const std::string_view kXmlTemplate = R"xml(
         flex-direction: column;
         width: 100%;
         height: 100%;
-        border: 1px solid #777;
-        padding: 2px;
+        border: 1 solid #777;
+        padding: 2;
       }
       .header {
         display: block;
         background-color: #222;
         color: #fff;
-        padding: 1px;
+        padding: 1;
         font-weight: bold;
         text-align: center;
       }
@@ -29,14 +29,14 @@ const std::string_view kXmlTemplate = R"xml(
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        padding: 1px;
+        padding: 1;
       }
       .card {
         display: block;
         width: 30%;
-        border: 1px solid #444;
-        margin: 1px;
-        padding: 1px;
+        border: 1 solid #444;
+        margin: 1;
+        padding: 1;
       }
       .card-title {
         display: block;
