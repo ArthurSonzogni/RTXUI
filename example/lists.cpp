@@ -15,129 +15,98 @@ class ListsDemo : public Component<ListsDemo> {
   std::string selected_style = "disc";
 
   std::string_view view = R"html(
-      <div class="container">
-        <div class="header">
-          <span class="title">RTXUI List Elements Demo</span>
-          <span class="desc">Showcases nested unordered lists (&lt;ul&gt;), ordered lists (&lt;ol&gt;), and dynamic styling.</span>
+      <div class="card">
+        <h1>Lists</h1>
+        <p>&lt;ul&gt; nests with a new bullet per level; &lt;ol&gt; counts, from start, or down when reversed.</p>
+
+        <div class="style">
+          <span>list-style-type</span>
+          <select value="{selected_style}">
+            <option value="disc">disc</option>
+            <option value="circle">circle</option>
+            <option value="square">square</option>
+            <option value="decimal">decimal</option>
+            <option value="none">none</option>
+          </select>
         </div>
 
-        <div class="demo-grid">
-          <!-- Sidebar Controls -->
-          <div class="sidebar">
-            <span class="section-title">Controls</span>
-            <p class="control-label">Custom List Style:</p>
-            <select value="{selected_style}">
-              <option value="disc">disc (•)</option>
-              <option value="circle">circle (○)</option>
-              <option value="square">square (■)</option>
-              <option value="decimal">decimal (1., 2.)</option>
-              <option value="none">none</option>
-            </select>
-          </div>
-
-          <!-- Live Preview -->
-          <div class="preview">
-            <span class="section-title">Interactive Preview</span>
-            
-            <p class="preview-label">1. Custom Styled List (Dynamic list-style-type)</p>
-            <ul class="dynamic-list">
-              <li>Dynamic list item A</li>
-              <li>Dynamic list item B</li>
-              <li>Dynamic list item C</li>
-            </ul>
-
-            <p class="preview-label">2. Default Nested List (Automatic bullet alternation)</p>
-            <ul>
-              <li>Level 1 (disc)
-                <ul>
-                  <li>Level 2 (circle)
-                    <ul>
-                      <li>Level 3 (square)</li>
-                      <li>Level 3 item 2</li>
-                    </ul>
-                  </li>
-                  <li>Level 2 item 2</li>
-                </ul>
-              </li>
-              <li>Level 1 item 2</li>
-            </ul>
-
-            <p class="preview-label">3. Ordered List (Decimal numbering)</p>
-            <ol>
-              <li>First steps with RTXUI</li>
-              <li>Writing XML-based components</li>
-              <li>Applying custom CSS rules</li>
-            </ol>
-          </div>
+        <div class="columns">
+          <ul class="styled">
+            <li>Apples</li>
+            <li>Pears</li>
+            <li>Plums</li>
+          </ul>
+          <ul>
+            <li>Fruit
+              <ul>
+                <li>Citrus
+                  <ul>
+                    <li>Lemon</li>
+                  </ul>
+                </li>
+                <li>Berries</li>
+              </ul>
+            </li>
+            <li>Vegetables</li>
+          </ul>
+          <ol start="3">
+            <li>Clone</li>
+            <li>Build</li>
+            <li value="10">Ship</li>
+          </ol>
+          <ol reversed="true">
+            <li>Three</li>
+            <li>Two</li>
+            <li>One</li>
+          </ol>
         </div>
       </div>
 
       <style>
         self {
+          --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
-          background-color: rgb(13, 17, 23);
-          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           width: 100%;
           height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
-        .container {
-          display: block;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 70;
         }
-        .header {
-          display: block;
-          margin-bottom: 2;
+        h1 {
+          color: var(--accent);
         }
-        .title {
-          display: block;
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-          margin-bottom: 1;
+        p {
+          color: var(--muted);
         }
-        .desc {
-          display: block;
-          color: rgb(139, 148, 158);
-        }
-        .demo-grid {
+        .style {
           display: flex;
-          flex-direction: row;
-          gap: 4;
-        }
-        .sidebar {
-          display: block;
-          width: 30;
-          border-right: solid;
-          border-color: rgb(48, 54, 61);
-          padding-right: 2;
-        }
-        .preview {
-          display: block;
-          flex: 1;
-          padding-left: 2;
-        }
-        .section-title {
-          display: block;
-          font-weight: bold;
-          color: rgb(244, 63, 94);
-          margin-bottom: 2;
-        }
-        .control-label {
-          display: block;
-          color: rgb(203, 213, 225);
+          gap: 2;
           margin-bottom: 1;
+          color: var(--muted);
         }
-        .preview-label {
-          display: block;
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-          margin-top: 2;
-          margin-bottom: 1;
+        select {
+          width: 14;
+          color: rgb(230, 237, 243);
         }
-        ul, ol {
-          margin-bottom: 1;
+        select:focus {
+          color: var(--accent);
         }
-        .dynamic-list {
+        .columns {
+          display: flex;
+          gap: 3;
+        }
+        .styled {
           list-style-type: {selected_style};
         }
       </style>

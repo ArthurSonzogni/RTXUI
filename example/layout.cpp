@@ -20,25 +20,17 @@ class Box : public Component<Box> {
   } props;
 
   std::string_view view = R"html(
-      <div class="box-content">
-        {text}
-      </div>
+      {text}
 
       <style>
         self {
-          --bg: rgb(13, 17, 23);
-          --accent: rgb(88, 166, 255);
-
-          background-color: var(--bg);
           display: block;
           flex-grow: 1;
-        }
-        .box-content {
           border: tall;
-          padding-left: 1;
-          padding-right: 1;
-          color: {color};
           border-color: {color};
+          background-color: rgb(22, 27, 34);
+          color: {color};
+          padding: 1 2;
         }
       </style>
     )html";
@@ -52,37 +44,31 @@ class Box : public Component<Box> {
 class LayoutDemo : public Component<LayoutDemo> {
  public:
   std::string_view view = R"html(
-      <div>
-        <h1>RTXUI Layout Demonstration</h1>
-        <p>This layout uses nested custom Box components inside a flex row container.</p>
-        
-        <div class="flex-row">
-          <Box text="Blue-300" color="rgb(121, 192, 255)"></Box>
-          <Box text="Blue-500" color="var(--accent)"></Box>
-          <Box text="Blue-700" color="rgb(29, 78, 216)"></Box>
-        </div>
+      <h1>Flexbox</h1>
+      <p>A flex row shares its width among three Box components, each given its text and color as props.</p>
+
+      <div class="row">
+        <Box text="Sky" color="rgb(121, 192, 255)"></Box>
+        <Box text="Blue" color="rgb(88, 166, 255)"></Box>
+        <Box text="Navy" color="rgb(56, 117, 230)"></Box>
       </div>
 
       <style>
         self {
           display: block;
-          padding: 1;
-          background-color: var(--bg);
-          color: white;
+          padding: 1 2;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
         }
         h1 {
-          color: var(--accent);
-          font-weight: bold;
+          color: rgb(88, 166, 255);
         }
         p {
-          margin-top: 1;
-          margin-bottom: 1;
+          color: rgb(139, 148, 158);
         }
-        .flex-row {
+        .row {
           display: flex;
-          width: 100%;
           gap: 2;
-          margin-top: 1;
         }
       </style>
     )html";

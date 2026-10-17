@@ -1,24 +1,24 @@
 
 
- Interactive Label Element
 
- Clicking on a label delegates focus and actions to its associated
- input/checkbox.
+             ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+             ▊                                                    ▎
+             ▊   Label                                            ▎
+             ▊                                                    ▎
+             ▊   Clicking a label acts on the control it          ▎
+             ▊   belongs to.                                      ▎
+             ▊                                                    ▎
+             ▊   for="id" names the control                       ▎
+             ▊   Click this label    ☐ Notifications              ▎
+             ▊                                                    ▎
+             ▊   or the label wraps it                            ▎
+             ▊   Click anywhere on this line ☑ Sound              ▎
+             ▊                                                    ▎
+             ▊   ──────────────────────────────────────────────   ▎
+             ▊                                                    ▎
+             ▊   notifications false                 sound true   ▎
+             ▊                                                    ▎
+             ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎
 
 
- ╭────────────────────────────────────────────────────────────────────────────╮
- │                                                                            │
- │                                                                            │
- │ 1. Explicit Association (via "for" attribute)                              │
- │                                                                            │
- │ ┌───────────────────────────┐                                              │
- │ │ Click Me (Explicit Label) │     ☐ Checkbox 1                             │
- │ └───────────────────────────┘                                              │
- │                                                                            │
- │ Checked state: false                                                       │
- │                                                                            │
- │                                                                            │
- ╰────────────────────────────────────────────────────────────────────────────╯
 
-
- ╭────────────────────────────────────────────────────────────────────────────╮

@@ -14,99 +14,99 @@ using namespace rtxui;
 class GridDemo : public Component<GridDemo> {
  public:
   std::string_view view = R"html(
-      <div class="content">
-        <h1>RTXUI CSS Grid Layout Demo</h1>
-        <p>This demo showcases the CSS Grid layout support in RTXUI. The container uses display: grid, the new shorthand grid-template: 1fr 1fr 1fr 1fr / 1fr 2fr 1fr, and gaps. Spanning is also demonstrated (item 1 spans 2 columns, item 5 spans 2 rows).</p>
+      <div class="card">
+        <h1>Grid</h1>
+        <p>grid-template sets the tracks: 4 rows / 1fr 2fr 1fr columns. Items span tracks with grid-column and grid-row.</p>
 
-        <div class="grid-container">
-          <div class="grid-item item-1">1 (span 2 cols)</div>
-          <div class="grid-item item-3">3 (1fr)</div>
-          <div class="grid-item item-4">4 (1fr)</div>
-          <div class="grid-item item-5">5 (span 2 rows)</div>
-          <div class="grid-item item-6">6 (1fr)</div>
-          <div class="grid-item item-7">7 (1fr)</div>
-          <div class="grid-item item-8">8 (2fr)</div>
-          <div class="grid-item item-9">9 (1fr)</div>
+        <div class="grid">
+          <div class="red wide">span 2 columns</div>
+          <div class="yellow">1fr</div>
+          <div class="green">1fr</div>
+          <div class="blue tall">2fr, span 2 rows</div>
+          <div class="purple">1fr</div>
+          <div class="pink">1fr</div>
+          <div class="teal">1fr</div>
+          <div class="gray full">span 3 columns</div>
         </div>
       </div>
-      
+
       <style>
         self {
           --border: rgb(48, 54, 61);
+          --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          background-color: rgb(13, 17, 23);
-        }
-
-        .content {
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           width: 100%;
           height: 100%;
+          background-color: rgb(13, 17, 23);
+          color: rgb(230, 237, 243);
+        }
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 70;
         }
         h1 {
-          font-weight: bold;
-          color: rgb(121, 192, 255);
-          margin-bottom: 1;
+          color: var(--accent);
         }
         p {
-          margin-bottom: 2;
+          color: var(--muted);
         }
-        .grid-container {
+        .grid {
           display: grid;
           grid-template: 1fr 1fr 1fr 1fr / 1fr 2fr 1fr;
-          gap: 1 1;
-          width: 90%;
-          height: 18;
-          border: solid;
-          border-color: var(--border);
-          padding: 1;
+          gap: 1 2;
+          height: 16;
         }
-        .grid-item {
-          display: block;
-          padding: 1;
+        .grid div {
           border: tall;
+          padding: 0 1;
         }
-        .item-1 {
-          background-color: rgb(248, 81, 73);
-          color: white;
-          border-color: rgb(185, 28, 28);
+        .wide {
           grid-column: span 2;
         }
-        .item-3 {
-          background-color: rgb(234, 179, 8);
-          color: black;
-          border-color: rgb(161, 98, 7);
-        }
-        .item-4 {
-          background-color: rgb(34, 197, 94);
-          color: white;
-          border-color: rgb(21, 128, 61);
-        }
-        .item-5 {
-          background-color: rgb(88, 166, 255);
-          color: white;
-          border-color: rgb(29, 78, 216);
+        .tall {
           grid-row: span 2;
         }
-        .item-6 {
-          background-color: rgb(168, 85, 247);
-          color: white;
-          border-color: rgb(126, 34, 206);
+        .full {
+          grid-column: span 3;
         }
-        .item-7 {
-          background-color: rgb(236, 72, 153);
-          color: white;
-          border-color: rgb(190, 24, 74);
+        .red {
+          background-color: rgb(73, 32, 36);
+          border-color: rgb(248, 81, 73);
         }
-        .item-8 {
-          background-color: rgb(20, 184, 166);
-          color: white;
-          border-color: rgb(13, 148, 136);
+        .yellow {
+          background-color: rgb(66, 53, 20);
+          border-color: rgb(210, 153, 34);
         }
-        .item-9 {
-          background-color: rgb(100, 116, 139);
-          color: white;
-          border-color: var(--border);
+        .green {
+          background-color: rgb(24, 57, 37);
+          border-color: rgb(63, 185, 80);
+        }
+        .blue {
+          background-color: rgb(22, 45, 77);
+          border-color: var(--accent);
+        }
+        .purple {
+          background-color: rgb(52, 36, 79);
+          border-color: rgb(188, 140, 255);
+        }
+        .pink {
+          background-color: rgb(73, 31, 54);
+          border-color: rgb(247, 120, 186);
+        }
+        .teal {
+          background-color: rgb(19, 59, 61);
+          border-color: rgb(57, 197, 207);
+        }
+        .gray {
+          background-color: rgb(33, 38, 45);
+          border-color: var(--muted);
         }
       </style>
     )html";

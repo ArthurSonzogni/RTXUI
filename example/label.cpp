@@ -10,111 +10,97 @@ using namespace rtxui;
 
 class LabelDemo : public Component<LabelDemo> {
  public:
-  bool cb1_checked = false;
-  bool cb2_checked = false;
+  bool notify = false;
+  bool sound = true;
 
   std::string_view view = R"html(
-      <div class="container">
-        <p class="title">Interactive Label Element</p>
-        <p class="desc">
-          Clicking on a label delegates focus and actions to its associated input/checkbox.
-        </p>
+      <div class="card">
+        <h1>Label</h1>
+        <p>Clicking a label acts on the control it belongs to.</p>
 
-        <!-- Explicit Association using "for" -->
-        <div class="section">
-          <p class="section-title">1. Explicit Association (via "for" attribute)</p>
-          <div class="row">
-            <label class="btn-label" for="explicit-cb">Click Me (Explicit Label)</label>
-            <checkbox id="explicit-cb" checked="{cb1_checked}">Checkbox 1</checkbox>
-          </div>
-          <p class="state-label">Checked state: <span class="value">{cb1_checked}</span></p>
+        <h2>for="id" names the control</h2>
+        <div class="row">
+          <label for="notify">Click this label</label>
+          <checkbox id="notify" checked="{notify}">Notifications</checkbox>
         </div>
 
-        <!-- Implicit Association using Nesting -->
-        <div class="section">
-          <p class="section-title">2. Implicit Association (via Nesting)</p>
-          <label class="nest-label">
-            Click Anywhere Here (Implicit Label)
-            <checkbox checked="{cb2_checked}">Checkbox 2</checkbox>
-          </label>
-          <p class="state-label">Checked state: <span class="value">{cb2_checked}</span></p>
+        <h2>or the label wraps it</h2>
+        <label class="wrapper">
+          Click anywhere on this line
+          <checkbox checked="{sound}">Sound</checkbox>
+        </label>
+
+        <div class="readout">
+          <span>notifications <span class="value">{notify}</span></span>
+          <span>sound <span class="value">{sound}</span></span>
         </div>
       </div>
 
       <style>
         self {
-          --surface: rgb(22, 27, 34);
+          --border: rgb(48, 54, 61);
           --muted: rgb(139, 148, 158);
+          --accent: rgb(88, 166, 255);
 
-          display: block;
-          padding: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
           background-color: rgb(13, 17, 23);
-          color: white;
+          color: rgb(230, 237, 243);
         }
-        .container {
-          display: block;
+        .card {
+          border: tall;
+          border-color: var(--border);
+          background-color: rgb(22, 27, 34);
+          padding: 1 3;
+          width: 54;
         }
-        .title {
-          display: block;
-          font-weight: bold;
-          color: rgb(56, 189, 248);
-          margin-bottom: 1;
+        h1 {
+          color: var(--accent);
         }
-        .desc {
-          display: block;
+        p {
           color: var(--muted);
-          margin-bottom: 2;
         }
-        .section {
-          display: block;
-          margin-bottom: 2;
-          border: round;
-          border-color: rgb(75, 85, 99);
-          padding: 1;
-        }
-        .section-title {
-          display: block;
-          font-weight: bold;
-          color: rgb(234, 179, 8);
-          margin-bottom: 1;
+        h2 {
+          margin: 1 0 0 0;
+          font-weight: normal;
+          color: var(--muted);
         }
         .row {
           display: flex;
-          align-items: center;
-          gap: 4;
+          gap: 3;
         }
-        .btn-label {
-          background-color: var(--surface);
-          padding-left: 1;
-          padding-right: 1;
-          border: solid;
-          border-color: rgb(88, 166, 255);
+        label {
+          color: var(--accent);
         }
-        .nest-label {
+        label:hover {
+          text-decoration: underline;
+        }
+        .wrapper {
           display: flex;
-          align-items: center;
-          gap: 2;
-          background-color: var(--surface);
-          padding: 1;
-          border: dashed;
-          border-color: rgb(63, 185, 80);
+          justify-content: space-between;
         }
-        .state-label {
-          display: block;
+        .readout {
+          display: flex;
+          justify-content: space-between;
+          border-top: solid;
+          border-color: var(--border);
           margin-top: 1;
+          padding-top: 1;
           color: var(--muted);
         }
         .value {
+          color: var(--accent);
           font-weight: bold;
-          color: rgb(56, 189, 248);
         }
       </style>
     )html";
 
   LabelDemo() {
-    Bind(cb1_checked);
-    Bind(cb2_checked);
-    EnableHotReload();
+    Bind(notify);
+    Bind(sound);
   }
 };
 
