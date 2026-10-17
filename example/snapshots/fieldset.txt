@@ -1,7 +1,6 @@
 
 
-    Personal Identification
- ┌────────────────────────────────────────────────────────────────────────────┐
+ ┌─ Personal Identification ──────────────────────────────────────────────────┐
  │                                                                            │
  │                                                                            │
  │ Name: Arthur Sonzogni                                                      │
@@ -14,11 +13,12 @@
 
 
 
-    Project Metadata
- ┌────────────────────────────────────────────────────────────────────────────┐
+ ┌─ Project Metadata ─────────────────────────────────────────────────────────┐
  │                                                                            │
  │                                                                            │
  │ Repository: RTXUI (Reactive Terminal User Interface)                       │
  │                                                                            │
  │                                                                            │
  │ Language: C++23                                                            │
+ │                                                                            │
+ │                                                                            │

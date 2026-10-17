@@ -303,6 +303,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/component/default/checkbox/checkbox_test.cpp"
     "src/rtxui/component/default/default_components_test.cpp"
     "src/rtxui/component/default/details/details_test.cpp"
+    "src/rtxui/component/default/fieldset/fieldset_test.cpp"
     "src/rtxui/component/default/dialog/dialog_test.cpp"
     "src/rtxui/component/default/input/input_test.cpp"
     "src/rtxui/component/default/label/label_test.cpp"

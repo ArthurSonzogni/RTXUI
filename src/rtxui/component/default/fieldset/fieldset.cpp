@@ -33,13 +33,17 @@ std::string_view fieldset::Setup() {
         margin-top: 1;
         margin-bottom: 1;
       }
+      .fieldset-wrapper {
+        position: relative;
+      }
       .legend-line {
         display: flex;
         flex-direction: row;
         font-weight: bold;
         color: rgb(59, 130, 246);
-        margin-bottom: -1;
-        margin-left: 2;
+        position: absolute;
+        top: 0;
+        left: 2;
         padding-left: 1;
         padding-right: 1;
         z-index: 1;
