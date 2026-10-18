@@ -34,6 +34,10 @@
     .xterm-viewport::-webkit-scrollbar {
       display: none !important;
     }
+    /* Cells are whole pixels: what is left of the width is split evenly. */
+    html.fill #terminal {
+      margin: 0 auto;
+    }
     html.fullscreen, html.fullscreen body {
       width: 100% !important;
       height: 100% !important;
@@ -93,7 +97,12 @@
                              params.get('fullscreen') === 'true' ||
                              params.get('fit') === '1' ||
                              params.get('fit') === 'true';
-        let cols = parseInt(params.get('cols') || '80', 10);
+        // fill=width: as many columns as the frame is wide, but never fewer
+        // than `cols`, which the example needs. Below that, the font shrinks
+        // rather than the terminal being cut off.
+        const fillWidth = !isFullscreen && params.get('fill') === 'width';
+        const minCols = parseInt(params.get('cols') || '80', 10);
+        let cols = minCols;
         let rows = parseInt(params.get('rows') || '15', 10);
 
         const measureCharSize = () => {
@@ -171,6 +180,73 @@
             }, 30);
           });
         } else {
+          if (fillWidth) {
+            document.documentElement.classList.add('fill');
+            const BASE_FONT = 14;
+            const MIN_FONT = 7;
+            const PADDING = 24;  // #terminal's padding, both sides.
+            // The width of a cell as xterm draws it at the current font: it
+            // rounds cells to whole pixels, so the font's metrics are off.
+            // Read once the renderer has caught up with a font change.
+            const frame = () => new Promise(requestAnimationFrame);
+            const cellWidth = async () => {
+              await frame();
+              await frame();
+              const dimensions = xtermInstance._core._renderService.dimensions;
+              return dimensions.css.cell.width ||
+                  document.querySelector('.xterm-screen').offsetWidth /
+                      xtermInstance.cols;
+            };
+            let baseCellWidth = 0;
+            let fitting = 0;  // Drops a fit that a newer one replaced.
+            const fit = async () => {
+              const id = ++fitting;
+              const avail = window.innerWidth - PADDING;
+              if (!baseCellWidth) baseCellWidth = await cellWidth();
+              let newCols = Math.floor(avail / baseCellWidth);
+              let font = BASE_FONT;
+              if (newCols < minCols) {
+                // The largest font, in half points, at which `cols` fit.
+                newCols = minCols;
+                let lo = MIN_FONT * 2;
+                let hi = BASE_FONT * 2 - 1;
+                while (lo < hi) {
+                  const mid = Math.ceil((lo + hi) / 2);
+                  xtermInstance.options.fontSize = mid / 2;
+                  if ((await cellWidth()) * minCols <= avail) {
+                    lo = mid;
+                  } else {
+                    hi = mid - 1;
+                  }
+                  if (id !== fitting) return;
+                }
+                font = lo / 2;
+              }
+              if (xtermInstance.options.fontSize !== font) {
+                xtermInstance.options.fontSize = font;
+              }
+              if (newCols !== xtermInstance.cols) {
+                xtermInstance.resize(newCols, xtermInstance.rows);
+                window.rtxui_columns = newCols;
+                if (window.rtxui_on_input) {
+                  window.rtxui_on_input(-1);
+                } else if (window.rtxui_input_queue) {
+                  window.rtxui_input_queue.push(-1);
+                }
+              }
+            };
+            fit();
+            // The frame's height follows the terminal, and changing it fires
+            // `resize` too: only a new width calls for another fit.
+            let fittedWidth = window.innerWidth;
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+              if (window.innerWidth === fittedWidth) return;
+              fittedWidth = window.innerWidth;
+              if (resizeTimer) clearTimeout(resizeTimer);
+              resizeTimer = setTimeout(fit, 30);
+            });
+          }
           // Report dimensions to parent iframe container
           const screenEl = document.querySelector('.xterm');
           if (screenEl && window.ResizeObserver) {

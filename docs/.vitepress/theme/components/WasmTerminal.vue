@@ -2,9 +2,10 @@
   <ClientOnly>
     <div class="wasm-terminal-container">
       <iframe
+        ref="iframe"
         :src="terminalUrl"
         class="terminal-iframe"
-        :style="{ height: iframeHeight, width: iframeWidth }"
+        :style="{ height: iframeHeight }"
         frameborder="0"
         scrolling="no"
       ></iframe>
@@ -34,16 +35,18 @@ const props = defineProps({
 const terminalUrl = computed(() => {
   const resolvedSrc = withBase(props.src)
   const resolvedTerminal = withBase('/terminal.html')
-  return `${resolvedTerminal}?src=${encodeURIComponent(resolvedSrc)}&cols=${props.cols}&rows=${props.rows}`
+  // The terminal fills the width it is given, with `cols` as its minimum.
+  return `${resolvedTerminal}?src=${encodeURIComponent(resolvedSrc)}&cols=${props.cols}&rows=${props.rows}&fill=width`
 })
 
+const iframe = ref(null)
 const iframeHeight = ref(`${props.rows * 19 + 24}px`)
-const iframeWidth = ref('100%')
 
+// Only the height follows the terminal: its width follows the iframe's.
 const handleMessage = (event) => {
-  if (event.data && event.data.type === 'rtxui-terminal-resize') {
+  if (event.data && event.data.type === 'rtxui-terminal-resize' &&
+      iframe.value && event.source === iframe.value.contentWindow) {
     iframeHeight.value = `${event.data.height}px`
-    iframeWidth.value = `${event.data.width}px`
   }
 }
 
@@ -60,15 +63,14 @@ onUnmounted(() => {
 .wasm-terminal-container {
   margin: 1.5rem 0;
   border-radius: 12px;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--vp-c-border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   background: #0f172a;
-  max-width: 100%;
-  width: max-content;
 }
 .terminal-iframe {
   border: none;
   display: block;
+  width: 100%;
 }
 </style>
