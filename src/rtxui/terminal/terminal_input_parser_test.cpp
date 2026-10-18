@@ -296,10 +296,11 @@ TEST_CASE("Event.MouseRightClick", "[terminal]") {
 // last afterwards.
 TEST_CASE("Event.MouseUrxvtMotionWithoutButton", "[terminal]") {
   TerminalInputParser parser;
-  for (char c : std::string_view(
-           "\x1b[<31;2;2M"
-           "\x1b[<0;8;5M\x1b[<32;12;5M\x1b[<0;15;5m\x1b[<32;18;5M"
-           "\x1b[<2;22;5M\x1b[<34;25;5M\x1b[<2;25;5m\x1b[<34;28;5M")) {
+  for (char c :
+       std::string_view("\x1b[<31;2;2M"
+                        "\x1b[<0;8;5M\x1b[<32;12;5M\x1b[<0;15;5m\x1b[<32;18;5M"
+                        "\x1b[<2;22;5M\x1b[<34;25;5M\x1b[<2;25;5m\x1b[<34;28;5M"
+                        "\x1b[<65;30;5M\x1b[<97;31;5M")) {
     parser.Add(c);
   }
   struct Expected {
@@ -317,6 +318,8 @@ TEST_CASE("Event.MouseUrxvtMotionWithoutButton", "[terminal]") {
       {Event::Mouse::Right, Event::Mouse::Moved, 25},
       {Event::Mouse::Right, Event::Mouse::Released, 25},
       {Event::Mouse::None, Event::Mouse::Moved, 28},
+      {Event::Mouse::WheelDown, Event::Mouse::Pressed, 30},
+      {Event::Mouse::None, Event::Mouse::Moved, 31},
   };
   for (const Expected& e : expected) {
     auto event = parser.GetEvent();
@@ -357,6 +360,87 @@ TEST_CASE("Event.RxvtKeys", "[terminal]") {
     CHECK(*event == expected);
     CHECK_FALSE(parser.GetEvent().has_value());
   }
+}
+
+// tmux, screen and the Linux console (captures/tmux-3.6.txt).
+TEST_CASE("Event.MultiplexerHomeEnd", "[terminal]") {
+  const std::pair<std::string_view, Event> keys[] = {
+      {"\x1B[1~", Event::Home()},
+      {"\x1B[4~", Event::End()},
+  };
+  for (const auto& [sequence, expected] : keys) {
+    TerminalInputParser parser;
+    for (char c : sequence) {
+      parser.Add(c);
+    }
+    auto event = parser.GetEvent();
+    REQUIRE(event.has_value());
+    CHECK(*event == expected);
+    CHECK_FALSE(parser.GetEvent().has_value());
+  }
+}
+
+// screen holds an Escape back and sends it with the next key
+// (captures/screen-4.09.01.txt).
+TEST_CASE("Event.EscapeSentWithTheNextKey", "[terminal]") {
+  TerminalInputParser parser;
+  for (char c : std::string_view("\x1B\x1BOQ\x1B\x1B[A")) {
+    parser.Add(c);
+  }
+  CHECK(parser.GetEvent() == Event::Escape());
+  CHECK(parser.GetEvent() == Event::F2());
+  // rxvt's Alt+Up still reads as one.
+  CHECK(parser.GetEvent() == Event::ArrowUpAlt());
+  CHECK_FALSE(parser.GetEvent().has_value());
+}
+
+// A terminal that does not know the SGR encoding sends `ESC[M` and three
+// bytes, each 32 more than the button, the column and the row.
+TEST_CASE("Event.MouseX10", "[terminal]") {
+  TerminalInputParser parser;
+  const auto report = [](int button, int x, int y) {
+    return std::string("\x1B[M") + static_cast<char>(32 + button) +
+           static_cast<char>(32 + x) + static_cast<char>(32 + y);
+  };
+  for (char c : report(0, 10, 5) + report(32, 11, 5) + report(3, 12, 5) +
+                    report(35, 13, 5) + report(2 + 16, 14, 5) +
+                    report(3 + 16, 14, 5) + report(65, 200, 6)) {
+    parser.Add(c);
+  }
+  struct Expected {
+    Event::Mouse::Button button;
+    Event::Mouse::Motion motion;
+    int x;
+    int y;
+  };
+  const Expected expected[] = {
+      {Event::Mouse::Left, Event::Mouse::Pressed, 10, 5},
+      {Event::Mouse::Left, Event::Mouse::Moved, 11, 5},
+      {Event::Mouse::Left, Event::Mouse::Released, 12, 5},
+      {Event::Mouse::None, Event::Mouse::Moved, 13, 5},
+      {Event::Mouse::Right, Event::Mouse::Pressed, 14, 5},
+      {Event::Mouse::Right, Event::Mouse::Released, 14, 5},
+      {Event::Mouse::WheelDown, Event::Mouse::Pressed, 200, 6},
+  };
+  for (const Expected& e : expected) {
+    auto event = parser.GetEvent();
+    REQUIRE(event.has_value());
+    INFO(event->Print());
+    auto mouse = event->get_if<Event::Mouse>();
+    REQUIRE(mouse);
+    CHECK(mouse->button() == e.button);
+    CHECK(mouse->motion() == e.motion);
+    CHECK(mouse->x() == e.x);
+    CHECK(mouse->y() == e.y);
+  }
+  CHECK_FALSE(parser.GetEvent().has_value());
+
+  // `ESC[M` alone is still some consoles' F1.
+  for (char c : std::string_view("\x1B[M")) {
+    parser.Add(c);
+  }
+  parser.Timeout(1000);
+  CHECK(parser.GetEvent() == Event::F1());
 }
 
 TEST_CASE("Event.UTF8", "[terminal]") {
@@ -580,6 +664,8 @@ TEST_CASE("Event.Keyboard", "[terminal]") {
     for (auto input : test.input) {
       parser.Add(input);
     }
+    // `ESC[M`, F1 on some consoles, may also start an X10 mouse report.
+    parser.Timeout(1000);
     auto event = parser.GetEvent();
     REQUIRE(event.has_value());
     CHECK(*event == test.expected);

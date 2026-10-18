@@ -68,6 +68,7 @@ class TerminalInputParser {
   Output ParseCSI();
   Output ParseOSC();
   Output ParseMouse(bool altered, bool pressed, std::vector<int> arguments);
+  Output ParseX10Mouse();
   Output ParseCursorPosition(std::vector<int> arguments);
   Output ParseModeReport(std::vector<int> arguments);
 
@@ -97,6 +98,8 @@ class TerminalInputParser {
   // with no button held as a drag of the last button released, so a motion
   // naming a button known to be up is a plain motion.
   int released_buttons_ = 0;
+  // The button of the last X10 press: an X10 release does not say which.
+  int x10_button_ = 0;
 };
 
 }  // namespace rtxui

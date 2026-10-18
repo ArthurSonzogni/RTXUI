@@ -82,6 +82,9 @@ std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
       {"\x1BOd", Event::ArrowLeftCtrl()},
       {"\x1B[7~", Event::Home()},
       {"\x1B[8~", Event::End()},
+      // tmux, screen and the Linux console.
+      {"\x1B[1~", Event::Home()},
+      {"\x1B[4~", Event::End()},
       {"\x1B\x1B[A", Event::ArrowUpAlt()},
       {"\x1B\x1B[B", Event::ArrowDownAlt()},
       {"\x1B\x1B[C", Event::ArrowRightAlt()},
@@ -383,9 +386,19 @@ TerminalInputParser::Output TerminalInputParser::ParseESC() {
       return ParseOSC();
     case '[':
       return ParseCSI();
-    case '\x1B':
-      // rxvt sends Alt+key as an Escape before the key's own sequence.
-      return ParseESC();
+    case '\x1B': {
+      // rxvt sends Alt+key as an Escape before the key's own sequence. screen
+      // holds an Escape back until the next key, and sends both at once: when
+      // the two make no Alt+key, they are an Escape, then that key.
+      Output output = ParseESC();
+      if (auto* type = std::get_if<Type>(&output); type && *type == DROP) {
+        events_.push_back(Event::Escape());
+        pending_.erase(0, 1);
+        position_ = -1;
+        return Parse();
+      }
+      return output;
+    }
     case 'O': {
       if (!Eat()) {
         return UNCOMPLETED;
@@ -551,6 +564,9 @@ TerminalInputParser::Output TerminalInputParser::ParseCSI() {
       arguments.push_back(argument);
       switch (Current()) {
         case 'M':
+          if (position_ == 2) {  // `ESC[M`, with no parameters.
+            return ParseX10Mouse();
+          }
           return ParseMouse(altered, true, std::move(arguments));
         case 'm':
           return ParseMouse(altered, false, std::move(arguments));
@@ -607,6 +623,11 @@ TerminalInputParser::Output TerminalInputParser::ParseMouse(
   mouse.button =
       (button & 64) ? Event::Mouse::Button(Event::Mouse::WheelUp + (button & 3))
                     : Event::Mouse::Button(button & 3);
+  // urxvt reports a motion after the wheel turned as a drag of the wheel,
+  // which nothing can hold.
+  if ((button & 64) && mouse.motion == Event::Mouse::Moved) {
+    mouse.button = Event::Mouse::None;
+  }
   if (button < 64 && (button & 3) != 3) {
     const int bit = 1 << (button & 3);
     if (mouse.motion == Event::Mouse::Pressed) {
@@ -623,6 +644,28 @@ TerminalInputParser::Output TerminalInputParser::ParseMouse(
   mouse.x = arguments[1];
   mouse.y = arguments[2];
   return Event(mouse);
+}
+// A terminal that does not know the SGR encoding (1006) reports the mouse as
+// `ESC[M` and three bytes: the button, the column and the row, each plus 32.
+// A release names no button: it is the last one pressed. Some consoles send
+// `ESC[M` alone for F1, which Timeout() still reads.
+TerminalInputParser::Output TerminalInputParser::ParseX10Mouse() {
+  int bytes[3] = {};
+  for (int& byte : bytes) {
+    if (!Eat()) {
+      return UNCOMPLETED;
+    }
+    byte = Current() - 32;
+  }
+  int button = bytes[0];
+  const bool pressed = (button & 3) != 3 || (button & (32 | 64)) != 0;
+  if (pressed && (button & 32) == 0 && (button & 64) == 0) {
+    x10_button_ = button & 3;
+  }
+  if (!pressed) {
+    button = (button & ~3) | x10_button_;
+  }
+  return ParseMouse(false, pressed, {button, bytes[1], bytes[2]});
 }
 // `ESC[row;colR` is a terminal's reply to a cursor position query, which an
 // inline screen makes to find where it is drawn. Not an Event: it answers the
