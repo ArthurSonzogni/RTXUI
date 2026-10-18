@@ -574,13 +574,28 @@ TerminalInputParser::Output TerminalInputParser::ParseMouse(
     }
   }
   MouseData mouse;
-  const int button = arguments[0];
+  int button = arguments[0];
+  // urxvt encodes "no button" as -1 rather than 3, so a motion with no button
+  // held, before any press, arrives as 32 - 1 instead of 32 + 3.
+  if (button == 31) {
+    button = 35;
+  }
   mouse.motion = (button & 32) ? Event::Mouse::Moved
                                : (pressed ? Event::Mouse::Pressed
                                           : Event::Mouse::Released);
   mouse.button =
       (button & 64) ? Event::Mouse::Button(Event::Mouse::WheelUp + (button & 3))
                     : Event::Mouse::Button(button & 3);
+  if (button < 64 && (button & 3) != 3) {
+    const int bit = 1 << (button & 3);
+    if (mouse.motion == Event::Mouse::Pressed) {
+      released_buttons_ &= ~bit;
+    } else if (mouse.motion == Event::Mouse::Released) {
+      released_buttons_ |= bit;
+    } else if (released_buttons_ & bit) {
+      mouse.button = Event::Mouse::None;
+    }
+  }
   mouse.modifier.shift = (button & 4) != 0;
   mouse.modifier.meta = (button & 8) != 0;
   mouse.modifier.ctrl = (button & 16) != 0;

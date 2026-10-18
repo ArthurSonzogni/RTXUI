@@ -84,6 +84,12 @@ class TerminalInputParser {
   std::optional<Color> background_color_;
   std::optional<Color> foreground_color_;
   std::vector<std::pair<int, int>> cursor_positions_;
+
+  // Bit `b` is set once button `b` (Left, Middle, Right) was reported
+  // released, and cleared when it is pressed again. urxvt reports a motion
+  // with no button held as a drag of the last button released, so a motion
+  // naming a button known to be up is a plain motion.
+  int released_buttons_ = 0;
 };
 
 }  // namespace rtxui

@@ -5,6 +5,7 @@
 
 #include <optional>  // for std::optional
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>  // for vector
 
@@ -285,6 +286,49 @@ TEST_CASE("Event.MouseRightClick", "[terminal]") {
   CHECK(mouse->button() == Event::Mouse::Right);
   CHECK(mouse->x() == 12);
   CHECK(mouse->y() == 42);
+  CHECK_FALSE(parser.GetEvent().has_value());
+}
+
+// The bytes urxvt 9.31 sends, with `?1003h` and `?1006h`, for: a move, a
+// left click, a move, a right drag, then a move. It reports a move with no
+// button held as 31 before any press, and as a drag of the button released
+// last afterwards.
+TEST_CASE("Event.MouseUrxvtMotionWithoutButton", "[terminal]") {
+  TerminalInputParser parser;
+  for (char c : std::string_view(
+           "\x1b[<31;2;2M"
+           "\x1b[<0;8;5M\x1b[<32;12;5M\x1b[<0;15;5m\x1b[<32;18;5M"
+           "\x1b[<2;22;5M\x1b[<34;25;5M\x1b[<2;25;5m\x1b[<34;28;5M")) {
+    parser.Add(c);
+  }
+  struct Expected {
+    Event::Mouse::Button button;
+    Event::Mouse::Motion motion;
+    int x;
+  };
+  const Expected expected[] = {
+      {Event::Mouse::None, Event::Mouse::Moved, 2},
+      {Event::Mouse::Left, Event::Mouse::Pressed, 8},
+      {Event::Mouse::Left, Event::Mouse::Moved, 12},
+      {Event::Mouse::Left, Event::Mouse::Released, 15},
+      {Event::Mouse::None, Event::Mouse::Moved, 18},
+      {Event::Mouse::Right, Event::Mouse::Pressed, 22},
+      {Event::Mouse::Right, Event::Mouse::Moved, 25},
+      {Event::Mouse::Right, Event::Mouse::Released, 25},
+      {Event::Mouse::None, Event::Mouse::Moved, 28},
+  };
+  for (const Expected& e : expected) {
+    auto event = parser.GetEvent();
+    REQUIRE(event.has_value());
+    auto mouse = event->get_if<Event::Mouse>();
+    REQUIRE(mouse);
+    CHECK(mouse->button() == e.button);
+    CHECK(mouse->motion() == e.motion);
+    CHECK(mouse->x() == e.x);
+    CHECK_FALSE(mouse->modifier().shift());
+    CHECK_FALSE(mouse->modifier().meta());
+    CHECK_FALSE(mouse->modifier().ctrl());
+  }
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
