@@ -1133,9 +1133,39 @@ using GridLineNames = std::vector<std::vector<std::string>>;
 // A track list: sizes, `repeat(count, ...)`, and line names in brackets,
 // `[full-start main-start] 1fr [main-end]`. The names of each line go to
 // `names`, when given: one list per line, left empty when none is named.
-// A grid track: a length, an fr, auto, or minmax(<min>, <max>), whose min
-// cannot be fr. Nothing when it is none of them.
+// One end of a grid track: a length, an fr, auto, min-content or
+// max-content, as `length` and `content`.
+void ParseGridTrackEnd(std::string_view token,
+                       Length* length,
+                       GridTrack::Content* content) {
+  if (token == "min-content") {
+    *content = GridTrack::Content::Min;
+  } else if (token == "max-content") {
+    *content = GridTrack::Content::Max;
+  } else {
+    *length = ParseLength(token);
+  }
+}
+
+// A grid track: a length, an fr, auto, min-content, max-content,
+// fit-content(<length>), or minmax(<min>, <max>), whose min cannot be fr.
+// Nothing when it is none of them.
 std::optional<Length> ParseGridTrack(std::string_view token) {
+  GridTrack track;
+  if (token == "min-content" || token == "max-content") {
+    ParseGridTrackEnd(token, &track.min, &track.min_content);
+    ParseGridTrackEnd(token, &track.max, &track.max_content);
+    return Length::MakeTrack(RegisterGridTrack(track));
+  }
+  if (token.starts_with("fit-content(") && token.back() == ')') {
+    track.max =
+        ParseLength(TrimWhitespace(token.substr(12, token.size() - 13)));
+    if (track.max.unit != Unit::Cells && track.max.unit != Unit::Percent) {
+      return std::nullopt;
+    }
+    track.fit_content = true;
+    return Length::MakeTrack(RegisterGridTrack(track));
+  }
   if (!token.starts_with("minmax(") || token.back() != ')') {
     return ParseLength(token);
   }
@@ -1144,12 +1174,14 @@ std::optional<Length> ParseGridTrack(std::string_view token) {
   if (comma == std::string_view::npos) {
     return std::nullopt;
   }
-  const Length min = ParseLength(TrimWhitespace(inner.substr(0, comma)));
-  const Length max = ParseLength(TrimWhitespace(inner.substr(comma + 1)));
-  if (min.unit == Unit::Fr) {
+  ParseGridTrackEnd(TrimWhitespace(inner.substr(0, comma)), &track.min,
+                    &track.min_content);
+  ParseGridTrackEnd(TrimWhitespace(inner.substr(comma + 1)), &track.max,
+                    &track.max_content);
+  if (track.min.unit == Unit::Fr) {
     return std::nullopt;
   }
-  return Length::MakeTrack(RegisterGridTrack({min, max}));
+  return Length::MakeTrack(RegisterGridTrack(track));
 }
 
 std::vector<Length> ParseGridTemplate(

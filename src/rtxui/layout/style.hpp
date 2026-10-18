@@ -167,8 +167,15 @@ struct Length {
 // A grid track sized minmax(min, max): at least `min`, at most `max`, which
 // may be fr. Interned like MinMaxExpr, so that a Length can name one.
 struct GridTrack {
+  // min-content or max-content in place of a length, at either end: the
+  // width of the track's items, wrapped as much as they can be or not at all.
+  enum class Content { None, Min, Max };
   Length min;
   Length max;
+  Content min_content = Content::None;
+  Content max_content = Content::None;
+  // fit-content(max): the max-content, but no more than `max`.
+  bool fit_content = false;
   bool operator==(const GridTrack&) const = default;
 };
 /// Interns the track and returns its id, for Length::MakeTrack().

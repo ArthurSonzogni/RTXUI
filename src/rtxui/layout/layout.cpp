@@ -175,6 +175,18 @@ std::string_view TruncateWithEllipsis(std::string_view text, int limit) {
   return std::string_view(dst, result_size);
 }
 
+// How far right `fragment` reaches, with what overflows it unless it clips.
+int FragmentInkRight(const PhysicalFragment* fragment) {
+  int right = fragment->width;
+  if (fragment->clips_descendants) {
+    return right;
+  }
+  for (const auto& child : fragment->children) {
+    right = std::max(right, child.x + FragmentInkRight(&*child.fragment));
+  }
+  return right;
+}
+
 // The row of an inline-level box's baseline: that of its last line of text in
 // flow, or its bottom row when it has none or clips its content, as in CSS.
 int FragmentBaseline(const PhysicalFragment* fragment) {
@@ -4060,6 +4072,9 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     float flex = 0.0f;
     bool content_min = false;  // An auto minimum.
     bool stretch = false;      // An auto maximum.
+    // min-content, max-content or fit-content() at an end: the base and
+    // limit come from the content, once measured.
+    bool sized_by_content = false;
   };
   std::vector<ColumnSize> sizes(C);
   std::vector<int> col_widths(C, 0);
@@ -4072,6 +4087,19 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     size.content_min = min.unit == Unit::Auto;
     if (min.unit != Unit::Auto && min.unit != Unit::Fr) {
       size.base = min.Resolve(remaining_width);
+    }
+    if (size.track.min_content != GridTrack::Content::None ||
+        size.track.max_content != GridTrack::Content::None ||
+        size.track.fit_content) {
+      size.sized_by_content = true;
+      size.content_min = false;
+      if (size.track.min_content != GridTrack::Content::None) {
+        size.base = 0;
+      }
+      if (max.unit == Unit::Fr) {
+        size.flex = max.value;
+      }
+      continue;
     }
     if (max.unit == Unit::Fr) {
       size.flex = max.value;
@@ -4088,16 +4116,16 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   // item in it alone, out of the space the other tracks leave.
   int fixed_width = 0;
   for (const ColumnSize& size : sizes) {
-    if (!size.content_min && !size.stretch) {
+    if (!size.content_min && !size.stretch && !size.sized_by_content) {
       fixed_width += size.base;
     }
   }
   int free_col_width = std::max(0, remaining_width - fixed_width);
-  std::vector<int> auto_content(C, 0);
-  for (int c = 0; c < C; ++c) {
-    if (!sizes[c].content_min && !sizes[c].stretch) {
-      continue;
-    }
+  // The widest item of a column, laid out in `width` cells: the free width
+  // for its max-content; one for its min-content, wrapped wherever it can,
+  // with the words that cannot wrap overflowing.
+  auto measure_column = [&](int c, int width, MeasureMode mode) {
+    int content = 0;
     for (const auto& pc : placed_children) {
       if (pc.col != c || pc.c_span != 1) {
         continue;
@@ -4105,12 +4133,50 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       LayoutContext measure_context =
           CreateChildContext(box, parent_width, parent_height, 0, 0, context);
       measure_context.is_measurement = true;
-      const LayoutConstraints measure_c = {
-          {free_col_width, MeasureMode::Undefined},
-          {0, MeasureMode::Undefined}};
+      const LayoutConstraints measure_c = {{width, mode},
+                                           {0, MeasureMode::Undefined}};
+      const PhysicalFragment* fragment =
+          RunLayout({pc.box}, measure_c, measure_context);
+      content = std::max(content, mode == MeasureMode::AtMost
+                                      ? FragmentInkRight(fragment)
+                                      : fragment->width);
+    }
+    return content;
+  };
+  std::vector<int> auto_content(C, 0);
+  for (int c = 0; c < C; ++c) {
+    ColumnSize& size = sizes[c];
+    if (size.content_min || size.stretch) {
       auto_content[c] =
-          std::max(auto_content[c],
-                   RunLayout({pc.box}, measure_c, measure_context)->width);
+          measure_column(c, free_col_width, MeasureMode::Undefined);
+    }
+    if (!size.sized_by_content) {
+      continue;
+    }
+    const int max_content =
+        measure_column(c, free_col_width, MeasureMode::Undefined);
+    const int min_content = measure_column(c, 1, MeasureMode::AtMost);
+    auto content = [&](GridTrack::Content kind) {
+      return kind == GridTrack::Content::Min ? min_content : max_content;
+    };
+    if (size.track.fit_content) {
+      // fit-content(max) is minmax(auto, max-content), but no more than max.
+      size.base = min_content;
+      size.limit = std::max(
+          min_content,
+          std::min(max_content, size.track.max.Resolve(remaining_width)));
+      continue;
+    }
+    if (size.track.min_content != GridTrack::Content::None) {
+      size.base = content(size.track.min_content);
+    }
+    if (size.track.max_content != GridTrack::Content::None) {
+      size.limit = std::max(size.base, content(size.track.max_content));
+    } else if (size.track.max.unit == Unit::Auto) {
+      size.stretch = true;
+      auto_content[c] = max_content;
+    } else if (size.track.max.unit != Unit::Fr) {
+      size.limit = std::max(size.base, size.track.max.Resolve(remaining_width));
     }
   }
 

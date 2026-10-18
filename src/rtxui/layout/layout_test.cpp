@@ -703,6 +703,46 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
           CheckGrid({"A   B     "}));
   }
 
+  SECTION("a min-content column is as narrow as its text can wrap") {
+    // Text wraps anywhere by default, so down to a single cell; with
+    // overflow-wrap: normal, down to its longest word.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:min-content 1fr;width:10;}.n{overflow-wrap:normal;}</style><div class="g"><div>AB</div><div>C</div></div><div class="g"><div class="n">AAA BB</div><div>C</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 4)) ==
+          CheckGrid({"AC        ", "B         ", "AAAC      ", "BB        "}));
+  }
+
+  SECTION("a max-content column does not wrap") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:max-content 1fr;width:10;}</style><div class="g"><div>AAA BB</div><div>C</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 2)) ==
+          CheckGrid({"AAA BBC   ", "          "}));
+  }
+
+  SECTION("minmax() takes min-content and max-content") {
+    // The fr column keeps 7 of 10: the first wraps down to its min-content,
+    // its longest word.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:minmax(min-content,max-content) minmax(7,1fr);width:10;overflow-wrap:normal;}</style><div class="g"><div>AAA BB</div><div>C</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 2)) ==
+          CheckGrid({"AAAC      ", "BB        "}));
+  }
+
+  SECTION("fit-content() grows with its content up to its limit") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:fit-content(4) 1fr;width:10;}</style><div class="g"><div>AAA BB</div><div>C</div></div><div class="g"><div>AB</div><div>D</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 3)) ==
+          CheckGrid({"AAA C     ", "BB        ", "ABD       "}));
+  }
+
   SECTION("repeat(auto-fill) repeats as many tracks as fit") {
     // Two 3-wide columns and their gap fit in 10; three would not.
     struct T : Component<T> {
