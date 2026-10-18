@@ -6361,6 +6361,35 @@ TEST_CASE("Screen.DragSelectsAndCopiesText", "[terminal][selection]") {
   CHECK(device->GetOutput().find("\x1b[7m") == std::string::npos);
 }
 
+TEST_CASE("Screen.CtrlASelectsAndCopiesThePage", "[terminal][selection]") {
+  class App : public Component<App> {
+   public:
+    std::string_view view = R"(
+      <style> .skip { user-select: none; } </style>
+      <div>hello <span class="skip">skip</span>world</div>
+      <div>second line</div>
+    )";
+  };
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->TriggerResize(30, 4);
+  Screen screen = ScreenInternals::Make(Ref<App>::New(), device);
+  screen.Draw();
+  device->ClearOutput();
+
+  device->PushInput("\x01");
+  screen.Step();
+  CHECK(device->GetOutput().find("\x1b[7m") != std::string::npos);
+  CHECK(device->GetOutput().find("\x1b]52;c;" +
+                                 Base64Encode("hello world\nsecond line")) !=
+        std::string::npos);
+
+  // A press clears it, as it clears a drag's.
+  device->ClearOutput();
+  device->PushInput(LeftAt('P', 20, 3) + LeftAt('U', 20, 3));
+  screen.Step();
+  CHECK(device->GetOutput().find("\x1b[7m") == std::string::npos);
+}
+
 TEST_CASE("Screen.DragSelectionTakesTextOnly", "[terminal][selection]") {
   SECTION("a click selects nothing") {
     CHECK(CopiedBy("<div>hello</div>", LeftAt('P', 1, 0) + LeftAt('U', 1, 0))

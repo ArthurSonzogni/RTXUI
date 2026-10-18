@@ -1067,6 +1067,8 @@ class ScreenImpl {
   // Updates the selection for a mouse event. Returns whether that consumed
   // the event.
   bool HandleSelection(const Event::Mouse& mouse);
+  // Selects the whole page and copies it, as a drag is on release.
+  void SelectAll();
   // Paints the last layout again, into the texture returned, and records in
   // `glyphs` the glyph of selectable text each cell shows.
   Texture PaintGlyphs(std::vector<TextPosition>& glyphs) const;
@@ -2377,6 +2379,12 @@ void ScreenImpl::HandleEvent(Event event) {
   // state, like a component recording the events it lets through.
   DigestAndDraw();
   if (event_handled) {
+    return;
+  }
+
+  // An input with the focus takes Ctrl+A for its own text first.
+  if (event == Event::CtrlA()) {
+    SelectAll();
     return;
   }
 
@@ -3790,6 +3798,24 @@ void ScreenImpl::UpdateSelectionOrder() {
       gone(selection_.anchor_all) || gone(selection_.focus_all)) {
     selection_ = {};
   }
+}
+
+void ScreenImpl::SelectAll() {
+  Element* root = component_->Root();
+  if (!root) {
+    return;
+  }
+  const Element* last = root;
+  root->Visit([&](Element& element) { last = &element; });
+  selection_ = {};
+  selection_.unit = Selection::Unit::Block;
+  selection_.anchor = selection_.anchor_end = {root, 0};
+  selection_.focus = selection_.focus_end = {last, UINT32_MAX};
+  UpdateSelectionOrder();
+  if (std::string text = SelectedText(); !text.empty()) {
+    component_->SetClipboard(text);
+  }
+  RequestDraw();
 }
 
 bool ScreenImpl::Selected(const TextPosition& glyph) const {

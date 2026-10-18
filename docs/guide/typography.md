@@ -233,7 +233,9 @@ in reverse video. A double click selects a word, a triple click the whole
 block (a paragraph, say), and a drag after either extends by words or blocks.
 Shift and a click extends the selection from where the last click was to
 there. Releasing the button copies the selection to the system clipboard (OSC
-52, so it works over SSH). The next click clears it.
+52, so it works over SSH). The next click clears it. Ctrl+A selects and
+copies the whole page, unless what has the focus takes it, as an input does
+for its own text.
 
 The selection is of the document, not of the screen. Dragging from one column
 of a layout to the one beside it takes the end of the first and the start of
