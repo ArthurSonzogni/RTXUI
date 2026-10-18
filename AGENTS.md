@@ -92,6 +92,15 @@ Test sources live next to the code they test (`*_test.cpp`). New test files
 must be added to the `rtxui_test` target in `CMakeLists.txt`; new library
 sources to `rtxui`.
 
+### Real terminals' input
+
+`src/rtxui/terminal/captures/` holds the bytes real terminals send for a fixed
+set of mouse gestures and keys, plus their replies to the screen's queries;
+`terminal_capture_test.cpp` replays every capture through the input parser.
+`scripts/record_terminal.py <terminal>...` records them, in a private X
+server (Xvfb, or Xephyr), with xdotool. When a terminal misbehaves, record it
+first: the capture is the regression test.
+
 ### Seeing what an app draws
 
 Run any app headless to read its screen as text, optionally after input

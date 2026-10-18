@@ -299,6 +299,7 @@ if(RTXUI_BUILD_TESTS)
 
   add_executable(rtxui_test
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
+    "src/rtxui/terminal/terminal_capture_test.cpp"
     "src/rtxui/terminal/headless_test.cpp"
     "src/rtxui/terminal/inline_test.cpp"
     "src/rtxui/terminal/layout_reuse_test.cpp"
@@ -369,6 +370,8 @@ if(RTXUI_BUILD_TESTS)
     target_link_libraries(rtxui_test PRIVATE rtxui)
   endif()
   target_link_libraries(rtxui_test PRIVATE Catch2::Catch2WithMain)
+  target_compile_definitions(rtxui_test PRIVATE
+    RTXUI_TERMINAL_CAPTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/rtxui/terminal/captures")
   target_include_directories(rtxui_test PRIVATE "src")
   # Test files each define their own file-local helpers under the same names.
   # The library supports CMAKE_UNITY_BUILD; its tests don't need to.
