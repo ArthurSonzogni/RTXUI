@@ -208,8 +208,7 @@ TEST_CASE("A block in an inline box does not widen its flex container",
   CHECK(side->layout_width() == 12);
 }
 
-class NarrowBlocksComponent
-    : public rtxui::Component<NarrowBlocksComponent> {
+class NarrowBlocksComponent : public rtxui::Component<NarrowBlocksComponent> {
  public:
   std::string_view view = R"(
     <div id="first">one</div>
@@ -244,8 +243,7 @@ TEST_CASE("Blocks in a component stack, however narrow",
   CHECK(second->absolute_y() == 1);
 }
 
-class WrappedFixedComponent
-    : public rtxui::Component<WrappedFixedComponent> {
+class WrappedFixedComponent : public rtxui::Component<WrappedFixedComponent> {
  public:
   // The inline-block does not fit after the text, so it wraps to the next
   // line, carrying a fixed box that belongs at the top-left of the screen.

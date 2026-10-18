@@ -4745,8 +4745,8 @@ std::string ExtractHotReloadTemplate(const std::string& filepath,
   for (std::string_view keyword : {"class", "struct"}) {
     for (size_t pos = FindWord(content, keyword, 0); pos != std::string::npos;
          pos = FindWord(content, keyword, pos + 1)) {
-      const size_t name = content.find_first_not_of(" \t\r\n",
-                                                    pos + keyword.size());
+      const size_t name =
+          content.find_first_not_of(" \t\r\n", pos + keyword.size());
       if (name != std::string::npos &&
           FindWord(content, class_name, name) == name) {
         search_start = name;
@@ -4837,9 +4837,8 @@ bool HotReloadManager::PollChanges() {
     if (current_time != info.last_modified) {
       info.last_modified = current_time;
 
-      std::string new_template =
-          ExtractHotReloadTemplate(info.filepath, info.component->Tag(),
-                                   info.view_var_name);
+      std::string new_template = ExtractHotReloadTemplate(
+          info.filepath, info.component->Tag(), info.view_var_name);
       if (!new_template.empty()) {
         info.component->HotReload(new_template);
         reloaded = true;

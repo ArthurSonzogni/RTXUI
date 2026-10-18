@@ -75,9 +75,11 @@ struct Process {
 class TablePage : public Component<TablePage> {
  public:
   std::vector<Process> processes = {
-      {4121, "clang++", "ada", 98.2, 1240, "12:04", "clang++ -O2 -c layout.cpp"},
+      {4121, "clang++", "ada", 98.2, 1240, "12:04",
+       "clang++ -O2 -c layout.cpp"},
       {2210, "chrome", "ada", 12.5, 3120, "09:12", "/opt/google/chrome/chrome"},
-      {3301, "postgres", "postgres", 6.1, 512, "08:00", "postgres -D /var/lib/pg"},
+      {3301, "postgres", "postgres", 6.1, 512, "08:00",
+       "postgres -D /var/lib/pg"},
       {1874, "node", "ada", 4.8, 680, "10:41", "node server.js --port 8080"},
       {1022, "dockerd", "root", 2.2, 210, "08:00", "/usr/bin/dockerd"},
       {2950, "nvim", "ada", 0.9, 96, "11:30", "nvim src/screen.cpp"},
@@ -563,17 +565,15 @@ class FormPage : public Component<FormPage> {
 
 struct Step {
   std::string name;
-  double seconds = 0;  // How long it pretends to take.
+  double seconds = 0;             // How long it pretends to take.
   std::string state = "pending";  // "pending" | "running" | "done"
 };
 
 class TasksPage : public Component<TasksPage> {
  public:
   std::vector<Step> steps = {
-      {"Resolve dependencies", 0.6},
-      {"Download 14 packages", 1.4},
-      {"Compile 212 files", 2.0},
-      {"Run 818 tests", 1.2},
+      {"Resolve dependencies", 0.6}, {"Download 14 packages", 1.4},
+      {"Compile 212 files", 2.0},    {"Run 818 tests", 1.2},
       {"Package release", 0.6},
   };
   bool running = false;

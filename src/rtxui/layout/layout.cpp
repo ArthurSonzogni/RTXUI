@@ -1832,8 +1832,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
         if (grandchild->is_text && ends_with_block &&
             (grandchild->text.white_space == WhiteSpace::Normal ||
              grandchild->text.white_space == WhiteSpace::Nowrap) &&
-            grandchild->text_data.find_first_not_of(' ') ==
-                std::string::npos) {
+            grandchild->text_data.find_first_not_of(' ') == std::string::npos) {
           continue;
         }
         ends_with_block = false;

@@ -1068,8 +1068,9 @@ void Element::TriggerTransitions(double current_time_ms) {
     bool has_active = active_transitions.count(std::string(prop_name)) > 0;
     bool target_changed = false;
     if (has_active) {
-      target_changed = (active_transitions[std::string(prop_name)].target_color !=
-                        to.value_or(Color::RGBA(0, 0, 0, 0)));
+      target_changed =
+          (active_transitions[std::string(prop_name)].target_color !=
+           to.value_or(Color::RGBA(0, 0, 0, 0)));
     } else {
       target_changed = (from != to);
       // A transition to the inherited color lands on it explicitly; hand the
@@ -1081,8 +1082,7 @@ void Element::TriggerTransitions(double current_time_ms) {
       const TransitionConfig* config = FindTransitionConfig(this, prop_name);
       // Text in the terminal's own color, which nothing here knows, switches
       // at once rather than fading out of sight.
-      const bool unknown_text_color =
-          prop_name == "color" && (!from || !to);
+      const bool unknown_text_color = prop_name == "color" && (!from || !to);
       if (config && config->duration_seconds > 0.0f && !unknown_text_color) {
         current_val = from;
         ActiveTransition trans;

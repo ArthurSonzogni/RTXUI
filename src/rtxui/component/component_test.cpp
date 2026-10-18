@@ -1289,7 +1289,8 @@ TEST_CASE("Hot reload takes the template of its own class",
     std::ofstream out(temp_file);
     out << "// The view of each component.\n"
         << "class Other : public rtxui::Component<Other> {\n"
-        << "  std::string_view view = R\"html(<div id=\"target\">Other</div>)html\";\n"
+        << "  std::string_view view = R\"html(<div "
+           "id=\"target\">Other</div>)html\";\n"
         << "};\n"
         << "class HotReloadTestComponent\n"
         << "    : public rtxui::Component<HotReloadTestComponent> {\n"

@@ -219,9 +219,10 @@ class Confirm : public Component<Confirm> {
   )html";
 };
 
-TEST_CASE("An element appearing with autofocus takes the focus on a reused "
-          "instance",
-          "[headless][focus]") {
+TEST_CASE(
+    "An element appearing with autofocus takes the focus on a reused "
+    "instance",
+    "[headless][focus]") {
   auto app = Ref<Confirm>::New();
   HeadlessScreen screen(app, 20, 8);
   app->asking = true;
