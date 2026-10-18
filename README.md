@@ -15,9 +15,7 @@ and the running app reloads its template, with no recompile.
 
 *From the author of [FTXUI](https://github.com/ArthurSonzogni/FTXUI).*
 
-<p align="center">
-  <img src="docs/public/img/showcase.svg" alt="RTXUI's showcase example: a process table with its details drawer open" width="100%">
-</p>
+https://github.com/user-attachments/assets/b270494a-074c-4ddf-b34e-7c7fdf530f03
 
 <p align="center">
   <a href="https://arthursonzogni.github.io/RTXUI/guide/examples/showcase"><b>▶ Run this exact app in your browser</b></a>
@@ -73,6 +71,8 @@ That is the whole program. The mouse works, Tab moves focus, the button
 fades to green on hover, and the count updates when you click.
 
 ## What's in the box
+
+https://github.com/user-attachments/assets/10d75224-eb4d-4e71-8d53-2e647028c923
 
 **Layout, the way the web does it**
 - Flexbox, with `gap`, `wrap`, `grow`/`shrink`/`basis` and alignment on both axes.
