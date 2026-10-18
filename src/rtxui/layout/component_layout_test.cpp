@@ -208,6 +208,32 @@ TEST_CASE("A block in an inline box does not widen its flex container",
   CHECK(side->layout_width() == 12);
 }
 
+class WrappedFixedComponent
+    : public rtxui::Component<WrappedFixedComponent> {
+ public:
+  // The inline-block does not fit after the text, so it wraps to the next
+  // line, carrying a fixed box that belongs at the top-left of the screen.
+  std::string_view view = R"(
+    <div class="line">some text <div class="chip"><div id="fixed"></div>x</div></div>
+    <style>
+      .line { width: 20; }
+      .chip { display: inline-block; width: 15; }
+      #fixed { position: fixed; top: 0; left: 0; width: 3; height: 1; }
+    </style>
+  )";
+};
+
+TEST_CASE("A box that wraps lays out its fixed descendants where it lands",
+          "[component][layout]") {
+  auto container = rtxui::Ref<WrappedFixedComponent>::New();
+  RenderComponent(container, 40, 4);
+  auto* fixed =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#fixed");
+  REQUIRE(fixed != nullptr);
+  CHECK(fixed->absolute_x() == 0);
+  CHECK(fixed->absolute_y() == 0);
+}
+
 class ExtremeSizeComponent : public rtxui::Component<ExtremeSizeComponent> {
  public:
   // calc() bounds each operand when it is parsed, but not their product, so

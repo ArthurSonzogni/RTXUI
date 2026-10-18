@@ -1754,6 +1754,11 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
            m_left;
       cy = cursor_y + m_top;
       child_context = CreateChildContext(box, width, 0, cx, cy, context);
+      // Its fixed and absolute descendants were placed from where it was
+      // first tried: lay it out again where it ended up.
+      if (elem->has_out_of_flow) {
+        child_frag = RunLayout(child_input, child_c, child_context);
+      }
     }
 
     int rx = cx;
