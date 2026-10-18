@@ -3,6 +3,7 @@ import WasmTerminal from './components/WasmTerminal.vue'
 import ExampleTabs from './components/ExampleTabs.vue'
 import CssProperty from './components/CssProperty.vue'
 import PlaygroundFullscreen from './components/PlaygroundFullscreen.vue'
+import './custom.css'
 
 export default {
   extends: DefaultTheme,

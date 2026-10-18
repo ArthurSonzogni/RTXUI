@@ -1,0 +1,5 @@
+/* Example pages: the demo takes the whole width, the prose around it keeps a
+   readable one. */
+.example-page .vp-doc > div > :not(.tabs-container) {
+  max-width: 48rem;
+}

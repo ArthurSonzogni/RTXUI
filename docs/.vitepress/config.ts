@@ -34,6 +34,13 @@ export default defineConfig({
     ]
   },
   base: '/RTXUI/',
+  // Example pages give their demo the width the outline would take.
+  transformPageData(pageData) {
+    if (pageData.relativePath.startsWith('guide/examples/')) {
+      pageData.frontmatter.aside = false
+      pageData.frontmatter.pageClass = 'example-page'
+    }
+  },
   title: 'RTXUI',
   description: 'Terminal user interfaces built from HTML templates, CSS, and plain C++ state.',
   themeConfig: {

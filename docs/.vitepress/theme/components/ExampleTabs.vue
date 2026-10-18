@@ -118,6 +118,10 @@ const fullscreenUrl = computed(() => {
 .tab-content {
   padding: 16px;
 }
+/* The demo already has its own frame. */
+.tab-content :deep(.wasm-terminal-container) {
+  margin: 0;
+}
 
 /* Ensure code blocks inside tabs don't have extra margins */
 .tab-content :deep(div[class*='language-']) {
