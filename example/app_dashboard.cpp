@@ -91,6 +91,13 @@ class Dashboard : public Component<Dashboard> {
   void ShowDegraded() { filter = "degraded"; }
   void ShowDown() { filter = "down"; }
 
+  void Select(const std::string& index_str) {
+    size_t index = std::stoull(index_str);
+    if (index < services.size()) {
+      selected = services[index].name;
+    }
+  }
+
   void Restart() {
     Service* service = Find(selected);
     if (service) {
@@ -391,13 +398,7 @@ class Dashboard : public Component<Dashboard> {
     Bind(ShowDegraded);
     Bind(ShowDown);
     Bind(Restart);
-
-    Import("Select", [this](std::string index_str) {
-      size_t index = std::stoull(index_str);
-      if (index < services.size()) {
-        selected = services[index].name;
-      }
-    });
+    Bind(Select);
   }
 
   // What a template reads of each service. Not a Fields() function of

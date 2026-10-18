@@ -1095,8 +1095,7 @@ int main() {
     Bind(Decrement);
     Bind(ToggleSecret);
     Bind(AddTodo);
-    Import("RemoveTodo",
-           [this](std::string index_str) { RemoveTodo(index_str); });
+    Bind(RemoveTodo);
 
     Import<Header>();
     Import<Sidebar>();

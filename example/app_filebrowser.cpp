@@ -125,6 +125,7 @@ class FileBrowser : public Component<FileBrowser> {
 
   void MoveDown() { SetCursor(cursor + 1); }
   void MoveUp() { SetCursor(cursor - 1); }
+  void Select(const std::string& index) { SetCursor(std::stoi(index)); }
 
   void Open() {
     const FileEntry* entry = Selected();
@@ -387,9 +388,7 @@ class FileBrowser : public Component<FileBrowser> {
     Bind(MoveUp);
     Bind(Open);
     Bind(GoUp);
-
-    Import("Select",
-           [this](std::string index_str) { SetCursor(std::stoi(index_str)); });
+    Bind(Select);
 
     SetCursor(0);
   }

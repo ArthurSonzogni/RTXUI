@@ -155,8 +155,8 @@ class TablePage : public Component<TablePage> {
     Bind(d_started);
     Bind(d_command);
     Bind(Close);
-    Import("SortBy", [this](std::string column) { SortBy(column); });
-    Import("Open", [this](std::string index) { Open(index); });
+    Bind(SortBy);
+    Bind(Open);
   }
 
   // The visible rows follow the filter and the sort before every render.
@@ -801,7 +801,7 @@ class DialogPage : public Component<DialogPage> {
     Bind(title);
     Bind(Cancel);
     Bind(Delete);
-    Import("Ask", [this](std::string index) { Ask(index); });
+    Bind(Ask);
   }
 
   void BranchFields(const Branch& branch, FieldSink& out) const {
@@ -1042,10 +1042,10 @@ class Showcase : public Component<Showcase> {
     Bind(description);
     Bind(cursor_offset);
     Bind(OpenPalette);
-    Import("Go", [this](std::string index) { Go(index); });
-    Import("RunCommand", [this](std::string index) { RunCommand(index); });
-    Import("Notify", [this](std::string kind) { Notify(kind); });
-    Import("Dismiss", [this](std::string id) { Dismiss(id); });
+    Bind(Go);
+    Bind(RunCommand);
+    Bind(Notify);
+    Bind(Dismiss);
     Import<TablePage>();
     Import<FormPage>();
     Import<TasksPage>();
