@@ -832,9 +832,9 @@ class DialogPage : public Component<DialogPage> {
         </if>
       </dialog>
       <style>
-        @keyframes drop {
-          from { opacity: 0; translate: 0 -1; }
-          to { opacity: 1; translate: 0 0; }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .branches {
           display: flex;
@@ -898,8 +898,6 @@ class DialogPage : public Component<DialogPage> {
           background-color: var(--danger);
           color: var(--bg);
         }
-        /* The dialog drops in from just above, so it reads as a step on
-           top of the page rather than a new page. */
         dialog::part(dialog-box) {
           width: 52;
           max-width: 52;
@@ -907,7 +905,7 @@ class DialogPage : public Component<DialogPage> {
           border-color: var(--danger);
           background-color: var(--raised);
           padding: 1 2;
-          animation: drop 150ms ease-out;
+          animation: fade-in 100ms ease-out;
         }
         dialog::part(dialog-header) {
           color: var(--text);
@@ -1185,13 +1183,9 @@ class Showcase : public Component<Showcase> {
       </div>
 
       <style>
-        @keyframes enter {
-          from { opacity: 0; translate: 0 1; }
-          to { opacity: 1; translate: 0 0; }
-        }
-        @keyframes drop {
-          from { opacity: 0; translate: 0 -1; }
-          to { opacity: 1; translate: 0 0; }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         @keyframes slide-in {
           from { opacity: 0; translate: calc(100% + 2); }
@@ -1290,11 +1284,6 @@ class Showcase : public Component<Showcase> {
           color: var(--muted);
           margin-bottom: 1;
         }
-        /* A page settles in from just below, so the switch reads as one
-           place giving way to the next. */
-        .page {
-          animation: enter 180ms ease-out;
-        }
         .buttons {
           display: flex;
           gap: 2;
@@ -1329,7 +1318,7 @@ class Showcase : public Component<Showcase> {
           border-color: var(--accent);
           background-color: var(--raised);
           padding: 0 1 1 1;
-          animation: drop 150ms ease-out;
+          animation: fade-in 100ms ease-out;
         }
         .palette input {
           width: 100%;
