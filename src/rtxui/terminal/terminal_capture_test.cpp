@@ -41,7 +41,18 @@ std::string Unescape(const std::string& line) {
 struct Mouse {
   Event::Mouse::Button button;
   Event::Mouse::Motion motion;
+  // The modifier held, as Held() names it.
+  std::string held;
 };
+
+std::string Held(const Event::Modifier& modifier) {
+  std::string held;
+  held += modifier.shift() ? "shift " : "";
+  held += modifier.ctrl() ? "ctrl " : "";
+  held += modifier.alt() ? "alt " : "";
+  held += modifier.meta() ? "meta " : "";
+  return held;
+}
 
 const std::map<std::string, Mouse>& MouseGestures() {
   static const std::map<std::string, Mouse> gestures = {
@@ -58,6 +69,10 @@ const std::map<std::string, Mouse>& MouseGestures() {
       {"middle_release", {Event::Mouse::Middle, Event::Mouse::Released}},
       {"wheel_up", {Event::Mouse::WheelUp, Event::Mouse::Pressed}},
       {"wheel_down", {Event::Mouse::WheelDown, Event::Mouse::Pressed}},
+      {"shift_move", {Event::Mouse::None, Event::Mouse::Moved, "shift "}},
+      {"ctrl_move", {Event::Mouse::None, Event::Mouse::Moved, "ctrl "}},
+      // The mouse encodings call Alt "meta".
+      {"alt_move", {Event::Mouse::None, Event::Mouse::Moved, "meta "}},
   };
   return gestures;
 }
@@ -122,6 +137,9 @@ TEST_CASE("Every terminal capture is read as the gestures it recorded",
     // One parser for the whole capture, as one screen reads one terminal:
     // what a terminal sent before can change how it is read.
     TerminalInputParser parser;
+    // What the last key gesture should have given, when nothing came: screen
+    // holds an Escape back and sends it with the next key.
+    std::vector<Event> held;
     std::ifstream file(capture);
     std::string line;
     while (std::getline(file, line)) {
@@ -145,10 +163,11 @@ TEST_CASE("Every terminal capture is read as the gestures it recorded",
 
       if (gesture == "reply_colors") {
         CHECK(events.empty());
-        if (!bytes.empty()) {
-          CHECK(parser.TakeBackgroundColor().has_value());
-          CHECK(parser.TakeForegroundColor().has_value());
-        }
+        // screen answers for the background only.
+        CHECK(parser.TakeBackgroundColor().has_value() ==
+              bytes.contains("]11;"));
+        CHECK(parser.TakeForegroundColor().has_value() ==
+              bytes.contains("]10;"));
       } else if (gesture == "reply_cursor_position") {
         CHECK(events.empty());
         CHECK(parser.TakeCursorPositions().size() == 1);
@@ -160,6 +179,9 @@ TEST_CASE("Every terminal capture is read as the gestures it recorded",
       } else if (bytes.empty()) {
         // The terminal kept the gesture for itself, like tilix's Alt+Up
         // shortcut: nothing reaches the application to read.
+        held = KeyGestures().contains(gesture) ? KeyGestures().at(gesture)
+                                               : std::vector<Event>{};
+        continue;
       } else if (MouseGestures().contains(gesture)) {
         const Mouse expected = MouseGestures().at(gesture);
         CHECK_FALSE(events.empty());
@@ -172,17 +194,24 @@ TEST_CASE("Every terminal capture is read as the gestures it recorded",
           }
           CHECK(mouse->button() == expected.button);
           CHECK(mouse->motion() == expected.motion);
-          CHECK(mouse->modifier() == Event::Modifier());
+          // urxvt reports no modifier with a motion.
+          const std::string held = Held(mouse->modifier());
+          CHECK((held == expected.held || held.empty()));
         }
       } else {
         REQUIRE(KeyGestures().contains(gesture));
         const auto& expected = KeyGestures().at(gesture);
+        if (!events.empty() &&
+            std::ranges::find(held, events.front()) != held.end()) {
+          events.erase(events.begin());
+        }
         for (const Event& event : events) {
           INFO(event.Print());
           CHECK(std::ranges::find(expected, event) != expected.end());
         }
         CHECK(events.size() == 1);
       }
+      held.clear();
     }
   }
 }

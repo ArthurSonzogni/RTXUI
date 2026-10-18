@@ -16,6 +16,9 @@ middle_press
 middle_release	\x1b[<1;40;11m
 wheel_up	\x1b[<64;40;11M
 wheel_down	\x1b[<65;40;11M
+shift_move	\x1b[<39;32;10M\x1b[<39;40;11M
+ctrl_move	\x1b[<51;32;10M\x1b[<51;40;11M
+alt_move	\x1b[<43;32;10M\x1b[<43;40;11M
 a	a
 shift_a	A
 ctrl_a	\x01

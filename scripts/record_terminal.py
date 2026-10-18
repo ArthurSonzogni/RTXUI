@@ -41,8 +41,7 @@ CAPTURES = os.path.join(ROOT, "src", "rtxui", "terminal", "captures")
 TITLE = "rtxui-terminal-capture"
 
 # How to run `command` in each terminal. Wayland-only terminals (foot) can't
-# be driven through X, and gnome-terminal opens its windows in the desktop's
-# running server rather than here; tilix and xfce4-terminal share its VTE.
+# be driven through X.
 TERMINALS = {
     "xterm": lambda c: ["xterm", "-e", *c],
     "urxvt": lambda c: ["urxvt", "-e", *c],
@@ -53,7 +52,21 @@ TERMINALS = {
     "xfce4-terminal": lambda c: [
         "xfce4-terminal", "--disable-server", "--hide-menubar", "-x", *c],
     "tilix": lambda c: ["tilix", "-e", " ".join(c)],
+    # On a bus of its own: else the desktop's gnome-terminal-server opens the
+    # window, on the desktop.
+    "gnome-terminal": lambda c: ["dbus-run-session", "--", "gnome-terminal",
+                                 "--wait", "--", *c],
+    # Multiplexers re-encode what the terminal around them sends, in xterm.
+    "tmux": lambda c: ["xterm", "-e", "tmux", "-L", "rtxui-capture", "-f",
+                       "/dev/null", "new-session", *c],
+    # screen's command key moved off Ctrl+A, which it would keep, along with
+    # the key after it.
+    "screen": lambda c: ["xterm", "-e", "screen", "-U", "-e", "^Gg", "-c",
+                         "/dev/null", *c],
 }
+
+# How each terminal tells its version, when not --version.
+VERSION_FLAGS = {"xterm": "-version", "tmux": "-V", "screen": "-v"}
 
 # Where the pointer goes, as a fraction of the window, away from the edges a
 # terminal keeps for padding or scrollbars.
@@ -61,7 +74,8 @@ A, B, C, D = (0.3, 0.3), (0.4, 0.35), (0.5, 0.4), (0.6, 0.45)
 
 # The gestures, in order: a name terminal_capture_test.cpp knows, and what to
 # do. ("move", point) moves the pointer, ["key", keys] presses keys through
-# XTest, and anything else is xdotool arguments.
+# XTest, ["keydown" | "keyup", key] holds or lets go of one, and anything else
+# is xdotool arguments.
 GESTURES = [
     ("move", [("move", A), ("move", B)]),
     ("left_press", [["mousedown", "1"]]),
@@ -76,6 +90,14 @@ GESTURES = [
     ("middle_release", [["mouseup", "2"]]),
     ("wheel_up", [["click", "4"]]),
     ("wheel_down", [["click", "5"]]),
+    # A motion with a modifier held and no button: urxvt sends it as code
+    # 32 - 1 + the modifier, which reads like a button.
+    ("shift_move", [["keydown", "shift"], ("move", B), ("move", C),
+                    ["keyup", "shift"]]),
+    ("ctrl_move", [["keydown", "ctrl"], ("move", B), ("move", C),
+                   ["keyup", "ctrl"]]),
+    ("alt_move", [["keydown", "alt"], ("move", B), ("move", C),
+                  ["keyup", "alt"]]),
     ("a", [["key", "a"]]),
     ("shift_a", [["key", "shift+a"]]),
     ("ctrl_a", [["key", "ctrl+a"]]),
@@ -202,18 +224,19 @@ class Keyboard:
 
     def press(self, keys):
         """Presses `keys`, like "ctrl+Left": the modifiers, then the key."""
+        self.send([(name, True) for name in keys.split("+")] +
+                  [(name, False) for name in reversed(keys.split("+"))])
+
+    def send(self, events):
+        """Sends (key, pressed) events, in order."""
         # A connection reads the keymap once. Xephyr can take the desktop's
         # layout over when its window gets the focus, so read it every time.
         display = self.x11.XOpenDisplay(self.display_name)
-        codes = []
-        for name in keys.split("+"):
+        for name, pressed in events:
             keysym = self.x11.XStringToKeysym(
                 self.MODIFIERS.get(name, name).encode())
-            codes.append(self.x11.XKeysymToKeycode(display, keysym))
-        for code in codes:
-            self.xtst.XTestFakeKeyEvent(display, code, True, 0)
-        for code in reversed(codes):
-            self.xtst.XTestFakeKeyEvent(display, code, False, 0)
+            code = self.x11.XKeysymToKeycode(display, keysym)
+            self.xtst.XTestFakeKeyEvent(display, code, pressed, 0)
         self.x11.XCloseDisplay(display)
 
 
@@ -242,7 +265,7 @@ def start_x_server():
 
 
 def version_of(terminal):
-    flag = "-version" if terminal == "xterm" else "--version"
+    flag = VERSION_FLAGS.get(terminal, "--version")
     result = subprocess.run([terminal, flag], capture_output=True, text=True)
     # urxvt has no --version; its usage line carries it.
     if not re.search(r"\d", result.stdout + result.stderr):
@@ -325,6 +348,8 @@ def record(terminal, env, keyboard):
                 xdotool("mousemove", "--window", window, *point(action[1]))
             elif action[0] == "key" and len(action) == 2:
                 keyboard.press(action[1])
+            elif action[0] in ("keydown", "keyup"):
+                keyboard.send([(action[1], action[0] == "keydown")])
             else:
                 xdotool(*action)
             time.sleep(0.15)
@@ -349,15 +374,18 @@ def record(terminal, env, keyboard):
 
 def record_checked(terminal, env, keyboard):
     """Records `terminal` until its capture can be trusted, and saves it."""
-    # The plain `a` checks the recording itself: anything else means the
-    # layout changed under it or the keys went to another window.
+    # The plain keys check the recording itself: anything else means the
+    # layout changed under it, the keys went to another window, or the
+    # desktop's pointer crossed Xephyr's window.
+    expected = ["a\ta", "shift_a\tA", "ctrl_a\t\\x01"]
     for _ in range(3):
         lines = record(terminal, env, keyboard)
         if lines is None:
             return
-        if "\na\ta\n" in lines:
+        found = lines.split("\n")
+        if all(line in found for line in expected):
             break
-        print(f"{terminal}: the a key did not type a, recording again")
+        print(f"{terminal}: the plain keys were not typed, recording again")
     else:
         print(f"{terminal}: gave up")
         return

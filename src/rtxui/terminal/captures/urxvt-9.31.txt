@@ -16,6 +16,9 @@ middle_press	\x1b[<1;65;16M
 middle_release	\x1b[<1;65;16m
 wheel_up	\x1b[<64;65;16M
 wheel_down	\x1b[<65;65;16M
+shift_move	\x1b[<97;52;14M\x1b[<97;65;16M
+ctrl_move	\x1b[<97;52;14M\x1b[<97;65;16M
+alt_move	\x1b[<97;52;14M\x1b[<97;65;16M
 a	a
 shift_a	A
 ctrl_a	\x01
@@ -39,9 +42,9 @@ return	\x0d
 tab	\x09
 shift_tab	\x1b[Z
 escape	\x1b
-f1	\x1b[11~
 f2	\x1b[12~
 f3	\x1b[13~
 f4	\x1b[14~
 f5	\x1b[15~
 f12	\x1b[24~
+f1	\x1b[11~
