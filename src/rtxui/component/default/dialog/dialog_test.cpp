@@ -217,3 +217,62 @@ TEST_CASE(
   REQUIRE(body_part != nullptr);
   CHECK(*body_part == "dialog-body");
 }
+
+namespace {
+
+// A page with a list and a dialog. Its root, like any component's, is an
+// inline box around them.
+class DialogPageTestComponent
+    : public rtxui::Component<DialogPageTestComponent> {
+ public:
+  std::string_view view = R"(
+    <div class="list">one<br/>two<br/>three</div>
+    <dialog open="true" title="Confirm"><p id="body">Sure?</p></dialog>
+    <style>
+      .list { display: flex; flex-direction: column; width: 20; }
+    </style>
+  )";
+};
+
+class DialogInPageTestComponent
+    : public rtxui::Component<DialogInPageTestComponent> {
+ public:
+  DialogInPageTestComponent() { Import<DialogPageTestComponent>(); }
+  std::string_view view = R"(
+    <div class="app">
+      <div class="side">side</div>
+      <div class="main">
+        <p>Title</p>
+        <div class="page"><DialogPageTestComponent /></div>
+      </div>
+    </div>
+    <style>
+      .app { display: flex; width: 100%; height: 100%; }
+      .side { width: 10; }
+      .main { flex-grow: 1; padding: 1 2; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Dialog: the overlay covers the screen from inside a component",
+          "[component][dialog]") {
+  // The overlay is `position: fixed`, so wherever the dialog sits it must be
+  // placed against the screen. From a component nested in a page, it was
+  // shifted by where the page started.
+  auto device = std::make_shared<rtxui::MockTerminalDevice>();
+  device->TriggerResize(60, 20);
+  auto container = rtxui::Ref<DialogInPageTestComponent>::New();
+  rtxui::Screen screen = rtxui::ScreenInternals::Make(container, device);
+  container->Digest();
+  screen.Draw();
+
+  auto* overlay = rtxui::ComponentInternals::Root(*container)
+                      ->QuerySelector(".dialog-overlay");
+  REQUIRE(overlay != nullptr);
+  CHECK(overlay->absolute_x() == 0);
+  CHECK(overlay->absolute_y() == 0);
+  CHECK(overlay->layout_width() == 60);
+  CHECK(overlay->layout_height() == 20);
+}

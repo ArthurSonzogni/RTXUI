@@ -208,6 +208,42 @@ TEST_CASE("A block in an inline box does not widen its flex container",
   CHECK(side->layout_width() == 12);
 }
 
+class NarrowBlocksComponent
+    : public rtxui::Component<NarrowBlocksComponent> {
+ public:
+  std::string_view view = R"(
+    <div id="first">one</div>
+    <div id="second">two</div>
+    <style>
+      div { width: 5; }
+    </style>
+  )";
+};
+
+class NarrowBlocksPageComponent
+    : public rtxui::Component<NarrowBlocksPageComponent> {
+ public:
+  NarrowBlocksPageComponent() { Import<NarrowBlocksComponent>(); }
+  std::string_view view = R"(<div><NarrowBlocksComponent /></div>)";
+};
+
+TEST_CASE("Blocks in a component stack, however narrow",
+          "[component][layout]") {
+  // The component's root is an inline box around its template. Blocks in it
+  // sat side by side whenever they were narrow enough to fit on one line.
+  auto container = rtxui::Ref<NarrowBlocksPageComponent>::New();
+  RenderComponent(container, 40, 4);
+  auto* root = rtxui::ComponentInternals::Root(*container);
+  auto* first = root->QuerySelector("#first");
+  auto* second = root->QuerySelector("#second");
+  REQUIRE(first != nullptr);
+  REQUIRE(second != nullptr);
+  CHECK(first->absolute_x() == 0);
+  CHECK(first->absolute_y() == 0);
+  CHECK(second->absolute_x() == 0);
+  CHECK(second->absolute_y() == 1);
+}
+
 class WrappedFixedComponent
     : public rtxui::Component<WrappedFixedComponent> {
  public:

@@ -1825,6 +1825,18 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
                // keeps one rather than dissolving into the line's text.
                child->style().outline_style == BorderStyle::None) {
       for (auto& grandchild : child->children) {
+        if (grandchild->style().position == PositionType::Absolute ||
+            grandchild->style().position == PositionType::Fixed) {
+          continue;
+        }
+        if (grandchild->is_text && ends_with_block &&
+            (grandchild->text.white_space == WhiteSpace::Normal ||
+             grandchild->text.white_space == WhiteSpace::Nowrap) &&
+            grandchild->text_data.find_first_not_of(' ') ==
+                std::string::npos) {
+          continue;
+        }
+        ends_with_block = false;
         if (grandchild->is_text) {
           // background-color doesn't inherit, so a styled <span> (e.g.
           // class="selection") only carries it on `child` (the element),
@@ -1841,6 +1853,18 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
                grandchild->text.blink});
         } else if (is_br(grandchild.get())) {
           commit_line(/*hard_break=*/true);
+        } else if (grandchild->style().display_outside ==
+                   DisplayOutside::Block) {
+          // Takes a line of its own, as a block child does below. This is
+          // the case of every component, whose root is an inline box around
+          // its template.
+          if (cursor_x > 0) {
+            commit_line();
+          }
+          place_opaque_box(grandchild.get());
+          commit_line();
+          wrapped = false;
+          ends_with_block = true;
         } else {
           place_opaque_box(grandchild.get());
         }
