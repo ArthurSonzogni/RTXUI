@@ -84,7 +84,6 @@
     background: rgba(22,27,34,0.95); border: 1px solid var(--pink); white-space: pre;
     box-shadow: 0 20px 60px rgba(0,0,0,0.6);
   }
-  #flash { inset: 0; background: white; opacity: 0; pointer-events: none; }
   .fact { font-weight: 900; font-size: 120px; letter-spacing: -4px; white-space: nowrap; text-align: center; width: 1920px; left: 0; }
   .fact small { display: block; font-size: 38px; font-weight: 500; letter-spacing: 0; color: var(--muted); margin-top: 14px; }
   #logo { font-weight: 900; font-size: 300px; letter-spacing: -14px; width: 1920px; text-align: center; left: 0; }
@@ -103,7 +102,7 @@
   <div id="w3" class="abs word grad">C++.</div>
   <div id="tagline" class="abs"></div>
 
-  <div id="code" class="abs"><div id="codehead">dashboard.cpp</div><div id="codebody"></div></div>
+  <div id="code" class="abs"><div id="codehead">showcase.cpp</div><div id="codebody"></div></div>
   <div id="codecap" class="abs" style="font-weight:850;font-size:84px;letter-spacing:-3px;line-height:1.05;width:600px"></div>
 
   <div id="win" class="abs">
@@ -119,7 +118,6 @@
   <div id="sub" class="abs"></div>
   <div id="url" class="abs"></div>
 
-  <div id="flash" class="abs"></div>
   <div id="bar" class="abs"></div>
 </div>
 
@@ -150,24 +148,28 @@ function slam(el, t, at, x, y) {
 
 // ------------------------------------------------------------------- code
 const CODE = [
-  ['<k>class</k> <t>Dashboard</t> : <k>public</k> <t>rtxui::Component</t>&lt;<t>Dashboard</t>&gt; {'],
+  ['<k>class</k> <t>Showcase</t> : <k>public</k> <t>rtxui::Component</t>&lt;<t>Showcase</t>&gt; {'],
   [' <k>public</k>:'],
-  ['  <t>std::vector</t>&lt;<t>Metric</t>&gt; <n>metrics</n>;'],
-  ['  <t>Dashboard</t>() { <n>Bind</n>(<n>metrics</n>, &amp;<t>Dashboard</t>::<n>Fields</n>); }'],
+  ['  <t>std::vector</t>&lt;<t>Page</t>&gt; <n>pages</n>;'],
+  ['  <t>Showcase</t>() { <n>Bind</n>(<n>pages</n>, &amp;<t>Showcase</t>::<n>Fields</n>); }'],
   [''],
   ['  <t>std::string_view</t> <n>view</n> = <s>R"html(</s>'],
-  ['    <tag>&lt;div</tag> <at>class</at>=<s>"grid"</s><tag>&gt;</tag>'],
-  ['      <tag>&lt;for</tag> <at>each</at>=<s>"<in>{metrics}</in>"</s> <at>as</at>=<s>"m"</s><tag>&gt;</tag>', 'for'],
-  ['        <tag>&lt;div</tag> <at>class</at>=<s>"card"</s><tag>&gt;</tag><in>{m.name}</in>: <in>{m.value}</in><tag>&lt;/div&gt;</tag>', 'bind'],
-  ['      <tag>&lt;/for&gt;</tag>'],
+  ['    <tag>&lt;div</tag> <at>class</at>=<s>"app"</s><tag>&gt;</tag>'],
+  ['      <tag>&lt;div</tag> <at>class</at>=<s>"sidebar"</s><tag>&gt;</tag>'],
+  ['        <tag>&lt;for</tag> <at>each</at>=<s>"<in>{pages}</in>"</s> <at>as</at>=<s>"p"</s><tag>&gt;</tag>', 'for'],
+  ['          <tag>&lt;div</tag> <at>class</at>=<s>"nav"</s> <at>onclick</at>=<s>"Go(<in>{$index}</in>)"</s><tag>&gt;</tag><in>{p.name}</in><tag>&lt;/div&gt;</tag>', 'bind'],
+  ['        <tag>&lt;/for&gt;</tag>'],
+  ['      <tag>&lt;/div&gt;</tag>'],
+  ['      <tag>&lt;div</tag> <at>class</at>=<s>"main"</s><tag>&gt;</tag><tag>&lt;Page /&gt;</tag><tag>&lt;/div&gt;</tag>'],
   ['    <tag>&lt;/div&gt;</tag>'],
   ['    <tag>&lt;style&gt;</tag>'],
-  ['      <sel>.grid</sel> {'],
-  ['        <p>display</p>: <v>grid</v>;', 'grid'],
-  ['        <p>grid-template-columns</p>: <v>repeat(auto-fill, minmax(24, 1fr))</v>;', 'grid'],
-  ['      }'],
-  ['      <sel>.card</sel> { <p>border</p>: <v>tall</v>; <p>transition</p>: <v>translate 200ms</v>; }', 'anim'],
-  ['      <sel>.card:hover</sel> { <p>translate</p>: <v>0 -1</v>; }', 'anim'],
+  ['      <sel>.app</sel> { <p>display</p>: <v>flex</v>; <p>height</p>: <v>100%</v>; }', 'grid'],
+  ['      <sel>@media</sel> (<p>max-width</p>: <v>99</v>) { <sel>.sidebar</sel> { <p>width</p>: <v>8</v>; } }', 'grid'],
+  ['      <sel>.nav</sel> {', 'anim'],
+  ['        <p>transition</p>: <v>background-color 150ms, border-color 150ms</v>;', 'anim'],
+  ['      }', 'anim'],
+  ['      <sel>.nav:hover</sel> { <p>background-color</p>: <v>var(--raised)</v>; }', 'anim'],
+  ['      <sel>.nav.active</sel> { <p>border-color</p>: <v>var(--accent)</v>; }', 'anim'],
   ['    <tag>&lt;/style&gt;</tag>'],
   ['  <s>)html"</s>;'],
   ['};'],
@@ -213,15 +215,15 @@ async function setFootage(index) {
 // The footage part of the timeline: [caption, start, duration, speed,
 // big caption, small line, camera].
 const SHOTS = [
-  ['dash',    0.0, 2.2, 1.2, 'Live.<br>Reactive.', 'Bind plain C++ members. Change one, the screen follows.', { ry: -16, rx: 6 }],
-  ['resize',  2.2, 2.4, 1.2, 'CSS Grid.<br>@media.', 'The layout reflows with the terminal.', { ry: 14, rx: 4 }],
-  ['motion',  4.6, 3.2, 1.35, 'Transitions.<br>@keyframes.', 'Motion, declared in CSS.', { ry: -12, rx: -4 }],
-  ['widgets', 7.8, 3.1, 1.5, 'Mouse.<br>Keyboard.<br>Widgets.', 'Inputs, sliders, tabs, focus. Built in.', { ry: 12, rx: 5 }],
-  ['select',  10.9, 1.8, 1.3, 'Select.<br>Copy.', 'Text selection, like a browser.', { ry: -10, rx: 3 }],
-  ['reload',  12.7, 3.0, 1.0, 'Hot<br>reload.', 'Save the file. No recompile.', { ry: 0, rx: 0 }],
+  ['palette', 0.0, 1.7, 1.0, 'Keyboard<br>first.', 'Ctrl K, a few letters, Enter.', { ry: -16, rx: 6 }],
+  ['table',   1.7, 2.35, 1.15, 'Motion<br>that guides.', 'The highlight glides to the row. The details slide in beside it.', { ry: 14, rx: 4 }],
+  ['resize',  4.05, 2.1, 1.2, 'CSS<br>@media.', 'The layout reflows with the terminal.', { ry: -12, rx: -4 }],
+  ['hover',   6.15, 2.85, 1.4, 'Transitions.<br>@keyframes.', 'Hover, focus, notifications. Declared in CSS.', { ry: 12, rx: 5 }],
+  ['dialog',  9.0, 2.85, 1.4, 'Mouse.<br>Keyboard.<br>Focus.', 'The safe answer is the default.', { ry: -10, rx: 3 }],
+  ['reload',  11.85, 2.0, 1.0, 'Hot<br>reload.', 'Save the file. No recompile.', { ry: 0, rx: 0 }],
 ];
 const FOOT_T0 = 8.0;  // When the footage starts in the promo.
-const FOOT_END = FOOT_T0 + 15.7;
+const FOOT_END = FOOT_T0 + 13.85;
 
 // ------------------------------------------------------------------ scene
 const T_FACTS = FOOT_END;
@@ -294,7 +296,7 @@ async function setTime(t) {
   if (t >= 3.6 && t < 7.9) {
     const which = t < 5.3 ? 0 : t < 6.2 ? 1 : 2;
     const starts = [3.6, 5.3, 6.2];
-    const texts = ['HTML<br>templates.', 'Real CSS<br><span class="grad">grid.</span>', 'Real CSS<br><span class="grad">motion.</span>'];
+    const texts = ['HTML<br>templates.', 'Real CSS<br><span class="grad">layout.</span>', 'Real CSS<br><span class="grad">motion.</span>'];
     const into = outExpo(seg(t, starts[which], starts[which] + 0.35));
     $('codecap').innerHTML = texts[which] + '<div style="font-size:30px;font-weight:500;letter-spacing:0;color:var(--muted);margin-top:20px">in a plain C++ class.</div>';
     pose($('codecap'), { x: 90, y: 360 + (1 - into) * 40, o: into * (1 - seg(t, 7.2, 7.5)), blur: (1 - into) * 12 });
@@ -334,19 +336,10 @@ async function setTime(t) {
 
     if (name === 'reload' && into > 0.3) {
       const k = outBack(seg(into, 0.3, 0.6));
-      const second = into > 1.3;
-      $('chip').innerHTML = second
-        ? '<span class="c">.grid {</span>\n<span style="color:#f85149">-  minmax(24, 1fr)</span>\n<span style="color:#3fb950">+  minmax(40, 1fr)</span>'
-        : '<span class="c">self {</span>\n<span style="color:#f85149">-  --accent: rgb(88, 166, 255);</span>\n<span style="color:#3fb950">+  --accent: rgb(255, 123, 172);</span>';
+      $('chip').innerHTML = '<span class="c">self {</span>\n<span style="color:#f85149">-  --accent: rgb(88, 166, 255);</span>\n<span style="color:#3fb950">+  --accent: rgb(255, 123, 172);</span>';
       show($('chip'), true);
       pose($('chip'), { x: 70, y: 700, s: lerp(0.6, 1, k), o: clamp(k) * (1 - exit) });
     }
-    // A white flash on each cut, two frames long.
-    const sinceCut = Math.min(...SHOTS.map((s) => (local >= s[1] ? local - s[1] : 99)));
-    $('flash').style.opacity = Math.abs(local + 0.2) < 0.05 ? 0.25
-        : local > 0.2 && sinceCut < 0.07 ? 0.12 : 0;
-  } else {
-    $('flash').style.opacity = 0;
   }
 
   // 4. Facts, slammed one per beat.
