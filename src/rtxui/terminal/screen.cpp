@@ -1235,6 +1235,10 @@ class ScreenImpl {
   // The same for the text color, from the OSC 10 query. Text in no color of
   // its own is drawn in it, unless the app named a background.
   Color terminal_foreground_;
+  // Whether the terminal confirmed it reports the mouse in pixels, answering
+  // the query made on entering raw mode. Until then, and for a terminal that
+  // ignores the mode, reports are in cells even when the cell size is known.
+  bool pixel_mouse_ = false;
   bool drag_active_ = false;
   Element* drag_element_ = nullptr;
   bool drag_vertical_ = false;
@@ -1475,6 +1479,9 @@ void ScreenImpl::Step() {
           RequestDraw();
         }
       }
+      if (auto pixel_mouse = parser_->TakePixelMouse()) {
+        pixel_mouse_ = *pixel_mouse;
+      }
       while (auto event = parser_->GetEvent()) {
         HandleEvent(*event);
       }
@@ -1627,7 +1634,8 @@ void ScreenImpl::HandleEvent(Event event) {
     MouseData mouse_data = EventInternals::Data(*mouse_event);
     MouseData* mouse_ptr = &mouse_data;
     int cell_w = 0, cell_h = 0;
-    if (device_->GetCellPixelSize(cell_w, cell_h) && cell_w > 0 && cell_h > 0) {
+    if (pixel_mouse_ && device_->GetCellPixelSize(cell_w, cell_h) &&
+        cell_w > 0 && cell_h > 0) {
       mouse_ptr->is_pixel_precise = true;
       mouse_ptr->pixel_x = mouse_ptr->x;
       mouse_ptr->pixel_y = mouse_ptr->y;

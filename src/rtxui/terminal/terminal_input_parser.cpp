@@ -556,6 +556,12 @@ TerminalInputParser::Output TerminalInputParser::ParseCSI() {
           return ParseMouse(altered, false, std::move(arguments));
         case 'R':
           return ParseCursorPosition(std::move(arguments));
+        case 'y':
+          if (pending_.starts_with("\x1B[?") &&
+              pending_[pending_.size() - 2] == '$') {
+            return ParseModeReport(std::move(arguments));
+          }
+          [[fallthrough]];
         default:
           if (pending_ == "\x1B[200~") {
             in_bracketed_paste_ = true;
@@ -631,6 +637,16 @@ TerminalInputParser::Output TerminalInputParser::ParseCursorPosition(
   }
   cursor_positions_.emplace_back(std::max(arguments[1], 1) - 1,
                                  std::max(arguments[0], 1) - 1);
+  return DROP;
+}
+// `ESC[?mode;value$y` is a terminal's reply to a DECRQM query: 1 or 3 when
+// the mode is set, 2 or 4 when reset, 0 when the terminal does not know it.
+// Not an Event either.
+TerminalInputParser::Output TerminalInputParser::ParseModeReport(
+    std::vector<int> arguments) {
+  if (arguments.size() == 2 && arguments[0] == 1016) {
+    pixel_mouse_ = arguments[1] == 1 || arguments[1] == 3;
+  }
   return DROP;
 }
 void TerminalInputParser::AddEvent(Event event) {

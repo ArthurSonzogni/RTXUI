@@ -3859,6 +3859,9 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
   auto component = Ref<ThumbDragPixelComponent>::New();
   Screen screen = ScreenInternals::Make(component, device);
   screen.SetSmoothScrollEnabled(false);
+  // The terminal confirms it reports the mouse in pixels.
+  device->PushInput("\x1b[?1016;1$y");
+  screen.Step();
   screen.Draw();
 
   auto* scroll_el =
@@ -3907,6 +3910,47 @@ TEST_CASE("Screen.ScrollbarThumbDragPixelPrecise",
 
   // Scroll should be at 6.
   CHECK(scroll_el->target_scroll_y() == 6);
+}
+
+// urxvt, alacritty and konsole fill in the cell size in pixels, yet ignore
+// pixel mouse reports (mode 1016) and keep reporting cells.
+TEST_CASE("Screen.MouseInCellsUntilTheTerminalConfirmsPixels", "[terminal]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  device->SetMockCellPixelSize(10, 20);
+
+  class MouseTrackerComponent : public Component<MouseTrackerComponent> {
+   public:
+    int x = 0, y = 0;
+    bool OnEvent(Event event) override {
+      if (auto mouse = event.get_if<Event::Mouse>()) {
+        x = mouse->x();
+        y = mouse->y();
+      }
+      return false;
+    }
+    std::string_view view = "Tracker";
+  };
+
+  auto component = Ref<MouseTrackerComponent>::New();
+  Screen screen = ScreenInternals::Make(component, device);
+
+  // No reply yet: cells.
+  device->PushInput("\x1b[<35;5;3M");
+  screen.Step();
+  CHECK(component->x == 5);
+  CHECK(component->y == 3);
+
+  // The terminal does not know the mode: still cells.
+  device->PushInput("\x1b[?1016;0$y\x1b[<35;6;4M");
+  screen.Step();
+  CHECK(component->x == 6);
+  CHECK(component->y == 4);
+
+  // The terminal confirms it: pixels, 10x20 per cell.
+  device->PushInput("\x1b[?1016;1$y\x1b[<35;51;41M");
+  screen.Step();
+  CHECK(component->x == 6);
+  CHECK(component->y == 3);
 }
 
 TEST_CASE("Screen.ScrollbarPseudoClasses", "[terminal][scroll][scrollbar]") {

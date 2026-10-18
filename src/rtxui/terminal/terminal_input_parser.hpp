@@ -42,6 +42,11 @@ class TerminalInputParser {
   std::vector<std::pair<int, int>> TakeCursorPositions() {
     return std::exchange(cursor_positions_, {});
   }
+  // Whether the terminal reports the mouse in pixels, from its reply to a
+  // DECRQM query of mode 1016 (`ESC[?1016$p`), since the last call.
+  std::optional<bool> TakePixelMouse() {
+    return std::exchange(pixel_mouse_, std::nullopt);
+  }
 
  private:
   unsigned char Current();
@@ -64,6 +69,7 @@ class TerminalInputParser {
   Output ParseOSC();
   Output ParseMouse(bool altered, bool pressed, std::vector<int> arguments);
   Output ParseCursorPosition(std::vector<int> arguments);
+  Output ParseModeReport(std::vector<int> arguments);
 
   void AddEvent(Event event);
   std::optional<Event> ToEvent(std::string_view);
@@ -84,6 +90,7 @@ class TerminalInputParser {
   std::optional<Color> background_color_;
   std::optional<Color> foreground_color_;
   std::vector<std::pair<int, int>> cursor_positions_;
+  std::optional<bool> pixel_mouse_;
 
   // Bit `b` is set once button `b` (Left, Middle, Right) was reported
   // released, and cleared when it is pressed again. urxvt reports a motion

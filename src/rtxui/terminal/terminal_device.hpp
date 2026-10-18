@@ -410,7 +410,7 @@ class SystemTerminalDevice : public TerminalDevice {
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h\x1b[?1016$p");
     } else {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
             "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
@@ -456,10 +456,13 @@ class SystemTerminalDevice : public TerminalDevice {
     sa.sa_flags = 0;
     sigaction(SIGWINCH, &sa, &previous_sigaction_);
 
+    // Pixel mouse reports (1016) only where the cell size is known. urxvt,
+    // alacritty and konsole know it and ignore the mode, so the screen reads
+    // pixels only once the terminal confirms it, answering `ESC[?1016$p`.
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h\x1b[?1016$p");
     } else {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
             "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
@@ -552,7 +555,7 @@ class MockTerminalDevice : public TerminalDevice {
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h\x1b[?1016$p");
     } else {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
             "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
