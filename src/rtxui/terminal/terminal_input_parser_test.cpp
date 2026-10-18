@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>  // for vector
 
 #include "catch2/catch_test_macros.hpp"  // for TEST_CASE, REQUIRE, CHECK, CHECK_FALSE
@@ -330,6 +331,32 @@ TEST_CASE("Event.MouseUrxvtMotionWithoutButton", "[terminal]") {
     CHECK_FALSE(mouse->modifier().ctrl());
   }
   CHECK_FALSE(parser.GetEvent().has_value());
+}
+
+// The keys urxvt encodes its own way (captures/urxvt-9.31.txt).
+TEST_CASE("Event.RxvtKeys", "[terminal]") {
+  const std::pair<std::string_view, Event> keys[] = {
+      {"\x1BOa", Event::ArrowUpCtrl()},
+      {"\x1BOb", Event::ArrowDownCtrl()},
+      {"\x1BOc", Event::ArrowRightCtrl()},
+      {"\x1BOd", Event::ArrowLeftCtrl()},
+      {"\x1B[7~", Event::Home()},
+      {"\x1B[8~", Event::End()},
+      {"\x1B\x1B[A", Event::ArrowUpAlt()},
+      {"\x1B\x1B[B", Event::ArrowDownAlt()},
+      {"\x1B\x1B[C", Event::ArrowRightAlt()},
+      {"\x1B\x1B[D", Event::ArrowLeftAlt()},
+  };
+  for (const auto& [sequence, expected] : keys) {
+    TerminalInputParser parser;
+    for (char c : sequence) {
+      parser.Add(c);
+    }
+    auto event = parser.GetEvent();
+    REQUIRE(event.has_value());
+    CHECK(*event == expected);
+    CHECK_FALSE(parser.GetEvent().has_value());
+  }
 }
 
 TEST_CASE("Event.UTF8", "[terminal]") {

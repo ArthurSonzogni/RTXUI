@@ -75,6 +75,18 @@ std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
       {"\x1BOD", Event::ArrowLeft()},
       {"\x1BOH", Event::Home()},
       {"\x1BOF", Event::End()},
+      // rxvt: Ctrl+arrows, Home and End, and Alt as an Escape before a key.
+      {"\x1BOa", Event::ArrowUpCtrl()},
+      {"\x1BOb", Event::ArrowDownCtrl()},
+      {"\x1BOc", Event::ArrowRightCtrl()},
+      {"\x1BOd", Event::ArrowLeftCtrl()},
+      {"\x1B[7~", Event::Home()},
+      {"\x1B[8~", Event::End()},
+      {"\x1B\x1B[A", Event::ArrowUpAlt()},
+      {"\x1B\x1B[B", Event::ArrowDownAlt()},
+      {"\x1B\x1B[C", Event::ArrowRightAlt()},
+      {"\x1B\x1B[D", Event::ArrowLeftAlt()},
+      {"\x1B\x1B", Event::Escape()},
       {"\x1B[[A", Event::F1()},
       {"\x1B[[B", Event::F2()},
       {"\x1B[[C", Event::F3()},
@@ -371,6 +383,9 @@ TerminalInputParser::Output TerminalInputParser::ParseESC() {
       return ParseOSC();
     case '[':
       return ParseCSI();
+    case '\x1B':
+      // rxvt sends Alt+key as an Escape before the key's own sequence.
+      return ParseESC();
     case 'O': {
       if (!Eat()) {
         return UNCOMPLETED;
