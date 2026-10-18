@@ -6410,6 +6410,10 @@ TEST_CASE("The event loop wakes for a delayed task when it is due",
   CHECK(InputWait(false, milliseconds(50)) == milliseconds(50));
   CHECK(InputWait(false, microseconds(30500)) == milliseconds(31));
   CHECK(InputWait(true, milliseconds(50)) == milliseconds(16));
+  // In a browser too: a delayed task wakes the loop without any input.
+  CHECK(BrowserInputWait(false, {}) == -1);
+  CHECK(BrowserInputWait(true, {}) == 16);
+  CHECK(BrowserInputWait(false, milliseconds(50)) == 50);
 }
 
 }  // namespace

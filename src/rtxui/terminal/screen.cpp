@@ -1373,7 +1373,12 @@ void ScreenImpl::Loop() {
 void ScreenImpl::Step() {
   ScopedLayoutArenas arenas(layout_arenas_);
 #ifdef __EMSCRIPTEN__
-  EM_ASM({ window.rtxui_has_active_transitions = $0; }, HasActiveTransitions());
+  // How long emscripten_read() may sleep, waiting for input.
+  EM_ASM(
+      { window.rtxui_input_wait_ms = $0; },
+      BrowserInputWait(HasActiveTransitions() || autoscroll_pending_ ||
+                           parser_->HasPendingInput(),
+                       next_task_delay_));
 #endif
 
   bool input_available = true;

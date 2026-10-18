@@ -36,13 +36,13 @@ inline int emscripten_get_char() {
         return;
       }
       let timer = null;
-      if (window.rtxui_has_active_transitions) {
+      if (window.rtxui_input_wait_ms >= 0) {
         timer = setTimeout(
             function() {
               window.rtxui_on_input = null;
               wakeUp(-1);
             },
-            16);
+            window.rtxui_input_wait_ms);
       }
       window.rtxui_on_input = function(char_code) {
         if (timer) {
@@ -81,7 +81,8 @@ inline int emscripten_read(char* buf, int len) {
     return drained;
   }
 
-  // 2. Queue was empty: sleep until input arrives or transition timer fires.
+  // 2. Queue was empty: sleep until input arrives, or until the next frame or
+  // delayed task is due.
   // Crucially, char_code is returned as the function's return value from
   // wakeUp(), which Asyncify preserves in a register across the stack rewind.
   int c = emscripten_get_char();

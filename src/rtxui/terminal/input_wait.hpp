@@ -24,6 +24,16 @@ inline std::chrono::milliseconds InputWait(
   return wait;
 }
 
+// The same in a browser, in milliseconds, or -1 to wait for input alone: with
+// nothing moving and no delayed task, there is no hot reload to poll for.
+inline int BrowserInputWait(bool moving,
+                            std::chrono::steady_clock::duration next_task) {
+  if (!moving && next_task <= std::chrono::steady_clock::duration::zero()) {
+    return -1;
+  }
+  return static_cast<int>(InputWait(moving, next_task).count());
+}
+
 }  // namespace rtxui
 
 #endif  // RTXUI_TERMINAL_INPUT_WAIT_HPP_
