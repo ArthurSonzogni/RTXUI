@@ -1281,6 +1281,43 @@ TEST_CASE("Component Template Hot Reloading", "[component][hotreload]") {
   std::filesystem::remove(temp_file);
 }
 
+TEST_CASE("Hot reload takes the template of its own class",
+          "[component][hotreload]") {
+  // Several components in one file: the reload must not pick the first one.
+  const std::string temp_file = "temp_hot_reload_classes.cpp";
+  const auto write = [&](std::string_view content) {
+    std::ofstream out(temp_file);
+    out << "// The view of each component.\n"
+        << "class Other : public rtxui::Component<Other> {\n"
+        << "  std::string_view view = R\"html(<div id=\"target\">Other</div>)html\";\n"
+        << "};\n"
+        << "class HotReloadTestComponent\n"
+        << "    : public rtxui::Component<HotReloadTestComponent> {\n"
+        << "  std::string_view view = R\"html(<div id=\"target\">" << content
+        << "</div>)html\";\n"
+        << "};\n";
+  };
+  write("Initial Content");
+  auto container = rtxui::Ref<HotReloadTestComponent>::New();
+  container->EnableHotReload("view", temp_file);
+  rtxui::Screen screen(container);
+  screen.Draw();
+
+  write("Updated Content");
+  std::error_code ec;
+  const auto time = std::filesystem::last_write_time(temp_file, ec);
+  std::filesystem::last_write_time(temp_file, time + std::chrono::seconds(2),
+                                   ec);
+  CHECK(rtxui::HotReloadManager::PollChanges());
+  screen.Draw();
+
+  auto* target =
+      rtxui::ComponentInternals::Root(*container)->QuerySelector("#target");
+  REQUIRE(target != nullptr);
+  CHECK(target->Print().find("Updated Content") != std::string::npos);
+  std::filesystem::remove(temp_file);
+}
+
 namespace rtxui {
 
 void PrintCompilerStyleError(std::string_view source_string,

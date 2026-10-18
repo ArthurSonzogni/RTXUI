@@ -4696,7 +4696,36 @@ std::vector<HotReloadInfo>& GetRegisteredHotReloads() {
   return registered;
 }
 
+bool IsIdentifierChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+}
+
+// The position of `word` as a whole identifier at or after `from`, followed
+// by `next` (after spaces) when `next` is given.
+size_t FindWord(const std::string& content,
+                std::string_view word,
+                size_t from,
+                char next = 0) {
+  for (size_t pos = content.find(word, from); pos != std::string::npos;
+       pos = content.find(word, pos + 1)) {
+    const size_t end = pos + word.size();
+    if ((pos > 0 && IsIdentifierChar(content[pos - 1])) ||
+        (end < content.size() && IsIdentifierChar(content[end]))) {
+      continue;
+    }
+    if (next == 0) {
+      return pos;
+    }
+    const size_t after = content.find_first_not_of(" \t\r\n", end);
+    if (after != std::string::npos && content[after] == next) {
+      return pos;
+    }
+  }
+  return std::string::npos;
+}
+
 std::string ExtractHotReloadTemplate(const std::string& filepath,
+                                     std::string_view class_name,
                                      const std::string& var_name) {
   std::ifstream file(filepath);
   if (!file.is_open()) {
@@ -4706,9 +4735,30 @@ std::string ExtractHotReloadTemplate(const std::string& filepath,
   std::string content((std::istreambuf_iterator<char>(file)),
                       std::istreambuf_iterator<char>());
 
+  // A file can hold several components: start from this one's class, then
+  // its `view = ...` member.
   size_t search_start = 0;
+  if (const size_t colons = class_name.rfind("::");
+      colons != std::string_view::npos) {
+    class_name.remove_prefix(colons + 2);
+  }
+  for (std::string_view keyword : {"class", "struct"}) {
+    for (size_t pos = FindWord(content, keyword, 0); pos != std::string::npos;
+         pos = FindWord(content, keyword, pos + 1)) {
+      const size_t name = content.find_first_not_of(" \t\r\n",
+                                                    pos + keyword.size());
+      if (name != std::string::npos &&
+          FindWord(content, class_name, name) == name) {
+        search_start = name;
+        break;
+      }
+    }
+    if (search_start != 0) {
+      break;
+    }
+  }
   if (!var_name.empty()) {
-    size_t var_pos = content.find(var_name);
+    size_t var_pos = FindWord(content, var_name, search_start, '=');
     if (var_pos != std::string::npos) {
       search_start = var_pos;
     }
@@ -4788,7 +4838,8 @@ bool HotReloadManager::PollChanges() {
       info.last_modified = current_time;
 
       std::string new_template =
-          ExtractHotReloadTemplate(info.filepath, info.view_var_name);
+          ExtractHotReloadTemplate(info.filepath, info.component->Tag(),
+                                   info.view_var_name);
       if (!new_template.empty()) {
         info.component->HotReload(new_template);
         reloaded = true;
