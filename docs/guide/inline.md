@@ -1,10 +1,8 @@
 # Inline Mode
 
-By default, `Screen::Loop()` switches the terminal to its alternate screen and
-draws over all of it, as a full-screen editor does. In inline mode, the
-application is drawn where the cursor is instead, below the command that
-started it, as a progress display or a prompt is. The shell's lines stay above
-it, and the application is only as tall as its content.
+By default, an application is drawn inline: where the cursor is, below the
+command that started it, as a progress display or a prompt is. The shell's
+lines stay above it, and the application is only as tall as its content.
 
 ```cpp
 #include <rtxui/rtxui.hpp>
@@ -23,10 +21,23 @@ class Prompt : public rtxui::Component<Prompt> {
 int main() {
   auto app = rtxui::Ref<Prompt>::New();
   rtxui::Screen screen(app);
-  screen.SetInline(true);  // Before Loop().
   screen.Loop();
 }
 ```
+
+## Full screen
+
+An application built around the whole terminal, as an editor or a dashboard
+is, asks for it before `Loop()`:
+
+<!-- snippet: fragment -->
+```cpp
+screen.SetInline(false);
+```
+
+`Loop()` then switches the terminal to its alternate screen and draws over all
+of it, at the terminal's height. When it returns, the terminal shows the
+shell's lines again, as they were before.
 
 ## Height
 

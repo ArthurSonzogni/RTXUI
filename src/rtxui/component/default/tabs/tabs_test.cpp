@@ -162,6 +162,7 @@ TEST_CASE("Tabs header divider renders as a line under the headers",
 TEST_CASE("Tabs Component Interactions", "[component][tabs][interaction]") {
   auto container = rtxui::Ref<TabsTestComponent>::New();
   rtxui::Screen screen(container);
+  screen.SetInline(false);  // Clicks at the cells it draws on.
   screen.Draw();
 
   auto* tabs_el =

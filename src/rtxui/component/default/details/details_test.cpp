@@ -49,6 +49,7 @@ class DetailsDefaultTestComponent
 TEST_CASE("Details and Summary Components", "[component][details]") {
   auto container = rtxui::Ref<DetailsTestComponent>::New();
   rtxui::Screen screen(container);
+  screen.SetInline(false);  // Clicks at the cells it draws on.
   screen.Draw();
 
   auto* details_el =

@@ -109,7 +109,7 @@ https://github.com/user-attachments/assets/10d75224-eb4d-4e71-8d53-2e647028c923
 **A fast development loop**
 - Hot reload: save the C++ file, and the running app picks up the new HTML and CSS.
 - Errors in templates and styles point at the line and column, like a compiler does.
-- Inline mode draws below the prompt, like `cargo` or `apt`, instead of taking the whole screen.
+- Apps draw below the prompt, like `cargo` or `apt`. `SetInline(false)` gives them the whole screen.
 - The same code builds to WebAssembly: every example in the docs runs live in the browser.
 
 **Unicode done right**

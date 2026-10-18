@@ -4261,7 +4261,9 @@ ScreenImpl::RawTerminal::~RawTerminal() {
 }
 
 Screen::Screen(Ref<ComponentBase> component)
-    : Screen(std::move(component), nullptr) {}
+    : Screen(std::move(component), nullptr) {
+  SetInline(true);
+}
 
 Screen::Screen(Ref<ComponentBase> component,
                std::shared_ptr<TerminalDevice> device)

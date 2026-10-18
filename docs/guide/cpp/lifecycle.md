@@ -25,10 +25,10 @@ frame. Entering `Loop()` switches the terminal to raw mode and enables mouse
 reporting; both are restored when the loop exits — on <kbd>Ctrl-C</kbd>, on
 <kbd>Escape</kbd> when no dialog is open, or when input closes.
 
-`Loop()` draws on the terminal's alternate screen, over all of it. Call
-`SetInline(true)` before it to draw below the shell's lines instead, as tall
-as the application's content, and `Print()` to write lines above it: see
-[Inline Mode](/guide/inline).
+`Loop()` draws below the shell's lines, as tall as the application's
+content, and `Print()` writes lines above it: see
+[Inline Mode](/guide/inline). Call `SetInline(false)` before it to draw on
+the terminal's alternate screen instead, over all of it.
 
 ## What one loop iteration does
 

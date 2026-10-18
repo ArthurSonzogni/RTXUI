@@ -36,6 +36,8 @@ class RTXUI_EXPORT Screen {
 
   /// Draws the application where the cursor is, on the terminal's main
   /// screen, rather than on the alternate screen over the whole terminal.
+  /// This is the default: SetInline(false) gives the application the whole
+  /// terminal instead, as a full-screen program such as an editor takes it.
   ///
   /// The application is then as tall as its content, as a web page is, up to
   /// the terminal's height: `height: 100%` still makes it fill the terminal.
