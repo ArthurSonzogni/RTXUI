@@ -444,6 +444,7 @@ class Dashboard : public Component<Dashboard> {
 int main() {
   auto app = Ref<Dashboard>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

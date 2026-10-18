@@ -2,7 +2,7 @@
 
 An inline application: a package installer drawn below the command that started it, as `apt install` is, rather than over the whole terminal.
 
-Screen::SetInline() keeps the shell's lines above the interface, which is only as tall as its content. Screen::Print() writes each installed package above it, where it stays in the terminal's history. Once done, the interface is a one-line summary, left behind for the shell to go on below.
+Drawn inline, as a Screen is by default, the interface keeps the shell's lines above it and is only as tall as its content. Screen::Print() writes each installed package above it, where it stays in the terminal's history. Once done, the interface is a one-line summary, left behind for the shell to go on below.
 
 Try it: press p to pause, q to cancel, or click them.
 

@@ -1455,6 +1455,7 @@ class Showcase : public Component<Showcase> {
 int main() {
   auto app = Ref<Showcase>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

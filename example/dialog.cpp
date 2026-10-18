@@ -161,6 +161,7 @@ class DialogDemo : public Component<DialogDemo> {
 int main() {
   auto app = Ref<DialogDemo>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

@@ -119,6 +119,7 @@ class LogViewer : public Component<LogViewer> {
 int main() {
   auto app = Ref<LogViewer>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

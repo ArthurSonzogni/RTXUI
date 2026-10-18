@@ -78,6 +78,7 @@ class ConfirmApp : public Component<ConfirmApp> {
 int main() {
   auto app = Ref<ConfirmApp>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

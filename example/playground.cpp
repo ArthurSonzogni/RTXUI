@@ -250,6 +250,7 @@ int main() {
   });
 
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

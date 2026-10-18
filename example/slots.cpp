@@ -64,8 +64,6 @@ class SlotsDemo : public Component<SlotsDemo> {
         align-items: center;
         justify-content: center;
         width: 100%;
-        height: 100%;
-        background-color: rgb(13, 17, 23);
         color: rgb(230, 237, 243);
       }
     </style>

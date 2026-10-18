@@ -139,6 +139,7 @@ class PositioningApp : public Component<PositioningApp> {
 int main() {
   auto app = Ref<PositioningApp>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

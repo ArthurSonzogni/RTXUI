@@ -220,6 +220,7 @@ class Events : public Component<Events> {
 int main() {
   auto app = Ref<Events>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

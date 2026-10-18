@@ -48,8 +48,6 @@ class TransitionsDemo : public Component<TransitionsDemo> {
           align-items: center;
           justify-content: center;
           width: 100%;
-          height: 100%;
-          background-color: var(--bg);
           color: rgb(230, 237, 243);
         }
         .card {

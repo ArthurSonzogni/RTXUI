@@ -91,9 +91,10 @@ class ColorDemo : public Component<ColorDemo> {
           align-items: center;
           justify-content: center;
           width: 100%;
-          height: 100%;
-          background-color: rgb(13, 17, 23);
+          height: 70%;
+          background-color: rgba(13, 17, 23, 0.0);
           color: rgb(230, 237, 243);
+          overflow-y: auto;
         }
         .card {
           border: tall;
@@ -109,20 +110,27 @@ class ColorDemo : public Component<ColorDemo> {
           color: rgb(139, 148, 158);
         }
         h2 {
-          margin: 1 0 0 0;
+          margin: 2 0 1 0;
           font-weight: normal;
         }
         .swatches {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 0 1;
+          gap: 1 2;
         }
         .wide {
           grid-template-columns: repeat(2, 1fr);
         }
         .swatch {
-          padding: 0 1;
+          padding: 1;
+          border: tall;
+          border-color: rgb(0,0,0,0.1);
+          text-align: center;
         }
+        .swatch:hover {
+          border-color: white;
+        }
+
       </style>
     )html";
 

@@ -123,6 +123,7 @@ class ToastDemo : public Component<ToastDemo> {
 int main() {
   auto app = Ref<ToastDemo>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

@@ -164,6 +164,7 @@ class CommandPalette : public Component<CommandPalette> {
 int main() {
   auto app = Ref<CommandPalette>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }

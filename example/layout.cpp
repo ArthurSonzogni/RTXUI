@@ -57,7 +57,7 @@ class LayoutDemo : public Component<LayoutDemo> {
         self {
           display: block;
           padding: 1 2;
-          background-color: rgb(13, 17, 23);
+          background-color: rgba(13, 17, 23, 0.8);
           color: rgb(230, 237, 243);
         }
         h1 {

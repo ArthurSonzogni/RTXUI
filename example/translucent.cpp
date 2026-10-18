@@ -46,7 +46,6 @@ class TranslucentDemo : public Component<TranslucentDemo> {
           align-items: center;
           justify-content: center;
           width: 100%;
-          height: 100%;
         }
         .card {
           border: tall;

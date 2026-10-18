@@ -68,8 +68,6 @@ class FocusStatesDemo : public Component<FocusStatesDemo> {
           align-items: center;
           justify-content: center;
           width: 100%;
-          height: 100%;
-          background-color: var(--bg);
           color: var(--text);
         }
         .card {

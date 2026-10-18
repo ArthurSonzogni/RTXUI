@@ -466,6 +466,7 @@ class FileBrowser : public Component<FileBrowser> {
 int main() {
   auto app = Ref<FileBrowser>::New();
   Screen screen(app);
+  screen.SetInline(false);
   screen.Loop();
   return 0;
 }
