@@ -166,15 +166,18 @@ width/height opts an item out of stretching:
 `place-items` and `place-self` set both axes at once
 (`place-items: center center`).
 
-## Aligning the rows in the grid
+## Aligning the tracks in the grid
 
 When the grid is taller than its rows, as with a `height` of its own or as a
 stretched flex item, `align-content` decides where the rest goes. By default
 (`stretch`) the `auto` rows grow to fill it; `start`, `end`, `center`,
-`space-between`, `space-around` and `space-evenly` place the rows instead:
+`space-between`, `space-around` and `space-evenly` place the rows instead.
+`justify-content` does the same with the columns in the grid's width, where
+the default (`normal`) stretches the `auto` columns:
 
 ```css
 .form { display: grid; height: 20; align-content: start; }
+.toolbar { display: grid; grid-template-columns: auto auto auto; justify-content: end; }
 ```
 
 ## Demo

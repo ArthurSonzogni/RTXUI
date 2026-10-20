@@ -841,6 +841,24 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
                      "  c   h   ", "  d f     "}));
   }
 
+  SECTION("justify-content places the columns in the grid's width") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:1 1;width:6;}.c{justify-content:center;}.e{justify-content:end;}.sb{justify-content:space-between;}.sa{justify-content:space-around;}.se{justify-content:space-evenly;}</style><div class="g c"><div>a</div><div>b</div></div><div class="g e"><div>c</div><div>d</div></div><div class="g sb"><div>e</div><div>f</div></div><div class="g sa"><div>g</div><div>h</div></div><div class="g se"><div>i</div><div>j</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 5)) ==
+          CheckGrid({"  ab  ", "    cd", "e    f", " g  h ", " i j  "}));
+  }
+
+  SECTION("auto columns stretch only under justify-content: normal") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-columns:auto auto;width:6;}.s{justify-content:start;}</style><div class="g"><div>A</div><div>B</div></div><div class="g s"><div>C</div><div>D</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 2)) ==
+          CheckGrid({"A  B  ", "CD    "}));
+  }
+
   SECTION("a min-content or max-content row is as tall as its items") {
     struct T : Component<T> {
       std::string_view view =

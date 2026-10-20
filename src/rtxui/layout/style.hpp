@@ -320,6 +320,9 @@ enum class PositionType {
 };
 
 enum class JustifyContent {
+  // normal or stretch: flex-start in a flex container; in a grid, the auto
+  // columns stretch to fill the width.
+  Normal,
   FlexStart,
   FlexEnd,
   Center,
@@ -494,7 +497,7 @@ struct ComputedStyleCore {
   int order = 0;
   Length row_gap = Length::Cells(0.0f);
   Length column_gap = Length::Cells(0.0f);
-  JustifyContent justify_content = JustifyContent::FlexStart;
+  JustifyContent justify_content = JustifyContent::Normal;
   AlignItems align_items = AlignItems::Stretch;
   AlignSelf align_self = AlignSelf::Auto;
   // Inline-axis alignment inside grid cells (justify-items / justify-self).

@@ -3223,6 +3223,9 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   // flexbox, and both spellings are in current use.
   auto parse_justify_content =
       [](std::string_view kw) -> std::optional<JustifyContent> {
+    if (kw == "normal" || kw == "stretch") {
+      return JustifyContent::Normal;
+    }
     if (kw == "flex-start" || kw == "start") {
       return JustifyContent::FlexStart;
     }
@@ -3245,7 +3248,7 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
   };
   auto parse_align_content =
       [](std::string_view kw) -> std::optional<AlignContent> {
-    if (kw == "stretch") {
+    if (kw == "normal" || kw == "stretch") {
       return AlignContent::Stretch;
     }
     if (kw == "flex-start" || kw == "start") {

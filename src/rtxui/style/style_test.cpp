@@ -1855,18 +1855,23 @@ TEST_CASE("place-content sets both content-distribution axes",
     CHECK(style.justify_content == rtxui::JustifyContent::SpaceBetween);
   }
 
-  SECTION("A value valid on only one axis leaves the other alone") {
-    // `stretch` is an align-content value with no justify-content counterpart.
-    rtxui::ApplyStyle(style, {"justify-content", "center"});
+  SECTION("stretch and normal set both axes") {
+    // justify-content takes them too, the same value: flex-start in a flex
+    // container, and the auto columns stretch in a grid.
+    rtxui::ApplyStyle(style, {"place-content", "center"});
     rtxui::ApplyStyle(style, {"place-content", "stretch"});
     CHECK(style.align_content == rtxui::AlignContent::Stretch);
-    CHECK(style.justify_content == rtxui::JustifyContent::Center);
+    CHECK(style.justify_content == rtxui::JustifyContent::Normal);
+    rtxui::ApplyStyle(style, {"place-content", "center"});
+    rtxui::ApplyStyle(style, {"place-content", "normal"});
+    CHECK(style.align_content == rtxui::AlignContent::Stretch);
+    CHECK(style.justify_content == rtxui::JustifyContent::Normal);
   }
 
   SECTION("An unknown keyword changes nothing") {
     rtxui::ApplyStyle(style, {"place-content", "nonsense"});
     CHECK(style.align_content == rtxui::AlignContent::Stretch);
-    CHECK(style.justify_content == rtxui::JustifyContent::FlexStart);
+    CHECK(style.justify_content == rtxui::JustifyContent::Normal);
   }
 }
 

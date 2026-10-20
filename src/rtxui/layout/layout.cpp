@@ -3651,6 +3651,72 @@ ExpandedTemplate ExpandAutoRepeat(
   return out;
 }
 
+// The offset of each of `sizes.size()` tracks from `start`, with `gap`
+// between two, placed by justify-content or align-content in the `free`
+// space they leave.
+std::vector<int> PlaceTracks(const std::vector<int>& sizes,
+                             int start,
+                             int gap,
+                             int free,
+                             JustifyContent placement) {
+  const int count = static_cast<int>(sizes.size());
+  if (placement == JustifyContent::SpaceBetween && count == 1) {
+    placement = JustifyContent::FlexStart;
+  }
+  float leading = 0.0f;  // Before the first track.
+  float between = 0.0f;  // Between two tracks, on top of the gap.
+  switch (placement) {
+    case JustifyContent::Normal:
+    case JustifyContent::FlexStart:
+      break;
+    case JustifyContent::FlexEnd:
+      leading = static_cast<float>(free);
+      break;
+    case JustifyContent::Center:
+      leading = static_cast<float>(free) / 2.0f;
+      break;
+    case JustifyContent::SpaceBetween:
+      between = static_cast<float>(free) / static_cast<float>(count - 1);
+      break;
+    case JustifyContent::SpaceAround:
+      between = static_cast<float>(free) / static_cast<float>(count);
+      leading = between / 2.0f;
+      break;
+    case JustifyContent::SpaceEvenly:
+      between = static_cast<float>(free) / static_cast<float>(count + 1);
+      leading = between;
+      break;
+  }
+  std::vector<int> offsets(count);
+  float at = static_cast<float>(start) + leading;
+  for (int i = 0; i < count; ++i) {
+    offsets[i] = static_cast<int>(at);
+    at += static_cast<float>(sizes[i] + gap) + between;
+  }
+  return offsets;
+}
+
+// align-content as the justify-content that places tracks the same way.
+JustifyContent AsTrackPlacement(AlignContent align) {
+  switch (align) {
+    case AlignContent::Stretch:
+      return JustifyContent::Normal;
+    case AlignContent::FlexStart:
+      return JustifyContent::FlexStart;
+    case AlignContent::FlexEnd:
+      return JustifyContent::FlexEnd;
+    case AlignContent::Center:
+      return JustifyContent::Center;
+    case AlignContent::SpaceBetween:
+      return JustifyContent::SpaceBetween;
+    case AlignContent::SpaceAround:
+      return JustifyContent::SpaceAround;
+    case AlignContent::SpaceEvenly:
+      return JustifyContent::SpaceEvenly;
+  }
+  return JustifyContent::Normal;
+}
+
 PhysicalFragment* LayoutGrid(LayoutInputNode node,
                              LayoutConstraints constraints,
                              LayoutContext context) {
@@ -4276,7 +4342,8 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     }
   } else if (stretch_count > 0) {
     // The auto tracks stretch to fill the width, sharing what their content
-    // leaves equally; or shrink in proportion to it when it does not fit.
+    // leaves equally, under justify-content: normal; or shrink in proportion
+    // to it when it does not fit.
     int others = 0;
     for (int c = 0; c < C; ++c) {
       if (!sizes[c].stretch) {
@@ -4291,7 +4358,10 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
         continue;
       }
       const int content = std::max(sizes[c].base, auto_content[c]);
-      if (extra >= 0) {
+      if (extra >= 0 &&
+          box->style().justify_content != JustifyContent::Normal) {
+        col_widths[c] = content;
+      } else if (extra >= 0) {
         col_widths[c] = content + extra / stretch_count +
                         (nth < extra % stretch_count ? 1 : 0);
       } else {
@@ -4591,20 +4661,20 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     }
   }
 
-  std::vector<int> col_offsets(C, 0);
-  int cur_x = box->style().padding.left + box->style().border.left;
-  for (int c = 0; c < C; ++c) {
-    col_offsets[c] = cur_x;
-    cur_x += col_widths[c] + col_gap_val;
-  }
+  // justify-content and align-content: the space the tracks leave in the
+  // container goes to its auto ones (normal and stretch, the default; the
+  // columns stretched when sized), or before, between and around them.
+  const int free_width =
+      std::max(0, container_frag->width - border_h - padding_h - content_w);
+  const std::vector<int> col_offsets = PlaceTracks(
+      col_widths, box->style().padding.left + box->style().border.left,
+      col_gap_val, free_width, box->style().justify_content);
 
-  // align-content: the height the rows leave in the container goes to its
-  // auto rows (stretch, the default), or before, between and around them.
-  std::vector<int> row_offsets(R, 0);
-  {
-    const int free_height =
-        std::max(0, container_frag->height - border_v - padding_v - content_h);
-    AlignContent align = box->style().align_content;
+  const int free_height =
+      std::max(0, container_frag->height - border_v - padding_v - content_h);
+  const JustifyContent row_placement =
+      AsTrackPlacement(box->style().align_content);
+  if (row_placement == JustifyContent::Normal) {
     auto auto_max = [&](int r) {
       if (rows_template[r].unit == Unit::Auto) {
         return true;
@@ -4617,55 +4687,22 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
              track.max_content == GridTrack::Content::None &&
              !track.fit_content;
     };
-    if (align == AlignContent::Stretch) {
-      int auto_rows = 0;
-      for (int r = 0; r < R; ++r) {
-        auto_rows += auto_max(r) ? 1 : 0;
-      }
-      int nth = 0;
-      for (int r = 0; r < R && auto_rows > 0; ++r) {
-        if (auto_max(r)) {
-          row_heights[r] +=
-              free_height / auto_rows + (nth < free_height % auto_rows ? 1 : 0);
-          ++nth;
-        }
-      }
-    }
-    if (align == AlignContent::SpaceBetween && R == 1) {
-      align = AlignContent::FlexStart;
-    }
-    float leading = 0.0f;  // Before the first row.
-    float between = 0.0f;  // Between two rows, on top of the gap.
-    switch (align) {
-      case AlignContent::Stretch:
-      case AlignContent::FlexStart:
-        break;
-      case AlignContent::FlexEnd:
-        leading = static_cast<float>(free_height);
-        break;
-      case AlignContent::Center:
-        leading = free_height / 2.0f;
-        break;
-      case AlignContent::SpaceBetween:
-        between = static_cast<float>(free_height) / (R - 1);
-        break;
-      case AlignContent::SpaceAround:
-        between = static_cast<float>(free_height) / R;
-        leading = between / 2.0f;
-        break;
-      case AlignContent::SpaceEvenly:
-        between = static_cast<float>(free_height) / (R + 1);
-        leading = between;
-        break;
-    }
-    float y =
-        static_cast<float>(box->style().padding.top + box->style().border.top) +
-        leading;
+    int auto_rows = 0;
     for (int r = 0; r < R; ++r) {
-      row_offsets[r] = static_cast<int>(y);
-      y += static_cast<float>(row_heights[r] + row_gap_val) + between;
+      auto_rows += auto_max(r) ? 1 : 0;
+    }
+    int nth = 0;
+    for (int r = 0; r < R && auto_rows > 0; ++r) {
+      if (auto_max(r)) {
+        row_heights[r] +=
+            free_height / auto_rows + (nth < free_height % auto_rows ? 1 : 0);
+        ++nth;
+      }
     }
   }
+  const std::vector<int> row_offsets = PlaceTracks(
+      row_heights, box->style().padding.top + box->style().border.top,
+      row_gap_val, free_height, row_placement);
 
   for (auto& pc : placed_children) {
     int r = pc.row;
