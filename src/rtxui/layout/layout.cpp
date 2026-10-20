@@ -4317,8 +4317,11 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
 
   // A minmax() row starts at its minimum, grows with its content as an auto
   // one does, up to its maximum when that is a length, or shares the free
-  // height as an fr one does when that is fr.
+  // height as an fr one does when that is fr. A content minimum (auto,
+  // min-content, max-content, or fit-content()'s) keeps the row as tall as
+  // its items, past that maximum.
   std::vector<int> row_limits(R, -1);
+  std::vector<bool> row_content_min(R, false);
   for (int r = 0; r < R; ++r) {
     if (r < static_cast<int>(rows_template.size())) {
       const GridTrack track = AsGridTrack(rows_template[r]);
@@ -4333,6 +4336,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
         } else if (track.max.unit != Unit::Auto) {
           row_limits[r] =
               std::max(row_heights[r], track.max.Resolve(remaining_height));
+          row_content_min[r] = track.min.unit == Unit::Auto;
         }
       } else if (rows_template[r].unit == Unit::Fr) {
         is_row_fr[r] = true;
@@ -4438,10 +4442,26 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     }
   }
 
-  // A minmax() row with a length maximum grows no further.
+  // A minmax() row with a length maximum grows no further, but for the
+  // minimum of the items in it alone, under a content minimum: their height,
+  // or for a scroll container its min-height, as it scrolls what overflows.
+  std::vector<int> row_floors(R, 0);
+  for (const auto& pc : placed_children) {
+    if (pc.r_span != 1 || !row_content_min[pc.row]) {
+      continue;
+    }
+    const ComputedStyle& style = pc.box->style();
+    const int floor =
+        style.overflow_y == Overflow::Visible
+            ? pc.fragment->height
+            : std::max(0, ResolveBoxHeight(style, style.min_height,
+                                           remaining_height));
+    row_floors[pc.row] = std::max(row_floors[pc.row], floor);
+  }
   for (int r = 0; r < R; ++r) {
     if (row_limits[r] >= 0) {
-      row_heights[r] = std::min(row_heights[r], row_limits[r]);
+      row_heights[r] =
+          std::max(row_floors[r], std::min(row_heights[r], row_limits[r]));
     }
   }
 

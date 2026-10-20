@@ -801,6 +801,35 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
           CheckGrid({"A ", "  ", "B ", "  "}));
   }
 
+  SECTION("a row's content minimum outgrows its maximum") {
+    // AAAA wraps to two rows in 2 cells: fit-content(1) and minmax(auto, 1)
+    // still make room for both, as their minimum is the content's.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;width:2;}.f{grid-template-rows:fit-content(1) 1;}.m{grid-template-rows:minmax(auto,1) 1;}</style><div class="g f"><div>AAAA</div><div>B</div></div><div class="g m"><div>CCCC</div><div>D</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 6)) ==
+          CheckGrid({"AA", "AA", "B ", "CC", "CC", "D "}));
+  }
+
+  SECTION("a fit-content() row scrolls a scroll container past its limit") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-rows:fit-content(2) 1;width:2;}.s{overflow-y:hidden;}</style><div class="g"><div class="s">A<br/>B<br/>C</div><div>D</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 3)) ==
+          CheckGrid({"A ", "B ", "D "}));
+  }
+
+  SECTION("a min-content or max-content row is as tall as its items") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-rows:min-content max-content 1;height:5;width:2;}</style><div class="g"><div>AAAA</div><div>B</div><div>C</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 5)) ==
+          CheckGrid({"AA", "AA", "B ", "C ", "  "}));
+  }
+
   SECTION("grid-auto-rows sizes the rows past the template") {
     struct T : Component<T> {
       std::string_view view =
