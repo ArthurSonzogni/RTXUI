@@ -1,5 +1,9 @@
 name: Release
 
+# Pushing a v* tag builds the packages, checks them, and publishes the
+# release. Run by hand (workflow_dispatch), it builds and checks the packages
+# without publishing anything: a dry run.
+
 on:
   push:
     tags:
@@ -11,14 +15,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The archive holds Debug and Release; the .deb and .rpm, Release only, each
+  # built for its distribution's library directory. See cmake/package.cmake.
   linux:
     name: Linux x64
     runs-on: ubuntu-latest
+    env:
+      CC: gcc-14
+      CXX: g++-14
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install toolchain (Linux)
-        run: sudo apt-get update && sudo apt-get install -y ninja-build ccache g++-14
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y ninja-build ccache g++-14 rpm
 
       - name: Cache ccache
         uses: actions/cache@v4
@@ -28,46 +37,48 @@ jobs:
           restore-keys: |
             ccache-release-linux-${{ runner.os }}-
 
-      - name: Build & Install Debug
-        env:
-          CC: gcc-14
-          CXX: g++-14
+      - name: Archive (Debug and Release)
         run: |
-          cmake -B build_debug -G Ninja \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache
-          cmake --build build_debug
-          cmake --install build_debug --prefix install
+          cmake -B build -G "Ninja Multi-Config" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build --config Debug
+          cmake --build build --config Release
+          cpack --config build/CPackConfig.cmake -G TGZ -C "Debug;Release" -B dist
 
-      - name: Build & Install Release
-        env:
-          CC: gcc-14
-          CXX: g++-14
+      - name: Debian package
         run: |
-          cmake -B build_release -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache
-          cmake --build build_release
-          cmake --install build_release --prefix install
+          cmake -B build_deb -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build_deb
+          cpack --config build_deb/CPackConfig.cmake -G DEB -B dist
 
-      - name: Package
-        run: tar -czf rtxui-linux-x64.tar.gz -C install .
+      - name: RPM package
+        run: |
+          cmake -B build_rpm -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build_rpm
+          cpack --config build_rpm/CPackConfig.cmake -G RPM -B dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rtxui-linux-x64
-          path: rtxui-linux-x64.tar.gz
+          name: packages-linux
+          path: |
+            dist/rtxui-*.tar.gz
+            dist/*.deb
+            dist/*.rpm
 
   macos:
     name: macOS (universal)
     runs-on: macos-latest
+    env:
+      CC: clang
+      CXX: clang++
+      CCACHE_DIR: /Users/runner/.cache/ccache
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install toolchain (macOS)
+      - name: Install toolchain
         run: brew install ninja ccache
 
       - name: Cache ccache
@@ -78,42 +89,99 @@ jobs:
           restore-keys: |
             ccache-release-macos-${{ runner.os }}-
 
-      - name: Build & Install Debug
-        env:
-          CC: clang
-          CXX: clang++
-          CCACHE_DIR: /Users/runner/.cache/ccache
+      - name: Archive (Debug and Release)
         run: |
-          cmake -B build_debug -G Ninja \
-            -DCMAKE_BUILD_TYPE=Debug \
+          cmake -B build -G "Ninja Multi-Config" \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache
-          cmake --build build_debug
-          cmake --install build_debug --prefix install
-
-      - name: Build & Install Release
-        env:
-          CC: clang
-          CXX: clang++
-          CCACHE_DIR: /Users/runner/.cache/ccache
-        run: |
-          cmake -B build_release -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache
-          cmake --build build_release
-          cmake --install build_release --prefix install
-
-      - name: Package
-        run: tar -czf rtxui-macos-universal.tar.gz -C install .
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build --config Debug
+          cmake --build build --config Release
+          cpack --config build/CPackConfig.cmake -G TGZ -C "Debug;Release" -B dist
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rtxui-macos-universal
-          path: rtxui-macos-universal.tar.gz
+          name: packages-macos
+          path: dist/rtxui-*.tar.gz
+
+  # MSVC, with its default runtime (/MD, /MDd): rtxui.lib and rtxuid.lib.
+  windows:
+    name: Windows x64 (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Archive (Debug and Release)
+        env:
+          CC: cl
+          CXX: cl
+        run: |
+          cmake -B build -G "Ninja Multi-Config"
+          cmake --build build --config Debug
+          cmake --build build --config Release
+          cpack --config build/CPackConfig.cmake -G ZIP -C "Debug;Release" -B dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-windows
+          path: dist/rtxui-*.zip
+
+  # Installs each Linux package with its distribution's package manager, then
+  # builds an app against it with find_package() and with pkg-config.
+  check-linux-packages:
+    name: Install the ${{ matrix.package }} on ${{ matrix.image }}
+    needs: linux
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: .deb
+            image: ubuntu:24.04
+            install: |
+              apt-get update
+              apt-get install -y ./*.deb g++-14 cmake ninja-build pkg-config
+            cxx: g++-14
+          - package: .rpm
+            image: fedora:latest
+            install: dnf install -y ./*.rpm gcc-c++ cmake ninja-build pkgconf-pkg-config
+            cxx: g++
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-linux
+
+      - name: Install the package
+        run: ${{ matrix.install }}
+
+      - name: Build and run an app against it
+        env:
+          CXX: ${{ matrix.cxx }}
+          RTXUI_STRICT: 1
+        run: |
+          mkdir app
+          cp packaging/bazel/test_module/main.cpp app/
+          cat > app/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.24)
+          project(app LANGUAGES CXX)
+          find_package(rtxui CONFIG REQUIRED)
+          add_executable(app main.cpp)
+          target_link_libraries(app PRIVATE rtxui::rtxui)
+          EOF
+          cmake -S app -B app/build -G Ninja
+          cmake --build app/build
+          ./app/build/app
+          "$CXX" -std=c++23 app/main.cpp $(pkg-config --cflags --libs rtxui) -o app/pkg-config-app
+          ./app/pkg-config-app
 
   # The tarball registries (vcpkg, Conan, Meson, Homebrew, ...) build from,
   # with a checksum they can pin: GitHub's own archives are not guaranteed to
@@ -142,13 +210,15 @@ jobs:
 
   publish:
     name: Publish release
-    needs: [source, linux, macos]
+    if: github.ref_type == 'tag'
+    needs: [source, linux, macos, windows, check-linux-packages]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
+          path: dist
           merge-multiple: true
 
       # The notes are written by hand, one file per tag: the auto-generated
@@ -168,13 +238,10 @@ jobs:
           echo "NOTES=$notes" >> "$GITHUB_ENV"
 
       - name: Checksums
-        run: sha256sum rtxui-*.tar.gz > SHA256SUMS
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS && cat SHA256SUMS
 
       - uses: softprops/action-gh-release@v2
         with:
           body_path: ${{ env.NOTES }}
-          files: |
-            rtxui-linux-x64.tar.gz
-            rtxui-macos-universal.tar.gz
-            rtxui-[0-9]*.tar.gz
-            SHA256SUMS
+          files: dist/*

@@ -44,6 +44,11 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/generated/rtxui/rtxui_export.hpp"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rtxui
 )
 
+# The MIT license asks for its notice to travel with every copy.
+install(FILES LICENSE
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/rtxui
+)
+
 
 
 install(EXPORT rtxui-targets
@@ -72,7 +77,17 @@ install(FILES
 
 # pkg-config, for Meson, Makefiles and distro packaging. The library name goes
 # through file(GENERATE) to pick up the Debug `d` suffix.
-set(RTXUI_PC_PREFIX "${CMAKE_INSTALL_PREFIX}")
+#
+# The prefix is found from where rtxui.pc is, rather than written in: a
+# package is unpacked or installed somewhere else than the build's
+# CMAKE_INSTALL_PREFIX.
+if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
+  set(RTXUI_PC_PREFIX "${CMAKE_INSTALL_PREFIX}")
+else()
+  file(RELATIVE_PATH RTXUI_PC_UP "/root/${CMAKE_INSTALL_LIBDIR}/pkgconfig" "/root")
+  string(REGEX REPLACE "/$" "" RTXUI_PC_UP "${RTXUI_PC_UP}")
+  set(RTXUI_PC_PREFIX "\${pcfiledir}/${RTXUI_PC_UP}")
+endif()
 foreach(dir LIBDIR INCLUDEDIR)
   if(IS_ABSOLUTE "${CMAKE_INSTALL_${dir}}")
     set(RTXUI_PC_${dir} "${CMAKE_INSTALL_${dir}}")

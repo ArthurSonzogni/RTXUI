@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(rtxui
   LANGUAGES CXX
-  VERSION 0.1.0
+  VERSION 0.1.1
   DESCRIPTION "C++ reactive terminal rendering"
 )
 
@@ -196,6 +196,9 @@ if(RTXUI_BUILD_EXAMPLES)
 endif()
 
 include(cmake/install.cmake)
+if(PROJECT_IS_TOP_LEVEL)
+  include(cmake/package.cmake)
+endif()
 
 option(RTXUI_BUILD_BENCHMARKS "Build benchmarks" OFF)
 if(RTXUI_BUILD_BENCHMARKS)
