@@ -64,7 +64,7 @@ class textarea : public Component<textarea>, public TextInputBase {
   std::vector<GutterLine> gutter_lines;
   std::vector<LineRow> content_line_highlights;
 
-  void InitReflection() override;
+  textarea();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

@@ -128,9 +128,8 @@ int GetListItemNumber(Element* li_root,
 }
 }  // namespace
 
-void li::InitReflection() {
+li::li() {
   Bind(marker);
-  Component<li>::InitReflection();
 }
 
 std::string_view li::Setup() {

@@ -14,11 +14,10 @@
 
 namespace rtxui {
 
-void radio::InitReflection() {
+radio::radio() {
   Bind(checked);
   Bind(disabled);
   Bind(radio_char);
-  Component<radio>::InitReflection();
 }
 
 std::string_view radio::Setup() {

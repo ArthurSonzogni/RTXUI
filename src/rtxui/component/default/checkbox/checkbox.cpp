@@ -14,11 +14,10 @@
 
 namespace rtxui {
 
-void checkbox::InitReflection() {
+checkbox::checkbox() {
   Bind(checked);
   Bind(disabled);
   Bind(checked_char);
-  Component<checkbox>::InitReflection();
 }
 
 std::string_view checkbox::Setup() {

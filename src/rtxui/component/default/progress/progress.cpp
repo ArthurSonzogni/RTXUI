@@ -12,13 +12,12 @@
 
 namespace rtxui {
 
-void progress::InitReflection() {
+progress::progress() {
   Bind(value);
   Bind(max);
   Bind(width);
   Bind(filled_track);
   Bind(empty_track);
-  Component<progress>::InitReflection();
 }
 
 std::string_view progress::Setup() {

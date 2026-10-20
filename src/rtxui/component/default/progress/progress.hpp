@@ -21,7 +21,7 @@ class progress : public Component<progress> {
   std::string filled_track;
   std::string empty_track;
 
-  void InitReflection() override;
+  progress();
   std::string_view Setup();
   bool Digest() override;
 };

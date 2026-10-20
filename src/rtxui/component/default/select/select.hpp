@@ -35,7 +35,7 @@ class select : public Component<select> {
   int last_hovered_index_ = -1;
   std::string last_value_;
 
-  void InitReflection() override;
+  select();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

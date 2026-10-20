@@ -17,10 +17,9 @@
 
 namespace rtxui {
 
-void markdown::InitReflection() {
+markdown::markdown() {
   Bind(content);
   Bind(stylesheet);
-  Component<markdown>::InitReflection();
 }
 
 std::string_view markdown::Setup() {

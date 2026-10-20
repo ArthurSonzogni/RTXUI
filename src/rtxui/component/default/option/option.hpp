@@ -16,7 +16,7 @@ class option : public Component<option> {
   std::string value;
   bool disabled = false;
 
-  void InitReflection() override;
+  option();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

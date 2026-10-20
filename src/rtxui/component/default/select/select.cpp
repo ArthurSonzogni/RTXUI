@@ -20,13 +20,12 @@
 
 namespace rtxui {
 
-void select::InitReflection() {
+select::select() {
   Bind(value);
   Bind(disabled);
   Bind(selected_label);
   Bind(arrow_char);
   Bind(dropdown_class);
-  Component<select>::InitReflection();
 }
 
 std::string_view select::Setup() {

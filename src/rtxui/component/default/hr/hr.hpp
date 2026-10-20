@@ -15,7 +15,7 @@ class hr : public Component<hr> {
  public:
   std::string line_chars;
 
-  void InitReflection() override;
+  hr();
   std::string_view Setup();
   bool Digest() override;
 };

@@ -14,9 +14,8 @@
 
 namespace rtxui {
 
-void hr::InitReflection() {
+hr::hr() {
   Bind(line_chars);
-  Component<hr>::InitReflection();
 }
 
 std::string_view hr::Setup() {

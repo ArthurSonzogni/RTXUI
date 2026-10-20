@@ -11,9 +11,8 @@
 
 namespace rtxui {
 
-void button::InitReflection() {
+button::button() {
   Bind(disabled);
-  Component<button>::InitReflection();
 }
 
 bool button::Digest() {

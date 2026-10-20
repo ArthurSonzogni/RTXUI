@@ -16,7 +16,7 @@
 
 namespace rtxui {
 
-void slider::InitReflection() {
+slider::slider() {
   Bind(value);
   Bind(min);
   Bind(max);
@@ -28,7 +28,6 @@ void slider::InitReflection() {
   Bind(thumb_char);
   Bind(track_right);
   Bind(container_class);
-  Component<slider>::InitReflection();
 }
 
 std::string_view slider::Setup() {

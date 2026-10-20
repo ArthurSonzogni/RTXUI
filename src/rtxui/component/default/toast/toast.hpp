@@ -29,7 +29,7 @@ class toast : public Component<toast> {
   void Close();
   void AnimationEnded();
 
-  void InitReflection() override;
+  toast();
   std::string_view Setup();
   bool Digest() override;
 

@@ -17,7 +17,7 @@ class radio : public Component<radio> {
   bool disabled = false;
   std::string radio_char = "○";
 
-  void InitReflection() override;
+  radio();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

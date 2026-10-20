@@ -105,7 +105,7 @@ class CounterCard : public rtxui::Component<CounterCard> {
 ```
 
 ### 3.2 Registration & Binding Interface
-Bindings are registered in the constructor. A component that cannot bind there can override `virtual void InitReflection()` instead: it runs once, before the first render.
+Bindings are registered in the constructor.
 
 | Method Signature | Semantics |
 | :--- | :--- |
@@ -121,6 +121,7 @@ Bindings are registered in the constructor. A component that cannot bind there c
 | :--- | :--- |
 | `virtual bool OnEvent(Event event)` | Intercepts keyboard/mouse input before DOM dispatch. Return `true` to consume the event. |
 | `bool Digest()` | Compares bound members against snapshots; reconciles template DOM if differences are detected. Returns `true` if state changed. |
+| `void PropagateBinding(std::string_view prop, std::string_view value)` | For a component offering a two-way bound attribute: writes `value` to the parent state bound to its `prop` attribute, as `<input>` does for `value`. |
 | `ElementHandle RootElement() const` | Handle to the root element of the expanded component template (null before mounting). |
 | `ElementHandle QueryElement(std::string_view selector) const` | Handle to the first element matching `#id`, `.class`, or `tag`, or a null handle. |
 | `ComponentBase* QueryComponent(std::string_view selector)` | The component rendered at `selector`, or `nullptr`. |

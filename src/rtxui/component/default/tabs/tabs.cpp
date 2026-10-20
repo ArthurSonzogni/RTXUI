@@ -52,7 +52,7 @@ void tabs::SelectTab(std::string index_str) {
   }
 }
 
-void tabs::InitReflection() {
+tabs::tabs() {
   Bind(value);
   Bind(SelectTab);
   BindCollection("headers", &headers_,
@@ -65,7 +65,6 @@ void tabs::InitReflection() {
                                    ? std::string("tab-header-btn")
                                    : "tab-header-btn " + header.active_class);
                  });
-  Component<tabs>::InitReflection();
 }
 
 std::string_view tabs::Setup() {

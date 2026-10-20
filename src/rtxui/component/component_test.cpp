@@ -111,25 +111,6 @@ TEST_CASE("Mount", "[component]") {
           StripIndent(expected));
 }
 
-class LateBinding : public rtxui::Component<LateBinding> {
- public:
-  int count = 3;
-  void InitReflection() override { Bind(count); }
-  std::string_view view = R"(<span>{count}</span>)";
-};
-
-TEST_CASE("InitReflection binds before the first render", "[component]") {
-  auto component = rtxui::Ref<LateBinding>::New();
-  rtxui::ComponentInternals::Mount(*component);
-  CHECK(rtxui::ComponentInternals::Root(*component)->Print() == StripIndent(R"(
-    <LateBinding>
-      <span>
-        3
-      </span>
-    </LateBinding>
-  )"));
-}
-
 class Page : public rtxui::Component<Page> {
  public:
   std::string_view view = R"(

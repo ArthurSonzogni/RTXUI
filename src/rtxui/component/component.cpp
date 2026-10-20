@@ -180,7 +180,9 @@ void RefCounted::Release() const {
   }
 }
 
-void ComponentBase::InitReflection() {}
+void ComponentBase::Reserved1() {}
+void ComponentBase::Reserved2() {}
+void ComponentBase::Reserved3() {}
 
 namespace {
 ComponentBase* g_mouse_capturer = nullptr;
@@ -3024,7 +3026,6 @@ void ComponentBase::Data::SetXmlNodes(xml::Nodes nodes) {
 }
 
 void ComponentBase::Mount() {
-  InitReflection();
   data_->template_ = Template();
   // Template() has already stripped it. Running StripIndent again finds a
   // minimum indent of zero and changes nothing, but still splits the text into

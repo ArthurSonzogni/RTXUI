@@ -12,7 +12,7 @@
 
 namespace rtxui {
 
-void input::InitReflection() {
+input::input() {
   Bind(value);
   Bind(type);
   Bind(disabled);
@@ -32,7 +32,6 @@ void input::InitReflection() {
   Bind(right_unselected);
   Bind(selection_class_left);
   Bind(selection_class_right);
-  Component<input>::InitReflection();
 }
 
 std::string_view input::Setup() {

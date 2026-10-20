@@ -16,13 +16,12 @@ void details::Toggle() {
   PropagateBinding("open", open ? "true" : "false");
 }
 
-void details::InitReflection() {
+details::details() {
   Bind(open);
   Bind(arrow_char);
   Bind(content_class);
   Bind(no_summary);
   Bind(Toggle);
-  Component<details>::InitReflection();
 }
 
 std::string_view details::Setup() {

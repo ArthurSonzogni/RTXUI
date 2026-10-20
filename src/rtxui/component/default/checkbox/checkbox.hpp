@@ -17,7 +17,7 @@ class checkbox : public Component<checkbox> {
   bool disabled = false;
   std::string checked_char = " ";
 
-  void InitReflection() override;
+  checkbox();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

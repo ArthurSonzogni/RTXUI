@@ -17,7 +17,7 @@ class tooltip : public Component<tooltip> {
   std::string placement = "top";
   std::string tooltip_class = "hidden";
 
-  void InitReflection() override;
+  tooltip();
   std::string_view Setup();
   bool Digest() override;
 };

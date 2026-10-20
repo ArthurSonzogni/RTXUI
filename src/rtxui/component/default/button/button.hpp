@@ -15,7 +15,7 @@ class button : public Component<button> {
   bool disabled = false;
   static const std::string_view view;
 
-  void InitReflection() override;
+  button();
   bool Digest() override;
 };
 

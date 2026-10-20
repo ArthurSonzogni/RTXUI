@@ -70,7 +70,7 @@ std::string toast::MirrorSlide(std::string_view interrupted_prefix,
   return "";
 }
 
-void toast::InitReflection() {
+toast::toast() {
   Bind(open);
   Bind(duration);
   Bind(placement);
@@ -79,7 +79,6 @@ void toast::InitReflection() {
   Bind(toast_style);
   Bind(Close);
   Bind(AnimationEnded);
-  Component<toast>::InitReflection();
 }
 
 std::string_view toast::Setup() {

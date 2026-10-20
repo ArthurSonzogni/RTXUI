@@ -14,10 +14,9 @@
 
 namespace rtxui {
 
-void option::InitReflection() {
+option::option() {
   Bind(value);
   Bind(disabled);
-  Component<option>::InitReflection();
 }
 
 std::string_view option::Setup() {

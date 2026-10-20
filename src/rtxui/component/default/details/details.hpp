@@ -20,7 +20,7 @@ class details : public Component<details> {
 
   void Toggle();
 
-  void InitReflection() override;
+  details();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

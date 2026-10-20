@@ -11,11 +11,10 @@
 
 namespace rtxui {
 
-void dialog::InitReflection() {
+dialog::dialog() {
   Bind(open);
   Bind(title);
   Bind(overlay_class);
-  Component<dialog>::InitReflection();
 }
 
 std::string_view dialog::Setup() {

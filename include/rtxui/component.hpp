@@ -70,11 +70,6 @@ class RTXUI_EXPORT ComponentBase : public RefCounted {
   virtual std::string_view Tag() const = 0;
 
   // Reactivity ---------------------------------------------------------------
-  /// Registers the component's bindings. Called once, before the first
-  /// render; override it to Bind() or Import() there instead of in the
-  /// constructor.
-  virtual void InitReflection();
-
   /// Compares bound state with its last snapshot, re-renders what changed and
   /// recurses into children. Screen calls it every frame; returns whether
   /// anything changed. An override doing more each frame calls this one.
@@ -258,6 +253,14 @@ class RTXUI_EXPORT ComponentBase : public RefCounted {
   /// nor part of its layout.
   struct Data;
   std::unique_ptr<Data> data_;
+
+  // Spare vtable slots, last in declaration order. A future release can turn
+  // one into a new overridable hook without shifting the slots of virtual
+  // functions a derived class declares, which would break components compiled
+  // against the older header.
+  virtual void Reserved1();
+  virtual void Reserved2();
+  virtual void Reserved3();
 };
 
 /// The base of every application component:

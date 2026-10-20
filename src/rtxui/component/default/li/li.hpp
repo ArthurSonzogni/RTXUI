@@ -14,7 +14,7 @@ class li : public Component<li> {
  public:
   std::string marker;
 
-  void InitReflection() override;
+  li();
   std::string_view Setup();
   bool Digest() override;
 };

@@ -26,7 +26,7 @@ class tree_item : public Component<tree_item> {
 
   void Toggle();
 
-  void InitReflection() override;
+  tree_item();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

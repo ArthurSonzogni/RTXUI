@@ -13,11 +13,10 @@
 
 namespace rtxui {
 
-void tooltip::InitReflection() {
+tooltip::tooltip() {
   Bind(content);
   Bind(placement);
   Bind(tooltip_class);
-  Component<tooltip>::InitReflection();
 }
 
 std::string_view tooltip::Setup() {

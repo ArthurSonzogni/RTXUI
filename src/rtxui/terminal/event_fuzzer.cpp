@@ -52,7 +52,7 @@ class EventTargetApp : public rtxui::Component<EventTargetApp> {
   void CloseDialog() { dialog_open = false; }
   std::string Count() const { return std::to_string(clicks); }
 
-  void InitReflection() override {
+  EventTargetApp() {
     Bind(clicks);
     Bind(shown);
     Bind(dialog_open);
@@ -63,7 +63,6 @@ class EventTargetApp : public rtxui::Component<EventTargetApp> {
     Bind(OpenDialog);
     Bind(CloseDialog);
     Bind(Count);
-    rtxui::Component<EventTargetApp>::InitReflection();
   }
 
   std::string_view view = R"(

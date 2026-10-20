@@ -26,14 +26,13 @@ void tree_item::Toggle() {
   }
 }
 
-void tree_item::InitReflection() {
+tree_item::tree_item() {
   Bind(open);
   Bind(label);
   Bind(arrow);
   Bind(children_class);
   Bind(row_action);
   Bind(Toggle);
-  Component<tree_item>::InitReflection();
 }
 
 std::string_view tree_item::Setup() {

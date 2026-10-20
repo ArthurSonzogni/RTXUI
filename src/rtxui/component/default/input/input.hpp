@@ -13,7 +13,7 @@ namespace rtxui {
 
 class input : public Component<input>, public TextInputBase {
  public:
-  void InitReflection() override;
+  input();
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;

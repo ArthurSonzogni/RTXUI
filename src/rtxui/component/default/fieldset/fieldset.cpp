@@ -12,9 +12,8 @@
 
 namespace rtxui {
 
-void fieldset::InitReflection() {
+fieldset::fieldset() {
   Bind(legend_class);
-  Component<fieldset>::InitReflection();
 }
 
 std::string_view fieldset::Setup() {

@@ -45,7 +45,7 @@ std::string PadLeft(std::string s, int width) {
 
 }  // namespace
 
-void textarea::InitReflection() {
+textarea::textarea() {
   Bind(value);
   Bind(disabled);
   Bind(readonly);
@@ -80,7 +80,6 @@ void textarea::InitReflection() {
   Bind(right_unselected);
   Bind(selection_class_left);
   Bind(selection_class_right);
-  Component<textarea>::InitReflection();
 }
 
 std::string_view textarea::Setup() {
