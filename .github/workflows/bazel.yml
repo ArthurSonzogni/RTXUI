@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Runs the unit tests through BUILD.bazel, then builds an app depending on
+  # Runs the unit tests through BUILD.bazel, builds the examples, then builds an app depending on
   # the `rtxui` module, as a Bazel user would (packaging/bazel/test_module/).
   bazel:
     name: Bazel (${{ matrix.name }})
@@ -62,7 +62,7 @@ jobs:
 
       - name: Test
         run: >
-          bazel test //:rtxui_test --test_output=errors
+          bazel test //... --test_output=errors
           --disk_cache=$HOME/.cache/bazel-disk
           --repository_cache=$HOME/.cache/bazel-repo
 

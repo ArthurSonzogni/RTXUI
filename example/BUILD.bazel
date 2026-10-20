@@ -1,0 +1,19 @@
+# One binary per example, named after its file: `bazel run //example:counter`.
+
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+[
+    cc_binary(
+        name = file.removesuffix(".cpp"),
+        srcs = [file],
+        copts = select({
+            "@rules_cc//cc/compiler:msvc-cl": [
+                "/std:c++latest",
+                "/utf-8",
+            ],
+            "//conditions:default": ["-std=c++23"],
+        }),
+        deps = ["//:rtxui"],
+    )
+    for file in glob(["*.cpp"])
+]

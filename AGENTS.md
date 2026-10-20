@@ -129,6 +129,11 @@ In C++, `HeadlessScreen` (`include/rtxui/headless.hpp`) does the same.
   `include/rtxui/bind.hpp`, since a module cannot export macros.
 - Emscripten/WASM build of examples into `docs/public/wasm/` via
   `emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DRTXUI_BUILD_EXAMPLES=ON`.
+- Bazel: `MODULE.bazel` and `BUILD.bazel` build the library (`@rtxui`),
+  the unit tests (`bazel test //:rtxui_test`) and the examples
+  (`bazel run //example:counter`). Sources are globbed, so they need no
+  update when a file is added. `packaging/bazel/test_module/` consumes the
+  module as a user would.
 - Examples build as `build/rtxui_example_<name>` (interactive TUIs — they take
   over the terminal; drive them through a PTY, as `scripts/smoke_examples.py`
   does).
