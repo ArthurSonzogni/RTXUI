@@ -127,7 +127,8 @@ export default defineConfig({
         items: [
           { text: 'HTML Elements', link: '/html_reference' },
           { text: 'CSS Properties', link: '/css_reference' },
-          { text: 'C++ API', link: '/cpp_api' }
+          { text: 'C++ API', link: '/cpp_api' },
+          { text: 'Compatibility', link: '/guide/compatibility' }
         ]
       }
     ],

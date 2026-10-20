@@ -8,11 +8,16 @@
 # - push to main: baseline is the previous commit; an incompatible ABI change
 #   only emits a warning annotation (breaking changes on main are allowed,
 #   this job exists to make them visible, not to forbid them).
+# - push of a release tag vX.Y.Z with Z > 0: baseline is the previous
+#   vX.Y.* tag; an incompatible ABI change fails the job. A patch release
+#   keeps the ABI (docs/guide/compatibility.md); vX.Y.0 starts a new soname
+#   and is not compared.
 name: ABI
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -50,6 +55,18 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             baseline=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            tag="${{ github.ref_name }}"
+            minor="${tag%.*}"
+            # The highest earlier tag of the same vX.Y series, if any.
+            baseline=$(git tag --list "$minor.*" --sort=-version:refname |
+                       { grep -vx "$tag" || true; } |
+                       while read -r t; do
+                         if [ "$(printf '%s\n' "$t" "$tag" |
+                                 sort -V | tail -1)" = "$tag" ]; then
+                           echo "$t"; break
+                         fi
+                       done)
           else
             baseline="${{ github.event.before }}"
             if ! git cat-file -e "$baseline^{commit}" 2>/dev/null; then
@@ -144,7 +161,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ $((status & 8)) -ne 0 ]; then
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
+            if [ "${{ github.event_name }}" = "pull_request" ] ||
+               [ "${{ github.ref_type }}" = "tag" ]; then
               exit 1
             fi
             echo "::warning::Incompatible ABI change since ${{ steps.baseline.outputs.sha }} (see the run summary)."
