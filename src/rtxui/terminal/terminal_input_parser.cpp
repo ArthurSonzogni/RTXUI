@@ -387,6 +387,16 @@ TerminalInputParser::Output TerminalInputParser::ParseESC() {
     case '[':
       return ParseCSI();
     case '\x1B': {
+      // A third Escape in a row: no Alt+key starts with two, so the first is
+      // an Escape of its own. Taking it now keeps a run of Escapes from
+      // piling up, each one a level of recursion deeper than the last.
+      if (position_ + 1 < static_cast<int>(pending_.size()) &&
+          pending_[position_ + 1] == '\x1B') {
+        events_.push_back(Event::Escape());
+        pending_.erase(0, 1);
+        position_ = -1;
+        return Parse();
+      }
       // rxvt sends Alt+key as an Escape before the key's own sequence. screen
       // holds an Escape back until the next key, and sends both at once: when
       // the two make no Alt+key, they are an Escape, then that key.

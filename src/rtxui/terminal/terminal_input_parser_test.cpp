@@ -394,6 +394,31 @@ TEST_CASE("Event.EscapeSentWithTheNextKey", "[terminal]") {
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
+// A run of Escapes is parsed again for every byte until it completes. Reading
+// it recursively, one level per Escape, overflowed the stack on a long run
+// (found by the TerminalInputParser fuzzer).
+TEST_CASE("Event.LongRunOfEscapes", "[terminal]") {
+  constexpr int kEscapes = 100'000;
+  TerminalInputParser parser;
+  for (int i = 0; i < kEscapes; ++i) {
+    parser.Add('\x1B');
+  }
+  for (char c : std::string_view("[A")) {
+    parser.Add(c);
+  }
+  // Every Escape but the last two is a key of its own; those two and "[A"
+  // are rxvt's Alt+Up.
+  int escapes = 0;
+  std::optional<Event> event = parser.GetEvent();
+  while (event == Event::Escape()) {
+    ++escapes;
+    event = parser.GetEvent();
+  }
+  CHECK(escapes == kEscapes - 2);
+  CHECK(event == Event::ArrowUpAlt());
+  CHECK_FALSE(parser.GetEvent().has_value());
+}
+
 // A terminal that does not know the SGR encoding sends `ESC[M` and three
 // bytes, each 32 more than the button, the column and the row.
 TEST_CASE("Event.MouseX10", "[terminal]") {
