@@ -1,0 +1,74 @@
+name: Bazel
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  workflow_dispatch:
+
+concurrency:
+  group: bazel-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Runs the unit tests through BUILD.bazel, then builds an app depending on
+  # the `rtxui` module, as a Bazel user would (packaging/bazel/test_module/).
+  bazel:
+    name: Bazel (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux GCC
+            os: ubuntu-latest
+            cc: gcc-14
+          - name: macOS Clang
+            os: macos-latest
+            cc: clang
+    env:
+      CC: ${{ matrix.cc }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y g++-14
+
+      # The runners ship bazelisk as `bazel`; it fetches the version named in
+      # .bazelversion.
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazel-disk
+            ~/.cache/bazel-repo
+          key: bazel-${{ matrix.name }}-${{ github.run_id }}
+          restore-keys: |
+            bazel-${{ matrix.name }}-
+
+      - name: Test
+        run: >
+          bazel test //:rtxui_test --test_output=errors
+          --disk_cache=$HOME/.cache/bazel-disk
+          --repository_cache=$HOME/.cache/bazel-repo
+
+      - name: Consume the module
+        working-directory: packaging/bazel/test_module
+        run: >
+          bazel test //:app_test --test_output=all
+          --disk_cache=$HOME/.cache/bazel-disk
+          --repository_cache=$HOME/.cache/bazel-repo

@@ -74,6 +74,31 @@ for pkg-config:
 c++ -std=c++23 main.cpp $(pkg-config --cflags --libs rtxui) -o my_app
 ```
 
+### With Bazel
+
+RTXUI is a Bazel module. It is not in the Bazel Central Registry yet, so
+point `MODULE.bazel` at the repository:
+
+```python
+bazel_dep(name = "rtxui")
+git_override(
+    module_name = "rtxui",
+    remote = "https://github.com/ArthurSonzogni/RTXUI.git",
+    commit = "...",  # The commit to build.
+)
+```
+
+Then depend on `@rtxui` and compile as C++23:
+
+```python
+cc_binary(
+    name = "my_app",
+    srcs = ["main.cpp"],
+    copts = ["-std=c++23"],
+    deps = ["@rtxui"],
+)
+```
+
 ## First program
 
 Create `main.cpp`:

@@ -1,0 +1,11 @@
+# A separate Bazel module, with its own bazel-* output links.
+packaging/bazel/test_module
+# Local CMake builds, whose fetched dependencies ship BUILD files.
+build
+build_asan
+build_coverage
+build_fuzz
+build_wasm
+fuzz_coverage
+gcc-local
+docs/node_modules

@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def main() -> int:
     cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
     conan = (ROOT / "conanfile.py").read_text(encoding="utf-8")
+    bazel = (ROOT / "MODULE.bazel").read_text(encoding="utf-8")
     vcpkg = json.loads((ROOT / "packaging/vcpkg/rtxui/vcpkg.json")
                        .read_text(encoding="utf-8"))
     versions = {
@@ -24,6 +25,8 @@ def main() -> int:
         "conanfile.py":
             re.search(r'^\s*version\s*=\s*"([^"]+)"', conan, re.M).group(1),
         "packaging/vcpkg/rtxui/vcpkg.json": vcpkg["version-semver"],
+        "MODULE.bazel":
+            re.search(r'module\([^)]*\bversion\s*=\s*"([^"]+)"', bazel).group(1),
     }
     if len(sys.argv) > 1:
         versions["release tag"] = sys.argv[1].removeprefix("v")

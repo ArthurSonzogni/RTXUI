@@ -1,0 +1,12 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+cc_test(
+    name = "app_test",
+    srcs = ["main.cpp"],
+    copts = select({
+        "@rules_cc//cc/compiler:msvc-cl": ["/std:c++latest"],
+        "//conditions:default": ["-std=c++23"],
+    }),
+    env = {"RTXUI_STRICT": "1"},
+    deps = ["@rtxui"],
+)

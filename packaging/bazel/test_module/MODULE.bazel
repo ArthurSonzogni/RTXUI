@@ -1,0 +1,10 @@
+# An app depending on RTXUI as a Bazel user would. The override points at this
+# checkout; a user would rely on the registry's version instead.
+module(name = "rtxui_test_module")
+
+bazel_dep(name = "rules_cc", version = "0.2.26")
+bazel_dep(name = "rtxui")
+local_path_override(
+    module_name = "rtxui",
+    path = "../../..",
+)

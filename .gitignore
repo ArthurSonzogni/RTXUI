@@ -33,6 +33,7 @@
 
 # bazel
 bazel-*
+MODULE.bazel.lock
 
 # cmake & local build
 /build/

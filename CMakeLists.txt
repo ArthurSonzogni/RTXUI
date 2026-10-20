@@ -219,7 +219,7 @@ if(RTXUI_BUILD_TESTS)
       COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_examples.py"
     )
 
-    # Verify that the CMake, Conan and vcpkg files name the same version
+    # Verify that the CMake, Conan, vcpkg and Bazel files name the same version
     add_test(NAME verify_version
       COMMAND Python3::Interpreter "${CMAKE_CURRENT_SOURCE_DIR}/scripts/verify_version.py"
     )

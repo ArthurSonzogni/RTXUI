@@ -1,0 +1,88 @@
+# Bazel build of RTXUI: the library, and its unit tests. CMakeLists.txt stays
+# the reference build; this one globs the sources, so it needs no update when
+# a file is added. packaging/bazel/test_module/ consumes it as a user would.
+
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:private"])
+
+COPTS = select({
+    "@rules_cc//cc/compiler:msvc-cl": [
+        "/std:c++latest",
+        # Templates and tests are full of UTF-8 literals.
+        "/utf-8",
+    ],
+    "//conditions:default": ["-std=c++23"],
+})
+
+# CMake generates this with generate_export_header(). Bazel builds a static
+# library, where the export macros expand to nothing.
+genrule(
+    name = "rtxui_export",
+    outs = ["include/rtxui/rtxui_export.hpp"],
+    cmd = """cat > $@ <<'EOF'
+#ifndef RTXUI_EXPORT_H
+#define RTXUI_EXPORT_H
+#define RTXUI_EXPORT
+#define RTXUI_NO_EXPORT
+#define RTXUI_DEPRECATED [[deprecated]]
+#define RTXUI_DEPRECATED_EXPORT RTXUI_DEPRECATED
+#define RTXUI_DEPRECATED_NO_EXPORT RTXUI_DEPRECATED
+#endif  // RTXUI_EXPORT_H
+EOF""",
+)
+
+# The internal headers, kept out of the include path of RTXUI's users, as the
+# CMake build does: they reach only the targets listed below.
+cc_library(
+    name = "internal_headers",
+    hdrs = glob(["src/**/*.hpp"]),
+    copts = COPTS,
+    strip_include_prefix = "src",
+    deps = [":public_headers"],
+)
+
+cc_library(
+    name = "public_headers",
+    hdrs = glob(["include/**/*.hpp"]) + [":rtxui_export"],
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "rtxui",
+    srcs = glob(
+        ["src/**/*.cpp"],
+        exclude = [
+            "src/**/*_test.cpp",
+            "src/**/*_fuzzer.cpp",
+            "src/**/*_main.cpp",
+            "src/rtxui/testing/**",
+        ],
+    ),
+    copts = COPTS,
+    implementation_deps = [":internal_headers"],
+    visibility = ["//visibility:public"],
+    deps = [":public_headers"],
+)
+
+cc_test(
+    name = "rtxui_test",
+    size = "medium",
+    srcs = glob([
+        "src/**/*_test.cpp",
+        "src/rtxui/testing/**",
+    ]),
+    # component_test.cpp #includes the demo app.
+    additional_compiler_inputs = ["benchmarks/demo_app.cpp"],
+    copts = COPTS,
+    data = glob(["src/rtxui/terminal/captures/**"]),
+    env = {"RTXUI_VERIFY_LAYOUT_REUSE": "1"},
+    local_defines = [
+        'RTXUI_TERMINAL_CAPTURES_DIR=\\"src/rtxui/terminal/captures\\"',
+    ],
+    deps = [
+        ":internal_headers",
+        ":rtxui",
+        "@catch2//:catch2_main",
+    ],
+)
