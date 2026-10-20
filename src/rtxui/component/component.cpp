@@ -4285,7 +4285,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           // element appears all the same, and must take the focus.
           const bool had_autofocus =
               std::ranges::find(child->data_->parent_attributes_,
-                                "autofocus") !=
+                                std::string_view("autofocus")) !=
               child->data_->parent_attributes_.end();
           child->data_->parent_attributes_ = std::move(applied_attributes);
 
