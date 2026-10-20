@@ -155,9 +155,9 @@ class SectionTransitions : public Component<SectionTransitions> {
       <div class="divider"></div>
       
       <div class="row">
-        <checkbox :checked="props.show_secret" onchange="ToggleSecret">Toggle Secret CSS Panel</checkbox>
+        <checkbox checked="{props.show_secret}" onchange="ToggleSecret">Toggle Secret CSS Panel</checkbox>
       </div>
-      <div :if="props.show_secret" class="alert-box">
+      <div if="{props.show_secret}" class="alert-box">
         ✨ Conditional display flow shifts tags dynamically.
       </div>
     </div>
@@ -235,12 +235,12 @@ class SectionBoxModel : public Component<SectionBoxModel> {
       <div class="card-title">2. Box Model & Values</div>
       <div class="row">
         <span>Slider:  </span>
-        <slider :value="props.slider_val" min="0" max="100" step="5" width="18" />
+        <slider value="{props.slider_val}" min="0" max="100" step="5" width="18" />
         <span class="badge">{props.slider_val}%</span>
       </div>
       <div class="row">
         <span>Progress:</span>
-        <progress :value="props.slider_val" max="100" width="18" />
+        <progress value="{props.slider_val}" max="100" width="18" />
       </div>
     </div>
     <style>
@@ -292,14 +292,14 @@ class SectionInputs : public Component<SectionInputs> {
       <div class="card-title">3. Text Form Fields</div>
       <div class="row">
         <span>Input:</span>
-        <input :value="props.text_input" />
+        <input value="{props.text_input}" />
       </div>
       <div class="echo-text">
         <span>Echo: "{props.text_input}"</span>
       </div>
       <div class="row">
         <span>Notes:</span>
-        <textarea :value="props.textarea_input" />
+        <textarea value="{props.textarea_input}" />
       </div>
     </div>
     <style>
@@ -896,7 +896,7 @@ class SectionMarkdown : public Component<SectionMarkdown> {
       <div class="markdown-layout">
         <div class="markdown-editor-pane">
           <span class="sub-label">Editor (Source)</span>
-          <textarea :value="props.markdown_content" class="md-editor-textarea" />
+          <textarea value="{props.markdown_content}" class="md-editor-textarea" />
         </div>
         <div class="markdown-preview-pane">
           <span class="sub-label">Preview (Rendered)</span>
@@ -1135,7 +1135,7 @@ int main() {
                   <for each="{todos}" as="todo">
                     <div class="todo-item {todo.appearing_class}">
                       <span>[{$index}] {todo.text}</span>
-                      <button class="btn-delete" @click="RemoveTodo({$index})">Delete</button>
+                      <button class="btn-delete" onclick="RemoveTodo({$index})">Delete</button>
                     </div>
                   </for>
                 </div>

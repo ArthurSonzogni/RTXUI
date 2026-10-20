@@ -76,26 +76,16 @@ class CounterApp : public rtxui::Component<CounterApp> {
 
 ## 4. Attribute Interpolation
 
-You can bind dynamic variables to HTML attributes (such as element classes, check statuses, or dimensions) in two styles:
-
-### React-style Binding
-Include curly braces around the C++ variable name inside the attribute's double-quotes:
+Bound values are written into attributes (classes, check states, dimensions)
+with the same braces as in text, and can be mixed with literal text:
 ```html
 <div class="box {color_class}"></div>
 <checkbox checked="{is_active}">Active Option</checkbox>
 ```
 
-### Vue-style Binding
-Prefix the attribute name with a colon `:` and pass the raw variable name directly as the value:
-```html
-<div :title="color_class"></div>
-<checkbox :checked="is_active">Active Option</checkbox>
-```
-
-> [!NOTE]
-> `:class` and `:id` are not supported using Vue-style binding. For classes and IDs, use React-style interpolation instead: `class="{variable}"`.
-
-Both styles perform the same underlying reactive linking, so you can choose the format you prefer.
+An attribute whose whole value is one `{name}` is also bound in the other
+direction where the element supports it: see
+[Two-Way Data Binding](/guide/bindings#_5-two-way-data-binding).
 
 ---
 

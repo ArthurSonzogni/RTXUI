@@ -43,12 +43,11 @@ Content placed inside a slot declaration acts as its fallback: it is rendered wh
 
 ---
 
-## Named Slots (`<slot.name>`)
-
+## Named Slots (`<slot name="...">`)
 For complex components that have multiple customizable content zones (e.g. a Header, a Body, and a Footer), you can use named slots.
 
 ### Declaring Named Slots
-Define slots with dot-separated names inside your component template (e.g. `<slot.header>` and `<slot.footer>`):
+Give each slot a `name` attribute, as in HTML:
 
 ```cpp
 class PageLayout : public Component<PageLayout> {
@@ -56,13 +55,13 @@ class PageLayout : public Component<PageLayout> {
   std::string_view view = R"html(
     <div class="layout">
       <div class="header-zone">
-        <slot.header>Default Header Content</slot.header>
+        <slot name="header">Default Header Content</slot>
       </div>
       <div class="body-zone">
         <slot></slot> <!-- Default slot for general content -->
       </div>
       <div class="footer-zone">
-        <slot.footer></slot.footer>
+        <slot name="footer"></slot>
       </div>
     </div>
   )html";
@@ -70,28 +69,28 @@ class PageLayout : public Component<PageLayout> {
 ```
 
 ### Projecting to Named Slots
-When consuming a component with named slots, wrap the projected elements inside `<template.name>` tags:
+When using a component with named slots, put a `slot` attribute on the element
+to project. To project several nodes, or text, without a wrapping element,
+put them in a `<template slot="...">`:
 
 ```html
 <PageLayout>
-  <!-- Projects to <slot.header> -->
-  <template.header>
-    <h1>Welcome to my App</h1>
-  </template.header>
+  <!-- Projects to <slot name="header"> -->
+  <h1 slot="header">Welcome to my App</h1>
 
   <!-- Projects to <slot> (default slot) -->
   <p>Here is some page body content...</p>
 
-  <!-- Projects to <slot.footer> -->
-  <template.footer>
-    <span>Status: Ready</span>
-  </template.footer>
+  <!-- Projects to <slot name="footer"> -->
+  <template slot="footer">Status: <b>Ready</b></template>
 </PageLayout>
 ```
 
+Content naming the same slot fills it in the order it is written.
+
 ### Selecting Projected Content by Tag (`select`)
 
-`<template.name>` asks the consumer to say where content goes. Sometimes the
+`slot="..."` asks the consumer to say where content goes. Sometimes the
 component should decide instead, from the tag the consumer wrote. Give the slot
 a `select` attribute and it claims projected children with that tag, wherever
 they appear in the projected content:
@@ -99,7 +98,7 @@ they appear in the projected content:
 ```html
 <!-- Inside the component's own template -->
 <div class="legend-line">
-  <slot.legend select="legend"></slot.legend>
+  <slot name="legend" select="legend"></slot>
 </div>
 <div class="body">
   <slot></slot>
@@ -107,7 +106,7 @@ they appear in the projected content:
 ```
 
 ```html
-<!-- What the consumer writes: no <template.legend> ceremony -->
+<!-- What the consumer writes: no slot="legend" needed -->
 <fieldset>
   <legend>Group title</legend>
   <div>body</div>

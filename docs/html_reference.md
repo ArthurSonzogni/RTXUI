@@ -18,10 +18,7 @@ Every built-in tag—from `<div>` to `<dialog>`—is a component registered in t
 | Syntax | Target | Example | Semantic Contract |
 | :--- | :--- | :--- | :--- |
 | `{member}` | Text / Attribute | `<span id="{node_id}">{title}</span>` | Interpolates C++ member snapshot; updates DOM on change. |
-| `:attr="member"` | Attribute | `<input :value="username" />` | Equivalent to `attr="{member}"`. |
-| `on<event>="Handler"` | Event Callback | `<button onclick="Submit">OK</button>` | Dispatches to registered C++ method or lambda. |
-| `@<event>="Handler"` | Event Callback | `<button @click="Submit">OK</button>` | Shorthand for event dispatch. |
-| `@<event>.<mod>="Handler"` | Event Modifier | `<button @click.right="OnMenu">OK</button>` | Restricts dispatch to specific event conditions (e.g. mouse right-click). |
+| `on<event>="Handler"` | Event Callback | `<button onclick="Submit">OK</button>` | Dispatches to registered C++ method or lambda. `oncontextmenu` takes the right click. |
 
 ---
 
@@ -730,22 +727,20 @@ Repeats template structures across bound collections. Syntax: `<for each="{colle
 ### `<slot>` and `<template>` (Content Projection)
 Enables reusable components to project child content passed by their caller:
 - **Default Slot**: `<slot></slot>` inside a component definition renders all unassigned child elements.
-- **Named Slots**: `<slot.header></slot.header>` or `<slot name="header"></slot>` defines named projection targets.
-- **Content Injection**: Callers project into named slots via `<template.header>` or `<template name="header">`.
+- **Named Slots**: `<slot name="header"></slot>` defines a named projection target.
+- **Content Injection**: Callers project an element into a named slot with `slot="header"` on it, or several nodes at once with `<template slot="header">`. Content naming the same slot fills it in document order.
 - **Fallback Content**: Markup placed inside `<slot>Fallback</slot>` is rendered if the caller provides no projecting children.
 
 ```xml
 <!-- Component Definition (e.g. Card) -->
 <div class="card">
-  <div class="card-header"><slot.header>Default Header</slot.header></div>
+  <div class="card-header"><slot name="header">Default Header</slot></div>
   <div class="card-body"><slot></slot></div>
 </div>
 
 <!-- Caller Usage -->
 <Card>
-  <template.header>
-    <span>Custom Title</span>
-  </template.header>
+  <span slot="header">Custom Title</span>
   <p>Body projected into default slot.</p>
 </Card>
 ```

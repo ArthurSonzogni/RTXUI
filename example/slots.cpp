@@ -16,11 +16,11 @@ class Card : public Component<Card> {
  public:
   std::string_view view = R"html(
     <div class="header">
-      <slot.header>Untitled</slot.header>
+      <slot name="header">Untitled</slot>
     </div>
     <slot></slot>
     <div class="footer">
-      <slot.footer></slot.footer>
+      <slot name="footer"></slot>
     </div>
 
     <style>
@@ -51,11 +51,11 @@ class SlotsDemo : public Component<SlotsDemo> {
  public:
   std::string_view view = R"html(
     <Card>
-      <template.header>Slots</template.header>
+      <span slot="header">Slots</span>
 
       <div>Card places what it is given into its slots: this text in the default slot, the title and this footer in named ones.</div>
 
-      <template.footer>Card's own markup draws the frame and the rule.</template.footer>
+      <template slot="footer">Card's own markup draws the frame and the rule.</template>
     </Card>
 
     <style>

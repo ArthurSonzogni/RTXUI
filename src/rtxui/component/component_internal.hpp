@@ -47,7 +47,7 @@ struct LocalScope {
 
 /// Restricts which of a node's children a reconcile pass consumes, so that
 /// content projected into a component can be split across several slots by
-/// tag. See `<slot.name select="tag">` in RenderReconcile.
+/// tag. See `<slot name="x" select="tag">` in RenderReconcile.
 struct SlotFilter {
   /// Tags claimed by a sibling select-slot; skipped by the default slot.
   const std::vector<std::string>* claimed = nullptr;
@@ -137,6 +137,9 @@ struct ComponentBase::Data {
   std::map<std::pair<const xml::Node*, const Element*>, ForMemos> for_memos_;
   Ref<Element> root_;
   std::map<std::string, Ref<Element>, std::less<>> slots_;
+  // How many children each named slot received so far in the current
+  // projection pass, so several pieces of content can fill one slot.
+  std::map<std::string, size_t, std::less<>> slot_fill_;
   // Set when rendering created a slot element afresh, cleared once the
   // consumer has projected its content into the slots. Still set after a
   // Digest() means this component re-rendered on its own -- an <if> around a

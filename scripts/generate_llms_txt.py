@@ -81,7 +81,7 @@ def flatten(markdown):
             out.append(f"- `{prop.group(1)}`: `{values}`. "
                        f"{attrs.get('description', '')}".rstrip())
             continue
-        # The wrapper around embedded examples, not RTXUI's own <template.x>.
+        # The wrapper around embedded examples, not RTXUI's <template slot>.
         if re.match(r"<ExampleTabs\b|</ExampleTabs>|<template #source>|"
                     r"</template>$", line):
             continue

@@ -38,8 +38,17 @@ A condition is true when the bound value prints as `true` or `1`.
 
 **Handlers name a bound method.** Write `onclick="Name"`, or
 `onclick="Name(arg)"` to pass one string argument (`{$index}` works inside the
-parentheses). `@click="Name"` is the same. There are no inline statements,
-no braces, and no camelCase: `onClick` and `onclick="{() => ...}"` do nothing.
+parentheses), and `oncontextmenu` for the right click. There is no `@click`
+shorthand, no inline statements, no braces, and no camelCase: `@click`,
+`onClick` and `onclick="{() => ...}"` do nothing.
+
+**Attributes bind with braces.** Write `title="{name}"`, as in text. There is
+no `:title="name"` shorthand.
+
+**Named slots use `name` and `slot`, as in HTML.** A component declares
+`<slot name="header">`; its user writes `slot="header"` on the element to
+project, or `<template slot="header">` around several. `<slot.header>` and
+`<template.header>` are not RTXUI syntax.
 
 **`class`, not `className`.**
 

@@ -107,7 +107,7 @@ class Counter : public rtxui::Component<Counter> {
   std::string_view view = R"html(
     <div>
       <span>Count: {count}</span>
-      <button @click="Increment">+1</button>
+      <button onclick="Increment">+1</button>
     </div>
   )html";
 };
@@ -128,7 +128,7 @@ class Panel : public rtxui::Component<Panel> {
   std::string_view view = R"html(
     <div class="panel">
       <div class="header">
-        <slot.title select="h3">Default Title</slot.title>
+        <slot name="title" select="h3">Default Title</slot>
       </div>
       <div class="body">
         <slot>Default body content.</slot>

@@ -2933,10 +2933,22 @@ std::optional<std::string> ForeignAttributeAdvice(std::string_view name,
     return "use <for each=\"{list}\" as=\"item\"> instead of a for attribute";
   }
   if (starts("v-on:") || starts("(") || starts("x-on:")) {
-    return "use onclick=\"Name\" or @click=\"Name\"";
+    return "use onclick=\"Name\"";
   }
   if (starts("v-bind:") || starts("[") || starts("x-bind:")) {
-    return "use attr=\"{name}\" or :attr=\"name\"";
+    return "use attr=\"{name}\"";
+  }
+  if (name == "@click" || name == "@click.left") {
+    return "use onclick=\"Name\"";
+  }
+  if (name == "@click.right") {
+    return "use oncontextmenu=\"Name\"";
+  }
+  if (starts("@")) {
+    return "use on" + std::string(name.substr(1)) + "=\"Name\"";
+  }
+  if (starts(":") && name.size() > 1) {
+    return "use " + std::string(name.substr(1)) + "=\"{name}\"";
   }
   if (name == "className") {
     return "use class";
@@ -2981,6 +2993,18 @@ void CheckTemplate(const xml::Nodes& nodes,
     if (node.type != xml::Node::kElement) {
       continue;
     }
+    if (node.tag.starts_with("slot.")) {
+      ReportDiagnostic("<" + node.tag + "> in <" + std::string(tag) +
+                       "> is not RTXUI syntax: use <slot name=\"" +
+                       node.tag.substr(5) + "\">");
+    }
+    if (node.tag.starts_with("template.")) {
+      ReportDiagnostic(
+          "<" + node.tag + "> in <" + std::string(tag) +
+          "> is not RTXUI syntax: put slot=\"" + node.tag.substr(9) +
+          "\" on the element, or wrap several in <template slot=\"" +
+          node.tag.substr(9) + "\">");
+    }
     // Only top-level <style> blocks are collected; a nested one is dropped.
     if (node.tag == "style" && !parent.empty()) {
       ReportDiagnostic("<style> inside <" + std::string(parent) + "> in <" +
@@ -3019,7 +3043,33 @@ xml::Node RenderTemplate(const xml::Nodes& nodes) {
 
 }  // namespace
 
+namespace {
+
+// Wraps each element written with slot="x" in a <template slot="x">, so that
+// projection into a named slot has one form to handle.
+void WrapSlotted(xml::Nodes& nodes) {
+  for (xml::Node& node : nodes) {
+    if (node.type != xml::Node::kElement) {
+      continue;
+    }
+    WrapSlotted(node.children);
+    const auto slot_it = node.attributes.find("slot");
+    if (node.tag == "template" || slot_it == node.attributes.end()) {
+      continue;
+    }
+    xml::Node wrapper;
+    wrapper.tag = "template";
+    wrapper.attributes.emplace("slot", slot_it->second);
+    node.attributes.erase(slot_it);
+    wrapper.children.push_back(std::move(node));
+    node = std::move(wrapper);
+  }
+}
+
+}  // namespace
+
 void ComponentBase::Data::SetXmlNodes(xml::Nodes nodes) {
+  WrapSlotted(nodes);
   xml_nodes_ = std::move(nodes);
   render_template_ = RenderTemplate(xml_nodes_);
   for_memos_.clear();  // Keyed by the nodes just freed.
@@ -3970,11 +4020,11 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           break;
         }
 
-        if (child_node.tag == "slot" || child_node.tag.starts_with("slot.")) {
+        if (child_node.tag == "slot") {
           ItemNotCacheable();
-          std::string slot_name = child_node.tag == "slot"
-                                      ? ""
-                                      : std::string(child_node.tag.substr(5));
+          const auto name_it = child_node.attributes.find("name");
+          const std::string slot_name =
+              name_it == child_node.attributes.end() ? "" : name_it->second;
 
           Ref<Element> slot_element;
           if (child_idx < slot->ChildCount() &&
@@ -4003,9 +4053,9 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
             }
           }
-          // `<slot.name select="tag">` routes projected children by tag; the
-          // criterion is kept on the element so the projection site below can
-          // read it without a parallel map.
+          // `<slot name="x" select="tag">` routes projected children by tag;
+          // the criterion is kept on the element so the projection site below
+          // can read it without a parallel map.
           auto select_it = child_node.attributes.find("select");
           if (select_it != child_node.attributes.end()) {
             slot_element->SetAttribute("select", select_it->second);
@@ -4028,15 +4078,20 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           break;
         }
 
-        if (child_node.tag.starts_with("template.")) {
+        // Content projected into a named slot. An element written with
+        // slot="x" reaches here wrapped in one of these (WrapSlotted).
+        if (child_node.tag == "template" &&
+            child_node.attributes.contains("slot")) {
           ItemNotCacheable();  // It renders outside the item.
-          std::string template_name = std::string(child_node.tag.substr(9));
-          Ref<Element> target_slot = Slot(template_name);
+          const std::string& slot_name = child_node.attributes.at("slot");
+          Ref<Element> target_slot = Slot(slot_name);
           if (target_slot) {
-            size_t sub_child_idx = 0;
+            // Several pieces of content can name the same slot: each one
+            // continues where the previous one stopped, in document order.
+            size_t& filled = data_->slot_fill_[slot_name];
             RenderReconcile(child_node, target_slot.get(), import_source, scope,
-                            sub_child_idx, preserve_newlines);
-            target_slot->TruncateChildren(sub_child_idx);
+                            filled, preserve_newlines);
+            target_slot->TruncateChildren(filled);
           }
           break;
         }
@@ -4167,45 +4222,16 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
           }
 
           bool attribute_changed = false;
-          std::vector<std::string> child_custom_keys;
           std::vector<std::string> applied_attributes;
-          for (auto& [key_view, value] : child_node.attributes) {
-            std::string_view key = key_view;
-            bool dynamic = false;
-            if (key.starts_with(':')) {
-              key.remove_prefix(1);
-              dynamic = true;
-            }
-
-            if (key.starts_with('@')) {
-              if (key == "@click" || key == "@click.left") {
-                key = "onclick";
-              } else if (key == "@click.right") {
-                key = "oncontextmenu";
-              } else if (key == "@change") {
-                key = "onchange";
-              } else {
-                child_custom_keys.push_back("on" + std::string(key.substr(1)));
-                key = child_custom_keys.back();
-              }
-            }
-
+          for (const auto& [key_string, value] : child_node.attributes) {
+            const std::string_view key = key_string;
             if (key == "id" || key == "class") {
               continue;
             }
 
             std::string interpolated_storage;
             std::string_view interpolated_value;
-            if (dynamic) {
-              std::string actual_value;
-              if (!value.starts_with('{')) {
-                actual_value = "{" + value + "}";
-              } else {
-                actual_value = value;
-              }
-              interpolated_storage = Interpolate(actual_value);
-              interpolated_value = interpolated_storage;
-            } else if (value.find('{') != std::string::npos) {
+            if (value.find('{') != std::string::npos) {
               interpolated_storage = Interpolate(value);
               interpolated_value = interpolated_storage;
             } else {
@@ -4237,13 +4263,10 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
             }
             applied_attributes.emplace_back(key);
 
-            if (dynamic || (value.starts_with("{") && value.ends_with("}"))) {
-              std::string_view expr = value;
-              if (expr.starts_with("{") && expr.ends_with("}")) {
-                expr = expr.substr(1, expr.size() - 2);
-              }
+            if (value.starts_with("{") && value.ends_with("}")) {
               child->data_->two_way_bindings_.push_back(
-                  {std::string(key), import_source, std::string(expr)});
+                  {std::string(key), import_source,
+                   value.substr(1, value.size() - 2)});
             }
           }
 
@@ -4357,10 +4380,10 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               child->data_->old_children_taken_ = 0;
             }
 
-            // Fill each `<slot.name select="tag">` from the projected content
-            // first, then let the default slot take what is left. Doing the
-            // split here - inside the reconcile that owns these children - is
-            // what keeps a select-slot consistent when the consumer stops
+            // Fill each `<slot name="x" select="tag">` from the projected
+            // content first, then let the default slot take what is left. Doing
+            // the split here - inside the reconcile that owns these children -
+            // is what keeps a select-slot consistent when the consumer stops
             // providing a matching child: the slot is reconciled and truncated
             // every frame like any other.
             // Puts a slot back to the content written between its own tags.
@@ -4404,13 +4427,13 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               }
             }
 
-            // A <template.x> that stopped being rendered -- one inside an
-            // <if> that turned false, say -- leaves its content behind in the
-            // slot it filled. Nothing else empties that slot: the pass below
-            // only writes the templates it actually finds, and truncates to
-            // what it wrote in the slot it wrote to. The components behind the
-            // abandoned content are released a few lines further down, so the
-            // stale elements were left pointing at freed memory.
+            // A <template slot="x"> that stopped being rendered -- one inside
+            // an <if> that turned false, say -- leaves its content behind in
+            // the slot it filled. Nothing else empties that slot: the pass
+            // below only writes the templates it actually finds, and truncates
+            // to what it wrote in the slot it wrote to. The components behind
+            // the abandoned content are released a few lines further down, so
+            // the stale elements were left pointing at freed memory.
             //
             // Emptying every named slot the loop above did not fill makes the
             // pass below the only source of their content, so a template that
@@ -4426,6 +4449,7 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
               RestoreFallback(named_slot);
             }
 
+            child->data_->slot_fill_.clear();
             SlotFilter default_filter;
             default_filter.claimed = &claimed;
             size_t sub_child_idx = 0;
@@ -4484,57 +4508,17 @@ void ComponentBase::RenderReconcile(const xml::Node& node,
         }
 
         std::vector<std::string_view> updated_keys;
-        std::vector<std::string> custom_event_keys;
-        for (auto& [key_view, value] : child_node.attributes) {
-          std::string_view key = key_view;
-          bool dynamic = false;
-          if (key.starts_with(':')) {
-            key.remove_prefix(1);
-            dynamic = true;
-          }
-
-          if (key.starts_with('@')) {
-            if (key == "@click" || key == "@click.left") {
-              key = "onclick";
-            } else if (key == "@click.right") {
-              key = "oncontextmenu";
-            } else if (key == "@change") {
-              key = "onchange";
-            } else {
-              custom_event_keys.push_back("on" + std::string(key.substr(1)));
-              key = custom_event_keys.back();
-            }
-          }
-
-          if (dynamic) {
-            std::string actual_value;
-            if (!value.starts_with('{')) {
-              actual_value = "{" + value + "}";
-            } else {
-              actual_value = value;
-            }
-            std::string new_val = Interpolate(actual_value);
-            const std::string* current_val =
-                child_element->GetAttribute(std::string(key));
-            if (!current_val || *current_val != new_val) {
-              child_element->SetAttribute(std::string(key), std::move(new_val));
+        for (const auto& [key, value] : child_node.attributes) {
+          if (value.find('{') == std::string::npos) {
+            const std::string* current_val = child_element->GetAttribute(key);
+            if (!current_val || *current_val != value) {
+              child_element->SetAttribute(key, value);
             }
           } else {
-            if (value.find('{') == std::string::npos) {
-              const std::string* current_val =
-                  child_element->GetAttribute(std::string(key));
-              if (!current_val || *current_val != value) {
-                child_element->SetAttribute(std::string(key),
-                                            std::string(value));
-              }
-            } else {
-              std::string new_val = Interpolate(value);
-              const std::string* current_val =
-                  child_element->GetAttribute(std::string(key));
-              if (!current_val || *current_val != new_val) {
-                child_element->SetAttribute(std::string(key),
-                                            std::move(new_val));
-              }
+            std::string new_val = Interpolate(value);
+            const std::string* current_val = child_element->GetAttribute(key);
+            if (!current_val || *current_val != new_val) {
+              child_element->SetAttribute(key, std::move(new_val));
             }
           }
           updated_keys.push_back(key);

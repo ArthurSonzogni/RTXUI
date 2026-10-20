@@ -78,8 +78,12 @@ Link the CMake target `rtxui` and include only `<rtxui/rtxui.hpp>`.
   `void Fields(const Task& t, rtxui::FieldSink& out) { out("id", t.id); }`,
   then `Bind(tasks)` and `{task.id}`.
 - Handlers: `onclick="Method"` or `onclick="Method(arg)"`, one string argument;
-  `@click`, `@change` are aliases. No braces, statements or camelCase
-  (`onClick`). Use `class`, not `className`.
+  `oncontextmenu` for the right click. No `@click`, braces, statements or
+  camelCase (`onClick`). Use `class`, not `className`.
+- Attributes bind like text: `title="{name}"`, never `:title="name"`.
+- Slots: a component declares `<slot name="header">fallback</slot>` (and an
+  unnamed `<slot>`); its user writes `<h1 slot="header">` or
+  `<template slot="header">several nodes</template>`.
 - Two-way binding: `<input value="{text}"/>`, `<textarea value="{text}"/>`,
   `<checkbox checked="{done}">Label</checkbox>`,
   `<radio name="group" checked="{picked}">Label</radio>`,

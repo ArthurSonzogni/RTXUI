@@ -29,7 +29,7 @@ std::string_view details::Setup() {
     <div class="details-container" part="details-container">
       <div class="summary-line" part="summary-line" tabindex="0" onclick="Toggle()">
         <span class="arrow" part="arrow">{arrow_char}</span>
-        <slot.summary select="summary"></slot.summary>
+        <slot name="summary" select="summary"></slot>
         <if condition="{no_summary}"><span>Details</span></if>
       </div>
       <div class="details-content {content_class}" part="details-content">

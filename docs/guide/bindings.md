@@ -30,34 +30,23 @@ struct ClickApp : public rtxui::Component<ClickApp> {
 
 ---
 
-## 2. Event Binding Syntaxes
+## 2. Event Attributes
 
-Once registered, you can wire callbacks to layout components in two styles:
-
-### HTML-style (`onclick`, `onchange`)
-The attribute value is the name of a bound callback:
+Once registered, a callback is wired to an element with an `on<event>`
+attribute, as in HTML. The attribute value is the name of a bound callback:
 ```html
 <button onclick="Increment">Increment</button>
 ```
 
-### `@` shorthand (`@click`, `@change`)
-The `@` prefix is equivalent:
-```html
-<button @click="Increment">Increment</button>
-```
-
 ---
 
-## 3. Event Modifiers
+## 3. Right Click
 
-To intercept specific mouse behaviors (like context menu clicks), you can append a modifier suffix:
+`onclick` takes the left click. `oncontextmenu` takes the right click:
 
 ```html
-<!-- Triggered only on mouse right-click events -->
-<button @click.right="ShowContextMenu">Options</button>
+<button oncontextmenu="ShowContextMenu">Options</button>
 ```
-*   `@click` or `@click.left`: Main trigger callback.
-*   `@click.right`: Secondary/context menu trigger.
 
 ---
 
@@ -82,7 +71,7 @@ index:
   <for each="{todo_list}" as="todo">
     <li>
       <span>{todo}</span>
-      <button @click="RemoveItem({$index})">Delete</button>
+      <button onclick="RemoveItem({$index})">Delete</button>
     </li>
   </for>
 </ul>

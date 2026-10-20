@@ -20,7 +20,7 @@ std::string_view fieldset::Setup() {
   return R"html(
     <div class="fieldset-wrapper" part="fieldset-wrapper">
       <div class="legend-line {legend_class}" part="legend-line">
-        <slot.legend select="legend"></slot.legend>
+        <slot name="legend" select="legend"></slot>
       </div>
       <div class="fieldset-body" part="fieldset-body">
         <slot></slot>

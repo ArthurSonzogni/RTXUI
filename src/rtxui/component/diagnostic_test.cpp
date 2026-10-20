@@ -142,6 +142,37 @@ TEST_CASE("Other frameworks' attribute syntax is reported", "[diagnostic]") {
   CHECK(recorder.Has("'for' on <div>"));
 }
 
+class OldForms : public Component<OldForms> {
+ public:
+  std::string_view view = R"html(
+    <div @click="Go" @click.right="Menu" @change="Pick" :title="name">
+      <slot.header>x</slot.header>
+      <template.footer>y</template.footer>
+    </div>
+  )html";
+};
+
+TEST_CASE("Removed shorthands are reported with what to write instead",
+          "[diagnostic]") {
+  DiagnosticRecorder recorder;
+  Show(Ref<OldForms>::New());
+  CHECK(
+      recorder.Has("'@click' on <div> in <OldForms> is not RTXUI syntax: "
+                   "use onclick=\"Name\""));
+  CHECK(recorder.Has("'@click.right'"));
+  CHECK(recorder.Has("use oncontextmenu=\"Name\""));
+  CHECK(recorder.Has("use onchange=\"Name\""));
+  CHECK(
+      recorder.Has("':title' on <div> in <OldForms> is not RTXUI syntax: "
+                   "use title=\"{name}\""));
+  CHECK(
+      recorder.Has("<slot.header> in <OldForms> is not RTXUI syntax: use "
+                   "<slot name=\"header\">"));
+  CHECK(
+      recorder.Has("<template.footer> in <OldForms> is not RTXUI syntax: "
+                   "put slot=\"footer\" on the element"));
+}
+
 class Card : public Component<Card> {
  public:
   std::string_view view = R"html(<div>card</div>)html";

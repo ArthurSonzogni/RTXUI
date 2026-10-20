@@ -2220,9 +2220,9 @@ void ScreenImpl::HandleEvent(Event event) {
           }
           std::vector<std::string> attr_keys;
           if (mouse.button() == Event::Mouse::Button::Left) {
-            attr_keys = {"onclick", "@click.left", "@click"};
+            attr_keys = {"onclick"};
           } else {
-            attr_keys = {"oncontextmenu", "@click.right"};
+            attr_keys = {"oncontextmenu"};
           }
 
           curr = clicked_element;
@@ -3873,8 +3873,7 @@ bool ScreenImpl::HandleSelection(const Event::Mouse& mouse) {
       // element selects nothing: dragging from a button is no selection.
       Element* target = FindElementAt(root_fragment_, x, y);
       for (const Element* el = target; el; el = el->Parent()) {
-        if (el->GetAttribute("onclick") || el->GetAttribute("@click") ||
-            el->GetAttribute("@click.left") ||
+        if (el->GetAttribute("onclick") ||
             (el->tag() == "a" && el->GetAttribute("href"))) {
           return false;
         }
@@ -4225,7 +4224,7 @@ void ScreenImpl::SimulateClick(Element* element) {
   if (!element) {
     return;
   }
-  std::vector<std::string> attr_keys = {"onclick", "@click.left", "@click"};
+  std::vector<std::string> attr_keys = {"onclick"};
   Element* curr = element;
   while (curr) {
     if (FollowLink(curr)) {

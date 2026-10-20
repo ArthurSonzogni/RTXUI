@@ -114,9 +114,9 @@ TEST_CASE("Mount", "[component]") {
 class Page : public rtxui::Component<Page> {
  public:
   std::string_view view = R"(
-    <slot.header/>
+    <slot name="header"/>
     <slot/>
-    <slot.footer/>
+    <slot name="footer"/>
   )";
 };
 
@@ -127,17 +127,17 @@ class MyPage : public rtxui::Component<MyPage> {
   std::string_view view = R"(
       <p>This is a page:</p>
       <Page>
-        <template.header>
+        <template slot="header">
           <p>
             A website by Arthur Sonzogni
           </p>
-        </template.header>
+        </template>
 
-        <template.footer>
+        <template slot="footer">
           <p>
             © 2024 Arthur Sonzogni
           </p>
-        </template.footer>
+        </template>
 
         <p>
          Hello, World!
@@ -478,8 +478,8 @@ TEST_CASE(
 class FallbackCard : public rtxui::Component<FallbackCard> {
  public:
   std::string_view view =
-      R"(<div><slot.header>DEFHEAD</slot.header>|<slot>DEFBODY</slot>|)"
-      R"(<slot.footer>DEFFOOT</slot.footer></div>)";
+      R"(<div><slot name="header">DEFHEAD</slot>|<slot>DEFBODY</slot>|)"
+      R"(<slot name="footer">DEFFOOT</slot></div>)";
 };
 
 class NoProjection : public rtxui::Component<NoProjection> {
@@ -502,8 +502,8 @@ class BodyProjection : public rtxui::Component<BodyProjection> {
 TEST_CASE("A slot shows its own content when nothing is projected",
           "[component][slot]") {
   // The content between a slot's tags is its fallback. It was never rendered
-  // at all -- example/slots.cpp writes <slot.header>Default
-  // Header</slot.header> and that text never appeared.
+  // at all -- example/slots.cpp writes <slot name="header">Default
+  // Header</slot> and that text never appeared.
   auto text = [](auto& app) {
     std::string out;
     rtxui::ComponentInternals::Root(*app)->Visit(
@@ -550,12 +550,47 @@ class SlotCard : public rtxui::Component<SlotCard> {
  public:
   std::string_view view = R"(
     <div>
-      <div>H<slot.header></slot.header></div>
+      <div>H<slot name="header"></slot></div>
       <div>B<slot></slot></div>
-      <div>F<slot.footer></slot.footer></div>
+      <div>F<slot name="footer"></slot></div>
     </div>
   )";
 };
+
+class SlotAttribute : public rtxui::Component<SlotAttribute> {
+ public:
+  SlotAttribute() { Import<SlotCard>(); }
+  std::string_view view = R"(
+    <SlotCard>
+      <span slot="footer">F1</span>
+      <span>BODY</span>
+      <span slot="header">HEAD</span>
+      <template slot="footer">F2<span>F3</span></template>
+    </SlotCard>
+  )";
+};
+
+TEST_CASE("slot=\"name\" projects an element into the named slot",
+          "[component][slot]") {
+  // Several pieces of content naming one slot fill it in document order, an
+  // element with its slot attribute and a <template slot> with its children.
+  auto app = rtxui::Ref<SlotAttribute>::New();
+  rtxui::ComponentInternals::Mount(*app);
+  app->Digest();
+  auto text = [&]() {
+    std::string out;
+    rtxui::ComponentInternals::Root(*app)->Visit(
+        [&out](rtxui::Element& element) {
+          if (element.is_text()) {
+            out += static_cast<rtxui::TextElement&>(element).text();
+          }
+        });
+    return out;
+  };
+  CHECK(text() == "HHEADBBODYFF1F2F3");
+  app->Digest();  // A second pass refills the slots rather than appending.
+  CHECK(text() == "HHEADBBODYFF1F2F3");
+}
 
 class ConditionalTemplateComponent
     : public rtxui::Component<ConditionalTemplateComponent> {
@@ -570,11 +605,11 @@ class ConditionalTemplateComponent
   std::string_view view = R"(
     <SlotCard>
       <if condition="{with_header}">
-        <template.header><span>HEAD</span></template.header>
+        <template slot="header"><span>HEAD</span></template>
       </if>
       <span>BODY</span>
       <if condition="{with_footer}">
-        <template.footer><span>FOOT</span></template.footer>
+        <template slot="footer"><span>FOOT</span></template>
       </if>
     </SlotCard>
   )";
@@ -582,7 +617,7 @@ class ConditionalTemplateComponent
 
 TEST_CASE("A template that stops rendering takes its slot content with it",
           "[component][slot]") {
-  // A <template.x> inside a condition that turns false used to leave its
+  // A <template slot="x"> inside a condition that turns false used to leave its
   // content in the slot: nothing emptied it, since the pass that fills slots
   // only truncates the ones it writes to. The components behind that content
   // are released in the same reconcile, so what stayed behind was pointing at
