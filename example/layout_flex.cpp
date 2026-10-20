@@ -155,6 +155,7 @@ class LayoutFlexDemo : public Component<LayoutFlexDemo> {
           display: grid;
           grid-template-columns: 17 16;
           row-gap: 1;
+          align-content: start;
           flex-shrink: 0;
         }
         .fields span, .sizes span {

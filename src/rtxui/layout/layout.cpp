@@ -4513,89 +4513,13 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     container_frag->border_width = box->style().border;
   }
 
-  std::vector<int> col_offsets(C, 0);
-  int cur_x = box->style().padding.left + box->style().border.left;
-  for (int c = 0; c < C; ++c) {
-    col_offsets[c] = cur_x;
-    cur_x += col_widths[c] + col_gap_val;
-  }
-
-  std::vector<int> row_offsets(R, 0);
-  int cur_y = box->style().padding.top + box->style().border.top;
-  for (int r = 0; r < R; ++r) {
-    row_offsets[r] = cur_y;
-    cur_y += row_heights[r] + row_gap_val;
-  }
-
-  for (auto& pc : placed_children) {
-    int r = pc.row;
-    int c = pc.col;
-
-    int final_w = 0;
-    for (int i = 0; i < pc.c_span; ++i) {
-      final_w += col_widths[c + i];
-    }
-    final_w += (pc.c_span - 1) * col_gap_val;
-
-    int final_h = 0;
-    for (int i = 0; i < pc.r_span; ++i) {
-      final_h += row_heights[r + i];
-    }
-    final_h += (pc.r_span - 1) * row_gap_val;
-
-    AlignItems justify = EffectiveAlign(pc.box->style().justify_self,
-                                        box->style().justify_items);
-    AlignItems align =
-        EffectiveAlign(pc.box->style().align_self, box->style().align_items);
-
-    bool stretch_x = (justify == AlignItems::Stretch) &&
-                     pc.box->style().width.unit == Unit::Auto;
-    bool stretch_y = (align == AlignItems::Stretch) &&
-                     pc.box->style().height.unit == Unit::Auto;
-
-    LayoutConstraints final_c;
-    final_c.width = {final_w,
-                     stretch_x ? MeasureMode::Exactly : MeasureMode::AtMost};
-    final_c.height = {final_h,
-                      stretch_y ? MeasureMode::Exactly : MeasureMode::AtMost};
-
-    int cx = col_offsets[c];
-    int cy = row_offsets[r];
-
-    LayoutContext final_context =
-        CreateChildContext(box, parent_width, parent_height, cx, cy, context);
-    final_context.is_measurement = context.is_measurement;
-
-    auto final_frag = RunLayout({pc.box}, final_c, final_context);
-
-    if (!stretch_x && final_frag->width < final_w) {
-      if (justify == AlignItems::Center) {
-        cx += (final_w - final_frag->width) / 2;
-      } else if (justify == AlignItems::FlexEnd) {
-        cx += final_w - final_frag->width;
-      }
-    }
-    if (!stretch_y && final_frag->height < final_h) {
-      if (align == AlignItems::Center) {
-        cy += (final_h - final_frag->height) / 2;
-      } else if (align == AlignItems::FlexEnd) {
-        cy += final_h - final_frag->height;
-      }
-    }
-
-    container_frag->children.push_back({final_frag, cx, cy});
-  }
-
-  int content_w = 0;
-  if (!col_offsets.empty()) {
-    content_w = col_offsets.back() + col_widths.back() -
-                (box->style().padding.left + box->style().border.left);
-  }
-  int content_h = 0;
-  if (!row_offsets.empty()) {
-    content_h = row_offsets.back() + row_heights.back() -
-                (box->style().padding.top + box->style().border.top);
-  }
+  // The container's size, from its tracks unless it has one of its own.
+  const int content_w =
+      std::accumulate(col_widths.begin(), col_widths.end(), 0) +
+      (C - 1) * col_gap_val;
+  const int content_h =
+      std::accumulate(row_heights.begin(), row_heights.end(), 0) +
+      (R - 1) * row_gap_val;
 
   container_frag->width = content_w + border_h + padding_h;
   if (constraints.width.mode == MeasureMode::Exactly) {
@@ -4665,6 +4589,141 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     if (min_h != -1 && container_frag->height < min_h) {
       container_frag->height = min_h;
     }
+  }
+
+  std::vector<int> col_offsets(C, 0);
+  int cur_x = box->style().padding.left + box->style().border.left;
+  for (int c = 0; c < C; ++c) {
+    col_offsets[c] = cur_x;
+    cur_x += col_widths[c] + col_gap_val;
+  }
+
+  // align-content: the height the rows leave in the container goes to its
+  // auto rows (stretch, the default), or before, between and around them.
+  std::vector<int> row_offsets(R, 0);
+  {
+    const int free_height =
+        std::max(0, container_frag->height - border_v - padding_v - content_h);
+    AlignContent align = box->style().align_content;
+    auto auto_max = [&](int r) {
+      if (rows_template[r].unit == Unit::Auto) {
+        return true;
+      }
+      if (rows_template[r].unit != Unit::Track) {
+        return false;
+      }
+      const GridTrack track = AsGridTrack(rows_template[r]);
+      return track.max.unit == Unit::Auto &&
+             track.max_content == GridTrack::Content::None &&
+             !track.fit_content;
+    };
+    if (align == AlignContent::Stretch) {
+      int auto_rows = 0;
+      for (int r = 0; r < R; ++r) {
+        auto_rows += auto_max(r) ? 1 : 0;
+      }
+      int nth = 0;
+      for (int r = 0; r < R && auto_rows > 0; ++r) {
+        if (auto_max(r)) {
+          row_heights[r] +=
+              free_height / auto_rows + (nth < free_height % auto_rows ? 1 : 0);
+          ++nth;
+        }
+      }
+    }
+    if (align == AlignContent::SpaceBetween && R == 1) {
+      align = AlignContent::FlexStart;
+    }
+    float leading = 0.0f;  // Before the first row.
+    float between = 0.0f;  // Between two rows, on top of the gap.
+    switch (align) {
+      case AlignContent::Stretch:
+      case AlignContent::FlexStart:
+        break;
+      case AlignContent::FlexEnd:
+        leading = static_cast<float>(free_height);
+        break;
+      case AlignContent::Center:
+        leading = free_height / 2.0f;
+        break;
+      case AlignContent::SpaceBetween:
+        between = static_cast<float>(free_height) / (R - 1);
+        break;
+      case AlignContent::SpaceAround:
+        between = static_cast<float>(free_height) / R;
+        leading = between / 2.0f;
+        break;
+      case AlignContent::SpaceEvenly:
+        between = static_cast<float>(free_height) / (R + 1);
+        leading = between;
+        break;
+    }
+    float y =
+        static_cast<float>(box->style().padding.top + box->style().border.top) +
+        leading;
+    for (int r = 0; r < R; ++r) {
+      row_offsets[r] = static_cast<int>(y);
+      y += static_cast<float>(row_heights[r] + row_gap_val) + between;
+    }
+  }
+
+  for (auto& pc : placed_children) {
+    int r = pc.row;
+    int c = pc.col;
+
+    int final_w = 0;
+    for (int i = 0; i < pc.c_span; ++i) {
+      final_w += col_widths[c + i];
+    }
+    final_w += (pc.c_span - 1) * col_gap_val;
+
+    int final_h = 0;
+    for (int i = 0; i < pc.r_span; ++i) {
+      final_h += row_heights[r + i];
+    }
+    final_h += (pc.r_span - 1) * row_gap_val;
+
+    AlignItems justify = EffectiveAlign(pc.box->style().justify_self,
+                                        box->style().justify_items);
+    AlignItems align =
+        EffectiveAlign(pc.box->style().align_self, box->style().align_items);
+
+    bool stretch_x = (justify == AlignItems::Stretch) &&
+                     pc.box->style().width.unit == Unit::Auto;
+    bool stretch_y = (align == AlignItems::Stretch) &&
+                     pc.box->style().height.unit == Unit::Auto;
+
+    LayoutConstraints final_c;
+    final_c.width = {final_w,
+                     stretch_x ? MeasureMode::Exactly : MeasureMode::AtMost};
+    final_c.height = {final_h,
+                      stretch_y ? MeasureMode::Exactly : MeasureMode::AtMost};
+
+    int cx = col_offsets[c];
+    int cy = row_offsets[r];
+
+    LayoutContext final_context =
+        CreateChildContext(box, parent_width, parent_height, cx, cy, context);
+    final_context.is_measurement = context.is_measurement;
+
+    auto final_frag = RunLayout({pc.box}, final_c, final_context);
+
+    if (!stretch_x && final_frag->width < final_w) {
+      if (justify == AlignItems::Center) {
+        cx += (final_w - final_frag->width) / 2;
+      } else if (justify == AlignItems::FlexEnd) {
+        cx += final_w - final_frag->width;
+      }
+    }
+    if (!stretch_y && final_frag->height < final_h) {
+      if (align == AlignItems::Center) {
+        cy += (final_h - final_frag->height) / 2;
+      } else if (align == AlignItems::FlexEnd) {
+        cy += final_h - final_frag->height;
+      }
+    }
+
+    container_frag->children.push_back({final_frag, cx, cy});
   }
 
   LayoutOutOfFlowChildren(box, container_frag, context);

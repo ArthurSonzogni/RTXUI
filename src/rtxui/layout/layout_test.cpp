@@ -821,6 +821,26 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
           CheckGrid({"A ", "B ", "D "}));
   }
 
+  SECTION("align-content stretches the auto rows by default") {
+    // Implicit rows are auto too; a max-content row is not stretched.
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.o{display:flex;}.g{display:grid;height:4;width:2;}.a{grid-template-rows:auto 1;}.m{grid-template-rows:max-content 1;}</style><div class="o"><div class="g a"><div>A</div><div>B</div></div><div class="g m"><div>C</div><div>D</div></div><div class="g"><div>E</div><div>F</div></div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 6, 4)) ==
+          CheckGrid({"A C E ", "  D   ", "    F ", "B     "}));
+  }
+
+  SECTION("align-content places the rows in the grid's height") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.o{display:flex;}.g{display:grid;grid-template-rows:1 1;height:6;width:2;}.c{align-content:center;}.e{align-content:end;}.sb{align-content:space-between;}.sa{align-content:space-around;}.se{align-content:space-evenly;}</style><div class="o"><div class="g c"><div>a</div><div>b</div></div><div class="g e"><div>c</div><div>d</div></div><div class="g sb"><div>e</div><div>f</div></div><div class="g sa"><div>g</div><div>h</div></div><div class="g se"><div>i</div><div>j</div></div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 6)) ==
+          CheckGrid({"    e     ", "      g i ", "a         ", "b       j ",
+                     "  c   h   ", "  d f     "}));
+  }
+
   SECTION("a min-content or max-content row is as tall as its items") {
     struct T : Component<T> {
       std::string_view view =
@@ -3902,11 +3922,11 @@ TEST_CASE("Layout: aspect-ratio on a grid container",
       {Color::RGB(255, 0, 0), 'R'},
   };
 
-  // The container is 8 wide, so ratio 4:1 gives it 2 rows; the single
-  // 1-row item leaves the second row showing the container background.
+  // The container is 8 wide, so ratio 4:1 gives it 2 rows, which its auto
+  // row stretches to fill, and the item with it.
   CHECK(GetColorLayer(texture, true, colors) == CheckGrid({
                                                     "RRRRRRRR..",
-                                                    "GGGGGGGG..",
+                                                    "RRRRRRRR..",
                                                     "..........",
                                                 }));
 }
