@@ -4312,6 +4312,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
 
   std::vector<int> row_heights(R, 0);
   std::vector<bool> is_row_fr(R, false);
+  std::vector<float> row_fr(R, 0.0f);
   float total_row_fr = 0.0f;
 
   // A minmax() row starts at its minimum, grows with its content as an auto
@@ -4327,6 +4328,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
         }
         if (track.max.unit == Unit::Fr) {
           is_row_fr[r] = true;
+          row_fr[r] = track.max.value;
           total_row_fr += track.max.value;
         } else if (track.max.unit != Unit::Auto) {
           row_limits[r] =
@@ -4334,6 +4336,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
         }
       } else if (rows_template[r].unit == Unit::Fr) {
         is_row_fr[r] = true;
+        row_fr[r] = rows_template[r].value;
         total_row_fr += rows_template[r].value;
       } else {
         row_heights[r] = rows_template[r].Resolve(remaining_height);
@@ -4455,8 +4458,8 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     int free_row_height = std::max(0, remaining_height - non_fr_row_height);
     for (int r = 0; r < R; ++r) {
       if (is_row_fr[r]) {
-        int fr_height = static_cast<int>(
-            free_row_height * (rows_template[r].value / total_row_fr));
+        int fr_height =
+            static_cast<int>(free_row_height * (row_fr[r] / total_row_fr));
         row_heights[r] = std::max(row_heights[r], fr_height);
       }
     }

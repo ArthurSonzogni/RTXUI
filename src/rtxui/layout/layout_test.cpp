@@ -792,6 +792,15 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
           CheckGrid({"A ", "  ", "B "}));
   }
 
+  SECTION("a minmax(length, fr) row shares the free height by its fr") {
+    struct T : Component<T> {
+      std::string_view view =
+          R"html(<style>.g{display:grid;grid-template-rows:minmax(1,1fr) 1fr;height:4;width:2;}</style><div class="g"><div>A</div><div>B</div></div>)html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 2, 4)) ==
+          CheckGrid({"A ", "  ", "B ", "  "}));
+  }
+
   SECTION("grid-auto-rows sizes the rows past the template") {
     struct T : Component<T> {
       std::string_view view =
