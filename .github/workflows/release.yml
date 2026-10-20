@@ -151,12 +151,28 @@ jobs:
         with:
           merge-multiple: true
 
+      # The notes are written by hand, one file per tag: the auto-generated
+      # ones list pull requests, and changes reach main without them.
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+          sparse-checkout: .github/release-notes
+
+      - name: Find the release notes
+        run: |
+          notes="repo/.github/release-notes/${{ github.ref_name }}.md"
+          if [ ! -f "$notes" ]; then
+            echo "::error::Missing $notes: write the release notes first."
+            exit 1
+          fi
+          echo "NOTES=$notes" >> "$GITHUB_ENV"
+
       - name: Checksums
         run: sha256sum rtxui-*.tar.gz > SHA256SUMS
 
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: ${{ env.NOTES }}
           files: |
             rtxui-linux-x64.tar.gz
             rtxui-macos-universal.tar.gz

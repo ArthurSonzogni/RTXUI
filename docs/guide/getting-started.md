@@ -49,7 +49,7 @@ include(FetchContent)
 FetchContent_Declare(
   rtxui
   GIT_REPOSITORY https://github.com/ArthurSonzogni/RTXUI.git
-  GIT_TAG        main  # Pin a tag or commit for reproducible builds.
+  GIT_TAG        v0.1.0  # A release tag, or main for the latest.
 )
 FetchContent_MakeAvailable(rtxui)
 
@@ -84,7 +84,7 @@ bazel_dep(name = "rtxui")
 git_override(
     module_name = "rtxui",
     remote = "https://github.com/ArthurSonzogni/RTXUI.git",
-    commit = "...",  # The commit to build.
+    tag = "v0.1.0",
 )
 ```
 

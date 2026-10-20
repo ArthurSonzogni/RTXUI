@@ -147,7 +147,7 @@ include(FetchContent)
 FetchContent_Declare(
   rtxui
   GIT_REPOSITORY https://github.com/ArthurSonzogni/RTXUI.git
-  GIT_TAG        main
+  GIT_TAG        v0.1.0
 )
 FetchContent_MakeAvailable(rtxui)
 
@@ -156,7 +156,7 @@ target_link_libraries(my_app PRIVATE rtxui)
 ```
 
 `find_package(rtxui)` and `pkg-config rtxui` work too, after
-`cmake --install`. See the
+`cmake --install`, and the repository is a Bazel module (`@rtxui`). See the
 [getting started guide](https://arthursonzogni.github.io/RTXUI/guide/getting-started).
 
 Then browse the [examples](https://arthursonzogni.github.io/RTXUI/guide/examples):
