@@ -1,0 +1,53 @@
+name: Windows examples
+
+# Every example as a Windows executable, to try RTXUI on a real Windows
+# console without building it there. Download the zip from the run's
+# "Artifacts" section, unzip it, and run an .exe from Windows Terminal or the
+# classic console.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+concurrency:
+  group: windows-examples-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  examples:
+    name: Build the examples (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # The static runtime: the executables need no Visual C++
+      # redistributable on the machine that runs them.
+      - name: Build
+        env:
+          CC: cl
+          CXX: cl
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release `
+            -DRTXUI_BUILD_EXAMPLES=ON `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cmake --build build
+
+      - name: Collect
+        run: |
+          New-Item -ItemType Directory rtxui-examples | Out-Null
+          Copy-Item build/rtxui_example_*.exe rtxui-examples/
+          Copy-Item LICENSE rtxui-examples/
+          Get-ChildItem rtxui-examples | Measure-Object | Select-Object -ExpandProperty Count
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtxui-examples-windows-x64
+          path: rtxui-examples/
