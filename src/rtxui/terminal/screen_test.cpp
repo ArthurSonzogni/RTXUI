@@ -77,6 +77,32 @@ TEST_CASE("Screen.BracketedPasteIsSetWithRawMode", "[terminal][paste]") {
   CHECK(device->GetOutput().find("\x1b[?2004l") != std::string::npos);
 }
 
+#if defined(_WIN32)
+// Shift pressed alone in the Windows console stopped the loop, animations
+// included, in ReadFile() until the next key. The records are those the
+// console gave, in virtual terminal input mode, for Shift, then Up.
+TEST_CASE("Screen.ModifierAloneIsNotReadAsAKey", "[terminal]") {
+  INPUT_RECORD record = {};
+  record.EventType = KEY_EVENT;
+  KEY_EVENT_RECORD& key = record.Event.KeyEvent;
+  key.bKeyDown = TRUE;
+  key.wVirtualKeyCode = VK_SHIFT;
+  CHECK_FALSE(internal::ReadFileReads(record));
+
+  // Up arrives as ESC, [, A: one record each, with no virtual key code.
+  key.wVirtualKeyCode = 0;
+  key.uChar.UnicodeChar = 0x1B;
+  CHECK(internal::ReadFileReads(record));
+  key.uChar.UnicodeChar = 'A';
+  CHECK(internal::ReadFileReads(record));
+
+  key.bKeyDown = FALSE;
+  key.wVirtualKeyCode = VK_UP;
+  key.uChar.UnicodeChar = 0;
+  CHECK_FALSE(internal::ReadFileReads(record));
+}
+#endif
+
 TEST_CASE("Screen.SynchronizedOutputMode2026", "[terminal][sync]") {
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<DummyComponent>::New();

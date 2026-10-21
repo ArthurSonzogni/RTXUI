@@ -85,14 +85,14 @@ void handle_sigwinch(int /*sig*/) {}
 
 #if defined(_WIN32)
 // The console signals its input handle for focus, menu, mouse and resize
-// records too, but ReadFile() returns only once there is a key, and would
-// block the loop until one. Drops the records ReadFile() would skip, and says
-// whether a key is left to read.
+// records too, and for a modifier pressed alone, but ReadFile() returns only
+// once there is a character, and would block the loop until one. Drops the
+// records ReadFile() would skip, and says whether a key is left to read.
 bool DrainToKeyRecord(HANDLE handle) {
   INPUT_RECORD record;
   DWORD count = 0;
   while (PeekConsoleInputW(handle, &record, 1, &count) && count == 1) {
-    if (record.EventType == KEY_EVENT && record.Event.KeyEvent.bKeyDown) {
+    if (internal::ReadFileReads(record)) {
       return true;
     }
     ReadConsoleInputW(handle, &record, 1, &count);

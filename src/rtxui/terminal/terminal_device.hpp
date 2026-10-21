@@ -139,6 +139,20 @@ inline UINT g_saved_out_cp = 0;
 inline volatile long g_raw_mode_active = 0;
 inline volatile long g_alternate_screen_active = 0;
 
+// Whether ReadFile() reads anything of a console input record. In virtual
+// terminal input mode, the console turns each key into key-down records of one
+// character each, with no virtual key code. A modifier pressed alone (Shift,
+// Ctrl, Alt) is a key-down with a virtual key code and no character: ReadFile()
+// skips it, and waits for a key that has one.
+inline bool ReadFileReads(const INPUT_RECORD& record) {
+  if (record.EventType != KEY_EVENT) {
+    return false;
+  }
+  const KEY_EVENT_RECORD& key = record.Event.KeyEvent;
+  return key.bKeyDown &&
+         (key.uChar.UnicodeChar != 0 || key.wVirtualKeyCode == 0);
+}
+
 inline BOOL WINAPI ConsoleCtrlHandler(DWORD ctrl_type) {
   (void)ctrl_type;
   if (g_raw_mode_active) {
