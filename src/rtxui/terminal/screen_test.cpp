@@ -62,6 +62,21 @@ TEST_CASE("TerminalDevice.MockIOWrites", "[terminal]") {
   REQUIRE(output.find("Hello Mock") != std::string::npos);
 }
 
+// The Windows console reads escape sequences only in raw mode: one written
+// outside it is printed as text ("←[?2004h").
+TEST_CASE("Screen.BracketedPasteIsSetWithRawMode", "[terminal][paste]") {
+  auto device = std::make_shared<MockTerminalDevice>();
+  {
+    Screen screen = ScreenInternals::Make(Ref<DummyComponent>::New(), device);
+  }
+  CHECK(device->GetOutput().find("\x1b[?2004") == std::string::npos);
+
+  device->EnterRawMode(nullptr, /*alternate_screen=*/false);
+  CHECK(device->GetOutput().find("\x1b[?2004h") != std::string::npos);
+  device->ExitRawMode();
+  CHECK(device->GetOutput().find("\x1b[?2004l") != std::string::npos);
+}
+
 TEST_CASE("Screen.SynchronizedOutputMode2026", "[terminal][sync]") {
   auto device = std::make_shared<MockTerminalDevice>();
   auto component = Ref<DummyComponent>::New();

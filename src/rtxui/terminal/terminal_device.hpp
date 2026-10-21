@@ -248,6 +248,10 @@ class TerminalDevice {
 
   // `alternate_screen`: draw on the terminal's alternate screen, which hides
   // the shell until ExitRawMode(), rather than where the cursor is.
+  // Also turns on bracketed paste: the terminal wraps pasted content in
+  // "\x1b[200~"/"\x1b[201~" markers instead of sending it as if typed, so
+  // it is inserted as literal text (see TerminalInputParser) instead of being
+  // read as keystrokes or escape sequences.
   virtual void EnterRawMode(void (*sigwinch_handler)(int),
                             bool alternate_screen) = 0;
   virtual void ExitRawMode() = 0;
@@ -411,15 +415,16 @@ class SystemTerminalDevice : public TerminalDevice {
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h\x1b[?1016$p");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?2004h\x1b[?1016h"
+            "\x1b[?1016$p");
     } else {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?2004h");
     }
 #elif defined(__EMSCRIPTEN__)
     (void)sigwinch_handler;
     Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-          "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+          "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?2004h");
 #else
     tcgetattr(STDIN_FILENO, &previous_termios_);
     termios terminal = previous_termios_;
@@ -463,17 +468,18 @@ class SystemTerminalDevice : public TerminalDevice {
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h\x1b[?1016$p");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?2004h\x1b[?1016h"
+            "\x1b[?1016$p");
     } else {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?2004h");
     }
 #endif
   }
 
   void ExitRawMode() override {
 #if defined(_WIN32)
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h" +
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h" +
           std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
     internal::g_raw_mode_active = 0;
     SetConsoleCtrlHandler(internal::ConsoleCtrlHandler, FALSE);
@@ -485,10 +491,10 @@ class SystemTerminalDevice : public TerminalDevice {
     SetConsoleCP(previous_in_cp_);
     SetConsoleOutputCP(previous_out_cp_);
 #elif defined(__EMSCRIPTEN__)
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?25h\x1b[?7h" +
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?2004l\x1b[?25h\x1b[?7h" +
           std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
 #else
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h" +
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h" +
           std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
     internal::g_raw_mode_active = 0;
     internal::RemoveFatalSignalHandlers();
@@ -556,16 +562,17 @@ class MockTerminalDevice : public TerminalDevice {
     int cell_w = 0, cell_h = 0;
     if (GetCellPixelSize(cell_w, cell_h)) {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?1016h\x1b[?1016$p");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?2004h\x1b[?1016h"
+            "\x1b[?1016$p");
     } else {
       Write(std::string(alternate_screen ? "\x1b[?1049h" : "") +
-            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h");
+            "\x1b[?7l\x1b[?25l\x1b[?1003h\x1b[?1006h\x1b[?2004h");
     }
   }
 
   void ExitRawMode() override {
     is_raw_ = false;
-    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?25h\x1b[?7h" +
+    Write("\x1b[?1003l\x1b[?1006l\x1b[?1016l\x1b[?2004l\x1b[?25h\x1b[?7h" +
           std::string(alternate_screen_ ? "\x1b[?1049l" : ""));
   }
 
