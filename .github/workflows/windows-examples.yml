@@ -1,16 +1,12 @@
 name: Windows examples
 
 # Every example as a Windows executable, to try RTXUI on a real Windows
-# console without building it there. Download the zip from the run's
-# "Artifacts" section, unzip it, and run an .exe from Windows Terminal or the
-# classic console.
+# console without building it there. Run by hand only (Actions tab, or
+# `gh workflow run windows-examples.yml`): test.yml already builds the examples
+# on every push. Download the zip from the run's "Artifacts" section, unzip
+# it, and run an .exe from Windows Terminal or the classic console.
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
   workflow_dispatch:
 
 concurrency:
