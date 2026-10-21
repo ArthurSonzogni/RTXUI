@@ -53,6 +53,28 @@ layout expects it.
 Nothing is required of you to get any of this: it applies to every string a
 template interpolates, whatever its source.
 
+## Glyphs the Terminal Lacks
+
+Borders, scrollbars and the marks of the built-in tags (`☑`, `◉`, `▾`, …) are
+drawn with Unicode glyphs. Most terminals draw a glyph their font lacks with
+another font. The Windows console (conhost) does not: it shows a boxed `?`,
+and its default font, Consolas, lacks the eighth blocks `border: tall` is made
+of.
+
+In the Windows console, RTXUI asks the console font which of these glyphs it
+has, and replaces each one it lacks with the closest one it has, down to
+ASCII: `▊` becomes `▌`, `╭` becomes `┌`. A `border: tall` then looks a little
+heavier there, instead of broken. Elsewhere, including Windows Terminal, which
+falls back to other fonts, nothing is replaced. Text you write is never
+replaced: choose its glyphs for the fonts your users have.
+
+The `RTXUI_GLYPHS` environment variable overrides this:
+
+| Value | Effect |
+| :--- | :--- |
+| `full` | Replace nothing: the terminal draws every glyph. |
+| `basic` | Replace every glyph outside WGL4, the repertoire Windows fonts cover. For a terminal RTXUI cannot ask, like one connected over SSH. |
+
 ## Layout Alignment
 
 Because widths are computed from display columns rather than byte or code

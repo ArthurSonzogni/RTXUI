@@ -67,6 +67,7 @@
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/sticky.hpp"
+#include "rtxui/paint/glyph_fallback.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/style/style.hpp"
@@ -963,6 +964,21 @@ std::optional<std::pair<int, int>> HeadlessSizeFromEnvironment() {
   return std::pair{width, height};
 }
 
+// The glyphs the terminal lacks, and what replaces them. RTXUI_GLYPHS=full
+// trusts it to draw them all; RTXUI_GLYPHS=basic takes it to have only WGL4's,
+// for a terminal that cannot be asked (one reached over SSH, say).
+GlyphFallback GlyphFallbackFor(TerminalDevice& device) {
+  const char* value = std::getenv("RTXUI_GLYPHS");
+  const std::string_view setting = value ? value : "";
+  if (setting == "full") {
+    return {};
+  }
+  if (setting == "basic") {
+    return GlyphFallback(GlyphFallback::BasicMissing());
+  }
+  return GlyphFallback(device.MissingGlyphs(GlyphFallback::Glyphs()));
+}
+
 }  // namespace
 
 class ScreenImpl {
@@ -1248,6 +1264,7 @@ class ScreenImpl {
   int drag_start_mouse_pixel_ = 0;
   int drag_start_thumb_pos_ = 0;
   task::TaskRunner task_runner_;
+  GlyphFallback glyph_fallback_;
 #if defined(_WIN32)
   HANDLE wakeup_event_ = NULL;
 #else
@@ -1301,6 +1318,7 @@ ScreenImpl::ScreenImpl(Ref<ComponentBase> component,
       device_ = std::make_shared<SystemTerminalDevice>();
     }
   }
+  glyph_fallback_ = GlyphFallbackFor(*device_);
   UpdateSize();
   css::g_terminal_width = width_;
   css::g_terminal_height = height_;
@@ -2806,6 +2824,9 @@ void ScreenImpl::Draw(bool reuse_layout) {
     }
   }
 
+  if (repaint) {
+    glyph_fallback_.Apply(texture);
+  }
   selection_painted_ = SelectionShown();
 
   std::string new_output;
@@ -3084,6 +3105,7 @@ void ScreenImpl::Print(Ref<ComponentBase> component) {
     if (alone.root_fragment_) {
       alone.PaintScreen(*alone.root_fragment_, texture);
     }
+    glyph_fallback_.Apply(texture);
     if (headless_) {
       alone.last_texture_ = std::make_unique<Texture>(std::move(texture));
       text = alone.Text();

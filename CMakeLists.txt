@@ -137,6 +137,8 @@ add_library(rtxui
   "src/rtxui/paint/cell.hpp"
   "src/rtxui/paint/color.cpp"
   "include/rtxui/color.hpp"
+  "src/rtxui/paint/glyph_fallback.cpp"
+  "src/rtxui/paint/glyph_fallback.hpp"
   "src/rtxui/paint/paint.cpp"
   "src/rtxui/paint/paint.hpp"
   "src/rtxui/paint/texture.cpp"
@@ -190,6 +192,12 @@ target_include_directories(rtxui SYSTEM INTERFACE
 include(cmake/reflection.cmake)
 
 add_library(rtxui::rtxui ALIAS rtxui)
+
+# The Windows console's window and font are asked whether it has the glyphs
+# RTXUI draws.
+if(WIN32)
+  target_link_libraries(rtxui PRIVATE gdi32 user32)
+endif()
 
 if(RTXUI_BUILD_EXAMPLES)
   add_subdirectory(example)
@@ -326,6 +334,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/component/default/textarea/textarea_test.cpp"
     "src/rtxui/component/default/tooltip/tooltip_test.cpp"
     "src/rtxui/layout/component_layout_test.cpp"
+    "src/rtxui/paint/glyph_fallback_test.cpp"
     "src/rtxui/paint/text_paint_test.cpp"
     "src/rtxui/style/css_test.cpp"
     "src/rtxui/style/selector_test.cpp"

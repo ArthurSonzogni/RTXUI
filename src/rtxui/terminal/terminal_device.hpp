@@ -25,6 +25,7 @@
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -245,6 +246,12 @@ class TerminalDevice {
   virtual bool GetCellPixelSize(int& /*cell_width*/, int& /*cell_height*/) {
     return false;
   }
+  // The glyphs among `glyphs` the terminal cannot draw, as far as it can
+  // tell. Most cannot be asked, and fall back to another font for a glyph
+  // theirs lacks.
+  virtual std::u32string MissingGlyphs(std::u32string_view /*glyphs*/) {
+    return {};
+  }
 
   // `alternate_screen`: draw on the terminal's alternate screen, which hides
   // the shell until ExitRawMode(), rather than where the cursor is.
@@ -371,6 +378,62 @@ class SystemTerminalDevice : public TerminalDevice {
       return cell_width > 0 && cell_height > 0;
     }
     return false;
+#endif
+  }
+
+  std::u32string MissingGlyphs(std::u32string_view glyphs) override {
+#if defined(_WIN32)
+    // The Windows console draws with its one font, and a boxed "?" for a
+    // glyph it lacks. Under a pseudoconsole (Windows Terminal, VS Code, SSH,
+    // ...) the font is the host's, which falls back to others: the console
+    // reports a font there, but not the one drawing.
+    wchar_t window_class[32] = L"";
+    GetClassNameW(GetConsoleWindow(), window_class, 32);
+    if (std::wstring_view(window_class) != L"ConsoleWindowClass") {
+      return {};
+    }
+    CONSOLE_FONT_INFOEX font = {};
+    font.cbSize = sizeof(font);
+    if (!GetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE,
+                                 &font)) {
+      return {};
+    }
+    HDC dc = CreateCompatibleDC(nullptr);
+    HFONT handle = CreateFontW(
+        -font.dwFontSize.Y, 0, 0, 0, static_cast<int>(font.FontWeight), FALSE,
+        FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY, FIXED_PITCH, font.FaceName);
+    HGDIOBJ previous = SelectObject(dc, handle);
+    // A raster font, like "Terminal", draws the console's OEM code page, and
+    // GetGlyphIndicesW() knows none of its glyphs.
+    const bool raster = !(font.FontFamily & TMPF_TRUETYPE);
+    std::u32string missing;
+    for (char32_t glyph : glyphs) {
+      const wchar_t c = static_cast<wchar_t>(glyph);
+      WORD index = 0;
+      char oem[4];
+      BOOL not_in_oem = FALSE;
+      if (glyph > 0xFFFF) {
+        missing += glyph;
+      } else if (raster) {
+        WideCharToMultiByte(GetOEMCP(), WC_NO_BEST_FIT_CHARS, &c, 1, oem,
+                            sizeof(oem), nullptr, &not_in_oem);
+        if (not_in_oem) {
+          missing += glyph;
+        }
+      } else if (GetGlyphIndicesW(dc, &c, 1, &index,
+                                  GGI_MARK_NONEXISTING_GLYPHS) == 1 &&
+                 index == 0xFFFF) {
+        missing += glyph;
+      }
+    }
+    SelectObject(dc, previous);
+    DeleteObject(handle);
+    DeleteDC(dc);
+    return missing;
+#else
+    (void)glyphs;
+    return {};
 #endif
   }
 
@@ -554,6 +617,20 @@ class MockTerminalDevice : public TerminalDevice {
     mock_cell_height_ = height;
   }
 
+  std::u32string MissingGlyphs(std::u32string_view glyphs) override {
+    std::u32string missing;
+    for (char32_t glyph : glyphs) {
+      if (missing_glyphs_.find(glyph) != std::u32string::npos) {
+        missing += glyph;
+      }
+    }
+    return missing;
+  }
+  // What MissingGlyphs() reports: a font lacking them.
+  void SetMissingGlyphs(std::u32string glyphs) {
+    missing_glyphs_ = std::move(glyphs);
+  }
+
   void EnterRawMode(void (*sigwinch_handler)(int),
                     bool alternate_screen) override {
     alternate_screen_ = alternate_screen;
@@ -601,6 +678,7 @@ class MockTerminalDevice : public TerminalDevice {
   int mock_height_ = 24;
   int mock_cell_width_ = 0;
   int mock_cell_height_ = 0;
+  std::u32string missing_glyphs_;
   bool is_raw_ = false;
   bool alternate_screen_ = true;
   void (*sigwinch_handler_)(int) = nullptr;

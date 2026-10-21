@@ -61,6 +61,14 @@ cc_library(
     ),
     copts = COPTS,
     implementation_deps = [":internal_headers"],
+    # The Windows console's window and font are asked whether it has the
+    # glyphs RTXUI draws.
+    linkopts = select({
+        "@rules_cc//cc/compiler:msvc-cl": ["gdi32.lib", "user32.lib"],
+        "@rules_cc//cc/compiler:clang-cl": ["gdi32.lib", "user32.lib"],
+        "@rules_cc//cc/compiler:mingw-gcc": ["-lgdi32", "-luser32"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = [":public_headers"],
 )

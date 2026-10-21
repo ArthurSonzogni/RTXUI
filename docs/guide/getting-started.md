@@ -10,8 +10,10 @@ project, and how to build the repository itself.
   `Fields()` function (see [Loops](/guide/loops)).
 - **Linux, macOS or Windows.** On Windows, RTXUI drives the console through
   its virtual terminal mode: Windows Terminal, or the console of Windows 10
-  version 1809 and newer. MSVC, clang-cl and MinGW-w64 GCC are tested. RTXUI
-  also targets the browser through Emscripten / WebAssembly.
+  version 1809 and newer, whose font lacks some glyphs RTXUI replaces (see
+  [Glyphs the terminal lacks](/guide/unicode#glyphs-the-terminal-lacks)).
+  MSVC, clang-cl and MinGW-w64 GCC are tested. RTXUI also targets the browser
+  through Emscripten / WebAssembly.
 - **CMake 3.24 or newer.**
 - **Ninja** (optional, faster builds than Make).
 
