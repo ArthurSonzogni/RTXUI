@@ -402,9 +402,10 @@ class SystemTerminalDevice : public TerminalDevice {
                  ENABLE_PROCESSED_INPUT | ENABLE_QUICK_EDIT_MODE);
     SetConsoleMode(in_handle, in_mode);
 
+    // Not DISABLE_NEWLINE_AUTO_RETURN: frames end their rows with "\n", which
+    // must go back to the first column, as it does on POSIX terminals.
     DWORD out_mode = previous_out_mode_;
-    out_mode |=
-        ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN;
+    out_mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(out_handle, out_mode);
 
     int cell_w = 0, cell_h = 0;
