@@ -9,11 +9,13 @@ project, and how to build the repository itself.
   reflection also lets loops read the fields of your own structs without a
   `Fields()` function (see [Loops](/guide/loops)).
 - **Linux, macOS or Windows.** On Windows, RTXUI drives the console through
-  its virtual terminal mode: Windows Terminal, or the console of Windows 10
-  version 1809 and newer, whose font lacks some glyphs RTXUI replaces (see
-  [Glyphs the terminal lacks](/guide/unicode#glyphs-the-terminal-lacks)).
-  MSVC, clang-cl and MinGW-w64 GCC are tested. RTXUI also targets the browser
-  through Emscripten / WebAssembly.
+  its virtual terminal mode, from Windows 10 version 1809. It has been checked
+  by hand in the console window itself (conhost), whose font lacks some glyphs
+  RTXUI replaces (see
+  [Glyphs the terminal lacks](/guide/unicode#glyphs-the-terminal-lacks)), in
+  Windows Terminal, WezTerm, Alacritty, mintty (Git Bash) and the VS Code
+  terminal. MSVC, clang-cl and MinGW-w64 GCC are tested. RTXUI also targets
+  the browser through Emscripten / WebAssembly.
 - **CMake 3.24 or newer.**
 - **Ninja** (optional, faster builds than Make).
 
