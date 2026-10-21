@@ -4,6 +4,8 @@
 
 // Replays the bytes real terminals sent, recorded by
 // scripts/record_terminal.py into captures/, through TerminalInputParser.
+// The Windows ones were recorded the same way in a Windows VM, the gestures
+// sent through QEMU.
 // Each line of a capture is a gesture's name, a tab, and the bytes the
 // terminal sent for it, with \xHH for anything not printable.
 #include <algorithm>
@@ -92,7 +94,8 @@ const std::map<std::string, std::vector<Event>>& KeyGestures() {
       {"left", {Event::ArrowLeft()}},
       {"ctrl_left", {Event::ArrowLeftCtrl()}},
       {"ctrl_right", {Event::ArrowRightCtrl()}},
-      {"alt_up", {Event::ArrowUpAlt()}},
+      // VS Code sends Ctrl+Up for Alt+Up.
+      {"alt_up", {Event::ArrowUpAlt(), Event::ArrowUpCtrl()}},
       {"home", {Event::Home()}},
       {"end", {Event::End()}},
       {"page_up", {Event::PageUp()}},
@@ -185,11 +188,23 @@ TEST_CASE("Every terminal capture is read as the gestures it recorded",
       } else if (MouseGestures().contains(gesture)) {
         const Mouse expected = MouseGestures().at(gesture);
         CHECK_FALSE(events.empty());
-        for (const Event& event : events) {
+        // What may follow a press or a release, where the pointer is: Windows
+        // Terminal and VS Code report a drag of the button pressed, conhost
+        // and VS Code a motion with no button once it is released.
+        const auto trailing_button = expected.motion == Event::Mouse::Pressed
+                                         ? expected.button
+                                         : Event::Mouse::None;
+        for (size_t i = 0; i < events.size(); ++i) {
+          const Event& event = events[i];
           INFO(event.Print());
           auto mouse = event.get_if<Event::Mouse>();
           CHECK(mouse);
           if (!mouse) {
+            continue;
+          }
+          if (i > 0 && expected.motion != Event::Mouse::Moved &&
+              mouse->motion() == Event::Mouse::Moved &&
+              mouse->button() == trailing_button) {
             continue;
           }
           CHECK(mouse->button() == expected.button);

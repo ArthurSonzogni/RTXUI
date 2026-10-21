@@ -1,0 +1,52 @@
+# VS Code 1.143.0 terminal on Windows 11 24H2 (26100), recorded in a VM through QEMU's QMP
+# a, shift_a and ctrl_a from a second run: in the first, a Find box VS Code
+# opened during the mouse gestures took them.
+# pixels: no
+reply_colors	\x1b]11;rgb:1919/1a1a/1b1b\x1b\x5c\x1b]10;rgb:cccc/cccc/cccc\x1b\x5c
+reply_cursor_position	\x1b[3;1R
+reply_pixel_mode	\x1b[?1016;2$y
+move	\x1b[<35;63;13M
+left_press	\x1b[<0;63;13M\x1b[<32;63;13M
+left_drag	\x1b[<32;81;15M
+left_release	\x1b[<0;81;15m\x1b[<35;81;15M
+move_after_left	\x1b[<35;45;10M
+right_press	\x1b[<2;45;10M\x1b[200~\x1b[201~
+right_drag	\x1b[<34;63;13M
+right_release	\x1b[<2;63;13m\x1b[<35;63;13M
+move_after_right	\x1b[<35;81;15M
+middle_press	\x1b[<1;81;15M
+middle_release	\x1b[<1;81;15m
+wheel_up	\x1b[<64;81;15M
+wheel_down	\x1b[<65;81;15M
+shift_move	\x1b[<39;63;13M\x1b[<39;81;15M
+ctrl_move	\x1b[<51;63;13M\x1b[<51;81;15M
+alt_move	\x1b[<43;63;13M\x1b[<43;81;15M
+a	a
+shift_a	A
+ctrl_a	\x01
+alt_a	\x1ba
+up	\x1b[A
+down	\x1b[B
+right	\x1b[C
+left	\x1b[D
+ctrl_left	\x1b[1;5D
+ctrl_right	\x1b[1;5C
+alt_up	\x1b[1;5A
+home	\x1b[H
+end	\x1b[F
+page_up	\x1b[5~
+page_down	\x1b[6~
+insert	\x1b[2~
+delete	\x1b[3~
+backspace	\x7f
+return	\x0d
+tab	\x09
+shift_tab	\x1b[Z
+escape	\x1b
+f2	\x1bOQ
+f3	
+f4	\x1bOS
+f5	
+f12	
+f1	
+

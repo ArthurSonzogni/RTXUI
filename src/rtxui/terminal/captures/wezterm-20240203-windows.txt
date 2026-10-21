@@ -1,0 +1,50 @@
+# WezTerm 20240203-110809-5046fc22 on Windows 11 24H2 (26100), recorded in a VM through QEMU's QMP
+# pixels: no
+reply_colors	
+reply_cursor_position	\x1b[2;1R
+reply_pixel_mode	\x1b[?1016;0$y
+move	\x1b[<35;51;10M
+left_press	\x1b[<0;51;10M
+left_drag	\x1b[<32;63;12M
+left_release	\x1b[<0;63;12m
+move_after_left	\x1b[<35;76;14M\x1b[<35;38;9M
+right_press	\x1b[<2;38;9M
+right_drag	\x1b[<34;51;10M
+right_release	\x1b[<2;51;10m
+move_after_right	\x1b[<35;63;12M
+middle_press	\x1b[<1;63;12M
+middle_release	\x1b[<1;63;12m
+wheel_up	\x1b[<64;63;12M
+wheel_down	\x1b[<65;63;12M
+shift_move	\x1b[<39;51;10M\x1b[<39;63;12M
+ctrl_move	\x1b[<51;51;10M\x1b[<51;63;12M
+alt_move	\x1b[<43;51;10M\x1b[<43;63;12M
+a	a
+shift_a	A
+ctrl_a	\x01
+alt_a	\x1ba
+up	\x1b[A
+down	\x1b[B
+right	\x1b[C
+left	\x1b[D
+ctrl_left	\x1b[1;5D
+ctrl_right	\x1b[1;5C
+alt_up	\x1b[1;3A
+home	\x1b[H
+end	\x1b[F
+page_up	\x1b[5~
+page_down	\x1b[6~
+insert	\x1b[2~
+delete	\x1b[3~
+backspace	\x7f
+return	\x0d
+tab	\x09
+shift_tab	\x1b[Z
+escape	\x1b
+f2	\x1bOQ
+f3	\x1bOR
+f4	\x1bOS
+f5	\x1b[15~
+f12	\x1b[24~
+f1	\x1bOP
+

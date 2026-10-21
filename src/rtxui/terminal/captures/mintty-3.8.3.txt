@@ -1,0 +1,50 @@
+# mintty 3.8.3 (Git for Windows 2.56.0) on Windows 11 24H2 (26100), recorded in a VM through QEMU's QMP
+# pixels: no
+reply_colors	
+reply_cursor_position	\x1b[2;1R
+reply_pixel_mode	\x1b[?1016;0$y
+move	\x1b[<35;73;19M
+left_press	\x1b[<0;73;19M
+left_drag	\x1b[<32;92;22M
+left_release	\x1b[<0;92;22m
+move_after_left	\x1b[<35;110;24M\x1b[<35;55;16M
+right_press	\x1b[<2;55;16M
+right_drag	\x1b[<34;73;19M
+right_release	\x1b[<2;73;19m
+move_after_right	\x1b[<35;92;22M
+middle_press	\x1b[<1;92;22M
+middle_release	\x1b[<1;92;22m
+wheel_up	\x1b[<64;92;22M
+wheel_down	\x1b[<65;92;22M
+shift_move	\x1b[<35;73;19M\x1b[<35;92;22M
+ctrl_move	\x1b[<51;73;19M\x1b[<51;92;22M
+alt_move	\x1b[<43;73;19M\x1b[<43;92;22M
+a	a
+shift_a	A
+ctrl_a	\x01
+alt_a	\x1ba
+up	\x1b[A
+down	\x1b[B
+right	\x1b[C
+left	\x1b[D
+ctrl_left	\x1b[1;5D
+ctrl_right	\x1b[1;5C
+alt_up	\x1b[1;3A
+home	\x1b[H
+end	\x1b[F
+page_up	\x1b[5~
+page_down	\x1b[6~
+insert	\x1b[2~
+delete	\x1b[3~
+backspace	\x7f
+return	\x0d
+tab	\x09
+shift_tab	\x1b[Z
+escape	\x1b
+f2	\x1bOQ
+f3	\x1bOR
+f4	\x1bOS
+f5	\x1b[15~
+f12	\x1b[24~
+f1	\x1bOP
+
