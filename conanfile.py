@@ -4,7 +4,7 @@ from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
 
 class RtxuiConan(ConanFile):
     name = "rtxui"
-    version = "0.1.1"
+    version = "0.1.2"
     license = "MIT"
     author = "Arthur Sonzogni <sonzogniarthur@gmail.com>"
     url = "https://github.com/ArthurSonzogni/RTXUI"
