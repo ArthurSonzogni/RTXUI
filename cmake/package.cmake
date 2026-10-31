@@ -31,6 +31,11 @@ if(RTXUI_PACKAGE_ARCH MATCHES "^(x86_64|amd64)$")
 elseif(RTXUI_PACKAGE_ARCH STREQUAL "aarch64")
   set(RTXUI_PACKAGE_ARCH arm64)
 endif()
+# A MinGW library does not link with MSVC, nor the reverse: the MinGW archive
+# is rtxui-<version>-windows-x64-mingw.
+if(MINGW)
+  string(APPEND RTXUI_PACKAGE_ARCH -mingw)
+endif()
 
 set(CPACK_PACKAGE_NAME rtxui)
 set(CPACK_PACKAGE_VENDOR "Arthur Sonzogni")

@@ -18,8 +18,15 @@ jobs:
   # The archive holds Debug and Release; the .deb and .rpm, Release only, each
   # built for its distribution's library directory. See cmake/package.cmake.
   linux:
-    name: Linux x64
-    runs-on: ubuntu-latest
+    name: Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     env:
       CC: gcc-14
       CXX: g++-14
@@ -33,9 +40,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-release-linux-${{ runner.os }}-${{ github.sha }}
+          key: ccache-release-linux-${{ matrix.arch }}-${{ github.sha }}
           restore-keys: |
-            ccache-release-linux-${{ runner.os }}-
+            ccache-release-linux-${{ matrix.arch }}-
 
       - name: Archive (Debug and Release)
         run: |
@@ -62,7 +69,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: packages-linux
+          name: packages-linux-${{ matrix.arch }}
           path: |
             dist/rtxui-*.tar.gz
             dist/*.deb
@@ -105,19 +112,52 @@ jobs:
           path: dist/rtxui-*.tar.gz
 
   # MSVC, with its default runtime (/MD, /MDd): rtxui.lib and rtxuid.lib.
+  # MinGW (UCRT64, as MSYS2 ships it): librtxui.a and librtxuid.a, in an
+  # archive of its own, since neither compiler links the other's C++ library.
   windows:
-    name: Windows x64 (MSVC)
-    runs-on: windows-latest
+    name: Windows ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - name: x64 (MSVC)
+            id: x64-msvc
+            runner: windows-latest
+            arch: x64
+          - name: arm64 (MSVC)
+            id: arm64-msvc
+            runner: windows-11-arm
+            arch: arm64
+          - name: x64 (MinGW)
+            id: x64-mingw
+            runner: windows-latest
+            msys2: true
+    defaults:
+      run:
+        shell: ${{ matrix.msys2 && 'msys2 {0}' || 'pwsh' }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install toolchain
+      - name: Install toolchain (MSVC)
+        if: ${{ !matrix.msys2 }}
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Install toolchain (MinGW)
+        if: ${{ matrix.msys2 }}
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
 
       - name: Archive (Debug and Release)
         env:
-          CC: cl
-          CXX: cl
+          CC: ${{ !matrix.msys2 && 'cl' || '' }}
+          CXX: ${{ !matrix.msys2 && 'cl' || '' }}
         run: |
           cmake -B build -G "Ninja Multi-Config"
           cmake --build build --config Debug
@@ -127,21 +167,112 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: packages-windows
+          name: packages-windows-${{ matrix.id }}
           path: dist/rtxui-*.zip
+
+  # Unpacks each archive, then builds an app against it with find_package(),
+  # in Debug and in Release, and runs it.
+  check-archives:
+    name: Use the ${{ matrix.artifact }} archive
+    needs: [linux, macos, windows]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: linux-x64
+            runner: ubuntu-latest
+            cxx: g++-14
+          - artifact: linux-arm64
+            runner: ubuntu-24.04-arm
+            cxx: g++-14
+          - artifact: macos
+            runner: macos-latest
+            cxx: clang++
+          - artifact: windows-x64-msvc
+            runner: windows-latest
+            arch: x64
+            cxx: cl
+          - artifact: windows-arm64-msvc
+            runner: windows-11-arm
+            arch: arm64
+            cxx: cl
+          - artifact: windows-x64-mingw
+            runner: windows-latest
+            msys2: true
+    defaults:
+      run:
+        shell: ${{ matrix.msys2 && 'msys2 {0}' || 'bash' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages-${{ matrix.artifact }}
+          path: dist
+
+      - name: Install toolchain (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build g++-14
+
+      - name: Install toolchain (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install toolchain (MSVC)
+        if: ${{ matrix.arch }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Install toolchain (MinGW)
+        if: ${{ matrix.msys2 }}
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build and run an app against it
+        env:
+          CXX: ${{ matrix.cxx }}
+          RTXUI_STRICT: 1
+        run: |
+          archive=$(ls dist/rtxui-*.tar.gz dist/rtxui-*.zip 2>/dev/null || true)
+          (cd dist && cmake -E tar xf "$(basename "$archive")")
+          prefix=$(cd dist && pwd)/$(basename "$archive" | sed -E 's/\.(tar\.gz|zip)$//')
+          mkdir app
+          cp packaging/bazel/test_module/main.cpp app/
+          cat > app/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.24)
+          project(app LANGUAGES CXX)
+          find_package(rtxui CONFIG REQUIRED)
+          add_executable(app main.cpp)
+          target_link_libraries(app PRIVATE rtxui::rtxui)
+          EOF
+          for config in Debug Release; do
+            cmake -S app -B "app/build-$config" -G Ninja \
+              -DCMAKE_BUILD_TYPE=$config -DCMAKE_PREFIX_PATH="$prefix"
+            cmake --build "app/build-$config"
+            "./app/build-$config/app"
+          done
 
   # Installs each Linux package with its distribution's package manager, then
   # builds an app against it with find_package() and with pkg-config.
   check-linux-packages:
-    name: Install the ${{ matrix.package }} on ${{ matrix.image }}
+    name: Install the ${{ matrix.arch }} ${{ matrix.package }} on ${{ matrix.image }}
     needs: linux
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container: ${{ matrix.image }}
     env:
       DEBIAN_FRONTEND: noninteractive
     strategy:
       fail-fast: false
       matrix:
+        arch: [x64, arm64]
+        package: [.deb, .rpm]
         include:
           - package: .deb
             image: ubuntu:24.04
@@ -158,7 +289,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: packages-linux
+          name: packages-linux-${{ matrix.arch }}
 
       - name: Install the package
         run: ${{ matrix.install }}
@@ -211,7 +342,7 @@ jobs:
   publish:
     name: Publish release
     if: github.ref_type == 'tag'
-    needs: [source, linux, macos, windows, check-linux-packages]
+    needs: [source, linux, macos, windows, check-linux-packages, check-archives]
     runs-on: ubuntu-latest
     permissions:
       contents: write
