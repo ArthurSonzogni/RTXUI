@@ -216,7 +216,8 @@ constexpr std::string_view kTheme = R"css(
 // A page's template: its markup, shown beside it, then the theme.
 template <typename Page>
 std::string_view Themed() {
-  static const std::string view = std::string(Page::kView) + std::string(kTheme);
+  static const std::string view =
+      std::string(Page::kView) + std::string(kTheme);
   return view;
 }
 
