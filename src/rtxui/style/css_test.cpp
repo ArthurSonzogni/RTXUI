@@ -1453,3 +1453,45 @@ TEST_CASE("border: none removes a border an earlier rule set",
   CHECK(a->style.border.Horiz() == 0);
   CHECK(a->style.border.Vert() == 0);
 }
+
+namespace {
+
+class ScopedChild : public rtxui::Component<ScopedChild> {
+ public:
+  std::string_view view = R"(<button id="inner">child</button>)";
+};
+
+// Styles its own button, which has the same tag as the one in its child.
+class ScopedParent : public rtxui::Component<ScopedParent> {
+ public:
+  ScopedParent() { Import<ScopedChild>(); }
+  std::string_view view = R"(
+    <div>
+      <button id="outer">parent</button>
+      <ScopedChild id="child" />
+    </div>
+    <style>
+      button { padding: 0 5; }
+      ScopedChild { margin-left: 2; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("A component's rules stop at the templates of the components in it",
+          "[component][style][css]") {
+  auto app = rtxui::Ref<ScopedParent>::New();
+  rtxui::ComponentInternals::Mount(*app);
+  auto at = [&](const char* id) {
+    auto* element = rtxui::ComponentInternals::Root(*app)->QuerySelector(id);
+    REQUIRE(element != nullptr);
+    return element;
+  };
+  // Its own button, and the root of the child it places.
+  CHECK(at("#outer")->style.padding.left == 5);
+  CHECK(at("#child")->style.margin.left == 2);
+  // Not the button the child's own template writes: that one keeps the
+  // default padding.
+  CHECK(at("#inner")->style.padding.left == 1);
+}
