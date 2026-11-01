@@ -10,6 +10,13 @@ name: Publish
 #
 # Not here:
 # - conda-forge and nixpkgs: their bots open the version bumps themselves.
+# - TODO(maturity): vcpkg. New ports need a release at least 6 months old, or
+#   6 months of public development
+#   (https://learn.microsoft.com/vcpkg/contributing/maintainer-guide#packaged-projects-should-be-mature).
+#   RTXUI went public around 2026-09-21 and released v0.1.0 on 2026-10-20:
+#   eligible from about 2027-03-21. Then run
+#   `scripts/publish_registry.py vcpkg <tag>` once, and add vcpkg to the
+#   matrix below for the bumps.
 # - TODO(adoption): Conan Center. Its inclusion criteria ask for adoption
 #   beyond the author (stars, forks, outside issues and users), with no fixed
 #   bar; aim for ~200 stars and some outside users. The recipe is conanfile.py
@@ -34,10 +41,6 @@ on:
         type: string
       bcr:
         description: "Bazel Central Registry"
-        type: boolean
-        default: true
-      vcpkg:
-        description: "vcpkg"
         type: boolean
         default: true
       xmake:
@@ -110,13 +113,11 @@ jobs:
     needs: prepare
     if: >-
       github.event_name != 'workflow_dispatch' ||
-      inputs.vcpkg || inputs.xmake || inputs.homebrew
+      inputs.xmake || inputs.homebrew
     strategy:
       fail-fast: false
       matrix:
         include:
-          - registry: vcpkg
-            os: ubuntu-latest
           - registry: xmake
             os: ubuntu-latest
           # macOS: the formula is installed and tested before it is pushed.

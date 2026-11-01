@@ -172,7 +172,7 @@ def open_pr_for(upstream, prefix):
 VCPKG_NEW_PORT_BODY = """\
 - [x] Changes comply with the [maintainer guide](https://github.com/microsoft/vcpkg-docs/blob/main/vcpkg/contributing/maintainer-guide.md).
 - [x] The packaged project is [mature and ready for broad sharing with vcpkg users](https://learn.microsoft.com/vcpkg/contributing/maintainer-guide#packaged-projects-should-be-mature)
-    - [x] Has a release at least 6 months old or 6 months of demonstrated public development: public development since June 2024.
+    - [x] Has a release at least 6 months old or 6 months of demonstrated public development.
 - [x] The packaged project shows strong association with the chosen port name: `rtxui` is the project's name, its GitHub repository (ArthurSonzogni/RTXUI), its CMake package (`find_package(rtxui)`) and its pkg-config module.
     - Repology: https://repology.org/project/rtxui/versions
 - [x] Optional dependencies of the build are all controlled by the port: RTXUI has none. Catch2 is only fetched for its tests, turned off here.

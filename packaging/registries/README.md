@@ -10,7 +10,6 @@ over. `.github/workflows/publish.yml` runs it after each release.
 
 | Registry | Directory | After each release |
 | :--- | :--- | :--- |
-| [vcpkg](https://github.com/microsoft/vcpkg) | `vcpkg/` | publish.yml opens the bump PR |
 | [Bazel Central Registry](https://registry.bazel.build) | `/.bcr/` | publish.yml, through publish-to-bcr |
 | [xmake-repo](https://github.com/xmake-io/xmake-repo) | `xmake/` | publish.yml opens the bump PR |
 | Homebrew tap ([ArthurSonzogni/homebrew-tap](https://github.com/ArthurSonzogni/homebrew-tap)) | `homebrew/` | publish.yml tests and pushes the formula |
@@ -24,6 +23,11 @@ submission, or rewritten whole where RTXUI owns the package (the tap, the AUR).
 
 ## Not yet
 
+- **vcpkg** (TODO, maturity): new ports need a release at least 6 months old,
+  or 6 months of public development. RTXUI went public around 2026-09-21:
+  eligible from about 2027-03-21. The port in `vcpkg/` is ready and was built
+  locally (x64-linux, x64-linux-dynamic). Submit it with
+  `scripts/publish_registry.py vcpkg <tag>`, then add vcpkg to publish.yml.
 - **Conan Center** (TODO, adoption): the inclusion criteria ask for adoption
   beyond the author, with no fixed bar; aim for ~200 stars and some outside
   users. Start from `/conanfile.py` and `/packaging/conan/test_package`.
