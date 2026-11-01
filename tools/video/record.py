@@ -525,6 +525,10 @@ def render(log, start, end, out, max_cols, max_rows, cols, rows,
     overlay = None
     term_img = None
     dirty = True
+    # Inside a synchronized update (DEC mode 2026), a real terminal keeps
+    # showing the last frame until the update ends. pyte ignores the mode,
+    # so the frame is held here instead of filming a half-drawn screen.
+    syncing = False
     frames = int((end - start) * FPS)
     meta = []
     if frames_dir:
@@ -535,6 +539,10 @@ def render(log, start, end, out, max_cols, max_rows, cols, rows,
             _, kind, data = log[i]
             if kind == "out":
                 stream.feed(data)
+                begin = data.rfind(b"\x1b[?2026h")
+                end_ = data.rfind(b"\x1b[?2026l")
+                if begin != end_:
+                    syncing = begin > end_
                 dirty = True
             elif kind == "resize":
                 screen.resize(data[1], data[0])
@@ -550,7 +558,7 @@ def render(log, start, end, out, max_cols, max_rows, cols, rows,
                 for row, line in enumerate(screen.display):
                     print(f"{row:2d} {line.rstrip()}")
             i += 1
-        if dirty:
+        if dirty and not syncing:
             term_img = r.terminal(screen)
             dirty = False
         img = r.frame(term_img, screen.columns, screen.lines, pointer, caption,
