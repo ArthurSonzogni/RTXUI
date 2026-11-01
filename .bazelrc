@@ -1,0 +1,3 @@
+# Windows: lay the runfiles out on disk, as on Linux and macOS. rtxui_test
+# reads the terminal captures from there.
+build --enable_runfiles

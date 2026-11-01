@@ -306,7 +306,13 @@ if(RTXUI_BUILD_TESTS)
     # server opts in, so don't copy this to a SHA-pinned dependency.
     GIT_SHALLOW TRUE
   )
+  # Catch2 stays static under BUILD_SHARED_LIBS=ON: as a DLL, it would sit in
+  # _deps/, where Windows (which has no rpath) does not look, and rtxui_test
+  # would not start.
+  set(RTXUI_SAVED_BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS}")
+  set(BUILD_SHARED_LIBS OFF)
   FetchContent_MakeAvailable(catch2)
+  set(BUILD_SHARED_LIBS "${RTXUI_SAVED_BUILD_SHARED_LIBS}")
 
   add_executable(rtxui_test
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
