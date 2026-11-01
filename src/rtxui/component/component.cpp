@@ -515,6 +515,22 @@ bool ComponentBase::ChildrenOnEvent(Event event) {
   return false;
 }
 ComponentBase::~ComponentBase() {
+  // A component below this one can outlive it, kept by a task it posted (a
+  // toast's timer). Its two-way bindings must not write back to this one.
+  const auto forget = [this](const auto& self,
+                             ComponentBase& component) -> void {
+    std::erase_if(component.data_->two_way_bindings_,
+                  [this](const auto& link) { return link.parent == this; });
+    for (const auto* children :
+         {&component.data_->children_, &component.data_->old_children_}) {
+      for (const Ref<ComponentBase>& child : *children) {
+        if (child) {
+          self(self, *child);
+        }
+      }
+    }
+  };
+  forget(forget, *this);
   MarkSlotsRecreated(false);
   ReleaseMouse();
   HotReloadManager::Unregister(this);

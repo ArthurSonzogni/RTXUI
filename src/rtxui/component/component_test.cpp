@@ -5,6 +5,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <cstddef>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -37,6 +39,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/task.hpp"
 #include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
@@ -1854,4 +1857,62 @@ TEST_CASE("A loop over no bound collection is reported",
         std::string::npos);
   CHECK(messages[1].find("no collection named 'missing'") != std::string::npos);
   CHECK(screen.Text().starts_with("a"));
+}
+
+namespace {
+// A component two-way bound to a toast, which a page shows and then removes.
+class ToastOwner : public rtxui::Component<ToastOwner> {
+ public:
+  bool saved = false;
+  static inline ToastOwner* last = nullptr;
+  ToastOwner() {
+    Bind(saved);
+    last = this;
+  }
+  // Freed memory often still reads as the object it was; scribbled over, a
+  // use after free crashes instead.
+  static void operator delete(void* pointer, std::size_t size) {
+    std::memset(pointer, 0xAB, size);
+    ::operator delete(pointer);
+  }
+  std::string_view view = R"html(
+    <toast open="{saved}" duration="1000">Saved</toast>
+  )html";
+};
+
+class ToastHost : public rtxui::Component<ToastHost> {
+ public:
+  bool shown = true;
+  int renders = 0;
+  ToastHost() {
+    Bind(shown);
+    Bind(renders);
+    Import<ToastOwner>();
+  }
+  std::string_view view = R"html(
+    <if condition="{shown}"><ToastOwner /></if>
+    <p>{renders}</p>
+  )html";
+};
+}  // namespace
+
+TEST_CASE("A child outliving the component it binds to does not write to it",
+          "[component]") {
+  // The toast's timer keeps it alive after its owner is gone. When it closed,
+  // it wrote `open` back through a pointer to the destroyed owner.
+  auto app = rtxui::Ref<ToastHost>::New();
+  rtxui::TimelineScreen screen(app, 30, 6);
+  screen.Advance(16);
+  REQUIRE(ToastOwner::last != nullptr);
+  rtxui::PostTask([] { ToastOwner::last->saved = true; });
+  screen.Advance(16);
+  rtxui::PostTask([&] { app->shown = false; });
+  screen.Advance(16);
+  // Later frames let go of the owner.
+  for (int i = 0; i < 2; ++i) {
+    rtxui::PostTask([&] { app->renders++; });
+    screen.Advance(16);
+  }
+  screen.Advance(1000);  // The toast's timer fires.
+  CHECK(screen.Advance(16).find("Saved") == std::string::npos);
 }
