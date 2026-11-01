@@ -113,6 +113,10 @@ def commit(repo, message, paths):
     run("git", "commit", "-m", message, cwd=repo)
 
 
+# nixpkgs asks LLM-assisted commits to say so with this trailer.
+ASSISTED_BY = "Assisted-by: Claude Code (Claude Opus 5.5)"
+
+
 def clone_fork(upstream, base, branch, work, sparse=None):
     """A shallow checkout of upstream's base, on a new branch to push to
     OWNER's fork. Registries such as nixpkgs are far too big to clone."""
@@ -154,7 +158,12 @@ def open_pull_request(repo, upstream, base, branch, title, body, dry_run):
                       "open", "--head", branch, "--json", "url", "--jq",
                       ".[].url")
     if existing:
-        print(f"Pull request already open, updated by the push: {existing}")
+        # REST rather than `gh pr edit`, which fails on GitHub's retired
+        # Projects (classic) API.
+        number = existing.rstrip("/").split("/")[-1]
+        run("gh", "api", "-X", "PATCH", f"repos/{upstream}/pulls/{number}",
+            "-f", f"title={title}", "-f", f"body={body}", capture=True)
+        print(f"Pull request already open, updated: {existing}")
         return
     run("gh", "pr", "create", "--repo", upstream, "--base", base, "--head",
         f"{OWNER}:{branch}", "--title", title, "--body", body)
@@ -175,22 +184,14 @@ def open_pr_for(upstream, prefix):
 # vcpkg ------------------------------------------------------------------------
 
 VCPKG_NEW_PORT_BODY = """\
-- [x] Changes comply with the [maintainer guide](https://github.com/microsoft/vcpkg-docs/blob/main/vcpkg/contributing/maintainer-guide.md).
-- [x] The packaged project is [mature and ready for broad sharing with vcpkg users](https://learn.microsoft.com/vcpkg/contributing/maintainer-guide#packaged-projects-should-be-mature)
-    - [x] Has a release at least 6 months old or 6 months of demonstrated public development.
-- [x] The packaged project shows strong association with the chosen port name: `rtxui` is the project's name, its GitHub repository (ArthurSonzogni/RTXUI), its CMake package (`find_package(rtxui)`) and its pkg-config module.
-    - Repology: https://repology.org/project/rtxui/versions
-- [x] Optional dependencies of the build are all controlled by the port: RTXUI has none. Catch2 is only fetched for its tests, turned off here.
-- [x] The versioning scheme in `vcpkg.json` matches what upstream says.
-- [x] The license declaration in `vcpkg.json` matches what upstream says.
-- [x] The installed as the "copyright" file matches what upstream says.
-- [x] The source code of the component installed comes from an authoritative source.
-- [x] The generated "usage text" is brief and accurate.
-- [x] The version database is fixed by rerunning `./vcpkg x-add-version --all` and committing the result.
-- [x] Exactly one version is added in each modified versions file.
+New port for [RTXUI](https://github.com/ArthurSonzogni/RTXUI), a C++23 terminal UI library (HTML templates + CSS layout). I'm the author (also of `ftxui`), and will maintain the port: later versions come from RTXUI's release workflow.
 
-RTXUI is a C++23 terminal UI library (HTML templates, CSS layout), by the
-author of the `ftxui` port. Opened by RTXUI's release automation.
+- [x] Changes comply with the maintainer guide.
+- [x] The project is mature: 6 months of public development.
+- [x] `rtxui` is the project's name, its CMake package and its pkg-config module.
+- [x] No optional dependencies.
+- [x] Version, license and copyright match upstream.
+- [x] Version database updated with `x-add-version`.
 """
 
 
@@ -226,8 +227,7 @@ def publish_vcpkg(release, work, dry_run):
            ["versions"])
     body = (VCPKG_NEW_PORT_BODY if new else
             f"Updates rtxui to {release.tag}: "
-            f"https://github.com/{OWNER}/{REPO}/releases/tag/{release.tag}\n\n"
-            "Opened by RTXUI's release automation.")
+            f"https://github.com/{OWNER}/{REPO}/releases/tag/{release.tag}")
     open_pull_request(repo, upstream, base, branch, title, body, dry_run)
 
 
@@ -251,9 +251,11 @@ def publish_xmake(release, work, dry_run):
         return
     title = "add rtxui" if new else f"update rtxui to {release.tag}"
     commit(repo, title, ["packages/r/rtxui"])
-    body = ("RTXUI is a C++23 terminal UI library (HTML templates, CSS "
-            f"layout): https://github.com/{OWNER}/{REPO}\n\n"
-            "Opened by RTXUI's release automation.")
+    body = (f"[RTXUI](https://github.com/{OWNER}/{REPO}) is a C++23 terminal "
+            "UI library (HTML templates + CSS layout). I'm its author and "
+            "will maintain this package: new versions will mostly come as "
+            "PRs from RTXUI's release workflow." if new else
+            f"https://github.com/{OWNER}/{REPO}/releases/tag/{release.tag}")
     open_pull_request(repo, upstream, base, branch, title, body, dry_run)
 
 
@@ -347,22 +349,17 @@ def publish_conda_forge(release, work, dry_run):
     if existing:
         print(f"Updating the open pull request {existing}")
     body = ("Adds [RTXUI](https://github.com/ArthurSonzogni/RTXUI), a C++23 "
-            "terminal UI library built from HTML templates and CSS.\n\n"
-            "- [x] Title of this PR is meaningful: e.g. \"Adding my_nifty_"
-            "package\", not \"updated meta.yaml\".\n"
+            "terminal UI library (HTML templates + CSS layout).\n\n"
+            "I'm the upstream author and will maintain the feedstock. "
+            "Releases are automated by a GitHub workflow upstream, so most "
+            "updates should be the autotick bot's PRs.\n\n"
             "- [x] License file is packaged.\n"
             "- [x] Source is from official source.\n"
             "- [x] Package does not vendor other packages.\n"
-            "- [x] If static libraries are linked in, the license of the "
-            "static library is packaged: none.\n"
             "- [x] Package does not ship static libraries.\n"
             "- [x] Build number is 0.\n"
-            "- [x] A tarball (`url`) rather than a repo (e.g. `git_url`) is "
-            "used in your recipe.\n"
-            "- [x] GitHub users listed in the maintainer section have posted "
-            "a comment confirming they are willing to be listed there.\n"
-            "- [x] When in trouble, please check our knowledge base "
-            "documentation before pinging a team.\n")
+            "- [x] A tarball (`url`) rather than a repo is used.\n"
+            "- [x] Maintainers listed have confirmed (I'm the only one).\n")
     open_pull_request(repo, upstream, base, branch, "Add rtxui", body,
                       dry_run)
 
@@ -409,22 +406,21 @@ def publish_nixpkgs(release, work, dry_run):
     repo = clone_fork(upstream, base, branch, work,
                       sparse=["maintainers", "pkgs/by-name/rt"])
     if add_nix_maintainer(repo / "maintainers" / "maintainer-list.nix"):
-        commit(repo, "maintainers: add arthursonzogni",
+        commit(repo, f"maintainers: add arthursonzogni\n\n{ASSISTED_BY}",
                ["maintainers/maintainer-list.nix"])
     render(release, TEMPLATES / "nixpkgs", repo,
            {"@NIX_HASH@": nix_hash(release)})
-    commit(repo, f"rtxui: init at {release.version}",
+    commit(repo, f"rtxui: init at {release.version}\n\n{ASSISTED_BY}",
            ["pkgs/by-name/rt/rtxui"])
     body = (f"Adds [RTXUI](https://github.com/{OWNER}/{REPO}), a C++23 "
-            "terminal UI library built from HTML templates and CSS, and its "
-            "author as maintainer.\n\n"
-            "## Things done\n\n"
-            "- Built on platform:\n"
-            "  - [x] x86_64-linux\n"
-            "- [x] Tested basic functionality: an app built against the "
-            "package with `find_package(rtxui)` and with pkg-config runs.\n"
-            "- [x] Fits [CONTRIBUTING.md](https://github.com/NixOS/nixpkgs/"
-            "blob/master/CONTRIBUTING.md).\n")
+            "terminal UI library (HTML templates + CSS layout). I'm its "
+            "author and will maintain the package; upstream releases are "
+            "automated, so r-ryantm should handle the bumps.\n\n"
+            "Built on x86_64-linux; an app using it through "
+            "`find_package(rtxui)` and pkg-config builds and runs.\n\n"
+            "Disclosure: the derivation and this description were drafted "
+            "with Claude Code (Claude Opus 5.5), see the `Assisted-by` "
+            "trailers.\n")
     open_pull_request(repo, upstream, base, branch,
                       f"rtxui: init at {release.version}", body, dry_run)
 
