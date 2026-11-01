@@ -1,0 +1,5 @@
+# libc++ has the C++23 library RTXUI uses (std::format, floating-point
+# std::to_chars) from macOS 13.3 on.
+c_stdlib_version:
+  - if: osx
+    then: "13.3"

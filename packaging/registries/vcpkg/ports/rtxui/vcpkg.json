@@ -1,0 +1,18 @@
+{
+  "name": "rtxui",
+  "version-semver": "@VERSION@",
+  "description": "C++ terminal user interfaces built from HTML templates, CSS and reactive state",
+  "homepage": "https://github.com/ArthurSonzogni/RTXUI",
+  "license": "MIT",
+  "supports": "!uwp & !android & !ios",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

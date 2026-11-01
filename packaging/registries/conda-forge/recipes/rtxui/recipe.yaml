@@ -1,0 +1,75 @@
+context:
+  version: "@VERSION@"
+
+package:
+  name: rtxui
+  version: ${{ version }}
+
+source:
+  url: https://github.com/ArthurSonzogni/RTXUI/archive/refs/tags/v${{ version }}.tar.gz
+  sha256: @SHA256@
+
+build:
+  number: 0
+  script:
+    - if: win
+      then:
+        # RTXUI's DLL build is not checked on Windows yet: ship the static
+        # library there.
+        - cmake -S . -B build -G Ninja %CMAKE_ARGS% -DBUILD_SHARED_LIBS=OFF -DRTXUI_BUILD_TESTS=OFF -DRTXUI_BUILD_EXAMPLES=OFF
+        - cmake --build build
+        - cmake --install build
+      else:
+        - cmake -S . -B build -G Ninja ${CMAKE_ARGS} -DBUILD_SHARED_LIBS=ON -DRTXUI_BUILD_TESTS=OFF -DRTXUI_BUILD_EXAMPLES=OFF
+        - cmake --build build
+        - cmake --install build
+
+requirements:
+  build:
+    - ${{ compiler('cxx') }}
+    - ${{ stdlib('c') }}
+    - cmake
+    - ninja
+
+tests:
+  - package_contents:
+      include:
+        - rtxui/rtxui.hpp
+      files:
+        - if: unix
+          then: lib/cmake/rtxui/rtxui-config.cmake
+          else: Library/lib/cmake/rtxui/rtxui-config.cmake
+  - files:
+      recipe:
+        - test/
+    requirements:
+      run:
+        - ${{ compiler('cxx') }}
+        - cmake
+        - ninja
+    script:
+      - if: win
+        then:
+          - cmake -S test -B test/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=%LIBRARY_PREFIX%
+          - cmake --build test/build
+          - test\build\app.exe
+        else:
+          - cmake -S test -B test/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=${PREFIX}
+          - cmake --build test/build
+          - ./test/build/app
+
+about:
+  homepage: https://github.com/ArthurSonzogni/RTXUI
+  repository: https://github.com/ArthurSonzogni/RTXUI
+  documentation: https://arthursonzogni.github.io/RTXUI/
+  summary: C++ terminal user interfaces built from HTML templates, CSS and reactive state
+  description: |
+    RTXUI builds terminal user interfaces the way a browser builds pages:
+    components declare HTML templates, style them with CSS (flexbox, grid,
+    transitions) and bind C++ members into them.
+  license: MIT
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - ArthurSonzogni

@@ -1,0 +1,5 @@
+{
+  "integrity": "",
+  "strip_prefix": "rtxui-{VERSION}",
+  "url": "https://github.com/ArthurSonzogni/RTXUI/releases/download/{TAG}/rtxui-{VERSION}.tar.gz"
+}

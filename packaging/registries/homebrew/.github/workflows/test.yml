@@ -1,0 +1,22 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Install from source and test
+        run: |
+          brew install --build-from-source arthursonzogni/tap/rtxui
+          brew test arthursonzogni/tap/rtxui
