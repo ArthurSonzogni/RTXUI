@@ -17,6 +17,9 @@ target_link_libraries(rtxui_example_layout_flex PRIVATE rtxui)
 add_executable(rtxui_example_showcase showcase.cpp)
 target_link_libraries(rtxui_example_showcase PRIVATE rtxui)
 
+add_executable(rtxui_example_elements elements.cpp)
+target_link_libraries(rtxui_example_elements PRIVATE rtxui)
+
 add_executable(rtxui_example_borders borders.cpp)
 target_link_libraries(rtxui_example_borders PRIVATE rtxui)
 

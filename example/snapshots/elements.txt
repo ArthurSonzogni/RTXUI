@@ -1,0 +1,24 @@
+                     ▎
+  ◆ Elements         ▎  <button>
+                     ▎  Runs a handler on click, Enter or Space.
+  Forms              ▎
+ ▊ <button>          ▎  ▊▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▎
+ ▊ <input>           ▎  ▊ Preview                                            ▎
+ ▊ <textarea>        ▎  ▊                                                    ▎
+ ▊ <checkbox>        ▎  ▊ ▊▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▎  ▊▔▔▔▔▔▔▔▔▔▔▎                 ▎
+ ▊ <radio>           ▎  ▊ ▊ Save ▎  ▊ Deploy ▎  ▊ Disabled ▎                 ▎
+ ▊ <select>          ▎  ▊ ▊▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▎  ▊▁▁▁▁▁▁▁▁▁▁▎                 ▎
+ ▊ <slider>          ▎  ▊                                                    ▎
+ ▊ <progress>        ▎  ▊ Clicked 0 times.                                   ▎
+ ▊ <fieldset>        ▎  ▊                                                    ▎
+                     ▎  ▊                                                    ▎
+  Disclosure         ▎  ▊                                                    ▎
+ ▊ <details>         ▎  ▊                                                    ▎
+ ▊ <tabs>            ▎  ▊                                                    ▎
+ ▊ <tree-item>       ▎  ▊                                                    ▎
+ ▊ <tooltip>         ▎  ▊                                                    ▎
+ ▊ <dialog>          ▎  ▊                                                    ▎
+ ▊ <toast>           ▎  ▊                                                    ▎
+                     ▎  ▊                                                    ▎
+  Content            ▎  ▊                                                    ▎
+ ▊ <h1> <b> <code>   ▎  ▊                                                    ▎
