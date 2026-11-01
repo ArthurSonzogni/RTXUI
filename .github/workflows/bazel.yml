@@ -39,6 +39,9 @@ jobs:
           - name: macOS Clang
             os: macos-latest
             cc: clang
+          # The Bazel Central Registry's presubmit builds on Windows too.
+          - name: Windows MSVC
+            os: windows-latest
     env:
       CC: ${{ matrix.cc }}
     steps:
