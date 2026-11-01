@@ -8,19 +8,27 @@
 // template reads and writes. In a public header only because the templates
 // that bind the application's own types instantiate it.
 
-#include <cctype>
-#include <charconv>
 #include <ostream>
 #include <rtxui/rtxui_export.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <type_traits>
 
 namespace rtxui::internal {
 
 RTXUI_EXPORT int ParseInt(std::string_view str);
+
+// Floating-point conversions live in the library: on macOS, the standard
+// library marks std::to_chars and std::from_chars on floating-point types
+// unavailable before recent versions, which would otherwise constrain every
+// application's deployment target. ParseFloat sets 0 on invalid text.
+RTXUI_EXPORT std::string FormatFloat(float value);
+RTXUI_EXPORT std::string FormatFloat(double value);
+RTXUI_EXPORT std::string FormatFloat(long double value);
+RTXUI_EXPORT void ParseFloat(std::string_view str, float& value);
+RTXUI_EXPORT void ParseFloat(std::string_view str, double& value);
+RTXUI_EXPORT void ParseFloat(std::string_view str, long double& value);
 
 template <typename T>
 std::string to_string(const T& value) {
@@ -30,13 +38,8 @@ std::string to_string(const T& value) {
     return std::string(1, value);
   }
   if constexpr (std::is_floating_point_v<T>) {
-    char buf[64];
-    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
-    if (ec == std::errc()) {
-      return std::string(buf, ptr - buf);
-    }
-  }
-  if constexpr (std::is_convertible_v<T, std::string>) {
+    return FormatFloat(value);
+  } else if constexpr (std::is_convertible_v<T, std::string>) {
     return static_cast<std::string>(value);
   } else if constexpr (requires { std::to_string(value); }) {
     return std::to_string(value);
@@ -58,21 +61,7 @@ void from_string(std::string_view str, T& value) {
   } else if constexpr (std::is_same_v<T, bool>) {
     value = (str == "true" || str == "1");
   } else if constexpr (std::is_floating_point_v<T>) {
-    std::string_view s = str;
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
-      s.remove_prefix(1);
-    }
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
-      s.remove_suffix(1);
-    }
-    if (!s.empty()) {
-      auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
-      if (ec != std::errc()) {
-        value = 0.0f;
-      }
-    } else {
-      value = 0.0f;
-    }
+    ParseFloat(str, value);
   } else {
     std::stringstream ss;
     ss << str;

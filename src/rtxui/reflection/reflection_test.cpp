@@ -53,6 +53,17 @@ TEST_CASE("Reflection Float Serialization", "[reflection]") {
     float f3 = 5.0f;
     rtxui::internal::from_string("invalid", f3);
     REQUIRE(f3 == 0.0f);
+
+    double d2 = 5.0;
+    rtxui::internal::from_string("   ", d2);
+    REQUIRE(d2 == 0.0);
+  }
+
+  SECTION("long double round trip") {
+    long double ld = 0.0L;
+    rtxui::internal::from_string("2.5", ld);
+    REQUIRE(ld == 2.5L);
+    REQUIRE(rtxui::internal::to_string(ld) == "2.5");
   }
 }
 

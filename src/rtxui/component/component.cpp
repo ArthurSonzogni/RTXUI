@@ -4646,6 +4646,54 @@ int ParseInt(std::string_view str) {
   }
   return 0;
 }
+
+namespace {
+
+template <typename T>
+std::string FormatFloatImpl(T value) {
+  char buf[64];
+  auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
+  if (ec != std::errc()) {
+    return {};
+  }
+  return {buf, ptr};
+}
+
+template <typename T>
+void ParseFloatImpl(std::string_view str, T& value) {
+  while (!str.empty() &&
+         std::isspace(static_cast<unsigned char>(str.front()))) {
+    str.remove_prefix(1);
+  }
+  while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back()))) {
+    str.remove_suffix(1);
+  }
+  auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), value);
+  if (str.empty() || ec != std::errc()) {
+    value = 0;
+  }
+}
+
+}  // namespace
+
+std::string FormatFloat(float value) {
+  return FormatFloatImpl(value);
+}
+std::string FormatFloat(double value) {
+  return FormatFloatImpl(value);
+}
+std::string FormatFloat(long double value) {
+  return FormatFloatImpl(value);
+}
+void ParseFloat(std::string_view str, float& value) {
+  ParseFloatImpl(str, value);
+}
+void ParseFloat(std::string_view str, double& value) {
+  ParseFloatImpl(str, value);
+}
+void ParseFloat(std::string_view str, long double& value) {
+  ParseFloatImpl(str, value);
+}
 }  // namespace internal
 
 void ComponentBase::EnableHotReload(std::string_view view_var_name,
