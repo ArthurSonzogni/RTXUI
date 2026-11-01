@@ -26,7 +26,9 @@ concurrency:
 jobs:
   shared-linux:
     name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    # apt.llvm.org has no LLVM 20/21 for Ubuntu 26.04, which ubuntu-latest is
+    # moving to.
+    runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     strategy:
       fail-fast: false

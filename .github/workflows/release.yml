@@ -23,8 +23,10 @@ jobs:
     strategy:
       matrix:
         include:
+          # The same Ubuntu on both: a newer one could link the archives
+          # against glibc symbols the .deb's Ubuntu 24.04 lacks.
           - arch: x64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
     env:

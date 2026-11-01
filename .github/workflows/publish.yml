@@ -1,0 +1,150 @@
+name: Publish
+
+# Hands a release to the package registries, once the Release workflow has
+# published it on GitHub. Run by hand to retry, or to publish an older tag.
+#
+# The recipes are in packaging/registries/ and .bcr/, and
+# scripts/publish_registry.py says what each job does. Needs the PUBLISH_TOKEN
+# secret: a classic personal access token of ArthurSonzogni with the "repo"
+# and "workflow" scopes (publish-to-bcr asks for both).
+#
+# Not here:
+# - conda-forge and nixpkgs: their bots open the version bumps themselves.
+# - TODO(adoption): Conan Center. Its inclusion criteria ask for adoption
+#   beyond the author (stars, forks, outside issues and users), with no fixed
+#   bar; aim for ~200 stars and some outside users. The recipe is conanfile.py
+#   + packaging/conan/test_package; it needs CCI's layout (conandata.yml with
+#   the archive URL and sha256, config.yml). Then add a job modelled on
+#   FTXUI's .github/workflows/publish.yaml.
+# - TODO(adoption): homebrew-core. A formula submitted by the project's owner
+#   needs 225 stars, 90 forks or 90 watchers
+#   (https://docs.brew.sh/Acceptable-Formulae). Until then: the tap below.
+# - TODO(account): Fedora COPR. Needs a Fedora account and a COPR project
+#   building from a .spec, triggered by its webhook.
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.1.3"
+        required: true
+        type: string
+      bcr:
+        description: "Bazel Central Registry"
+        type: boolean
+        default: true
+      vcpkg:
+        description: "vcpkg"
+        type: boolean
+        default: true
+      xmake:
+        description: "xmake-repo"
+        type: boolean
+        default: true
+      homebrew:
+        description: "Homebrew tap"
+        type: boolean
+        default: true
+      aur:
+        description: "AUR"
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  prepare:
+    name: Pick the tag
+    # After a Release run, only one that published a tag.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - id: tag
+        env:
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Bad tag $TAG"; exit 1; }
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  bcr:
+    name: Bazel Central Registry
+    needs: prepare
+    if: github.event_name != 'workflow_dispatch' || inputs.bcr
+    permissions:
+      contents: write
+    uses: bazel-contrib/publish-to-bcr/.github/workflows/publish.yaml@v1.6.0
+    with:
+      tag_name: ${{ needs.prepare.outputs.tag }}
+      registry_fork: ArthurSonzogni/bazel-central-registry
+      attest: false
+    secrets:
+      publish_token: ${{ secrets.PUBLISH_TOKEN }}
+
+  pull-request:
+    name: ${{ matrix.registry }}
+    needs: prepare
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.vcpkg || inputs.xmake || inputs.homebrew
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - registry: vcpkg
+            os: ubuntu-latest
+          - registry: xmake
+            os: ubuntu-latest
+          # macOS: the formula is installed and tested before it is pushed.
+          - registry: homebrew
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish
+        if: github.event_name != 'workflow_dispatch' || inputs[matrix.registry]
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+        run: |
+          gh auth setup-git --hostname github.com
+          python3 scripts/publish_registry.py ${{ matrix.registry }} ${{ needs.prepare.outputs.tag }}
+
+  # Skipped until the AUR_SSH_PRIVATE_KEY secret exists: the private key of an
+  # AUR account (https://aur.archlinux.org) that owns the rtxui package.
+  aur:
+    name: AUR
+    needs: prepare
+    if: github.event_name != 'workflow_dispatch' || inputs.aur
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    env:
+      AUR_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.AUR_KEY != ''
+
+      - name: Publish
+        if: env.AUR_KEY != ''
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          pacman -Syu --noconfirm git openssh python cmake ninja
+          # makepkg refuses to run as root.
+          useradd -m builder
+          install -d -m 700 -o builder ~builder/.ssh
+          printf '%s\n' "$AUR_KEY" > ~builder/.ssh/aur
+          ssh-keyscan aur.archlinux.org > ~builder/.ssh/known_hosts
+          printf 'Host aur.archlinux.org\n  IdentityFile ~/.ssh/aur\n  User aur\n' > ~builder/.ssh/config
+          chown -R builder ~builder/.ssh
+          chmod 600 ~builder/.ssh/*
+          chown -R builder .
+          su builder -c "python3 scripts/publish_registry.py aur $TAG"

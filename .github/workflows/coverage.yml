@@ -28,7 +28,9 @@ concurrency:
 jobs:
   coverage:
     name: Clang source-based coverage
-    runs-on: ubuntu-latest
+    # apt.llvm.org has no LLVM 20/21 for Ubuntu 26.04, which ubuntu-latest is
+    # moving to.
+    runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v4
