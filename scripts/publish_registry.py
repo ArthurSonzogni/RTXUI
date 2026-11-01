@@ -97,6 +97,11 @@ def render(release, template, destination, extra=None):
 def configure_git(repo):
     run("git", "config", "user.name", OWNER, cwd=repo)
     run("git", "config", "user.email", AUTHOR_EMAIL, cwd=repo)
+    # Push over HTTPS with gh's login, in CI as on a machine whose git
+    # otherwise uses SSH.
+    run("git", "config", "credential.https://github.com.helper", "", cwd=repo)
+    run("git", "config", "--add", "credential.https://github.com.helper",
+        "!gh auth git-credential", cwd=repo)
 
 
 def has_changes(repo):
@@ -350,8 +355,7 @@ def publish_conda_forge(release, work, dry_run):
             "- [x] Package does not vendor other packages.\n"
             "- [x] If static libraries are linked in, the license of the "
             "static library is packaged: none.\n"
-            "- [x] Package does not ship static libraries, except on "
-            "Windows, where the DLL build is not checked upstream yet.\n"
+            "- [x] Package does not ship static libraries.\n"
             "- [x] Build number is 0.\n"
             "- [x] A tarball (`url`) rather than a repo (e.g. `git_url`) is "
             "used in your recipe.\n"

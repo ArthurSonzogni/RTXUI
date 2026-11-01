@@ -14,9 +14,7 @@ build:
   script:
     - if: win
       then:
-        # RTXUI's DLL build is not checked on Windows yet: ship the static
-        # library there.
-        - cmake -S . -B build -G Ninja %CMAKE_ARGS% -DBUILD_SHARED_LIBS=OFF -DRTXUI_BUILD_TESTS=OFF -DRTXUI_BUILD_EXAMPLES=OFF
+        - cmake -S . -B build -G Ninja %CMAKE_ARGS% -DBUILD_SHARED_LIBS=ON -DRTXUI_BUILD_TESTS=OFF -DRTXUI_BUILD_EXAMPLES=OFF
         - cmake --build build
         - cmake --install build
       else:
