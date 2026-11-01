@@ -5,6 +5,7 @@
 [![Docs](https://github.com/ArthurSonzogni/RTXUI/actions/workflows/deploy-docs.yml/badge.svg)](https://arthursonzogni.github.io/RTXUI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
+[![Packaged versions](https://repology.org/badge/latest-versions/rtxui.svg)](https://repology.org/project/rtxui/versions)
 
 **A browser engine for your terminal, in C++.**
 
@@ -159,6 +160,18 @@ target_link_libraries(my_app PRIVATE rtxui)
 `cmake --install`, and the repository is a Bazel module (`@rtxui`). See the
 [getting started guide](https://arthursonzogni.github.io/RTXUI/guide/getting-started).
 
+Packages are available too:
+
+```bash
+brew install arthursonzogni/tap/rtxui   # Homebrew
+yay -S rtxui                            # Arch Linux (AUR)
+```
+
+The [release page](https://github.com/ArthurSonzogni/RTXUI/releases/latest)
+has `.deb`, `.rpm` and archives for Linux, macOS and Windows.
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/rtxui.svg)](https://repology.org/project/rtxui/versions)
+
 Then browse the [examples](https://arthursonzogni.github.io/RTXUI/guide/examples):
 66 of them, each running live in your browser next to its source.
 
@@ -188,6 +201,12 @@ ctest --test-dir build --output-on-failure
 Contributions are welcome. The [contributing guide](CONTRIBUTING.md) covers
 the coding style (Chromium), the rules (no exceptions, a regression test with
 every fix), and formatting.
+
+## Contributors
+
+<a href="https://github.com/ArthurSonzogni/RTXUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ArthurSonzogni/RTXUI" />
+</a>
 
 ## License
 
