@@ -1,5 +1,5 @@
                                        │
- Markdown— live                        │ Preview
+ Markdown — live                       │ Preview
                                        │ Markdown Playground
     1                                  │ ─────────────────────────────────────
     2 # Markdown Playground          ▆ │
@@ -9,7 +9,7 @@
     6 on every                         │ keystroke, using the same
     7 keystroke, using the same        │  <markdown>  component every RTXUI
                                        │ app can embed.
- Stylesheet— CSS, live                 │
+ Stylesheet — CSS, live                │
                                        │                                      ▄
     1                                  │ Features
     2   h1 {                         ▆ │ ─────────────────────────────────────

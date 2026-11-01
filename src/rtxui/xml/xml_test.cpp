@@ -6,6 +6,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "rtxui/base/string.hpp"
 
@@ -29,7 +30,12 @@ TEST_CASE("XML parser works correctly", "[xml]") {
 
   CHECK(nodes.value().size() == 1);
 
-  CHECK(xml::Print(nodes.value()[0]) == StripIndent(input));
+  // The indentation is gone, except where a line break separates text from
+  // an element: that one is a space, as it would be on one line.
+  const std::vector<xml::Node>& children = nodes.value()[0].children;
+  REQUIRE(children.size() == 3);
+  CHECK(children[0].text == "Hello from here! ");
+  CHECK(children[2].text == " Hello from here too!");
 }
 
 TEST_CASE("XML nesting is bounded", "[xml]") {
@@ -355,4 +361,27 @@ TEST_CASE("XML.StyleContentIsRawText", "[xml]") {
     auto nodes = xml::Parse("<style>.a { color: red; }</stylesheet>");
     CHECK_FALSE(nodes.has_value());
   }
+}
+
+TEST_CASE("XML.LineBreakNextToAnElementIsASpace", "[xml]") {
+  // Indentation was dropped wherever it spanned lines, so "A," and the <s>
+  // on the next line were glued together.
+  auto nodes = xml::Parse(R"(
+    <p>
+      A,
+      <s>B</s>
+      C
+      <b>
+        D
+      </b>
+    </p>
+  )");
+  REQUIRE(nodes.has_value());
+  const std::vector<xml::Node>& p = nodes.value()[0].children;
+  REQUIRE(p.size() == 4);
+  CHECK(p[0].text == "A, ");
+  CHECK(p[2].text == " C ");
+  // Next to the edges of their parent, line breaks are indentation only.
+  REQUIRE(p[3].children.size() == 1);
+  CHECK(p[3].children[0].text == "D");
 }

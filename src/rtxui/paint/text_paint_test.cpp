@@ -564,3 +564,32 @@ TEST_CASE("text-decoration: overline reaches the cells and inherits",
   }
   CHECK(found == 4);
 }
+
+namespace {
+
+class LineBreakBeforeInlineComponent
+    : public rtxui::Component<LineBreakBeforeInlineComponent> {
+ public:
+  std::string_view view = R"(
+    <p>
+      A,
+      <s>B</s>
+      C,   D
+      E
+    </p>
+  )";
+};
+
+TEST_CASE("A line break in text is one space, like any run of spaces",
+          "[component][paint][white-space]") {
+  // The parser dropped whitespace holding a line break at the edge of a text
+  // node, gluing "A," to the <s> that followed it on the next line; and runs
+  // of spaces were drawn as written instead of collapsing to one.
+  auto container = rtxui::Ref<LineBreakBeforeInlineComponent>::New();
+  auto texture = RenderComponent(container, 40, 3);
+  const int row = FindRow(texture, "A,");
+  REQUIRE(row >= 0);
+  CHECK(RowText(texture, row) == "A, B C, D E");
+}
+
+}  // namespace

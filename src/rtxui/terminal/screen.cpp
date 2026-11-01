@@ -3550,25 +3550,48 @@ bool IsLineBox(const Element* element) {
   });
 }
 
+// Where the laid-out byte `offset` comes from in `text`, once each run of
+// whitespace in it collapsed to one space (white-space: normal).
+size_t BeforeCollapse(std::string_view text, size_t offset) {
+  auto space = [](char c) {
+    return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+  };
+  size_t laid_out = 0;
+  for (size_t i = 0; i < text.size(); ++i) {
+    if (i > 0 && space(text[i]) && space(text[i - 1])) {
+      continue;
+    }
+    if (laid_out++ == offset) {
+      return i;
+    }
+  }
+  return text.size();
+}
+
 // `glyph`, the text drawn for `position`, as its text element has it:
 // before text-transform changed its case. Where the laid-out text no longer
-// lines up with the element's, whitespace collapsed say, as drawn.
+// lines up with the element's, as drawn.
 std::string_view AsWritten(const TextPosition& position,
                            std::string_view glyph) {
   if (!position.node->is_text()) {
     return glyph;
   }
-  const std::string& text =
+  const std::string_view text =
       static_cast<const TextElement*>(position.node)->text();
-  if (position.offset + glyph.size() > text.size()) {
-    return glyph;
-  }
-  const std::string_view written =
-      std::string_view(text).substr(position.offset, glyph.size());
   auto lower = [](char c) {
     return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
   };
-  return std::ranges::equal(written, glyph, {}, lower, lower) ? written : glyph;
+  for (const size_t offset :
+       {size_t{position.offset}, BeforeCollapse(text, position.offset)}) {
+    if (offset + glyph.size() > text.size()) {
+      continue;
+    }
+    const std::string_view written = text.substr(offset, glyph.size());
+    if (std::ranges::equal(written, glyph, {}, lower, lower)) {
+      return written;
+    }
+  }
+  return glyph;
 }
 
 bool IsInside(const Element* element, const Element* ancestor) {

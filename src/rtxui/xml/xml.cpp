@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <charconv>
 #include <cstddef>
 #include <string>
@@ -65,6 +66,8 @@ class Parser {
   std::string_view xml_;
   size_t pos_ = 0;
   int depth_ = 0;
+  /// The last node parsed in the current element is an element.
+  bool after_element_ = false;
 };
 
 // Optimization: Inline character checks to bypass std::vector
@@ -102,36 +105,56 @@ inline bool IsTextTerminator(char c) {
   return c == '<' || c == '\0';
 }
 
-std::string_view TrimWhitespaceWithNewlines(std::string_view sv) {
-  // Trim leading if it contains a newline
+bool IsXmlSpace(char c) {
+  return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+}
+
+bool IsXmlSpaceOnly(std::string_view sv) {
+  return std::ranges::all_of(sv, IsXmlSpace);
+}
+
+// The text of a template, without the indentation around it: text holding
+// only whitespace that spans lines is dropped, and so is whitespace spanning
+// lines at either edge of other text -- unless an element is on the other
+// side of it. There it becomes one space, which separates the text from the
+// element as it would on one line ("A,\n<s>B" reads "A, B").
+std::string_view TrimTemplateIndentation(std::string_view sv,
+                                         bool element_before,
+                                         bool element_after,
+                                         std::string& storage) {
+  auto spans_lines = [](std::string_view run) {
+    return run.find_first_of("\r\n") != std::string_view::npos;
+  };
   size_t start = 0;
-  bool has_newline = false;
-  while (start < sv.size() && (sv[start] == ' ' || sv[start] == '\n' ||
-                               sv[start] == '\r' || sv[start] == '\t')) {
-    if (sv[start] == '\n' || sv[start] == '\r') {
-      has_newline = true;
-    }
+  while (start < sv.size() && IsXmlSpace(sv[start])) {
     start++;
   }
-  if (has_newline) {
-    sv.remove_prefix(start);
+  if (start == sv.size()) {
+    return spans_lines(sv) ? std::string_view() : sv;
   }
-
-  // Trim trailing if it contains a newline
   size_t end = sv.size();
-  has_newline = false;
-  while (end > 0 && (sv[end - 1] == ' ' || sv[end - 1] == '\n' ||
-                     sv[end - 1] == '\r' || sv[end - 1] == '\t')) {
-    if (sv[end - 1] == '\n' || sv[end - 1] == '\r') {
-      has_newline = true;
-    }
+  while (IsXmlSpace(sv[end - 1])) {
     end--;
   }
-  if (has_newline) {
-    sv.remove_suffix(sv.size() - end);
+  const bool trim_lead = start > 0 && spans_lines(sv.substr(0, start));
+  const bool trim_trail = end < sv.size() && spans_lines(sv.substr(end));
+  const bool space_before = trim_lead && element_before;
+  const bool space_after = trim_trail && element_after;
+  const size_t first = trim_lead ? start : 0;
+  const size_t last = trim_trail ? end : sv.size();
+  sv = sv.substr(first, last - first);
+  if (!space_before && !space_after) {
+    return sv;
   }
-
-  return sv;
+  storage.clear();
+  if (space_before) {
+    storage += ' ';
+  }
+  storage.append(sv);
+  if (space_after) {
+    storage += ' ';
+  }
+  return storage;
 }
 
 void AppendUtf8(std::string& out, unsigned int codepoint) {
@@ -351,6 +374,7 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
     return MakeErrorExpected(">");
   }
   Advance();  // Skip '>'.
+  after_element_ = false;
 
   if (tag_opening.value() == "style") {
     return ParseStyleContent(tag_opening.value(), attributes.value());
@@ -377,6 +401,9 @@ auto Parser::ParseNode() -> Expected<Node, Error> {
     auto node = ParseNode();
     if (!node) {
       return node.error();
+    }
+    if (node.value().type == Node::kElement) {
+      after_element_ = true;
     }
     if (node.value().type != Node::kText || !node.value().text.empty()) {
       children.push_back(std::move(node.value()));
@@ -414,8 +441,13 @@ auto Parser::ParseText(size_t start) -> Node {
   while (!IsTextTerminator(Get())) {
     Advance();
   }
-  std::string_view text =
-      TrimWhitespaceWithNewlines(xml_.substr(start, pos_ - start));
+  // An element starts after the text, rather than its parent ending or a
+  // comment starting.
+  const bool element_after = Get() == '<' && Get(1) != '/' && Get(1) != '!';
+  std::string storage;
+  std::string_view text = TrimTemplateIndentation(
+      xml_.substr(start, pos_ - start), after_element_, element_after, storage);
+  after_element_ = false;
   return Node{
       .type = Node::kText,
       .text = text.empty() ? std::string() : Unescape(text),
@@ -441,7 +473,7 @@ auto Parser::ParseStyleContent(std::string_view tag, Attributes& attributes)
   pos_ = close;
 
   Nodes style_children;
-  if (!TrimWhitespaceWithNewlines(raw).empty()) {
+  if (!IsXmlSpaceOnly(raw)) {
     style_children.push_back(Node{
         .type = Node::kText,
         .text = std::string(raw),

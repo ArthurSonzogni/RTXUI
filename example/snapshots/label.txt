@@ -9,7 +9,7 @@
              ▊   Click this label    ☐ Notifications              ▎
              ▊                                                    ▎
              ▊   or the label wraps it                            ▎
-             ▊   Click anywhere on this line ☑ Sound              ▎
+             ▊   Click anywhere on this line  ☑ Sound             ▎
              ▊                                                    ▎
              ▊   ──────────────────────────────────────────────   ▎
              ▊                                                    ▎

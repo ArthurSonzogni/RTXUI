@@ -182,23 +182,18 @@ void SanitizeText(std::string& text) {
 // text keeps its newlines in the DOM; the conversion is style-driven here.)
 // Tabs go the same way: CSS treats them as collapsible whitespace in these
 // modes, and a literal one must not reach the terminal in any mode -- see
-// ExpandTabs for why.
-void ReplaceSegmentBreaksAndTabsWithSpaces(std::string& text) {
-  if (text.find('\n') == std::string::npos &&
-      text.find('\r') == std::string::npos &&
-      text.find('\t') == std::string::npos) {
-    return;
-  }
+// ExpandTabs for why. Each run of this whitespace then collapses to a single
+// space, so text indented across several template lines reads as one.
+void CollapseWhitespace(std::string& text) {
   std::string result;
   result.reserve(text.size());
-  for (size_t i = 0; i < text.size(); ++i) {
-    char c = text[i];
-    if (c == '\r' && i + 1 < text.size() && text[i + 1] == '\n') {
-      continue;  // CRLF collapses to a single space via the '\n'.
+  for (char c : text) {
+    const bool space = c == ' ' || c == '\n' || c == '\r' || c == '\t';
+    if (!space) {
+      result += c;
+    } else if (result.empty() || result.back() != ' ') {
+      result += ' ';
     }
-    // A tab is collapsible whitespace in these modes, exactly like a segment
-    // break, and must not survive as a literal either.
-    result += (c == '\n' || c == '\r' || c == '\t') ? ' ' : c;
   }
   text = std::move(result);
 }
@@ -411,7 +406,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
     switch (resolved.white_space) {
       case WhiteSpace::Normal:
       case WhiteSpace::Nowrap:
-        ReplaceSegmentBreaksAndTabsWithSpaces(box->text_data);
+        CollapseWhitespace(box->text_data);
         break;
       case WhiteSpace::PreLine:
         CollapseWhitespacePreLine(box->text_data);

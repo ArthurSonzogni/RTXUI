@@ -98,9 +98,12 @@ TEST_CASE("Mount", "[component]") {
   auto component = rtxui::Ref<HelloWorld>::New();
   rtxui::ComponentInternals::Mount(*component);
 
+  // "Hello, World!" keeps a space before the <Hello> on the next line.
   const std::string expected = R"(
     <HelloWorld>
-      Hello, World!
+      Hello, World!)"
+                               " "
+                               R"(
       <Hello>
         Hello
       </Hello>

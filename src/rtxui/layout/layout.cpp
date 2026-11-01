@@ -1446,7 +1446,41 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   // The last line ended in a soft wrap, and no text came after it yet.
   bool wrapped = false;
 
+  // CSS collapses a space ending a text into one starting the next, and
+  // removes collapsible spaces at the start and end of each line. Only the
+  // lines of a block, or of the anonymous box holding a run
+  // of text, are known to start and end here: an inline box laid out on its
+  // own sits within a line of its parent's.
+  const bool collapse_spaces = box->text.white_space == WhiteSpace::Normal ||
+                               box->text.white_space == WhiteSpace::Nowrap ||
+                               box->text.white_space == WhiteSpace::PreLine;
+  const bool trim_line_edges =
+      collapse_spaces && (box->is_anonymous || box->style().display_outside !=
+                                                   DisplayOutside::Inline);
+  auto last_text_on_line = [&]() -> PhysicalFragment* {
+    if (container_frag->children.size() == line_start_index) {
+      return nullptr;
+    }
+    PhysicalFragment* last = container_frag->children.back().fragment;
+    return last->is_text ? last : nullptr;
+  };
+  auto line_ends_in_space = [&] {
+    if (container_frag->children.size() == line_start_index) {
+      return trim_line_edges;
+    }
+    const PhysicalFragment* last = last_text_on_line();
+    return last != nullptr && last->text_content.ends_with(' ');
+  };
+
   auto commit_line = [&](bool hard_break = false) {
+    if (trim_line_edges) {
+      PhysicalFragment* last = last_text_on_line();
+      if (last != nullptr && last->text_content.ends_with(' ')) {
+        last->text_content.remove_suffix(1);
+        last->width -= 1;
+        cursor_x -= 1;
+      }
+    }
     max_line_width = std::max(max_line_width, cursor_x);
     // A line of text alone, or of one box, has nothing to align.
     if (!line_boxes.empty() &&
@@ -1479,7 +1513,11 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
         text = TruncateWithEllipsis(text, avail);
       }
     }
-    size_t byte_start = 0;
+    // A space the line already ends in, or starts with, absorbs this one.
+    const size_t skip =
+        collapse_spaces && text.starts_with(' ') && line_ends_in_space() ? 1
+                                                                         : 0;
+    size_t byte_start = skip;
     int col_start = 0;
     size_t last_space_byte = 0;
     int last_space_col = 0;
@@ -1531,7 +1569,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     }
 
     if (is_pure_ascii) {
-      size_t i = 0;
+      size_t i = skip;
       while (i < text.size()) {
         char c = text[i];
         bool is_newline = (c == '\n' || c == '\r');
@@ -1614,7 +1652,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
       return;
     }
 
-    for (const Grapheme& g : Graphemes(text)) {
+    for (const Grapheme& g : Graphemes(text.substr(skip))) {
       size_t byte_end =
           static_cast<size_t>(g.text.data() + g.text.size() - text.data());
 

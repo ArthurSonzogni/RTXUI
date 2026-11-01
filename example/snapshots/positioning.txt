@@ -21,4 +21,4 @@
        ▊   │       ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎                               │   ▎
        ▊   │                                                        │   ▎
        ▊   │                                                        │   ▎
- position: fixed; bottom: 0   The front card is at left: 8, top: 4.
+ position: fixed; bottom: 0 The front card is at left: 8, top: 4.

@@ -6067,11 +6067,13 @@ TEST_CASE("Screen.SelectionFollowsTheDocument", "[terminal][selection]") {
           Base64Encode("one\ntwo\n\nthree\nfour"));
   }
   SECTION("as written, before text-transform") {
+    // The spaces collapse to one when drawn; what follows them is still
+    // found in the text as written, not copied in capitals.
     CHECK(CopiedBy(R"(
             <style> .up { text-transform: uppercase; } </style>
             <div class="up">Hello   World</div>
           )",
-                   DragFromTo(0, 0, 14, 0)) == Base64Encode("Hello   World"));
+                   DragFromTo(0, 0, 14, 0)) == Base64Encode("Hello World"));
   }
   SECTION("a double click, a word") {
     const std::string click = LeftAt('P', 8, 0) + LeftAt('U', 8, 0);
