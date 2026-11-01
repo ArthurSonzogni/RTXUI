@@ -835,6 +835,7 @@ class Elements : public Component<Elements> {
           border-color: var(--border);
           padding: 1 1;
           overflow-y: auto;
+          scrollbar-width: none;
         }
         .sidebar > div {
           flex-shrink: 0;
@@ -931,6 +932,7 @@ class Elements : public Component<Elements> {
           color: var(--muted);
           overflow-x: hidden;
           overflow-y: auto;
+          scrollbar-width: none;
         }
 
       </style>
