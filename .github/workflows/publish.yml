@@ -75,6 +75,22 @@ jobs:
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Bad tag $TAG"; exit 1; }
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+      # Fails here, rather than halfway through the registries. Run by hand
+      # with every registry unticked to check the token alone.
+      - name: Check PUBLISH_TOKEN
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::The PUBLISH_TOKEN secret is missing or empty"; exit 1; }
+          headers=$(gh api -i user) || { echo "::error::GitHub rejects PUBLISH_TOKEN"; exit 1; }
+          login=$(gh api user -q .login)
+          scopes=$(printf '%s\n' "$headers" | tr -d '\r' | sed -n 's/^[Xx]-[Oo][Aa]uth-[Ss]copes: //p')
+          echo "PUBLISH_TOKEN: $login, scopes: $scopes"
+          [ "$login" = ArthurSonzogni ] || { echo "::error::PUBLISH_TOKEN belongs to $login"; exit 1; }
+          for scope in repo workflow; do
+            [[ ", $scopes, " == *", $scope, "* ]] || { echo "::error::PUBLISH_TOKEN lacks the $scope scope (a classic token is needed)"; exit 1; }
+          done
+
   bcr:
     name: Bazel Central Registry
     needs: prepare
