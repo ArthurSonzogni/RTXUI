@@ -8,7 +8,7 @@ working on this repository. `CLAUDE.md` and `GEMINI.md` import this file.
 RTXUI is a C++23 reactive terminal UI library with web-inspired paradigms:
 components declare their structure as HTML templates embedded in C++ string
 literals, style them with CSS (`<style>` blocks, flexbox/grid/transitions), and
-bind C++ members into templates with `{name}` interpolation. Builds with GCC 14+
+bind C++ members into templates with `{name}` interpolation. Builds with GCC 13+
 or Clang 18+; C++26 reflection is used when available. ccache is picked up
 automatically.
 

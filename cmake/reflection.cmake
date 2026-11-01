@@ -19,7 +19,11 @@ set(SAFE_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
 set(SAFE_CMAKE_CXX_STANDARD "${CMAKE_CXX_STANDARD}")
 set(CMAKE_CXX_STANDARD 26)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+# A compiler without C++26 (GCC 13, as in Ubuntu 24.04) has no reflection
+# either, and CMake refuses to even configure a C++26 probe for it.
+if(NOT "cxx_std_26" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  # No reflection.
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   set(CMAKE_REQUIRED_FLAGS "-freflection-latest")
   check_cxx_source_compiles("
     #include <meta>

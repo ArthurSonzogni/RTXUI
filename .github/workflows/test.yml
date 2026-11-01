@@ -37,6 +37,13 @@ jobs:
             sanitize: "OFF"
             cc: gcc-14
             cxx: g++-14
+          # Ubuntu 24.04's default compiler, which vcpkg's CI builds with.
+          - name: GCC 13 Release
+            os: ubuntu-latest
+            build_type: Release
+            sanitize: "OFF"
+            cc: gcc-13
+            cxx: g++-13
           - name: Clang Release
             os: ubuntu-latest
             build_type: Release
@@ -67,7 +74,7 @@ jobs:
           if [[ "${{ matrix.cc }}" == clang* ]]; then
             wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 20
           else
-            sudo apt-get install -y g++-14
+            sudo apt-get install -y ${{ matrix.cxx }}
           fi
 
       - name: Cache ccache

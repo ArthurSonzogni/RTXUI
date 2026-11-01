@@ -8,7 +8,7 @@ Thank you for your interest in contributing to RTXUI!
 
 ### Prerequisites
 
-- **C++23 compiler**: GCC 14+ or Clang 18+.
+- **C++23 compiler**: GCC 13+ or Clang 18+.
 - **Lint tools**: clang-format and clang-tidy (LLVM 21, as in CI).
 - **Build system**: CMake (>= 3.24) and Ninja.
 

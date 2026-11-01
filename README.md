@@ -119,7 +119,7 @@ https://github.com/user-attachments/assets/10d75224-eb4d-4e71-8d53-2e647028c923
 
 | Platform | Compilers tested in CI |
 | :--- | :--- |
-| Linux | GCC 14, GCC 16, Clang 20 |
+| Linux | GCC 13, GCC 14, GCC 16, Clang 20 |
 | macOS | AppleClang |
 | Windows | MSVC, clang-cl, MinGW-w64 GCC |
 | Browser | Emscripten (WebAssembly) |
