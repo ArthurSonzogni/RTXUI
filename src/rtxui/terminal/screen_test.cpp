@@ -134,6 +134,28 @@ TEST_CASE("TerminalDevice.ResizeTrigger", "[terminal]") {
   REQUIRE(height == 30);
 }
 
+TEST_CASE("A resize clears the screen inside the synchronized update",
+          "[terminal]") {
+  // The clear used to be written before the update began, so a terminal
+  // showed an empty screen until the new frame came, at each resize step.
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<DummyComponent>::New();
+  Screen screen = ScreenInternals::Make(component, device);
+  screen.Draw();
+  device->ClearOutput();
+
+  device->TriggerResize(30, 10);
+  device->PushInput(" ");
+  screen.Step();
+
+  const std::string output = device->GetOutput();
+  const size_t begin = output.find("\x1b[?2026h");
+  const size_t clear = output.find("\x1b[2J");
+  REQUIRE(begin != std::string::npos);
+  REQUIRE(clear != std::string::npos);
+  CHECK(begin < clear);
+}
+
 TEST_CASE("Screen.StepExecution", "[terminal]") {
   auto device = std::make_shared<MockTerminalDevice>();
 

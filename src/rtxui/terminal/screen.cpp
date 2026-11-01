@@ -2961,7 +2961,9 @@ void ScreenImpl::UpdateSize() {
         component_->Render();
         Draw();
       } else if (has_drawn_) {
-        device_->Write("\x1b[2J\x1b[H");
+        // Draw() clears the screen inside its synchronized update, so the
+        // terminal never shows it empty.
+        has_drawn_ = false;
         last_height_ = 0;
         component_->Render();
         Draw();
