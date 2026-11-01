@@ -78,8 +78,14 @@ jobs:
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Bad tag $TAG"; exit 1; }
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+  token:
+    name: Check PUBLISH_TOKEN
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
       # Fails here, rather than halfway through the registries. Run by hand
-      # with every registry unticked to check the token alone.
+      # with every registry unticked to check the token alone. The AUR job
+      # needs no token, and does not wait for this one.
       - name: Check PUBLISH_TOKEN
         env:
           GH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
@@ -96,7 +102,7 @@ jobs:
 
   bcr:
     name: Bazel Central Registry
-    needs: prepare
+    needs: [prepare, token]
     if: github.event_name != 'workflow_dispatch' || inputs.bcr
     permissions:
       contents: write
@@ -110,7 +116,7 @@ jobs:
 
   pull-request:
     name: ${{ matrix.registry }}
-    needs: prepare
+    needs: [prepare, token]
     if: >-
       github.event_name != 'workflow_dispatch' ||
       inputs.xmake || inputs.homebrew
