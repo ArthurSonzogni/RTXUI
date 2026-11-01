@@ -17,6 +17,7 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "@NIX_HASH@";
   };
 
+  __structuredAttrs = true;
   strictDeps = true;
 
   nativeBuildInputs = [
