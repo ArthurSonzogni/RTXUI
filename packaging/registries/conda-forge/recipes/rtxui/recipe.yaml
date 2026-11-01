@@ -18,6 +18,10 @@ build:
         - cmake --build build
         - cmake --install build
       else:
+        # conda-forge ships a libc++ newer than macOS's: the C++ features
+        # Clang marks unavailable on old macOS (floating-point
+        # std::from_chars) are there. Without effect on Linux.
+        - export CXXFLAGS="${CXXFLAGS} -D_LIBCPP_DISABLE_AVAILABILITY"
         - cmake -S . -B build -G Ninja ${CMAKE_ARGS} -DBUILD_SHARED_LIBS=ON -DRTXUI_BUILD_TESTS=OFF -DRTXUI_BUILD_EXAMPLES=OFF
         - cmake --build build
         - cmake --install build
@@ -52,7 +56,8 @@ tests:
           - cmake --build test/build
           - test\build\app.exe
         else:
-          - cmake -S test -B test/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=${PREFIX}
+          # RTXUI's headers use std::from_chars too.
+          - cmake -S test -B test/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=${PREFIX} -DCMAKE_CXX_FLAGS=-D_LIBCPP_DISABLE_AVAILABILITY
           - cmake --build test/build
           - ./test/build/app
 
