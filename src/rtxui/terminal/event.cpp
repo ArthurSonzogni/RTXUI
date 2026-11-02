@@ -386,6 +386,7 @@ RTXUI_IMPL_EVENT(ArrowUpAlt,
 RTXUI_IMPL_EVENT(ArrowDownAlt,
                  .special = Event::Keyboard::ArrowDown,
                  .modifier = {.alt = true})
+RTXUI_IMPL_EVENT(CtrlSpace, .codepoint = ' ', .modifier = {.ctrl = true})
 RTXUI_IMPL_EVENT(Backspace, .special = Event::Keyboard::Backspace)
 RTXUI_IMPL_EVENT(BackspaceCtrl,
                  .special = Event::Keyboard::Backspace,

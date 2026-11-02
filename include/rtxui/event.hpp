@@ -216,6 +216,8 @@ class RTXUI_EXPORT Event {
   static const Event& F10();
   static const Event& F11();
   static const Event& F12();
+  /// A space typed with Ctrl held, sent by most terminals as a NUL byte.
+  static const Event& CtrlSpace();
 
 #define RTXUI_DECLARE_LETTER(L, UC) \
   static const Event& L();          \

@@ -117,6 +117,7 @@ std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
       {"\x1B[V", Event::F10()},
       {"\x1B[W", Event::F11()},
       {"\x1B[X", Event::F12()},
+      {std::string(1, '\0'), Event::CtrlSpace()},
       {"\x01", Event::CtrlA()},
       {"\x02", Event::CtrlB()},
       {"\x03", Event::CtrlC()},
@@ -301,8 +302,27 @@ bool TerminalInputParser::Eat() {
   position_++;
   return position_ < static_cast<int>(pending_.size());
 }
+namespace {
+// A move with no button held: only where the pointer is matters.
+bool IsHover(const Event& event) {
+  const auto mouse = event.get_if<Event::Mouse>();
+  return mouse && mouse->motion() == Event::Mouse::Moved &&
+         mouse->button() == Event::Mouse::None;
+}
+}  // namespace
+
 void TerminalInputParser::Send(TerminalInputParser::Output output) {
   if (auto* event = std::get_if<Event>(&output)) {
+    // A hover move replaces one still queued right before it: a fast sweep
+    // would otherwise restyle the page once per cell crossed, to show only
+    // the last. Drags, presses and keys keep every event, in order.
+    if (IsHover(*event) && !events_.empty() && IsHover(events_.back()) &&
+        events_.back().get_if<Event::Mouse>()->modifier() ==
+            event->get_if<Event::Mouse>()->modifier()) {
+      events_.back() = std::move(*event);
+      pending_.clear();
+      return;
+    }
     events_.push_back(std::move(*event));
     pending_.clear();
     return;

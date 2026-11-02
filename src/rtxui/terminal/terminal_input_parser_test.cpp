@@ -203,6 +203,50 @@ TEST_CASE("Event.MouseLeftMoved", "[terminal]") {
   CHECK_FALSE(parser.GetEvent().has_value());
 }
 
+TEST_CASE("Hover moves queued together reach the app as the last one",
+          "[terminal]") {
+  // Every move of a fast sweep was handed on, and each one restyled every
+  // element for hover: only the last position can be shown. Drags, presses
+  // and keys keep each of their events, in order.
+  TerminalInputParser parser;
+  for (const char c : std::string_view("\x1B[<35;1;1M"      // hover
+                                       "\x1B[<35;2;1M"      // hover
+                                       "\x1B[<35;3;1M"      // hover
+                                       "\x1B[<0;3;1M"       // press left
+                                       "\x1B[<32;4;1M"      // drag
+                                       "\x1B[<32;5;1M"      // drag
+                                       "\x1B[<0;5;1m"       // release
+                                       "\x1B[<35;6;1M"      // hover
+                                       "a"                  // key
+                                       "\x1B[<35;7;1M")) {  // hover
+    parser.Add(c);
+  }
+  struct Expected {
+    Event::Mouse::Motion motion;
+    int x;
+  };
+  const Expected expected[] = {
+      {Event::Mouse::Moved, 3},    {Event::Mouse::Pressed, 3},
+      {Event::Mouse::Moved, 4},    {Event::Mouse::Moved, 5},
+      {Event::Mouse::Released, 5}, {Event::Mouse::Moved, 6},
+  };
+  for (const Expected& e : expected) {
+    auto event = parser.GetEvent();
+    REQUIRE(event.has_value());
+    auto mouse = event->get_if<Event::Mouse>();
+    REQUIRE(mouse);
+    CHECK(mouse->motion() == e.motion);
+    CHECK(mouse->x() == e.x);
+  }
+  auto key = parser.GetEvent();
+  REQUIRE(key.has_value());
+  CHECK(*key == Event::a());
+  auto last = parser.GetEvent();
+  REQUIRE(last.has_value());
+  CHECK(last->get_if<Event::Mouse>()->x() == 7);
+  CHECK_FALSE(parser.GetEvent().has_value());
+}
+
 TEST_CASE("Event.MouseLeftClickReleased", "[terminal]") {
   TerminalInputParser parser;
   parser.Add('');
@@ -682,6 +726,9 @@ TEST_CASE("Event.Keyboard", "[terminal]") {
 
       // Custom:
 
+      // Ctrl-Space, which terminals without a keyboard protocol send as NUL.
+      // It used to be dropped as an unknown control character.
+      {{0}, Event::CtrlSpace()},
   };
 
   for (auto test : kTestCase) {
