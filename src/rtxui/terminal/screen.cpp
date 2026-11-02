@@ -755,6 +755,15 @@ std::optional<FragmentWithPos> FindFragmentForElementWithPos(
   return std::nullopt;
 }
 
+// Whether `element` draws a scrollbar the mouse can be on: what both
+// IsCellOn*Scrollbar check first, so a pointer move can skip looking up the
+// fragment of every other element.
+bool DrawsScrollbar(const Element& element) {
+  return element.style.scrollbar_width == ScrollbarWidth::Auto &&
+         (element.style.overflow_x == Overflow::Scroll ||
+          element.style.overflow_y == Overflow::Scroll);
+}
+
 bool IsCellOnVerticalScrollbar(const PhysicalFragment* frag,
                                int abs_x,
                                int abs_y,
@@ -1872,7 +1881,7 @@ void ScreenImpl::HandleEvent(Event event) {
             scrollbar_thumb_hovered = true;
             scrollbar_active = true;
             scrollbar_thumb_active = true;
-          } else if (!drag_active_) {
+          } else if (!drag_active_ && DrawsScrollbar(el)) {
             auto frag_opt = FindFragmentForElementWithPos(root_fragment_, &el);
             if (frag_opt) {
               bool on_v_thumb = false;
