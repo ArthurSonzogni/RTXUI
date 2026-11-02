@@ -148,7 +148,7 @@ include(FetchContent)
 FetchContent_Declare(
   rtxui
   GIT_REPOSITORY https://github.com/ArthurSonzogni/RTXUI.git
-  GIT_TAG        v0.1.3
+  GIT_TAG        v0.1.4
 )
 FetchContent_MakeAvailable(rtxui)
 

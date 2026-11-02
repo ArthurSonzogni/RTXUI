@@ -53,7 +53,7 @@ include(FetchContent)
 FetchContent_Declare(
   rtxui
   GIT_REPOSITORY https://github.com/ArthurSonzogni/RTXUI.git
-  GIT_TAG        v0.1.3  # A release tag, or main for the latest.
+  GIT_TAG        v0.1.4  # A release tag, or main for the latest.
 )
 FetchContent_MakeAvailable(rtxui)
 
@@ -88,7 +88,7 @@ bazel_dep(name = "rtxui")
 git_override(
     module_name = "rtxui",
     remote = "https://github.com/ArthurSonzogni/RTXUI.git",
-    tag = "v0.1.3",
+    tag = "v0.1.4",
 )
 ```
 
