@@ -13,10 +13,6 @@ package("rtxui")
         add_syslinks("gdi32", "user32")
     end
 
-    if is_plat("macosx") then
-        add_defines("_LIBCPP_DISABLE_AVAILABILITY")
-    end
-
     on_install("linux", "macosx", "windows", "mingw", function (package)
         local configs = {
             "-DRTXUI_BUILD_TESTS=OFF",
@@ -24,9 +20,6 @@ package("rtxui")
             "-DRTXUI_BUILD_FUZZERS=OFF",
             "-DRTXUI_BUILD_BENCHMARKS=OFF",
         }
-        if package:is_plat("macosx") then
-            table.insert(configs, "-DCMAKE_CXX_FLAGS=-D_LIBCPP_DISABLE_AVAILABILITY")
-        end
         table.insert(configs, "-DCMAKE_BUILD_TYPE=" .. (package:debug() and "Debug" or "Release"))
         table.insert(configs, "-DBUILD_SHARED_LIBS=" .. (package:config("shared") and "ON" or "OFF"))
         import("package.tools.cmake").install(package, configs)
