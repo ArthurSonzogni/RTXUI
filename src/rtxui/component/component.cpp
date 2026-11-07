@@ -24,13 +24,13 @@
 #include <string_view>
 #include <system_error>
 #include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "rtxui/base/charconv.hpp"
 #include "rtxui/base/clock.hpp"
 #include "rtxui/base/diagnostic_internal.hpp"
 #include "rtxui/base/expected.hpp"
@@ -4685,27 +4685,10 @@ void ParseFloatImpl(std::string_view str, T& value) {
   while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back()))) {
     str.remove_suffix(1);
   }
-#if defined(__cpp_lib_to_chars)
-  auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), value);
+  auto [ptr, ec] = FloatFromChars(str.data(), str.data() + str.size(), value);
   if (str.empty() || ec != std::errc()) {
     value = 0;
   }
-#else
-  // libc++ has no std::from_chars for long double, nor for any
-  // floating-point type before version 20 (Xcode 16): strto* stands in.
-  const std::string text(str);
-  char* end = nullptr;
-  if constexpr (std::is_same_v<T, float>) {
-    value = std::strtof(text.c_str(), &end);
-  } else if constexpr (std::is_same_v<T, double>) {
-    value = std::strtod(text.c_str(), &end);
-  } else {
-    value = std::strtold(text.c_str(), &end);
-  }
-  if (text.empty() || end == text.c_str()) {
-    value = 0;
-  }
-#endif
 }
 
 }  // namespace

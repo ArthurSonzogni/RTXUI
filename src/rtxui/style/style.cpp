@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "rtxui/base/charconv.hpp"
 #include "rtxui/base/expected.hpp"
 
 namespace css {
@@ -898,7 +899,7 @@ std::optional<float> ParseKeyframeOffset(std::string_view selector) {
   }
   selector.remove_suffix(1);
   float percent = 0.0f;
-  const auto [ptr, ec] = std::from_chars(
+  const auto [ptr, ec] = rtxui::FloatFromChars(
       selector.data(), selector.data() + selector.size(), percent);
   if (ec != std::errc() || ptr != selector.data() + selector.size() ||
       percent < 0.0f || percent > 100.0f) {

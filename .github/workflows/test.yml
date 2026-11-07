@@ -146,11 +146,17 @@ jobs:
         run: scripts/verify_install.sh ${{ matrix.cmake_args }}
 
   # Runs on every push: macOS minutes are free for a public repository, and
-  # libc++ catches missing includes libstdc++ supplies transitively.
+  # libc++ catches missing includes libstdc++ supplies transitively. macos-15
+  # keeps Xcode 16, whose libc++ has no floating-point std::from_chars, as
+  # package registries' macOS builders still do.
   test-macos:
-    name: macOS AppleClang Release
-    runs-on: macos-latest
+    name: macOS AppleClang Release (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-15]
     steps:
       - uses: actions/checkout@v4
 
@@ -161,9 +167,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-macos-${{ runner.os }}-${{ github.run_id }}
+          key: ccache-${{ matrix.os }}-${{ github.run_id }}
           restore-keys: |
-            ccache-macos-${{ runner.os }}-
+            ccache-${{ matrix.os }}-
 
       - name: Configure
         env:

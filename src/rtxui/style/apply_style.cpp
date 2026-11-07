@@ -19,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "rtxui/base/charconv.hpp"
 #include "rtxui/base/diagnostic_internal.hpp"
 #include "rtxui/color.hpp"
 #include "rtxui/layout/style.hpp"
@@ -61,7 +62,7 @@ float StoF(std::string_view s) {
     return 0.0f;
   }
   float value = 0.0f;
-  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+  auto [ptr, ec] = FloatFromChars(s.data(), s.data() + s.size(), value);
   if (ec == std::errc()) {
     return std::clamp(value, static_cast<float>(-kMaxCssNumber),
                       static_cast<float>(kMaxCssNumber));
@@ -231,7 +232,7 @@ std::optional<uint8_t> ParseRgbChannel(std::string_view sv) {
   if (sv.back() == '%') {
     sv.remove_suffix(1);
     float pct = 0.0f;
-    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), pct);
+    auto [ptr, ec] = FloatFromChars(sv.data(), sv.data() + sv.size(), pct);
     if (ec != std::errc() || ptr != sv.data() + sv.size()) {
       return std::nullopt;
     }
@@ -239,7 +240,7 @@ std::optional<uint8_t> ParseRgbChannel(std::string_view sv) {
     return static_cast<uint8_t>(val);
   }
   float num = 0.0f;
-  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), num);
+  auto [ptr, ec] = FloatFromChars(sv.data(), sv.data() + sv.size(), num);
   if (ec != std::errc() || ptr != sv.data() + sv.size()) {
     return std::nullopt;
   }
@@ -254,7 +255,7 @@ std::optional<uint8_t> ParseAlphaChannel(std::string_view sv) {
   if (sv.back() == '%') {
     sv.remove_suffix(1);
     float pct = 0.0f;
-    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), pct);
+    auto [ptr, ec] = FloatFromChars(sv.data(), sv.data() + sv.size(), pct);
     if (ec != std::errc() || ptr != sv.data() + sv.size()) {
       return std::nullopt;
     }
@@ -262,7 +263,7 @@ std::optional<uint8_t> ParseAlphaChannel(std::string_view sv) {
     return static_cast<uint8_t>(val);
   }
   float num = 0.0f;
-  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), num);
+  auto [ptr, ec] = FloatFromChars(sv.data(), sv.data() + sv.size(), num);
   if (ec != std::errc() || ptr != sv.data() + sv.size()) {
     return std::nullopt;
   }
@@ -288,7 +289,7 @@ std::optional<float> ParseHue(std::string_view sv) {
     factor = 360.0f;
   }
   float val = 0.0f;
-  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), val);
+  auto [ptr, ec] = FloatFromChars(sv.data(), sv.data() + sv.size(), val);
   if (ec != std::errc() || ptr != sv.data() + sv.size()) {
     return std::nullopt;
   }
@@ -311,7 +312,7 @@ std::optional<float> ParseHslComponent(std::string_view sv) {
     sv.remove_suffix(1);
   }
   float val = 0.0f;
-  auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), val);
+  auto [ptr, ec] = FloatFromChars(sv.data(), sv.data() + sv.size(), val);
   if (ec != std::errc() || ptr != sv.data() + sv.size()) {
     return std::nullopt;
   }
@@ -941,7 +942,7 @@ Length ParseLength(std::string_view value) {
   // A number, in cells, and what follows it: a unit.
   float number = 0;
   const auto [end, ec] =
-      std::from_chars(value.data(), value.data() + value.size(), number);
+      FloatFromChars(value.data(), value.data() + value.size(), number);
   const std::string_view unit(end, value.data() + value.size() - end);
   if (ec != std::errc() || unit.empty()) {
     return Length::Cells(StoF(value));
@@ -1581,7 +1582,7 @@ std::optional<float> ParseTimeSeconds(std::string_view text,
   }
   float value = 0.0f;
   const auto [ptr, ec] =
-      std::from_chars(text.data(), text.data() + text.size(), value);
+      FloatFromChars(text.data(), text.data() + text.size(), value);
   if (text.empty() || ec != std::errc() || ptr != text.data() + text.size() ||
       (value < 0.0f && !allow_negative)) {
     return std::nullopt;
@@ -1621,7 +1622,7 @@ std::optional<float> ParseIterationCount(std::string_view text) {
   }
   float value = 0.0f;
   const auto [ptr, ec] =
-      std::from_chars(text.data(), text.data() + text.size(), value);
+      FloatFromChars(text.data(), text.data() + text.size(), value);
   if (text.empty() || ec != std::errc() || ptr != text.data() + text.size() ||
       value < 0.0f) {
     return std::nullopt;
