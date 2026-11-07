@@ -6,14 +6,14 @@
 #include <charconv>
 
 #if !defined(_WIN32)
+#include <locale.h>  // NOLINT(modernize-deprecated-headers): newlocale.
+#include <stdlib.h>  // NOLINT(modernize-deprecated-headers): strto*_l.
+
 #include <cctype>
 #include <cerrno>
-#include <cstdlib>
 #include <string>
 #include <system_error>
 #include <type_traits>
-
-#include <locale.h>  // NOLINT(modernize-deprecated-headers): newlocale.
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <xlocale.h>  // strto*_l
 #endif
@@ -32,8 +32,8 @@ std::from_chars_result Strto(const char* first, const char* last, T& value) {
   if (digits != last && *digits == '-') {
     ++digits;
   }
-  if (digits == last ||
-      std::isspace(static_cast<unsigned char>(*digits)) || *digits == '+') {
+  if (digits == last || std::isspace(static_cast<unsigned char>(*digits)) ||
+      *digits == '+') {
     return {first, std::errc::invalid_argument};
   }
   if (*digits == '0' && digits + 1 != last &&

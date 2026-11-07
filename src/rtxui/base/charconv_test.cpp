@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/base/charconv.hpp"
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <charconv>
 #include <clocale>
@@ -15,11 +16,11 @@ namespace rtxui {
 namespace {
 
 constexpr std::string_view kInputs[] = {
-    "0",      "1",     "-1",    "1.5",    ".5",      "-.5",     "10px",
-    "50%",    "1e3",   "1e3px", "1.5em",  "2e",      "2e+",     "-0",
-    "1e-3",   "1e400", "",      "-",      ".",       "+1",      " 1",
-    "abc",    "0x10",  "-0x1",  "inf",    "-inf",    "nan",     "1,5",
-    "1.2.3",  "007",   "12deg", "255)",   "0.25s",   "3.40282e+38",
+    "0",     "1",     "-1",    "1.5",   ".5",    "-.5",         "10px",
+    "50%",   "1e3",   "1e3px", "1.5em", "2e",    "2e+",         "-0",
+    "1e-3",  "1e400", "",      "-",     ".",     "+1",          " 1",
+    "abc",   "0x10",  "-0x1",  "inf",   "-inf",  "nan",         "1,5",
+    "1.2.3", "007",   "12deg", "255)",  "0.25s", "3.40282e+38",
 };
 
 template <typename T>
