@@ -86,6 +86,9 @@ target_link_libraries(rtxui_example_slider PRIVATE rtxui)
 add_executable(rtxui_example_progress progress.cpp)
 target_link_libraries(rtxui_example_progress PRIVATE rtxui)
 
+add_executable(rtxui_example_canvas canvas.cpp)
+target_link_libraries(rtxui_example_canvas PRIVATE rtxui)
+
 add_executable(rtxui_example_details details.cpp)
 target_link_libraries(rtxui_example_details PRIVATE rtxui)
 

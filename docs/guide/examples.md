@@ -97,6 +97,7 @@ Built-in HTML elements, CJK text, Markdown rendering, spatial nav, and cookbook 
 
 | Example | Demonstrates | Guide |
 | :--- | :--- | :--- |
+| [canvas.cpp](/guide/examples/canvas) | `<canvas>`: the application draws the cells and reads the pointer. | [Reference](/html_reference) |
 | [cjk.cpp](/guide/examples/cjk) | Double-width text. | [Guide](/guide/unicode) |
 | [cookbook_async.cpp](/guide/examples/cookbook_async) | Recipe: updating the UI from a worker thread. | [Guide](/guide/cookbook) |
 | [cookbook_command_palette.cpp](/guide/examples/cookbook_command_palette) | Recipe: a command palette. | [Guide](/guide/cookbook) |

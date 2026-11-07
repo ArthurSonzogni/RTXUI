@@ -4,6 +4,7 @@
 #ifndef RTXUI_RTXUI_HPP_
 #define RTXUI_RTXUI_HPP_
 
+#include "rtxui/canvas.hpp"      // IWYU pragma: export
 #include "rtxui/component.hpp"   // IWYU pragma: export
 #include "rtxui/diagnostic.hpp"  // IWYU pragma: export
 #include "rtxui/element.hpp"     // IWYU pragma: export

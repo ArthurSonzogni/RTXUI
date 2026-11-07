@@ -388,6 +388,99 @@ self:disabled {
 
 ---
 
+### `<canvas>`
+- **Classification**: Inline-Block Component (`rtxui::canvas`), replaced: it has no children
+- **Focusable**: No (add `tabindex="0"`; keys then reach the owner's `OnEvent`)
+
+The application draws the cells. RTXUI calls `ondraw` once the frame is laid
+out, with an `rtxui::Canvas` the size of the element's content box, cleared
+first. It calls it again only when the content box changes size or the bound
+state of the component holding `ondraw` changes, and keeps the drawing
+otherwise. To animate, advance a bound member from a `PostDelayedTask`.
+
+#### Attributes
+| Attribute | Type | Default | Reactive | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `width` | `integer` | `30` | One-way | Width in cells when CSS sets none, as an image's. |
+| `height` | `integer` | `8` | One-way | Height in cells when CSS sets none. |
+| `ondraw` | `handler` | — | — | Draws the cells. A bound `void(rtxui::Canvas&)`. Required. |
+| `onpointer` | `handler` | — | — | Mouse events over the canvas, in its coordinates. A bound `void(const rtxui::PointerEvent&)`. |
+
+`width` and `height` CSS set the box as for any element, so `width: 100%`
+fills the parent. Padding and borders surround the drawing. A cell the draw
+function leaves alone shows the element's CSS background through; a color it
+leaves out is the element's CSS `color`, `:hover` and transitions included.
+
+#### Drawing (`rtxui::Canvas`)
+| Member | Description |
+| :--- | :--- |
+| `width()`, `height()` | The size, in cells. |
+| `color()` | The element's CSS `color`. |
+| `Set(x, y, grapheme[, color])` | One grapheme; a wide one takes two cells. |
+| `Text(x, y, text[, color])` | A line of text, not wrapped. |
+| `SetBackground(x, y, color)`, `Fill(color)` | A cell's background, or every cell's. |
+| `SetPixels(mode)` | The dots of `Point` and `Line`: `Braille` (2×4 a cell, the default), `Quadrant` (2×2), `HalfBlock` (1×2, a color each). |
+| `pixel_width()`, `pixel_height()` | The size, in dots. |
+| `Point(x, y[, color])`, `Line(x0, y0, x1, y1[, color])` | Dots. |
+
+Anything outside the surface is clipped.
+
+#### Pointer (`rtxui::PointerEvent`)
+`x`, `y` are the cell from the content box's top left; `pixel_x`, `pixel_y`
+the dot in the current pixel mode (precise when the terminal reports pixels,
+else the cell's middle); `mouse` is the `Event::Mouse` (button, motion,
+modifiers). Hover moves arrive while the pointer is over the canvas. A press
+captures the pointer until its release, so a drag keeps reporting past the
+edges, with coordinates outside the canvas.
+
+```cpp
+class Sketch : public rtxui::Component<Sketch> {
+ public:
+  int count = 0;
+  int last_x = 0, last_y = 0;
+  std::vector<std::array<int, 4>> lines;
+  std::string_view view = R"(
+    <canvas class="pad" ondraw="Draw" onpointer="OnPointer"/>
+    <style>
+      .pad { width: 100%; height: 10; color: rgb(88, 166, 255); }
+    </style>
+  )";
+  Sketch() {
+    Bind(count);
+    Bind(Draw);
+    Bind(OnPointer);
+  }
+  void Draw(rtxui::Canvas& c) {
+    for (const auto& [x0, y0, x1, y1] : lines) {
+      c.Line(x0, y0, x1, y1);
+    }
+  }
+  void OnPointer(const rtxui::PointerEvent& e) {
+    if (e.mouse.button() != rtxui::Event::Mouse::Left) {
+      return;
+    }
+    if (e.mouse.motion() == rtxui::Event::Mouse::Pressed) {
+      last_x = e.pixel_x;
+      last_y = e.pixel_y;
+    }
+    lines.push_back({last_x, last_y, e.pixel_x, e.pixel_y});
+    last_x = e.pixel_x;
+    last_y = e.pixel_y;
+    count = static_cast<int>(lines.size());  // Bound: draws again.
+  }
+};
+```
+
+<ExampleTabs src="/wasm/rtxui_example_canvas.js">
+<template #source>
+
+<<< @/../example/canvas.cpp
+
+</template>
+</ExampleTabs>
+
+---
+
 ### `<label>`
 - **Classification**: Inline-Flex Component (`rtxui::label`)
 - **Focusable**: No (`cursor: pointer`)

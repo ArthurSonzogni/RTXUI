@@ -92,6 +92,7 @@ EXAMPLES_META = {
     "translate.cpp": {"category": "Typography & Styling", "guide": "/guide/css/animations"},
 
     # Components & Advanced Features
+    "canvas.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference", "cols": 80, "rows": 40},
     "tabs.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},
     "dialog.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},
     "toast.cpp": {"category": "Components & Advanced Features", "guide": "/html_reference"},

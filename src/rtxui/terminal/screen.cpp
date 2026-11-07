@@ -59,6 +59,7 @@
 
 #include "rtxui/base/string.hpp"
 #include "rtxui/base/task_runner.hpp"
+#include "rtxui/canvas.hpp"
 #include "rtxui/component/component_internal.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
@@ -67,6 +68,7 @@
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/sticky.hpp"
+#include "rtxui/paint/canvas_surface.hpp"
 #include "rtxui/paint/glyph_fallback.hpp"
 #include "rtxui/paint/paint.hpp"
 #include "rtxui/paint/texture.hpp"
@@ -990,6 +992,99 @@ GlyphFallback GlyphFallbackFor(TerminalDevice& device) {
 
 }  // namespace
 
+namespace {
+
+// The element's CSS color, as it inherits it.
+Color InheritedColor(const Element& element) {
+  for (const Element* e = &element; e; e = e->Parent()) {
+    if (e->style.foreground_color) {
+      return *e->style.foreground_color;
+    }
+  }
+  return {};
+}
+
+// The component binding a <canvas>'s `attribute` handler: the nearest
+// enclosing one with that name, as for onclick. Null if none, or no attribute.
+ComponentBase* CanvasHandlerOwner(Element& element,
+                                  std::string_view attribute,
+                                  std::string* name) {
+  const auto& attributes = element.Attributes();
+  const auto it = attributes.find(std::string(attribute));
+  if (it == attributes.end()) {
+    return nullptr;
+  }
+  *name = it->second;
+  for (ComponentBase* c = GetAttributeOwnerComponent(&element); c;
+       c = GetParentComponent(c)) {
+    if (attribute == "ondraw"
+            ? ComponentInternals::HasDrawCallback(*c, *name)
+            : ComponentInternals::HasPointerCallback(*c, *name)) {
+      return c;
+    }
+  }
+  return nullptr;
+}
+
+// Calls a <canvas>'s ondraw when its drawing is out of date: never drawn, at
+// another size, or its owner's state changed since. Whether it drew.
+bool DrawCanvas(const PhysicalFragment& fragment,
+                Element& element,
+                CanvasSurface& surface) {
+  const Spacing& padding = element.style.padding;
+  const bool bordered =
+      fragment.has_border && fragment.border_style != BorderStyle::None;
+  const int width =
+      std::max(0, fragment.width - padding.Horiz() -
+                      (bordered ? fragment.border_width.Horiz() : 0));
+  const int height =
+      std::max(0, fragment.height - padding.Vert() -
+                      (bordered ? fragment.border_width.Vert() : 0));
+  std::string name;
+  ComponentBase* owner = CanvasHandlerOwner(element, "ondraw", &name);
+  const uint64_t generation =
+      owner ? ComponentInternals::StateGeneration(*owner) : 0;
+  if (surface.drawn && surface.width == width && surface.height == height &&
+      surface.owner_generation == generation) {
+    return false;
+  }
+  surface.Reset(width, height);
+  surface.pixels = Canvas::Pixels::Braille;
+  surface.color = InheritedColor(element);
+  surface.drawn = true;
+  surface.owner_generation = generation;
+
+  if (owner) {
+    Canvas canvas(surface);
+    ComponentInternals::RunDrawCallback(*owner, name, canvas);
+  } else if (!surface.reported_draw) {
+    surface.reported_draw = true;
+    ReportDiagnostic(
+        name.empty() ? std::string("<canvas> has no ondraw: nothing draws it")
+                     : "<canvas ondraw=\"" + name +
+                           "\">: no bound method takes an rtxui::Canvas& "
+                           "by that name");
+  }
+  return true;
+}
+
+// Draws the <canvas> elements in `fragment` that are out of date. Whether any
+// drew.
+bool DrawCanvases(const PhysicalFragment& fragment) {
+  bool drew = false;
+  if (Element* element = fragment.dom_node) {
+    if (CanvasSurface* surface = element->canvas_surface()) {
+      drew = DrawCanvas(fragment, *element, *surface);
+    }
+  }
+  for (const auto& child : fragment.children) {
+    drew = DrawCanvases(*child.fragment) || drew;
+  }
+  return drew;
+}
+
+}  // namespace
+
 class ScreenImpl {
  public:
   ScreenImpl(Ref<ComponentBase> component,
@@ -1046,6 +1141,10 @@ class ScreenImpl {
   // Follows `link`, an <a href="#id">: scrolls the element with that id into
   // view. Returns whether there was one.
   bool FollowLink(Element* link);
+  // Hands a mouse event to the <canvas> under it, or holding the pointer
+  // since a press on it, as its onpointer.
+  void DispatchCanvasPointer(const Event::Mouse& mouse);
+  Ref<Element> canvas_pointer_capture_;
   void PaintScreen(const PhysicalFragment& root,
                    Texture& texture,
                    const PaintSelection* selection = nullptr) const;
@@ -1702,6 +1801,10 @@ void ScreenImpl::HandleEvent(Event event) {
   if (auto mouse = event.get_if<Event::Mouse>();
       mouse && HandleSelection(*mouse)) {
     return;
+  }
+  if (auto mouse = event.get_if<Event::Mouse>();
+      mouse && CanvasSurface::live_count > 0) {
+    DispatchCanvasPointer(*mouse);
   }
 
   // `:focus-visible` follows the last kind of input. Typing after a click
@@ -2787,8 +2890,12 @@ void ScreenImpl::Draw(bool reuse_layout) {
   auto root = component_->Root();
   const auto& root_fragment = root_fragment_;
 
+  // Once laid out, as their size is the layout's.
+  const bool canvases_drew = CanvasSurface::live_count > 0 && root_fragment &&
+                             DrawCanvases(*root_fragment);
+
   // A layout reused whole paints what the last frame painted.
-  const bool repaint = reuse_layout || laid_out_since_paint_ ||
+  const bool repaint = canvases_drew || reuse_layout || laid_out_since_paint_ ||
                        !last_texture_ || last_texture_->width() != width_ ||
                        last_texture_->height() != frame_height_ ||
                        painted_background_set_ != background_color_set_ ||
@@ -4243,6 +4350,64 @@ std::string ScreenImpl::SelectedText() const {
   }
   text.erase(text.find_last_not_of(' ') + 1);
   return text;
+}
+
+void ScreenImpl::DispatchCanvasPointer(const Event::Mouse& mouse) {
+  Ref<Element> target = canvas_pointer_capture_;
+  if (!target && root_fragment_) {
+    for (Element* e =
+             FindElementAt(root_fragment_, mouse.x() - 1, mouse.y() - 1);
+         e; e = e->Parent()) {
+      if (e->canvas_surface()) {
+        target = Ref<Element>(e);
+        break;
+      }
+    }
+  }
+  CanvasSurface* surface = target ? target->canvas_surface() : nullptr;
+  if (!surface) {
+    canvas_pointer_capture_ = nullptr;
+    return;
+  }
+  const bool press = mouse.motion() == Event::Mouse::Pressed &&
+                     (mouse.button() == Event::Mouse::Left ||
+                      mouse.button() == Event::Mouse::Middle ||
+                      mouse.button() == Event::Mouse::Right);
+  if (press) {
+    canvas_pointer_capture_ = target;
+  } else if (mouse.motion() == Event::Mouse::Released) {
+    canvas_pointer_capture_ = nullptr;
+  }
+
+  std::string name;
+  ComponentBase* owner = CanvasHandlerOwner(*target, "onpointer", &name);
+  if (!owner) {
+    if (!name.empty() && !surface->reported_pointer) {
+      surface->reported_pointer = true;
+      ReportDiagnostic("<canvas onpointer=\"" + name +
+                       "\">: no bound method takes a const "
+                       "rtxui::PointerEvent& by that name");
+    }
+    return;
+  }
+  const int across = DotsAcross(surface->pixels);
+  const int down = DotsDown(surface->pixels);
+  const auto dot = [&](float sub_cell, int dots) {
+    return mouse.is_pixel_precise()
+               ? std::clamp(static_cast<int>(sub_cell * dots), 0, dots - 1)
+               : dots / 2;
+  };
+  const int x = mouse.x() - 1 - surface->content_x;
+  const int y = mouse.y() - 1 - surface->content_y;
+  const PointerEvent event{
+      x,
+      y,
+      x * across + dot(mouse.sub_cell_x(), across),
+      y * down + dot(mouse.sub_cell_y(), down),
+      mouse,
+  };
+  ComponentInternals::RunPointerCallback(*owner, name, event);
+  DigestAndDraw();
 }
 
 bool ScreenImpl::FollowLink(Element* link) {

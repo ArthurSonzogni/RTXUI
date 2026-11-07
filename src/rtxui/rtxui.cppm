@@ -13,10 +13,13 @@ module;
 export module rtxui;
 
 export namespace rtxui {
+using rtxui::Canvas;
+using rtxui::Color;
 using rtxui::Component;
 using rtxui::Diagnostic;
 using rtxui::Event;
 using rtxui::FieldSink;
+using rtxui::PointerEvent;
 using rtxui::PostDelayedTask;
 using rtxui::PostTask;
 using rtxui::Ref;

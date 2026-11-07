@@ -15,6 +15,7 @@
 #include "rtxui/layout/layout_arena.hpp"
 #include "rtxui/layout/layout_box.hpp"
 #include "rtxui/layout/style.hpp"
+#include "rtxui/paint/canvas_surface.hpp"
 
 namespace rtxui {
 
@@ -330,6 +331,24 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       LayoutArenaAllocator<LayoutBox>());
   box->set_style(dom_node->style);
   box->dom_node = dom_node;
+  // A <canvas> has a size of its own, as an image does: its `width` and
+  // `height` attributes, where CSS sets none.
+  if (const CanvasSurface* canvas = dom_node->canvas_surface()) {
+    const ComputedStyle& style = box->style();
+    const bool border_box = style.box_sizing == BoxSizing::BorderBox;
+    if (style.width.unit == Unit::Auto) {
+      const int extra =
+          border_box ? style.padding.Horiz() + style.border.Horiz() : 0;
+      box->mutable_style().width =
+          Length::Cells(static_cast<float>(canvas->intrinsic_width + extra));
+    }
+    if (box->style().height.unit == Unit::Auto) {
+      const int extra =
+          border_box ? style.padding.Vert() + style.border.Vert() : 0;
+      box->mutable_style().height =
+          Length::Cells(static_cast<float>(canvas->intrinsic_height + extra));
+    }
+  }
   // Text is laid out where it flows. A rule reaching a text node (`div *`,
   // `:not(.x)`) can still give it a position, and an out-of-flow text box was
   // laid out as its own out-of-flow child, without end.

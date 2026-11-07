@@ -9,6 +9,7 @@
 #include "rtxui/component/default/b/b.hpp"
 #include "rtxui/component/default/blockquote/blockquote.hpp"
 #include "rtxui/component/default/button/button.hpp"
+#include "rtxui/component/default/canvas/canvas.hpp"
 #include "rtxui/component/default/checkbox/checkbox.hpp"
 #include "rtxui/component/default/code/code.hpp"
 #include "rtxui/component/default/details/details.hpp"

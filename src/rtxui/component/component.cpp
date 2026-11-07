@@ -40,6 +40,7 @@
 #include "rtxui/component/default/b/b.hpp"
 #include "rtxui/component/default/blockquote/blockquote.hpp"
 #include "rtxui/component/default/button/button.hpp"
+#include "rtxui/component/default/canvas/canvas.hpp"
 #include "rtxui/component/default/checkbox/checkbox.hpp"
 #include "rtxui/component/default/code/code.hpp"
 #include "rtxui/component/default/details/details.hpp"
@@ -225,6 +226,7 @@ bool ComponentBase::Digest() {
     changed = true;
   }
   if (changed) {
+    ++data_->state_generation_;
     Render();
   }
   if (DigestChildren()) {
@@ -320,6 +322,24 @@ void ComponentBase::Import(std::string_view name,
   data_->parameterized_callbacks_[std::string(name)] = std::move(callback);
 }
 
+void ComponentBase::Import(std::string_view name,
+                           std::function<void(Canvas&)> callback) {
+  if (data_->draw_callbacks_.count(name)) {
+    std::cerr << "Error: Callback '" << name << "' is already imported.\n";
+    return;
+  }
+  data_->draw_callbacks_[std::string(name)] = std::move(callback);
+}
+
+void ComponentBase::Import(std::string_view name,
+                           std::function<void(const PointerEvent&)> callback) {
+  if (data_->pointer_callbacks_.count(name)) {
+    std::cerr << "Error: Callback '" << name << "' is already imported.\n";
+    return;
+  }
+  data_->pointer_callbacks_[std::string(name)] = std::move(callback);
+}
+
 void ComponentBase::Import(std::string_view name, ComponentFactory factory) {
   if (data_->imports_.count(name)) {
     std::cerr << "Error: Component '" << name << "' is already imported.\n";
@@ -383,6 +403,7 @@ std::unordered_map<std::string, ComponentFactory>& GetGlobalRegistry() {
     (*reg)["option"] = []() { return Ref<option>::New(); };
     (*reg)["p"] = []() { return Ref<p>::New(); };
     (*reg)["pre"] = []() { return Ref<pre>::New(); };
+    (*reg)["canvas"] = []() { return Ref<canvas>::New(); };
     (*reg)["progress"] = []() { return Ref<progress>::New(); };
     (*reg)["radio"] = []() { return Ref<radio>::New(); };
     (*reg)["s"] = []() { return Ref<s>::New(); };

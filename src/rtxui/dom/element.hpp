@@ -178,6 +178,7 @@ class ActiveTransitionsMap {
 /// back at its component without owning it, so keeping the element alive past
 /// its component leaves that pointer dangling.
 class Element;
+struct CanvasSurface;
 struct ElementHandleTarget : public RefCounted {
   Element* element = nullptr;
 };
@@ -653,6 +654,10 @@ class RTXUI_EXPORT Element : public RefCounted {
     absolute_y_ = y;
   }
 
+  /// A <canvas>'s drawing, owned by its component; null for other elements.
+  CanvasSurface* canvas_surface() const { return canvas_surface_; }
+  void set_canvas_surface(CanvasSurface* surface) { canvas_surface_ = surface; }
+
  protected:
   bool is_slot_ : 1 = false;
   bool is_text_ : 1 = false;
@@ -674,6 +679,7 @@ class RTXUI_EXPORT Element : public RefCounted {
   bool scrollbar_thumb_active_ = false;
   int absolute_x_ = 0;
   int absolute_y_ = 0;
+  CanvasSurface* canvas_surface_ = nullptr;
 
   int target_scroll_y_ = 0;
   int target_scroll_x_ = 0;

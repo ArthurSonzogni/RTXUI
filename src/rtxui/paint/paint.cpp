@@ -19,6 +19,7 @@
 #include "rtxui/layout/physical_fragment.hpp"
 #include "rtxui/layout/sticky.hpp"
 #include "rtxui/layout/style.hpp"
+#include "rtxui/paint/canvas_surface.hpp"
 #include "rtxui/paint/texture.hpp"
 
 namespace rtxui {
@@ -979,6 +980,63 @@ void PaintImpl(const PhysicalFragment* frag,
         }
       }
       cell_x += g.width;
+    }
+  }
+
+  // 2b. A <canvas>'s cells, in its content box.
+  if (frag->dom_node) {
+    if (CanvasSurface* canvas = frag->dom_node->canvas_surface()) {
+      const Spacing& padding = frag->dom_node->style.padding;
+      const bool bordered =
+          frag->has_border && frag->border_style != BorderStyle::None;
+      const int left =
+          abs_x + padding.left + (bordered ? frag->border_width.left : 0);
+      const int top =
+          abs_y + padding.top + (bordered ? frag->border_width.top : 0);
+      canvas->content_x = left;
+      canvas->content_y = top;
+      for (int y = 0; y < canvas->height; ++y) {
+        for (int x = 0; x < canvas->width; ++x) {
+          const CanvasCell& from = *canvas->At(x, y);
+          const int tex_x = left + x;
+          const int tex_y = top + y;
+          if (from.continuation || tex_x < 0 || tex_y < 0 ||
+              tex_x >= texture.width() || tex_y >= texture.height() ||
+              !clip.Contains(tex_x, tex_y)) {
+            continue;
+          }
+          auto& cell = texture[tex_x, tex_y];
+          if (from.background) {
+            resolve_cell(cell);
+            Color bg = *from.background;
+            bg.a = static_cast<uint8_t>(bg.a * current_opacity);
+            cell.background_color = Blend(bg, cell.background_color);
+            if (from.glyph.empty() && bg.a == 255) {
+              cell.character = " ";
+            }
+          }
+          if (from.glyph.empty()) {
+            continue;
+          }
+          resolve_cell(cell);
+          cell.character = from.glyph;
+          Color fg = from.foreground.value_or(current_foreground_color);
+          fg.a = static_cast<uint8_t>(fg.a * current_opacity);
+          cell.foreground_color = Blend(fg, cell.background_color);
+          cell.bold = current_bold;
+          cell.dim = current_dim;
+          cell.italic = current_italic;
+          cell.underlined = current_underlined;
+          cell.underlined_double = current_underlined_double;
+          cell.strikethrough = current_strikethrough;
+          cell.overlined = current_overlined;
+          cell.blink = current_blink;
+          if (x + 1 < canvas->width && canvas->At(x + 1, y)->continuation &&
+              tex_x + 1 < texture.width() && clip.Contains(tex_x + 1, tex_y)) {
+            texture[tex_x + 1, tex_y].is_continuation = true;
+          }
+        }
+      }
     }
   }
 

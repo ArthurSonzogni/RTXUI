@@ -83,7 +83,14 @@ struct ComponentBase::Data {
   std::map<std::string, std::function<void()>, std::less<>> callbacks_;
   std::map<std::string, std::function<void(std::string)>, std::less<>>
       parameterized_callbacks_;
+  std::map<std::string, std::function<void(Canvas&)>, std::less<>>
+      draw_callbacks_;
+  std::map<std::string, std::function<void(const PointerEvent&)>, std::less<>>
+      pointer_callbacks_;
   std::map<std::string, ComponentFactory, std::less<>> imports_;
+  // Advances each time Digest() finds this component's bound state changed:
+  // what a <canvas> it wrote compares to know whether to draw again.
+  uint64_t state_generation_ = 0;
 
   // Shared with every other instance declaring the same stylesheet text; see
   // GetSharedStyle. Aliasing pointers into one StyleData, so both keep it
@@ -208,6 +215,37 @@ struct ComponentInternals {
                           std::string_view name,
                           std::string_view arg = "") {
     return c.RunCallback(name, arg);
+  }
+  // A <canvas>'s ondraw / onpointer, by name. Whether `c` has one.
+  static bool RunDrawCallback(ComponentBase& c,
+                              std::string_view name,
+                              Canvas& canvas) {
+    auto it = c.data_->draw_callbacks_.find(name);
+    if (it == c.data_->draw_callbacks_.end()) {
+      return false;
+    }
+    it->second(canvas);
+    return true;
+  }
+  static bool RunPointerCallback(ComponentBase& c,
+                                 std::string_view name,
+                                 const PointerEvent& event) {
+    auto it = c.data_->pointer_callbacks_.find(name);
+    if (it == c.data_->pointer_callbacks_.end()) {
+      return false;
+    }
+    it->second(event);
+    return true;
+  }
+  static bool HasDrawCallback(const ComponentBase& c, std::string_view name) {
+    return c.data_->draw_callbacks_.contains(name);
+  }
+  static bool HasPointerCallback(const ComponentBase& c,
+                                 std::string_view name) {
+    return c.data_->pointer_callbacks_.contains(name);
+  }
+  static uint64_t StateGeneration(const ComponentBase& c) {
+    return c.data_->state_generation_;
   }
   static std::optional<std::string> TakePendingClipboardWrite() {
     return ComponentBase::TakePendingClipboardWrite();

@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "rtxui/canvas.hpp"  // IWYU pragma: export
 #include "rtxui/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/field_sink.hpp"  // IWYU pragma: export
@@ -84,6 +85,11 @@ class RTXUI_EXPORT ComponentBase : public RefCounted {
   void Import(std::string_view name, std::function<void()> callback);
   /// The same, for a callback taking the value the template passes.
   void Import(std::string_view name, std::function<void(std::string)> callback);
+  /// The same, for a <canvas>'s `ondraw`.
+  void Import(std::string_view name, std::function<void(Canvas&)> callback);
+  /// The same, for a <canvas>'s `onpointer`.
+  void Import(std::string_view name,
+              std::function<void(const PointerEvent&)> callback);
   /// Makes `<name>` in the template create a component with `factory`.
   void Import(std::string_view name, ComponentFactory factory);
   /// Makes `<T>` in the template, T's class name, create a T.
@@ -321,6 +327,23 @@ class Component : public ComponentBase {
             std::function<void(std::string)>([this, member](std::string s) {
               (static_cast<Derived*>(this)->*member)(s);
             }));
+      } else if constexpr (requires {
+                             (std::declval<Derived>().*
+                              member)(std::declval<Canvas&>());
+                           }) {
+        ComponentBase::Import(
+            name, std::function<void(Canvas&)>([this, member](Canvas& c) {
+              (static_cast<Derived*>(this)->*member)(c);
+            }));
+      } else if constexpr (requires {
+                             (std::declval<Derived>().*
+                              member)(std::declval<const PointerEvent&>());
+                           }) {
+        ComponentBase::Import(name,
+                              std::function<void(const PointerEvent&)>(
+                                  [this, member](const PointerEvent& e) {
+                                    (static_cast<Derived*>(this)->*member)(e);
+                                  }));
       } else {
         // Non-const member function -> Event handler
         ComponentBase::Import(name, std::function<void()>([this, member]() {
@@ -348,11 +371,19 @@ class Component : public ComponentBase {
              (std::is_lvalue_reference_v<T> ||
               std::is_pointer_v<std::decay_t<T>> ||
               std::is_invocable_v<std::decay_t<T>> ||
-              std::is_invocable_v<std::decay_t<T>, std::string>))
+              std::is_invocable_v<std::decay_t<T>, std::string> ||
+              std::is_invocable_v<std::decay_t<T>, Canvas&> ||
+              std::is_invocable_v<std::decay_t<T>, const PointerEvent&>))
   void Import(std::string name, T&& item, Args&&... args) {
     using U = std::decay_t<T>;
-    if constexpr (std::is_invocable_v<U> ||
-                  std::is_invocable_v<U, std::string>) {
+    if constexpr (std::is_invocable_v<U, Canvas&>) {
+      ComponentBase::Import(
+          name, std::function<void(Canvas&)>(std::forward<T>(item)));
+    } else if constexpr (std::is_invocable_v<U, const PointerEvent&>) {
+      ComponentBase::Import(name, std::function<void(const PointerEvent&)>(
+                                      std::forward<T>(item)));
+    } else if constexpr (std::is_invocable_v<U> ||
+                         std::is_invocable_v<U, std::string>) {
       if constexpr (std::is_invocable_v<U, std::string>) {
         ComponentBase::Import(
             name, std::function<void(std::string)>(std::forward<T>(item)));
