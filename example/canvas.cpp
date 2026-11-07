@@ -7,6 +7,8 @@
 #include <charconv>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
+#include <rtxui/color.hpp>
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
