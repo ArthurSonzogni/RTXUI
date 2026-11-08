@@ -2350,6 +2350,9 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
     int cross_size;
     // Aligned to the baseline: the row of its baseline, its margin included.
     int baseline = -1;
+    // What `min-height: auto` keeps of it in a column: its content's height,
+    // as CSS's content-based minimum size, or 0 when it scrolls.
+    int auto_min_main = 0;
   };
 
   struct FlexLine {
@@ -2507,6 +2510,15 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
     items.push_back({child, frag, main_size, main_size,
                      child->style().flex_grow, child->style().flex_shrink,
                      cross_size});
+    // Measured at its content's height when its basis is auto. A definite
+    // one is left at 0: its content's height is not measured; so is a box
+    // with an aspect-ratio, whose height comes from its width rather than
+    // from its content. Rows too: text wraps anywhere by default, so their
+    // content's minimum is a cell or so.
+    if (!is_row && basis == -1 && child->style().aspect_ratio <= 0 &&
+        child->style().overflow_y == Overflow::Visible) {
+      items.back().auto_min_main = frag->height;
+    }
   }
 
   // Pass 2: Group items into Flex Lines and resolve flexible lengths
@@ -2588,7 +2600,10 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
                                : ResolveBoxHeight(s, s.min_height, content_h);
         const int max = is_row ? ResolveBoxWidth(s, s.max_width, content_w)
                                : ResolveBoxHeight(s, s.max_height, content_h);
-        min_main[i] = margins + std::max(0, min);
+        min_main[i] =
+            margins + (min == -1 && s.min_height.unit == Unit::Auto && !is_row
+                           ? item.auto_min_main
+                           : std::max(0, min));
         max_main[i] = max == -1 ? std::numeric_limits<int>::max()
                                 : margins + std::max(max, min);
         frozen[i] = growing ? item.grow <= 0 : item.shrink <= 0;

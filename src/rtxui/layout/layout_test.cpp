@@ -5507,6 +5507,34 @@ TEST_CASE("Layout: a flex item stopped by its min or max size leaves the rest",
   }
 }
 
+// A flex item's automatic minimum height is its content's, unless it scrolls:
+// all three shrank with the list, and the header and footer went to nothing.
+TEST_CASE(
+    "Layout: a flex column shrinks the item that scrolls and not the others",
+    "[layout][flex]") {
+  const std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+      {Color::RGB(0, 0, 255), 'B'},
+  };
+  struct Page : Component<Page> {
+    std::string_view view = R"html(
+      <div style="display: flex; flex-direction: column; height: 6;">
+        <div style="background-color: rgb(255, 0, 0)">h</div>
+        <div style="flex-grow: 1; overflow-y: scroll; scrollbar-width: none;
+                    background-color: rgb(0, 255, 0)">
+          <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+          <div>6</div><div>7</div><div>8</div><div>9</div><div>10</div>
+        </div>
+        <div style="background-color: rgb(0, 0, 255)">f</div>
+      </div>)html";
+    Page() { Import<div>(); }
+  };
+  auto texture = RenderComponent(Ref<Page>::New(), 1, 6);
+  CHECK(GetColorLayer(texture, true, colors) ==
+        CheckGrid({"R", "G", "G", "G", "G", "B"}));
+}
+
 TEST_CASE("Layout: align-items: baseline lines up the first lines of text",
           "[layout][flex][align-items]") {
   struct Baseline : Component<Baseline> {

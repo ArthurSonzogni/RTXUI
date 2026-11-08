@@ -71,7 +71,7 @@ Selector precedence is determined by a 3-component specificity vector `(A, B, C)
 <CssProperty name="height" values="<length>" animatable description="Initial: `auto`. Constrains element layout height." />
 <CssProperty name="min-width" values="<length>" description="Initial: `auto`. Minimum layout width constraint." />
 <CssProperty name="max-width" values="<length>" description="Initial: `none`. Maximum layout width constraint." />
-<CssProperty name="min-height" values="<length>" description="Initial: `auto`. Minimum layout height constraint." />
+<CssProperty name="min-height" values="<length>" description="Initial: `auto`. Minimum layout height constraint. In a flex column, `auto` keeps an item at least as tall as its content, as in CSS, unless it is a scroll container (`overflow` other than `visible`) or has an `aspect-ratio`: then the item may shrink to nothing. So the item that scrolls is the one a full-height column shrinks, and a header or footer beside it keeps its rows." />
 <CssProperty name="max-height" values="<length>" description="Initial: `none`. Maximum layout height constraint." />
 <CssProperty name="box-sizing" values="content-box | border-box" description="Initial: `border-box`. Whether width/height (and their min/max variants) describe the content box or the border box. Default is border-box, unlike web CSS." />
 
