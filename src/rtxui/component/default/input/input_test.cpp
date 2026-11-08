@@ -1851,3 +1851,22 @@ TEST_CASE("Input selects with Shift and the arrows a terminal sends",
     CHECK(app->text == "ab X");
   }
 }
+
+namespace {
+
+class SpacedInputComponent : public rtxui::Component<SpacedInputComponent> {
+ public:
+  std::string text = "a    b";
+  SpacedInputComponent() { Bind(text); }
+  std::string_view view = R"(<input value="{text}" />)";
+};
+
+// An input shows its value as typed: its runs of spaces were collapsed into
+// one, as the text of a paragraph's are.
+TEST_CASE("Input shows every space of its value", "[component]") {
+  const std::string screen =
+      rtxui::RenderToString(rtxui::Ref<SpacedInputComponent>::New(), 20, 1);
+  CHECK(screen.find("a    b") != std::string::npos);
+}
+
+}  // namespace

@@ -46,7 +46,8 @@ std::string_view input::Setup() {
         padding-right: 1;
         overflow-x: scroll;
         scrollbar-width: none;
-        white-space: nowrap;
+        /* The value as typed: its runs of spaces are kept. */
+        white-space: pre;
         background-color: rgb(40, 40, 40);
         opacity: 0.8;
       }

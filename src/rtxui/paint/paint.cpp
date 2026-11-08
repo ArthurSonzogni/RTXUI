@@ -632,10 +632,16 @@ void PaintImpl(const PhysicalFragment* frag,
 
   Color current_foreground_color =
       frag->foreground_color.value_or(inherited_foreground_color);
-  Color current_background_color =
-      frag->background_color
-          ? Blend(*frag->background_color, parent_background_color)
-          : parent_background_color;
+  // The ground the children draw on, as step 0 paints it: faded by the
+  // opacity, and not there at all when hidden.
+  Color current_background_color = parent_background_color;
+  if (!hidden && frag->background_color) {
+    Color own = *frag->background_color;
+    own.a = static_cast<uint8_t>(own.a * current_opacity);
+    if (own.a > 0) {
+      current_background_color = Blend(own, parent_background_color);
+    }
+  }
   bool current_bold = frag->bold.value_or(inherited_bold);
   bool current_dim = frag->dim.value_or(inherited_dim);
   bool current_italic = frag->italic.value_or(inherited_italic);

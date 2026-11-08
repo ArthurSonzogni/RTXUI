@@ -342,6 +342,7 @@ if(RTXUI_BUILD_TESTS)
     "src/rtxui/component/default/label/label_test.cpp"
     "src/rtxui/component/default/markdown/markdown_test.cpp"
     "src/rtxui/component/default/pre/pre_test.cpp"
+    "src/rtxui/component/default/progress/progress_test.cpp"
     "src/rtxui/component/default/select/select_test.cpp"
     "src/rtxui/component/default/slider/slider_test.cpp"
     "src/rtxui/component/default/tabs/tabs_test.cpp"

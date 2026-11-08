@@ -883,4 +883,30 @@ TEST_CASE("Paint: Half-block borders never render the default foreground",
   check_ring("inner");
 }
 
+class InvisibleParentTest : public Component<InvisibleParentTest> {
+ public:
+  std::string_view view = R"(
+    <div class="outer"><div class="inner">x</div></div>
+    <style>
+      .outer { background-color: rgb(0, 0, 200); opacity: 0; padding: 1; }
+      .inner { border: tall; border-color: rgb(200, 0, 0); }
+    </style>
+  )";
+};
+
+// The ground a `tall` border's outer edge takes is its parent's background as
+// drawn: under `opacity: 0`, nothing. It took the parent's color whole.
+TEST_CASE("A border's outer edge takes its parent's background as drawn",
+          "[paint]") {
+  auto texture = RenderComponent(Ref<InvisibleParentTest>::New(), 8, 5);
+  for (int y = 0; y < 5; ++y) {
+    for (int x = 0; x < 8; ++x) {
+      INFO("cell " << x << "," << y);
+      const Cell& cell = texture[x, y];
+      CHECK(cell.background_color.a == 0);
+      CHECK((cell.foreground_color.a == 0 || cell.foreground_color.b == 0));
+    }
+  }
+}
+
 }  // namespace rtxui

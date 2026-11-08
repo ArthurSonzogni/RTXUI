@@ -24,6 +24,8 @@ std::string_view progress::Setup() {
   return R"html(<span class="filled" part="filled">{filled_track}</span><span class="empty" part="empty">{empty_track}</span>    <style>
       self {
         display: inline-block;
+        /* The empty track is spaces: kept, not collapsed into one. */
+        white-space: pre;
       }
       .filled {
         opacity: 1.0;
