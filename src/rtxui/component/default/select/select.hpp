@@ -44,7 +44,12 @@ class select : public Component<select> {
   std::vector<OptionInfo> GetOptions();
 
  private:
-  void ScrollHoveredIntoView(Element* root);
+  bool ScrollHoveredIntoView(Element* root);
+
+  // Whether the list still has to scroll to the highlighted option: once it
+  // opens, and each time the arrows move the highlight. Not on every frame,
+  // or the wheel could never scroll away from it.
+  bool reveal_hovered_ = false;
 };
 
 }  // namespace rtxui

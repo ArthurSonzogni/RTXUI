@@ -4,6 +4,7 @@
 #include "rtxui/component/default/select/select.hpp"
 
 #include <algorithm>
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <iostream>
@@ -568,6 +569,22 @@ TEST_CASE("A select's list scrolls to the option the arrows reach",
   const std::string text = screen.Text();
   CHECK(Line(text, 1).find('e') != std::string::npos);
   CHECK(Line(text, 3).find('g') != std::string::npos);
+}
+
+TEST_CASE("A select's list scrolls with the wheel",
+          "[component][select][regression]") {
+  // Every frame scrolled the highlighted option back into view, so the wheel
+  // stuck on it.
+  auto app = rtxui::Ref<LongSelect>::New();
+  rtxui::TimelineScreen screen(app, 20, 6);
+  screen.Input("\t\r");  // Focus and open, on "a".
+  for (int i = 0; i < 5; ++i) {
+    screen.Input("\x1b[<65;2;3M");  // Wheel down, over the list.
+    screen.Advance(1000);           // Past any smooth scrolling.
+  }
+  const std::string text = screen.Text();
+  INFO(text);
+  CHECK(Line(text, 3).find('h') != std::string::npos);
 }
 
 namespace {

@@ -233,6 +233,7 @@ bool select::OnEvent(Event event) {
               }
               if (next != hovered_index) {
                 hovered_index = next;
+                reveal_hovered_ = true;
                 changed = true;
               }
             }
@@ -341,6 +342,7 @@ bool select::Digest() {
   bool state_changed = false;
   if (is_open != last_is_open_) {
     last_is_open_ = is_open;
+    reveal_hovered_ = is_open;
     state_changed = true;
   }
   if (hovered_index != last_hovered_index_) {
@@ -407,8 +409,8 @@ bool select::Digest() {
     // returns.
   }
 
-  if (root && is_open) {
-    ScrollHoveredIntoView(root);
+  if (root && is_open && reveal_hovered_ && ScrollHoveredIntoView(root)) {
+    reveal_hovered_ = false;
   }
 
   bool parent_digest = Component<select>::Digest();
@@ -417,13 +419,16 @@ bool select::Digest() {
 
 // Scrolls a list taller than its max-height so the highlighted option is in
 // view. Positions are those of the last frame: once the list has been drawn,
-// they move only as this scrolls them.
-void select::ScrollHoveredIntoView(Element* root) {
+// they move only as this scrolls them. Returns false while the list has not
+// been laid out yet, to be tried again on the next frame.
+bool select::ScrollHoveredIntoView(Element* root) {
   auto* list = root->QuerySelector(".dropdown-list");
   auto options = GetOptions();
-  if (!list || list->layout_height() <= 0 || hovered_index < 0 ||
-      hovered_index >= static_cast<int>(options.size())) {
-    return;
+  if (!list || list->layout_height() <= 0) {
+    return false;
+  }
+  if (hovered_index < 0 || hovered_index >= static_cast<int>(options.size())) {
+    return true;
   }
   const Element* option = options[hovered_index].element;
   const int top = option->absolute_y() - list->absolute_y() + list->scroll_y();
@@ -433,6 +438,7 @@ void select::ScrollHoveredIntoView(Element* root) {
   } else if (bottom > list->scroll_y() + list->layout_height()) {
     list->set_scroll_y(bottom - list->layout_height());
   }
+  return true;
 }
 
 void select::SelectOption(std::string_view opt_val) {
