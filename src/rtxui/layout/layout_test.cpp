@@ -250,6 +250,32 @@ TEST_CASE("Layout: visibility hides the whole subtree",
   CHECK(GetTextLayer(texture) == CheckGrid({"  ", "cd"}));
 }
 
+TEST_CASE("Layout: hidden inline text keeps its place, and a child shows",
+          "[layout][inheritance]") {
+  SECTION("a hidden span leaves blank the cells its text takes") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <div><span style="visibility: hidden">ab</span><span>cd</span></div>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 1)) ==
+          CheckGrid({"  cd"}));
+  }
+  SECTION("a child setting visibility: visible shows in a hidden parent") {
+    struct T : Component<T> {
+      std::string_view view = R"html(
+        <div style="visibility: hidden">
+          <div>ab</div>
+          <div style="visibility: visible">cd</div>
+          <span>ef<span style="visibility: visible">gh</span></span>
+        </div>
+      )html";
+    };
+    CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 4, 3)) ==
+          CheckGrid({"    ", "cd  ", "  gh"}));
+  }
+}
+
 // Box model conformance. box-sizing and auto margins are the two places a
 // stylesheet author's CSS intuition most often meets a layout engine, so pin
 // the behaviour rather than infer it from feature tests.
@@ -4827,6 +4853,9 @@ TEST_CASE("Layout: CSS-wide keywords reset a property",
   }
 
   SECTION("a keyword that loses the cascade does nothing") {
+    std::vector<std::string> reported;
+    SetDiagnosticHandler(
+        [&](const Diagnostic& d) { reported.push_back(d.message()); });
     struct T : Component<T> {
       std::string_view view = R"html(
         <style>
@@ -4837,7 +4866,10 @@ TEST_CASE("Layout: CSS-wide keywords reset a property",
         <div class="outer"><span class="inner">ab</span></div>)html";
     };
     auto texture = RenderComponent(Ref<T>::New(), 2, 1);
+    SetDiagnosticHandler(nullptr);
     CHECK(GetColorLayer(texture, false, colors) == CheckGrid({"RR"}));
+    // Nor is it reported as a value it cannot read.
+    CHECK(reported.empty());
   }
 
   SECTION("a keyword is not reported as an unsupported value") {
@@ -5104,6 +5136,464 @@ TEST_CASE("Layout: a horizontal scroller is as wide to scroll as its content",
 
   CHECK(root->QuerySelector(".wrap")->scroll_width() == 15);
   CHECK(root->QuerySelector(".short")->layout_width() == 10);
+}
+
+TEST_CASE("Layout: auto margins in a flex container take its free space",
+          "[layout][flex][margin]") {
+  struct AutoMargins : Component<AutoMargins> {
+    std::string container_style;
+    std::string first_style;
+    std::string second_style;
+    std::string_view Setup() {
+      Import<div>();
+      Bind(container_style);
+      Bind(first_style);
+      Bind(second_style);
+      return R"html(
+        <style>
+          .r { background-color: rgb(255, 0, 0); width: 2; height: 1; }
+          .g { background-color: rgb(0, 255, 0); width: 2; height: 1; }
+        </style>
+        <div style="display: flex; width: 10; height: 3; {container_style}">
+          <div class="r" style="{first_style}"></div>
+          <div class="g" style="{second_style}"></div>
+        </div>
+      )html";
+    }
+  };
+  const std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+  const auto grid = [&](std::string container, std::string first,
+                        std::string second) {
+    auto app = Ref<AutoMargins>::New();
+    app->container_style = std::move(container);
+    app->first_style = std::move(first);
+    app->second_style = std::move(second);
+    return GetColorLayer(RenderComponent(app, 10, 3), true, colors);
+  };
+
+  SECTION("margin-left: auto pushes an item and those after it to the end") {
+    CHECK(grid("", "", "margin-left: auto;") == CheckGrid({
+                                                    "RR......GG",
+                                                    "..........",
+                                                    "..........",
+                                                }));
+  }
+  SECTION("they win over justify-content") {
+    CHECK(grid("justify-content: center;", "margin-right: auto;", "") ==
+          CheckGrid({
+              "RR......GG",
+              "..........",
+              "..........",
+          }));
+  }
+  SECTION("two auto margins share the free space") {
+    CHECK(grid("", "margin: 0 auto;", "") == CheckGrid({
+                                                 "...RR...GG",
+                                                 "..........",
+                                                 "..........",
+                                             }));
+  }
+  SECTION("in a reversed row, margin-left is still the left one") {
+    // The first item is the rightmost: its left margin parts it from the
+    // second, its right margin from the container's right edge.
+    CHECK(grid("flex-direction: row-reverse;", "margin-left: auto;", "") ==
+          CheckGrid({
+              "GG......RR",
+              "..........",
+              "..........",
+          }));
+    CHECK(grid("flex-direction: row-reverse;", "margin-right: auto;", "") ==
+          CheckGrid({
+              "GGRR......",
+              "..........",
+              "..........",
+          }));
+  }
+  SECTION("in a column, margin-top: auto pushes down") {
+    CHECK(grid("flex-direction: column;", "", "margin-top: auto;") ==
+          CheckGrid({
+              "RR........",
+              "..........",
+              "GG........",
+          }));
+  }
+  SECTION("on the cross axis they align the item, over align-items") {
+    CHECK(grid("align-items: flex-start;", "margin-top: auto;",
+               "margin: auto 0;") == CheckGrid({
+                                         "..........",
+                                         "..GG......",
+                                         "RR........",
+                                     }));
+  }
+  SECTION("on the cross axis they keep an auto-sized item from stretching") {
+    CHECK(grid("", "height: auto; min-height: 1; margin-bottom: auto;",
+               "height: auto;") == CheckGrid({
+                                       "RRGG......",
+                                       "..GG......",
+                                       "..GG......",
+                                   }));
+  }
+  SECTION("with no free space they are zero") {
+    CHECK(grid("", "width: 5; margin-left: auto;", "width: 5;") ==
+          CheckGrid({
+              "RRRRRGGGGG",
+              "..........",
+              "..........",
+          }));
+  }
+}
+
+TEST_CASE("Layout: grid items take their margins in their cell",
+          "[layout][grid][margin]") {
+  struct GridMargins : Component<GridMargins> {
+    std::string first_style;
+    std::string second_style;
+    std::string_view Setup() {
+      Import<div>();
+      Bind(first_style);
+      Bind(second_style);
+      return R"html(
+        <style>
+          .grid { display: grid; grid-template-columns: 8 8; width: 16;
+                  height: 3; }
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); height: 1; }
+        </style>
+        <div class="grid">
+          <div class="r" style="{first_style}">ab</div>
+          <div class="g" style="{second_style}">cd</div>
+        </div>
+      )html";
+    }
+  };
+  const std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+  const auto grid = [&](std::string first, std::string second) {
+    auto app = Ref<GridMargins>::New();
+    app->first_style = std::move(first);
+    app->second_style = std::move(second);
+    return GetColorLayer(RenderComponent(app, 16, 3), true, colors);
+  };
+
+  SECTION("a stretched item fills its cell") {
+    CHECK(grid("", "") == CheckGrid({
+                              "RRRRRRRRGGGGGGGG",
+                              "RRRRRRRR........",
+                              "RRRRRRRR........",
+                          }));
+  }
+  SECTION("a margin shrinks and moves it") {
+    CHECK(grid("margin: 1 2;", "margin-left: 1;") == CheckGrid({
+                                                         ".........GGGGGGG",
+                                                         "..RRRR..........",
+                                                         "................",
+                                                     }));
+  }
+  SECTION("justify-self fits an auto width to its content") {
+    CHECK(grid("justify-self: end;", "justify-self: center;") ==
+          CheckGrid({
+              "......RR...GG...",
+              "......RR........",
+              "......RR........",
+          }));
+  }
+  SECTION("an aspect-ratio item takes its width from its height") {
+    // Its height is the row's, which its content would not tell: fit to that
+    // content, it was one cell wide.
+    struct Ratio : Component<Ratio> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <div style="display: grid; grid-template-columns: 10;
+                      grid-template-rows: 2; width: 10;">
+            <div style="justify-self: center; aspect-ratio: 3 / 1;
+                        background-color: rgb(255, 0, 0);">x</div>
+          </div>
+        )html";
+      }
+    };
+    CHECK(GetColorLayer(RenderComponent(Ref<Ratio>::New(), 10, 2), true,
+                        colors) == CheckGrid({
+                                       "..RRRRRR..",
+                                       "..RRRRRR..",
+                                   }));
+  }
+  SECTION("auto margins take the cell's free space") {
+    CHECK(grid("margin-left: auto;", "margin: auto;") == CheckGrid({
+                                                             "......RR........",
+                                                             "......RR...GG...",
+                                                             "......RR........",
+                                                         }));
+  }
+  SECTION("a margin is room the track grows for") {
+    struct AutoRow : Component<AutoRow> {
+      std::string_view Setup() {
+        Import<div>();
+        return R"html(
+          <style>
+            .grid { display: grid; grid-template-columns: auto auto; }
+            .r { background-color: rgb(255, 0, 0); margin: 1 2; }
+            .g { background-color: rgb(0, 255, 0); }
+          </style>
+          <div class="grid">
+            <div class="r">ab</div>
+            <div class="g">cd</div>
+          </div>
+        )html";
+      }
+    };
+    CHECK(GetColorLayer(RenderComponent(Ref<AutoRow>::New(), 8, 4), true,
+                        colors) == CheckGrid({
+                                       "......GG",
+                                       "..RR..GG",
+                                       "......GG",
+                                       "........",
+                                   }));
+  }
+}
+
+TEST_CASE("Layout: a flex column aligns its blocks by their content's width",
+          "[layout][flex][align-items]") {
+  struct ColumnAlign : Component<ColumnAlign> {
+    std::string container_style;
+    std::string item_style;
+    std::string_view Setup() {
+      Import<div>();
+      Bind(container_style);
+      Bind(item_style);
+      return R"html(
+        <style>
+          .r { background-color: rgb(255, 0, 0); }
+          .g { background-color: rgb(0, 255, 0); }
+        </style>
+        <div style="display: flex; flex-direction: column; width: 10;
+                    {container_style}">
+          <div class="r" style="{item_style}">ab</div>
+          <div class="g">cdef</div>
+        </div>
+      )html";
+    }
+  };
+  const std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+  const auto grid = [&](std::string container, std::string item) {
+    auto app = Ref<ColumnAlign>::New();
+    app->container_style = std::move(container);
+    app->item_style = std::move(item);
+    return GetColorLayer(RenderComponent(app, 10, 2), true, colors);
+  };
+
+  SECTION("stretched, they fill the column") {
+    CHECK(grid("", "") == CheckGrid({
+                              "RRRRRRRRRR",
+                              "GGGGGGGGGG",
+                          }));
+  }
+  SECTION("align-items: center") {
+    CHECK(grid("align-items: center;", "") == CheckGrid({
+                                                  "....RR....",
+                                                  "...GGGG...",
+                                              }));
+  }
+  SECTION("align-self: flex-end") {
+    CHECK(grid("", "align-self: flex-end;") == CheckGrid({
+                                                   "........RR",
+                                                   "GGGGGGGGGG",
+                                               }));
+  }
+  SECTION("an auto margin across") {
+    CHECK(grid("", "margin-left: auto;") == CheckGrid({
+                                                "........RR",
+                                                "GGGGGGGGGG",
+                                            }));
+  }
+}
+
+TEST_CASE("Layout: a block's horizontal margins are taken once",
+          "[layout][margin]") {
+  const std::map<Color, char> colors = {{Color::RGB(255, 0, 0), 'R'}};
+  struct Margins : Component<Margins> {
+    std::string html;
+    explicit Margins(std::string h) : html(std::move(h)) {}
+    std::string_view Setup() {
+      Import<div>();
+      return html;
+    }
+  };
+  const auto row = [&](std::string html) {
+    auto texture = RenderComponent(Ref<Margins>::New(std::move(html)), 10, 1);
+    return GetColorLayer(texture, true, colors);
+  };
+  // Both used to give the block 10 - 2 * 3 cells: its margins were taken from
+  // its width by its container, then by the block itself.
+  SECTION("in a block") {
+    CHECK(row(R"html(<div><div style="margin: 0 1 0 2;
+                                  background-color: rgb(255, 0, 0)">ab</div>
+                 </div>)html") == CheckGrid({"..RRRRRRR."}));
+  }
+  SECTION("at the root of a component") {
+    CHECK(row(R"html(<div style="margin: 0 1 0 2;
+                             background-color: rgb(255, 0, 0)">ab</div>)html") ==
+          CheckGrid({"..RRRRRRR."}));
+  }
+  SECTION("in a flex column") {
+    CHECK(row(R"html(<div style="display: flex; flex-direction: column">
+                   <div style="margin: 0 1 0 2;
+                               background-color: rgb(255, 0, 0)">ab</div>
+                 </div>)html") == CheckGrid({"..RRRRRRR."}));
+  }
+  SECTION("auto margins at the root of a component center it") {
+    CHECK(row(R"html(<div style="width: 4; margin: 0 auto;
+                             background-color: rgb(255, 0, 0)">ab</div>)html") ==
+          CheckGrid({"...RRRR..."}));
+    CHECK(row(R"html(<div style="width: 4; margin-left: auto;
+                             background-color: rgb(255, 0, 0)">ab</div>)html") ==
+          CheckGrid({"......RRRR"}));
+  }
+}
+
+TEST_CASE("Layout: a flex item stopped by its min or max size leaves the rest",
+          "[layout][flex]") {
+  const std::map<Color, char> colors = {
+      {Color::RGB(255, 0, 0), 'R'},
+      {Color::RGB(0, 255, 0), 'G'},
+  };
+  struct Flex : Component<Flex> {
+    std::string html;
+    explicit Flex(std::string h) : html(std::move(h)) {}
+    std::string_view Setup() {
+      Import<div>();
+      return html;
+    }
+  };
+  const auto grid = [&](std::string html, int width, int height) {
+    auto texture =
+        RenderComponent(Ref<Flex>::New(std::move(html)), width, height);
+    return GetColorLayer(texture, true, colors);
+  };
+  SECTION("growing: max-width stops one, the other takes the rest") {
+    CHECK(grid(R"html(
+      <div style="display: flex; width: 10;">
+        <div style="flex-grow: 1; max-width: 3;
+                    background-color: rgb(255, 0, 0)">a</div>
+        <div style="flex-grow: 1; background-color: rgb(0, 255, 0)">b</div>
+      </div>)html",
+               10, 1) == CheckGrid({"RRRGGGGGGG"}));
+  }
+  SECTION("shrinking: min-width stops one, the other gives the rest") {
+    CHECK(grid(R"html(
+      <div style="display: flex; width: 10;">
+        <div style="width: 8; min-width: 6;
+                    background-color: rgb(255, 0, 0)">a</div>
+        <div style="width: 8; background-color: rgb(0, 255, 0)">b</div>
+      </div>)html",
+               12, 1) == CheckGrid({"RRRRRRGGGG.."}));
+  }
+  SECTION("down a column: max-height") {
+    CHECK(grid(R"html(
+      <div style="display: flex; flex-direction: column; height: 6;">
+        <div style="flex-grow: 1; max-height: 1;
+                    background-color: rgb(255, 0, 0)">a</div>
+        <div style="flex-grow: 1; background-color: rgb(0, 255, 0)">b</div>
+      </div>)html",
+               1, 6) == CheckGrid({"R", "G", "G", "G", "G", "G"}));
+  }
+}
+
+TEST_CASE("Layout: align-items: baseline lines up the first lines of text",
+          "[layout][flex][align-items]") {
+  struct Baseline : Component<Baseline> {
+    std::string_view view = R"html(
+      <div style="display: flex; align-items: baseline;">
+        <div style="padding-top: 2;">a</div>
+        <div style="margin-top: 1;">b<br/>c</div>
+        <div>d</div>
+        <div style="align-self: stretch;">e</div>
+      </div>
+    )html";
+  };
+  // a's text is 2 rows down, b's 1 and d's 0: b and d move down to a's.
+  // e stretches from the top. The line is as tall as b reaches.
+  CHECK(GetTextLayer(RenderComponent(Ref<Baseline>::New(), 4, 4)) == CheckGrid({
+                                                                         "   e",
+                                                                         "    ",
+                                                                         "abd ",
+                                                                         " c  ",
+                                                                     }));
+}
+
+TEST_CASE("Layout: absolute boxes are placed inside their container's border",
+          "[layout][position]") {
+  struct Absolute : Component<Absolute> {
+    std::string html;
+    explicit Absolute(std::string h) : html(std::move(h)) {}
+    std::string_view Setup() { return html; }
+  };
+  const auto text = [](std::string html, int width, int height) {
+    return GetTextLayer(
+        RenderComponent(Ref<Absolute>::New(std::move(html)), width, height));
+  };
+  SECTION("the padding box is the containing block, as in CSS") {
+    CHECK(text(R"html(
+      <div style="position: relative; width: 6; height: 4; border: rounded;">
+        <div style="position: absolute; left: 0; top: 0;">a</div>
+        <div style="position: absolute; right: 0; bottom: 0;">b</div>
+      </div>)html",
+               6, 4) == CheckGrid({
+                            "╭────╮",
+                            "│a   │",
+                            "│   b│",
+                            "╰────╯",
+                        }));
+  }
+  SECTION("so it is for a box further down") {
+    CHECK(text(R"html(
+      <div style="position: relative; width: 6; height: 4; border: rounded;">
+        <div><div style="position: absolute; left: 0; top: 0;">a</div></div>
+      </div>)html",
+               6, 4) == CheckGrid({
+                            "╭────╮",
+                            "│a   │",
+                            "│    │",
+                            "╰────╯",
+                        }));
+  }
+  SECTION("bottom: 0 further down, in an auto height block") {
+    CHECK(text(R"html(
+      <div style="position: relative; width: 4;">
+        <div>a</div>
+        <div>b</div>
+        <div>c</div>
+        <div><div style="position: absolute; right: 0; bottom: 0;">X</div></div>
+      </div>)html",
+               4, 4) == CheckGrid({
+                            "a   ",
+                            "b   ",
+                            "c  X",
+                            "    ",
+                        }));
+  }
+  SECTION("bottom: 0 further down, in an auto height grid") {
+    CHECK(text(R"html(
+      <div style="position: relative; display: grid;
+                  grid-template-columns: 1 1; width: 4;">
+        <div>a<br/>b<br/>c</div>
+        <div><div style="position: absolute; right: 0; bottom: 0;">X</div></div>
+      </div>)html",
+               4, 4) == CheckGrid({
+                            "a   ",
+                            "b   ",
+                            "c  X",
+                            "    ",
+                        }));
+  }
 }
 
 }  // namespace rtxui

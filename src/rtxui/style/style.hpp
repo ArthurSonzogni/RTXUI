@@ -34,7 +34,10 @@ struct SelectorPart {
   std::string id;
   std::vector<std::string> classes;
   std::vector<AttributeSelector> attributes;
-  char combinator = ' ';  // ' ' or '>'
+  // An ancestor's or a preceding sibling's pseudo-classes, as
+  // ParsedSelector::pseudo_classes holds the target's: `.card:hover .title`.
+  std::vector<std::string> pseudo_classes;
+  char combinator = ' ';  // ' ', '>', '+' or '~'
 };
 
 /// Parses one compound selector (`div.card#id[attr]`) with no combinators and

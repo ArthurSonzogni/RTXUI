@@ -104,56 +104,90 @@ std::string ProcessInlineMixed(std::string_view s, int depth = 0) {
       }
     }
 
-    // Check for Bold/Italic ** or __
-    if ((s[i] == '*' && i + 1 < s.size() && s[i + 1] == '*') ||
-        (s[i] == '_' && i + 1 < s.size() && s[i + 1] == '_')) {
-      char marker = s[i];
-      size_t start = i + 2;
-      size_t end = s.find(std::string(2, marker), start);
-      if (end != std::string_view::npos) {
-        size_t count = 0;
-        while (end + count < s.size() && s[end + count] == marker) {
-          count++;
-        }
-        if (count > 2) {
-          end += (count - 2);
-        }
-        std::string_view content = s.substr(start, end - start);
-        result += "<strong>" +
-                  (depth < kMaxInlineNestingDepth
-                       ? ProcessInlineMixed(content, depth + 1)
-                       : std::string(content)) +
-                  "</strong>";
-        i = end + 2;
-        continue;
-      }
-    }
-
-    // Check for Italic * or _
+    // Emphasis, as CommonMark delimits it: a run of markers opens only
+    // before a non-space and closes only after one, and `_` neither opens
+    // nor closes inside a word -- `snake_case_word` is not emphasis. A
+    // marker that closes nothing stays as it was written.
     if (s[i] == '*' || s[i] == '_') {
-      char marker = s[i];
-      size_t start = i + 1;
-      size_t end = start;
-      while (true) {
-        end = s.find(marker, end);
-        if (end == std::string_view::npos) {
-          break;
-        }
-        if (end + 1 < s.size() && s[end + 1] == marker) {
-          end += 2;
-        } else {
-          break;
-        }
-      }
-      if (end != std::string_view::npos) {
-        std::string_view content = s.substr(start, end - start);
-        result += "<em>" +
+      const char marker = s[i];
+      const bool doubled = i + 1 < s.size() && s[i + 1] == marker;
+      auto is_space = [](char c) { return c == ' ' || c == '\t' || c == '\n'; };
+      auto is_word = [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) ||
+               static_cast<unsigned char>(c) >= 0x80;
+      };
+      auto can_open = [&](size_t pos, size_t len) {
+        return pos + len < s.size() && !is_space(s[pos + len]) &&
+               (marker != '_' || pos == 0 || !is_word(s[pos - 1]));
+      };
+      auto can_close = [&](size_t pos, size_t len) {
+        return pos > 0 && !is_space(s[pos - 1]) &&
+               (marker != '_' || pos + len >= s.size() ||
+                !is_word(s[pos + len]));
+      };
+      auto emit = [&](std::string_view tag, size_t start, size_t end) {
+        const std::string_view content = s.substr(start, end - start);
+        result += "<" + std::string(tag) + ">" +
                   (depth < kMaxInlineNestingDepth
                        ? ProcessInlineMixed(content, depth + 1)
                        : std::string(content)) +
-                  "</em>";
-        i = end + 1;
-        continue;
+                  "</" + std::string(tag) + ">";
+      };
+
+      // Bold: ** or __.
+      if (doubled && can_open(i, 2)) {
+        const size_t start = i + 2;
+        size_t from = start;
+        size_t end = std::string_view::npos;
+        while (true) {
+          size_t at = s.find(std::string(2, marker), from);
+          if (at == std::string_view::npos) {
+            break;
+          }
+          // In a longer run, the last two close: `***a***` is bold italic.
+          size_t count = 0;
+          while (at + count < s.size() && s[at + count] == marker) {
+            count++;
+          }
+          at += count - 2;
+          if (at > start && can_close(at, 2)) {
+            end = at;
+            break;
+          }
+          from = at + 2;
+        }
+        if (end != std::string_view::npos) {
+          emit("strong", start, end);
+          i = end + 2;
+          continue;
+        }
+      }
+
+      // Italic: * or _, closed by a single marker, not by a doubled one.
+      if (can_open(i, 1)) {
+        const size_t start = i + 1;
+        size_t from = start;
+        size_t end = std::string_view::npos;
+        while (true) {
+          const size_t at = s.find(marker, from);
+          if (at == std::string_view::npos) {
+            break;
+          }
+          if (at + 1 < s.size() && s[at + 1] == marker) {
+            from = at + 2;
+            continue;
+          }
+          if (at > start && can_close(at, 1)) {
+            end = at;
+            break;
+          }
+          from = at + 1;
+        }
+        if (end != std::string_view::npos) {
+          emit("em", start, end);
+          i = end + 1;
+          continue;
+        }
       }
     }
 
@@ -357,6 +391,11 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
   std::string current_paragraph;
 
   ListType current_list_type = ListType::None;
+  // The item being read: its text, until the next item or the list's end.
+  // Lines that follow it without a blank line continue it.
+  bool in_item = false;
+  std::string current_item;
+  bool blank_since_item = false;
 
   bool in_blockquote = false;
   std::string current_blockquote;
@@ -371,7 +410,17 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
     }
   };
 
+  auto close_item = [&]() {
+    if (in_item) {
+      html += "<li>" + BreakLines(ParseInline(current_item)) + "</li>\n";
+      current_item.clear();
+      in_item = false;
+    }
+  };
+
   auto close_list = [&]() {
+    close_item();
+    blank_since_item = false;
     if (current_list_type == ListType::Unordered) {
       html += "</ul>\n";
     } else if (current_list_type == ListType::Ordered) {
@@ -431,9 +480,11 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
     };
     if (is_blank(line)) {
       close_paragraph();
-      close_list();
       close_blockquote();
       close_table();
+      // A blank line between two items does not end their list, which would
+      // start the next one's numbering over: what follows decides.
+      blank_since_item = in_item;
       continue;
     }
 
@@ -525,7 +576,15 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
         close_paragraph();
         close_list();
         close_table();
-        std::string_view text = line.substr(hashes + 1);
+        std::string_view text = TrimTrailingSpaces(line.substr(hashes + 1));
+        // The closing sequence, `## Title ##`, is not part of the title.
+        size_t closing = text.size();
+        while (closing > 0 && text[closing - 1] == '#') {
+          closing--;
+        }
+        if (closing == 0 || text[closing - 1] == ' ') {
+          text = TrimTrailingSpaces(text.substr(0, closing));
+        }
         std::string tag = "h" + std::to_string(hashes);
         html += "<" + tag + ">" + ParseInline(text) + "</" + tag + ">\n";
         continue;
@@ -548,10 +607,24 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
         if (target_type == ListType::Unordered) {
           html += "<ul>\n";
         } else {
-          html += "<ol>\n";
+          // Numbered from the first item's number, as in CommonMark.
+          size_t digits = 0;
+          while (digits < line.size() &&
+                 std::isdigit(static_cast<unsigned char>(line[digits]))) {
+            digits++;
+          }
+          size_t first = 0;
+          while (first + 1 < digits && line[first] == '0') {
+            first++;
+          }
+          const std::string_view start = line.substr(first, digits - first);
+          html += start == "1" ? std::string("<ol>\n")
+                               : "<ol start=\"" + std::string(start) + "\">\n";
         }
         current_list_type = target_type;
       }
+      close_item();
+      blank_since_item = false;
 
       std::string_view text;
       if (is_unordered_item) {
@@ -564,7 +637,8 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
         }
         text = line.substr(i + 2);
       }
-      html += "<li>" + ParseInline(text) + "</li>\n";
+      current_item = TrimLineBreakMarkers(text);
+      in_item = true;
       continue;
     }
 
@@ -586,6 +660,21 @@ std::string MarkdownToHtmlImpl(std::string_view markdown, int depth) {
         in_paragraph = false;
         continue;
       }
+    }
+
+    // A line right after an item's continues it, as a paragraph's next
+    // line continues the paragraph; after a blank line, only an indented one.
+    if (in_item && !in_paragraph &&
+        (!blank_since_item || line.starts_with("  ") ||
+         line.starts_with("\t"))) {
+      std::string_view rest = line;
+      while (!rest.empty() && (rest.front() == ' ' || rest.front() == '\t')) {
+        rest.remove_prefix(1);
+      }
+      current_item += "\n";
+      current_item += TrimLineBreakMarkers(rest);
+      blank_since_item = false;
+      continue;
     }
 
     // Regular line (paragraph)

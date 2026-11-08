@@ -73,6 +73,12 @@ TEST_CASE("Dialog Component Overlay", "[component][dialog]") {
   screen.Dispatch(Event::Escape());
   CHECK(dialog_ptr->open == false);
   CHECK(dialog_ptr->overlay_class == "closed");
+  // `open` is two-way: the parent's state follows. It stayed true, and the
+  // parent's next render opened the dialog again.
+  CHECK(container->dialog_open == false);
+  container->Digest();
+  screen.Draw();
+  CHECK(dialog_ptr->open == false);
 }
 
 namespace {

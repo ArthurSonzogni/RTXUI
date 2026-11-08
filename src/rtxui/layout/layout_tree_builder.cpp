@@ -379,6 +379,7 @@ std::shared_ptr<LayoutBox> LayoutTreeBuilder::Build(Element* dom_node,
       dom_node->style.overflow_wrap.value_or(parent.overflow_wrap);
 
   resolved.word_break = dom_node->style.word_break.value_or(parent.word_break);
+  resolved.visibility = dom_node->style.visibility.value_or(parent.visibility);
 
   resolved.fg = dom_node->style.foreground_color.has_value()
                     ? dom_node->style.foreground_color

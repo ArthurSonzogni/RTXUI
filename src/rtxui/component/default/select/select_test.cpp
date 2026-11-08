@@ -569,3 +569,41 @@ TEST_CASE("A select's list scrolls to the option the arrows reach",
   CHECK(Line(text, 1).find('e') != std::string::npos);
   CHECK(Line(text, 3).find('g') != std::string::npos);
 }
+
+namespace {
+
+class SelectStateStyleComponent
+    : public rtxui::Component<SelectStateStyleComponent> {
+ public:
+  std::string_view view = R"(
+    <select id="off" disabled="true">
+      <option value="a">A</option>
+    </select>
+    <select id="on">
+      <option value="a">A</option>
+    </select>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("A select's own state styles its button",
+          "[component][select][css]") {
+  // `self:disabled .select-btn` and `self:focus .select-btn`: a pseudo-class
+  // on the selector's first compound.
+  auto app = rtxui::Ref<SelectStateStyleComponent>::New();
+  rtxui::HeadlessScreen screen(app, 40, 6);
+  auto button_opacity = [&](const char* id) {
+    auto* select_el = rtxui::ComponentInternals::Root(*app)->QuerySelector(id);
+    REQUIRE(select_el != nullptr);
+    auto* button =
+        rtxui::ComponentInternals::Root(*ComponentAs<rtxui::select>(select_el))
+            ->QuerySelector(".select-btn");
+    REQUIRE(button != nullptr);
+    return button->style.opacity;
+  };
+  CHECK(button_opacity("#off") == 0.4f);
+  CHECK(button_opacity("#on") == 0.8f);
+  screen.Input("\t");
+  CHECK(button_opacity("#on") == 1.0f);
+}

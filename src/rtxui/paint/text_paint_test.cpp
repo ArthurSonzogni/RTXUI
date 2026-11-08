@@ -469,15 +469,13 @@ class StyleDecorationTestComponent
     : public rtxui::Component<StyleDecorationTestComponent> {
  public:
   std::string_view view = R"(
-    <box>
-      <item id="u">u</item>
-      <item id="ud">ud</item>
-      <item id="s">s</item>
-      <item id="bl">bl</item>
-    </box>
+    <div>
+      <span id="u">u</span>
+      <span id="ud">ud</span>
+      <span id="s">s</span>
+      <span id="bl">bl</span>
+    </div>
     <style>
-      box { display: block; }
-      item { display: inline; }
       #u { text-decoration: underline; }
       #ud { text-decoration: double-underline; }
       #s { text-decoration: strikethrough; }

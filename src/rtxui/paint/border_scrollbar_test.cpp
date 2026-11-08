@@ -1,3 +1,4 @@
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
 #include <string>
@@ -525,6 +526,121 @@ TEST_CASE("A scroller bordered on one side is clipped only on that side",
         "│first\n"
         "│2\n"
         "│3     ▆\n");
+}
+
+// A block's `overflow-x: scroll` scrollbar has a row of its own, as a flex
+// container's has: an auto height takes it in, rather than the scrollbar
+// being drawn over the last row of content. With a single row of text, that
+// row was all of the box, and the text was not drawn at all.
+TEST_CASE("Paint: a block's horizontal scrollbar takes a row of its own",
+          "[paint][scroll]") {
+  struct HScrollAutoHeight : Component<HScrollAutoHeight> {
+    std::string_view view = R"html(
+        <div id="scrollable">abcdefghijklmnop</div>
+        <style>
+          #scrollable {
+            width: 6;
+            overflow-x: scroll;
+            white-space: nowrap;
+          }
+        </style>
+      )html";
+    HScrollAutoHeight() { Import<div>(); }
+  };
+  auto app = Ref<HScrollAutoHeight>::New();
+  auto texture = RenderComponent(app, 6, 3);
+  CHECK(GetTextLayer(texture).starts_with("abcdef\n"));
+  auto* scrollable =
+      ComponentInternals::Root(*app)->QuerySelector("#scrollable");
+  REQUIRE(scrollable != nullptr);
+  CHECK(scrollable->layout_height() == 2);
+}
+
+// Scrolled to the end, the last row and column of a scroller come out from
+// under its scrollbars: the scrollbars' row and column count in how far it
+// scrolls. They stayed hidden under them.
+TEST_CASE(
+    "Paint: a scroller scrolls its last row and column past its "
+    "scrollbars",
+    "[paint][scroll]") {
+  struct Scroller : Component<Scroller> {
+    std::string html;
+    explicit Scroller(std::string display) {
+      html = R"html(
+        <div class="s">
+          <div>line0 wwwwwwwwwwZ</div>
+          <div>line1</div>
+          <div>line2</div>
+          <div>line3</div>
+          <div>line4</div>
+          <div>line5</div>
+        </div>
+        <style>
+          .s {
+            width: 10;
+            height: 4;
+            overflow: scroll;
+            white-space: nowrap;
+            display: )html" +
+             display + R"html(;
+          }
+        </style>)html";
+    }
+    std::string_view Setup() { return html; }
+  };
+  for (const std::string display : {"block", "flex; flex-direction: column"}) {
+    INFO(display);
+    std::string wheel;
+    for (int i = 0; i < 20; ++i) {
+      wheel += "\x1b[<65;3;2M";  // Down.
+    }
+    {
+      HeadlessScreen screen(Ref<Scroller>::New(display), 10, 4);
+      screen.Input(wheel);
+      // Rows 0 to 2 show content, row 3 is the horizontal scrollbar.
+      const std::string text = screen.Text();
+      CHECK(text.find("line5") != std::string::npos);
+    }
+    for (char& c : wheel) {
+      c = c == '5' ? '7' : c;  // Right.
+    }
+    {
+      HeadlessScreen screen(Ref<Scroller>::New(display), 10, 4);
+      screen.Input(wheel);
+      // Column 9 is the vertical scrollbar.
+      const std::string text = screen.Text();
+      CHECK(text.substr(0, text.find('\n')).ends_with("wwZ"));
+    }
+  }
+}
+
+// A flex column that scrolls sideways stretches its items to its own width,
+// as one that does not scroll does. They were given the whole room they may
+// scroll into, and came out ~10000 cells wide, so it scrolled that far.
+TEST_CASE(
+    "Paint: a flex column scrolling sideways stretches its items to "
+    "its width",
+    "[paint][scroll][flex]") {
+  struct Column : Component<Column> {
+    std::string_view view = R"html(
+        <div class="s"><div id="item">abc</div></div>
+        <style>
+          .s {
+            display: flex;
+            flex-direction: column;
+            width: 10;
+            height: 3;
+            overflow-x: scroll;
+          }
+        </style>)html";
+  };
+  auto app = Ref<Column>::New();
+  HeadlessScreen screen(app, 10, 3);
+  auto* item = ComponentInternals::Root(*app)->QuerySelector("#item");
+  REQUIRE(item != nullptr);
+  CHECK(item->layout_width() == 10);
+  CHECK(ComponentInternals::Root(*app)->QuerySelector(".s")->scroll_width() ==
+        10);
 }
 
 }  // namespace rtxui

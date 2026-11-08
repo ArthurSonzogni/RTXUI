@@ -82,6 +82,7 @@ inline bool IsTagCharTerminator(char c) {
     case '>':
     case ' ':
     case '\n':
+    case '\r':
     case '\t':
     case '=':
     case '"':
@@ -95,10 +96,6 @@ inline bool IsTagCharTerminator(char c) {
 
 inline bool IsAttributeTerminator(char c) {
   return c == '>' || c == '/';
-}
-
-inline bool IsValueTerminator(char c) {
-  return c == '"' || c == '\0';
 }
 
 inline bool IsTextTerminator(char c) {
@@ -231,26 +228,24 @@ std::string Unescape(std::string_view text) {
           result += '\'';
           i = end;
           continue;
-        } else if (entity.starts_with("#x")) {
-          std::string_view hex_str = entity.substr(2);
-          unsigned int val = 0;
-          auto [ptr, ec] = std::from_chars(
-              hex_str.data(), hex_str.data() + hex_str.size(), val, 16);
-          if (ec == std::errc()) {
-            AppendUtf8(result, val);
-          }
-          i = end;
-          continue;
         } else if (entity.starts_with("#")) {
-          std::string_view dec_str = entity.substr(1);
+          // A character reference, `&#65;` or `&#x41;`. As in HTML, one
+          // naming no character (0, a surrogate, past U+10FFFF) is U+FFFD,
+          // and one that is not a number stays as it was written.
+          const bool hex = entity.starts_with("#x") || entity.starts_with("#X");
+          const std::string_view digits = entity.substr(hex ? 2 : 1);
           unsigned int val = 0;
           auto [ptr, ec] = std::from_chars(
-              dec_str.data(), dec_str.data() + dec_str.size(), val, 10);
-          if (ec == std::errc()) {
-            AppendUtf8(result, val);
+              digits.data(), digits.data() + digits.size(), val, hex ? 16 : 10);
+          if (!digits.empty() && ptr == digits.data() + digits.size() &&
+              (ec == std::errc() || ec == std::errc::result_out_of_range)) {
+            const bool valid = ec == std::errc() && val != 0 &&
+                               val <= 0x10FFFF &&
+                               (val < 0xD800 || val > 0xDFFF);
+            AppendUtf8(result, valid ? val : 0xFFFD);
+            i = end;
+            continue;
           }
-          i = end;
-          continue;
         }
       }
     }
@@ -303,18 +298,20 @@ auto Parser::ParseAttribute() -> Expected<Attributes, Error> {
     }
     Advance();  // Skip '='.
     ParseWhiteSpaces();
-    if (Get() != '"') {
+    // Either quote, as in XML: `title='say "hi"'`.
+    const char quote = Get();
+    if (quote != '"' && quote != '\'') {
       return MakeErrorExpected("'\"'");
     }
-    Advance();  // Skip '"'.
+    Advance();  // Skip the opening quote.
     auto value_start = pos_;
-    while (!IsValueTerminator(Get())) {
+    while (Get() != quote && Get() != '\0') {
       Advance();
     }
     if (Get() == 0) {
-      return MakeErrorExpected("'\"'");
+      return MakeErrorExpected(quote == '"' ? "'\"'" : "\"'\"");
     }
-    Advance();  // Skip '"'.
+    Advance();  // Skip the closing quote.
     attributes[std::string(key.value())] =
         Unescape(xml_.substr(value_start, pos_ - value_start - 1));
 

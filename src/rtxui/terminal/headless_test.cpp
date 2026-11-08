@@ -7,10 +7,20 @@
 #include <string_view>
 #include <utility>
 
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+#include <stdlib.h>  // NOLINT(modernize-deprecated-headers): setenv.
+#include <unistd.h>
+
+#include <cstdio>
+#include <iostream>
+#include <sstream>
+#endif
+
 #include "catch2/catch_message.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/refcounted.hpp"
+#include "rtxui/screen.hpp"
 
 namespace rtxui {
 namespace {
@@ -87,6 +97,41 @@ TEST_CASE("HeadlessScreen takes input and shows its effect", "[headless]") {
     CHECK(screen.Text().size() <= 2 * 13);  // Two rows of at most 12 + '\n'.
   }
 }
+
+#if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
+TEST_CASE("RTXUI_HEADLESS takes the clicks piped to it", "[headless]") {
+  // Screen(app) draws inline, and an inline screen drops the mouse until the
+  // terminal says where the frame is. The headless terminal has to say it, or
+  // every click is lost while the keys still work.
+  int fds[2];
+  REQUIRE(pipe(fds) == 0);
+  const std::string_view click = "\x1b[<0;1;1M\x1b[<0;1;1m";
+  REQUIRE(write(fds[1], click.data(), click.size()) ==
+          static_cast<ssize_t>(click.size()));
+  close(fds[1]);
+  const int saved_stdin = dup(STDIN_FILENO);
+  dup2(fds[0], STDIN_FILENO);
+  close(fds[0]);
+  setenv("RTXUI_HEADLESS", "30x6", 1);
+  std::ostringstream out;
+  std::streambuf* saved_cout = std::cout.rdbuf(out.rdbuf());
+
+  auto app = Ref<Form>::New();
+  {
+    Screen screen(app);
+    screen.Loop();
+  }
+
+  std::cout.rdbuf(saved_cout);
+  unsetenv("RTXUI_HEADLESS");
+  dup2(saved_stdin, STDIN_FILENO);
+  close(saved_stdin);
+  std::clearerr(stdin);
+  std::cin.clear();
+  CHECK(app->clicks == 1);
+  CHECK(out.str().starts_with("clicks: 1\n"));
+}
+#endif
 
 }  // namespace
 }  // namespace rtxui

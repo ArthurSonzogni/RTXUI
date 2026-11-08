@@ -11,7 +11,7 @@ Every built-in tag—from `<div>` to `<dialog>`—is a component registered in t
 
 ### 1.2 Parser Contract
 - **Well-Formed XML/HTML**: All tags must be balanced or explicitly self-closed (e.g. `<hr />`, `<br />`, `<input />`). Unclosed tags generate parser errors with line and column diagnostics.
-- **Case Sensitivity**: Tag names and attribute names are parsed as lower-case identifiers.
+- **Case Sensitivity**: Tag names and attribute names are case-sensitive, as in XML. Built-in tags and attributes are lower-case (`<DIV>` is an unknown tag, and `CLASS` is not `class`), and a component's tag is written as it was imported (`<Card/>`).
 - **Quoting**: Attribute values must be enclosed in double (`"..."`) or single (`'...'`) quotes.
 
 ### 1.3 Binding Syntax

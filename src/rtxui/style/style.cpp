@@ -452,7 +452,9 @@ auto ParseSelectorString(std::string_view current) -> ParsedSelector {
   }
 
   for (int i = static_cast<int>(parts.size()) - 2; i >= 0; --i) {
-    SelectorPart parent_part = ParseSinglePart(parts[i]);
+    std::vector<std::string> pseudo_classes;
+    SelectorPart parent_part = ParseCompound(parts[i], pseudo_classes);
+    parent_part.pseudo_classes = std::move(pseudo_classes);
     parent_part.combinator = combinators[i];
     parsed.parents.push_back(std::move(parent_part));
   }
@@ -615,13 +617,18 @@ int Specificity(const ParsedSelector& parsed) {
                  parsed.attributes.size());
   // Pseudo-classes weigh the same as a class in CSS, pseudo-elements the
   // same as a type. `:where()` weighs nothing, which is what it is for.
-  classes += static_cast<int>(std::ranges::count_if(
-      parsed.pseudo_classes,
-      [](const std::string& pseudo) { return !pseudo.starts_with("where("); }));
+  auto count_pseudo_classes = [&](const std::vector<std::string>& pseudos) {
+    classes += static_cast<int>(
+        std::ranges::count_if(pseudos, [](const std::string& pseudo) {
+          return !pseudo.starts_with("where(");
+        }));
+  };
+  count_pseudo_classes(parsed.pseudo_classes);
   types += parsed.pseudo_element.empty() ? 0 : 1;
   for (const SelectorPart& parent : parsed.parents) {
     count_compound(parent.base, parent.id, parent.classes.size(),
                    parent.attributes.size());
+    count_pseudo_classes(parent.pseudo_classes);
   }
   return MakeSpecificity(ids, classes, types);
 }

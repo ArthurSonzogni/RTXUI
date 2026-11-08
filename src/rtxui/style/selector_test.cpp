@@ -14,6 +14,7 @@
 #include "rtxui/color.hpp"
 #include "rtxui/component.hpp"
 #include "rtxui/component/component_internal.hpp"
+#include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
@@ -1450,4 +1451,151 @@ TEST_CASE("Removing a list item restyles the items after it",
   screen.Step();
   CHECK(at(".b")->style.margin.left == 0);
   CHECK(at(".c")->style.margin.right == 0);
+}
+
+namespace {
+
+class AncestorPseudoApp : public rtxui::Component<AncestorPseudoApp> {
+ public:
+  std::string_view view = R"(
+    <div>
+      <div class="l" id="first">
+        <span id="a">1</span>
+        <span id="b">2</span>
+      </div>
+      <div class="l" id="second">
+        <span id="c">3</span>
+        <span id="d">4</span>
+      </div>
+      <div class="x">
+        <div class="y">
+          <div class="y"><span id="deep">5</span></div>
+        </div>
+      </div>
+    </div>
+    <style>
+      .l:first-child span { margin-left: 1; }
+      .l:nth-child(2) > span:first-child { margin-left: 2; }
+      span:first-child + span { margin-top: 3; }
+      .l:hover span { margin-right: 4; }
+      .x > .y span { margin-left: 5; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("Pseudo-classes and combinators in a selector's other compounds",
+          "[component][css][selector]") {
+  auto app = rtxui::Ref<AncestorPseudoApp>::New();
+  rtxui::HeadlessScreen screen(app, 40, 10);
+  auto* root = rtxui::ComponentInternals::Root(*app);
+  auto style = [&](const char* selector) -> const rtxui::ComputedStyle& {
+    auto* element = root->QuerySelector(selector);
+    REQUIRE(element != nullptr);
+    return element->style;
+  };
+
+  SECTION("a structural pseudo-class on an ancestor") {
+    CHECK(style("#a").margin.left == 1);
+    CHECK(style("#b").margin.left == 1);
+    CHECK(style("#c").margin.left == 2);
+    CHECK(style("#d").margin.left == 0);
+  }
+
+  SECTION("a pseudo-class on a preceding sibling") {
+    CHECK(style("#a").margin.top == 0);
+    CHECK(style("#b").margin.top == 3);
+    CHECK(style("#d").margin.top == 3);
+  }
+
+  SECTION("the ancestor's state changing") {
+    CHECK(style("#c").margin.right == 0);
+    root->QuerySelector("#second")->set_hovered(true);
+    rtxui::ComponentInternals::ResolveTargetStyles(
+        *app, rtxui::time::GetTimeMs() + 200.0);
+    CHECK(style("#c").margin.right == 4);
+    CHECK(style("#a").margin.right == 0);
+  }
+
+  SECTION("a descendant combinator tries every ancestor, not the nearest") {
+    // The nearest .y is not a child of .x; the one above it is.
+    CHECK(style("#deep").margin.left == 5);
+  }
+}
+
+TEST_CASE("A long chain of descendant combinators matches in linear time",
+          "[component][css][selector]") {
+  // 40 nested divs, and a selector of 30 descendant compounds that can never
+  // match: without giving up early, trying every way to place them among the
+  // ancestors takes on the order of C(40, 30) steps.
+  struct Deep : rtxui::Component<Deep> {
+    std::string html;
+    Deep() {
+      std::string selector;
+      for (int i = 0; i < 30; ++i) {
+        selector += "div ";
+      }
+      for (int i = 0; i < 40; ++i) {
+        html += "<div>";
+      }
+      html += "<span>x</span>";
+      for (int i = 0; i < 40; ++i) {
+        html += "</div>";
+      }
+      html += "<style>p " + selector + "span { margin-left: 1; }</style>";
+    }
+    std::string_view Setup() { return html; }
+  };
+  auto app = rtxui::Ref<Deep>::New();
+  rtxui::HeadlessScreen screen(app, 10, 2);
+  auto* span = rtxui::ComponentInternals::Root(*app)->QuerySelector("span");
+  REQUIRE(span != nullptr);
+  CHECK(span->style.margin.left == 0);
+}
+
+namespace {
+
+class PseudoDiagnosticApp : public rtxui::Component<PseudoDiagnosticApp> {
+ public:
+  std::string_view view = R"(
+    <div class="diag-probe"><span>x</span></div>
+    <style>
+      .diag-probe:hoverr { padding-top: 1; }
+      .diag-probe:nth-child(x) { padding-top: 1; }
+      .diag-probe:not(.a .b) { padding-top: 1; }
+      .diag-probe:focuss span { padding-top: 1; }
+      .diag-probe::befor { padding-top: 1; }
+      .diag-probe:hover,
+      .diag-probe:nth-child(2n+1),
+      .diag-probe:not(.x:first-child, #y),
+      .diag-probe:is(.a:focus-within) span,
+      .diag-probe:has(> span:checked) { padding-top: 1; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("A pseudo-class RTXUI does not know is reported",
+          "[component][css][selector][diagnostic]") {
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler([&](const rtxui::Diagnostic& diagnostic) {
+    messages.push_back(diagnostic.message());
+  });
+  auto app = rtxui::Ref<PseudoDiagnosticApp>::New();
+  rtxui::HeadlessScreen screen(app, 10, 2);
+  rtxui::SetDiagnosticHandler(nullptr);
+  CHECK(messages == std::vector<std::string>{
+                        "unsupported CSS pseudo-class ':hoverr' in "
+                        "'.diag-probe:hoverr': the rule matches nothing",
+                        "unsupported CSS pseudo-class ':nth-child(x)' in "
+                        "'.diag-probe:nth-child(x)': the rule matches nothing",
+                        "unsupported CSS pseudo-class ':not(.a .b)' in "
+                        "'.diag-probe:not(.a .b)': the rule matches nothing",
+                        "unsupported CSS pseudo-class ':focuss' in "
+                        "'.diag-probe:focuss span': the rule matches nothing",
+                        "unsupported CSS pseudo-class ':befor' in "
+                        "'.diag-probe::befor': the rule matches nothing",
+                    });
 }

@@ -200,7 +200,8 @@ void CollectFocusableFragments(
     return;
   }
 
-  if (fragment->dom_node) {
+  // A hidden element takes no focus; a visible child of it may.
+  if (fragment->dom_node && fragment->visibility != Visibility::Hidden) {
     auto tab_index_opt = GetEffectiveTabIndex(fragment->dom_node);
     if (tab_index_opt.has_value() && tab_index_opt.value() >= 0) {
       focusable_fragments.push_back({fragment->dom_node, abs_x, abs_y,
@@ -461,8 +462,10 @@ Element* FindElementAtImpl(PhysicalFragment* fragment,
   }
 
   // An element the mouse passes through is no target, but its children may
-  // be: what is under it is searched next.
-  if (fragment->dom_node && !IgnoresPointer(fragment->dom_node)) {
+  // be: what is under it is searched next. A hidden one is not there to
+  // click, as in CSS.
+  if (fragment->dom_node && fragment->visibility != Visibility::Hidden &&
+      !IgnoresPointer(fragment->dom_node)) {
     return fragment->dom_node;
   }
   return nullptr;
@@ -927,7 +930,16 @@ class HeadlessTerminalDevice : public TerminalDevice {
     input_.erase(0, count);
     return count;
   }
-  void Write(std::string_view /*data*/) override {}
+  // Discarded, but for the cursor position queries an inline screen sends,
+  // which it answers as a terminal would: there are no lines above the frame,
+  // so the cursor, back on its top row, is on the first. An inline screen
+  // drops the mouse until it knows where the frame is.
+  void Write(std::string_view data) override {
+    for (size_t at = data.find(kPositionQuery); at != std::string_view::npos;
+         at = data.find(kPositionQuery, at + kPositionQuery.size())) {
+      input_ += "\x1b[1;1R";
+    }
+  }
   bool GetSize(int& width, int& height) override {
     width = width_;
     height = height_;
@@ -945,6 +957,7 @@ class HeadlessTerminalDevice : public TerminalDevice {
   }
 
  private:
+  static constexpr std::string_view kPositionQuery = "\x1b[6n";
   std::string input_;
   int width_;
   int height_;
@@ -2514,17 +2527,25 @@ void ScreenImpl::HandleEvent(Event event) {
 
   if (event == Event::Tab() || event == Event::TabReverse()) {
     std::vector<Element*> document_order;
-    std::function<void(Element*)> CollectAll = [&](Element* el) {
+    // A hidden element takes no focus, as in CSS. Its visibility inherits, and
+    // a child can be visible again.
+    std::function<void(Element*, bool)> CollectAll = [&](Element* el,
+                                                         bool hidden) {
       if (!el || el->style.display_none) {
         return;
       }
-      document_order.push_back(el);
+      if (el->style.visibility) {
+        hidden = *el->style.visibility == Visibility::Hidden;
+      }
+      if (!hidden) {
+        document_order.push_back(el);
+      }
       for (const auto& child : el->children()) {
-        CollectAll(child.get());
+        CollectAll(child.get(), hidden);
       }
     };
     if (component_->Root()) {
-      CollectAll(component_->Root());
+      CollectAll(component_->Root(), false);
     }
 
     struct FocusEntry {
@@ -2777,12 +2798,19 @@ void ScreenImpl::UpdateLayout(bool reuse_fragments) {
   // only then: <tabs> and <select> re-tag the panes and options their user
   // wrote from their own Digest(). The pseudo-class pass is where :has()
   // rules are matched, so whenever styles changed it runs over the whole tree.
-  if (TakeBaseStylesResolved() &&
-      ComponentInternals::UsesRelationalSelectors(*component_)) {
+  //
+  // So does a pseudo-class input changed outside of an event: the form
+  // controls set :disabled and :checked on themselves from their Digest(),
+  // and one that starts disabled would otherwise look enabled until the
+  // first event.
+  const bool relational =
+      TakeBaseStylesResolved() &&
+      ComponentInternals::UsesRelationalSelectors(*component_);
+  auto root = component_->Root();
+  if (relational || (root && root->subtree_needs_pseudo &&
+                     component_->HasAnyPseudoClasses())) {
     component_->ResolveTargetStyles();
   }
-
-  auto root = component_->Root();
 
   // An element that appeared with `autofocus` takes the focus, provided it is
   // still in the document.
@@ -4291,11 +4319,9 @@ std::string ScreenImpl::SelectedText() const {
   // the selection too. Positions are in the content, scrolling ignored.
   auto visit = [&](auto& self, const PhysicalFragment* fragment, int x,
                    int y) -> void {
-    if (fragment->visibility == Visibility::Hidden) {
-      return;
-    }
-    if (fragment->is_text && fragment->text_node &&
-        TextSelectable(fragment->text_node)) {
+    // Hidden text is not selected; a visible child of a hidden box is.
+    if (fragment->visibility != Visibility::Hidden && fragment->is_text &&
+        fragment->text_node && TextSelectable(fragment->text_node)) {
       int column = 0;
       for (const Grapheme& g : Graphemes(fragment->text_content)) {
         if (g.width == 0) {

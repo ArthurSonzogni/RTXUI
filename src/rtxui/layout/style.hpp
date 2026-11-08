@@ -579,7 +579,8 @@ struct ComputedStyleCore {
   bool grid_auto_flow_dense = false;
 
   Cursor cursor = Cursor::Auto;
-  Visibility visibility = Visibility::Visible;
+  // Inherited: unset, an element takes its parent's.
+  std::optional<Visibility> visibility;
   VerticalAlign vertical_align = VerticalAlign::Baseline;
   // border-collapse: collapse; the cells' borders are then drawn once where
   // they meet.

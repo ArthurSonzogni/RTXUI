@@ -22,37 +22,34 @@ Spacing properties accept positive integer values representing the number of cha
 
 ---
 
-## Differences from CSS
+## Margins
 
-Two box-model behaviours differ from a browser and are worth knowing before
-you port a stylesheet:
+Margins behave as in a browser, in the two places that most often surprise:
 
-**Vertical margins do not collapse.** In CSS, a `margin-bottom: 1` above a
-`margin-top: 1` collapse into a single cell of space. Here they add up to two.
-Set the margin on one side only when you want a predictable gap, or use `gap`
-on a flex container:
+**Vertical margins collapse, as in CSS.** Between two blocks, a
+`margin-bottom: 1` above a `margin-top: 1` leaves one blank row, not two: the
+larger of the two margins. The items of a flex or grid container never collapse
+theirs; `gap` spaces them:
 
 ```css
-.a { margin-bottom: 1; }
-.b { margin-top: 1; }   /* two blank rows between them, not one */
+.a { margin-bottom: 2; }
+.b { margin-top: 1; }   /* two blank rows between them: the larger margin */
 ```
 
-**Auto margins centre inside a parent, not at the component root.**
-`margin: 0 auto` (and the `margin-left`/`margin-right` longhands) centre a
-fixed-width block within its containing block, and a single `auto` pushes the
-block to the opposite edge. A block that is the component's own root element
-has no containing block to centre within, so wrap it:
-
-```html
-<div><div class="card">centred</div></div>
-```
+**Auto margins take the space a box leaves.** `margin: 0 auto` (and the
+`margin-left`/`margin-right` longhands) centre a fixed-width block, and a single
+`auto` pushes it to the opposite edge, the component's own root element
+included:
 
 ```css
 .card { width: 40; margin: 0 auto; }
 ```
 
-For centring a whole screen, `display: flex` with `justify-content: center` on
-the root is usually clearer than auto margins.
+In a flex container, auto margins take the free space before
+`justify-content` does: `margin-left: auto` on the last item of a row pushes
+it to the right end, and the items before it stay on the left. In a grid, they
+place an item within its cell. On the cross axis of a flex container, or
+vertically in a grid cell, they align the item, in place of `align-self`.
 
 ## Dimension Units
 

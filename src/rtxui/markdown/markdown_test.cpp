@@ -315,3 +315,55 @@ TEST_CASE("Markdown: inline formatting survives a line break", "[markdown]") {
 }
 
 }  // namespace rtxui
+
+namespace rtxui {
+
+// As in CommonMark, `_` does not delimit emphasis inside a word, a marker
+// before a space opens nothing, and one that closes nothing stays as
+// written. Identifiers lost their underscores, and an unclosed `**` both its
+// asterisks.
+TEST_CASE("Markdown: emphasis delimiters", "[markdown]") {
+  CHECK(MarkdownToHtml("snake_case_word") == "<p>snake_case_word</p>\n");
+  CHECK(MarkdownToHtml("a **unclosed") == "<p>a **unclosed</p>\n");
+  CHECK(MarkdownToHtml("2 * 3 * 4") == "<p>2 * 3 * 4</p>\n");
+  CHECK(MarkdownToHtml("a ** b ** c") == "<p>a ** b ** c</p>\n");
+  CHECK(MarkdownToHtml("(_a_) __b__") ==
+        "<p>(<em>a</em>) <strong>b</strong></p>\n");
+  CHECK(MarkdownToHtml("2*3*4") == "<p>2<em>3</em>4</p>\n");
+  CHECK(MarkdownToHtml("***a***") == "<p><strong><em>a</em></strong></p>\n");
+  CHECK(MarkdownToHtml("*a **b** c*") ==
+        "<p><em>a <strong>b</strong> c</em></p>\n");
+}
+
+TEST_CASE("Markdown: a list goes on past blank lines", "[markdown]") {
+  // One list, numbered on, rather than three numbered 1.
+  CHECK(MarkdownToHtml("1. a\n\n2. b") ==
+        "<ol>\n<li>a</li>\n<li>b</li>\n</ol>\n");
+  // What follows the blank line ends it.
+  CHECK(MarkdownToHtml("- a\n\nafter") ==
+        "<ul>\n<li>a</li>\n</ul>\n<p>after</p>\n");
+}
+
+TEST_CASE("Markdown: an ordered list starts at its first number",
+          "[markdown]") {
+  CHECK(MarkdownToHtml("3. a\n4. b") ==
+        "<ol start=\"3\">\n<li>a</li>\n<li>b</li>\n</ol>\n");
+  CHECK(MarkdownToHtml("01. a") == "<ol>\n<li>a</li>\n</ol>\n");
+}
+
+TEST_CASE("Markdown: a line after an item continues it", "[markdown]") {
+  CHECK(MarkdownToHtml("- a\n  more\n- b") ==
+        "<ul>\n<li>a<br />more</li>\n<li>b</li>\n</ul>\n");
+  CHECK(MarkdownToHtml("- a\nlazy") == "<ul>\n<li>a<br />lazy</li>\n</ul>\n");
+  CHECK(MarkdownToHtml("- a\n\n  indented") ==
+        "<ul>\n<li>a<br />indented</li>\n</ul>\n");
+}
+
+TEST_CASE("Markdown: a heading's closing hashes are not its text",
+          "[markdown]") {
+  CHECK(MarkdownToHtml("## Title ##") == "<h2>Title</h2>\n");
+  CHECK(MarkdownToHtml("# C#") == "<h1>C#</h1>\n");
+  CHECK(MarkdownToHtml("# a #  ") == "<h1>a</h1>\n");
+}
+
+}  // namespace rtxui

@@ -989,4 +989,68 @@ TEST_CASE("Parsed keys equal the named Event constants", "[terminal][event]") {
   CHECK(parse("\x1b[24~") == Event::F12());
 }
 
+// xterm reports the modifiers held with a key as a parameter, `CSI 1;m X` or
+// `CSI n;m ~`: m - 1 sets Shift 1, Alt 2, Ctrl 4, Meta 8. Only Ctrl and Alt
+// on the arrows were listed, so Shift+arrows (selecting in an <input>) were
+// dropped.
+TEST_CASE("Event.ModifiedSpecialKeys", "[terminal]") {
+  using rtxui::internal::KeyboardData;
+  using Keyboard = Event::Keyboard;
+  auto parse = [](std::string_view bytes) -> std::optional<Event> {
+    TerminalInputParser parser;
+    for (char c : bytes) {
+      parser.Add(c);
+    }
+    auto event = parser.GetEvent();
+    CHECK_FALSE(parser.GetEvent().has_value());
+    return event;
+  };
+  struct Case {
+    std::string_view bytes;
+    KeyboardData expected;
+  };
+  const std::vector<Case> cases = {
+      {"\x1B[1;2D",
+       {.special = Keyboard::ArrowLeft, .modifier = {.shift = true}}},
+      {"\x1B[1;2C",
+       {.special = Keyboard::ArrowRight, .modifier = {.shift = true}}},
+      {"\x1B[1;2A",
+       {.special = Keyboard::ArrowUp, .modifier = {.shift = true}}},
+      {"\x1B[1;2B",
+       {.special = Keyboard::ArrowDown, .modifier = {.shift = true}}},
+      {"\x1B[1;2H", {.special = Keyboard::Home, .modifier = {.shift = true}}},
+      {"\x1B[1;2F", {.special = Keyboard::End, .modifier = {.shift = true}}},
+      {"\x1B[1;6D",
+       {.special = Keyboard::ArrowLeft,
+        .modifier = {.ctrl = true, .shift = true}}},
+      {"\x1B[1;4C",
+       {.special = Keyboard::ArrowRight,
+        .modifier = {.alt = true, .shift = true}}},
+      {"\x1B[1;5H", {.special = Keyboard::Home, .modifier = {.ctrl = true}}},
+      {"\x1B[1;5F", {.special = Keyboard::End, .modifier = {.ctrl = true}}},
+      {"\x1B[1;9A", {.special = Keyboard::ArrowUp, .modifier = {.meta = true}}},
+      {"\x1B[3;2~", {.special = Keyboard::Delete, .modifier = {.shift = true}}},
+      {"\x1B[5;5~", {.special = Keyboard::PageUp, .modifier = {.ctrl = true}}},
+      {"\x1B[6;2~",
+       {.special = Keyboard::PageDown, .modifier = {.shift = true}}},
+      {"\x1B[15;2~", {.special = Keyboard::F5, .modifier = {.shift = true}}},
+      {"\x1B[24;5~", {.special = Keyboard::F12, .modifier = {.ctrl = true}}},
+      {"\x1B[1;2P", {.special = Keyboard::F1, .modifier = {.shift = true}}},
+  };
+  for (const Case& c : cases) {
+    INFO(std::string(c.bytes.substr(1)));
+    const auto event = parse(c.bytes);
+    REQUIRE(event.has_value());
+    CHECK(*event == Event(c.expected));
+  }
+  // The listed ones are unchanged.
+  CHECK(parse("\x1B[1;5D") == Event::ArrowLeftCtrl());
+  CHECK(parse("\x1B[1;3A") == Event::ArrowUpAlt());
+  // Neither a key nor a modifier set: dropped as before.
+  CHECK_FALSE(parse("\x1B[1;1D").has_value());
+  CHECK_FALSE(parse("\x1B[1;17D").has_value());
+  CHECK_FALSE(parse("\x1B[9;2~").has_value());
+  CHECK_FALSE(parse("\x1B[2;2D").has_value());
+}
+
 // NOLINTEND

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <numeric>
@@ -222,6 +223,35 @@ int FragmentBaseline(const PhysicalFragment* fragment) {
   };
   find(find, fragment, 0);
   return last >= 0 ? last : bottom;
+}
+
+// The row of a flex item's baseline: that of its first line of text in flow,
+// or its bottom row when it has none or clips its content.
+int FirstBaseline(const PhysicalFragment* fragment) {
+  const int bottom = std::max(0, fragment->height - 1);
+  if (fragment->clips_descendants) {
+    return bottom;
+  }
+  int first = -1;
+  auto find = [&first](auto& self, const PhysicalFragment* at, int y) -> void {
+    for (const auto& child : at->children) {
+      if (first >= 0 && y + child.y >= first) {
+        continue;
+      }
+      if (child.fragment->is_text) {
+        first = y + child.y;
+        continue;
+      }
+      const Element* element = child.fragment->dom_node;
+      if (element && (element->style.position == PositionType::Absolute ||
+                      element->style.position == PositionType::Fixed)) {
+        continue;
+      }
+      self(self, child.fragment, y + child.y);
+    }
+  };
+  find(find, fragment, 0);
+  return first >= 0 ? first : bottom;
 }
 
 // An inline-level box placed on a line, which vertical-align moves once the
@@ -839,10 +869,12 @@ LayoutContext CreateChildContext(LayoutBox* parent,
   child_context.viewport_offset_y += child_flow_y;
 
   if (parent->style().position != PositionType::Static) {
-    child_context.npa_w = parent_w;
-    child_context.npa_h = parent_h;
-    child_context.npa_offset_x = child_flow_x;
-    child_context.npa_offset_y = child_flow_y;
+    // As in CSS, the containing block is the padding box: inside the border.
+    const Spacing& border = parent->style().border;
+    child_context.npa_w = std::max(0, parent_w - border.Horiz());
+    child_context.npa_h = std::max(0, parent_h - border.Vert());
+    child_context.npa_offset_x = child_flow_x - border.left;
+    child_context.npa_offset_y = child_flow_y - border.top;
   } else {
     child_context.npa_offset_x += child_flow_x;
     child_context.npa_offset_y += child_flow_y;
@@ -868,10 +900,12 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
         npa_offset_x = parent_context.viewport_offset_x;
         npa_offset_y = parent_context.viewport_offset_y;
       } else if (parent->style().position != PositionType::Static) {
-        container_w = fragment->width;
-        container_h = fragment->height;
-        npa_offset_x = 0;
-        npa_offset_y = 0;
+        // As in CSS, the containing block is the padding box.
+        const auto& border = parent->style().border;
+        container_w = std::max(0, fragment->width - border.Horiz());
+        container_h = std::max(0, fragment->height - border.Vert());
+        npa_offset_x = -border.left;
+        npa_offset_y = -border.top;
       }
 
       LayoutConstraints child_c;
@@ -914,11 +948,14 @@ void LayoutOutOfFlowChildren(LayoutBox* parent,
       int max_avail_w = child_w == -1 ? parent_context.viewport_w : container_w;
       int max_avail_h = child_h == -1 ? parent_context.viewport_h : container_h;
 
+      // A box is given the space less its margins, as everywhere.
       child_c.width = {
-          child_w != -1 ? child_w : max_avail_w,
+          child_w != -1 ? child_w
+                        : std::max(0, max_avail_w - child_style.margin.Horiz()),
           child_w != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
       child_c.height = {
-          child_h != -1 ? child_h : max_avail_h,
+          child_h != -1 ? child_h
+                        : std::max(0, max_avail_h - child_style.margin.Vert()),
           child_h != -1 ? MeasureMode::Exactly : MeasureMode::AtMost};
 
       int x = 0;
@@ -1037,9 +1074,13 @@ static int CollapseMargins(int a, int b) {
   return a + b;
 }
 
-PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
-                                  LayoutConstraints constraints,
-                                  LayoutContext context) {
+// One pass of LayoutBlockFlow. `npa_height` is the height absolutely
+// positioned descendants are placed against when `box` is their containing
+// block, or -1 when it is not known yet.
+PhysicalFragment* LayoutBlockFlowPass(LayoutInputNode node,
+                                      LayoutConstraints constraints,
+                                      LayoutContext context,
+                                      int npa_height) {
   auto* box = node.box;
   int avail_width = constraints.width.value;
 
@@ -1068,9 +1109,11 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
           early_resolved_height * box->style().aspect_ratio + 0.5f);
     } else {
       is_auto_width = true;
+      // An auto width fills what it is given, which is what is left of its
+      // container once its margins are taken: the caller has taken them.
       width = (constraints.width.mode == MeasureMode::Undefined)
                   ? 0
-                  : std::max(0, avail_width - box->style().margin.Horiz());
+                  : std::max(0, avail_width);
     }
   }
 
@@ -1085,6 +1128,12 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
   bool has_v_scrollbar = (box->style().overflow_y == Overflow::Scroll &&
                           box->style().scrollbar_width == ScrollbarWidth::Auto);
   int scrollbar_spacing_x = has_v_scrollbar ? 1 : 0;
+  // `overflow-x: scroll` keeps a row for its scrollbar, as a flex container
+  // does, rather than drawing it over the last row of content.
+  const bool has_h_scrollbar =
+      box->style().overflow_x == Overflow::Scroll &&
+      box->style().scrollbar_width == ScrollbarWidth::Auto;
+  const int scrollbar_spacing_y = has_h_scrollbar ? 1 : 0;
 
   int content_width_limit =
       is_auto_width && constraints.width.mode == MeasureMode::Undefined
@@ -1098,7 +1147,7 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
   fragment->children.reserve(box->children.size());
   fragment->dom_node = box->dom_node;
   fragment->paint_fields = kPaintAll;
-  fragment->visibility = box->style().visibility;
+  fragment->visibility = box->text.visibility;
   fragment->background_color = box->style().background_color;
   fragment->foreground_color = box->text.fg;
   fragment->opacity = box->style().opacity;
@@ -1204,7 +1253,7 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
     int cy = cur_y + collapsed_margin;
 
     LayoutContext child_context =
-        CreateChildContext(box, width, 0, cx, cy, context);
+        CreateChildContext(box, width, npa_height, cx, cy, context);
     LayoutInputNode child_input = {child_box.get()};
     auto child_frag = RunLayout(child_input, child_c, child_context);
 
@@ -1257,7 +1306,8 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
 
   cur_y += prev_margin_bottom;
 
-  cur_y += box->style().border.bottom + box->style().padding.bottom;
+  cur_y += box->style().border.bottom + box->style().padding.bottom +
+           scrollbar_spacing_y;
 
   if (is_auto_width && constraints.width.mode == MeasureMode::Undefined) {
     fragment->width = max_child_width + box->style().padding.Horiz() +
@@ -1323,9 +1373,12 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
   }
 
   if (box->dom_node) {
+    // The scrollbars' row and column are part of the extent, so that
+    // scrolling to the end brings the last row and column out from under
+    // them. (cur_y already counts the row.)
     int total_scroll_height = cur_y;
     int total_scroll_width = max_child_width + box->style().padding.Horiz() +
-                             box->style().border.Horiz();
+                             box->style().border.Horiz() + scrollbar_spacing_x;
 
     int max_child_right = 0;
     int max_child_bottom = 0;
@@ -1333,17 +1386,47 @@ PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
       AccumulateScrollExtent(child_link.fragment, child_link.x, child_link.y,
                              &max_child_right, &max_child_bottom);
     }
-    total_scroll_width = std::max(total_scroll_width,
-                                  max_child_right + box->style().padding.right +
-                                      box->style().border.right);
-    total_scroll_height = std::max(
-        total_scroll_height, max_child_bottom + box->style().padding.bottom +
-                                 box->style().border.bottom);
+    total_scroll_width =
+        std::max(total_scroll_width,
+                 max_child_right + box->style().padding.right +
+                     box->style().border.right + scrollbar_spacing_x);
+    total_scroll_height =
+        std::max(total_scroll_height,
+                 max_child_bottom + box->style().padding.bottom +
+                     box->style().border.bottom + scrollbar_spacing_y);
 
     ApplyScrollExtent(box, fragment, context, total_scroll_width,
                       total_scroll_height);
   }
 
+  return fragment;
+}
+
+PhysicalFragment* LayoutBlockFlow(LayoutInputNode node,
+                                  LayoutConstraints constraints,
+                                  LayoutContext context) {
+  auto* box = node.box;
+  const int known_height =
+      constraints.height.mode == MeasureMode::Exactly
+          ? constraints.height.value
+          : ResolveBoxHeight(box->style(), box->style().height,
+                             constraints.height.value);
+  PhysicalFragment* fragment =
+      LayoutBlockFlowPass(node, constraints, context, known_height);
+  // An absolutely positioned descendant of an in-flow child is placed against
+  // this box's final height (`bottom: 0`), which an auto height only knows
+  // once its children are laid out: lay them out again, now that it is known.
+  if (box->style().position == PositionType::Static ||
+      fragment->height == known_height) {
+    return fragment;
+  }
+  for (const auto& child : box->children) {
+    if (child->has_out_of_flow &&
+        child->style().position != PositionType::Absolute &&
+        child->style().position != PositionType::Fixed) {
+      return LayoutBlockFlowPass(node, constraints, context, fragment->height);
+    }
+  }
   return fragment;
 }
 
@@ -1359,6 +1442,7 @@ struct TextStyle {
   std::optional<bool> strikethrough;
   std::optional<bool> overlined;
   std::optional<bool> blink;
+  Visibility visibility = Visibility::Visible;
 };
 
 PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
@@ -1398,7 +1482,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   container_frag->children.reserve(estimated_children + 8);
   container_frag->dom_node = box->dom_node;
   container_frag->paint_fields = kPaintAll;
-  container_frag->visibility = box->style().visibility;
+  container_frag->visibility = box->text.visibility;
   container_frag->background_color = box->style().background_color;
   container_frag->foreground_color = box->text.fg;
   container_frag->opacity = box->style().opacity;
@@ -1547,6 +1631,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
       text_frag->strikethrough = style.strikethrough;
       text_frag->overlined = style.overlined;
       text_frag->blink = style.blink;
+      text_frag->visibility = style.visibility;
 
       container_frag->children.push_back(
           {text_frag,
@@ -1814,6 +1899,27 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
     int rx = cx;
     int ry = cy;
 
+    // A block, on a line of its own, has the line's width to itself: its auto
+    // margins share what it leaves, as in a block container. The line is then
+    // full, for text-align not to move it again. Not while measured for a
+    // natural width, which has no width to share.
+    int auto_space = 0;
+    const bool left_auto = elem->style().margin_left_auto;
+    const bool right_auto = elem->style().margin_right_auto;
+    if (elem->style().display_outside == DisplayOutside::Block &&
+        child_width_mode != MeasureMode::Undefined &&
+        (left_auto || right_auto)) {
+      auto_space = std::max(0, content_width_limit - cursor_x -
+                                   child_frag->width - child_m_horiz);
+      const int shift = left_auto && right_auto ? auto_space / 2
+                        : left_auto             ? auto_space
+                                                : 0;
+      if (shift > 0) {
+        rx += shift;
+        AdjustOutOfFlowCoordinates(child_frag, shift, 0, elem->dom_node);
+      }
+    }
+
     if (elem->style().position == PositionType::Relative) {
       if (elem->style().left.unit != Unit::Auto) {
         rx += elem->style().left.Resolve(width);
@@ -1832,7 +1938,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
                           child_frag->height + child_m_vert, m_top,
                           elem->style().vertical_align});
     line_height = std::max(line_height, child_frag->height + child_m_vert);
-    cursor_x += child_frag->width + child_m_horiz;
+    cursor_x += child_frag->width + child_m_horiz + auto_space;
   };
 
   // Whether the last box in flow was a block, which left an empty line open.
@@ -1859,7 +1965,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
           {child->style().background_color, child->text.fg, child->text.bold,
            child->text.dim, child->text.italic, child->text.underlined,
            child->text.underlined_double, child->text.strikethrough,
-           child->text.overlined, child->text.blink});
+           child->text.overlined, child->text.blink, child->text.visibility});
     } else if (is_br(child.get())) {
       commit_line(/*hard_break=*/true);
     } else if (child->style().display_outside == DisplayOutside::Inline &&
@@ -1899,7 +2005,7 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
                grandchild->text.italic, grandchild->text.underlined,
                grandchild->text.underlined_double,
                grandchild->text.strikethrough, grandchild->text.overlined,
-               grandchild->text.blink});
+               grandchild->text.blink, grandchild->text.visibility});
         } else if (is_br(grandchild.get())) {
           commit_line(/*hard_break=*/true);
         } else if (grandchild->style().display_outside ==
@@ -2242,6 +2348,8 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
     float grow;
     float shrink;
     int cross_size;
+    // Aligned to the baseline: the row of its baseline, its margin included.
+    int baseline = -1;
   };
 
   struct FlexLine {
@@ -2251,6 +2359,8 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
     float total_grow = 0.0f;
     float total_shrink_scaled = 0.0f;
     int cross_size = 0;
+    // The row of the baseline its baseline-aligned items share.
+    int baseline = 0;
   };
 
   std::vector<FlexItem> items;
@@ -2282,6 +2392,47 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
                      });
     flex_children = &ordered_children;
   }
+
+  // Whether an item takes its line's cross size: an auto one, aligned to
+  // stretch, without an auto margin across. Any other is as wide (or tall) as
+  // its content, at most the line.
+  auto cross_stretches = [&](const LayoutBox& child) {
+    const ComputedStyle& s = child.style();
+    const bool auto_margin = is_row
+                                 ? (s.margin_top_auto || s.margin_bottom_auto)
+                                 : (s.margin_left_auto || s.margin_right_auto);
+    return !auto_margin &&
+           EffectiveAlign(s.align_self, box->style().align_items) ==
+               AlignItems::Stretch &&
+           (is_row ? s.height : s.width).unit == Unit::Auto;
+  };
+  // The width a column's item is measured at, `max_w` cells being free: an
+  // item that does not stretch fits an auto width to its content, where a
+  // block would take all the width it is given. One with an aspect-ratio
+  // takes its width from its height instead.
+  auto column_item_width = [&](LayoutBox& child, int max_w) {
+    // A stretched item is as wide as the line, which is as wide as the
+    // container: one that scrolls sideways does not make room for the item
+    // to fill (a block given all the room it may scroll into took ~10000).
+    if (cross_stretches(child)) {
+      return Constraint{std::max(0, std::min(max_w, content_w) -
+                                        child.style().margin.Horiz()),
+                        MeasureMode::AtMost};
+    }
+    if (child.style().width.unit != Unit::Auto ||
+        child.style().aspect_ratio > 0) {
+      return Constraint{std::max(0, max_w - child.style().margin.Horiz()),
+                        MeasureMode::AtMost};
+    }
+    LayoutContext fit_context = context;
+    fit_context.is_measurement = true;
+    const PhysicalFragment* fit = RunLayout(
+        {&child}, {{0, MeasureMode::Undefined}, {0, MeasureMode::Undefined}},
+        fit_context);
+    return Constraint{
+        std::min(fit->width, std::max(0, max_w - child.style().margin.Horiz())),
+        MeasureMode::Exactly};
+  };
 
   for (auto& child : *flex_children) {
     if (child->style().position == PositionType::Absolute ||
@@ -2335,7 +2486,7 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
       } else {
         int max_w =
             (box->style().overflow_x == Overflow::Scroll) ? 10000 : content_w;
-        child_c.width = {max_w, MeasureMode::AtMost};
+        child_c.width = column_item_width(*child, max_w);
       }
       child_c.height = {basis != -1 ? basis : 0, basis != -1
                                                      ? MeasureMode::Exactly
@@ -2414,63 +2565,108 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
 
     int free_space =
         main_is_indefinite ? 0 : (container_main - line.total_main_base);
+    const bool allow_overflow =
+        (is_row && box->style().overflow_x == Overflow::Scroll) ||
+        (!is_row && box->style().overflow_y == Overflow::Scroll);
+    const bool growing = free_space > 0 && line.total_grow > 0;
+    const bool shrinking =
+        free_space < 0 && line.total_shrink_scaled > 0 && !allow_overflow;
 
-    if (free_space > 0 && line.total_grow > 0) {
-      int total_allocated = 0;
-      float current_grow_sum = 0.0f;
-      int items_to_grow = 0;
-      for (const auto& item : line.items) {
-        if (item.grow > 0) {
-          items_to_grow++;
-        }
+    if (growing || shrinking) {
+      // CSS's resolution of flexible lengths: the free space is shared by
+      // flex factor; an item that its min or max size stops is frozen there,
+      // and the space it did not take is shared again by the others.
+      const size_t n = line.items.size();
+      std::vector<int> min_main(n);
+      std::vector<int> max_main(n);
+      std::vector<bool> frozen(n);
+      for (size_t i = 0; i < n; ++i) {
+        const FlexItem& item = line.items[i];
+        const ComputedStyle& s = item.child_ptr->style();
+        const int margins = is_row ? s.margin.Horiz() : s.margin.Vert();
+        const int min = is_row ? ResolveBoxWidth(s, s.min_width, content_w)
+                               : ResolveBoxHeight(s, s.min_height, content_h);
+        const int max = is_row ? ResolveBoxWidth(s, s.max_width, content_w)
+                               : ResolveBoxHeight(s, s.max_height, content_h);
+        min_main[i] = margins + std::max(0, min);
+        max_main[i] = max == -1 ? std::numeric_limits<int>::max()
+                                : margins + std::max(max, min);
+        frozen[i] = growing ? item.grow <= 0 : item.shrink <= 0;
       }
-      int grown_count = 0;
-      for (auto& item : line.items) {
-        if (item.grow > 0) {
-          grown_count++;
-          int next_cumulative = 0;
-          if (grown_count == items_to_grow) {
-            next_cumulative = free_space;
+      // The gaps between the items, which the line takes before them.
+      int gaps = line.total_main_base;
+      for (const FlexItem& item : line.items) {
+        gaps -= item.main_base_size;
+      }
+      std::vector<int> target(n);
+      // Each round freezes an item at least, or ends.
+      for (size_t round = 0; round <= n; ++round) {
+        // What is left to share, and the factors sharing it.
+        int remaining = container_main - gaps;
+        float factors = 0.0f;
+        int sharing = 0;
+        for (size_t i = 0; i < n; ++i) {
+          const FlexItem& item = line.items[i];
+          if (frozen[i]) {
+            remaining -= item.main_resolved_size;
           } else {
-            current_grow_sum += item.grow;
-            next_cumulative = static_cast<int>((free_space * current_grow_sum) /
-                                               line.total_grow);
-          }
-          int extra = next_cumulative - total_allocated;
-          total_allocated = next_cumulative;
-          item.main_resolved_size += extra;
-        }
-      }
-    } else if (free_space < 0 && line.total_shrink_scaled > 0) {
-      bool allow_overflow =
-          (is_row && box->style().overflow_x == Overflow::Scroll) ||
-          (!is_row && box->style().overflow_y == Overflow::Scroll);
-      if (!allow_overflow) {
-        int total_shrunk = 0;
-        float current_shrink_scaled_sum = 0.0f;
-        int items_to_shrink = 0;
-        for (const auto& item : line.items) {
-          if (item.shrink > 0) {
-            items_to_shrink++;
+            remaining -= item.main_base_size;
+            factors += growing ? item.grow : item.main_base_size * item.shrink;
+            ++sharing;
           }
         }
-        int shrunk_count = 0;
-        for (auto& item : line.items) {
-          if (item.shrink > 0) {
-            shrunk_count++;
-            int next_cumulative = 0;
-            if (shrunk_count == items_to_shrink) {
-              next_cumulative = free_space;
-            } else {
-              current_shrink_scaled_sum += (item.main_base_size * item.shrink);
-              next_cumulative =
-                  static_cast<int>((free_space * current_shrink_scaled_sum) /
-                                   line.total_shrink_scaled);
-            }
-            int shrink_amount = next_cumulative - total_shrunk;
-            total_shrunk = next_cumulative;
-            item.main_resolved_size += shrink_amount;
+        if (sharing == 0 || factors <= 0.0f) {
+          break;
+        }
+        // Each item's share, by cumulative rounding: the shares add up to the
+        // space exactly, the last item taking what rounding leaves.
+        float cumulative_factor = 0.0f;
+        int allocated = 0;
+        int seen = 0;
+        for (size_t i = 0; i < n; ++i) {
+          if (frozen[i]) {
+            continue;
           }
+          const FlexItem& item = line.items[i];
+          cumulative_factor +=
+              growing ? item.grow : item.main_base_size * item.shrink;
+          const int cumulative =
+              ++seen == sharing
+                  ? remaining
+                  : static_cast<int>(remaining * cumulative_factor / factors);
+          target[i] = item.main_base_size + cumulative - allocated;
+          allocated = cumulative;
+        }
+        // Clamp, and freeze the items whose limit was hit in the direction
+        // the total violation goes. When the violations cancel out, each item
+        // takes its clamped size, and that is the end.
+        int violation = 0;
+        for (size_t i = 0; i < n; ++i) {
+          if (!frozen[i]) {
+            const int clamped = std::clamp(target[i], min_main[i], max_main[i]);
+            violation += clamped - target[i];
+          }
+        }
+        bool froze = false;
+        for (size_t i = 0; i < n; ++i) {
+          if (frozen[i]) {
+            continue;
+          }
+          const int clamped = std::clamp(target[i], min_main[i], max_main[i]);
+          const bool hit = violation > 0   ? clamped > target[i]
+                           : violation < 0 ? clamped < target[i]
+                                           : false;
+          if (hit) {
+            line.items[i].main_resolved_size = clamped;
+            frozen[i] = true;
+            froze = true;
+          } else {
+            line.items[i].main_resolved_size =
+                violation == 0 ? clamped : target[i];
+          }
+        }
+        if (!froze) {
+          break;
         }
       }
     }
@@ -2498,7 +2694,7 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
         } else {
           int max_w =
               (box->style().overflow_x == Overflow::Scroll) ? 10000 : content_w;
-          final_c.width = {max_w, MeasureMode::AtMost};
+          final_c.width = column_item_width(*item.child_ptr, max_w);
         }
         final_c.height = {item.main_resolved_size - m_vert,
                           MeasureMode::Exactly};
@@ -2522,6 +2718,31 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
       item.cross_size = is_row ? (item.fragment->height + m_vert)
                                : (item.fragment->width + m_horiz);
       line.cross_size = std::max(line.cross_size, item.cross_size);
+    }
+
+    // Down a row, the items aligned to the baseline line up their first line
+    // of text: the line is as tall as the most above it plus the most below
+    // it. A column's items have no baseline across: they align to its start.
+    if (is_row) {
+      int above = 0;
+      int below = 0;
+      bool any = false;
+      for (auto& item : line.items) {
+        const ComputedStyle& s = item.child_ptr->style();
+        if (s.margin_top_auto || s.margin_bottom_auto ||
+            EffectiveAlign(s.align_self, box->style().align_items) !=
+                AlignItems::Baseline) {
+          continue;
+        }
+        item.baseline = s.margin.top + FirstBaseline(item.fragment);
+        above = std::max(above, item.baseline);
+        below = std::max(below, item.cross_size - item.baseline);
+        any = true;
+      }
+      if (any) {
+        line.baseline = above;
+        line.cross_size = std::max(line.cross_size, above + below);
+      }
     }
 
     // Recompute total main resolved for the line
@@ -2620,7 +2841,7 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
   auto fragment = MakeArenaFragment(resolved_width, resolved_height);
   fragment->dom_node = box->dom_node;
   fragment->paint_fields = kPaintAll;
-  fragment->visibility = box->style().visibility;
+  fragment->visibility = box->text.visibility;
   fragment->background_color = box->style().background_color;
   fragment->foreground_color = box->text.fg;
   fragment->opacity = box->style().opacity;
@@ -2735,9 +2956,42 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
         main_is_indefinite ? 0
                            : (container_main_final - line.total_main_resolved);
 
+    // Whether an item's margin on the main-start (or main-end) side is auto.
+    // Positions are computed from main-start, then mirrored when reversed.
+    const auto main_margin_auto = [&](const LayoutBox& item, bool start) {
+      const ComputedStyle& s = item.style();
+      const bool left_or_top = start != is_reverse;
+      return is_row ? (left_or_top ? s.margin_left_auto : s.margin_right_auto)
+                    : (left_or_top ? s.margin_top_auto : s.margin_bottom_auto);
+    };
+    int auto_margins = 0;
+    for (const auto& item : line.items) {
+      auto_margins += main_margin_auto(*item.child_ptr, true) ? 1 : 0;
+      auto_margins += main_margin_auto(*item.child_ptr, false) ? 1 : 0;
+    }
+
     std::vector<int> item_positions(line.items.size(), 0);
     int cur_pos = main_start;
-    if (justify_free_space > 0) {
+    if (justify_free_space > 0 && auto_margins > 0) {
+      // Auto margins take the free space, shared equally, before
+      // justify-content: there is none left for it.
+      const int share = justify_free_space / auto_margins;
+      int remainder = justify_free_space % auto_margins;
+      const auto take_share = [&] {
+        cur_pos += share + (remainder > 0 ? 1 : 0);
+        remainder = std::max(0, remainder - 1);
+      };
+      for (size_t i = 0; i < line.items.size(); ++i) {
+        if (main_margin_auto(*line.items[i].child_ptr, true)) {
+          take_share();
+        }
+        item_positions[i] = cur_pos;
+        cur_pos += line.items[i].main_resolved_size + resolved_gap;
+        if (main_margin_auto(*line.items[i].child_ptr, false)) {
+          take_share();
+        }
+      }
+    } else if (justify_free_space > 0) {
       if (box->style().justify_content == JustifyContent::FlexEnd) {
         cur_pos += justify_free_space;
         for (size_t i = 0; i < line.items.size(); ++i) {
@@ -2844,6 +3098,20 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
             break;
         }
       }
+      // Auto margins on the cross axis take its free space, in place of
+      // align-self, and keep the item from stretching.
+      {
+        const ComputedStyle& s = item.child_ptr->style();
+        const bool before = is_row ? s.margin_top_auto : s.margin_left_auto;
+        const bool after = is_row ? s.margin_bottom_auto : s.margin_right_auto;
+        if (before && after) {
+          effective_align = AlignItems::Center;
+        } else if (before) {
+          effective_align = AlignItems::FlexEnd;
+        } else if (after) {
+          effective_align = AlignItems::FlexStart;
+        }
+      }
 
       if (is_row) {
         final_c.width = {item.main_resolved_size - m_horiz,
@@ -2864,8 +3132,10 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
         if (effective_align == AlignItems::Stretch &&
             item.child_ptr->style().width.unit == Unit::Auto) {
           final_c.width = {line.cross_size - m_horiz, MeasureMode::Exactly};
-        } else if (auto_width &&
-                   constraints.width.mode == MeasureMode::Undefined) {
+        } else if ((auto_width &&
+                    constraints.width.mode == MeasureMode::Undefined) ||
+                   item.child_ptr->style().width.unit == Unit::Auto) {
+          // As measured: the content's width, at most the line's.
           final_c.width = {item.cross_size - m_horiz, MeasureMode::Exactly};
         } else {
           int max_w = (box->style().overflow_x == Overflow::Scroll)
@@ -2878,7 +3148,9 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
       }
 
       int item_cross_pos = line_cross_pos;
-      if (effective_align != AlignItems::Stretch) {
+      if (effective_align == AlignItems::Baseline && item.baseline >= 0) {
+        item_cross_pos += line.baseline - item.baseline;
+      } else if (effective_align != AlignItems::Stretch) {
         int cross_free_space = line.cross_size - item.cross_size;
         if (cross_free_space > 0) {
           if (effective_align == AlignItems::FlexEnd) {
@@ -2922,16 +3194,16 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
 
   LayoutOutOfFlowChildren(box, fragment, context);
 
+  // The scrollbars' row and column are part of the extent, so that scrolling
+  // to the end brings the last row and column out from under them.
   int total_content_height =
-      is_row ? (total_cross_lines + box->style().padding.Vert() +
-                box->style().border.Vert())
-             : (max_line_main_resolved + box->style().padding.Vert() +
-                box->style().border.Vert());
+      (is_row ? total_cross_lines : max_line_main_resolved) +
+      box->style().padding.Vert() + box->style().border.Vert() +
+      scrollbar_spacing_y;
   int total_content_width =
-      is_row ? (max_line_main_resolved + box->style().padding.Horiz() +
-                box->style().border.Horiz())
-             : (total_cross_lines + box->style().padding.Horiz() +
-                box->style().border.Horiz());
+      (is_row ? max_line_main_resolved : total_cross_lines) +
+      box->style().padding.Horiz() + box->style().border.Horiz() +
+      scrollbar_spacing_x;
 
   if (box->style().overflow_y != Overflow::Visible ||
       box->style().overflow_x != Overflow::Visible) {
@@ -2945,12 +3217,14 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
       AccumulateScrollExtent(child_link.fragment, child_link.x, child_link.y,
                              &max_child_right, &max_child_bottom);
     }
-    total_content_width = std::max(
-        total_content_width, max_child_right + box->style().padding.right +
-                                 box->style().border.right);
-    total_content_height = std::max(
-        total_content_height, max_child_bottom + box->style().padding.bottom +
-                                  box->style().border.bottom);
+    total_content_width =
+        std::max(total_content_width,
+                 max_child_right + box->style().padding.right +
+                     box->style().border.right + scrollbar_spacing_x);
+    total_content_height =
+        std::max(total_content_height,
+                 max_child_bottom + box->style().padding.bottom +
+                     box->style().border.bottom + scrollbar_spacing_y);
 
     ApplyScrollExtent(box, fragment, context, total_content_width,
                       total_content_height);
@@ -3002,9 +3276,11 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
       is_fixed_width = true;
     } else {
       is_auto_width = true;
+      // An auto width fills what it is given, which is what is left of its
+      // container once its margins are taken: the caller has taken them.
       width = (constraints.width.mode == MeasureMode::Undefined)
                   ? 0
-                  : std::max(0, avail_width - box->style().margin.Horiz());
+                  : std::max(0, avail_width);
     }
   }
 
@@ -3156,7 +3432,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
     auto fragment = MakeArenaFragment(width, 0);
     fragment->dom_node = box->dom_node;
     fragment->paint_fields = kPaintBackground | kPaintForeground;
-    fragment->visibility = box->style().visibility;
+    fragment->visibility = box->text.visibility;
     fragment->background_color = box->style().background_color;
     fragment->foreground_color = box->text.fg;
     fragment->border_style = box->style().border_style;
@@ -3338,7 +3614,7 @@ PhysicalFragment* LayoutTable(LayoutInputNode node,
   auto fragment = MakeArenaFragment(width, 0);
   fragment->dom_node = box->dom_node;
   fragment->paint_fields = kPaintAll;
-  fragment->visibility = box->style().visibility;
+  fragment->visibility = box->text.visibility;
   fragment->background_color = box->style().background_color;
   fragment->foreground_color = box->text.fg;
   fragment->opacity = box->style().opacity;
@@ -4237,13 +4513,15 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       LayoutContext measure_context =
           CreateChildContext(box, parent_width, parent_height, 0, 0, context);
       measure_context.is_measurement = true;
-      const LayoutConstraints measure_c = {{width, mode},
+      // An item takes its margins in the column, as well as its box.
+      const int margins = pc.box->style().margin.Horiz();
+      const LayoutConstraints measure_c = {{std::max(0, width - margins), mode},
                                            {0, MeasureMode::Undefined}};
       const PhysicalFragment* fragment =
           RunLayout({pc.box}, measure_c, measure_context);
-      content = std::max(content, mode == MeasureMode::AtMost
-                                      ? FragmentInkRight(fragment)
-                                      : fragment->width);
+      content = std::max(content, margins + (mode == MeasureMode::AtMost
+                                                 ? FragmentInkRight(fragment)
+                                                 : fragment->width));
     }
     return content;
   };
@@ -4462,6 +4740,27 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
            rows_template[r].unit == Unit::Track;
   };
 
+  // The width an item is laid out at in its cell, `cell_w` wide once its
+  // margins are taken: the cell's when it stretches; otherwise its own, an
+  // auto one fitting its content, at most the cell's. One with an
+  // aspect-ratio takes its width from its height instead.
+  auto item_width = [&](LayoutBox* item, int cell_w, bool stretch) {
+    if (stretch) {
+      return Constraint{cell_w, MeasureMode::Exactly};
+    }
+    if (item->style().width.unit != Unit::Auto ||
+        item->style().aspect_ratio > 0) {
+      return Constraint{cell_w, MeasureMode::AtMost};
+    }
+    LayoutContext measure_context =
+        CreateChildContext(box, parent_width, parent_height, 0, 0, context);
+    measure_context.is_measurement = true;
+    const PhysicalFragment* fragment = RunLayout(
+        {item}, {{0, MeasureMode::Undefined}, {0, MeasureMode::Undefined}},
+        measure_context);
+    return Constraint{std::min(fragment->width, cell_w), MeasureMode::Exactly};
+  };
+
   // Measure children with exact widths and calculated/undefined heights
   for (auto& pc : placed_children) {
     LayoutConstraints child_c;
@@ -4471,6 +4770,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       child_width += col_widths[pc.col + i];
     }
     child_width += (pc.c_span - 1) * col_gap_val;
+    child_width = std::max(0, child_width - pc.box->style().margin.Horiz());
     // Mirror the final pass: only a stretched item fills the cell exactly.
     // A non-stretched one is sized by its own width, so measure it that way
     // (an aspect-ratio height must derive from the used width, not the
@@ -4478,9 +4778,9 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     bool stretch_x =
         EffectiveAlign(pc.box->style().justify_self,
                        box->style().justify_items) == AlignItems::Stretch &&
-        pc.box->style().width.unit == Unit::Auto;
-    child_c.width = {child_width,
-                     stretch_x ? MeasureMode::Exactly : MeasureMode::AtMost};
+        pc.box->style().width.unit == Unit::Auto &&
+        !pc.box->style().margin_left_auto && !pc.box->style().margin_right_auto;
+    child_c.width = item_width(pc.box, child_width, stretch_x);
 
     bool all_fixed = true;
     int fixed_height_sum = 0;
@@ -4496,7 +4796,9 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
 
     if (all_fixed) {
       fixed_height_sum += (pc.r_span - 1) * row_gap_val;
-      child_c.height = {fixed_height_sum, MeasureMode::Exactly};
+      child_c.height = {
+          std::max(0, fixed_height_sum - pc.box->style().margin.Vert()),
+          MeasureMode::Exactly};
     } else {
       child_c.height = {0, MeasureMode::Undefined};
     }
@@ -4523,7 +4825,8 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       current_sum += row_heights[pc.row + i];
     }
 
-    int target_sum = pc.fragment->height - (pc.r_span - 1) * row_gap_val;
+    int target_sum = pc.fragment->height + pc.box->style().margin.Vert() -
+                     (pc.r_span - 1) * row_gap_val;
     int extra = target_sum - current_sum;
     if (extra > 0) {
       int growable_count = 0;
@@ -4560,10 +4863,11 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     }
     const ComputedStyle& style = pc.box->style();
     const int floor =
-        style.overflow_y == Overflow::Visible
-            ? pc.fragment->height
-            : std::max(0, ResolveBoxHeight(style, style.min_height,
-                                           remaining_height));
+        style.margin.Vert() +
+        (style.overflow_y == Overflow::Visible
+             ? pc.fragment->height
+             : std::max(0, ResolveBoxHeight(style, style.min_height,
+                                            remaining_height)));
     row_floors[pc.row] = std::max(row_floors[pc.row], floor);
   }
   for (int r = 0; r < R; ++r) {
@@ -4597,7 +4901,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   auto container_frag = MakeArenaFragment(parent_width, 0);
   container_frag->dom_node = box->dom_node;
   container_frag->paint_fields = kPaintAll;
-  container_frag->visibility = box->style().visibility;
+  container_frag->visibility = box->text.visibility;
   container_frag->background_color = box->style().background_color;
   container_frag->foreground_color = box->text.fg;
   container_frag->opacity = box->style().opacity;
@@ -4758,10 +5062,30 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     }
     final_h += (pc.r_span - 1) * row_gap_val;
 
+    // The item's margin box fills the cell: its box, the cell less margins.
+    const ComputedStyle& item_style = pc.box->style();
+    final_w = std::max(0, final_w - item_style.margin.Horiz());
+    final_h = std::max(0, final_h - item_style.margin.Vert());
+
     AlignItems justify = EffectiveAlign(pc.box->style().justify_self,
                                         box->style().justify_items);
     AlignItems align =
         EffectiveAlign(pc.box->style().align_self, box->style().align_items);
+    // Auto margins take the free space of the cell, in place of the
+    // alignment, and keep the item from stretching.
+    const auto auto_align = [](bool before, bool after, AlignItems& a) {
+      if (before && after) {
+        a = AlignItems::Center;
+      } else if (before) {
+        a = AlignItems::FlexEnd;
+      } else if (after) {
+        a = AlignItems::FlexStart;
+      }
+    };
+    auto_align(item_style.margin_left_auto, item_style.margin_right_auto,
+               justify);
+    auto_align(item_style.margin_top_auto, item_style.margin_bottom_auto,
+               align);
 
     bool stretch_x = (justify == AlignItems::Stretch) &&
                      pc.box->style().width.unit == Unit::Auto;
@@ -4769,16 +5093,15 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
                      pc.box->style().height.unit == Unit::Auto;
 
     LayoutConstraints final_c;
-    final_c.width = {final_w,
-                     stretch_x ? MeasureMode::Exactly : MeasureMode::AtMost};
+    final_c.width = item_width(pc.box, final_w, stretch_x);
     final_c.height = {final_h,
                       stretch_y ? MeasureMode::Exactly : MeasureMode::AtMost};
 
-    int cx = col_offsets[c];
-    int cy = row_offsets[r];
+    int cx = col_offsets[c] + item_style.margin.left;
+    int cy = row_offsets[r] + item_style.margin.top;
 
-    LayoutContext final_context =
-        CreateChildContext(box, parent_width, parent_height, cx, cy, context);
+    LayoutContext final_context = CreateChildContext(
+        box, container_frag->width, container_frag->height, cx, cy, context);
     final_context.is_measurement = context.is_measurement;
 
     auto final_frag = RunLayout({pc.box}, final_c, final_context);

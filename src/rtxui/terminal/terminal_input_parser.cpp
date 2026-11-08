@@ -23,6 +23,81 @@
 
 namespace rtxui {
 
+namespace {
+
+// A key xterm sends with modifiers held, `CSI 1 ; m X` for the arrows, Home,
+// End and F1-F4, or `CSI n ; m ~` for the others. m - 1 is a set of bits:
+// Shift 1, Alt 2, Ctrl 4, Meta 8. Every terminal recorded under captures/
+// that reports modifiers on these keys does it this way.
+std::optional<Event> ModifiedKey(std::string_view sequence) {
+  if (!sequence.starts_with("\x1B[") || sequence.size() < 6) {
+    return std::nullopt;
+  }
+  const char final_byte = sequence.back();
+  const std::string_view parameters = sequence.substr(2, sequence.size() - 3);
+  const size_t semicolon = parameters.find(';');
+  if (semicolon == std::string_view::npos) {
+    return std::nullopt;
+  }
+  auto parse = [](std::string_view text, int& out) {
+    const char* end = text.data() + text.size();
+    const auto [ptr, error] = std::from_chars(text.data(), end, out);
+    return error == std::errc() && ptr == end;
+  };
+  int key = 0;
+  int modifiers = 0;
+  if (!parse(parameters.substr(0, semicolon), key) ||
+      !parse(parameters.substr(semicolon + 1), modifiers) || modifiers < 2 ||
+      modifiers > 16) {
+    return std::nullopt;
+  }
+  using Keyboard = Event::Keyboard;
+  Keyboard::Special special = Keyboard::None;
+  if (final_byte == '~') {
+    static constexpr std::pair<int, Keyboard::Special> kTildeKeys[] = {
+        {1, Keyboard::Home}, {2, Keyboard::Insert}, {3, Keyboard::Delete},
+        {4, Keyboard::End},  {5, Keyboard::PageUp}, {6, Keyboard::PageDown},
+        {7, Keyboard::Home}, {8, Keyboard::End},    {15, Keyboard::F5},
+        {17, Keyboard::F6},  {18, Keyboard::F7},    {19, Keyboard::F8},
+        {20, Keyboard::F9},  {21, Keyboard::F10},   {23, Keyboard::F11},
+        {24, Keyboard::F12},
+    };
+    for (const auto& [number, name] : kTildeKeys) {
+      if (number == key) {
+        special = name;
+      }
+    }
+  } else if (key == 1) {
+    // Not 'R' (F3): `CSI 1 ; m R` is also a cursor position report, which
+    // ParseCSI() reads before it gets here.
+    static constexpr std::pair<char, Keyboard::Special> kLetterKeys[] = {
+        {'A', Keyboard::ArrowUp},    {'B', Keyboard::ArrowDown},
+        {'C', Keyboard::ArrowRight}, {'D', Keyboard::ArrowLeft},
+        {'H', Keyboard::Home},       {'F', Keyboard::End},
+        {'P', Keyboard::F1},         {'Q', Keyboard::F2},
+        {'S', Keyboard::F4},
+    };
+    for (const auto& [letter, name] : kLetterKeys) {
+      if (letter == final_byte) {
+        special = name;
+      }
+    }
+  }
+  if (special == Keyboard::None) {
+    return std::nullopt;
+  }
+  const int bits = modifiers - 1;
+  return Event(internal::KeyboardData{
+      .special = special,
+      .modifier = {.alt = (bits & 2) != 0,
+                   .ctrl = (bits & 4) != 0,
+                   .meta = (bits & 8) != 0,
+                   .shift = (bits & 1) != 0},
+  });
+}
+
+}  // namespace
+
 std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
   static const auto& mapping = *new std::map<std::string, Event>{
       {"\x1B[D", Event::ArrowLeft()},
@@ -227,7 +302,7 @@ std::optional<Event> TerminalInputParser::ToEvent(std::string_view sequence) {
   if (auto it = mapping.find(std::string(sequence)); it != mapping.end()) {
     return it->second;
   }
-  return std::nullopt;
+  return ModifiedKey(sequence);
 }
 
 void TerminalInputParser::Timeout(int time) {

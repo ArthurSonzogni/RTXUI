@@ -1690,6 +1690,88 @@ bool ParseRelativeSelector(std::string_view text,
   }
 }
 
+// Whether MatchOnePseudo() understands `pseudo`, a token as it receives it.
+// Kept in step with it: a token it does not know matches nothing, which is
+// right for the matcher but would leave a typo like `:hovr` silently ignored,
+// so the stylesheet reports those up front.
+bool IsSupportedPseudoClass(std::string_view pseudo, int depth = 0) {
+  static constexpr std::array<std::string_view, 19> kNames = {
+      "hover",
+      "focus",
+      "focus-visible",
+      "focus-within",
+      "active",
+      "scrollbar-hover",
+      "scrollbar-active",
+      "scrollbar-thumb-hover",
+      "scrollbar-thumb-active",
+      "disabled",
+      "checked",
+      "read-only",
+      "first-child",
+      "last-child",
+      "only-child",
+      "empty",
+      "first-of-type",
+      "last-of-type",
+      "only-of-type",
+  };
+  if (std::ranges::find(kNames, pseudo) != kNames.end()) {
+    return true;
+  }
+  if (depth > kMaxPseudoDepth || !pseudo.ends_with(")")) {
+    return false;
+  }
+  const size_t open = pseudo.find('(');
+  if (open == std::string_view::npos) {
+    return false;
+  }
+  const std::string_view name = pseudo.substr(0, open);
+  const std::string_view argument =
+      pseudo.substr(open + 1, pseudo.size() - open - 2);
+  if (name == "nth-child" || name == "nth-last-child" ||
+      name == "nth-of-type" || name == "nth-last-of-type") {
+    int a = 0;
+    int b = 0;
+    return ParseAnPlusB(argument, a, b);
+  }
+  if (name == "has") {
+    std::vector<RelativeStep> steps;
+    return ParseRelativeSelector(argument, steps) &&
+           std::ranges::all_of(steps, [&](const RelativeStep& step) {
+             return std::ranges::all_of(
+                 step.pseudo_classes, [&](const std::string& inner) {
+                   return IsSupportedPseudoClass(inner, depth + 1);
+                 });
+           });
+  }
+  if (name != "not" && name != "is" && name != "where") {
+    return false;
+  }
+  // A list of compound selectors, as MatchCompoundList() reads it.
+  std::string_view rest = argument;
+  while (true) {
+    const size_t comma = css::FindTopLevel(rest, ",");
+    const std::string_view entry = TrimSelector(
+        comma == std::string_view::npos ? rest : rest.substr(0, comma));
+    if (entry.empty() ||
+        css::FindTopLevel(entry, " \n\r\t>+~") != std::string_view::npos) {
+      return false;
+    }
+    std::vector<std::string> inner;
+    css::ParseCompound(entry, inner);
+    if (!std::ranges::all_of(inner, [&](const std::string& token) {
+          return IsSupportedPseudoClass(token, depth + 1);
+        })) {
+      return false;
+    }
+    if (comma == std::string_view::npos) {
+      return true;
+    }
+    rest = rest.substr(comma + 1);
+  }
+}
+
 // Whether `element` matches steps[0..index] of a relative selector, with
 // steps[0] related to `anchor` by its combinator. Backtracks over every
 // ancestor or sibling a descendant or `~` combinator could mean.
@@ -1823,64 +1905,106 @@ bool MatchHas(const Element* anchor,
   return false;
 }
 
+namespace {
+// How matching parents[index..] from an element went. Beyond a plain match,
+// a failure says how far it rules out the elements still to try, as in
+// WebKit's SelectorChecker: past the last ancestor, no other ancestor can do
+// better, so a descendant combinator stops looking. This keeps a chain of
+// descendant combinators linear instead of exponential in the tree's depth.
+enum class ParentsMatch {
+  kMatches,
+  kFailsLocally,      // Another element further on may still match.
+  kFailsAllSiblings,  // No preceding sibling will, but an ancestor may.
+  kFailsCompletely,   // Nothing further on will.
+};
+
+// Whether the compounds parents[index..] lead from `element` the way their
+// combinators say. Backtracks, as CSS does: in `.a > .b .c`, the `.b` that
+// matters is any ancestor of the `.c` that is a child of an `.a`, not only
+// the nearest `.b`.
+ParentsMatch MatchSelectorParentsFrom(
+    const Element* element,
+    const Element* root,
+    const std::vector<css::SelectorPart>& parents,
+    size_t index,
+    const ComponentBase* scope) {
+  if (index == parents.size()) {
+    return ParentsMatch::kMatches;
+  }
+  const css::SelectorPart& part = parents[index];
+  auto match = [&](const Element* candidate) {
+    if (!MatchSelectorPart(candidate, root, part) ||
+        !MatchPseudos(candidate, part.pseudo_classes, 0, scope)) {
+      return ParentsMatch::kFailsLocally;
+    }
+    return MatchSelectorParentsFrom(candidate, root, parents, index + 1, scope);
+  };
+  switch (part.combinator) {
+    case '>': {
+      const Element* parent = GetRealParent(element, scope);
+      return parent ? match(parent) : ParentsMatch::kFailsCompletely;
+    }
+    case '+': {
+      const Element* sibling = GetPrecedingSibling(element, scope);
+      return sibling ? match(sibling) : ParentsMatch::kFailsAllSiblings;
+    }
+    case '~':
+      for (const Element* sibling = GetPrecedingSibling(element, scope);
+           sibling; sibling = GetPrecedingSibling(sibling, scope)) {
+        const ParentsMatch result = match(sibling);
+        if (result != ParentsMatch::kFailsLocally) {
+          return result;
+        }
+      }
+      return ParentsMatch::kFailsAllSiblings;
+    default:
+      for (const Element* ancestor = GetRealParent(element, scope); ancestor;
+           ancestor = GetRealParent(ancestor, scope)) {
+        const ParentsMatch result = match(ancestor);
+        if (result == ParentsMatch::kMatches ||
+            result == ParentsMatch::kFailsCompletely) {
+          return result;
+        }
+      }
+      return ParentsMatch::kFailsCompletely;
+  }
+}
+}  // namespace
+
 bool MatchSelectorParents(const Element* element,
                           const Element* root,
                           const std::vector<css::SelectorPart>& parents,
                           const ComponentBase* scope) {
-  const Element* curr = element;
-  for (const auto& parent_part : parents) {
-    if (parent_part.combinator == '>') {
-      curr = GetRealParent(curr, scope);
-      if (!curr) {
-        return false;
-      }
-      if (!MatchSelectorPart(curr, root, parent_part)) {
-        return false;
-      }
-    } else if (parent_part.combinator == '+') {
-      curr = GetPrecedingSibling(curr, scope);
-      if (!curr) {
-        return false;
-      }
-      if (!MatchSelectorPart(curr, root, parent_part)) {
-        return false;
-      }
-    } else if (parent_part.combinator == '~') {
-      bool found = false;
-      while (true) {
-        curr = GetPrecedingSibling(curr, scope);
-        if (!curr) {
-          break;
-        }
-        if (MatchSelectorPart(curr, root, parent_part)) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        return false;
-      }
-    } else {
-      bool found = false;
-      while (true) {
-        curr = GetRealParent(curr, scope);
-        if (!curr) {
-          break;
-        }
-        if (MatchSelectorPart(curr, root, parent_part)) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return MatchSelectorParentsFrom(element, root, parents, 0, scope) ==
+         ParentsMatch::kMatches;
 }
 
 namespace {
+
+// Reports each pseudo-class of `ruleset`'s selector that matches nothing
+// because it is not one RTXUI knows: a typo (`:hovr`), one from CSS that is
+// not implemented, or an argument it cannot read (`:nth-child(x)`).
+void ReportUnsupportedPseudoClasses(const css::Ruleset& ruleset) {
+  // A selector can be any length; a message quoting it need not be.
+  auto quote = [](std::string_view text) {
+    constexpr size_t kMax = 80;
+    return text.size() <= kMax ? std::string(text)
+                               : std::string(text.substr(0, kMax)) + "...";
+  };
+  auto check = [&](const std::vector<std::string>& pseudo_classes) {
+    for (const std::string& pseudo : pseudo_classes) {
+      if (!IsSupportedPseudoClass(pseudo)) {
+        ReportDiagnostic("unsupported CSS pseudo-class ':" + quote(pseudo) +
+                         "' in '" + quote(ruleset.selector) +
+                         "': the rule matches nothing");
+      }
+    }
+  };
+  check(ruleset.parsed_selector.pseudo_classes);
+  for (const css::SelectorPart& part : ruleset.parsed_selector.parents) {
+    check(part.pseudo_classes);
+  }
+}
 
 bool IsCssWideKeyword(std::string_view value) {
   while (!value.empty() &&
@@ -2422,9 +2546,11 @@ void ResolveElementStyle(Element* element,
       };
       for_each_round(false, find_keyword_wins);
       for_each_round(true, find_keyword_wins);
+      // A keyword that lost does nothing either: it is no value to apply.
       auto apply_unless_reset = [&](const css::Declaration& declaration) {
-        if (std::ranges::find(keyword_wins, declaration.property) ==
-            keyword_wins.end()) {
+        if (!IsCssWideKeyword(declaration.value) &&
+            std::ranges::find(keyword_wins, declaration.property) ==
+                keyword_wins.end()) {
           apply_with_vars(declaration);
         }
       };
@@ -2850,7 +2976,13 @@ std::shared_ptr<const StyleData> GetSharedStyle(
         rule.frames.push_back(&ruleset);
         continue;
       }
-      const bool is_pseudo = !ruleset.parsed_selector.pseudo_classes.empty();
+      ReportUnsupportedPseudoClasses(ruleset);
+      const bool is_pseudo =
+          !ruleset.parsed_selector.pseudo_classes.empty() ||
+          std::ranges::any_of(ruleset.parsed_selector.parents,
+                              [](const css::SelectorPart& part) {
+                                return !part.pseudo_classes.empty();
+                              });
       for (const auto& part : ruleset.parsed_selector.parents) {
         if (part.combinator == '+' || part.combinator == '~') {
           rules.has_sibling_combinators = true;

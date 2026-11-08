@@ -385,3 +385,35 @@ TEST_CASE("XML.LineBreakNextToAnElementIsASpace", "[xml]") {
   REQUIRE(p[3].children.size() == 1);
   CHECK(p[3].children[0].text == "D");
 }
+
+// As in HTML: a reference naming no character is U+FFFD, and one that is not
+// a number is text. They were dropped without a trace, or a surrogate was
+// encoded as bytes that are not UTF-8.
+TEST_CASE("XML.CharacterReferencesNamingNoCharacter", "[xml]") {
+  auto nodes = xml::Parse(
+      "<div>&#0;|&#55296;|&#x110000;|&#99999999999;|&#xZZ;|&#12ab;|&#;|"
+      "&#X41;</div>");
+  REQUIRE(nodes.has_value());
+  REQUIRE(nodes.value()[0].children.size() == 1);
+  CHECK(nodes.value()[0].children[0].text == "�|�|�|�|&#xZZ;|&#12ab;|&#;|A");
+}
+
+TEST_CASE("XML.SingleQuotedAttributes", "[xml]") {
+  auto nodes = xml::Parse(R"(<div a='say "hi"' b="it's"/>)");
+  REQUIRE(nodes.has_value());
+  const auto& div = nodes.value()[0];
+  CHECK(div.attributes.at("a") == "say \"hi\"");
+  CHECK(div.attributes.at("b") == "it's");
+  CHECK_FALSE(xml::Parse("<div a='open/>").has_value());
+}
+
+// A template saved with Windows line endings, read at run time by hot reload:
+// a carriage return ended no tag name, so `<div\r\n` opened a `div\r`.
+TEST_CASE("XML.CarriageReturnEndsATagName", "[xml]") {
+  auto nodes = xml::Parse("<div\r\n  class=\"a\">x</div\r\n><br\r\n/>");
+  REQUIRE(nodes.has_value());
+  REQUIRE(nodes.value().size() == 2);
+  CHECK(nodes.value()[0].tag == "div");
+  CHECK(nodes.value()[0].attributes.at("class") == "a");
+  CHECK(nodes.value()[1].tag == "br");
+}

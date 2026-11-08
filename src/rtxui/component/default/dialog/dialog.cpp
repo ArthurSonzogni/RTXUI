@@ -109,6 +109,9 @@ bool dialog::OnEvent(Event event) {
          kb.motion() == Event::Keyboard::Motion::Repeat) &&
         kb.special() == Event::Keyboard::Special::Escape) {
       open = false;
+      // Two-way: the parent's `open` follows, or its next render would open
+      // the dialog again.
+      PropagateBinding("open", "false");
       return true;
     }
   }

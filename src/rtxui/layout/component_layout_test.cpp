@@ -330,9 +330,9 @@ class MarginAutoTestComponent
     : public rtxui::Component<MarginAutoTestComponent> {
  public:
   std::string_view view = R"(
-    <box id="parent">
-      <box id="child">centered</box>
-    </box>
+    <div id="parent">
+      <div id="child">centered</div>
+    </div>
     <style>
       #parent {
         display: block;
@@ -374,19 +374,16 @@ TEST_CASE("Block layout max-width and margin auto centering",
 class MaxHeightTestComponent : public rtxui::Component<MaxHeightTestComponent> {
  public:
   std::string_view view = R"(
-    <box id="parent">
-      <box id="child">
-        <box>1</box>
-        <box>2</box>
-        <box>3</box>
-        <box>4</box>
-        <box>5</box>
-      </box>
-    </box>
+    <div id="parent">
+      <div id="child">
+        <div>1</div>
+        <div>2</div>
+        <div>3</div>
+        <div>4</div>
+        <div>5</div>
+      </div>
+    </div>
     <style>
-      box {
-        display: block;
-      }
       #parent {
         height: 20;
       }

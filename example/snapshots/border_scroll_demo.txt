@@ -12,11 +12,11 @@
           ▊   │ Each line is wider than the box, so it also scro │   ▎
           ▊   │ The scrollbars meet in the corner, inside the bo │   ▎
           ▊   │ Try round, double, tall, shadow, or a shade.     │   ▎
-          ▊   │ Untick a checkbox to drop that scrollbar.        │   ▎
+          ▊   │ Untick a checkbox to drop that scrollbar.       ▃│   ▎
           ▊   │ Line 5                                           │   ▎
           ▊   │ Line 6                                           │   ▎
           ▊   │ Line 7                                           │   ▎
-          ▊   │                                     ▋            │   ▎
+          ▊   │                                                  │   ▎
           ▊   ╰──────────────────────────────────────────────────╯   ▎
           ▊                                                          ▎
           ▊▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▎

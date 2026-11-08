@@ -10,7 +10,7 @@ RTXUI supports element positioning contexts:
 
 1.  **`static`** (Default): The element renders in order within the normal flex layout flow.
 2.  **`relative`**: The element remains in the normal flow but establishes a reference origin point for any descendant child elements set to `position: absolute`.
-3.  **`absolute`**: The element is removed from the normal flow. It is positioned relative to its closest parent ancestor that has `position: relative` (or the root screen boundary if no ancestor is relative).
+3.  **`absolute`**: The element is removed from the normal flow. It is positioned relative to its closest ancestor whose `position` is not `static` (or the screen if there is none). As in CSS, its offsets are measured from inside that ancestor's border: `top: 0; left: 0` is the first cell of its padding box.
 4.  **`fixed`**: The element is removed from the normal flow and positioned relative to the outermost terminal screen viewport.
 5.  **`sticky`**: The element is positioned based on the user's scroll position. It behaves like `relative` until the viewport scrolls past a given offset (such as `top: 0`), at which point it "sticks" to that position, similar to `fixed`.
 

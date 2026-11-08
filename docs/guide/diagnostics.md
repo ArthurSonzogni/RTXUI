@@ -10,6 +10,7 @@ RTXUI reports each one as a diagnostic.
 | Mistake | Example | Diagnostic |
 |---|---|---|
 | Unsupported CSS property or value | `font-size: small`, `flex-direction: diagonal` | `unsupported CSS declaration 'font-size: small'` |
+| A pseudo-class RTXUI does not know, or an argument it cannot read | `:hovr`, `:nth-child(x)`, `:not(.a .b)` | `unsupported CSS pseudo-class ':hovr' in 'span:hovr': the rule matches nothing` |
 | Interpolating a name that is not bound | `{titel}` | `'{titel}' in <App> is not a bound name` |
 | An expression inside `{}` | `{count == 1}` | `templates do not evaluate expressions; bind a const method computing the value and use its name` |
 | A handler that is not bound | `onclick="Sumbit"`, when clicked | `handler 'Sumbit' is not bound in any enclosing component` |

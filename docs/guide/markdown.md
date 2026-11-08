@@ -90,8 +90,8 @@ The built-in parser supports:
 - Paragraphs, separated by blank lines
 - Blockquotes, starting with `>`
 - Fenced code blocks, using ` ``` `
-- Lists: ordered (`1. `) and unordered (`- `, `* `, `+ `)
-- Inline formatting: `**bold**`, `*italic*`, `` `code` ``
+- Lists: ordered (`1. `, numbered from the first item's number) and unordered (`- `, `* `, `+ `). Blank lines between items keep one list, and a line right after an item continues it. Lists do not nest: an indented `- ` continues the item above as text.
+- Inline formatting: `**bold**`, `*italic*` (or `__`, `_`, which do not apply inside a word: `snake_case` stays as written), `` `code` ``
 - Links: `[text](url)`
 - Tables: pipe-tables with inline formatting and escaped pipes (`\|`)
 

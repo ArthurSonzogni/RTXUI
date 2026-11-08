@@ -18,6 +18,7 @@
 #include "rtxui/component/default/textarea/textarea.hpp"
 #include "rtxui/dom/element.hpp"
 #include "rtxui/event.hpp"
+#include "rtxui/headless.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
@@ -1818,4 +1819,35 @@ TEST_CASE("TextInputBase Select On Focus",
   screen.Draw();
 
   CHECK(input_ptr->selection_start == -1);
+}
+
+namespace {
+
+class ShiftSelectApp : public rtxui::Component<ShiftSelectApp> {
+ public:
+  std::string text;
+  ShiftSelectApp() { Bind(text); }
+  std::string_view view = R"(<input value="{text}" autofocus="true"/>)";
+};
+
+}  // namespace
+
+TEST_CASE("Input selects with Shift and the arrows a terminal sends",
+          "[component][input]") {
+  // What xterm-style terminals send for Shift+Left, Shift+Home and
+  // Ctrl+Shift+Left. They were dropped before they reached the input.
+  auto app = rtxui::Ref<ShiftSelectApp>::New();
+  rtxui::HeadlessScreen screen(app, 30, 3);
+  SECTION("Shift+Left") {
+    screen.Input("abc\x1b[1;2D\x1b[1;2DX");
+    CHECK(app->text == "aX");
+  }
+  SECTION("Shift+Home") {
+    screen.Input("abc\x1b[1;2HX");
+    CHECK(app->text == "X");
+  }
+  SECTION("Ctrl+Shift+Left selects a word") {
+    screen.Input("ab cd\x1b[1;6DX");
+    CHECK(app->text == "ab X");
+  }
 }

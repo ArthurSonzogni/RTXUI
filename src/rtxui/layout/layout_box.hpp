@@ -37,6 +37,7 @@ struct InheritedTextStyle {
   int text_indent = 0;
   OverflowWrap overflow_wrap = OverflowWrap::Anywhere;
   WordBreak word_break = WordBreak::Normal;
+  Visibility visibility = Visibility::Visible;
 
   bool operator==(const InheritedTextStyle&) const = default;
 };

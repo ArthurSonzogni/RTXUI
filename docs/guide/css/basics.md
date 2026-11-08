@@ -83,6 +83,10 @@ The CSS parser supports a wide range of standard selectors and combinators:
     *   **Adjacent Sibling combinator (`+`)**: Matches immediate following sibling (e.g., `div + p` targets a `p` that is placed right after a `div`).
     *   **General Sibling combinator (`~`)**: Matches any following sibling (e.g., `div ~ p` targets any `p` that shares the same parent and follows a `div`).
 
+    Every compound of the selector may carry pseudo-classes, not only the
+    last: `.card:hover .title` styles the title while the card is hovered, and
+    `li:first-child + li` the second item.
+
     Combinators see the component's own template, just as a rule's target is
     always one of its own elements. `.card .title` matches when this component
     wrote both the `.card` and the `.title`, even with other components in

@@ -602,9 +602,9 @@ void PaintImpl(const PhysicalFragment* frag,
                bool inherited_blink,
                ClipRect clip,
                float inherited_opacity) {
-  if (frag->visibility == Visibility::Hidden) {
-    return;
-  }
+  // A hidden box draws nothing of its own, but keeps its layout size, and its
+  // children each have their own visibility: inherited, unless they set it.
+  const bool hidden = frag->visibility == Visibility::Hidden;
 
   // The root and every raised box start a stacking context: the raised boxes
   // inside it are painted once the rest of it is, lowest z-index first.
@@ -648,7 +648,7 @@ void PaintImpl(const PhysicalFragment* frag,
   bool current_blink = frag->blink.value_or(inherited_blink);
 
   // 0. Draw Background
-  if (frag->background_color) {
+  if (!hidden && frag->background_color) {
     Color new_bg = frag->background_color.value();
     new_bg.a = static_cast<uint8_t>(new_bg.a * current_opacity);
     if (new_bg.a > 0) {
@@ -706,7 +706,7 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   // 1. Draw Border
-  if (frag->has_border && frag->border_style != BorderStyle::None) {
+  if (!hidden && frag->has_border && frag->border_style != BorderStyle::None) {
     Color top_border_color =
         frag->border_color_top.value_or(current_foreground_color);
     Color right_border_color =
@@ -897,7 +897,7 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   // 2. Draw Text
-  if (frag->is_text) {
+  if (!hidden && frag->is_text) {
     // Only while a selection is shown or recorded: whose text this is.
     const Element* selection_node =
         g_selection && frag->text_node && TextSelectable(frag->text_node)
@@ -984,7 +984,7 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   // 2b. A <canvas>'s cells, in its content box.
-  if (frag->dom_node) {
+  if (!hidden && frag->dom_node) {
     if (CanvasSurface* canvas = frag->dom_node->canvas_surface()) {
       const Spacing& padding = frag->dom_node->style.padding;
       const bool bordered =
@@ -1042,13 +1042,15 @@ void PaintImpl(const PhysicalFragment* frag,
 
   // 3. Draw Scrollbars
   bool draw_v_scrollbar = false;
-  if (frag->dom_node && frag->dom_node->style.overflow_y == Overflow::Scroll &&
+  if (!hidden && frag->dom_node &&
+      frag->dom_node->style.overflow_y == Overflow::Scroll &&
       frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
     draw_v_scrollbar = true;
   }
 
   bool draw_h_scrollbar = false;
-  if (frag->dom_node && frag->dom_node->style.overflow_x == Overflow::Scroll &&
+  if (!hidden && frag->dom_node &&
+      frag->dom_node->style.overflow_x == Overflow::Scroll &&
       frag->dom_node->style.scrollbar_width == ScrollbarWidth::Auto) {
     draw_h_scrollbar = true;
   }
@@ -1406,7 +1408,7 @@ void PaintImpl(const PhysicalFragment* frag,
   }
 
   // 5. Outline, drawn once the whole tree is painted.
-  if (frag->dom_node && !frag->is_text &&
+  if (!hidden && frag->dom_node && !frag->is_text &&
       frag->dom_node->style.outline_style != BorderStyle::None) {
     QueueOutline(frag->dom_node->style, abs_x, abs_y, w, h,
                  current_foreground_color, current_opacity, clip);

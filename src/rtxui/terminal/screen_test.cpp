@@ -4615,6 +4615,61 @@ TEST_CASE("Screen.FocusDisplayNone", "[screen][focus][display_none]") {
   CHECK_FALSE(second->focused());
 }
 
+TEST_CASE("A hidden element takes neither focus nor clicks",
+          "[screen][focus][visibility]") {
+  class Hidden : public Component<Hidden> {
+   public:
+    int clicks = 0;
+    Hidden() {
+      Bind(clicks);
+      Bind(Click);
+    }
+    void Click() { ++clicks; }
+    std::string_view view = R"xml(
+      <div>
+        <div id="first" tabindex="0">first</div>
+        <div style="visibility: hidden;">
+          <div id="hidden" tabindex="0" onclick="Click">hidden</div>
+          <div id="shown" tabindex="0" style="visibility: visible;">shown</div>
+        </div>
+      </div>
+    )xml";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<Hidden>::New();
+  Screen screen = ScreenInternals::Make(component, device);
+  screen.Draw();
+  Element* root = ComponentInternals::Root(*component);
+  Element* first = root->QuerySelector("#first");
+  Element* hidden = root->QuerySelector("#hidden");
+  Element* shown = root->QuerySelector("#shown");
+  REQUIRE(first);
+  REQUIRE(hidden);
+  REQUIRE(shown);
+
+  // Tab goes past the hidden element to the visible one inside its parent.
+  screen.Dispatch(Event::Tab());
+  CHECK(first->focused());
+  screen.Dispatch(Event::Tab());
+  CHECK_FALSE(hidden->focused());
+  CHECK(shown->focused());
+  // So does spatial navigation.
+  screen.Dispatch(Event::ArrowUp());
+  CHECK(first->focused());
+  screen.Dispatch(Event::ArrowDown());
+  CHECK(shown->focused());
+
+  // It is on the second row, where a click finds nothing to run.
+  MouseData press;
+  press.button = Event::Mouse::Button::Left;
+  press.motion = Event::Mouse::Motion::Pressed;
+  press.x = 1;
+  press.y = 2;
+  screen.Dispatch(press);
+  CHECK(component->clicks == 0);
+}
+
 TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
   class BorderUpdateComponent : public Component<BorderUpdateComponent> {
    public:
