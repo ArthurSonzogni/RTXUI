@@ -37,6 +37,22 @@ and set `CC=clang CXX=clang++` the same way.)
 
 ## Adding RTXUI to your project
 
+### From the starter
+
+The quickest start is
+[RTXUI-starter](https://github.com/ArthurSonzogni/RTXUI-starter): a template
+repository with one small app, its `CMakeLists.txt` and a CI that builds it
+on Linux, macOS and Windows. Click **Use this template** on GitHub, or clone
+it:
+
+```bash
+git clone https://github.com/ArthurSonzogni/RTXUI-starter my_app
+cd my_app
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/rtxui-starter
+```
+
 ### With FetchContent
 
 The simplest integration downloads RTXUI at configure time:

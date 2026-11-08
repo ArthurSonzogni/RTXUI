@@ -141,7 +141,10 @@ standard library.
 
 ## Get started
 
-Add it to your `CMakeLists.txt`:
+The quickest start is the
+[RTXUI-starter](https://github.com/ArthurSonzogni/RTXUI-starter) template: one
+small app, its CMake build and a CI, ready to make your own. Or add RTXUI to
+your `CMakeLists.txt`:
 
 ```cmake
 include(FetchContent)
@@ -174,6 +177,14 @@ has `.deb`, `.rpm` and archives for Linux, macOS and Windows.
 
 Then browse the [examples](https://arthursonzogni.github.io/RTXUI/guide/examples):
 66 of them, each running live in your browser next to its source.
+
+## Built with RTXUI
+
+- **[dusk](https://github.com/ArthurSonzogni/dusk)**: where did the disk
+  space go? Scans a directory, then browses it biggest first, with a filter,
+  sorting and deletion.
+
+Built something with RTXUI? Open a pull request to add it here.
 
 ## RTXUI or FTXUI?
 
