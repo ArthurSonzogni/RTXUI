@@ -2918,6 +2918,18 @@ void ScreenImpl::Draw(bool reuse_layout) {
   auto root = component_->Root();
   const auto& root_fragment = root_fragment_;
 
+  // ElementHandle::ScrollIntoView(), for an element still in the document.
+  if (Ref<Element> target = TakePendingScrollIntoView(); target && root) {
+    const Element* top = target.get();
+    while (top->Parent()) {
+      top = top->Parent();
+    }
+    if (top == root) {
+      ScrollIntoView(target.get());
+      laid_out_since_paint_ = true;
+    }
+  }
+
   // Once laid out, as their size is the layout's.
   const bool canvases_drew = CanvasSurface::live_count > 0 && root_fragment &&
                              DrawCanvases(*root_fragment);
@@ -3269,7 +3281,8 @@ void ScreenImpl::DigestAndDraw() {
     digest_pending_ = true;
     return;
   }
-  if (!component_->Digest()) {
+  // A handler asking for ScrollIntoView() changes no state, but needs a frame.
+  if (!component_->Digest() && !HasPendingScrollIntoView()) {
     return;
   }
   RequestDraw();
@@ -3279,7 +3292,7 @@ void ScreenImpl::EndBurst() {
   suppress_draw_ = false;
   if (digest_pending_) {
     digest_pending_ = false;
-    if (component_->Digest()) {
+    if (component_->Digest() || HasPendingScrollIntoView()) {
       draw_pending_ = true;
     }
   }

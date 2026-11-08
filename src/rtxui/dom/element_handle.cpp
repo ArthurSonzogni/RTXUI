@@ -141,4 +141,10 @@ void ElementHandle::SetScrollY(int y, bool smooth) {
   }
 }
 
+void ElementHandle::ScrollIntoView() {
+  if (Element* element = get()) {
+    RequestScrollIntoView(element);
+  }
+}
+
 }  // namespace rtxui

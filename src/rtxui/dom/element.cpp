@@ -544,6 +544,22 @@ void AdvanceLayoutEpoch() {
   g_layout_epoch.fetch_add(1, std::memory_order_relaxed);
 }
 
+namespace {
+thread_local Ref<Element> g_pending_scroll_into_view;
+}  // namespace
+
+void RequestScrollIntoView(Element* element) {
+  g_pending_scroll_into_view = Ref<Element>(element);
+}
+
+bool HasPendingScrollIntoView() {
+  return static_cast<bool>(g_pending_scroll_into_view);
+}
+
+Ref<Element> TakePendingScrollIntoView() {
+  return std::exchange(g_pending_scroll_into_view, Ref<Element>());
+}
+
 void Element::InvalidateLayout() {
   const uint64_t epoch = LayoutEpoch();
   // An ancestor already stamped in this epoch had its own ancestors stamped

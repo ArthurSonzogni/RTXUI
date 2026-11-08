@@ -159,6 +159,7 @@ A weak, nullable handle to an element of the rendered tree, declared in `<rtxui/
 | :--- | :--- |
 | `int scroll_x() const` / `int scroll_y() const` | Current scroll offsets in cells. |
 | `void SetScrollX(int offset, bool smooth = false)` / `void SetScrollY(int offset, bool smooth = false)` | Sets the scroll position, optionally animated. Negative offsets become 0; offsets past the end are clamped by the next layout. |
+| `void ScrollIntoView()` | Scrolls the containers around the element by the fewest cells that show it whole, once the next frame is laid out, as the DOM's `scrollIntoView({block: "nearest"})` does. |
 
 ---
 

@@ -190,6 +190,12 @@ struct ElementHandleTarget : public RefCounted {
 RTXUI_EXPORT uint64_t LayoutEpoch();
 RTXUI_EXPORT void AdvanceLayoutEpoch();
 
+/// ElementHandle::ScrollIntoView() asks for it; the screen does it once the
+/// frame is laid out. The last request wins.
+RTXUI_EXPORT void RequestScrollIntoView(Element* element);
+RTXUI_EXPORT Ref<Element> TakePendingScrollIntoView();
+RTXUI_EXPORT bool HasPendingScrollIntoView();
+
 class RTXUI_EXPORT Element : public RefCounted {
  public:
   Element();

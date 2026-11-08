@@ -61,6 +61,11 @@ class RTXUI_EXPORT ElementHandle {
   int scroll_y() const;
   void SetScrollX(int x, bool smooth = false);
   void SetScrollY(int y, bool smooth = false);
+  /// Scrolls the scroll containers around the element by the fewest cells
+  /// that show it whole, as the DOM's `scrollIntoView({block: "nearest"})`
+  /// does: one that already shows does not move. It happens once the next
+  /// frame is laid out, so it works on an element a re-render just made.
+  void ScrollIntoView();
 
  private:
   Element* get() const;

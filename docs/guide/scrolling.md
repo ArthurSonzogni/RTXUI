@@ -54,6 +54,22 @@ RTXUI automatically scrolls containers to keep focused elements visible when use
 </template>
 </ExampleTabs>
 
+### Scroll-Into-View from C++
+
+To keep something in view that has no focus, such as the selected row of a
+list driven by the arrow keys, call `ScrollIntoView()` on its element. Each
+scroll container around it moves by the fewest cells that show it whole, and
+not at all when it already shows. It happens once the next frame is laid out,
+so it also works on an element the change being made has just created.
+
+<!-- snippet: fragment -->
+```cpp
+void Select(int index) {
+  selected = index;
+  QueryElement("#row-" + std::to_string(index)).ScrollIntoView();
+}
+```
+
 ### Horizontal Scrolling
 
 <ExampleTabs src="/wasm/rtxui_example_horizontal_scroll.js">

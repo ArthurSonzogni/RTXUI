@@ -23,6 +23,7 @@
 #include "rtxui/component/default/tooltip/tooltip.hpp"
 #include "rtxui/diagnostic.hpp"
 #include "rtxui/dom/element.hpp"
+#include "rtxui/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
 #include "rtxui/layout/layout.hpp"
@@ -6781,4 +6782,62 @@ TEST_CASE("A raised box covers a later box elsewhere and takes its clicks",
 }
 
 }  // namespace
+
+namespace {
+
+class ScrollIntoViewApp : public rtxui::Component<ScrollIntoViewApp> {
+ public:
+  std::vector<std::string> rows;
+  ScrollIntoViewApp() {
+    for (int i = 0; i < 20; ++i) {
+      rows.push_back("row" + std::to_string(i));
+    }
+    Bind(rows);
+  }
+  // A key names the row to show: 'a' row15, 'b' row3, 'c' row5.
+  bool OnEvent(rtxui::Event event) override {
+    if (event == rtxui::Event(rtxui::Event::Keyboard::From('a'))) {
+      QueryElement("#row15").ScrollIntoView();
+      return true;
+    }
+    if (event == rtxui::Event(rtxui::Event::Keyboard::From('b'))) {
+      QueryElement("#row3").ScrollIntoView();
+      return true;
+    }
+    if (event == rtxui::Event(rtxui::Event::Keyboard::From('c'))) {
+      QueryElement("#row5").ScrollIntoView();
+      return true;
+    }
+    return Component<ScrollIntoViewApp>::OnEvent(event);
+  }
+  std::string_view view = R"(
+    <div id="list">
+      <for each="{rows}" as="row"><div id="{row}">{row}</div></for>
+    </div>
+    <style>
+      #list { height: 5; overflow-y: scroll; scrollbar-width: none; }
+    </style>
+  )";
+};
+
+}  // namespace
+
+TEST_CASE("ElementHandle::ScrollIntoView scrolls the least to show it",
+          "[screen]") {
+  auto app = rtxui::Ref<ScrollIntoViewApp>::New();
+  rtxui::HeadlessScreen screen(app, 10, 5);
+
+  screen.Input("a");
+  CHECK(app->QueryElement("#list").scroll_y() == 11);  // Last row: row15.
+  CHECK(screen.Text().find("row15") != std::string::npos);
+
+  // Back up: it becomes the first row shown.
+  screen.Input("b");
+  CHECK(app->QueryElement("#list").scroll_y() == 3);
+
+  // Already in view: nothing moves.
+  screen.Input("c");
+  CHECK(app->QueryElement("#list").scroll_y() == 3);
+}
+
 }  // namespace rtxui
