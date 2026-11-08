@@ -9,6 +9,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "rtxui/base/clock.hpp"
 #include "rtxui/color.hpp"
@@ -1870,3 +1871,49 @@ TEST_CASE("Input shows every space of its value", "[component]") {
 }
 
 }  // namespace
+
+namespace {
+
+class ChangeInputComponent : public rtxui::Component<ChangeInputComponent> {
+ public:
+  std::string text;
+  std::vector<std::string> changes;
+  int plain_changes = 0;
+  void Changed(const std::string& value) { changes.push_back(value); }
+  void PlainChanged() { plain_changes++; }
+  ChangeInputComponent() {
+    Bind(text);
+    Bind(Changed);
+    Bind(PlainChanged);
+  }
+  std::string_view view = R"(
+    <input value="{text}" onchange="Changed" />
+    <input onchange="PlainChanged" />
+  )";
+};
+
+}  // namespace
+
+// The reference documented onchange on <input>, but nothing ever called it.
+TEST_CASE("Input runs onchange once its value is committed", "[component]") {
+  auto app = rtxui::Ref<ChangeInputComponent>::New();
+  rtxui::HeadlessScreen screen(app, 30, 2);
+
+  screen.Input("\tab");
+  CHECK(app->changes.empty());  // Typing alone commits nothing.
+
+  screen.Input("\r");  // Enter commits.
+  REQUIRE(app->changes.size() == 1);
+  CHECK(app->changes[0] == "ab");
+
+  screen.Input("\r");  // Nothing new to commit.
+  CHECK(app->changes.size() == 1);
+
+  screen.Input("c\t");  // Leaving the input commits too.
+  REQUIRE(app->changes.size() == 2);
+  CHECK(app->changes[1] == "abc");
+
+  // A handler that takes no value runs as well.
+  screen.Input("x\r");
+  CHECK(app->plain_changes == 1);
+}

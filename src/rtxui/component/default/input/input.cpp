@@ -3,6 +3,7 @@
 // the LICENSE file.
 #include "rtxui/component/default/input/input.hpp"
 
+#include <string>
 #include <string_view>
 
 #include "rtxui/bind.hpp"
@@ -92,11 +93,39 @@ std::string_view input::Setup() {
 }
 
 bool input::OnEvent(Event event) {
-  return OnEventShared(this, event, false);
+  const std::string before = value;
+  const bool handled = OnEventShared(this, event, false);
+  edited_ |= value != before;
+  // Enter commits, and still goes where it went before: to a parent that
+  // handles it, for instance.
+  if (event == Event::Return() && is_focused_ && edited_) {
+    Commit();
+  }
+  return handled;
+}
+
+void input::Commit() {
+  edited_ = false;
+  auto* root = ComponentInternals::Root(*this);
+  if (!root || !root->Attributes().count("onchange")) {
+    return;
+  }
+  const std::string handler = root->Attributes().at("onchange");
+  if (auto* owner = GetAttributeOwnerComponent(root)) {
+    // A handler taking the value, or none.
+    if (value.empty() ||
+        !ComponentInternals::RunCallback(*owner, handler, value)) {
+      ComponentInternals::RunCallback(*owner, handler);
+    }
+  }
 }
 
 bool input::Digest() {
+  const bool was_focused = is_focused_;
   DigestShared(this);
+  if (was_focused && !is_focused_ && edited_) {
+    Commit();
+  }
   bool changed = Component<input>::Digest();
   if (changed) {
     KeepCursorVisible(ComponentInternals::Root(*this), false);

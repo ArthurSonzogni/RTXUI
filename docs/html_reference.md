@@ -194,7 +194,7 @@ self:disabled {
 | `readonly` | `boolean` | `false` | One-way | Prevents text modification while allowing focus and text selection. |
 | `select_on_focus` | `boolean` | `false` | One-way | Automatically selects all text content when focused. |
 | `maxlength` | `integer` | `-1` | One-way | Maximum character length constraint (`-1` indicates unconstrained). |
-| `onchange` | `handler` | — | — | Callback invoked when value is committed. Accepts `void()` or `void(std::string)`. |
+| `onchange` | `handler` | — | — | Runs when the user commits an edit: on Enter, or when focus leaves the input after its value changed. Accepts `void()` or `void(std::string)`, which receives the value. |
 
 #### Styleable Parts (`::part()`)
 - `placeholder`: The span element rendering placeholder text.

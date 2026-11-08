@@ -17,6 +17,12 @@ class input : public Component<input>, public TextInputBase {
   std::string_view Setup();
   bool OnEvent(Event event) override;
   bool Digest() override;
+
+ private:
+  // Runs onchange, as a browser fires `change`: on Enter, or once focus
+  // leaves, when the user has edited the value since it last ran.
+  void Commit();
+  bool edited_ = false;
 };
 
 }  // namespace rtxui
