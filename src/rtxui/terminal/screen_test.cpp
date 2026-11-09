@@ -34,6 +34,7 @@
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/style.hpp"
+#include "rtxui/task.hpp"
 #include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/input_wait.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
@@ -6730,11 +6731,74 @@ TEST_CASE("Screen.BurstOfEventsIsDigestedOnce", "[terminal][regression]") {
 
   device->ClearOutput();
   component->digests = 0;
-  device->PushInput(std::string(20, 'a'));
+  device->PushInput("\x1b[200~" + std::string(20, 'a') + "\x1b[201~");
   screen.Step();
   CHECK(component->events == 20);
   CHECK(component->digests == 1);
   CHECK(device->GetOutput().find("20") != std::string::npos);
+}
+
+TEST_CASE("Keys read together each see what the keys before them did",
+          "[terminal][regression]") {
+  // A burst compared the bound state once, after its last event, also for
+  // keys: piped or quickly typed, a key's handler did not find the element
+  // the key before it had added, as it does when typed slowly.
+  class List : public Component<List> {
+   public:
+    std::vector<std::string> items;
+    std::vector<bool> found;
+    List() { Bind(items); }
+    bool OnEvent(Event event) override {
+      const std::string id = "#item-" + std::to_string(items.size());
+      found.push_back(static_cast<bool>(QueryElement(id)));
+      items.push_back("item-" + std::to_string(items.size() + 1));
+      return true;
+    }
+    std::string_view view = R"(
+      <div><for each="{items}" as="item"><p id="{item}">x</p></for></div>)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<List>::New();
+  Screen screen = ScreenInternals::Make(component, device);
+  screen.Step();
+
+  device->PushInput("abc");
+  screen.Step();
+  // The first key finds nothing: no key added "#item-0".
+  CHECK(component->found == std::vector<bool>{false, true, true});
+}
+
+TEST_CASE("A task a handler posts finds the elements the handler added",
+          "[terminal]") {
+  // The documents say to reach an element the change being made creates
+  // from a task: it runs once the page shows that change.
+  class List : public Component<List> {
+   public:
+    std::vector<std::string> items;
+    std::vector<bool> found;
+    List() { Bind(items); }
+    bool OnEvent(Event event) override {
+      items.push_back("item-" + std::to_string(items.size()));
+      const std::string id = "#" + items.back();
+      found.push_back(static_cast<bool>(QueryElement(id)));
+      PostTask(
+          [this, id] { found.push_back(static_cast<bool>(QueryElement(id))); });
+      return true;
+    }
+    std::string_view view = R"(
+      <div><for each="{items}" as="item"><p id="{item}">x</p></for></div>)";
+  };
+
+  auto device = std::make_shared<MockTerminalDevice>();
+  auto component = Ref<List>::New();
+  Screen screen = ScreenInternals::Make(component, device);
+  screen.Step();
+
+  device->PushInput("ab");
+  screen.Step();
+  // In the handler, not yet; in the task, yes.
+  CHECK(component->found == std::vector<bool>{false, false, true, true});
 }
 
 TEST_CASE("A raised box covers a later box elsewhere and takes its clicks",

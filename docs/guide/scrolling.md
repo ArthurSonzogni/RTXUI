@@ -59,14 +59,26 @@ RTXUI automatically scrolls containers to keep focused elements visible when use
 To keep something in view that has no focus, such as the selected row of a
 list driven by the arrow keys, call `ScrollIntoView()` on its element. Each
 scroll container around it moves by the fewest cells that show it whole, and
-not at all when it already shows. It happens once the next frame is laid out,
-so it also works on an element the change being made has just created.
+not at all when it already shows. It happens once the next frame is laid out.
 
 <!-- snippet: fragment -->
 ```cpp
 void Select(int index) {
   selected = index;
   QueryElement("#row-" + std::to_string(index)).ScrollIntoView();
+}
+```
+
+The page shows a change of state once the handler making it returns, so
+`QueryElement()` does not find yet an element that change adds, such as the
+first row of a list just filled. Post the call: a task runs once the page
+shows the change.
+
+<!-- snippet: fragment -->
+```cpp
+void Open(Directory* directory) {
+  rows = RowsOf(directory);
+  PostTask([this] { QueryElement("#row-0").ScrollIntoView(); });
 }
 ```
 

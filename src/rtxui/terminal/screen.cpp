@@ -1007,6 +1007,22 @@ GlyphFallback GlyphFallbackFor(TerminalDevice& device) {
 
 namespace {
 
+// Whether `event` is one of many that come together -- a pasted character, a
+// key's release, a mouse motion, a wheel tick -- whose bound state a burst
+// compares once, after its last event. Any other event is something the user
+// did on purpose, and sees the state as the events before it left it.
+bool CoalescesInBurst(const Event& event) {
+  if (auto keyboard = event.get_if<Event::Keyboard>()) {
+    return keyboard->from_paste() ||
+           keyboard->motion() == Event::Keyboard::Released;
+  }
+  if (auto mouse = event.get_if<Event::Mouse>()) {
+    return mouse->motion() == Event::Mouse::Moved ||
+           mouse->button() >= Event::Mouse::WheelUp;
+  }
+  return false;
+}
+
 // The element's CSS color, as it inherits it.
 Color InheritedColor(const Element& element) {
   for (const Element* e = &element; e; e = e->Parent()) {
@@ -1129,6 +1145,10 @@ class ScreenImpl {
   // Ends a burst of events started by setting suppress_draw_: compares the
   // bound state once and draws once, if anything needs it.
   void EndBurst();
+  // Compares what a burst's events deferred, before an event that must see
+  // it.
+  void FlushBurstDigest();
+  void HandleBurstEvent(const Event& event);
   void HandleEvent(Event event);
   // Whether something is moving and needs more frames. `include_infinite`
   // false leaves out the animations that never end.
@@ -1326,9 +1346,10 @@ class ScreenImpl {
   // A RequestDraw() was deferred by suppress_draw_ and no Draw() has run
   // since.
   bool draw_pending_ = false;
-  // A DigestAndDraw() was deferred by suppress_draw_: the burst's events
-  // only change state, and EndBurst() compares it once, however many there
-  // were.
+  // A DigestAndDraw() was deferred by suppress_draw_: the burst's pasted
+  // characters, motions and wheel ticks only change state, and it is compared
+  // once, however many there were: before the next other event, which must
+  // see it, or by EndBurst().
   bool digest_pending_ = false;
   // Where this screen's layout lives. Declared before the trees allocated in
   // it, so they are destroyed while it still exists.
@@ -1618,7 +1639,7 @@ void ScreenImpl::Step() {
         pixel_mouse_ = *pixel_mouse;
       }
       while (auto event = parser_->GetEvent()) {
-        HandleEvent(*event);
+        HandleBurstEvent(*event);
       }
       EndBurst();
     } else if (bytes_read == 0) {
@@ -3288,6 +3309,25 @@ void ScreenImpl::DigestAndDraw() {
   RequestDraw();
 }
 
+void ScreenImpl::FlushBurstDigest() {
+  if (!digest_pending_) {
+    return;
+  }
+  digest_pending_ = false;
+  if (component_->Digest() || HasPendingScrollIntoView()) {
+    // Laid out now: the next event is hit-tested against it.
+    UpdateLayout();
+    draw_pending_ = true;
+  }
+}
+
+void ScreenImpl::HandleBurstEvent(const Event& event) {
+  if (!CoalescesInBurst(event)) {
+    FlushBurstDigest();
+  }
+  HandleEvent(event);
+}
+
 void ScreenImpl::EndBurst() {
   suppress_draw_ = false;
   if (digest_pending_) {
@@ -4664,7 +4704,7 @@ void ScreenImpl::SettlePendingInput() {
   parser_->Timeout(static_cast<int>(kEscapeDelayMs));
   suppress_draw_ = true;
   while (auto event = parser_->GetEvent()) {
-    HandleEvent(*event);
+    HandleBurstEvent(*event);
   }
   EndBurst();
 }

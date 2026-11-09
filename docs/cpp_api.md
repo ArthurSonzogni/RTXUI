@@ -123,7 +123,7 @@ Bindings are registered in the constructor.
 | `bool Digest()` | Compares bound members against snapshots; reconciles template DOM if differences are detected. Returns `true` if state changed. |
 | `void PropagateBinding(std::string_view prop, std::string_view value)` | For a component offering a two-way bound attribute: writes `value` to the parent state bound to its `prop` attribute, as `<input>` does for `value`. |
 | `ElementHandle RootElement() const` | Handle to the root element of the expanded component template (null before mounting). |
-| `ElementHandle QueryElement(std::string_view selector) const` | Handle to the first element matching `#id`, `.class`, or `tag`, or a null handle. |
+| `ElementHandle QueryElement(std::string_view selector) const` | Handle to the first element matching `#id`, `.class`, or `tag`, or a null handle. It searches the page as the last handler left it: an element the running handler's change adds appears once it returns, so reach it from a `PostTask()`. |
 | `ComponentBase* QueryComponent(std::string_view selector)` | The component rendered at `selector`, or `nullptr`. |
 | `void CaptureMouse() noexcept` | Routes all subsequent mouse events exclusively to this component until released. |
 | `void ReleaseMouse() noexcept` | Restores standard mouse hit-testing. |
