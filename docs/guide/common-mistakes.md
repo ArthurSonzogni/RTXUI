@@ -97,6 +97,12 @@ rules use them.
 `transform: translate(2, 1)` or `translateX(2)`. It takes the same lengths,
 percentages of the box's own size and `calc()`, and it animates.
 
+**Spaces collapse, as in HTML.** Several spaces in a template's text show as
+one, so they cannot line things up: `<span>q quit    s sort</span>` reads
+`q quit s sort`. Space elements with `gap` on a flex container, `margin`, or
+`padding`, and line up columns with a grid or a `width`. For text whose spaces
+matter, such as preformatted output, use `<pre>` or `white-space: pre`.
+
 ## C++ and Build
 
 **Include only `<rtxui/rtxui.hpp>`.** Headers under `src/` are internal and

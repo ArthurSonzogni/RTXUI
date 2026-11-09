@@ -593,6 +593,12 @@ Clicking a `<label>` delegates focus and activation to the target:
 #### Keyboard Invariants:
 Pressing the `Escape` key automatically dismisses an open dialog and updates the bound `open` property to `false`.
 
+#### Styleable Parts (`::part()`)
+- `dialog-overlay`: The backdrop over the whole screen, which centers the box.
+- `dialog-box`: The framed box. It is as wide as its content, between `min-width: 30` and `max-width: 60`; set a `width` here for another one, e.g. `dialog::part(dialog-box) { width: 56; }`.
+- `dialog-header`, `dialog-title`: The header frame and its title text.
+- `dialog-body`: What holds the dialog's content.
+
 <ExampleTabs src="/wasm/rtxui_example_dialog.js">
 <template #source>
 
