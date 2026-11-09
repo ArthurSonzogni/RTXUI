@@ -50,32 +50,62 @@ attribute, as in HTML. The attribute value is the name of a bound callback:
 
 ---
 
-## 4. Parameterized Callbacks
+## 4. Handler Arguments
 
-Callbacks can accept arguments from templates. The arguments are received by the C++ lambda as `std::string` parameters. This is extremely useful for index tracking in loops:
+A handler can take arguments, written in parentheses after its name. Each one
+is read from the template's text into the parameter's type:
 
 ```cpp
-// Registered in constructor
-Import("RemoveItem", [this](std::string index_str) {
-  size_t index = std::stoull(index_str);
-  items.erase(items.begin() + index);
-});
+struct ListApp : public rtxui::Component<ListApp> {
+  std::vector<std::string> items = {"a", "b", "c"};
+  int width = 0;
+  int height = 0;
+
+  void Remove(int index) { items.erase(items.begin() + index); }
+  void Resize(int w, int h) {
+    width = w;
+    height = h;
+  }
+
+  ListApp() {
+    Bind(items);
+    Bind(Remove);
+    Bind(Resize);
+  }
+
+  std::string_view view = R"html(
+    <div>
+      <button onclick="Resize(80, 24)">80x24</button>
+      <for each="{items}" as="item">
+        <div onclick="Remove({$index})">{item}</div>
+      </for>
+    </div>
+  )html";
+};
 ```
 
-To invoke a parameterized callback in a template, pass a value or an
-interpolated loop variable in parentheses. Inside a
-[`<for>` loop](/guide/loops), `{$index}` interpolates to the current item's
-index:
-```html
-<ul>
-  <for each="{todo_list}" as="todo">
-    <li>
-      <span>{todo}</span>
-      <button onclick="RemoveItem({$index})">Delete</button>
-    </li>
-  </for>
-</ul>
-```
+Inside a [`<for>` loop](/guide/loops), `{$index}` is the current item's index,
+and `{item.field}` any field of the item.
+
+| Parameter type | Template text |
+| :--- | :--- |
+| `int`, `size_t`, any integer | `Remove(3)` |
+| `float`, `double` | `Zoom(1.5)` |
+| `bool` | `Show(true)`, `Show(0)` |
+| `std::string`, `std::string_view` | `Open(notes.txt)`: the text as written, without quotes |
+| an enum | `SetSort(kSize)`: the enumerator's name, with C++26 reflection |
+| your own type, or an enum without reflection | what your `bool Parse(std::string_view, T&)` function, declared next to the type, accepts |
+
+Several arguments are separated by commas: `Resize(80, 24)` calls
+`void Resize(int w, int h)`. A handler taking a single string receives
+everything between the parentheses, commas included.
+
+Text that does not convert, such as `Remove(abc)` for an `int`, or the wrong
+number of arguments, is reported as a [diagnostic](/guide/diagnostics), and
+the handler does not run.
+
+A lambda imported with `Import("Name", [this](std::string arg) { ... })`
+receives the text as is.
 
 ---
 

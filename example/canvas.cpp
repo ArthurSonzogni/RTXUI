@@ -4,7 +4,6 @@
 //
 // <canvas>: the application draws the cells and reads the pointer. Braille
 // curves animated from a timer, and a half-block surface to paint on.
-#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -12,7 +11,6 @@
 #include <rtxui/rtxui.hpp>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <vector>
 
 using namespace rtxui;
@@ -214,12 +212,9 @@ class CanvasDemo : public Component<CanvasDemo> {
     }
   }
 
-  void Pick(const std::string& index) {
-    int i = 0;
-    const auto [ptr, ec] =
-        std::from_chars(index.data(), index.data() + index.size(), i);
-    if (ec == std::errc() && i >= 0 && i < static_cast<int>(swatches.size())) {
-      swatch = i;
+  void Pick(size_t index) {
+    if (index < swatches.size()) {
+      swatch = static_cast<int>(index);
     }
   }
 

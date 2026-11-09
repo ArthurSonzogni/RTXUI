@@ -27,6 +27,7 @@
 #include "rtxui/field_sink.hpp"  // IWYU pragma: export
 #include "rtxui/internal/binding.hpp"
 #include "rtxui/internal/class_name.hpp"
+#include "rtxui/internal/handler.hpp"
 #include "rtxui/refcounted.hpp"
 
 namespace css {
@@ -151,7 +152,13 @@ class RTXUI_EXPORT ComponentBase : public RefCounted {
   void ImportAlias(std::string_view class_name,
                    std::string_view alias,
                    ComponentFactory factory);
+  /// Makes `handler` callable from the template as `name`.
+  void ImportHandler(std::string_view name, internal::Handler handler);
+  /// Calls the handler `name` with `arg`. Whether it took the call.
   bool RunCallback(std::string_view name, std::string_view arg = "");
+  /// Calls the handler `call.name`: kNotApplicable when there is none, or
+  /// when it does not take what `call` passes.
+  internal::HandlerResult RunHandler(const internal::HandlerCall& call);
 
   /// The tag a template wrote to create this component: what selectors and
   /// QuerySelector() match it by. Tag() -- the class name -- for a component
@@ -320,14 +327,6 @@ class Component : public ComponentBase {
                   },
                   nullptr, nullptr});
       } else if constexpr (requires {
-                             (std::declval<Derived>().*member)(std::string{});
-                           }) {
-        ComponentBase::Import(
-            name,
-            std::function<void(std::string)>([this, member](std::string s) {
-              (static_cast<Derived*>(this)->*member)(s);
-            }));
-      } else if constexpr (requires {
                              (std::declval<Derived>().*
                               member)(std::declval<Canvas&>());
                            }) {
@@ -345,10 +344,10 @@ class Component : public ComponentBase {
                                     (static_cast<Derived*>(this)->*member)(e);
                                   }));
       } else {
-        // Non-const member function -> Event handler
-        ComponentBase::Import(name, std::function<void()>([this, member]() {
-                                (static_cast<Derived*>(this)->*member)();
-                              }));
+        // Any other method -> Event handler, its arguments read from the
+        // template's text.
+        ImportHandler(
+            name, internal::MakeHandler(static_cast<Derived*>(this), member));
       }
     } else {
       // Member variable pointer

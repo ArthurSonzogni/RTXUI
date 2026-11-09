@@ -23,7 +23,7 @@ class Counter : public Component<Counter> {
 
   int Doubled() const { return count * 2; }  // Computed: bind a const method.
   void Increment() { count++; }              // Handler: bind a method.
-  void Remove(std::string index) { items.erase(items.begin() + std::stoi(index)); }
+  void Remove(int index) { items.erase(items.begin() + index); }
 
   Counter() {
     Bind(count);
@@ -77,7 +77,9 @@ Link the CMake target `rtxui` and include only `<rtxui/rtxui.hpp>`.
   next to the struct and before the component:
   `void Fields(const Task& t, rtxui::FieldSink& out) { out("id", t.id); }`,
   then `Bind(tasks)` and `{task.id}`.
-- Handlers: `onclick="Method"` or `onclick="Method(arg)"`, one string argument;
+- Handlers: `onclick="Method"`, or `onclick="Method({$index}, 2)"` with
+  arguments converted to the method's parameter types (integers, floats,
+  `bool`, `std::string`, enums by enumerator name with C++26 reflection);
   `oncontextmenu` for the right click. No `@click`, braces, statements or
   camelCase (`onClick`). Use `class`, not `className`.
 - Attributes bind like text: `title="{name}"`, never `:title="name"`.

@@ -35,6 +35,7 @@
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/headless.hpp"
+#include "rtxui/internal/handler.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/paint/texture.hpp"
 #include "rtxui/refcounted.hpp"
@@ -1919,3 +1920,138 @@ TEST_CASE("A child outliving the component it binds to does not write to it",
   screen.Advance(1000);  // The toast's timer fires.
   CHECK(screen.Advance(16).find("Saved") == std::string::npos);
 }
+
+namespace typed_handlers {
+
+enum class Sort { kSize, kName };
+
+bool Parse(std::string_view text, Sort& sort) {
+  if (text == "size") {
+    sort = Sort::kSize;
+    return true;
+  }
+  if (text == "name") {
+    sort = Sort::kName;
+    return true;
+  }
+  return false;
+}
+
+class Typed : public rtxui::Component<Typed> {
+ public:
+  int index = -1;
+  double ratio = 0;
+  bool flag = false;
+  std::string text;
+  std::string_view seen_view;
+  int width = 0;
+  int height = 0;
+  Sort sort = Sort::kSize;
+  int plain = 0;
+
+  void Pick(int i) { index = i; }
+  void Ratio(double r) { ratio = r; }
+  void Flag(bool b) { flag = b; }
+  void Text(const std::string& s) { text = s; }
+  void View(std::string_view s) { text = std::string(s); }
+  void Resize(int w, unsigned h) {
+    width = w;
+    height = static_cast<int>(h);
+  }
+  void SetSort(Sort s) { sort = s; }
+  void Plain() { plain++; }
+  bool Maybe(int i) { return i > 0; }
+
+  std::string_view view = R"html(
+    <div>
+      <for each="{rows}" as="row">
+        <div onclick="Pick({row})">row {row}</div>
+      </for>
+    </div>
+  )html";
+  std::vector<int> rows = {10, 20, 30};
+
+  Typed() {
+    Bind(rows);
+    Bind(Pick);
+    Bind(Ratio);
+    Bind(Flag);
+    Bind(Text);
+    Bind(View);
+    Bind(Resize);
+    Bind(SetSort);
+    Bind(Plain);
+    Bind(Maybe);
+  }
+};
+
+using rtxui::ComponentInternals;
+
+TEST_CASE("Handlers take typed arguments", "[component]") {
+  auto app = rtxui::Ref<Typed>::New();
+  CHECK(ComponentInternals::RunCallback(*app, "Pick", " 42 "));
+  CHECK(app->index == 42);
+  CHECK(ComponentInternals::RunCallback(*app, "Ratio", "0.25"));
+  CHECK(app->ratio == 0.25);
+  CHECK(ComponentInternals::RunCallback(*app, "Flag", "true"));
+  CHECK(app->flag);
+  CHECK(ComponentInternals::RunCallback(*app, "Text", "a, b"));
+  CHECK(app->text == "a, b");  // One string argument takes the commas.
+  CHECK(ComponentInternals::RunCallback(*app, "View", "x"));
+  CHECK(app->text == "x");
+  CHECK(ComponentInternals::RunCallback(*app, "Resize", "80, 24"));
+  CHECK(app->width == 80);
+  CHECK(app->height == 24);
+  CHECK(ComponentInternals::RunCallback(*app, "SetSort", "name"));
+  CHECK(app->sort == Sort::kName);
+  CHECK(ComponentInternals::RunCallback(*app, "Plain"));
+  CHECK(app->plain == 1);
+}
+
+TEST_CASE("A handler whose arguments do not convert does not run",
+          "[component]") {
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler(
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message()); });
+  auto app = rtxui::Ref<Typed>::New();
+  // Taken, so that no other component's handler runs instead, but reported.
+  CHECK(ComponentInternals::RunCallback(*app, "Pick", "4x"));
+  CHECK(ComponentInternals::RunCallback(*app, "Resize", "1, 2, 3"));
+  CHECK(ComponentInternals::RunCallback(*app, "SetSort", "colour"));
+  CHECK(ComponentInternals::RunCallback(*app, "Resize", "1, -2"));
+  rtxui::SetDiagnosticHandler(nullptr);
+  CHECK(app->index == -1);
+  CHECK(app->width == 0);
+  CHECK(app->sort == Sort::kSize);
+  REQUIRE(messages.size() == 4);
+  CHECK(messages[0] == "handler 'Pick(4x)' cannot take '4x' as argument 1");
+  CHECK(messages[1] == "handler 'Resize(1, 2, 3)' takes 2 arguments, not 3");
+  CHECK(messages[2] ==
+        "handler 'SetSort(colour)' cannot take 'colour' as argument 1");
+  CHECK(messages[3] ==
+        "handler 'Resize(1, -2)' cannot take '-2' as argument 2");
+
+  // Not taken: the caller looks further, or calls it another way.
+  CHECK_FALSE(ComponentInternals::RunCallback(*app, "Plain", "1"));
+  CHECK_FALSE(ComponentInternals::RunCallback(*app, "Pick"));
+  CHECK(app->plain == 0);
+}
+
+TEST_CASE("A handler returning false declines the call", "[component]") {
+  auto app = rtxui::Ref<Typed>::New();
+  CHECK(ComponentInternals::RunHandler(*app, {.name = "Maybe", .args = "1"}) ==
+        rtxui::internal::HandlerResult::kHandled);
+  CHECK(ComponentInternals::RunHandler(*app, {.name = "Maybe", .args = "0"}) ==
+        rtxui::internal::HandlerResult::kDeclined);
+}
+
+TEST_CASE("A click passes an interpolated argument to a typed handler",
+          "[component]") {
+  auto app = rtxui::Ref<Typed>::New();
+  rtxui::HeadlessScreen screen(app, 20, 5);
+  CHECK(screen.Text().find("row 20") != std::string::npos);
+  screen.Click(1, 1);  // 0-based: the second row.
+  CHECK(app->index == 20);
+}
+
+}  // namespace typed_handlers

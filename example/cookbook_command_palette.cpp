@@ -51,12 +51,10 @@ class CommandPalette : public Component<CommandPalette> {
     selected = 0;
   }
 
-  // Runs the command at `index` in `matches`; from a click, it arrives as
-  // text.
-  void Run(std::string index) {
-    const size_t i = index.empty() ? 0 : std::stoul(index);
-    if (i < matches.size()) {
-      last = matches[i].name;
+  // Runs the command at `index` in `matches`.
+  void Run(size_t index) {
+    if (index < matches.size()) {
+      last = matches[index].name;
     }
     open = false;
   }
@@ -120,7 +118,7 @@ class CommandPalette : public Component<CommandPalette> {
       return true;
     }
     if (open && event == Event::Return()) {
-      Run(std::to_string(selected));
+      Run(static_cast<size_t>(selected));
       return true;
     }
     return Component<CommandPalette>::OnEvent(event);

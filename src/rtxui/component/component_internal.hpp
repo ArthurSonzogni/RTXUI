@@ -80,9 +80,7 @@ struct ComponentBase::Data {
   std::vector<internal::RangeBinding> range_entries_;
 
   // Imported callbacks and components, by the name the template uses.
-  std::map<std::string, std::function<void()>, std::less<>> callbacks_;
-  std::map<std::string, std::function<void(std::string)>, std::less<>>
-      parameterized_callbacks_;
+  std::map<std::string, internal::Handler, std::less<>> handlers_;
   std::map<std::string, std::function<void(Canvas&)>, std::less<>>
       draw_callbacks_;
   std::map<std::string, std::function<void(const PointerEvent&)>, std::less<>>
@@ -215,6 +213,10 @@ struct ComponentInternals {
                           std::string_view name,
                           std::string_view arg = "") {
     return c.RunCallback(name, arg);
+  }
+  static internal::HandlerResult RunHandler(ComponentBase& c,
+                                            const internal::HandlerCall& call) {
+    return c.RunHandler(call);
   }
   // A <canvas>'s ondraw / onpointer, by name. Whether `c` has one.
   static bool RunDrawCallback(ComponentBase& c,

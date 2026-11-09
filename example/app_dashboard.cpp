@@ -91,8 +91,7 @@ class Dashboard : public Component<Dashboard> {
   void ShowDegraded() { filter = "degraded"; }
   void ShowDown() { filter = "down"; }
 
-  void Select(const std::string& index_str) {
-    size_t index = std::stoull(index_str);
+  void Select(size_t index) {
     if (index < services.size()) {
       selected = services[index].name;
     }

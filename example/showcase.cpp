@@ -99,8 +99,8 @@ class TablePage : public Component<TablePage> {
     descending = column == sort ? !descending : column != "name";
     sort = column;
   }
-  void Open(const std::string& index) {
-    selected = std::stoi(index);
+  void Open(int index) {
+    selected = index;
     drawer_open = true;
   }
   void Close() { drawer_open = false; }
@@ -992,7 +992,7 @@ class Showcase : public Component<Showcase> {
   std::string description() const { return pages[page].description; }
   std::string cursor_offset() const { return std::to_string(selected); }
 
-  void Go(const std::string& index) { page = std::stoi(index); }
+  void Go(int index) { page = index; }
   void OpenPalette() {
     palette_open = true;
     query.clear();

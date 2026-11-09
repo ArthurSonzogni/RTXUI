@@ -47,7 +47,7 @@ class Counter : public rtxui::Component<Counter> {
 | **Mutable State** | `T member;` | Yes (`T snapshot_`) | `Digest()` | Must satisfy `std::equality_comparable` and `std::is_copy_constructible`. Evaluated with `!=`. |
 | **Computed Property** | `T method() const;` | No | Template Render | Invoked strictly on-demand during template string expansion. Must be side-effect free. |
 | **Event Handler** | `void method();` | No | Event Dispatch | Invoked upon matching event trigger. May freely mutate bound state. |
-| **Parameterized Handler**| `void method(std::string);` | No | Event Dispatch | Invoked with string argument parsed from template attribute call syntax. |
+| **Parameterized Handler**| `void method(int, std::string, ...);` | No | Event Dispatch | Invoked with the arguments the template writes in parentheses, each converted to its parameter's type (numbers, `bool`, strings, enums, types with a `Parse()` function). |
 | **Repetition Collection** | `std::vector<T>` | Yes (Deep copy) | `Digest()` | Element-wise equality comparison. Triggers `<for>` reconciliation on size or content mutation. |
 
 ---

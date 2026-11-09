@@ -43,16 +43,14 @@ class ComplexLoopApp : public Component<ComplexLoopApp> {
       new_task_name.clear();
     }
   }
-  void ToggleTask(std::string index) {
-    size_t i = std::stoull(index);
-    if (i < tasks.size()) {
-      tasks[i].completed = !tasks[i].completed;
+  void ToggleTask(size_t index) {
+    if (index < tasks.size()) {
+      tasks[index].completed = !tasks[index].completed;
     }
   }
-  void RemoveTask(std::string index) {
-    size_t i = std::stoull(index);
-    if (i < tasks.size()) {
-      tasks.erase(tasks.begin() + i);
+  void RemoveTask(size_t index) {
+    if (index < tasks.size()) {
+      tasks.erase(tasks.begin() + index);
     }
   }
 

@@ -677,7 +677,7 @@ class Elements : public Component<Elements> {
   bool on_blocks() const { return page == 17; }
   bool on_table() const { return page == 18; }
 
-  void Go(const std::string& index) { page = std::stoi(index); }
+  void Go(int index) { page = index; }
 
   Elements() {
     Bind(entries, &Elements::EntryFields);

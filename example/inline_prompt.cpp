@@ -110,15 +110,14 @@ class Prompt : public Component<Prompt> {
     Bind(Pick);
   }
 
-  // Adds the match at `index` in `matches`; from a click, it arrives as text.
-  void Pick(std::string index) {
-    const size_t i = index.empty() ? 0 : std::stoul(index);
-    if (i >= matches.size()) {
+  // Adds the match at `index` in `matches`.
+  void Pick(size_t index) {
+    if (index >= matches.size()) {
       return;
     }
-    picked_.push_back(matches[i].name);
+    picked_.push_back(matches[index].name);
     if (on_pick) {
-      on_pick(matches[i]);
+      on_pick(matches[index]);
     }
     query.clear();
     selected = 0;
@@ -138,7 +137,7 @@ class Prompt : public Component<Prompt> {
       return true;
     }
     if (event == Event::Return()) {
-      Pick(std::to_string(selected));
+      Pick(static_cast<size_t>(selected));
       return true;
     }
     if (event == Event::Escape() || event == Event::CtrlC()) {

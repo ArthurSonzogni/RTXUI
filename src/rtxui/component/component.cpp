@@ -84,6 +84,7 @@
 #include "rtxui/element.hpp"
 #include "rtxui/event.hpp"
 #include "rtxui/internal/binding.hpp"
+#include "rtxui/internal/handler.hpp"
 #include "rtxui/layout/style.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/style/apply_style.hpp"
@@ -283,43 +284,49 @@ ComponentBase* ComponentBase::QueryComponent(std::string_view selector) {
 }
 
 bool ComponentBase::RunCallback(std::string_view name, std::string_view arg) {
-  if (arg.empty()) {
-    auto it = data_->callbacks_.find(name);
-    if (it != data_->callbacks_.end()) {
-      it->second();
-      return true;
-    }
-  }
+  return RunHandler({.name = name, .args = arg}) !=
+         internal::HandlerResult::kNotApplicable;
+}
 
-  auto it_param = data_->parameterized_callbacks_.find(name);
-  if (it_param != data_->parameterized_callbacks_.end()) {
-    it_param->second(std::string(arg));
-    return true;
+internal::HandlerResult ComponentBase::RunHandler(
+    const internal::HandlerCall& call) {
+  auto it = data_->handlers_.find(call.name);
+  if (it == data_->handlers_.end()) {
+    return internal::HandlerResult::kNotApplicable;
   }
+  // Copied: the handler may import or re-render, invalidating `it`.
+  const internal::Handler handler = it->second;
+  return handler(call);
+}
 
-  return false;
+void ComponentBase::ImportHandler(std::string_view name,
+                                  internal::Handler handler) {
+  if (data_->handlers_.contains(name)) {
+    std::cerr << "Error: Callback '" << name << "' is already imported.\n";
+    return;
+  }
+  data_->handlers_[std::string(name)] = std::move(handler);
 }
 
 void ComponentBase::Import(std::string_view name,
                            std::function<void()> callback) {
-  if (data_->callbacks_.count(name) ||
-      data_->parameterized_callbacks_.count(name)) {
-    std::cerr << "Error: Callback '" << name << "' is already imported.\n";
-    return;
-  }
-
-  data_->callbacks_[std::string(name)] = std::move(callback);
+  ImportHandler(name, [callback = std::move(callback)](
+                          const internal::HandlerCall& call) {
+    if (!internal::TrimArgument(call.args).empty()) {
+      return internal::HandlerResult::kNotApplicable;
+    }
+    callback();
+    return internal::HandlerResult::kHandled;
+  });
 }
 
 void ComponentBase::Import(std::string_view name,
                            std::function<void(std::string)> callback) {
-  if (data_->callbacks_.count(name) ||
-      data_->parameterized_callbacks_.count(name)) {
-    std::cerr << "Error: Callback '" << name << "' is already imported.\n";
-    return;
-  }
-
-  data_->parameterized_callbacks_[std::string(name)] = std::move(callback);
+  ImportHandler(name, [callback = std::move(callback)](
+                          const internal::HandlerCall& call) {
+    callback(std::string(call.args));
+    return internal::HandlerResult::kHandled;
+  });
 }
 
 void ComponentBase::Import(std::string_view name,
@@ -4844,6 +4851,14 @@ void ParseFloatImpl(std::string_view str, T& value) {
   }
 }
 
+template <typename T>
+bool TryParseFloatImpl(std::string_view str, T& value) {
+  str = TrimArgument(str);
+  const char* end = str.data() + str.size();
+  auto [ptr, ec] = FloatFromChars(str.data(), end, value);
+  return !str.empty() && ec == std::errc() && ptr == end;
+}
+
 }  // namespace
 
 std::string FormatFloat(float value) {
@@ -4863,6 +4878,47 @@ void ParseFloat(std::string_view str, double& value) {
 }
 void ParseFloat(std::string_view str, long double& value) {
   ParseFloatImpl(str, value);
+}
+
+bool TryParseFloat(std::string_view str, float& value) {
+  return TryParseFloatImpl(str, value);
+}
+bool TryParseFloat(std::string_view str, double& value) {
+  return TryParseFloatImpl(str, value);
+}
+bool TryParseFloat(std::string_view str, long double& value) {
+  return TryParseFloatImpl(str, value);
+}
+
+std::string_view TrimArgument(std::string_view str) {
+  while (!str.empty() &&
+         std::isspace(static_cast<unsigned char>(str.front()))) {
+    str.remove_prefix(1);
+  }
+  while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back()))) {
+    str.remove_suffix(1);
+  }
+  return str;
+}
+
+std::vector<std::string_view> SplitArguments(std::string_view str) {
+  std::vector<std::string_view> out;
+  if (TrimArgument(str).empty()) {
+    return out;
+  }
+  while (true) {
+    const size_t comma = str.find(',');
+    out.push_back(TrimArgument(str.substr(0, comma)));
+    if (comma == std::string_view::npos) {
+      return out;
+    }
+    str.remove_prefix(comma + 1);
+  }
+}
+
+void ReportHandlerArguments(const HandlerCall& call, std::string_view problem) {
+  ReportDiagnostic("handler '" + std::string(call.name) + "(" +
+                   std::string(call.args) + ")' " + std::string(problem));
 }
 }  // namespace internal
 

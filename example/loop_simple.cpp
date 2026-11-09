@@ -27,10 +27,9 @@ class SimpleLoopApp : public Component<SimpleLoopApp> {
       new_fruit.clear();
     }
   }
-  void RemoveItem(std::string index) {
-    size_t i = std::stoull(index);
-    if (i < items.size()) {
-      items.erase(items.begin() + i);
+  void RemoveItem(size_t index) {
+    if (index < items.size()) {
+      items.erase(items.begin() + index);
     }
   }
 
