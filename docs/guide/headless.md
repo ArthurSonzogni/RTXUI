@@ -50,6 +50,18 @@ std::string text = screen.Text();
 Each call returns once the input is handled and any transition it started has
 finished, so `Text()` does not depend on timing.
 
+Work done on another thread, which hands its result over with `PostTask()`,
+is not waited for: it may take any time. `WaitUntil()` runs what such work
+posts until a condition holds, and returns whether it did before its timeout
+(5 seconds by default):
+
+<!-- snippet: fragment -->
+```cpp
+app->Search("needle");  // Searches on a thread, then sets `searching = false`.
+REQUIRE(screen.WaitUntil([&] { return !app->searching; }));
+CHECK(screen.Text().find("3 matches") != std::string::npos);
+```
+
 For a single frame, `RenderToString(app, width, height)` returns the text
 directly.
 

@@ -52,6 +52,7 @@
 #include <iostream>
 #include <iterator>
 #include <optional>
+#include <ratio>
 #include <thread>
 #include <tuple>
 #include <unordered_map>
@@ -1166,6 +1167,10 @@ class ScreenImpl {
   // transitions it started finish, so the frame left behind does not depend
   // on timing.
   void Settle(HeadlessTerminalDevice& device);
+  // Runs posted tasks until `done`, or `timeout_ms` passes, then settles.
+  bool WaitUntil(HeadlessTerminalDevice& device,
+                 const std::function<bool()>& done,
+                 double timeout_ms);
   void RunHeadless();
   bool headless_ = false;
 
@@ -4736,6 +4741,32 @@ void ScreenImpl::Settle(HeadlessTerminalDevice& device) {
   }
 }
 
+bool ScreenImpl::WaitUntil(HeadlessTerminalDevice& device,
+                           const std::function<bool()>& done,
+                           double timeout_ms) {
+  ScopedLayoutArenas arenas(layout_arenas_);
+  const auto deadline =
+      std::chrono::steady_clock::now() +
+      std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+          std::chrono::duration<double, std::milli>(timeout_ms));
+  bool reached = done();
+  while (!reached && std::chrono::steady_clock::now() < deadline) {
+    bool executed_task = false;
+    task_runner_.RunUntilNextDelayedTask(&executed_task);
+    if (executed_task) {
+      layout_reusable_ = false;
+      DigestAndDraw();
+    }
+    reached = done();
+    if (!reached && !executed_task) {
+      // What another thread posts wakes nothing here: look again shortly.
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+  Settle(device);
+  return reached;
+}
+
 void ScreenImpl::RunHeadless() {
   auto& device = static_cast<HeadlessTerminalDevice&>(*device_);
 #if defined(_WIN32)
@@ -4788,6 +4819,11 @@ void HeadlessScreen::Resize(int width, int height) {
   impl_->device->Resize(width, height);
   impl_->screen_impl().UpdateSize();
   impl_->screen_impl().Settle(*impl_->device);
+}
+
+bool HeadlessScreen::WaitUntil(const std::function<bool()>& done,
+                               double timeout_ms) {
+  return impl_->screen_impl().WaitUntil(*impl_->device, done, timeout_ms);
 }
 
 std::string HeadlessScreen::Text() const {

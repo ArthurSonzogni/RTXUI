@@ -4,6 +4,7 @@
 #ifndef RTXUI_HEADLESS_HPP_
 #define RTXUI_HEADLESS_HPP_
 
+#include <functional>
 #include <memory>
 #include <rtxui/rtxui_export.hpp>
 #include <string>
@@ -42,6 +43,15 @@ class RTXUI_EXPORT HeadlessScreen {
 
   /// Changes the size, as resizing the terminal would.
   void Resize(int width, int height);
+
+  /// Runs the tasks the application posts (PostTask(), from any thread)
+  /// until `done` returns true, then settles as Input() does. For work done
+  /// in the background: a test waits for its result, not for a guessed time.
+  ///
+  ///   screen.WaitUntil([&] { return !app->loading; });
+  ///
+  /// Gives up after `timeout_ms`, and returns whether `done` became true.
+  bool WaitUntil(const std::function<bool()>& done, double timeout_ms = 5000);
 
   /// The screen as plain text: one line per row, without colors or styles,
   /// trailing spaces removed.

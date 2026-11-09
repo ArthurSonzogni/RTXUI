@@ -3,8 +3,10 @@
 // the LICENSE file.
 #include "rtxui/headless.hpp"
 
+#include <chrono>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 #if !defined(_WIN32) && !defined(__EMSCRIPTEN__)
@@ -21,6 +23,7 @@
 #include "rtxui/component.hpp"
 #include "rtxui/refcounted.hpp"
 #include "rtxui/screen.hpp"
+#include "rtxui/task.hpp"
 
 namespace rtxui {
 namespace {
@@ -33,6 +36,48 @@ class Greeting : public Component<Greeting> {
     <div>Hello {name}</div>
   )html";
 };
+
+// Loads its text on a thread, as an application reading files or the network
+// would, and hands it to the UI thread.
+class Loader : public Component<Loader> {
+ public:
+  std::string text = "loading";
+  bool loaded = false;
+  Loader() { Bind(text); }
+  void Start() {
+    worker_ = std::thread([this] {
+      std::this_thread::sleep_for(std::chrono::milliseconds(30));
+      PostTask([this] {
+        text = "loaded";
+        loaded = true;
+      });
+    });
+  }
+  ~Loader() override {
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+  }
+  std::string_view view = "<div>{text}</div>";
+
+ private:
+  std::thread worker_;
+};
+
+TEST_CASE("HeadlessScreen waits for what a thread posts", "[headless]") {
+  auto app = Ref<Loader>::New();
+  HeadlessScreen screen(app, 20, 1);
+  app->Start();
+  CHECK(screen.Text() == "loading\n");
+  CHECK(screen.WaitUntil([&] { return app->loaded; }));
+  CHECK(screen.Text() == "loaded\n");
+}
+
+TEST_CASE("HeadlessScreen stops waiting after its timeout", "[headless]") {
+  auto app = Ref<Greeting>::New();
+  HeadlessScreen screen(app, 20, 1);
+  CHECK_FALSE(screen.WaitUntil([] { return false; }, 20));
+}
 
 TEST_CASE("RenderToString returns the screen as text", "[headless]") {
   // One line per row, trailing spaces trimmed, so a fixed-size frame compares

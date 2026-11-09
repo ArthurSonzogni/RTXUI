@@ -159,7 +159,9 @@ printf '\t\t\r' | RTXUI_STRICT=1 RTXUI_HEADLESS=80x24 ./my_app
 
 Read the printed screen and compare it with what was asked. In C++ tests,
 `rtxui::HeadlessScreen screen(app, 80, 24);` offers `Input(bytes)`,
-`Click(x, y)` (0-based), `Resize(w, h)` and `Text()`.
+`Click(x, y)` (0-based), `Resize(w, h)` and `Text()`, plus
+`WaitUntil([&] { return condition; })` for work a thread hands back with
+`PostTask()`.
 
 Headless runs wait for animations to end. To check what happens over time (an
 animation, a transition, a `PostDelayedTask` timer), use
