@@ -2304,10 +2304,12 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
     my_width = max_width_resolved;
   }
 
-  // Apply min-width constraint
+  // Apply min-width constraint, to a definite width: an auto one, still
+  // -1, is its content's, which the end of the layout clamps.
   int min_width_resolved =
       ResolveBoxWidth(box->style(), box->style().min_width, parent_w);
-  if (min_width_resolved != -1 && my_width < min_width_resolved) {
+  if (min_width_resolved != -1 && my_width != -1 &&
+      my_width < min_width_resolved) {
     my_width = min_width_resolved;
   }
 
@@ -2318,10 +2320,11 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
     my_height = max_height_resolved;
   }
 
-  // Apply min-height constraint
+  // Apply min-height constraint, to a definite height, as min-width.
   int min_height_resolved =
       ResolveBoxHeight(box->style(), box->style().min_height, parent_h);
-  if (min_height_resolved != -1 && my_height < min_height_resolved) {
+  if (min_height_resolved != -1 && my_height != -1 &&
+      my_height < min_height_resolved) {
     my_height = min_height_resolved;
   }
 

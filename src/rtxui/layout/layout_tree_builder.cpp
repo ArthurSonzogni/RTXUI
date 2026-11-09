@@ -491,59 +491,58 @@ void LayoutTreeBuilder::BuildChildren(LayoutBox& layout_box) {
     }
   };
   add_generated(/*after=*/false);
-  for (auto& child_dom : dom_node->children()) {
-    if (child_dom.get()->is_slot()) {
-      // Skip elements with no tag (e.g., SlotElement)
-      const ComputedStyle& slot_style = child_dom.get()->style;
-      InheritedTextStyle slot = resolved;
-      slot.align = slot_style.text_align.value_or(resolved.align);
-      slot.white_space = slot_style.white_space.value_or(resolved.white_space);
-      slot.text_transform =
-          slot_style.text_transform.value_or(resolved.text_transform);
-      slot.fg = slot_style.foreground_color.has_value()
-                    ? slot_style.foreground_color
-                    : resolved.fg;
-      slot.bold = slot_style.bold.has_value() ? slot_style.bold : resolved.bold;
-      slot.dim = slot_style.dim.has_value() ? slot_style.dim : resolved.dim;
-      slot.italic =
-          slot_style.italic.has_value() ? slot_style.italic : resolved.italic;
-      slot.underlined = slot_style.underlined.has_value()
-                            ? slot_style.underlined
-                            : resolved.underlined;
-      slot.underlined_double = slot_style.underlined_double.has_value()
-                                   ? slot_style.underlined_double
-                                   : resolved.underlined_double;
-      slot.strikethrough = slot_style.strikethrough.has_value()
-                               ? slot_style.strikethrough
-                               : resolved.strikethrough;
-      slot.overlined = slot_style.overlined.has_value() ? slot_style.overlined
-                                                        : resolved.overlined;
-      slot.blink =
-          slot_style.blink.has_value() ? slot_style.blink : resolved.blink;
-      slot.letter_spacing =
-          slot_style.letter_spacing.value_or(resolved.letter_spacing);
-      slot.tab_size = slot_style.tab_size.value_or(resolved.tab_size);
-      slot.line_height = slot_style.line_height.value_or(resolved.line_height);
-      slot.text_indent = slot_style.text_indent.value_or(resolved.text_indent);
-      slot.overflow_wrap =
-          slot_style.overflow_wrap.value_or(resolved.overflow_wrap);
-      slot.word_break = slot_style.word_break.value_or(resolved.word_break);
-
-      for (auto& grandchild_dom : child_dom.get()->children()) {
-        auto grandchild_box =
-            Build(grandchild_dom.get(), slot, children_may_defer);
-        if (grandchild_box) {
-          raw_children.push_back(std::move(grandchild_box));
-        }
+  // A <slot> has no box of its own: its children, the content projected into
+  // it, are this box's, with the text style the slot gives them. So are those
+  // of a slot nested in it: built as a box, an inline one, it laid what was
+  // projected out as inline content, and a flex row in it shrank to fit.
+  const auto add_children = [&](const auto& self, Element& parent,
+                                const InheritedTextStyle& text) -> void {
+    for (auto& child_dom : parent.children()) {
+      if (child_dom.get()->is_slot()) {
+        const ComputedStyle& slot_style = child_dom.get()->style;
+        InheritedTextStyle slot = text;
+        slot.align = slot_style.text_align.value_or(text.align);
+        slot.white_space = slot_style.white_space.value_or(text.white_space);
+        slot.text_transform =
+            slot_style.text_transform.value_or(text.text_transform);
+        slot.fg = slot_style.foreground_color.has_value()
+                      ? slot_style.foreground_color
+                      : text.fg;
+        slot.bold = slot_style.bold.has_value() ? slot_style.bold : text.bold;
+        slot.dim = slot_style.dim.has_value() ? slot_style.dim : text.dim;
+        slot.italic =
+            slot_style.italic.has_value() ? slot_style.italic : text.italic;
+        slot.underlined = slot_style.underlined.has_value()
+                              ? slot_style.underlined
+                              : text.underlined;
+        slot.underlined_double = slot_style.underlined_double.has_value()
+                                     ? slot_style.underlined_double
+                                     : text.underlined_double;
+        slot.strikethrough = slot_style.strikethrough.has_value()
+                                 ? slot_style.strikethrough
+                                 : text.strikethrough;
+        slot.overlined = slot_style.overlined.has_value() ? slot_style.overlined
+                                                          : text.overlined;
+        slot.blink =
+            slot_style.blink.has_value() ? slot_style.blink : text.blink;
+        slot.letter_spacing =
+            slot_style.letter_spacing.value_or(text.letter_spacing);
+        slot.tab_size = slot_style.tab_size.value_or(text.tab_size);
+        slot.line_height = slot_style.line_height.value_or(text.line_height);
+        slot.text_indent = slot_style.text_indent.value_or(text.text_indent);
+        slot.overflow_wrap =
+            slot_style.overflow_wrap.value_or(text.overflow_wrap);
+        slot.word_break = slot_style.word_break.value_or(text.word_break);
+        self(self, *child_dom.get(), slot);
+        continue;
       }
-      continue;
+      auto child_box = Build(child_dom.get(), text, children_may_defer);
+      if (child_box) {
+        raw_children.push_back(std::move(child_box));
+      }
     }
-
-    auto child_box = Build(child_dom.get(), resolved, children_may_defer);
-    if (child_box) {
-      raw_children.push_back(std::move(child_box));
-    }
-  }
+  };
+  add_children(add_children, *dom_node, resolved);
   add_generated(/*after=*/true);
 
   // Whether anything in this subtree is positioned out of flow, which is what

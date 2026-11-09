@@ -5573,6 +5573,42 @@ TEST_CASE("Layout: a flex row shrinks its items down to their longest word",
   }
 }
 
+// min-width made a flex container's auto width that minimum, rather than a
+// floor under its content's width: a dialog box (min-width: 30) wrapped a
+// line that had room to fit.
+TEST_CASE("Layout: a flex container's min-width does not cap its auto width",
+          "[layout][flex]") {
+  struct Page : Component<Page> {
+    std::string_view view = R"html(
+      <div style="display: flex;">
+        <div style="display: flex; flex-direction: column; min-width: 4;">
+          <div>ab cd ef</div>
+        </div>
+      </div>)html";
+  };
+  CHECK(GetTextLayer(RenderComponent(Ref<Page>::New(), 10, 2)) ==
+        CheckGrid({"ab cd ef  ", "          "}));
+}
+
+// The content projected into a component's <slot> is laid out as if written
+// in its place: a flex row there was laid out inline, and shrank to fit.
+TEST_CASE("Layout: a flex row projected into a slot fills its line",
+          "[layout][flex][slot]") {
+  struct Frame : Component<Frame> {
+    std::string_view view =
+        R"html(<div style="width: 10; border: solid;"><slot></slot></div>)html";
+  };
+  struct Page : Component<Page> {
+    Page() { Import<Frame>("frame"); }
+    std::string_view view = R"html(
+      <frame>
+        <div style="display: flex; justify-content: flex-end;">ok</div>
+      </frame>)html";
+  };
+  CHECK(GetTextLayer(RenderComponent(Ref<Page>::New(), 10, 3)) ==
+        CheckGrid({"┌────────┐", "│      ok│", "└────────┘"}));
+}
+
 TEST_CASE("Layout: align-items: baseline lines up the first lines of text",
           "[layout][flex][align-items]") {
   struct Baseline : Component<Baseline> {
