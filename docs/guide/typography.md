@@ -190,9 +190,12 @@ much padding hangs it, which suits a list marker written in the text:
 ```
 
 Words longer than the line break at the container edge by default
-(`overflow-wrap: anywhere` — note this differs from CSS, whose default lets
-long words overflow). Set `overflow-wrap: normal` to keep such words intact
-and let them overflow instead:
+(`overflow-wrap: break-word` — note this differs from CSS, whose default lets
+long words overflow). A box that shrinks to fit, such as a flex item, still
+stops at its longest word, so the words of a label squeezed by its neighbours
+stay whole; `overflow-wrap: anywhere` lets it shrink further, breaking them.
+Set `overflow-wrap: normal` to keep long words intact and let them overflow
+instead:
 
 ```css
 .url {

@@ -28,6 +28,10 @@ struct LayoutContext {
   int viewport_h = -1;
 
   bool is_measurement = false;
+  // Measuring the content's minimum width (CSS min-content): words of
+  // `overflow-wrap: break-word` text are kept whole, overflowing the line,
+  // rather than broken at its edge.
+  bool min_content = false;
 };
 
 PhysicalFragment* RunLayout(LayoutInputNode node,

@@ -4718,6 +4718,8 @@ TEST_CASE("Screen.DynamicBorderUpdate", "[screen][border][reconcile]") {
         .demo-area {
           display: block;
           flex-grow: 1;
+          /* Narrower than the box it holds, as in CSS. */
+          min-width: 0;
           border: solid;
           padding: 1;
         }

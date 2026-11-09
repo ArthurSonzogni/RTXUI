@@ -35,7 +35,7 @@ struct InheritedTextStyle {
   int tab_size = 8;
   int line_height = 1;
   int text_indent = 0;
-  OverflowWrap overflow_wrap = OverflowWrap::Anywhere;
+  OverflowWrap overflow_wrap = OverflowWrap::BreakWord;
   WordBreak word_break = WordBreak::Normal;
   Visibility visibility = Visibility::Visible;
 
@@ -106,6 +106,7 @@ class LayoutBox {
   // actually happen.
   struct MeasureCacheEntry {
     LayoutConstraints constraints;
+    bool min_content = false;
     PhysicalFragment* fragment;
   };
   std::vector<MeasureCacheEntry, LayoutArenaAllocator<MeasureCacheEntry>>

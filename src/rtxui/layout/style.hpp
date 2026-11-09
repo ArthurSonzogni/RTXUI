@@ -294,9 +294,13 @@ enum class TextTransform {
 };
 
 // How words longer than the line are handled. Unlike CSS, the default is
-// Anywhere (emergency-break at the container edge): overflowing the box is
-// rarely what a terminal UI wants.
+// BreakWord (emergency-break at the container edge): overflowing the box is
+// rarely what a terminal UI wants. BreakWord and Anywhere break the same way,
+// but only Anywhere counts those breaks in the content's minimum width: with
+// BreakWord, a flex item or a min-content track is as wide as its longest
+// word.
 enum class OverflowWrap {
+  BreakWord,
   Anywhere,
   Normal,
 };

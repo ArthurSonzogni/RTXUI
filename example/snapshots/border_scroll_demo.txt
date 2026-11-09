@@ -6,7 +6,7 @@
           ▊   scroll the box: Tab to it, then the arrows, or the     ▎
           ▊   wheel.                                                 ▎
           ▊                                                          ▎
-          ▊    round              ▾     ☑ Vertical    ☑ Horizontal   ▎
+          ▊    round            ▾     ☑ Vertical     ☑ Horizontal    ▎
           ▊                                                          ▎
           ▊   ╭──────────────────────────────────────────────────╮   ▎
           ▊   │ Each line is wider than the box, so it also scro │   ▎

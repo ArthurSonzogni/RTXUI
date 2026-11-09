@@ -3597,7 +3597,11 @@ void ApplyStyle(ComputedStyle& style, const css::Declaration& declaration) {
       style.overflow_wrap = OverflowWrap::Normal;
       return;
     }
-    if (v == "break-word" || v == "anywhere") {
+    if (v == "break-word") {
+      style.overflow_wrap = OverflowWrap::BreakWord;
+      return;
+    }
+    if (v == "anywhere") {
       style.overflow_wrap = OverflowWrap::Anywhere;
       return;
     }

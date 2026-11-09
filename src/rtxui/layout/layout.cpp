@@ -71,6 +71,7 @@ struct LayoutCache {
   struct Entry {
     LayoutConstraints constraints;
     bool is_measurement = false;
+    bool min_content = false;
     InheritedTextStyle text;
     PhysicalFragment* fragment;
     // The element's next entry, or -1.
@@ -799,7 +800,8 @@ PhysicalFragment* RunLayout(LayoutInputNode node,
   const bool cacheable = context.is_measurement && !box->has_out_of_flow;
   if (cacheable) {
     for (const auto& entry : box->measure_cache) {
-      if (entry.constraints == constraints) {
+      if (entry.constraints == constraints &&
+          entry.min_content == context.min_content) {
         return entry.fragment;
       }
     }
@@ -824,6 +826,7 @@ PhysicalFragment* RunLayout(LayoutInputNode node,
         const LayoutCache::Entry& entry = previous.entries[i];
         if (entry.constraints == constraints &&
             entry.is_measurement == context.is_measurement &&
+            entry.min_content == context.min_content &&
             entry.text == box->text) {
           auto fragment = CopyFragmentTree(*entry.fragment);
           // Its parent's link is new, and does not include its translate.
@@ -832,9 +835,11 @@ PhysicalFragment* RunLayout(LayoutInputNode node,
           g_layout_reuse_count++;
           arenas.caches[arenas.active]->Add(
               *element, arenas.active,
-              {constraints, context.is_measurement, box->text, fragment});
+              {constraints, context.is_measurement, context.min_content,
+               box->text, fragment});
           if (cacheable) {
-            box->measure_cache.push_back({constraints, fragment});
+            box->measure_cache.push_back(
+                {constraints, context.min_content, fragment});
           }
           return fragment;
         }
@@ -848,12 +853,13 @@ PhysicalFragment* RunLayout(LayoutInputNode node,
   auto fragment = RunLayoutUncached(node, constraints, context);
 
   if (cacheable) {
-    box->measure_cache.push_back({constraints, fragment});
+    box->measure_cache.push_back({constraints, context.min_content, fragment});
   }
   if (reusable) {
     arenas.caches[arenas.active]->Add(
         *element, arenas.active,
-        {constraints, context.is_measurement, box->text, fragment});
+        {constraints, context.is_measurement, context.min_content, box->text,
+         fragment});
   }
   return fragment;
 }
@@ -1513,9 +1519,12 @@ PhysicalFragment* LayoutInlineFlow(LayoutInputNode node,
   // line beyond it.
   const int min_line_height = box->text.line_height;
   // overflow-wrap: normal lets words longer than the line overflow instead
-  // of emergency-breaking them at the container edge.
+  // of emergency-breaking them at the container edge; so does break-word
+  // when measuring the content's minimum width.
   const bool overflow_wrap_normal =
-      box->text.overflow_wrap == OverflowWrap::Normal;
+      box->text.overflow_wrap == OverflowWrap::Normal ||
+      (box->text.overflow_wrap == OverflowWrap::BreakWord &&
+       context.min_content);
   // word-break: break-all treats every grapheme boundary as a break
   // opportunity, so a word wraps as soon as it would cross the line instead
   // of being pushed whole to the next line first.
@@ -2350,8 +2359,9 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
     int cross_size;
     // Aligned to the baseline: the row of its baseline, its margin included.
     int baseline = -1;
-    // What `min-height: auto` keeps of it in a column: its content's height,
-    // as CSS's content-based minimum size, or 0 when it scrolls.
+    // What `min-width: auto` (in a row) or `min-height: auto` (in a column)
+    // keeps of it: its content's minimum, as CSS's content-based minimum
+    // size, or 0 when it scrolls.
     int auto_min_main = 0;
   };
 
@@ -2512,12 +2522,31 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
                      cross_size});
     // Measured at its content's height when its basis is auto. A definite
     // one is left at 0: its content's height is not measured; so is a box
-    // with an aspect-ratio, whose height comes from its width rather than
-    // from its content. Rows too: text wraps anywhere by default, so their
-    // content's minimum is a cell or so.
+    // with an aspect-ratio, whose size comes from its other one rather than
+    // from its content.
     if (!is_row && basis == -1 && child->style().aspect_ratio <= 0 &&
         child->style().overflow_y == Overflow::Visible) {
       items.back().auto_min_main = frag->height;
+    }
+    // In a row, its min-content width: its longest word, or the whole of a
+    // text that does not wrap. CSS takes no more than a definite width; the
+    // content inside that width is not measured, so none is kept then.
+    if (is_row && child->style().aspect_ratio <= 0 &&
+        child->style().width.unit == Unit::Auto &&
+        child->style().overflow_x == Overflow::Visible &&
+        child->style().min_width.unit == Unit::Auto) {
+      LayoutContext min_context = child_context;
+      min_context.min_content = true;
+      const PhysicalFragment* narrowest = RunLayout(
+          child_input, {{0, MeasureMode::AtMost}, child_c.height}, min_context);
+      int min_width = narrowest->width;
+      const int ink = FragmentInkRight(narrowest);
+      if (ink > min_width) {
+        // What overflows ends inside its padding and border.
+        min_width =
+            ink + child->style().padding.right + child->style().border.right;
+      }
+      items.back().auto_min_main = min_width;
     }
   }
 
@@ -2600,10 +2629,10 @@ PhysicalFragment* LayoutFlex(LayoutInputNode node,
                                : ResolveBoxHeight(s, s.min_height, content_h);
         const int max = is_row ? ResolveBoxWidth(s, s.max_width, content_w)
                                : ResolveBoxHeight(s, s.max_height, content_h);
-        min_main[i] =
-            margins + (min == -1 && s.min_height.unit == Unit::Auto && !is_row
-                           ? item.auto_min_main
-                           : std::max(0, min));
+        const bool auto_min =
+            (is_row ? s.min_width : s.min_height).unit == Unit::Auto;
+        min_main[i] = margins + (min == -1 && auto_min ? item.auto_min_main
+                                                       : std::max(0, min));
         max_main[i] = max == -1 ? std::numeric_limits<int>::max()
                                 : margins + std::max(max, min);
         frozen[i] = growing ? item.grow <= 0 : item.shrink <= 0;
@@ -4519,7 +4548,8 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
   // The widest item of a column, laid out in `width` cells: the free width
   // for its max-content; one for its min-content, wrapped wherever it can,
   // with the words that cannot wrap overflowing.
-  auto measure_column = [&](int c, int width, MeasureMode mode) {
+  auto measure_column = [&](int c, int width, MeasureMode mode,
+                            bool min_content = false) {
     int content = 0;
     for (const auto& pc : placed_children) {
       if (pc.col != c || pc.c_span != 1) {
@@ -4528,6 +4558,7 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
       LayoutContext measure_context =
           CreateChildContext(box, parent_width, parent_height, 0, 0, context);
       measure_context.is_measurement = true;
+      measure_context.min_content = min_content;
       // An item takes its margins in the column, as well as its box.
       const int margins = pc.box->style().margin.Horiz();
       const LayoutConstraints measure_c = {{std::max(0, width - margins), mode},
@@ -4552,7 +4583,8 @@ PhysicalFragment* LayoutGrid(LayoutInputNode node,
     }
     const int max_content =
         measure_column(c, free_col_width, MeasureMode::Undefined);
-    const int min_content = measure_column(c, 1, MeasureMode::AtMost);
+    const int min_content =
+        measure_column(c, 1, MeasureMode::AtMost, /*min_content=*/true);
     auto content = [&](GridTrack::Content kind) {
       return kind == GridTrack::Content::Min ? min_content : max_content;
     };

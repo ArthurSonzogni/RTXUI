@@ -730,11 +730,11 @@ TEST_CASE("Layout: grid conformance", "[layout][grid][conformance]") {
   }
 
   SECTION("a min-content column is as narrow as its text can wrap") {
-    // Text wraps anywhere by default, so down to a single cell; with
-    // overflow-wrap: normal, down to its longest word.
+    // Down to its longest word by default (overflow-wrap: break-word); with
+    // overflow-wrap: anywhere, down to a single cell.
     struct T : Component<T> {
       std::string_view view =
-          R"html(<style>.g{display:grid;grid-template-columns:min-content 1fr;width:10;}.n{overflow-wrap:normal;}</style><div class="g"><div>AB</div><div>C</div></div><div class="g"><div class="n">AAA BB</div><div>C</div></div>)html";
+          R"html(<style>.g{display:grid;grid-template-columns:min-content 1fr;width:10;}.a{overflow-wrap:anywhere;}</style><div class="g"><div class="a">AB</div><div>C</div></div><div class="g"><div>AAA BB</div><div>C</div></div>)html";
     };
     CHECK(GetTextLayer(RenderComponent(Ref<T>::New(), 10, 4)) ==
           CheckGrid({"AC        ", "B         ", "AAAC      ", "BB        "}));
@@ -5533,6 +5533,44 @@ TEST_CASE(
   auto texture = RenderComponent(Ref<Page>::New(), 1, 6);
   CHECK(GetColorLayer(texture, true, colors) ==
         CheckGrid({"R", "G", "G", "G", "G", "B"}));
+}
+
+// A flex item's automatic minimum width is its longest word: text wrapping
+// anywhere, items in a row shrank until their words broke ("siz", "e").
+TEST_CASE("Layout: a flex row shrinks its items down to their longest word",
+          "[layout][flex]") {
+  struct Row : Component<Row> {
+    std::string html;
+    explicit Row(std::string h) : html(std::move(h)) {}
+    std::string_view Setup() {
+      Import<div>();
+      return html;
+    }
+  };
+  const auto text = [](std::string html, int width, int height) {
+    return GetTextLayer(
+        RenderComponent(Ref<Row>::New(std::move(html)), width, height));
+  };
+  CHECK(text(R"html(
+    <div style="display: flex;">
+      <div>abc def ghi</div><div>by size</div>
+    </div>)html",
+             8, 3) == CheckGrid({"abc by  ", "def size", "ghi     "}));
+  // A text that does not wrap is its own minimum.
+  CHECK(text(R"html(
+    <div style="display: flex;">
+      <div>abc def ghi</div><div style="white-space: nowrap;">by size</div>
+    </div>)html",
+             10, 3) == CheckGrid({"abcby size", "def       ", "ghi       "}));
+  // min-width: 0, or text that may break anywhere, lets words break.
+  for (const char* style : {"min-width: 0;", "overflow-wrap: anywhere;"}) {
+    CHECK(text(R"html(
+      <div style="display: flex;">
+        <div>abc def ghi</div><div style=")html" +
+                   std::string(style) + R"html(">by size</div>
+      </div>)html",
+               8, 3) == CheckGrid({"abc  by ", "def  siz", "ghi  e  "}));
+  }
 }
 
 TEST_CASE("Layout: align-items: baseline lines up the first lines of text",
