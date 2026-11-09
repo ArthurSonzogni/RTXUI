@@ -16,7 +16,7 @@ and the running app reloads its template, with no recompile.
 
 *From the author of [FTXUI](https://github.com/ArthurSonzogni/FTXUI).*
 
-https://github.com/user-attachments/assets/b270494a-074c-4ddf-b34e-7c7fdf530f03
+https://github.com/user-attachments/assets/b613896a-814c-4081-91e1-6de5deb7a305
 
 <p align="center">
   <a href="https://arthursonzogni.github.io/RTXUI/guide/examples/showcase"><b>▶ Run this exact app in your browser</b></a>
