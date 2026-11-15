@@ -129,6 +129,7 @@ class ForeignSyntax : public Component<ForeignSyntax> {
   std::string_view view = R"html(
     <div v-if="shown" className="box" onClick="Go">
       <div for="item in items">x</div>
+      <div onkeydown="Go" @keydown.enter="Go">y</div>
     </div>
   )html";
 };
@@ -140,6 +141,12 @@ TEST_CASE("Other frameworks' attribute syntax is reported", "[diagnostic]") {
   CHECK(recorder.Has("'className'"));
   CHECK(recorder.Has("'onClick'"));
   CHECK(recorder.Has("'for' on <div>"));
+  CHECK(
+      recorder.Has("'onkeydown' on <div> in <ForeignSyntax> is not RTXUI "
+                   "syntax: use onkey:"));
+  CHECK(
+      recorder.Has("'@keydown.enter' on <div> in <ForeignSyntax> is not RTXUI "
+                   "syntax: use onkey:"));
 }
 
 class OldForms : public Component<OldForms> {

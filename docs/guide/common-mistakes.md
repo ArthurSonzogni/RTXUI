@@ -59,6 +59,11 @@ a `const` method's result, `Bind(Increment)` a method callable from a
 handler. `Bind("Increment", [this] { ... })` does not exist: make the lambda a
 method.
 
+**Keys are `onkey:<key>`.** `onkey:Return="Submit"`, `onkey:ctrl+d="Down"`,
+or `onkey="Typed"` for every key. `onkeydown`, `@keydown.enter` and
+`v-on:keyup` are not RTXUI syntax. See
+[Keyboard Shortcuts](/guide/bindings#_4-keyboard-shortcuts).
+
 **Every name a template uses must be bound**, or `{name}` prints the word
 `name`.
 

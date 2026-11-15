@@ -43,6 +43,7 @@ add_library(rtxui
   "src/rtxui/terminal/terminal_input_parser.cpp"
   "src/rtxui/terminal/terminal_input_parser.hpp"
   "src/rtxui/terminal/event.cpp"
+  "src/rtxui/terminal/key_spec.cpp"
   "include/rtxui/event.hpp"
   "include/rtxui/canvas.hpp"
   "src/rtxui/terminal/screen.cpp"
@@ -327,6 +328,7 @@ if(RTXUI_BUILD_TESTS)
 
   add_executable(rtxui_test
     "src/rtxui/terminal/terminal_input_parser_test.cpp"
+    "src/rtxui/terminal/key_spec_test.cpp"
     "src/rtxui/terminal/terminal_capture_test.cpp"
     "src/rtxui/terminal/headless_test.cpp"
     "src/rtxui/terminal/inline_test.cpp"

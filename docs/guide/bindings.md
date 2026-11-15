@@ -50,7 +50,75 @@ attribute, as in HTML. The attribute value is the name of a bound callback:
 
 ---
 
-## 4. Handler Arguments
+## 4. Keyboard Shortcuts
+
+`onkey:<key>` runs a handler when that key is pressed:
+
+```cpp
+struct ListView : public rtxui::Component<ListView> {
+  int cursor = 0;
+
+  void Down() { cursor++; }
+  void Up() { cursor--; }
+  void Jump(int to) { cursor = to; }
+
+  ListView() {
+    Bind(cursor);
+    Bind(Down);
+    Bind(Up);
+    Bind(Jump);
+  }
+
+  std::string_view view = R"html(
+    <div onkey:j="Down" onkey:ArrowDown="Down"
+         onkey:k="Up" onkey:ArrowUp="Up"
+         onkey:g="Jump(0)" onkey:ctrl+d="Jump(10)">
+      <span>Row {cursor}</span>
+    </div>
+  )html";
+};
+```
+
+A key is named as one of these:
+
+- a character: `j`, `G`, `?`, `/`. An uppercase letter is the shifted key;
+  `shift+g` means the same as `G`.
+- `Space`, or a special key: `Return` (or `Enter`), `Escape`, `Tab`,
+  `Backspace`, `Delete`, `Insert`, `ArrowUp`, `ArrowDown`, `ArrowLeft`,
+  `ArrowRight`, `Home`, `End`, `PageUp`, `PageDown`, `F1` to `F12`.
+- either of those after modifiers: `ctrl+d`, `alt+x`, `ctrl+alt+x`,
+  `shift+Tab`, `ctrl+ArrowDown`.
+
+A plain `onkey="Handler"` runs for every key. Its handler can take the key as
+an `rtxui::Event::Keyboard` argument:
+
+<!-- snippet: fragment -->
+```cpp
+bool Typed(rtxui::Event::Keyboard key) {
+  log += key.Print();
+  return false;  // Let the key go on.
+}
+```
+
+**Which handlers run.** The key goes from the focused element up through its
+parents to the application's root. With nothing focused, the handlers on the
+application template's top-level elements run. On each element, the handler
+for the key runs before the one for every key. The first handler that runs
+takes the key, unless it returns `false`: then the key goes on, to the next
+handler and, past the last one, to what the key does by default (<kbd>Tab</kbd>
+moves the focus, <kbd>Enter</kbd> clicks the focused button, arrows move it).
+
+**What runs first.** A focused `<input>`, `<textarea>` or `<select>` keeps the
+keys it uses: typing `j` into a search box types a `j`. An `OnEvent()`
+override also sees a key before the `onkey` handlers do. Pasted text is
+never taken as a shortcut.
+
+A key name that is no key, such as `onkey:Arow`, is reported as a
+[diagnostic](/guide/diagnostics).
+
+---
+
+## 5. Handler Arguments
 
 A handler can take arguments, written in parentheses after its name. Each one
 is read from the template's text into the parameter's type:
@@ -109,7 +177,7 @@ receives the text as is.
 
 ---
 
-## 5. Two-Way Data Binding
+## 6. Two-Way Data Binding
 
 For interactive input widgets, RTXUI supports automatic two-way data bindings. When a user types text or checks a box, the bound C++ member variable is updated instantly, and programmatically changing the C++ value repaints the input field:
 

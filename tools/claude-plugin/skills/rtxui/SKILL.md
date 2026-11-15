@@ -80,7 +80,13 @@ Link the CMake target `rtxui` and include only `<rtxui/rtxui.hpp>`.
 - Handlers: `onclick="Method"`, or `onclick="Method({$index}, 2)"` with
   arguments converted to the method's parameter types (integers, floats,
   `bool`, `std::string`, enums by enumerator name with C++26 reflection);
-  `oncontextmenu` for the right click. No `@click`, braces, statements or
+  `oncontextmenu` for the right click.
+- Keyboard shortcuts: `onkey:j="Down"`, `onkey:ArrowDown="Down"`,
+  `onkey:ctrl+d="Jump(10)"`, `onkey:Escape="Close"` on any element; they run
+  when the focus is on it or inside it, or, with nothing focused, on the
+  top-level element. `onkey="Typed"` runs for every key (a handler may take
+  `rtxui::Event::Keyboard`; returning `false` passes the key on). Prefer these
+  to an `OnEvent()` override. No `@click`, braces, statements or
   camelCase (`onClick`). Use `class`, not `className`.
 - Attributes bind like text: `title="{name}"`, never `:title="name"`.
 - Slots: a component declares `<slot name="header">fallback</slot>` (and an

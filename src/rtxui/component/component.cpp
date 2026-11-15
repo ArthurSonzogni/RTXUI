@@ -3109,6 +3109,11 @@ std::optional<std::string> ForeignAttributeAdvice(std::string_view name,
                         value.find(" of ") != std::string_view::npos)) {
     return "use <for each=\"{list}\" as=\"item\"> instead of a for attribute";
   }
+  if (name == "onkeydown" || name == "onkeyup" || name == "onkeypress" ||
+      starts("@key") || starts("v-on:key")) {
+    return "use onkey:<key>=\"Name\", e.g. onkey:Return=\"Submit\", or "
+           "onkey=\"Name\" for every key";
+  }
   if (starts("v-on:") || starts("(") || starts("x-on:")) {
     return "use onclick=\"Name\"";
   }

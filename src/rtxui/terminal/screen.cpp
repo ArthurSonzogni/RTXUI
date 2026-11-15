@@ -65,6 +65,7 @@
 #include "rtxui/dom/element.hpp"
 #include "rtxui/dom/text_element.hpp"
 #include "rtxui/headless.hpp"
+#include "rtxui/internal/handler.hpp"
 #include "rtxui/layout/layout.hpp"
 #include "rtxui/layout/layout_tree_builder.hpp"
 #include "rtxui/layout/physical_fragment.hpp"
@@ -76,6 +77,7 @@
 #include "rtxui/style/style.hpp"
 #include "rtxui/terminal/event_internal.hpp"
 #include "rtxui/terminal/input_wait.hpp"
+#include "rtxui/terminal/key_spec.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
 #include "rtxui/terminal/terminal_input_parser.hpp"
@@ -1158,6 +1160,9 @@ class ScreenImpl {
   // Runs the `onanimationend` handler of every element whose animation
   // finished since the last call. Returns whether one ran.
   bool DispatchAnimationEnds();
+  /// Runs the `onkey` handlers from the focused element up to the root.
+  /// Whether one took the key.
+  bool DispatchKeyHandlers(const Event& event);
   void ScrollIntoView(Element* element);
 
   std::string Text() const;
@@ -1778,6 +1783,88 @@ bool ScreenImpl::DispatchAnimationEnds() {
     }
   }
   return !ended.empty();
+}
+
+bool ScreenImpl::DispatchKeyHandlers(const Event& event) {
+  const Event::Keyboard key = event.get<Event::Keyboard>();
+  // A pasted character is text, not a shortcut; a release is not a press.
+  if (key.from_paste() || key.motion() == Event::Keyboard::Released) {
+    return false;
+  }
+  // The elements the key goes through: from the focused one up to the root.
+  // With nothing focused, the app template's top-level elements, as a
+  // browser's <body> would.
+  Element* root = component_->Root();
+  std::vector<Element*> chain;
+  if (focused_element_) {
+    for (Element* e = focused_element_; e && e != root; e = e->Parent()) {
+      chain.push_back(e);
+    }
+  } else if (root) {
+    for (size_t i = 0; i < root->ChildCount(); ++i) {
+      chain.push_back(root->ChildAt(i));
+    }
+  }
+  if (root) {
+    chain.push_back(root);
+  }
+
+  // Calls the handler `action` names. kNotApplicable when none takes it.
+  const auto run = [&](Element* element, const std::string& action) {
+    std::string_view name = action;
+    std::string_view args;
+    const size_t paren_open = action.find('(');
+    if (paren_open != std::string::npos && action.ends_with(')')) {
+      name = std::string_view(action).substr(0, paren_open);
+      args = std::string_view(action).substr(paren_open + 1,
+                                             action.size() - paren_open - 2);
+    }
+    for (ComponentBase* comp = GetAttributeOwnerComponent(element); comp;
+         comp = GetParentComponent(comp)) {
+      const internal::HandlerResult result =
+          comp->RunHandler({.name = name, .args = args, .event = &event});
+      if (result != internal::HandlerResult::kNotApplicable) {
+        return result;
+      }
+    }
+    ReportDiagnostic("handler '" + std::string(name) +
+                     "' is not bound in any enclosing component, or does not "
+                     "take a key");
+    return internal::HandlerResult::kNotApplicable;
+  };
+
+  for (Element* element : chain) {
+    // The handlers for this key first, then the one for every key.
+    const std::string* any_key = nullptr;
+    for (const auto& [attribute, action] : element->Attributes()) {
+      if (attribute == "onkey") {
+        any_key = &action;
+        continue;
+      }
+      if (!attribute.starts_with("onkey:")) {
+        continue;
+      }
+      const std::string_view name = std::string_view(attribute).substr(6);
+      const std::optional<KeySpec> spec = KeySpec::Parse(name);
+      if (!spec) {
+        ReportDiagnostic("'" + attribute +
+                         "' names no key: write a character "
+                         "(j, G, ?), Space, a key such as ArrowDown, Return, "
+                         "Escape, PageUp or F1, after modifiers such as "
+                         "ctrl+, alt+ or shift+");
+        continue;
+      }
+      if (spec->Matches(key) &&
+          run(element, action) == internal::HandlerResult::kHandled) {
+        return true;
+      }
+    }
+    if (any_key &&
+        run(element, *any_key) == internal::HandlerResult::kHandled) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void ScreenImpl::Dispatch(Event event) {
@@ -2536,6 +2623,9 @@ void ScreenImpl::HandleEvent(Event event) {
     event_handled = ComponentBase::GetMouseCapturer()->OnEvent(event);
   } else {
     event_handled = component_->OnEvent(event);
+  }
+  if (!event_handled && event.is<Event::Keyboard>()) {
+    event_handled = DispatchKeyHandlers(event);
   }
 
   // Whether or not it handled the event, OnEvent() may have changed bound

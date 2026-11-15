@@ -2055,3 +2055,127 @@ TEST_CASE("A click passes an interpolated argument to a typed handler",
 }
 
 }  // namespace typed_handlers
+
+namespace key_handlers {
+
+class Keys : public rtxui::Component<Keys> {
+ public:
+  int cursor = 0;
+  std::string log;
+  std::string query;
+  bool claim_x = false;
+
+  void Down() { cursor++; }
+  void Up() { cursor--; }
+  void Jump(int to) { cursor = to; }
+  void Inner() { log += "inner;"; }
+  bool MaybeX() { return claim_x; }
+  void Outer() { log += "outer;"; }
+  bool Any(rtxui::Event::Keyboard key) {
+    log += "any:" + key.Print() + ";";
+    return false;
+  }
+
+  std::string_view view = R"html(
+    <div onkey:j="Down" onkey:ArrowDown="Down" onkey:k="Up" onkey:ctrl+d="Jump(10)"
+         onkey:x="Outer" onkey="Any">
+      <span>cursor {cursor}</span>
+      <button onkey:i="Inner" onkey:x="MaybeX">inner</button>
+      <input value="{query}"/>
+    </div>
+  )html";
+
+  Keys() {
+    Bind(cursor);
+    Bind(query);
+    Bind(Down);
+    Bind(Up);
+    Bind(Jump);
+    Bind(Inner);
+    Bind(MaybeX);
+    Bind(Outer);
+    Bind(Any);
+  }
+};
+
+TEST_CASE("onkey runs the handler of the key pressed", "[component]") {
+  auto app = rtxui::Ref<Keys>::New();
+  rtxui::HeadlessScreen screen(app, 30, 6);
+  screen.Input("jj");
+  CHECK(app->cursor == 2);
+  screen.Input("\x1b[B");  // ArrowDown.
+  CHECK(app->cursor == 3);
+  screen.Input("k");
+  CHECK(app->cursor == 2);
+  screen.Input("\x04");  // Ctrl+D.
+  CHECK(app->cursor == 10);
+  CHECK(screen.Text().find("cursor 10") != std::string::npos);
+}
+
+TEST_CASE("onkey bubbles from the focused element", "[component]") {
+  auto app = rtxui::Ref<Keys>::New();
+  rtxui::HeadlessScreen screen(app, 30, 6);
+  // Nothing focused: the button's handlers are not on the way up.
+  screen.Input("i");
+  CHECK(app->log == "any:Keyboard(i);");
+  app->log.clear();
+
+  // Tab goes through the catch-all handler, which lets it move the focus.
+  screen.Input("\t");
+  CHECK(app->log == "any:Keyboard(Tab);");
+  app->log.clear();
+  screen.Input("i");
+  CHECK(app->log == "inner;");
+  app->log.clear();
+
+  // The button's x declines, so the key goes on to the div's x.
+  screen.Input("x");
+  CHECK(app->log == "outer;");
+  app->log.clear();
+  app->claim_x = true;
+  screen.Input("x");
+  CHECK(app->log.empty());
+
+  // From the button, the div's handlers still run.
+  screen.Input("j");
+  CHECK(app->cursor == 1);
+}
+
+TEST_CASE("onkey leaves a focused input its typing", "[component]") {
+  auto app = rtxui::Ref<Keys>::New();
+  rtxui::HeadlessScreen screen(app, 30, 6);
+  screen.Input("\t\t");  // Focus the input.
+  screen.Input("jk");
+  CHECK(app->query == "jk");
+  CHECK(app->cursor == 0);
+  screen.Input("\x1b[B");  // The input does not use ArrowDown.
+  CHECK(app->cursor == 1);
+}
+
+TEST_CASE("onkey ignores pasted text", "[component]") {
+  auto app = rtxui::Ref<Keys>::New();
+  rtxui::HeadlessScreen screen(app, 30, 6);
+  screen.Input("\x1b[200~jjj\x1b[201~");
+  CHECK(app->cursor == 0);
+}
+
+class BadKey : public rtxui::Component<BadKey> {
+ public:
+  void Go() {}
+  std::string_view view = R"html(<div onkey:Arow="Go">x</div>)html";
+  BadKey() { Bind(Go); }
+};
+
+TEST_CASE("onkey reports a name that is no key", "[component]") {
+  std::vector<std::string> messages;
+  rtxui::SetDiagnosticHandler(
+      [&](const rtxui::Diagnostic& d) { messages.push_back(d.message()); });
+  auto app = rtxui::Ref<BadKey>::New();
+  rtxui::HeadlessScreen screen(app, 30, 6);
+  screen.Input("a");
+  rtxui::SetDiagnosticHandler(nullptr);
+  REQUIRE(messages.size() == 1);
+  CHECK(messages[0].starts_with("'onkey:Arow' names no key"));
+}
+
+}  // namespace key_handlers

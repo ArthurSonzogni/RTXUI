@@ -19,6 +19,7 @@ Every built-in tag—from `<div>` to `<dialog>`—is a component registered in t
 | :--- | :--- | :--- | :--- |
 | `{member}` | Text / Attribute | `<span id="{node_id}">{title}</span>` | Interpolates C++ member snapshot; updates DOM on change. |
 | `on<event>="Handler"` | Event Callback | `<button onclick="Submit">OK</button>` | Dispatches to registered C++ method or lambda. `oncontextmenu` takes the right click. |
+| `onkey:<key>="Handler"` | Keyboard Shortcut | `<div onkey:j="Down" onkey:ctrl+d="Jump(10)">` | Runs when the key is pressed with the focus on this element or inside it. `onkey="Handler"` runs for every key. See [Keyboard Shortcuts](/guide/bindings#_4-keyboard-shortcuts). |
 
 ---
 
