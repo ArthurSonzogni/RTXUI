@@ -16,8 +16,8 @@ namespace rtxui {
 class Texture {
  public:
   Texture(int width, int height);
-  Cell& operator[](int x, int y);
-  const Cell& operator[](int x, int y) const;
+  Cell& operator()(int x, int y);
+  const Cell& operator()(int x, int y) const;
 
   int width() const { return width_; }
   int height() const { return height_; }

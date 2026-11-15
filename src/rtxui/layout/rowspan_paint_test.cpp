@@ -20,7 +20,7 @@ std::string GetTextLayer(const Texture& texture) {
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = const_cast<Texture&>(texture)[x, y];
+      const auto& cell = const_cast<Texture&>(texture)(x, y);
       if (cell.is_continuation) {
         out += "^";
       } else if (cell.character.empty()) {
@@ -40,7 +40,7 @@ std::string GetColorLayer(const Texture& texture,
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = const_cast<Texture&>(texture)[x, y];
+      const auto& cell = const_cast<Texture&>(texture)(x, y);
       Color c = background ? cell.background_color : cell.foreground_color;
       if (c.a == 0) {
         out += ".";
@@ -106,15 +106,15 @@ TEST_CASE("Layout: Rowspan painting order regression test", "[layout][table]") {
   INFO("Text Grid:\n" << text_grid);
 
   // Row 1, Col 0: 'S' with Green BG
-  CHECK(texture[0, 0].character == "S");
-  CHECK(texture[0, 0].background_color == Color::RGB(0, 255, 0));
+  CHECK(texture(0, 0).character == "S");
+  CHECK(texture(0, 0).background_color == Color::RGB(0, 255, 0));
 
   // Row 2, Col 0: Should be Green BG from the rowspan, NOT red from row 2
-  CHECK(texture[0, 1].background_color == Color::RGB(0, 255, 0));
+  CHECK(texture(0, 1).background_color == Color::RGB(0, 255, 0));
 
   // Row 2, Col 1: 'B' with Red BG (inherited from row 2)
-  CHECK(texture[5, 1].character == "B");
-  CHECK(texture[5, 1].background_color == Color::RGB(255, 0, 0));
+  CHECK(texture(5, 1).character == "B");
+  CHECK(texture(5, 1).background_color == Color::RGB(255, 0, 0));
 }
 
 }  // namespace rtxui

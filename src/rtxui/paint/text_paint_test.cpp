@@ -36,14 +36,14 @@ TEST_CASE("Bold and Strong Components cell.bold rendering",
   bool found_strong = false;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = texture[x, y];
+      const auto& cell = texture(x, y);
       if (cell.character == "B") {
         if (x + 8 < texture.width()) {
           std::string text = "";
           bool all_bold = true;
           for (int i = 0; i < 9; ++i) {
-            text += texture[x + i, y].character;
-            if (!texture[x + i, y].bold) {
+            text += texture(x + i, y).character;
+            if (!texture(x + i, y).bold) {
               all_bold = false;
             }
           }
@@ -58,8 +58,8 @@ TEST_CASE("Bold and Strong Components cell.bold rendering",
           std::string text = "";
           bool all_bold = true;
           for (int i = 0; i < 11; ++i) {
-            text += texture[x + i, y].character;
-            if (!texture[x + i, y].bold) {
+            text += texture(x + i, y).character;
+            if (!texture(x + i, y).bold) {
               all_bold = false;
             }
           }
@@ -97,14 +97,14 @@ TEST_CASE("Italic and Em Components cell.italic rendering",
   auto find_italic_run = [&](const std::string& expected) {
     for (int y = 0; y < texture.height(); ++y) {
       for (int x = 0; x < texture.width(); ++x) {
-        if (texture[x, y].character != expected.substr(0, 1)) {
+        if (texture(x, y).character != expected.substr(0, 1)) {
           continue;
         }
         std::string text = "";
         bool all_italic = true;
         for (size_t c = 0; c < expected.size(); ++c) {
-          text += texture[x + static_cast<int>(c), y].character;
-          if (!texture[x + static_cast<int>(c), y].italic) {
+          text += texture(x + static_cast<int>(c), y).character;
+          if (!texture(x + static_cast<int>(c), y).italic) {
             all_italic = false;
           }
         }
@@ -149,8 +149,8 @@ TEST_CASE("Dim text rendering via font-weight lighter",
       std::string text = "";
       bool all_dim = true;
       for (size_t c = 0; c < expected.size(); ++c) {
-        text += texture[x + static_cast<int>(c), y].character;
-        if (!texture[x + static_cast<int>(c), y].dim) {
+        text += texture(x + static_cast<int>(c), y).character;
+        if (!texture(x + static_cast<int>(c), y).dim) {
           all_dim = false;
         }
       }
@@ -191,7 +191,7 @@ TEST_CASE("Text transform rendering", "[component][text-transform][paint]") {
   std::string all_text;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      all_text += texture[x, y].character;
+      all_text += texture(x, y).character;
     }
     all_text += "\n";
   }
@@ -227,7 +227,7 @@ TEST_CASE("Letter spacing rendering", "[component][letter-spacing][paint]") {
   std::string all_text;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      all_text += texture[x, y].character;
+      all_text += texture(x, y).character;
     }
     all_text += "\n";
   }
@@ -496,18 +496,18 @@ TEST_CASE("Text Decoration rendering onto cells",
 
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = texture[x, y];
+      const auto& cell = texture(x, y);
       if (cell.character == "u" && x + 1 < texture.width() &&
-          texture[x + 1, y].character != "d") {
+          texture(x + 1, y).character != "d") {
         CHECK(cell.underlined);
         CHECK_FALSE(cell.underlined_double);
         found_u = true;
       }
       if (cell.character == "u" && x + 1 < texture.width() &&
-          texture[x + 1, y].character == "d") {
+          texture(x + 1, y).character == "d") {
         CHECK_FALSE(cell.underlined);
         CHECK(cell.underlined_double);
-        CHECK(texture[x + 1, y].underlined_double);
+        CHECK(texture(x + 1, y).underlined_double);
         found_ud = true;
       }
       if (cell.character == "s") {
@@ -515,9 +515,9 @@ TEST_CASE("Text Decoration rendering onto cells",
         found_s = true;
       }
       if (cell.character == "b" && x + 1 < texture.width() &&
-          texture[x + 1, y].character == "l") {
+          texture(x + 1, y).character == "l") {
         CHECK(cell.blink);
-        CHECK(texture[x + 1, y].blink);
+        CHECK(texture(x + 1, y).blink);
         found_bl = true;
       }
     }
@@ -550,7 +550,7 @@ TEST_CASE("text-decoration: overline reaches the cells and inherits",
   int found = 0;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = texture[x, y];
+      const auto& cell = texture(x, y);
       // "ab" is styled directly; "cd" only inherits it from the parent.
       if (cell.character == "a" || cell.character == "b" ||
           cell.character == "c" || cell.character == "d") {

@@ -118,14 +118,14 @@ Texture::Texture(int width, int height)
       height_(height),
       cells_(static_cast<size_t>(width) * height) {}
 
-Cell& Texture::operator[](int x, int y) {
+Cell& Texture::operator()(int x, int y) {
   if (x < 0 || x >= width_ || y < 0 || y >= height_) {
     return NullCell;
   }
   return cells_[y * width_ + x];
 }
 
-const Cell& Texture::operator[](int x, int y) const {
+const Cell& Texture::operator()(int x, int y) const {
   if (x < 0 || x >= width_ || y < 0 || y >= height_) {
     return NullCell;
   }

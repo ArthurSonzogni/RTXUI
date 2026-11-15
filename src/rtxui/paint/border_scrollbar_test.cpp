@@ -25,7 +25,7 @@ std::string GetTextLayer(const Texture& texture) {
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = const_cast<Texture&>(texture).operator[](x, y);
+      const auto& cell = const_cast<Texture&>(texture)(x, y);
       out += cell.character.empty() ? " " : cell.character;
     }
     out += "\n";
@@ -52,7 +52,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
   // Initialize with spaces
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
-      texture.operator[](x, y).character = " ";
+      texture(x, y).character = " ";
     }
   }
 
@@ -110,29 +110,29 @@ TEST_CASE("Paint: VScroll with solid border - no overlap",
 
   // The border characters at the corners and edges must be present.
   // Top-left corner
-  CHECK(texture[0, 0].character == "┌");
+  CHECK(texture(0, 0).character == "┌");
   // Top-right corner
-  CHECK(texture[11, 0].character == "┐");
+  CHECK(texture(11, 0).character == "┐");
   // Bottom-left corner
-  CHECK(texture[0, 5].character == "└");
+  CHECK(texture(0, 5).character == "└");
   // Bottom-right corner
-  CHECK(texture[11, 5].character == "┘");
+  CHECK(texture(11, 5).character == "┘");
 
   // Top border (horizontal)
-  CHECK(texture[1, 0].character == "─");
-  CHECK(texture[10, 0].character == "─");
+  CHECK(texture(1, 0).character == "─");
+  CHECK(texture(10, 0).character == "─");
 
   // Bottom border (horizontal)
-  CHECK(texture[1, 5].character == "─");
-  CHECK(texture[10, 5].character == "─");
+  CHECK(texture(1, 5).character == "─");
+  CHECK(texture(10, 5).character == "─");
 
   // Left border (vertical) - middle rows
-  CHECK(texture[0, 1].character == "│");
-  CHECK(texture[0, 4].character == "│");
+  CHECK(texture(0, 1).character == "│");
+  CHECK(texture(0, 4).character == "│");
 
   // Right border (vertical) - middle rows
-  CHECK(texture[11, 1].character == "│");
-  CHECK(texture[11, 4].character == "│");
+  CHECK(texture(11, 1).character == "│");
+  CHECK(texture(11, 4).character == "│");
 
   // The scrollbar should NOT overwrite any border character.
   // The scrollbar column should be at x=10 (one inside the right border).
@@ -140,12 +140,12 @@ TEST_CASE("Paint: VScroll with solid border - no overlap",
   // borders).
   for (int y = 1; y <= 4; ++y) {
     // The scrollbar cell at x=10 should not be a border character.
-    CHECK(texture[10, y].character != "│");
-    CHECK(texture[10, y].character != "─");
-    CHECK(texture[10, y].character != "┌");
-    CHECK(texture[10, y].character != "┐");
-    CHECK(texture[10, y].character != "└");
-    CHECK(texture[10, y].character != "┘");
+    CHECK(texture(10, y).character != "│");
+    CHECK(texture(10, y).character != "─");
+    CHECK(texture(10, y).character != "┌");
+    CHECK(texture(10, y).character != "┐");
+    CHECK(texture(10, y).character != "└");
+    CHECK(texture(10, y).character != "┘");
   }
 }
 
@@ -187,24 +187,24 @@ TEST_CASE("Paint: HScroll with solid border - no overlap",
   std::cout << "HScroll+Border:\n" << text << std::endl;
 
   // Border characters must be preserved.
-  CHECK(texture[0, 0].character == "┌");
-  CHECK(texture[11, 0].character == "┐");
-  CHECK(texture[0, 3].character == "└");
-  CHECK(texture[11, 3].character == "┘");
+  CHECK(texture(0, 0).character == "┌");
+  CHECK(texture(11, 0).character == "┐");
+  CHECK(texture(0, 3).character == "└");
+  CHECK(texture(11, 3).character == "┘");
 
   // Left and right borders on the scrollbar row (y=2) must be preserved.
-  CHECK(texture[0, 2].character == "│");
-  CHECK(texture[11, 2].character == "│");
+  CHECK(texture(0, 2).character == "│");
+  CHECK(texture(11, 2).character == "│");
 
   // The horizontal scrollbar should be on row y=2 (one inside the bottom
   // border). It should only occupy x=1..10 (between left/right borders).
   for (int x = 1; x <= 10; ++x) {
-    CHECK(texture[x, 2].character != "│");
-    CHECK(texture[x, 2].character != "─");
-    CHECK(texture[x, 2].character != "┌");
-    CHECK(texture[x, 2].character != "┐");
-    CHECK(texture[x, 2].character != "└");
-    CHECK(texture[x, 2].character != "┘");
+    CHECK(texture(x, 2).character != "│");
+    CHECK(texture(x, 2).character != "─");
+    CHECK(texture(x, 2).character != "┌");
+    CHECK(texture(x, 2).character != "┐");
+    CHECK(texture(x, 2).character != "└");
+    CHECK(texture(x, 2).character != "┘");
   }
 }
 
@@ -256,21 +256,21 @@ TEST_CASE("Paint: Both scrollbars with solid border - no overlap",
   std::cout << "BothScroll+Border:\n" << text << std::endl;
 
   // All four corners must be preserved.
-  CHECK(texture[0, 0].character == "┌");
-  CHECK(texture[13, 0].character == "┐");
-  CHECK(texture[0, 7].character == "└");
-  CHECK(texture[13, 7].character == "┘");
+  CHECK(texture(0, 0).character == "┌");
+  CHECK(texture(13, 0).character == "┐");
+  CHECK(texture(0, 7).character == "└");
+  CHECK(texture(13, 7).character == "┘");
 
   // Top and bottom borders must be intact.
   for (int x = 1; x <= 12; ++x) {
-    CHECK(texture[x, 0].character == "─");
-    CHECK(texture[x, 7].character == "─");
+    CHECK(texture(x, 0).character == "─");
+    CHECK(texture(x, 7).character == "─");
   }
 
   // Left and right borders must be intact.
   for (int y = 1; y <= 6; ++y) {
-    CHECK(texture[0, y].character == "│");
-    CHECK(texture[13, y].character == "│");
+    CHECK(texture(0, y).character == "│");
+    CHECK(texture(13, y).character == "│");
   }
 }
 
@@ -311,14 +311,14 @@ TEST_CASE("Paint: VScroll with round border - no overlap",
   std::cout << "VScroll+RoundBorder:\n" << text << std::endl;
 
   // Round border corners must be preserved.
-  CHECK(texture[0, 0].character == "╭");
-  CHECK(texture[9, 0].character == "╮");
-  CHECK(texture[0, 4].character == "╰");
-  CHECK(texture[9, 4].character == "╯");
+  CHECK(texture(0, 0).character == "╭");
+  CHECK(texture(9, 0).character == "╮");
+  CHECK(texture(0, 4).character == "╰");
+  CHECK(texture(9, 4).character == "╯");
 
   // Right border must be intact on all middle rows.
   for (int y = 1; y <= 3; ++y) {
-    CHECK(texture[9, y].character == "│");
+    CHECK(texture(9, y).character == "│");
   }
 }
 
@@ -362,17 +362,17 @@ TEST_CASE("Paint: VScroll track avoids border rows",
   // The scrollbar column is at x=10 (inside the right border at x=11).
   // Top border row (y=0): should be a border horizontal char "─", NOT a
   // scrollbar character.
-  CHECK(texture[10, 0].character == "─");
+  CHECK(texture(10, 0).character == "─");
 
   // Bottom border row (y=5): should be a border horizontal char "─".
-  CHECK(texture[10, 5].character == "─");
+  CHECK(texture(10, 5).character == "─");
 
   // The scrollbar track should occupy only y=1..4.
   // These cells should have scrollbar content (track or thumb background),
   // not border characters.
   for (int y = 1; y <= 4; ++y) {
-    CHECK(texture[10, y].character != "─");
-    CHECK(texture[10, y].character != "│");
+    CHECK(texture(10, y).character != "─");
+    CHECK(texture(10, y).character != "│");
   }
 }
 
@@ -413,15 +413,15 @@ TEST_CASE("Paint: HScroll track avoids border columns",
 
   // The scrollbar row is at y=2 (inside the bottom border at y=3).
   // Left border column (x=0): should be border vertical char "│".
-  CHECK(texture[0, 2].character == "│");
+  CHECK(texture(0, 2).character == "│");
 
   // Right border column (x=9): should be border vertical char "│".
-  CHECK(texture[9, 2].character == "│");
+  CHECK(texture(9, 2).character == "│");
 
   // The scrollbar track should only occupy x=1..8.
   for (int x = 1; x <= 8; ++x) {
-    CHECK(texture[x, 2].character != "│");
-    CHECK(texture[x, 2].character != "─");
+    CHECK(texture(x, 2).character != "│");
+    CHECK(texture(x, 2).character != "─");
   }
 }
 
@@ -504,7 +504,7 @@ TEST_CASE("Paint: Anchor scrollbar thumb reaches bottom", "[paint][scroll]") {
   // Since we are scrolled to the bottom, the bottom-most cell of the track
   // (y=8) MUST be part of the thumb, so it must have the thumb background. The
   // top-most cell of the track (y=1) should have the track background.
-  CHECK(texture[18, 8].background_color != texture[18, 1].background_color);
+  CHECK(texture(18, 8).background_color != texture(18, 1).background_color);
 }
 
 class LeftBorderScroller : public Component<LeftBorderScroller> {

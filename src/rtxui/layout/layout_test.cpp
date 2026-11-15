@@ -38,7 +38,7 @@ std::string GetTextLayer(const Texture& texture) {
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = const_cast<Texture&>(texture)[x, y];
+      const auto& cell = const_cast<Texture&>(texture)(x, y);
       if (cell.is_continuation) {
         out += '^';  // marks the reserved column of a double-width character
       } else {
@@ -58,7 +58,7 @@ std::string GetColorLayer(const Texture& texture,
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = const_cast<Texture&>(texture)[x, y];
+      const auto& cell = const_cast<Texture&>(texture)(x, y);
       Color c = background ? cell.background_color : cell.foreground_color;
       if (c.a == 0) {
         out += ".";  // Use '.' for transparent/unset colors
@@ -1349,7 +1349,7 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
 
     auto texture = RenderComponent(Ref<CombiningTest>::New(), 6, 1);
     // The combining grapheme (e + U+0301) must be stored in a single cell.
-    const auto& cell3 = const_cast<Texture&>(texture)[3, 0];
+    const auto& cell3 = const_cast<Texture&>(texture)(3, 0);
     CHECK(cell3.character.size() > 1);      // multi-byte cluster in one cell
     CHECK(cell3.character == "e\xCC\x81");  // e + combining acute
     // GetTextLayer joins all cells: c a f e+\xCC\x81 _ _
@@ -1385,11 +1385,11 @@ TEST_CASE("Layout: Unicode rendering", "[layout][unicode]") {
     CHECK(layer == "一^B \n");
 
     // Verify the continuation cell flag is set
-    const auto& cont = const_cast<Texture&>(texture_cjk)[1, 0];
+    const auto& cont = const_cast<Texture&>(texture_cjk)(1, 0);
     CHECK(cont.is_continuation);
 
     // Verify 'B' is at column 2
-    const auto& b_cell = const_cast<Texture&>(texture_cjk)[2, 0];
+    const auto& b_cell = const_cast<Texture&>(texture_cjk)(2, 0);
     CHECK(b_cell.character == "B");
   }
 
@@ -1711,7 +1711,7 @@ TEST_CASE("Layout: position absolute and relative", "[layout][position]") {
   Texture texture(5, 3);
   for (int y = 0; y < 3; ++y) {
     for (int x = 0; x < 5; ++x) {
-      texture[x, y].character = " ";
+      texture(x, y).character = " ";
     }
   }
   if (layout_box) {
@@ -1770,7 +1770,7 @@ TEST_CASE("Layout: z-index stacking", "[layout][z-index]") {
   auto layout_box =
       LayoutTreeBuilder::Build(rtxui::ComponentInternals::Root(*c));
   Texture texture(1, 1);
-  texture[0, 0].character = " ";
+  texture(0, 0).character = " ";
   if (layout_box) {
     LayoutConstraints constraints;
     constraints.width = {1, MeasureMode::Exactly};
@@ -1828,7 +1828,7 @@ TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
   Texture texture(5, 3);
   for (int y = 0; y < 3; ++y) {
     for (int x = 0; x < 5; ++x) {
-      texture[x, y].character = " ";
+      texture(x, y).character = " ";
     }
   }
   if (layout_box) {
@@ -1844,7 +1844,7 @@ TEST_CASE("Layout: position fixed does not scroll", "[layout][fixed][scroll]") {
 
   // The fixed element must remain at top:1, left:1 (which is x=1, y=1)
   // regardless of the parent scroll position.
-  CHECK(texture[1, 1].character == "F");
+  CHECK(texture(1, 1).character == "F");
 }
 
 TEST_CASE("Layout: position sticky layout and scrolling",
@@ -1910,7 +1910,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     Texture texture(5, 5);
     for (int y = 0; y < 5; ++y) {
       for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     if (layout_box) {
@@ -1922,7 +1922,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 0 render:\n" << layer);
-    CHECK(texture[0, 1].character == "S");
+    CHECK(texture(0, 1).character == "S");
   }
 
   {
@@ -1942,7 +1942,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     Texture texture(5, 5);
     for (int y = 0; y < 5; ++y) {
       for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     if (layout_box) {
@@ -1952,7 +1952,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
       auto fragment = RunLayout({layout_box.get()}, constraints);
       Paint(fragment, texture);
     }
-    CHECK(texture[0, 1].character == "S");
+    CHECK(texture(0, 1).character == "S");
   }
 
   {
@@ -1974,7 +1974,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     Texture texture(5, 5);
     for (int y = 0; y < 5; ++y) {
       for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     if (layout_box) {
@@ -1986,7 +1986,7 @@ TEST_CASE("Layout: position sticky layout and scrolling",
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 9 render:\n" << layer);
-    CHECK(texture[0, 0].character == "S");
+    CHECK(texture(0, 0).character == "S");
   }
 }
 
@@ -2036,7 +2036,7 @@ TEST_CASE("Layout: position sticky direct child of scroll container",
   Texture texture(5, 5);
   for (int y = 0; y < 5; ++y) {
     for (int x = 0; x < 5; ++x) {
-      texture[x, y].character = " ";
+      texture(x, y).character = " ";
     }
   }
   if (layout_box) {
@@ -2048,7 +2048,7 @@ TEST_CASE("Layout: position sticky direct child of scroll container",
   }
   std::string layer = GetTextLayer(texture);
   INFO("Scroll 10 direct render:\n" << layer);
-  CHECK(texture[0, 0].character == "S");
+  CHECK(texture(0, 0).character == "S");
 }
 
 TEST_CASE("Layout: Flexbox Grow Cumulative Distribution",
@@ -3192,15 +3192,15 @@ TEST_CASE("Layout: Rowspan painting order", "[layout][table]") {
   INFO("Text Grid:\n" << text_grid);
 
   // Row 1
-  CHECK(texture[0, 0].character == "S");
-  CHECK(texture[0, 0].background_color == Color::RGB(0, 255, 0));
+  CHECK(texture(0, 0).character == "S");
+  CHECK(texture(0, 0).background_color == Color::RGB(0, 255, 0));
 
   // Row 2
   // Character is not repeated for multi-row cell, but background should span.
-  CHECK(texture[0, 1].background_color == Color::RGB(0, 255, 0));
+  CHECK(texture(0, 1).background_color == Color::RGB(0, 255, 0));
 
-  CHECK(texture[1, 1].character == "B");
-  CHECK(texture[1, 1].background_color == Color::RGB(255, 0, 0));
+  CHECK(texture(1, 1).character == "B");
+  CHECK(texture(1, 1).background_color == Color::RGB(255, 0, 0));
 }
 
 TEST_CASE("Layout: CSS Grid Layout basic positioning", "[layout][grid]") {
@@ -3448,7 +3448,7 @@ TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
 
   auto texture = RenderComponent(Ref<GridTallTest>::New(), 8, 3);
 
-  const auto& left_cell = texture[0, 0];
+  const auto& left_cell = texture(0, 0);
   INFO("left_cell fg: r=" << (int)left_cell.foreground_color.r
                           << " g=" << (int)left_cell.foreground_color.g
                           << " b=" << (int)left_cell.foreground_color.b
@@ -3461,7 +3461,7 @@ TEST_CASE("Layout: Grid Tall Border Colors", "[layout][grid][tall]") {
   CHECK(left_cell.foreground_color == Color::RGB(255, 0, 0));
   CHECK(left_cell.background_color.a == 0);
 
-  const auto& right_cell = texture[7, 0];
+  const auto& right_cell = texture(7, 0);
   INFO("right_cell bg: r=" << (int)right_cell.background_color.r
                            << " g=" << (int)right_cell.background_color.g
                            << " b=" << (int)right_cell.background_color.b
@@ -3539,7 +3539,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     if (layout_box) {
@@ -3551,10 +3551,10 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 0 render:\n" << layer);
-    CHECK(texture[0, 0].character == "J");
-    CHECK(texture[0, 1].character == "D");
-    CHECK(texture[0, 2].character == "D");
-    CHECK(texture[0, 3].character == "F");
+    CHECK(texture(0, 0).character == "J");
+    CHECK(texture(0, 1).character == "D");
+    CHECK(texture(0, 2).character == "D");
+    CHECK(texture(0, 3).character == "F");
   }
 
   // 2. scroll_y = 1
@@ -3565,7 +3565,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     if (layout_box) {
@@ -3577,10 +3577,10 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 1 render:\n" << layer);
-    CHECK(texture[0, 0].character == "J");
-    CHECK(texture[0, 1].character == "D");
-    CHECK(texture[0, 2].character == "F");
-    CHECK(texture[0, 3].character == "D");
+    CHECK(texture(0, 0).character == "J");
+    CHECK(texture(0, 1).character == "D");
+    CHECK(texture(0, 2).character == "F");
+    CHECK(texture(0, 3).character == "D");
   }
 
   // 3. scroll_y = 2
@@ -3591,7 +3591,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     if (layout_box) {
@@ -3603,10 +3603,10 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 2 render:\n" << layer);
-    CHECK(texture[0, 0].character == "J");
-    CHECK(texture[0, 1].character == "F");
-    CHECK(texture[0, 2].character == "D");
-    CHECK(texture[0, 3].character == "D");
+    CHECK(texture(0, 0).character == "J");
+    CHECK(texture(0, 1).character == "F");
+    CHECK(texture(0, 2).character == "D");
+    CHECK(texture(0, 3).character == "D");
   }
 
   // 4. scroll_y = 3
@@ -3617,7 +3617,7 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     Texture texture(5, 4);
     for (int y = 0; y < 4; ++y) {
       for (int x = 0; x < 5; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     if (layout_box) {
@@ -3629,9 +3629,9 @@ TEST_CASE("Layout: position sticky pushing calendar test",
     }
     std::string layer = GetTextLayer(texture);
     INFO("Scroll 3 render:\n" << layer);
-    CHECK(texture[0, 0].character == "F");
-    CHECK(texture[0, 1].character == "D");
-    CHECK(texture[0, 2].character == "D");
+    CHECK(texture(0, 0).character == "F");
+    CHECK(texture(0, 1).character == "D");
+    CHECK(texture(0, 2).character == "D");
   }
 }
 

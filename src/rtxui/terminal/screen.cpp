@@ -3780,7 +3780,7 @@ void ScreenImpl::PaintScreen(const PhysicalFragment& root,
   }
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      Cell& cell = texture[x, y];
+      Cell& cell = texture(x, y);
       if (borrow_background && cell.background_color == terminal_background_) {
         cell.background_color = Color();
       }
@@ -4080,7 +4080,7 @@ std::pair<TextPosition, TextPosition> ScreenImpl::UnitAround(
     return {glyph, glyph};
   }
   auto kind = [&](int cx) {
-    const std::string& c = texture[cx, y].character;
+    const std::string& c = texture(cx, y).character;
     const unsigned char first = c.empty() ? ' ' : c[0];
     if (first == ' ') {
       return 0;
@@ -4095,7 +4095,7 @@ std::pair<TextPosition, TextPosition> ScreenImpl::UnitAround(
   };
   int left = x;
   for (int cx = x - 1; cx >= 0; --cx) {
-    if (texture[cx, y].is_continuation) {
+    if (texture(cx, y).is_continuation) {
       continue;
     }
     if (!of_word(cx)) {
@@ -4105,7 +4105,7 @@ std::pair<TextPosition, TextPosition> ScreenImpl::UnitAround(
   }
   int right = x;
   for (int cx = x + 1; cx < width_; ++cx) {
-    if (texture[cx, y].is_continuation) {
+    if (texture(cx, y).is_continuation) {
       continue;
     }
     if (!of_word(cx)) {
@@ -4774,7 +4774,7 @@ std::string ScreenImpl::Text() const {
   for (int y = 0; y < last_texture_->height(); ++y) {
     std::string line;
     for (int x = 0; x < last_texture_->width(); ++x) {
-      const Cell& cell = (*last_texture_)[x, y];
+      const Cell& cell = (*last_texture_)(x, y);
       if (cell.is_continuation) {
         continue;
       }
@@ -4792,7 +4792,7 @@ const Cell* ScreenImpl::CellAt(int x, int y) const {
       y >= last_texture_->height()) {
     return nullptr;
   }
-  return &(*last_texture_)[x, y];
+  return &(*last_texture_)(x, y);
 }
 
 void ScreenImpl::SettlePendingInput() {

@@ -42,8 +42,8 @@ TEST_CASE("A texture writes its links as OSC 8 hyperlinks", "[paint][link]") {
   CHECK(texture.AddLink("https://example.com") == link);
   CHECK(texture.LinkUrl(link) == "https://example.com");
   for (int x = 1; x < 3; ++x) {
-    texture[x, 0].character = "a";
-    texture[x, 0].link = link;
+    texture(x, 0).character = "a";
+    texture(x, 0).link = link;
   }
   // Opened before the first linked cell, closed after the last, and never
   // left open across a line break. Blank row ends are erased.
@@ -55,8 +55,8 @@ TEST_CASE("A texture writes its links as OSC 8 hyperlinks", "[paint][link]") {
     const uint16_t other = next.AddLink("https://other.org");
     REQUIRE(other == link);  // Same id, different URL.
     for (int x = 1; x < 3; ++x) {
-      next[x, 0].character = "a";
-      next[x, 0].link = other;
+      next(x, 0).character = "a";
+      next(x, 0).link = other;
     }
     CHECK(next.RenderDiff(texture).find(Open("https://other.org")) !=
           std::string::npos);

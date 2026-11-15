@@ -62,7 +62,7 @@ TEST_CASE("A flex item that refuses to shrink is not overlapped",
     // cell too early.
     std::string row;
     for (int x = 0; x < 10; ++x) {
-      row += texture[x, 0].character;
+      row += texture(x, 0).character;
     }
     CHECK(row == "AAAAABBBBB");
   }
@@ -97,7 +97,7 @@ TEST_CASE("A block in an inline context takes its own line",
   auto row_text = [&](int y) {
     std::string row;
     for (int x = 0; x < texture.width(); ++x) {
-      row += texture[x, y].character;
+      row += texture(x, y).character;
     }
     while (!row.empty() && row.back() == ' ') {
       row.pop_back();
@@ -168,7 +168,7 @@ TEST_CASE("An inline box ending with a block takes no line after it",
   auto row = [&](int y) {
     std::string text;
     for (int x = 0; x < texture.width(); ++x) {
-      text += texture[x, y].character.empty() ? " " : texture[x, y].character;
+      text += texture(x, y).character.empty() ? " " : texture(x, y).character;
     }
     return text.substr(0, text.find_last_not_of(' ') + 1);
   };
@@ -488,7 +488,7 @@ TEST_CASE("Inline span background-color is applied when painted",
   REQUIRE(span != nullptr);
   int x = span->absolute_x();
   int y = span->absolute_y();
-  CHECK(texture[x, y].background_color == Color::RGB(38, 79, 120));
+  CHECK(texture(x, y).background_color == Color::RGB(38, 79, 120));
 }
 
 TEST_CASE("A block-level flex container fills its block parent",

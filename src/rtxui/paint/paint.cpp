@@ -510,7 +510,7 @@ void PaintOutline(const PendingOutline& outline, Texture& texture) {
         !clip.Contains(cx, cy)) {
       return;
     }
-    auto& cell = texture[cx, cy];
+    auto& cell = texture(cx, cy);
     if (cell.inverted) {
       std::swap(cell.background_color, cell.foreground_color);
       cell.inverted = false;
@@ -664,7 +664,7 @@ void PaintImpl(const PhysicalFragment* frag,
           int tex_y = abs_y + y;
           if (tex_x >= 0 && tex_x < texture.width() && tex_y >= 0 &&
               tex_y < texture.height() && clip.Contains(tex_x, tex_y)) {
-            auto& cell = texture[tex_x, tex_y];
+            auto& cell = texture(tex_x, tex_y);
             resolve_cell(cell);
             if (new_bg.a == 255) {
               // An opaque background hides whatever was painted beneath it,
@@ -693,11 +693,11 @@ void PaintImpl(const PhysicalFragment* frag,
               // drawn two cells wide, over the box or past it: blank the
               // half left outside.
               if (was_continuation && tex_x > 0) {
-                texture[tex_x - 1, tex_y].character = " ";
+                texture(tex_x - 1, tex_y).character = " ";
               }
               if (tex_x + 1 < texture.width() &&
-                  texture[tex_x + 1, tex_y].is_continuation) {
-                auto& next = texture[tex_x + 1, tex_y];
+                  texture(tex_x + 1, tex_y).is_continuation) {
+                auto& next = texture(tex_x + 1, tex_y);
                 next.is_continuation = false;
                 next.character = " ";
               }
@@ -792,7 +792,7 @@ void PaintImpl(const PhysicalFragment* frag,
       }
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
           clip.Contains(x, y)) {
-        auto& cell = texture[x, y];
+        auto& cell = texture(x, y);
         resolve_cell(cell);
         if (frag->merge_borders) {
           c = MergeBorderGlyph(cell.character, c);
@@ -922,7 +922,7 @@ void PaintImpl(const PhysicalFragment* frag,
         int x_prev = abs_x + border_offset + cell_x - 1;
         if (x_prev >= 0 && x_prev < texture.width() && y >= 0 &&
             y < texture.height() && clip.Contains(x_prev, y)) {
-          texture[x_prev, y].character += std::string(g.text);
+          texture(x_prev, y).character += std::string(g.text);
         }
         continue;  // no column advance
       }
@@ -930,7 +930,7 @@ void PaintImpl(const PhysicalFragment* frag,
       int x = abs_x + border_offset + cell_x;
       if (x >= 0 && x < texture.width() && y >= 0 && y < texture.height() &&
           clip.Contains(x, y)) {
-        auto& cell = texture[x, y];
+        auto& cell = texture(x, y);
         resolve_cell(cell);
         cell.character = std::string(g.text);
         cell.link = link;
@@ -982,7 +982,7 @@ void PaintImpl(const PhysicalFragment* frag,
         int x2 = x + 1;
         if (x2 >= 0 && x2 < texture.width() && y >= 0 && y < texture.height() &&
             clip.Contains(x2, y)) {
-          texture[x2, y].is_continuation = true;
+          texture(x2, y).is_continuation = true;
         }
       }
       cell_x += g.width;
@@ -1011,7 +1011,7 @@ void PaintImpl(const PhysicalFragment* frag,
               !clip.Contains(tex_x, tex_y)) {
             continue;
           }
-          auto& cell = texture[tex_x, tex_y];
+          auto& cell = texture(tex_x, tex_y);
           if (from.background) {
             resolve_cell(cell);
             Color bg = *from.background;
@@ -1039,7 +1039,7 @@ void PaintImpl(const PhysicalFragment* frag,
           cell.blink = current_blink;
           if (x + 1 < canvas->width && canvas->At(x + 1, y)->continuation &&
               tex_x + 1 < texture.width() && clip.Contains(tex_x + 1, tex_y)) {
-            texture[tex_x + 1, tex_y].is_continuation = true;
+            texture(tex_x + 1, tex_y).is_continuation = true;
           }
         }
       }
@@ -1117,7 +1117,7 @@ void PaintImpl(const PhysicalFragment* frag,
       for (int i = 0; i < track_h; ++i) {
         int y = track_y_start + i;
         if (y >= 0 && y < texture.height() && clip.Contains(scrollbar_x, y)) {
-          auto& cell = texture[scrollbar_x, y];
+          auto& cell = texture(scrollbar_x, y);
           resolve_cell(cell);
           cell.link = 0;
           ForgetGlyph(texture, scrollbar_x, y);
@@ -1211,7 +1211,7 @@ void PaintImpl(const PhysicalFragment* frag,
       for (int i = 0; i < track_w; ++i) {
         int x = track_x_start + i;
         if (x >= 0 && x < texture.width() && clip.Contains(x, scrollbar_y)) {
-          auto& cell = texture[x, scrollbar_y];
+          auto& cell = texture(x, scrollbar_y);
           resolve_cell(cell);
           cell.link = 0;
           ForgetGlyph(texture, x, scrollbar_y);
@@ -1450,7 +1450,7 @@ void Paint(const PhysicalFragment* frag,
   if (screen_background.a != 0) {
     for (int y = 0; y < texture.height(); ++y) {
       for (int x = 0; x < texture.width(); ++x) {
-        texture[x, y].background_color = screen_background;
+        texture(x, y).background_color = screen_background;
       }
     }
   }

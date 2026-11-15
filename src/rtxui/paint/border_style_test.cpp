@@ -26,7 +26,7 @@ std::string GetTextLayer(const Texture& texture) {
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = const_cast<Texture&>(texture).operator[](x, y);
+      const auto& cell = const_cast<Texture&>(texture)(x, y);
       out += cell.character.empty() ? " " : cell.character;
     }
     out += "\n";
@@ -42,7 +42,7 @@ std::string GetColorLayer(const Texture& texture,
   std::string out;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = const_cast<Texture&>(texture)[x, y];
+      const auto& cell = const_cast<Texture&>(texture)(x, y);
       Color c = background ? cell.background_color : cell.foreground_color;
       if (c.a == 0) {
         out += ".";  // Use '.' for transparent/unset colors
@@ -75,7 +75,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
   // Initialize with spaces
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
-      texture.operator[](x, y).character = " ";
+      texture(x, y).character = " ";
     }
   }
 
@@ -176,7 +176,7 @@ TEST_CASE("Paint: 4x3 Border Grid Component", "[paint][border]") {
     std::string output;
     for (int y = 0; y < texture.height(); ++y) {
       for (int x = 0; x < texture.width(); ++x) {
-        const auto& cell = texture.operator[](x, y);
+        const auto& cell = texture(x, y);
         Color bg = cell.background_color;
         if (color_map.find(bg) != color_map.end()) {
           output += color_map[bg];
@@ -298,7 +298,7 @@ TEST_CASE("Paint: Remaining 12 Border Grid Component", "[paint][border]") {
     std::string output;
     for (int y = 0; y < texture.height(); ++y) {
       for (int x = 0; x < texture.width(); ++x) {
-        const auto& cell = texture.operator[](x, y);
+        const auto& cell = texture(x, y);
         Color bg = cell.background_color;
         if (color_map.find(bg) != color_map.end()) {
           output += color_map[bg];
@@ -383,12 +383,12 @@ TEST_CASE("Paint: Scrollbar thumb at end", "[paint][scroll]") {
   // Under corrected math, the thumb must be at the very bottom (y=3).
   // Scrollbar now uses background colors: track=RGBA(80,80,80,120),
   // thumb=RGBA(200,200,200,200).
-  CHECK(texture[9, 0].character == " ");
-  CHECK(texture[9, 1].character == " ");
-  CHECK(texture[9, 2].character == " ");
-  CHECK(texture[9, 3].character == " ");
+  CHECK(texture(9, 0).character == " ");
+  CHECK(texture(9, 1).character == " ");
+  CHECK(texture(9, 2).character == " ");
+  CHECK(texture(9, 3).character == " ");
   // The thumb (y=3) should have a brighter background than the track (y=0..2).
-  CHECK(texture[9, 3].background_color != texture[9, 0].background_color);
+  CHECK(texture(9, 3).background_color != texture(9, 0).background_color);
 }
 
 TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
@@ -435,10 +435,10 @@ TEST_CASE("Paint: Horizontal Scrollbar thumb at end", "[paint][scroll]") {
   // Scrollbar row is index 3.
   // Track width is 10, scrollbar is drawn along y=3.
   // The thumb must be at the very right (x=9) when scrolled to the end.
-  CHECK(texture[0, 3].character == " ");
-  CHECK(texture[9, 3].character == " ");
+  CHECK(texture(0, 3).character == " ");
+  CHECK(texture(9, 3).character == " ");
   // The thumb (x=9) should have a brighter background than the track (x=0).
-  CHECK(texture[9, 3].background_color != texture[0, 3].background_color);
+  CHECK(texture(9, 3).background_color != texture(0, 3).background_color);
 }
 
 TEST_CASE("Individual Border Colors") {
@@ -689,13 +689,13 @@ TEST_CASE("Paint: Tall Border Parent Background Propagation") {
   // rather than left for the terminal.
   for (int y = 0; y < 3; ++y) {
     INFO("row " << y);
-    CHECK(texture[5, y].background_color == expected_bg);
-    CHECK(texture[5, y].foreground_color == border);
-    CHECK_FALSE(texture[5, y].inverted);
+    CHECK(texture(5, y).background_color == expected_bg);
+    CHECK(texture(5, y).foreground_color == border);
+    CHECK_FALSE(texture(5, y).inverted);
 
-    CHECK(texture[0, y].foreground_color == expected_bg);
-    CHECK(texture[0, y].background_color == border);
-    CHECK_FALSE(texture[0, y].inverted);
+    CHECK(texture(0, y).foreground_color == expected_bg);
+    CHECK(texture(0, y).background_color == border);
+    CHECK_FALSE(texture(0, y).inverted);
   }
 }
 
@@ -739,9 +739,9 @@ TEST_CASE("Paint: Transparent Overlay Blending on Tall Border") {
   // composited onto colors the terminal has not swapped yet). Both halves --
   // the parent's black showing through the glyph, and the border's red behind
   // it -- then blend with the semi-transparent overlay.
-  CHECK_FALSE(texture[0, 1].inverted);
-  CHECK(texture[0, 1].foreground_color == Blend(overlay, Color::RGB(0, 0, 0)));
-  CHECK(texture[0, 1].background_color ==
+  CHECK_FALSE(texture(0, 1).inverted);
+  CHECK(texture(0, 1).foreground_color == Blend(overlay, Color::RGB(0, 0, 0)));
+  CHECK(texture(0, 1).background_color ==
         Blend(overlay, Color::RGB(255, 0, 0)));
 }
 
@@ -791,7 +791,7 @@ TEST_CASE("Half-block borders follow Textual's location table",
 
     auto expect = [&](int x, int y, Loc loc) {
       INFO("cell " << x << "," << y);
-      const Cell& cell = texture[x, y];
+      const Cell& cell = texture(x, y);
       const bool outer = loc == Out || loc == RevOut;
       const bool reversed = loc == RevOut || loc == RevIn;
       const Color field = outer ? kParent : kOwn;
@@ -870,7 +870,7 @@ TEST_CASE("Paint: Half-block borders never render the default foreground",
           continue;  // Content, not border.
         }
         INFO("cell " << x << "," << y);
-        const Cell& cell = texture[x, y];
+        const Cell& cell = texture(x, y);
         CHECK(cell.foreground_color == Color::RGB(255, 0, 0));
         CHECK(cell.background_color.a == 0);
       }
@@ -902,7 +902,7 @@ TEST_CASE("A border's outer edge takes its parent's background as drawn",
   for (int y = 0; y < 5; ++y) {
     for (int x = 0; x < 8; ++x) {
       INFO("cell " << x << "," << y);
-      const Cell& cell = texture[x, y];
+      const Cell& cell = texture(x, y);
       CHECK(cell.background_color.a == 0);
       CHECK((cell.foreground_color.a == 0 || cell.foreground_color.b == 0));
     }

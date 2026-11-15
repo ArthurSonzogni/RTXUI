@@ -151,7 +151,7 @@ TEST_CASE("Tabs header divider renders as a line under the headers",
   CHECK(headers->layout_height() == 2);
   bool found_divider_char = false;
   for (int x = 0; x < headers->layout_width(); ++x) {
-    if (texture[x, 1].character == "─") {
+    if (texture(x, 1).character == "─") {
       found_divider_char = true;
       break;
     }

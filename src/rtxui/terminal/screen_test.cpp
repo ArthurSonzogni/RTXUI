@@ -2676,8 +2676,8 @@ TEST_CASE("Texture::RenderUnchanged is the diff of an identical texture",
           "[terminal]") {
   for (const int height : {1, 2, 5}) {
     Texture texture(4, height);
-    texture[1, 0].character = "x";
-    texture[1, 0].foreground_color = Color::RGB(255, 0, 0);
+    texture(1, 0).character = "x";
+    texture(1, 0).foreground_color = Color::RGB(255, 0, 0);
     CHECK(texture.RenderUnchanged() == texture.RenderDiff(texture));
   }
 }
@@ -2781,7 +2781,7 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
 
     for (int y = 0; y < new_tex.height(); ++y) {
       for (int x = 0; x < new_tex.width(); ++x) {
-        const auto& expected = new_tex[x, y];
+        const auto& expected = new_tex(x, y);
         const auto& actual = vt.cells[y * new_tex.width() + x];
         std::string expected_char =
             expected.is_continuation
@@ -2806,16 +2806,16 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
   // Test Case 1: Changing a wide character to another wide character
   {
     Texture old_tex(10, 1);
-    old_tex[0, 0].character = "A";
-    old_tex[1, 0].character = "中";
-    old_tex[2, 0].is_continuation = true;
-    old_tex[3, 0].character = "B";
+    old_tex(0, 0).character = "A";
+    old_tex(1, 0).character = "中";
+    old_tex(2, 0).is_continuation = true;
+    old_tex(3, 0).character = "B";
 
     Texture new_tex(10, 1);
-    new_tex[0, 0].character = "A";
-    new_tex[1, 0].character = "万";
-    new_tex[2, 0].is_continuation = true;
-    new_tex[3, 0].character = "B";
+    new_tex(0, 0).character = "A";
+    new_tex(1, 0).character = "万";
+    new_tex(2, 0).is_continuation = true;
+    new_tex(3, 0).character = "B";
 
     REQUIRE(VerifyDiff(old_tex, new_tex));
   }
@@ -2823,16 +2823,16 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
   // Test Case 2: Changing a wide character to a single-width character
   {
     Texture old_tex(10, 1);
-    old_tex[0, 0].character = "A";
-    old_tex[1, 0].character = "中";
-    old_tex[2, 0].is_continuation = true;
-    old_tex[3, 0].character = "B";
+    old_tex(0, 0).character = "A";
+    old_tex(1, 0).character = "中";
+    old_tex(2, 0).is_continuation = true;
+    old_tex(3, 0).character = "B";
 
     Texture new_tex(10, 1);
-    new_tex[0, 0].character = "A";
-    new_tex[1, 0].character = "X";
-    new_tex[2, 0].character = "Y";
-    new_tex[3, 0].character = "B";
+    new_tex(0, 0).character = "A";
+    new_tex(1, 0).character = "X";
+    new_tex(2, 0).character = "Y";
+    new_tex(3, 0).character = "B";
 
     REQUIRE(VerifyDiff(old_tex, new_tex));
   }
@@ -2840,16 +2840,16 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
   // Test Case 3: Changing a single-width character to a wide character
   {
     Texture old_tex(10, 1);
-    old_tex[0, 0].character = "A";
-    old_tex[1, 0].character = "X";
-    old_tex[2, 0].character = "Y";
-    old_tex[3, 0].character = "B";
+    old_tex(0, 0).character = "A";
+    old_tex(1, 0).character = "X";
+    old_tex(2, 0).character = "Y";
+    old_tex(3, 0).character = "B";
 
     Texture new_tex(10, 1);
-    new_tex[0, 0].character = "A";
-    new_tex[1, 0].character = "中";
-    new_tex[2, 0].is_continuation = true;
-    new_tex[3, 0].character = "B";
+    new_tex(0, 0).character = "A";
+    new_tex(1, 0).character = "中";
+    new_tex(2, 0).is_continuation = true;
+    new_tex(3, 0).character = "B";
 
     REQUIRE(VerifyDiff(old_tex, new_tex));
   }
@@ -2858,14 +2858,14 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
   // (which stays unchanged)
   {
     Texture old_tex(10, 1);
-    old_tex[0, 0].character = "中";
-    old_tex[1, 0].is_continuation = true;
-    old_tex[2, 0].character = "A";
+    old_tex(0, 0).character = "中";
+    old_tex(1, 0).is_continuation = true;
+    old_tex(2, 0).character = "A";
 
     Texture new_tex(10, 1);
-    new_tex[0, 0].character = "中";
-    new_tex[1, 0].is_continuation = true;
-    new_tex[2, 0].character = "B";
+    new_tex(0, 0).character = "中";
+    new_tex(1, 0).is_continuation = true;
+    new_tex(2, 0).character = "B";
 
     REQUIRE(VerifyDiff(old_tex, new_tex));
   }
@@ -2874,14 +2874,14 @@ TEST_CASE("Screen.RenderDiffWideCharactersRegression", "[terminal]") {
   // (which stays unchanged)
   {
     Texture old_tex(10, 1);
-    old_tex[0, 0].character = "A";
-    old_tex[1, 0].character = "中";
-    old_tex[2, 0].is_continuation = true;
+    old_tex(0, 0).character = "A";
+    old_tex(1, 0).character = "中";
+    old_tex(2, 0).is_continuation = true;
 
     Texture new_tex(10, 1);
-    new_tex[0, 0].character = "B";
-    new_tex[1, 0].character = "中";
-    new_tex[2, 0].is_continuation = true;
+    new_tex(0, 0).character = "B";
+    new_tex(1, 0).character = "中";
+    new_tex(2, 0).is_continuation = true;
 
     REQUIRE(VerifyDiff(old_tex, new_tex));
   }
@@ -3037,10 +3037,10 @@ TEST_CASE("Screen.DeltaTransmissionWideCharacters", "[terminal]") {
 
 TEST_CASE("Screen.RenderInitialFrameWideCharacterStyle", "[terminal]") {
   Texture texture(10, 1);
-  texture[0, 0].character = "中";
-  texture[0, 0].background_color = Color::RGB(0, 0, 255);
-  texture[1, 0].is_continuation = true;
-  texture[2, 0].character = "A";
+  texture(0, 0).character = "中";
+  texture(0, 0).background_color = Color::RGB(0, 0, 255);
+  texture(1, 0).is_continuation = true;
+  texture(2, 0).character = "A";
 
   std::string output = texture.Render();
   REQUIRE(output.find("A") != std::string::npos);
@@ -5720,7 +5720,7 @@ TEST_CASE("Declaring a screen background makes reversal exact",
     REQUIRE(fragment != nullptr);
     Texture texture(6, 3);
     Paint(fragment, texture, 0, 0, screen_background);
-    return texture[0, 1];
+    return texture(0, 1);
   };
 
   SECTION("unknown background: the terminal is asked to swap") {

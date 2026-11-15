@@ -513,7 +513,7 @@ TEST_CASE("Anchor component registration and default styling",
   bool found = false;
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      const auto& cell = texture[x, y];
+      const auto& cell = texture(x, y);
       if (cell.character == "L") {
         CHECK(cell.underlined);
         CHECK(cell.foreground_color == Color::RGB(0x3b, 0x82, 0xf6));

@@ -1189,7 +1189,7 @@ TEST_CASE(
     if (!selection_el) {
       return false;
     }
-    Color bg = texture[selection_el->absolute_x(), selection_el->absolute_y()]
+    Color bg = texture(selection_el->absolute_x(), selection_el->absolute_y())
                    .background_color;
     // The unselected background is a neutral gray (r == g == b); the blue
     // selection highlight is not.

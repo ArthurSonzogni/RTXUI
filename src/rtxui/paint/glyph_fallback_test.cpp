@@ -20,9 +20,9 @@ namespace {
 
 std::string Replaced(const GlyphFallback& fallback, std::string glyph) {
   Texture texture(1, 1);
-  texture[0, 0].character = std::move(glyph);
+  texture(0, 0).character = std::move(glyph);
   fallback.Apply(texture);
-  return texture[0, 0].character;
+  return texture(0, 0).character;
 }
 
 TEST_CASE("GlyphFallback.ReplacesTheGlyphsTheTerminalLacks", "[paint]") {

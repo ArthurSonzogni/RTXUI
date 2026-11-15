@@ -473,13 +473,13 @@ TEST_CASE(
 
   // "ab cd" at letter-spacing:1, width:5 wraps as "a\xC2\xA0b\xC2\xA0" then
   // "c\xC2\xA0d" - the second line must start with 'c', not an NBSP.
-  CHECK(texture[0, 0].character == "a");
-  CHECK(texture[1, 0].character == "\xC2\xA0");
-  CHECK(texture[2, 0].character == "b");
-  CHECK(texture[3, 0].character == "\xC2\xA0");
-  CHECK(texture[0, 1].character == "c");
-  CHECK(texture[1, 1].character == "\xC2\xA0");
-  CHECK(texture[2, 1].character == "d");
+  CHECK(texture(0, 0).character == "a");
+  CHECK(texture(1, 0).character == "\xC2\xA0");
+  CHECK(texture(2, 0).character == "b");
+  CHECK(texture(3, 0).character == "\xC2\xA0");
+  CHECK(texture(0, 1).character == "c");
+  CHECK(texture(1, 1).character == "\xC2\xA0");
+  CHECK(texture(2, 1).character == "d");
 }
 
 class FallbackCard : public rtxui::Component<FallbackCard> {

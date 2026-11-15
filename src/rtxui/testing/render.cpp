@@ -39,7 +39,7 @@ Texture PaintComponent(const ComponentBase& component, int width, int height) {
 std::string RowText(const Texture& texture, int y) {
   std::string row;
   for (int x = 0; x < texture.width(); ++x) {
-    row += texture[x, y].character;
+    row += texture(x, y).character;
   }
   while (!row.empty() && row.back() == ' ') {
     row.pop_back();

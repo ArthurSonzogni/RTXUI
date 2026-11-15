@@ -28,7 +28,7 @@ Texture RenderComponent(Ref<ComponentBase> component, int width, int height) {
   Texture texture(width, height);
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
-      texture.operator[](x, y).character = " ";
+      texture(x, y).character = " ";
     }
   }
 
@@ -116,7 +116,7 @@ TEST_CASE("Paint: Scrollbar partial fill color blending",
   // Unicode block characters.
   bool found_partial = false;
   for (int y = 0; y < 10; ++y) {
-    auto& cell = texture[19, y];
+    auto& cell = texture(19, y);
     const std::string& ch = cell.character;
 
     // Skip fully empty (space) and fully filled (█ = U+2588) cells.
@@ -182,7 +182,7 @@ Texture RenderTextarea(Ref<TextareaScrollbarApp> app, int width, int height) {
   Texture texture(width, height);
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
-      texture[x, y].character = " ";
+      texture(x, y).character = " ";
     }
   }
 
@@ -199,7 +199,7 @@ Texture RenderTextarea(Ref<TextareaScrollbarApp> app, int width, int height) {
 std::vector<Color> ScrollbarColumn(Texture& texture, int x, int height) {
   std::vector<Color> colors;
   for (int y = 0; y < height; ++y) {
-    colors.push_back(texture[x, y].background_color);
+    colors.push_back(texture(x, y).background_color);
   }
   return colors;
 }
@@ -267,7 +267,7 @@ TEST_CASE("Textarea scrollbar thumb position tracks the scroll offset",
     Texture texture(40, 5);
     for (int y = 0; y < 5; ++y) {
       for (int x = 0; x < 40; ++x) {
-        texture[x, y].character = " ";
+        texture(x, y).character = " ";
       }
     }
     LayoutConstraints constraints;

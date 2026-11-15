@@ -196,7 +196,7 @@ void GlyphFallback::Apply(Texture& texture) const {
   }
   for (int y = 0; y < texture.height(); ++y) {
     for (int x = 0; x < texture.width(); ++x) {
-      Cell& cell = texture[x, y];
+      Cell& cell = texture(x, y);
       // Every glyph replaced takes 3 bytes of UTF-8.
       if (cell.character.size() != 3) {
         continue;
