@@ -36,6 +36,11 @@ jobs:
           - name: Linux GCC
             os: ubuntu-latest
             cc: gcc-14
+          # The Bazel Central Registry's presubmit also runs Bazel 8.
+          - name: Linux GCC, Bazel 8
+            os: ubuntu-latest
+            cc: gcc-14
+            bazel: 8.x
           - name: macOS Clang
             os: macos-latest
             cc: clang
@@ -44,6 +49,8 @@ jobs:
             os: windows-latest
     env:
       CC: ${{ matrix.cc }}
+      # Overrides .bazelversion when set.
+      USE_BAZEL_VERSION: ${{ matrix.bazel }}
     steps:
       - uses: actions/checkout@v4
 

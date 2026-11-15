@@ -1,12 +1,11 @@
-#define RTXUI_BENCHMARK
 #include <chrono>
 #include <vector>
 
 #include "benchmark_common.hpp"
-#include "demo_app.cpp"
 #include "rtxui/base/task_runner.hpp"
 #include "rtxui/terminal/screen_internal.hpp"
 #include "rtxui/terminal/terminal_device.hpp"
+#include "rtxui/testing/demo_app.hpp"
 
 using namespace rtxui;
 using rtxui::bench::Clock;

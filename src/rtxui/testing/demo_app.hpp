@@ -2,11 +2,12 @@
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
 //
-// A kitchen-sink dashboard combining most of the library in one program.
-//
-// Not an example: rtxui_benchmark measures its frames, and component_test.cpp
-// keeps regression tests that need a layout this busy. Both include it with
-// RTXUI_BENCHMARK defined, which leaves out main().
+// A kitchen-sink dashboard combining most of the library in one component,
+// `App`. component_test.cpp keeps regression tests that need a layout this
+// busy, and rtxui_benchmark measures its frames.
+#ifndef RTXUI_TESTING_DEMO_APP_HPP_
+#define RTXUI_TESTING_DEMO_APP_HPP_
+
 #include <cstddef>
 #include <functional>
 #include <rtxui/rtxui.hpp>
@@ -1227,11 +1228,4 @@ int main() {
   )html";
 };
 
-#ifndef RTXUI_BENCHMARK
-int main() {
-  auto app = Ref<App>::New();
-  Screen screen(app);
-  screen.Loop();
-  return 0;
-}
-#endif
+#endif  // RTXUI_TESTING_DEMO_APP_HPP_

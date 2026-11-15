@@ -80,8 +80,6 @@ cc_test(
         "src/**/*_test.cpp",
         "src/rtxui/testing/**",
     ]),
-    # component_test.cpp #includes the demo app.
-    additional_compiler_inputs = ["benchmarks/demo_app.cpp"],
     copts = COPTS,
     data = glob(["src/rtxui/terminal/captures/**"]),
     env = {"RTXUI_VERIFY_LAYOUT_REUSE": "1"},
