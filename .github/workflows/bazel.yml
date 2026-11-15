@@ -47,6 +47,11 @@ jobs:
           # The Bazel Central Registry's presubmit builds on Windows too.
           - name: Windows MSVC
             os: windows-latest
+          # The oldest MSVC we support: the one the Bazel Central Registry's
+          # Windows machines have (Visual Studio 2022 17.9).
+          - name: Windows MSVC 14.39
+            os: windows-latest
+            msvc: '14.39'
     env:
       CC: ${{ matrix.cc }}
       # Overrides .bazelversion when set.
@@ -57,6 +62,22 @@ jobs:
       - name: Install toolchain (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y g++-14
+
+      # Adds the older MSVC toolset beside the runner's own, and has Bazel
+      # use it.
+      - name: Install MSVC ${{ matrix.msvc }}
+        if: matrix.msvc
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $component = "Microsoft.VisualStudio.Component.VC.${{ matrix.msvc }}.17.9.x86.x64"
+          $installer = Start-Process -Wait -PassThru `
+            -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" `
+            -ArgumentList "modify --installPath `"$vs`" --add $component --quiet --norestart --nocache"
+          if ($installer.ExitCode -ne 0) { exit $installer.ExitCode }
+          $version = (Get-ChildItem "$vs\VC\Tools\MSVC" -Filter "${{ matrix.msvc }}.*" | Select-Object -First 1).Name
+          if (-not $version) { Write-Error "MSVC ${{ matrix.msvc }} is not installed"; exit 1 }
+          "BAZEL_VC_FULL_VERSION=$version" >> $env:GITHUB_ENV
 
       # The runners ship bazelisk as `bazel`; it fetches the version named in
       # .bazelversion.
