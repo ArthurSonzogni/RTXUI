@@ -144,7 +144,8 @@ def clone_fork(upstream, base, branch, work, sparse=None):
     return repo
 
 
-def open_pull_request(repo, upstream, base, branch, title, body, dry_run):
+def open_pull_request(repo, upstream, base, branch, title, body, dry_run,
+                      update_body=True):
     if dry_run:
         print(f"\n--dry-run: would push {branch} and open on {upstream}:")
         print(f"  {title}\n")
@@ -161,8 +162,11 @@ def open_pull_request(repo, upstream, base, branch, title, body, dry_run):
         # REST rather than `gh pr edit`, which fails on GitHub's retired
         # Projects (classic) API.
         number = existing.rstrip("/").split("/")[-1]
+        fields = ["-f", f"title={title}"]
+        if update_body:
+            fields += ["-f", f"body={body}"]
         run("gh", "api", "-X", "PATCH", f"repos/{upstream}/pulls/{number}",
-            "-f", f"title={title}", "-f", f"body={body}", capture=True)
+            *fields, capture=True)
         print(f"Pull request already open, updated: {existing}")
         return
     run("gh", "pr", "create", "--repo", upstream, "--base", base, "--head",
@@ -412,17 +416,17 @@ def publish_nixpkgs(release, work, dry_run):
            {"@NIX_HASH@": nix_hash(release)})
     commit(repo, f"rtxui: init at {release.version}\n\n{ASSISTED_BY}",
            ["pkgs/by-name/rt/rtxui"])
-    body = (f"Adds [RTXUI](https://github.com/{OWNER}/{REPO}), a C++23 "
-            "terminal UI library (HTML templates + CSS layout). I'm its "
-            "author and will maintain the package; upstream releases are "
-            "automated, so r-ryantm should handle the bumps.\n\n"
-            "Built on x86_64-linux; an app using it through "
-            "`find_package(rtxui)` and pkg-config builds and runs.\n\n"
-            "Disclosure: the derivation and this description were drafted "
-            "with Claude Code (Claude Opus 5.5), see the `Assisted-by` "
-            "trailers.\n")
+    # nixpkgs forbids LLM output in pull request prose
+    # (CONTRIBUTING.md#use-of-llm-output-in-prose): the description is the
+    # homepage and nixpkgs' own template, whose boxes the author ticks. An
+    # open pull request keeps the description the author left.
+    template = output("gh", "api", f"repos/{upstream}/contents/.github/"
+                      "PULL_REQUEST_TEMPLATE.md", "-H",
+                      "Accept: application/vnd.github.raw")
+    body = f"https://github.com/{OWNER}/{REPO}\n\n{template}\n"
     open_pull_request(repo, upstream, base, branch,
-                      f"rtxui: init at {release.version}", body, dry_run)
+                      f"rtxui: init at {release.version}", body, dry_run,
+                      update_body=False)
 
 
 PUBLISHERS = {
