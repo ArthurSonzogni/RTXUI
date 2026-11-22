@@ -37,7 +37,8 @@ jobs:
             os: ubuntu-latest
             cc: gcc-14
           # The Bazel Central Registry's presubmit also runs Bazel 8.
-          - name: Linux GCC, Bazel 8
+          # No comma: the name is part of the cache key.
+          - name: Linux GCC Bazel 8
             os: ubuntu-latest
             cc: gcc-14
             bazel: 8.x
